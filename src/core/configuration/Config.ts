@@ -1,6 +1,5 @@
 import { Colord } from "colord";
 import { JWK } from "jose";
-import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import {
   Difficulty,
   Game,
@@ -18,6 +17,8 @@ import {
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import { NukeType } from "../StatsSchemas";
 
 export enum GameEnv {
   Dev,
@@ -48,8 +49,7 @@ export interface ServerConfig {
   r2AccessKey(): string;
   r2SecretKey(): string;
   otelEndpoint(): string;
-  otelUsername(): string;
-  otelPassword(): string;
+  otelAuthHeader(): string;
   otelEnabled(): boolean;
   jwtAudience(): string;
   jwtIssuer(): string;
@@ -89,9 +89,8 @@ export interface Config {
   playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;
-  populationIncreaseRate(player: Player | PlayerView): number;
+  troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
-  troopAdjustmentRate(player: Player): number;
   attackTilesPerTick(
     attckTroops: number,
     attacker: Player,
@@ -114,8 +113,8 @@ export interface Config {
   // When computing likelihood of trading for any given port, the X closest port
   // are twice more likely to be selected. X is determined below.
   proximityBonusPortsNb(totalPorts: number): number;
-  maxPopulation(player: Player | PlayerView): number;
-  cityPopulationIncrease(): number;
+  maxTroops(player: Player | PlayerView): number;
+  cityTroopIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
   shellLifetime(): number;
   boatMaxNumber(): number;
@@ -153,10 +152,18 @@ export interface Config {
   traitorDefenseDebuff(): number;
   traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
+  // Number of tiles destroyed to break an alliance
+  nukeAllianceBreakThreshold(): number;
   defaultNukeSpeed(): number;
   defaultNukeTargetableRange(): number;
+  defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
-  nukeDeathFactor(humans: number, tilesOwned: number): number;
+  nukeDeathFactor(
+    nukeType: NukeType,
+    humans: number,
+    tilesOwned: number,
+    maxTroops: number,
+  ): number;
   structureMinDist(): number;
   isReplay(): boolean;
   allianceExtensionPromptOffset(): number;

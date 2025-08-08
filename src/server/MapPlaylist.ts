@@ -2,12 +2,12 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
+  GameMapName,
   GameMapType,
   GameMode,
   GameType,
   Quads,
   Trios,
-  UnitType,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
@@ -17,17 +17,19 @@ const log = logger.child({});
 
 const config = getServerConfigFromServer();
 
-const frequency = {
+// How many times each map should appear in the playlist.
+// Note: The Partial should eventually be removed for better type safety.
+const frequency: Partial<Record<GameMapName, number>> = {
   World: 3,
   Europe: 2,
   Africa: 2,
+  Baikal: 2,
   Australia: 1,
   NorthAmerica: 1,
   Britannia: 1,
   GatewayToTheAtlantic: 1,
   Iceland: 1,
   SouthAmerica: 1,
-  KnownWorld: 1,
   DeglaciatedAntarctica: 1,
   EuropeClassic: 1,
   Mena: 1,
@@ -39,10 +41,11 @@ const frequency = {
   BlackSea: 1,
   FaroeIslands: 1,
   FalklandIslands: 1,
-  Baikal: 1,
   Halkidiki: 1,
   StraitOfGibraltar: 1,
   Italia: 1,
+  Yenisei: 1,
+  Pluto: 1,
 };
 
 interface MapWithMode {
@@ -84,7 +87,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: 400,
-      disabledUnits: [UnitType.Train, UnitType.Factory],
+      disabledUnits: [],
     } satisfies GameConfig;
   }
 
@@ -109,8 +112,8 @@ export class MapPlaylist {
 
   private shuffleMapsPlaylist(): boolean {
     const maps: GameMapType[] = [];
-    Object.keys(GameMapType).forEach((key) => {
-      for (let i = 0; i < parseInt(frequency[key]); i++) {
+    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
+      for (let i = 0; i < (frequency[key] ?? 0); i++) {
         maps.push(GameMapType[key]);
       }
     });

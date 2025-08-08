@@ -13,6 +13,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
+import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -33,6 +34,7 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -58,12 +60,11 @@ export interface LobbyConfig {
 }
 
 export function joinLobby(
+  eventBus: EventBus,
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
 ): () => void {
-  const eventBus = new EventBus();
-
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
@@ -82,7 +83,7 @@ export function joinLobby(
   const onmessage = (message: ServerMessage) => {
     if (message.type === "prestart") {
       console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
-      terrainLoad = loadTerrainMap(message.gameMap);
+      terrainLoad = loadTerrainMap(message.gameMap, terrainMapFileLoader);
       onPrestart();
     }
     if (message.type === "start") {
@@ -98,12 +99,13 @@ export function joinLobby(
         transport,
         userSettings,
         terrainLoad,
+        terrainMapFileLoader,
       ).then((r) => r.start());
     }
     if (message.type === "error") {
       showErrorModal(
         message.error,
-        "",
+        message.message,
         lobbyConfig.gameID,
         lobbyConfig.clientID,
         true,
@@ -125,6 +127,7 @@ async function createClientGame(
   transport: Transport,
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
+  mapLoader: GameMapLoader,
 ): Promise<ClientGameRunner> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
@@ -139,7 +142,10 @@ async function createClientGame(
   if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
-    gameMap = await loadTerrainMap(lobbyConfig.gameStartInfo.config.gameMap);
+    gameMap = await loadTerrainMap(
+      lobbyConfig.gameStartInfo.config.gameMap,
+      mapLoader,
+    );
   }
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
@@ -329,7 +335,7 @@ export class ClientGameRunner {
       if (message.type === "error") {
         showErrorModal(
           message.error,
-          "",
+          message.message,
           this.lobby.gameID,
           this.lobby.clientID,
           true,
@@ -385,7 +391,7 @@ export class ClientGameRunner {
       !this.gameView.hasOwner(tile) &&
       this.gameView.inSpawnPhase()
     ) {
-      this.eventBus.emit(new SendSpawnIntentEvent(cell));
+      this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;
     }
     if (this.gameView.inSpawnPhase()) {
@@ -582,27 +588,31 @@ export class ClientGameRunner {
 }
 
 function showErrorModal(
-  errMsg: string,
-  stack: string,
+  error: string,
+  message: string | undefined,
   gameID: GameID,
   clientID: ClientID,
   closable = false,
   showDiscord = true,
   heading = "error_modal.crashed",
 ) {
-  const errorText = `Error: ${errMsg}\nStack: ${stack}`;
-
   if (document.querySelector("#error-modal")) {
     return;
   }
 
   const modal = document.createElement("div");
-
   modal.id = "error-modal";
 
-  const discord = showDiscord ? translateText("error_modal.paste_discord") : "";
-
-  const content = `${discord}\n${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${errorText}`;
+  const content = [
+    showDiscord ? translateText("error_modal.paste_discord") : null,
+    translateText(heading),
+    `game id: ${gameID}`,
+    `client id: ${clientID}`,
+    `Error: ${error}`,
+    message ? `Message: ${message}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   // Create elements
   const pre = document.createElement("pre");

@@ -1,8 +1,7 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
-  Cell,
   GameType,
   Gold,
   PlayerID,
@@ -68,7 +67,7 @@ export class SendAllianceExtensionIntentEvent implements GameEvent {
 }
 
 export class SendSpawnIntentEvent implements GameEvent {
-  constructor(public readonly cell: Cell) {}
+  constructor(public readonly tile: TileRef) {}
 }
 
 export class SendAttackIntentEvent implements GameEvent {
@@ -90,7 +89,7 @@ export class SendBoatAttackIntentEvent implements GameEvent {
 export class BuildUnitIntentEvent implements GameEvent {
   constructor(
     public readonly unit: UnitType,
-    public readonly cell: Cell,
+    public readonly tile: TileRef,
   ) {}
 }
 
@@ -142,10 +141,6 @@ export class CancelBoatIntentEvent implements GameEvent {
   constructor(public readonly unitID: number) {}
 }
 
-export class SendSetTargetTroopRatioEvent implements GameEvent {
-  constructor(public readonly ratio: number) {}
-}
-
 export class SendWinnerEvent implements GameEvent {
   constructor(
     public readonly winner: Winner,
@@ -164,6 +159,10 @@ export class MoveWarshipIntentEvent implements GameEvent {
     public readonly unitId: number,
     public readonly tile: number,
   ) {}
+}
+
+export class SendKickPlayerIntentEvent implements GameEvent {
+  constructor(public readonly target: string) {}
 }
 
 export class Transport {
@@ -224,9 +223,6 @@ export class Transport {
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
-    this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
-      this.onSendSetTargetTroopRatioEvent(e),
-    );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
@@ -242,6 +238,9 @@ export class Transport {
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
+    this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
+      this.onSendKickPlayerIntent(e),
+    );
   }
 
   private startPing() {
@@ -438,8 +437,7 @@ export class Transport {
       pattern: this.lobbyConfig.pattern,
       name: this.lobbyConfig.playerName,
       playerType: PlayerType.Human,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 
@@ -527,21 +525,12 @@ export class Transport {
     });
   }
 
-  private onSendSetTargetTroopRatioEvent(event: SendSetTargetTroopRatioEvent) {
-    this.sendIntent({
-      type: "troop_ratio",
-      clientID: this.lobbyConfig.clientID,
-      ratio: event.ratio,
-    });
-  }
-
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
     this.sendIntent({
       type: "build_unit",
       clientID: this.lobbyConfig.clientID,
       unit: event.unit,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 
@@ -611,6 +600,14 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
       tile: event.tile,
+    });
+  }
+
+  private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
+    this.sendIntent({
+      type: "kick_player",
+      clientID: this.lobbyConfig.clientID,
+      target: event.target,
     });
   }
 

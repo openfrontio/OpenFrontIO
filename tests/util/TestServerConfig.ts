@@ -43,10 +43,7 @@ export class TestServerConfig implements ServerConfig {
   otelEndpoint(): string {
     throw new Error("Method not implemented.");
   }
-  otelUsername(): string {
-    throw new Error("Method not implemented.");
-  }
-  otelPassword(): string {
+  otelAuthHeader(): string {
     throw new Error("Method not implemented.");
   }
   turnIntervalMs(): number {

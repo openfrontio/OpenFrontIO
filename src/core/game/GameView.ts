@@ -34,7 +34,7 @@ import {
 } from "./GameUpdates";
 import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid } from "./UnitGrid";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
@@ -291,15 +291,6 @@ export class PlayerView {
   gold(): Gold {
     return this.data.gold;
   }
-  population(): number {
-    return this.data.population;
-  }
-  workers(): number {
-    return this.data.workers;
-  }
-  targetTroopRatio(): number {
-    return this.data.targetTroopRatio;
-  }
 
   troops(): number {
     return this.data.troops;
@@ -459,11 +450,12 @@ export class GameView implements GameMap {
       } else {
         unit = new UnitView(this, update);
         this._units.set(update.id, unit);
-      }
-      if (update.isActive) {
         this.unitGrid.addUnit(unit);
-      } else {
+      }
+      if (!update.isActive) {
         this.unitGrid.removeUnit(unit);
+      } else if (unit.tile() !== unit.lastTile()) {
+        this.unitGrid.updateUnitCell(unit);
       }
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
@@ -480,7 +472,7 @@ export class GameView implements GameMap {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-    predicate?: (value: { unit: UnitView; distSquared: number }) => boolean,
+    predicate?: UnitPredicate,
   ): Array<{ unit: UnitView; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
       tile,

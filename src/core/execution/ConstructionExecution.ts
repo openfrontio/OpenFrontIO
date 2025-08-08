@@ -1,5 +1,4 @@
 import {
-  Cell,
   Execution,
   Game,
   Gold,
@@ -27,12 +26,11 @@ export class ConstructionExecution implements Execution {
   private ticksUntilComplete: Tick;
 
   private cost: Gold;
-  private tile: TileRef;
 
   constructor(
     private player: Player,
     private constructionType: UnitType,
-    private tileOrCell: TileRef | Cell,
+    private tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -46,17 +44,10 @@ export class ConstructionExecution implements Execution {
       return;
     }
 
-    if (this.tileOrCell instanceof Cell) {
-      if (!this.mg.isValidCoord(this.tileOrCell.x, this.tileOrCell.y)) {
-        console.warn(
-          `cannot build construction invalid coordinates ${this.tileOrCell.x}, ${this.tileOrCell.y}`,
-        );
-        this.active = false;
-        return;
-      }
-      this.tile = this.mg.ref(this.tileOrCell.x, this.tileOrCell.y);
-    } else {
-      this.tile = this.tileOrCell;
+    if (!this.mg.isValidRef(this.tile)) {
+      console.warn(`cannot build construction invalid tile ${this.tile}`);
+      this.active = false;
+      return;
     }
   }
 

@@ -60,6 +60,7 @@
     "ui_options_desc": "La sekvaj elementoj povas esti trovigita interne:",
     "ui_playeroverlay": "Supermetita fenestro de ludanto-informoj",
     "ui_playeroverlay_desc": "Kiam vi pasigas la muson super lando, la supermetita fenestro de ludanto-informoj aperas sub Opcioj. Ĝi montras la tipon de ludanto: Homo, Nacio (inteligenta roboto), aŭ Roboto. Por Nacioj, ĝi ankaŭ montras ilian sintenon al vi, intervalante de Malamika ĝis Amika. Krome, vi povas vidi la nombron da defendaj trupoj, oro, kaj la nombron da milŝipoj kaj diversaj konstruaĵoj, kiujn la ludanto posedas.",
+    "ui_wilderness": "Sovaĝejo",
     "option_pause": "Paŭzigi/Rekomenci la ludon - Nur ebla en la solan modo.",
     "option_timer": "Kronometro - Pasinta tempo ekde la luda komenco.",
     "option_exit": "Elira butono",
@@ -89,6 +90,8 @@
     "build_desc": "Priskribo",
     "build_city": "Urbo",
     "build_city_desc": "Utila kiam vi ne povas pligrandigi vian teritorion aŭ kiam vi atingas vian loĝantlimon.",
+    "build_factory": "Fabriko",
+    "build_factory_desc": "Kreas fervojojn aŭtomate kun apud konstruaĵoj, kaj generas trajnojn sporade.",
     "build_defense": "Defenda posteno",
     "build_defense_desc": "Plialtigas la defendon ĉirkaŭ najbaraj landlimoj, kiuj montriĝas per kontrolita ŝablono. Atakoj de malamikoj estas pli malrapidaj kaj kaŭzas pli da viktimoj.",
     "build_port": "Haveno",
@@ -112,7 +115,8 @@
     "icon_ally": "Manpremo - Aliancano. Ĉi tiu ludanto estas via aliancano.",
     "icon_embargo": "Dolar-haltsigno - Embargo. Ĉi tiu ludanto ĉesis komerci kun vi aŭtomate aŭ mane.",
     "icon_request": "Koverto – Aliancopeto. Ĉi tiu ludanto sendis al vi peton pri alianco.",
-    "info_enemy_panel": "Malamiko informpanelo"
+    "info_enemy_panel": "Malamiko informpanelo",
+    "exit_confirmation": "Ĉu vi certe volas eliri el la ludo?"
   },
   "single_modal": {
     "title": "Sola Ludanto",
@@ -255,16 +259,27 @@
     "tab_keybinds": "Fulmoklavoj",
     "dark_mode_label": "Malhela Modo",
     "dark_mode_desc": "Baskuli la retpaĝa aspekto inter hela kaj malhela temo",
+    "dark_mode_enabled": "Malhela etoso aktivigita",
+    "light_mode_enabled": "Hela etoso aktivigita",
     "emojis_label": "Emoĝioj",
+    "emojis_visible": "Emoĝioj estas videblaj",
+    "emojis_hidden": "Emoĝioj estas maskitaj",
     "emojis_desc": "Montri/Maski la emoĝiojn en la ludo",
     "alert_frame_label": "Avertkadro",
     "alert_frame_desc": "Ŝalti la avertkadron. Kiam ebligita, la kadro estos montrata kiam vi estos perfidita.",
     "special_effects_label": "Specialaj efektoj",
     "special_effects_desc": "Baskuli specialajn efektojn. Malaktivigu por plibonigi funkciadon",
+    "special_effects_enabled": "Specialefektoj ebligitaj",
+    "special_effects_disabled": "Specialefektoj malebligitaj",
     "anonymous_names_label": "Maskitaj Nomoj",
     "anonymous_names_desc": "Kaŝi verajn uzantnomojn kun hazardaj sur via ekrano.",
+    "anonymous_names_enabled": "Anonimaj nomoj estas ebligitaj",
+    "real_names_shown": "Veraj nomoj estas montritaj",
     "left_click_label": "Maldekstra alklako por malfermi menuon",
     "left_click_desc": "Kiam aktiviga, maldekstra alklako malfermas menuon kaj glava atakbutono. Kiam malaktiviga, maldekstra alklako atakas direkten.",
+    "left_click_menu": "Maldekstra alklako-menuo",
+    "left_click_opens_menu": "Maldekstra alklako malfermas menuon",
+    "right_click_opens_menu": "Dekstra alklako malfermas menuon",
     "attack_ratio_label": "⚔️ Atakkvociento",
     "attack_ratio_desc": "Kian procenton de viaj trupoj sendi en atako (1–100%)",
     "troop_ratio_label": "🪖🛠️ Trupoj kaj Laboristoj kvociento",
@@ -305,7 +320,14 @@
     "move_right": "Movi Fotilon Dekstren",
     "move_right_desc": "Movi la fotilon dekstren",
     "reset": "Rekomencigi",
-    "unbind": "Senligi"
+    "unbind": "Senligi",
+    "on": "Ŝaltita",
+    "off": "Malŝaltita",
+    "toggle_terrain": "Ŝalti terenon",
+    "terrain_enabled": "Terenvido ebligita",
+    "terrain_disabled": "Terenvido malebligita",
+    "exit_game_label": "Eliri la ludon",
+    "exit_game_info": "Reiri al precipa menuo"
   },
   "chat": {
     "title": "Rapida Babilejo",
@@ -389,8 +411,9 @@
       "sam_launcher": "Defendas kontraŭ alvenantaj atombomboj",
       "warship": "Kaptas komercŝipojn, detruas ŝipojn kaj boatojn",
       "port": "Sendas komercŝipojn por produkti oron",
-      "defense_post": "Pligrandigi defendojn de proksimumaj landlimoj",
-      "city": "Pligrandigi maksiman loĝantaron"
+      "defense_post": "Pligrandigas defendojn de proksimumaj landlimoj",
+      "city": "Pligrandigas maksiman loĝantaron",
+      "factory": "Kreas fervojojn kaj generas trajnojn"
     },
     "not_enough_money": "Ne sufiĉe da mono"
   },
@@ -412,9 +435,7 @@
     "team": "Teamo",
     "owned": "Posedata",
     "gold": "Oro",
-    "troops": "Trupoj",
-    "show_top_5": "Montri Suprajn 5",
-    "show_all": "Montri ĉiujn"
+    "troops": "Trupoj"
   },
   "player_info_overlay": {
     "type": "Tipo",
@@ -437,9 +458,22 @@
   "events_display": {
     "retreating": "retiriĝas",
     "boat": "Boato",
+    "alliance_request_status": "{name} {status} vian aliancpeton",
+    "alliance_accepted": "akceptis",
+    "alliance_rejected": "rifuzis",
+    "duration_second": "1 sekundo",
+    "betrayal_description": "Vi rompis vian aliancon kun {name}, igante vin PERFIDULO ({malusPercent}% defenda malfortigon dum {durationText})",
+    "duration_seconds_plural": "{seconds} sekundoj",
+    "betrayed_you": "{name} rompis sian aliancon kun vi",
     "about_to_expire": "Via alianco kun {name} baldaŭ eksvalidiĝos!",
+    "alliance_expired": "Via alianco kun {name} eksvalidiĝis",
+    "attack_request": "{name} petas vin ataki {target}",
+    "sent_emoji": "Sendita al {name}: {emoji}",
     "renew_alliance": "Peti renovigon",
+    "request_alliance": "{name} petas aliancon!",
     "focus": "Fokusi",
+    "accept_alliance": "Akcepti",
+    "reject_alliance": "Rifuzi",
     "alliance_renewed": "Via alianco kun {name} estis renovigita",
     "ignore": "Ignori"
   },
@@ -483,7 +517,8 @@
   },
   "replay_panel": {
     "replay_speed": "Reluda rapideco",
-    "game_speed": "Luda rapideco"
+    "game_speed": "Luda rapideco",
+    "fastest_game_speed": "maks"
   },
   "error_modal": {
     "crashed": "Ludo kolapsis!",
@@ -538,5 +573,11 @@
       "grogu_head": "Grogu Kapo",
       "grogu": "Grogu"
     }
+  },
+  "auth": {
+    "login_required": "Ensaluto estas necesa por aliri ĉi tiun retejon.",
+    "redirecting": "Vi estas redirektata...",
+    "not_authorized": "Vi ne rajtas aliri ĉi tiun retejon.",
+    "contact_admin": "Se vi kredas, ke vi vidas ĉi tiun mesaĝon erare, bonvolu kontakti la retejan administranton."
   }
 }

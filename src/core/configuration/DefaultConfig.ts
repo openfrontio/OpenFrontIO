@@ -1,5 +1,5 @@
 import { JWK } from "jose";
-import { z } from "zod/v4";
+import { z } from "zod";
 import {
   Difficulty,
   Duos,
@@ -23,6 +23,7 @@ import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import { NukeType } from "../StatsSchemas";
 import { assertNever, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { PastelTheme } from "./PastelTheme";
@@ -67,6 +68,8 @@ const numPlayersConfig = {
   [GameMapType.Halkidiki]: [50, 40, 30],
   [GameMapType.StraitOfGibraltar]: [50, 40, 30],
   [GameMapType.Italia]: [50, 40, 30],
+  [GameMapType.Pluto]: [70, 50, 40],
+  [GameMapType.Yenisei]: [60, 50, 40],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -119,19 +122,16 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   otelEnabled(): boolean {
     return (
+      this.env() !== GameEnv.Dev &&
       Boolean(this.otelEndpoint()) &&
-      Boolean(this.otelUsername()) &&
-      Boolean(this.otelPassword())
+      Boolean(this.otelAuthHeader())
     );
   }
   otelEndpoint(): string {
-    return process.env.OTEL_ENDPOINT ?? "";
+    return process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "";
   }
-  otelUsername(): string {
-    return process.env.OTEL_USERNAME ?? "";
-  }
-  otelPassword(): string {
-    return process.env.OTEL_PASSWORD ?? "";
+  otelAuthHeader(): string {
+    return process.env.OTEL_AUTH_HEADER ?? "";
   }
   gitCommit(): string {
     return process.env.GIT_COMMIT ?? "";
@@ -236,7 +236,7 @@ export class DefaultConfig implements Config {
     return 0.5;
   }
   traitorSpeedDebuff(): number {
-    return 0.6;
+    return 0.8;
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
@@ -273,7 +273,7 @@ export class DefaultConfig implements Config {
     }
   }
 
-  cityPopulationIncrease(): number {
+  cityTroopIncrease(): number {
     return 250_000;
   }
 
@@ -326,10 +326,10 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   trainSpawnRate(numberOfStations: number): number {
-    return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
+    return Math.min(1400, Math.round(40 * Math.pow(numberOfStations, 0.5)));
   }
   trainGold(): Gold {
-    return BigInt(10_000);
+    return BigInt(4_000);
   }
   trainStationMinRange(): number {
     return 15;
@@ -375,15 +375,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    1_000_000,
-                    (p.unitsOwned(UnitType.Warship) + 1) * 250_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.Warship, (numUnits: number) =>
+            Math.min(1_000_000, (numUnits + 1) * 250_000),
+          ),
           territoryBound: false,
           maxHealth: 1000,
         };
@@ -400,15 +394,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Port:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.Port)) * 125_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.Port, (numUnits: number) =>
+            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
@@ -416,26 +404,17 @@ export class DefaultConfig implements Config {
         };
       case UnitType.AtomBomb:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : 750_000n,
+          cost: this.costWrapper(UnitType.AtomBomb, () => 750_000),
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : 5_000_000n,
+          cost: this.costWrapper(UnitType.HydrogenBomb, () => 5_000_000),
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : 35_000_000n,
+          cost: this.costWrapper(UnitType.MIRV, () => 35_000_000),
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -450,54 +429,33 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : 1_000_000n,
+          cost: this.costWrapper(UnitType.MissileSilo, () => 1_000_000),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
       case UnitType.DefensePost:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    250_000,
-                    (p.unitsConstructed(UnitType.DefensePost) + 1) * 50_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.DefensePost, (numUnits: number) =>
+            Math.min(250_000, (numUnits + 1) * 50_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.SAMLauncher:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    3_000_000,
-                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.SAMLauncher, (numUnits: number) =>
+            Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
         };
       case UnitType.City:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.City)) * 125_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.City, (numUnits: number) =>
+            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
@@ -505,15 +463,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Factory:
         return {
-          cost: (p: Player) =>
-            p.type() === PlayerType.Human && this.infiniteGold()
-              ? 0n
-              : BigInt(
-                  Math.min(
-                    1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.Factory)) * 125_000,
-                  ),
-                ),
+          cost: this.costWrapper(UnitType.Factory, (numUnits: number) =>
+            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
@@ -535,6 +487,20 @@ export class DefaultConfig implements Config {
         assertNever(type);
     }
   }
+
+  private costWrapper(
+    type: UnitType,
+    costFn: (units: number) => number,
+  ): (p: Player) => bigint {
+    return (p: Player) => {
+      if (p.type() === PlayerType.Human && this.infiniteGold()) {
+        return 0n;
+      }
+      const numUnits = Math.min(p.unitsOwned(type), p.unitsConstructed(type));
+      return BigInt(costFn(numUnits));
+    };
+  }
+
   defaultDonationAmount(sender: Player): number {
     return Math.floor(sender.troops() / 3);
   }
@@ -557,7 +523,7 @@ export class DefaultConfig implements Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
-    return 600 * 10; // 10 minutes.
+    return 300 * 10; // 5 minutes.
   }
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
@@ -748,8 +714,8 @@ export class DefaultConfig implements Config {
     return this.infiniteTroops() ? 1_000_000 : 25_000;
   }
 
-  maxPopulation(player: Player | PlayerView): number {
-    const maxPop =
+  maxTroops(player: Player | PlayerView): number {
+    const maxTroops =
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
@@ -757,38 +723,38 @@ export class DefaultConfig implements Config {
             .units(UnitType.City)
             .map((city) => city.level())
             .reduce((a, b) => a + b, 0) *
-            this.cityPopulationIncrease();
+            this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
-      return maxPop / 2;
+      return maxTroops / 2;
     }
 
     if (player.type() === PlayerType.Human) {
-      return maxPop;
+      return maxTroops;
     }
 
     switch (this._gameConfig.difficulty) {
       case Difficulty.Easy:
-        return maxPop * 0.5;
+        return maxTroops * 0.5;
       case Difficulty.Medium:
-        return maxPop * 1;
+        return maxTroops * 1;
       case Difficulty.Hard:
-        return maxPop * 1.5;
+        return maxTroops * 1.5;
       case Difficulty.Impossible:
-        return maxPop * 2;
+        return maxTroops * 2;
     }
   }
 
-  populationIncreaseRate(player: Player): number {
-    const max = this.maxPopulation(player);
+  troopIncreaseRate(player: Player): number {
+    const max = this.maxTroops(player);
 
-    let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
+    let toAdd = 10 + Math.pow(player.troops(), 0.73) / 4;
 
-    const ratio = 1 - player.population() / max;
+    const ratio = 1 - player.troops() / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
-      toAdd *= 0.7;
+      toAdd *= 0.6;
     }
 
     if (player.type() === PlayerType.FakeHuman) {
@@ -808,26 +774,11 @@ export class DefaultConfig implements Config {
       }
     }
 
-    return Math.min(player.population() + toAdd, max) - player.population();
+    return Math.min(player.troops() + toAdd, max) - player.troops();
   }
 
   goldAdditionRate(player: Player): Gold {
-    return BigInt(Math.floor(0.045 * player.workers() ** 0.7));
-  }
-
-  troopAdjustmentRate(player: Player): number {
-    const maxDiff = this.maxPopulation(player) / 1000;
-    const target = player.population() * player.targetTroopRatio();
-    const diff = target - player.troops();
-    if (Math.abs(diff) < maxDiff) {
-      return diff;
-    }
-    const adjustment = maxDiff * Math.sign(diff);
-    // Can ramp down troops much faster
-    if (adjustment < 0) {
-      return adjustment * 5;
-    }
-    return adjustment;
+    return 100n;
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
@@ -842,21 +793,43 @@ export class DefaultConfig implements Config {
     throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
+  nukeAllianceBreakThreshold(): number {
+    return 100;
+  }
+
   defaultNukeSpeed(): number {
     return 6;
   }
 
   defaultNukeTargetableRange(): number {
-    return 120;
+    return 150;
   }
 
   defaultSamRange(): number {
-    return 80;
+    return 70;
   }
 
-  // Humans can be population, soldiers attacking, soldiers in boat etc.
-  nukeDeathFactor(humans: number, tilesOwned: number): number {
-    return (5 * humans) / Math.max(1, tilesOwned);
+  defaultSamMissileSpeed(): number {
+    return 12;
+  }
+
+  // Humans can be soldiers, soldiers attacking, soldiers in boat etc.
+  nukeDeathFactor(
+    nukeType: NukeType,
+    humans: number,
+    tilesOwned: number,
+    maxTroops: number,
+  ): number {
+    if (nukeType !== UnitType.MIRVWarhead) {
+      return (5 * humans) / Math.max(1, tilesOwned);
+    }
+    const targetTroops = 0.03 * maxTroops;
+    const excessTroops = Math.max(0, humans - targetTroops);
+    const scalingFactor = 500;
+
+    const steepness = 2;
+    const normalizedExcess = excessTroops / maxTroops;
+    return scalingFactor * (1 - Math.exp(-steepness * normalizedExcess));
   }
 
   structureMinDist(): number {
