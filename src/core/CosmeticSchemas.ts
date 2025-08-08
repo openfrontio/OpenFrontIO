@@ -3,8 +3,10 @@ import { RequiredPatternSchema } from "./Schemas";
 
 export const ProductSchema = z.object({
   productId: z.string(),
+  /* eslint-disable sort-keys */
   priceId: z.string(),
   price: z.string(),
+  /* eslint-enable sort-keys */
 });
 
 const PatternSchema = z.object({
@@ -16,6 +18,7 @@ const PatternSchema = z.object({
 // Schema for resources/cosmetics/cosmetics.json
 export const CosmeticsSchema = z.object({
   patterns: z.record(z.string(), PatternSchema),
+  /* eslint-disable sort-keys */
   flag: z
     .object({
       layers: z.record(
@@ -35,6 +38,7 @@ export const CosmeticsSchema = z.object({
       ),
     })
     .optional(),
+  /* eslint-enable sort-keys */
 });
 export type Cosmetics = z.infer<typeof CosmeticsSchema>;
 export type Pattern = z.infer<typeof PatternSchema>;

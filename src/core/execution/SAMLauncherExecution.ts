@@ -98,6 +98,7 @@ class SAMTargetingSystem {
       }
       const interceptionTile = this.computeInterceptionTile(nuke.unit);
       if (interceptionTile !== undefined) {
+        // eslint-disable-next-line sort-keys
         targets.push({ unit: nuke.unit, tile: interceptionTile });
       } else {
         // Store unreachable nukes in order to prevent useless interception computation

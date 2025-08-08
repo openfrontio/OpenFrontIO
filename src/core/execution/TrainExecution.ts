@@ -119,8 +119,8 @@ export class TrainExecution implements Execution {
     for (let i = 0; i < this.numCars; i++) {
       this.cars.push(
         this.player.buildUnit(UnitType.Train, tile, {
-          trainType: TrainType.Carriage,
           loaded: this.hasCargo,
+          trainType: TrainType.Carriage,
         }),
       );
     }

@@ -44,6 +44,7 @@ export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
 export const Quads = "Quads" as const;
 
+/* eslint-disable sort-keys */
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
   Blue: "Blue",
@@ -54,6 +55,7 @@ export const ColoredTeams: Record<string, Team> = {
   Green: "Green",
   Bot: "Bot",
 } as const;
+/* eslint-enable sort-keys */
 
 export enum GameMapType {
   World = "World",
@@ -118,6 +120,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Italia,
     GameMapType.Yenisei,
   ],
+  // eslint-disable-next-line sort-keys
   fantasy: [
     GameMapType.Pangaea,
     GameMapType.Pluto,

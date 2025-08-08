@@ -113,7 +113,7 @@ export class WarshipExecution implements Execution {
           continue;
         }
       }
-      potentialTargets.push({ unit: unit, distSquared });
+      potentialTargets.push({ distSquared, unit });
     }
 
     return potentialTargets.sort((a, b) => {
