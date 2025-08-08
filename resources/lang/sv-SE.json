@@ -21,7 +21,9 @@
     "instructions": "Instruktioner",
     "how_to_play": "Hur man Spelar",
     "advertise": "Annonsera",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Sekretesspolicy",
+    "terms_of_service": "Användarvillkor"
   },
   "news": {
     "full_changelog": "Se fullständig ändringslogg",
@@ -448,6 +450,7 @@
     "gold": "Guld",
     "ports": "Hamnar",
     "cities": "Städer",
+    "factories": "Fabriker",
     "missile_launchers": "Missilavfyringsramper",
     "sams": "Luftvärn",
     "warships": "Krigsskepp",
@@ -573,6 +576,9 @@
       "grogu_head": "Grogu Huvud",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Laddar annons..."
   },
   "auth": {
     "login_required": "Inloggning krävs för att komma åt den här webbplatsen.",

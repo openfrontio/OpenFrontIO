@@ -21,7 +21,9 @@
     "instructions": "Instrukcioj",
     "how_to_play": "Kiel ludi",
     "advertise": "Reklami",
-    "wiki": "Vikio"
+    "wiki": "Vikio",
+    "privacy_policy": "Privateca politiko",
+    "terms_of_service": "Uzokondiĉoj"
   },
   "news": {
     "full_changelog": "Vidi la plenan ŝanĝprotokolon",
@@ -448,6 +450,7 @@
     "gold": "Oro",
     "ports": "Havenoj",
     "cities": "Urboj",
+    "factories": "Fabrikoj",
     "missile_launchers": "Misillanĉiloj",
     "sams": "SAM-oj",
     "warships": "Militŝipoj",
@@ -573,6 +576,9 @@
       "grogu_head": "Grogu Kapo",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Ŝarĝante reklamo..."
   },
   "auth": {
     "login_required": "Ensaluto estas necesa por aliri ĉi tiun retejon.",
