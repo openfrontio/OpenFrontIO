@@ -66,7 +66,7 @@ describe("Donate gold to an ally", () => {
   it("Gold should be successfully donated", async () => {
     const game = await setup("ocean_and_land", {
       infiniteGold: false,
-      donateGold: false,
+      donateGold: true,
     });
 
     const donorInfo = new PlayerInfo(
@@ -122,15 +122,13 @@ describe("Donate gold to an ally", () => {
     console.log(`donor gold after donation: ${donor.gold()}`);
     console.log(`recipient gold after donation: ${recipient.gold()}`);
 
-    expect(donor.gold() < recipient.gold());
+    expect(donor.gold() < recipient.gold()).toBe(true);
   });
 });
 
 describe("Donate troops to a non ally", () => {
   it("Troops should not be donated", async () => {
     const game = await setup("ocean_and_land", {
-      infiniteGold: true,
-      instantBuild: true,
       infiniteTroops: false,
       donateTroops: true,
     });
