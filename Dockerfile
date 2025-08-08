@@ -46,7 +46,7 @@ ENV NPM_CONFIG_IGNORE_SCRIPTS=1
 # Copy package.json and package-lock.json
 COPY package*.json ./
 # Install dependencies
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev @types/js-yaml @types/express
 
 # Final image
 FROM base
