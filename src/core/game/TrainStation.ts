@@ -119,13 +119,13 @@ export class TrainStation {
     );
     if (toRemove) {
       const railTiles: RailTile[] = toRemove.tiles.map((tile) => ({
-        tile,
         railType: RailType.VERTICAL,
+        tile,
       }));
       this.mg.addUpdate({
-        type: GameUpdateType.RailroadEvent,
         isActive: false,
         railTiles,
+        type: GameUpdateType.RailroadEvent,
       });
       this.railroads.delete(toRemove);
     }
@@ -229,10 +229,7 @@ export class Cluster {
   availableForTrade(player: Player): Set<TrainStation> {
     const tradingStations = new Set<TrainStation>();
     for (const station of this.stations) {
-      if (
-        station.unit.owner() === player ||
-        station.unit.owner().isFriendly(player)
-      ) {
+      if (station.tradeAvailable(player)) {
         tradingStations.add(station);
       }
     }

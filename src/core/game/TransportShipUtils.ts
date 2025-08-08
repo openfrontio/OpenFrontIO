@@ -183,10 +183,10 @@ export function candidateShoreTiles(
 
   let bestByManhattan: TileRef | null = null;
   const extremumTiles: Record<string, TileRef | null> = {
-    minX: null,
-    minY: null,
     maxX: null,
     maxY: null,
+    minX: null,
+    minY: null,
   };
 
   const borderShoreTiles = Array.from(player.borderTiles()).filter((t) =>

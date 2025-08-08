@@ -47,7 +47,7 @@ export class HostLobbyModal extends LitElement {
   @state() private copySuccess = false;
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
 

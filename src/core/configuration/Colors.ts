@@ -5,6 +5,7 @@ import lchPlugin from "colord/plugins/lch";
 extend([lchPlugin]);
 extend([labPlugin]);
 
+/* eslint-disable sort-keys */
 export const red = colord({ h: 0, s: 82, l: 56 });
 export const blue = colord({ h: 224, s: 100, l: 58 });
 export const teal = colord({ h: 172, s: 66, l: 50 });

@@ -54,6 +54,7 @@ const numPlayersConfig = {
   [GameMapType.FalklandIslands]: [80, 50, 30],
   [GameMapType.Baikal]: [60, 50, 40],
   [GameMapType.Mena]: [60, 50, 30],
+  [GameMapType.MarsRevised]: [70, 50, 40],
   [GameMapType.Mars]: [50, 40, 30],
   [GameMapType.Oceania]: [30, 20, 10],
   [GameMapType.EastAsia]: [50, 40, 30],
@@ -366,6 +367,7 @@ export class DefaultConfig implements Config {
     return 1_000_000;
   }
 
+  /* eslint-disable sort-keys */
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
       case UnitType.TransportShip:
@@ -487,6 +489,7 @@ export class DefaultConfig implements Config {
         assertNever(type);
     }
   }
+  /* eslint-enable sort-keys */
 
   private costWrapper(
     type: UnitType,

@@ -44,6 +44,7 @@ export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
 export const Quads = "Quads" as const;
 
+/* eslint-disable sort-keys */
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
   Blue: "Blue",
@@ -54,6 +55,7 @@ export const ColoredTeams: Record<string, Team> = {
   Green: "Green",
   Bot: "Bot",
 } as const;
+/* eslint-enable sort-keys */
 
 export enum GameMapType {
   World = "World",
@@ -69,6 +71,7 @@ export enum GameMapType {
   Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
+  MarsRevised = "Mars Revised",
   Britannia = "Britannia",
   GatewayToTheAtlantic = "Gateway to the Atlantic",
   Australia = "Australia",
@@ -117,9 +120,11 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Italia,
     GameMapType.Yenisei,
   ],
+  // eslint-disable-next-line sort-keys
   fantasy: [
     GameMapType.Pangaea,
     GameMapType.Pluto,
+    GameMapType.MarsRevised,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
   ],
@@ -362,10 +367,11 @@ export interface Alliance {
 export interface MutableAlliance extends Alliance {
   expire(): void;
   other(player: Player): Player;
-  canExtend(): boolean;
+  bothAgreedToExtend(): boolean;
   addExtensionRequest(player: Player): void;
   id(): number;
   extend(): void;
+  onlyOneAgreedToExtend(): boolean;
 }
 
 export class PlayerInfo {

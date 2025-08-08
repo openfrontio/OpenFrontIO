@@ -113,9 +113,22 @@ describe("Attack", () => {
   });
 });
 
+let playerA: Player;
+let playerB: Player;
+
+function addPlayerToGame(
+  playerInfo: PlayerInfo,
+  game: Game,
+  tile: TileRef,
+): Player {
+  game.addPlayer(playerInfo);
+  game.addExecution(new SpawnExecution(playerInfo, tile));
+  return game.player(playerInfo.id);
+}
+
 describe("Attack race condition with alliance requests", () => {
-  it("should not mark attacker as traitor when alliance is formed after attack starts", async () => {
-    const game = await setup("ocean_and_land", {
+  beforeEach(async () => {
+    game = await setup("ocean_and_land", {
       infiniteGold: true,
       instantBuild: true,
       infiniteTroops: true,
@@ -127,32 +140,22 @@ describe("Attack race condition with alliance requests", () => {
       null,
       "playerA_id",
     );
+    playerA = addPlayerToGame(playerAInfo, game, game.ref(0, 10));
+
     const playerBInfo = new PlayerInfo(
       "playerB",
       PlayerType.Human,
       null,
       "playerB_id",
     );
-
-    game.addPlayer(playerAInfo);
-    game.addPlayer(playerBInfo);
-
-    const playerA = game.player(playerAInfo.id);
-    const playerB = game.player(playerBInfo.id);
-
-    // Spawn both players
-    const spawnA = game.ref(0, 10);
-    const spawnB = game.ref(0, 15);
-
-    game.addExecution(
-      new SpawnExecution(playerAInfo, spawnA),
-      new SpawnExecution(playerBInfo, spawnB),
-    );
+    playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 10));
 
     while (game.inSpawnPhase()) {
       game.executeNextTick();
     }
+  });
 
+  it("should not mark attacker as traitor when alliance is formed after attack starts", async () => {
     // Player A sends alliance request to Player B
     const allianceRequest = playerA.createAllianceRequest(playerB);
     expect(allianceRequest).not.toBeNull();
@@ -194,44 +197,6 @@ describe("Attack race condition with alliance requests", () => {
   });
 
   it("should mark attacker as traitor when alliance existed before attack", async () => {
-    const game = await setup("ocean_and_land", {
-      infiniteGold: true,
-      instantBuild: true,
-      infiniteTroops: true,
-    });
-
-    const playerAInfo = new PlayerInfo(
-      "playerA",
-      PlayerType.Human,
-      null,
-      "playerA_id",
-    );
-    const playerBInfo = new PlayerInfo(
-      "playerB",
-      PlayerType.Human,
-      null,
-      "playerB_id",
-    );
-
-    game.addPlayer(playerAInfo);
-    game.addPlayer(playerBInfo);
-
-    const playerA = game.player(playerAInfo.id);
-    const playerB = game.player(playerBInfo.id);
-
-    // Spawn both players
-    const spawnA = game.ref(0, 10);
-    const spawnB = game.ref(0, 15);
-
-    game.addExecution(
-      new SpawnExecution(playerAInfo, spawnA),
-      new SpawnExecution(playerBInfo, spawnB),
-    );
-
-    while (game.inSpawnPhase()) {
-      game.executeNextTick();
-    }
-
     // Create an alliance between Player A and Player B
     const allianceRequest = playerA.createAllianceRequest(playerB);
     if (allianceRequest) {
@@ -254,5 +219,68 @@ describe("Attack race condition with alliance requests", () => {
 
     // Player A should be marked as traitor because they attacked an ally
     expect(playerA.isTraitor()).toBe(true);
+  });
+
+  test("should cancel alliance requests if the recipient attacks", async () => {
+    // Player A sends alliance request to Player B
+    const allianceRequest = playerA.createAllianceRequest(playerB);
+    expect(allianceRequest).not.toBeNull();
+    expect(playerB.incomingAllianceRequests()).toHaveLength(1);
+
+    // Player B attacks Player A
+    const attackExecution = new AttackExecution(
+      null,
+      playerB,
+      playerA.id(),
+      null,
+    );
+    game.addExecution(attackExecution);
+
+    // Execute a few ticks to process the attacks
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+    }
+    // Alliance request should be denied since player B attacked
+    expect(playerA.outgoingAllianceRequests()).toHaveLength(0);
+    expect(playerB.incomingAllianceRequests()).toHaveLength(0);
+  });
+
+  test("should cancel the proper alliance request among many", async () => {
+    // Add a new player to have more alliance requests
+    const playerCInfo = new PlayerInfo(
+      "playerB",
+      PlayerType.Human,
+      null,
+      "playerB_id",
+    );
+    const playerC = addPlayerToGame(playerCInfo, game, game.ref(10, 10));
+
+    // Player A sends alliance request to Player B
+    const allianceRequestAtoB = playerA.createAllianceRequest(playerB);
+    expect(allianceRequestAtoB).not.toBeNull();
+
+    // Player C also sends alliance request to Player B
+    const allianceRequestCtoB = playerC.createAllianceRequest(playerB);
+    expect(allianceRequestCtoB).not.toBeNull();
+
+    expect(playerB.incomingAllianceRequests()).toHaveLength(2);
+
+    // Player B attacks Player A
+    const attackExecution = new AttackExecution(
+      null,
+      playerB,
+      playerA.id(),
+      null,
+    );
+    game.addExecution(attackExecution);
+
+    // Execute a few ticks to process the attacks
+    for (let i = 0; i < 5; i++) {
+      game.executeNextTick();
+    }
+    // Alliance request A->B should be denied since player B attacked
+    expect(playerA.outgoingAllianceRequests()).toHaveLength(0);
+    // However C->B should remain
+    expect(playerB.incomingAllianceRequests()).toHaveLength(1);
   });
 });

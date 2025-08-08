@@ -2,3 +2,5 @@
 * @openfrontio/review-approver
 resources/lang @openfrontio/translation-approver
 resources/lang/en.json @openfrontio/review-approver
+src/client @openfrontio/frontend-approver
+src/server @openfrontio/backend-approver
