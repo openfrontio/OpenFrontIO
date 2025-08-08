@@ -1,5 +1,5 @@
 import { Logger } from "winston";
-import { z } from "zod/v4/classic/external.cjs";
+import { z } from "zod";
 import {
   ClientMessageSchema,
   ServerErrorMessage,
