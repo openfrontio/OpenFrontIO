@@ -342,28 +342,28 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(50000 + 100 * dist);
-    const basePortBonus = 0.25;
-    const diminishingFactor = 0.9;
-
-    let totalMultiplier = 1;
-    for (let i = 0; i < numPorts; i++) {
-      totalMultiplier += basePortBonus * Math.pow(diminishingFactor, i);
-    }
-
-    return BigInt(Math.floor(baseGold * totalMultiplier));
+    const baseGold = 25000 + 100 * dist;
+    const portBonus = 1 + 0.5 * Math.sqrt(numPorts - 1);
+    return BigInt(Math.floor(portBonus * baseGold));
   }
 
-  // Chance to spawn a trade ship in one second,
-  tradeShipSpawnRate(numTradeShips: number): number {
-    if (numTradeShips < 20) {
-      return 5;
+  tradeShipSpawnRate(numTradeShips: number, numPlayerPorts: number): number {
+    if (numTradeShips >= 150) {
+      return 1_000_000;
     }
-    if (numTradeShips <= 150) {
-      const additional = numTradeShips - 20;
-      return Math.floor(Math.pow(additional, 0.85) + 5);
-    }
-    return 1_000_000;
+    const baseSpawnRate = Math.floor(Math.pow(numTradeShips, 0.7) + 10);
+
+    const multiplier = (10 * numPlayerPorts ** 0.5 + numPlayerPorts) / 10;
+    return Math.floor(baseSpawnRate * multiplier);
+  }
+
+  expectedTradeShipSpawnRate(
+    numTradeShips: number,
+    numPlayerPorts: number,
+  ): number {
+    const spawnRate = this.tradeShipSpawnRate(numTradeShips, numPlayerPorts);
+    const expectedSpawn = numPlayerPorts * (1 / spawnRate);
+    return expectedSpawn;
   }
 
   unitInfo(type: UnitType): UnitInfo {
