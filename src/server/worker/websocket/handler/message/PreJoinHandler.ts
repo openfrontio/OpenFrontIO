@@ -67,7 +67,7 @@ async function handleJoinMessage(
   | {
       success: false;
       code: 1002;
-      error?: string;
+      error: string;
       reason:
         | "ClientJoinMessageSchema"
         | "Flag invalid"
@@ -132,6 +132,7 @@ async function handleJoinMessage(
       log.warn("Unauthorized: Invalid token");
       return {
         code: 1002,
+        error: "The game server did not recognize your session token",
         reason: "Unauthorized",
         success: false,
       };
@@ -143,10 +144,13 @@ async function handleJoinMessage(
 
     const allowedFlares = config.allowedFlares();
     if (claims === null) {
+      // Anonymous user
       if (allowedFlares !== undefined) {
+        // Login is required
         log.warn("Unauthorized: Anonymous user attempted to join game");
         return {
           code: 1002,
+          error: "A valid login is required to join this game",
           reason: "Unauthorized",
           success: false,
         };
@@ -158,6 +162,7 @@ async function handleJoinMessage(
         log.warn("Unauthorized: Token verification failed");
         return {
           code: 1002,
+          error: "The game server did not recognize your session token",
           reason: "Unauthorized",
           success: false,
         };
@@ -166,6 +171,7 @@ async function handleJoinMessage(
       flares = result.player.flares;
 
       if (allowedFlares !== undefined) {
+        // Login is required
         const allowed =
           allowedFlares.length === 0 ||
           allowedFlares.some((f) => flares?.includes(f));
@@ -175,6 +181,7 @@ async function handleJoinMessage(
           );
           return {
             code: 1002,
+            error: "You are forbidden from joining this game",
             reason: "Forbidden",
             success: false,
           };
@@ -192,6 +199,7 @@ async function handleJoinMessage(
           log.warn(`Flag ${allowed}: ${clientMsg.flag}`);
           return {
             code: 1002,
+            error: `The flag you have selected is ${allowed}.`,
             reason: `Flag ${allowed}`,
             success: false,
           };
@@ -208,6 +216,7 @@ async function handleJoinMessage(
         log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
         return {
           code: 1002,
+          error: `The pattern you have selected is ${allowed}.`,
           reason: `Pattern ${allowed}`,
           success: false,
         };
@@ -234,6 +243,7 @@ async function handleJoinMessage(
       log.warn(`game ${clientMsg.gameID} not found on worker ${workerId}`);
       return {
         code: 1002,
+        error: "The game was not found.",
         reason: "Not found",
         success: false,
       };
