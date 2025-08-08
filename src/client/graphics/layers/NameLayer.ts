@@ -14,7 +14,7 @@ import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
+import { AllPlayers, Cell, isNukeType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
@@ -561,7 +561,7 @@ export class NameLayer implements Layer {
       const isSendingNuke = render.player.id() === unit.owner().id();
       const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
       return (
-        nukeTypes.includes(unit.type()) &&
+        isNukeType(unit.type()) &&
         isSendingNuke &&
         notMyPlayer &&
         unit.isActive()

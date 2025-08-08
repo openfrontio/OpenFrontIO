@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import { NukeType } from "../StatsSchemas";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -266,6 +267,10 @@ export const nukeTypes = [
   UnitType.MIRVWarhead,
   UnitType.MIRV,
 ] as const satisfies UnitType[];
+
+export function isNukeType(type: UnitType): type is NukeType {
+  return (nukeTypes as readonly UnitType[]).includes(type);
+}
 
 export enum Relation {
   Hostile = 0,
