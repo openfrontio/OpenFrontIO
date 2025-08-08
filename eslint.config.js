@@ -49,6 +49,7 @@ export default [
     rules: {
       // Enable rules
       "@typescript-eslint/prefer-nullish-coalescing": "error",
+      curly: ["error", "multi-line"],
       eqeqeq: "error",
       "sort-keys": "error",
     },

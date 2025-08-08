@@ -417,8 +417,9 @@ export class RadialMenu implements Layer {
         (this.currentLevel > 0 &&
           level === 0 &&
           d.data.id === this.selectedItemId)
-      )
+      ) {
         return;
+      }
       path.attr("filter", null);
       path.attr("stroke-width", "2");
       const color = disabled
@@ -437,15 +438,17 @@ export class RadialMenu implements Layer {
         this.params === null ||
         d.data.disabled(this.params) ||
         this.navigationInProgress
-      )
+      ) {
         return;
+      }
 
       if (
         this.currentLevel > 0 &&
         level === 0 &&
         d.data.id !== this.selectedItemId
-      )
+      ) {
         return;
+      }
 
       const subMenu = d.data.subMenu?.(this.params);
       if (subMenu && subMenu.length > 0) {

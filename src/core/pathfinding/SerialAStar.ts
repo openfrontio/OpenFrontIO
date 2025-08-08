@@ -119,8 +119,9 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       if (
         neighbor !== (isForward ? this.dst : this.closestSource) &&
         !this.graph.isTraversable(current, neighbor)
-      )
+      ) {
         continue;
+      }
 
       const gScore = isForward ? this.fwdGScore : this.bwdGScore;
       const openSet = isForward ? this.fwdOpenSet : this.bwdOpenSet;

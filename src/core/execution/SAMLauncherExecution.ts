@@ -112,13 +112,15 @@ class SAMTargetingSystem {
         if (
           a.unit.type() === UnitType.HydrogenBomb &&
           b.unit.type() !== UnitType.HydrogenBomb
-        )
+        ) {
           return -1;
+        }
         if (
           a.unit.type() !== UnitType.HydrogenBomb &&
           b.unit.type() === UnitType.HydrogenBomb
-        )
+        ) {
           return 1;
+        }
 
         return 0;
       })[0] ?? null

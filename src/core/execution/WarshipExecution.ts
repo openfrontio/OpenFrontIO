@@ -124,25 +124,29 @@ export class WarshipExecution implements Execution {
       if (
         unitA.type() === UnitType.TransportShip &&
         unitB.type() !== UnitType.TransportShip
-      )
+      ) {
         return -1;
+      }
       if (
         unitA.type() !== UnitType.TransportShip &&
         unitB.type() === UnitType.TransportShip
-      )
+      ) {
         return 1;
+      }
 
       // Then prioritize Warships.
       if (
         unitA.type() === UnitType.Warship &&
         unitB.type() !== UnitType.Warship
-      )
+      ) {
         return -1;
+      }
       if (
         unitA.type() !== UnitType.Warship &&
         unitB.type() === UnitType.Warship
-      )
+      ) {
         return 1;
+      }
 
       // If both are the same type, sort by distance (lower `distSquared` means closer)
       return distA - distB;

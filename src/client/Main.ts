@@ -212,8 +212,9 @@ class Client {
       "territory-patterns-input-preview-button",
     );
     territoryModal instanceof TerritoryPatternsModal;
-    if (patternButton === null)
+    if (patternButton === null) {
       throw new Error("territory-patterns-input-preview-button");
+    }
     territoryModal.previewButton = patternButton;
     territoryModal.updatePreview();
     territoryModal.resizeObserver = new ResizeObserver((entries) => {
@@ -371,8 +372,9 @@ class Client {
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
-    if (joinPrivateLobbyButton === null)
+    if (joinPrivateLobbyButton === null) {
       throw new Error("Missing join-private-lobby-button");
+    }
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         this.joinModal.open();

@@ -214,23 +214,27 @@ export class InputHandler {
       if (
         this.activeKeys.has(this.keybinds.moveUp) ||
         this.activeKeys.has("ArrowUp")
-      )
+      ) {
         deltaY += this.PAN_SPEED;
+      }
       if (
         this.activeKeys.has(this.keybinds.moveDown) ||
         this.activeKeys.has("ArrowDown")
-      )
+      ) {
         deltaY -= this.PAN_SPEED;
+      }
       if (
         this.activeKeys.has(this.keybinds.moveLeft) ||
         this.activeKeys.has("ArrowLeft")
-      )
+      ) {
         deltaX += this.PAN_SPEED;
+      }
       if (
         this.activeKeys.has(this.keybinds.moveRight) ||
         this.activeKeys.has("ArrowRight")
-      )
+      ) {
         deltaX -= this.PAN_SPEED;
+      }
 
       if (deltaX || deltaY) {
         this.eventBus.emit(new DragEvent(deltaX, deltaY));
