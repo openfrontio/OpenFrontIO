@@ -11,11 +11,13 @@ const log = logger.child({ component: "Archive" });
 // R2 client configuration
 const r2 = new S3({
   region: "auto", // R2 ignores region, but it's required by the SDK
+  /* eslint-disable sort-keys */
   endpoint: config.r2Endpoint(),
   credentials: {
     accessKeyId: config.r2AccessKey(),
     secretAccessKey: config.r2SecretKey(),
   },
+  /* eslint-disable sort-keys */
 });
 
 const bucket = config.r2Bucket();

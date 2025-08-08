@@ -373,6 +373,7 @@ export class DefaultConfig implements Config {
     return 1_000_000;
   }
 
+  /* eslint-disable sort-keys */
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
       case UnitType.TransportShip:
@@ -494,6 +495,7 @@ export class DefaultConfig implements Config {
         assertNever(type);
     }
   }
+  /* eslint-enable sort-keys */
 
   private costWrapper(
     type: UnitType,
