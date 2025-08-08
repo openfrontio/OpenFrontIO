@@ -328,6 +328,13 @@ export class GameImpl implements Game {
   }
 
   executeNextTick(): GameUpdates {
+    console.log(`number of trade ships: ${this.unitCount(UnitType.TradeShip)}`);
+    const myPlayer = this.players().find((p) => p.type() === PlayerType.Human);
+    if (myPlayer) {
+      console.log(
+        `my player: ${myPlayer.name()} has ${myPlayer.unitCount(UnitType.TradeShip)} trade ships`,
+      );
+    }
     this.updates = createGameUpdatesMap();
     this.execs.forEach((e) => {
       if (
