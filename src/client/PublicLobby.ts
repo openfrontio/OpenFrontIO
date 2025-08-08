@@ -1,18 +1,18 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { consolex } from "../core/Consolex";
-import { GameMode } from "../core/game/Game";
+import { GameMapType, GameMode } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
-import { getMapsImage } from "./utilities/Maps";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
   @state() public isLobbyHighlighted: boolean = false;
   @state() private isButtonDebounced: boolean = false;
+  @state() private mapImages: Map<GameID, string> = new Map();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
@@ -49,9 +49,26 @@ export class PublicLobby extends LitElement {
           const msUntilStart = l.msUntilStart ?? 0;
           this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
         }
+
+        // Load map image if not already loaded
+        if (l.gameConfig && !this.mapImages.has(l.gameID)) {
+          this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+        }
       });
     } catch (error) {
-      consolex.error("Error fetching lobbies:", error);
+      console.error("Error fetching lobbies:", error);
+    }
+  }
+
+  private async loadMapImage(gameID: GameID, gameMap: string) {
+    try {
+      // Convert string to GameMapType enum value
+      const mapType = gameMap as GameMapType;
+      const data = terrainMapFileLoader.getMapData(mapType);
+      this.mapImages.set(gameID, await data.webpPath());
+      this.requestUpdate();
+    } catch (error) {
+      console.error("Failed to load map image:", error);
     }
   }
 
@@ -63,7 +80,7 @@ export class PublicLobby extends LitElement {
       const data = await response.json();
       return data.lobbies;
     } catch (error) {
-      consolex.error("Error fetching lobbies:", error);
+      console.error("Error fetching lobbies:", error);
       throw error;
     }
   }
@@ -93,54 +110,67 @@ export class PublicLobby extends LitElement {
 
     const teamCount =
       lobby.gameConfig.gameMode === GameMode.Team
-        ? lobby.gameConfig.playerTeams || 0
+        ? (lobby.gameConfig.playerTeams ?? 0)
         : null;
+
+    const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="w-full mx-auto p-4 md:p-6 ${this.isLobbyHighlighted
+        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
+          .isLobbyHighlighted
           ? "bg-gradient-to-r from-green-600 to-green-500"
           : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
       >
-        <div class="text-lg md:text-2xl font-semibold mb-2">
-          ${translateText("public_lobby.join")}
-        </div>
-        <div class="flex">
-          <img
-            src="${getMapsImage(lobby.gameConfig.gameMap)}"
-            alt="${lobby.gameConfig.gameMap}"
-            class="w-1/3 md:w-1/5 md:h-[80px]"
-            style="border: 1px solid rgba(255, 255, 255, 0.5)"
-          />
-          <div
-            class="w-full flex flex-col md:flex-row items-center justify-center md:justify-evenly"
-          >
-            <div class="flex flex-col items-center">
-              <div class="text-md font-medium text-blue-100 mb-4">
-                <!-- ${lobby.gameConfig.gameMap} -->
-                ${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
-                )}
-              </div>
-              <div class="text-md font-medium text-blue-100">
+        ${mapImageSrc
+          ? html`<img
+              src="${mapImageSrc}"
+              alt="${lobby.gameConfig.gameMap}"
+              class="place-self-start col-span-full row-span-full h-full -z-10"
+              style="mask-image: linear-gradient(to left, transparent, #fff)"
+            />`
+          : html`<div
+              class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
+            ></div>`}
+        <div
+          class="flex flex-col justify-between h-full col-span-full row-span-full p-4 md:p-6 text-right z-0"
+        >
+          <div>
+            <div class="text-lg md:text-2xl font-semibold">
+              ${translateText("public_lobby.join")}
+            </div>
+            <div class="text-md font-medium text-blue-100">
+              <span
+                class="text-sm ${this.isLobbyHighlighted
+                  ? "text-green-600"
+                  : "text-blue-600"} bg-white rounded-sm px-1"
+              >
                 ${lobby.gameConfig.gameMode === GameMode.Team
-                  ? translateText("public_lobby.teams", { num: teamCount ?? 0 })
-                  : translateText("game_mode.ffa")}
-              </div>
+                  ? typeof teamCount === "string"
+                    ? translateText(`public_lobby.teams_${teamCount}`)
+                    : translateText("public_lobby.teams", {
+                        num: teamCount ?? 0,
+                      })
+                  : translateText("game_mode.ffa")}</span
+              >
+              <span
+                >${translateText(
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
+                )}</span
+              >
             </div>
-            <div class="flex flex-col items-center">
-              <div class="text-md font-medium text-blue-100 mb-2">
-                ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
-              </div>
-              <div class="text-md font-medium text-blue-100">
-                ${timeDisplay}
-              </div>
+          </div>
+
+          <div>
+            <div class="text-md font-medium text-blue-100">
+              ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
             </div>
+            <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
           </div>
         </div>
       </button>

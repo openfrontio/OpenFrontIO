@@ -1,4 +1,6 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
-* @openfrontio/core-contributor
+* @openfrontio/review-approver
 resources/lang @openfrontio/translation-approver
-resources/lang/en.json
+resources/lang/en.json @openfrontio/review-approver
+src/client @openfrontio/frontend-approver
+src/server @openfrontio/backend-approver

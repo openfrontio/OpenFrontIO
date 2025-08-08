@@ -9,7 +9,6 @@ import {
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
 import { onlyImages } from "../../../core/Util";
 import { Layer } from "./Layer";
 
@@ -24,13 +23,8 @@ interface ChatEvent {
 export class ChatDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
-  public clientID: ClientID;
 
   private active: boolean = false;
-
-  private updateMap = new Map([
-    [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
-  ]);
 
   @state() private _hidden: boolean = false;
   @state() private newEvents: number = 0;
@@ -61,7 +55,7 @@ export class ChatDisplay extends LitElement implements Layer {
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
     if (event.messageType !== MessageType.CHAT) return;
-    const myPlayer = this.game.playerByClientID(this.clientID);
+    const myPlayer = this.game.myPlayer();
     if (
       event.playerID !== null &&
       (!myPlayer || myPlayer.smallID() !== event.playerID)
@@ -82,7 +76,7 @@ export class ChatDisplay extends LitElement implements Layer {
   tick() {
     // this.active = true;
     const updates = this.game.updatesSinceLastTick();
-    if (updates === null) throw new Error("null updates");
+    if (updates === null) return;
     const messages = updates[GameUpdateType.DisplayEvent] as
       | DisplayMessageUpdate[]
       | undefined;
@@ -90,7 +84,7 @@ export class ChatDisplay extends LitElement implements Layer {
     if (messages) {
       for (const msg of messages) {
         if (msg.messageType === MessageType.CHAT) {
-          const myPlayer = this.game.playerByClientID(this.clientID);
+          const myPlayer = this.game.myPlayer();
           if (
             msg.playerID !== null &&
             (!myPlayer || myPlayer.smallID() !== msg.playerID)

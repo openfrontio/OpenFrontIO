@@ -6,6 +6,7 @@ export const RefreshResponseSchema = z.object({
 });
 export type RefreshResponse = z.infer<typeof RefreshResponseSchema>;
 
+/* eslint-disable sort-keys */
 export const TokenPayloadSchema = z.object({
   jti: z.string(),
   sub: z
@@ -28,21 +29,22 @@ export const TokenPayloadSchema = z.object({
   iss: z.string(),
   aud: z.string(),
   exp: z.number(),
-  rol: z
-    .string()
-    .optional()
-    .transform((val) => (val ?? "").split(",")),
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 
 export const UserMeResponseSchema = z.object({
   user: z.object({
     id: z.string(),
-    avatar: z.string(),
+    avatar: z.string().nullable(),
     username: z.string(),
-    global_name: z.string(),
+    global_name: z.string().nullable(),
     discriminator: z.string(),
-    locale: z.string(),
+    locale: z.string().optional(),
+  }),
+  player: z.object({
+    publicId: z.string(),
+    roles: z.string().array().optional(),
+    flares: z.string().array().optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;

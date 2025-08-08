@@ -51,6 +51,11 @@ export class UserSettingModal extends LitElement {
   private handleKeyDown = (e: KeyboardEvent) => {
     if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
 
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+
     const key = e.key.toLowerCase();
     const nextSequence = [...this.keySequence, key].slice(-4);
     this.keySequence = nextSequence;
@@ -90,6 +95,14 @@ export class UserSettingModal extends LitElement {
       document.documentElement.classList.remove("dark");
     }
 
+    this.dispatchEvent(
+      new CustomEvent("dark-mode-changed", {
+        detail: { darkMode: enabled },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
@@ -102,6 +115,33 @@ export class UserSettingModal extends LitElement {
     console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
   }
 
+  private toggleAlertFrame(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.alertFrame", enabled);
+
+    console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.specialEffects", enabled);
+
+    console.log("💥 Special effects:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleStructureSprites(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.structureSprites", enabled);
+
+    console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
+  }
+
   private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -109,6 +149,14 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.anonymousNames", enabled);
 
     console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleLobbyIdVisibility(e: CustomEvent<{ checked: boolean }>) {
+    const hideIds = e.detail?.checked;
+    if (typeof hideIds !== "boolean") return;
+
+    this.userSettings.set("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
+    console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
   }
 
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
@@ -139,6 +187,22 @@ export class UserSettingModal extends LitElement {
     } else {
       console.warn("Slider event missing detail.value", e);
     }
+  }
+
+  private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.territoryPatterns", enabled);
+
+    console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
+  }
+
+  private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
   private handleKeybindChange(
@@ -226,6 +290,33 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleEmojis}
       ></setting-toggle>
 
+      <!-- 🚨 Alert frame -->
+      <setting-toggle
+        label="${translateText("user_setting.alert_frame_label")}"
+        description="${translateText("user_setting.alert_frame_desc")}"
+        id="alert-frame-toggle"
+        .checked=${this.userSettings.alertFrame()}
+        @change=${this.toggleAlertFrame}
+      ></setting-toggle>
+
+      <!-- 💥 Special effects -->
+      <setting-toggle
+        label="${translateText("user_setting.special_effects_label")}"
+        description="${translateText("user_setting.special_effects_desc")}"
+        id="special-effect-toggle"
+        .checked=${this.userSettings.fxLayer()}
+        @change=${this.toggleFxLayer}
+      ></setting-toggle>
+
+      <!-- 🏠 Structure Sprites -->
+      <setting-toggle
+        label="${translateText("user_setting.structure_sprites_label")}"
+        description="${translateText("user_setting.structure_sprites_desc")}"
+        id="structure_sprites-toggle"
+        .checked=${this.userSettings.structureSprites()}
+        @change=${this.toggleStructureSprites}
+      ></setting-toggle>
+
       <!-- 🖱️ Left Click Menu -->
       <setting-toggle
         label="${translateText("user_setting.left_click_label")}"
@@ -244,6 +335,33 @@ export class UserSettingModal extends LitElement {
         @change=${this.toggleAnonymousNames}
       ></setting-toggle>
 
+      <!-- 👁️ Hidden Lobby IDs -->
+      <setting-toggle
+        label="${translateText("user_setting.lobby_id_visibility_label")}"
+        description="${translateText("user_setting.lobby_id_visibility_desc")}"
+        id="lobby-id-visibility-toggle"
+        .checked=${!this.userSettings.get("settings.lobbyIdVisibility", true)}
+        @change=${this.toggleLobbyIdVisibility}
+      ></setting-toggle>
+
+      <!-- 🏳️ Territory Patterns -->
+      <setting-toggle
+        label="${translateText("user_setting.territory_patterns_label")}"
+        description="${translateText("user_setting.territory_patterns_desc")}"
+        id="territory-patterns-toggle"
+        .checked=${this.userSettings.territoryPatterns()}
+        @change=${this.toggleTerritoryPatterns}
+      ></setting-toggle>
+
+      <!-- 📱 Performance Overlay -->
+      <setting-toggle
+        label="${translateText("user_setting.performance_overlay_label")}"
+        description="${translateText("user_setting.performance_overlay_desc")}"
+        id="performance-overlay-toggle"
+        .checked=${this.userSettings.performanceOverlay()}
+        @change=${this.togglePerformanceOverlay}
+      ></setting-toggle>
+
       <!-- ⚔️ Attack Ratio -->
       <setting-slider
         label="${translateText("user_setting.attack_ratio_label")}"
@@ -253,17 +371,6 @@ export class UserSettingModal extends LitElement {
         .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
         100}
         @change=${this.sliderAttackRatio}
-      ></setting-slider>
-
-      <!-- 🪖🛠️ Troop Ratio -->
-      <setting-slider
-        label="${translateText("user_setting.troop_ratio_label")}"
-        description="${translateText("user_setting.troop_ratio_desc")}"
-        min="1"
-        max="100"
-        .value=${Number(localStorage.getItem("settings.troopRatio") ?? "0.95") *
-        100}
-        @change=${this.sliderTroopRatio}
       ></setting-slider>
 
       ${this.showEasterEggSettings
@@ -324,6 +431,50 @@ export class UserSettingModal extends LitElement {
         description=${translateText("user_setting.toggle_view_desc")}
         defaultKey="Space"
         .value=${this.keybinds["toggleView"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.attack_ratio_controls")}
+      </div>
+
+      <setting-keybind
+        action="attackRatioDown"
+        label=${translateText("user_setting.attack_ratio_down")}
+        description=${translateText("user_setting.attack_ratio_down_desc")}
+        defaultKey="Digit1"
+        .value=${this.keybinds["attackRatioDown"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="attackRatioUp"
+        label=${translateText("user_setting.attack_ratio_up")}
+        description=${translateText("user_setting.attack_ratio_up_desc")}
+        defaultKey="Digit2"
+        .value=${this.keybinds["attackRatioUp"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.attack_keybinds")}
+      </div>
+
+      <setting-keybind
+        action="boatAttack"
+        label=${translateText("user_setting.boat_attack")}
+        description=${translateText("user_setting.boat_attack_desc")}
+        defaultKey="KeyB"
+        .value=${this.keybinds["boatAttack"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="groundAttack"
+        label=${translateText("user_setting.ground_attack")}
+        description=${translateText("user_setting.ground_attack_desc")}
+        defaultKey="KeyG"
+        .value=${this.keybinds["groundAttack"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

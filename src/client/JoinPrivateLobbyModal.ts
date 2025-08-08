@@ -1,7 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { consolex } from "../core/Consolex";
 import { GameInfo, GameRecord } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
@@ -20,6 +19,23 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private players: string[] = [];
 
   private playersInterval: NodeJS.Timeout | null = null;
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   render() {
     return html`
@@ -119,12 +135,23 @@ export class JoinPrivateLobbyModal extends LitElement {
     );
   }
 
-  private setLobbyId(id: string) {
-    if (id.startsWith("http")) {
-      this.lobbyIdInput.value = id.split("join/")[1];
+  private extractLobbyIdFromUrl(input: string): string {
+    if (input.startsWith("http")) {
+      if (input.includes("#join=")) {
+        const params = new URLSearchParams(input.split("#")[1]);
+        return params.get("join") ?? input;
+      } else if (input.includes("join/")) {
+        return input.split("join/")[1];
+      } else {
+        return input;
+      }
     } else {
-      this.lobbyIdInput.value = id;
+      return input;
     }
+  }
+
+  private setLobbyId(id: string) {
+    this.lobbyIdInput.value = this.extractLobbyIdFromUrl(id);
   }
 
   private handleChange(e: Event) {
@@ -135,23 +162,15 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async pasteFromClipboard() {
     try {
       const clipText = await navigator.clipboard.readText();
-
-      let lobbyId: string;
-      if (clipText.startsWith("http")) {
-        lobbyId = clipText.split("join/")[1];
-      } else {
-        lobbyId = clipText;
-      }
-
-      this.lobbyIdInput.value = lobbyId;
+      this.setLobbyId(clipText);
     } catch (err) {
-      consolex.error("Failed to read clipboard contents: ", err);
+      console.error("Failed to read clipboard contents: ", err);
     }
   }
 
   private async joinLobby(): Promise<void> {
     const lobbyId = this.lobbyIdInput.value;
-    consolex.log(`Joining lobby with ID: ${lobbyId}`);
+    console.log(`Joining lobby with ID: ${lobbyId}`);
     this.message = `${translateText("private_lobby.checking")}`;
 
     try {
@@ -165,7 +184,7 @@ export class JoinPrivateLobbyModal extends LitElement {
 
       this.message = `${translateText("private_lobby.not_found")}`;
     } catch (error) {
-      consolex.error("Error checking lobby existence:", error);
+      console.error("Error checking lobby existence:", error);
       this.message = `${translateText("private_lobby.error")}`;
     }
   }
@@ -218,7 +237,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       archiveData.success === false &&
       archiveData.error === "Version mismatch"
     ) {
-      consolex.warn(
+      console.warn(
         `Git commit hash mismatch for game ${lobbyId}`,
         archiveData.details,
       );
@@ -266,7 +285,7 @@ export class JoinPrivateLobbyModal extends LitElement {
         this.players = data.clients?.map((p) => p.username) ?? [];
       })
       .catch((error) => {
-        consolex.error("Error polling players:", error);
+        console.error("Error polling players:", error);
       });
   }
 }

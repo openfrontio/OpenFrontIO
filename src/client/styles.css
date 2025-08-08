@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url("./styles/core/flag-animation.css");
 @import url("./styles/core/variables.css");
 @import url("./styles/core/typography.css");
 @import url("./styles/layout/header.css");
@@ -34,6 +35,14 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 .start-game-button {
@@ -174,6 +183,13 @@ label.option-card:hover {
   color: #fff;
 }
 
+.visibility-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
 .copy-success {
   position: relative;
   color: green;
@@ -235,15 +251,15 @@ label.option-card:hover {
 }
 
 .player-tag {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 16px;
+  gap: 8px;
+  background: #2a2a2a;
+  color: #fff;
+  padding: 8px 12px;
+  margin: 4px;
   border-radius: 16px;
   font-size: 14px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 #bots-count,
@@ -309,11 +325,6 @@ label.option-card:hover {
   background: rgba(74, 158, 255, 0.1);
 }
 
-.radial-menu-image {
-  width: 211px;
-  height: 200px;
-}
-
 #helpModal table {
   border-collapse: collapse;
 }
@@ -333,6 +344,28 @@ label.option-card:hover {
   text-align: center;
 }
 
+#helpModal .default-image {
+  width: 12rem;
+  max-width: 12rem;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+#helpModal .info-panel-img {
+  width: 12rem;
+  max-width: 12rem;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+#helpModal .player-icon-img {
+  width: 14rem;
+  height: 14rem;
+  object-fit: contain;
+}
+
 #helpModal .icon {
   background-color: white;
   width: 32px;
@@ -341,6 +374,11 @@ label.option-card:hover {
 
 #helpModal .city-icon {
   mask: url("../../resources/images/CityIconWhite.svg") no-repeat center / cover;
+}
+
+#helpModal .factory-icon {
+  mask: url("../../resources/images/FactoryIconWhite.svg") no-repeat center /
+    cover;
 }
 
 #helpModal .defense-post-icon {
@@ -358,13 +396,13 @@ label.option-card:hover {
 }
 
 #helpModal .missile-silo-icon {
-  mask: url("../../resources/images/MissileSiloIconWhite.svg") no-repeat
-    center / cover;
+  mask: url("../../resources/non-commercial/svg/MissileSiloIconWhite.svg")
+    no-repeat center / cover;
 }
 
 #helpModal .sam-launcher-icon {
-  mask: url("../../resources/images/SamLauncherIconWhite.svg") no-repeat
-    center / cover;
+  mask: url("../../resources/non-commercial/svg/SamLauncherIconWhite.svg")
+    no-repeat center / cover;
 }
 
 #helpModal .atom-bomb-icon {
@@ -378,6 +416,10 @@ label.option-card:hover {
 
 #helpModal .mirv-icon {
   mask: url("../../resources/images/MIRVIcon.svg") no-repeat center / cover;
+}
+
+#helpModal .chat-icon {
+  mask: url("../../resources/images/ChatIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .target-icon {
@@ -404,6 +446,11 @@ label.option-card:hover {
     center / cover;
 }
 
+#helpModal .donate-gold-icon {
+  mask: url("../../resources/images/DonateGoldIconWhite.svg") no-repeat center /
+    cover;
+}
+
 #helpModal .build-icon {
   mask: url("../../resources/images/BuildIconWhite.svg") no-repeat center /
     cover;
@@ -427,6 +474,57 @@ label.option-card:hover {
     max-width: 100vw;
     width: 100%;
   }
+  #error-modal {
+    max-width: 575px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  #error-modal {
+    max-width: 350px;
+  }
+}
+
+#error-modal {
+  position: fixed;
+  padding: 20px;
+  background: white;
+  border: 1px solid black;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  width: 87%;
+  box-sizing: border-box;
+}
+
+#error-modal pre {
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 400px;
+}
+
+#error-modal button.copy-btn {
+  padding: 8px 16px;
+  margin-top: 10px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#error-modal button.close-btn {
+  color: white;
+  top: 0px;
+  right: 0px;
+  cursor: pointer;
+  background: red;
+  margin-right: 0px;
+  position: fixed;
+  width: 40px;
 }
 
 .start-game-button-container {
@@ -527,14 +625,61 @@ label.option-card:hover {
   padding: 0 16px;
 }
 
-.player-tag {
+/* News Button Notification */
+news-button .active button {
+  position: relative;
+  border-color: #2563eb !important;
+  border-width: 2px !important;
+  box-shadow:
+    0 0 0 1px rgba(37, 99, 235, 0.5),
+    0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+news-button .active button::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: #f59e0b;
+  border: 2px solid white;
+  border-radius: 50%;
+  animation: newsPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes newsPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.4);
+  }
+}
+
+.host-badge {
+  font-size: 11px;
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.remove-player-btn {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: #ff4444;
+  color: white;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 16px;
-  border-radius: 16px;
-  font-size: 14px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-left: 4px;
+}
+
+.remove-player-btn:hover {
+  background: #ff6666;
 }

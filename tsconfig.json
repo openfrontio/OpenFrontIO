@@ -21,7 +21,8 @@
     "noImplicitAny": true,
     "resolveJsonModule": true,
     "strictNullChecks": true,
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "strictPropertyInitialization": false
   },
   "include": [
     "src/**/*",

@@ -5,7 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
@@ -54,8 +54,8 @@ app.use(express.json());
 app.set("trust proxy", 3);
 app.use(
   rateLimit({
-    windowMs: 1000, // 1 second
     max: 20, // 20 requests per IP per second
+    windowMs: 1000, // 1 second
   }),
 );
 
@@ -146,8 +146,9 @@ app.get(
   "/api/env",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
     const envConfig = {
-      game_env: process.env.GAME_ENV || "prod",
+      game_env: process.env.GAME_ENV,
     };
+    if (!envConfig.game_env) return res.sendStatus(500);
     res.json(envConfig);
   }),
 );
@@ -170,14 +171,19 @@ app.post(
 
     const { gameID, clientID } = req.params;
 
+    if (!ID.safeParse(gameID).success || !ID.safeParse(clientID).success) {
+      res.sendStatus(400);
+      return;
+    }
+
     try {
       const response = await fetch(
         `http://localhost:${config.workerPort(gameID)}/api/kick_player/${gameID}/${clientID}`,
         {
-          method: "POST",
           headers: {
             [config.adminHeader()]: config.adminToken(),
           },
+          method: "POST",
         },
       );
 
@@ -196,7 +202,7 @@ app.post(
 async function fetchLobbies(): Promise<number> {
   const fetchPromises: Promise<GameInfo | null>[] = [];
 
-  for (const gameID of publicLobbyIDs) {
+  for (const gameID of new Set(publicLobbyIDs)) {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 5000); // 5 second timeout
     const port = config.workerPort(gameID);
@@ -211,6 +217,7 @@ async function fetchLobbies(): Promise<number> {
       .catch((error) => {
         log.error(`Error fetching game ${gameID}:`, error);
         // Return null or a placeholder if fetch fails
+        publicLobbyIDs.delete(gameID);
         return null;
       });
 
@@ -225,10 +232,10 @@ async function fetchLobbies(): Promise<number> {
     .filter((result) => result !== null)
     .map((gi: GameInfo) => {
       return {
-        gameID: gi.gameID,
-        numClients: gi?.clients?.length ?? 0,
         gameConfig: gi.gameConfig,
+        gameID: gi.gameID,
         msUntilStart: (gi.msUntilStart ?? Date.now()) - Date.now(),
+        numClients: gi?.clients?.length ?? 0,
       } as GameInfo;
     });
 
@@ -276,14 +283,12 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     const response = await fetch(
       `http://localhost:${config.workerPort(gameID)}/api/create_game/${gameID}`,
       {
-        method: "POST",
+        body: JSON.stringify(playlist.gameConfig()),
         headers: {
           "Content-Type": "application/json",
           [config.adminHeader()]: config.adminToken(),
         },
-        body: JSON.stringify({
-          gameConfig: playlist.gameConfig(),
-        }),
+        method: "POST",
       },
     );
 

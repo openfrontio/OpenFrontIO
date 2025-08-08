@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
@@ -7,13 +7,14 @@ import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
+import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 const button = ({
   classes = "",
   onClick = () => {},
   title = "",
-  children,
+  children = "",
 }) => html`
   <button
     class="flex items-center justify-center p-1
@@ -74,7 +75,9 @@ export class OptionsMenu extends LitElement implements Layer {
   private onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm("Are you sure you want to exit the game?");
+      const isConfirmed = confirm(
+        translateText("help_modal.exit_confirmation"),
+      );
       if (!isConfirmed) return;
     }
     // redirect to the home page
@@ -100,6 +103,16 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleAlertFrameButtonClick() {
+    this.userSettings.toggleAlertFrame();
+    this.requestUpdate();
+  }
+
+  private onToggleSpecialEffectsButtonClick() {
+    this.userSettings.toggleFxLayer();
+    this.requestUpdate();
+  }
+
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.requestUpdate();
@@ -117,6 +130,16 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
+  }
+
+  private onToggleTerritoryPatterns() {
+    this.userSettings.toggleTerritoryPatterns();
+    this.requestUpdate();
+  }
+
+  private onTogglePerformanceOverlayButtonClick() {
+    this.userSettings.togglePerformanceOverlay();
+    this.requestUpdate();
   }
 
   init() {
@@ -149,7 +172,7 @@ export class OptionsMenu extends LitElement implements Layer {
     return html`
       <div
         class="top-0 lg:top-4 right-0 lg:right-4 z-50 pointer-events-auto"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
           class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md"
@@ -162,7 +185,7 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center
+              class="w-[55px] h-8 lg:w-24 lg:h-10 flex items-center justify-center
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
@@ -198,6 +221,22 @@ export class OptionsMenu extends LitElement implements Layer {
             children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
           })}
           ${button({
+            onClick: this.onToggleAlertFrameButtonClick,
+            title: "Toggle Alert frame",
+            children: "🚨: " + (this.userSettings.alertFrame() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleSpecialEffectsButtonClick,
+            title: "Toggle Special effects",
+            children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleTerritoryPatterns,
+            title: "Territory Patterns",
+            children:
+              "🏳️: " + (this.userSettings.territoryPatterns() ? "On" : "Off"),
+          })}
+          ${button({
             onClick: this.onToggleDarkModeButtonClick,
             title: "Dark Mode",
             children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
@@ -216,6 +255,12 @@ export class OptionsMenu extends LitElement implements Layer {
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+          })}
+          ${button({
+            onClick: this.onTogglePerformanceOverlayButtonClick,
+            title: "Performance Overlay",
+            children:
+              "🚀: " + (this.userSettings.performanceOverlay() ? "On" : "Off"),
           })}
           <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,

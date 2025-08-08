@@ -1,10 +1,8 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
   Player,
-  PlayerID,
   TerraNullius,
   Unit,
   UnitType,
@@ -16,8 +14,6 @@ import { simpleHash } from "../Util";
 import { NukeExecution } from "./NukeExecution";
 
 export class MirvExecution implements Execution {
-  private player: Player;
-
   private active = true;
 
   private mg: Game;
@@ -38,38 +34,37 @@ export class MirvExecution implements Execution {
   private speed: number = -1;
 
   constructor(
-    private senderID: PlayerID,
+    private player: Player,
     private dst: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.senderID)) {
-      console.warn(`MIRVExecution: player ${this.senderID} not found`);
-      this.active = false;
-      return;
-    }
-
-    this.random = new PseudoRandom(mg.ticks() + simpleHash(this.senderID));
+    this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
     this.pathFinder = new ParabolaPathFinder(mg);
-    this.player = mg.player(this.senderID);
     this.targetPlayer = this.mg.owner(this.dst);
     this.speed = this.mg.config().defaultNukeSpeed();
 
-    this.mg
-      .stats()
-      .increaseNukeCount(
-        this.player.id(),
-        this.targetPlayer.id(),
-        UnitType.MIRV,
-      );
+    // Record stats
+    this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
+
+    // Betrayal on launch
+    if (this.targetPlayer.isPlayer()) {
+      const alliance = this.player.allianceWith(this.targetPlayer);
+      if (alliance !== null) {
+        this.player.breakAlliance(alliance);
+      }
+      if (this.targetPlayer !== this.player) {
+        this.targetPlayer.updateRelation(this.player, -100);
+      }
+    }
   }
 
   tick(ticks: number): void {
     if (this.nuke === null) {
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {
-        consolex.warn(`cannot build MIRV`);
+        console.warn(`cannot build MIRV`);
         this.active = false;
         return;
       }
@@ -83,8 +78,9 @@ export class MirvExecution implements Execution {
 
       this.mg.displayIncomingUnit(
         this.nuke.id(),
+        // TODO TranslateText
         `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
-        MessageType.ERROR,
+        MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
       );
     }
@@ -93,6 +89,8 @@ export class MirvExecution implements Execution {
     if (result === true) {
       this.separate();
       this.active = false;
+      // Record stats
+      this.mg.stats().bombLand(this.player, this.targetPlayer, UnitType.MIRV);
       return;
     } else {
       this.nuke.move(result);
@@ -122,7 +120,7 @@ export class MirvExecution implements Execution {
       this.mg.addExecution(
         new NukeExecution(
           UnitType.MIRVWarhead,
-          this.senderID,
+          this.player,
           dst,
           this.nuke.tile(),
           15 + Math.floor((i / this.warheadCount) * 5),
@@ -130,15 +128,6 @@ export class MirvExecution implements Execution {
           this.random.nextInt(0, 15),
         ),
       );
-    }
-    if (this.targetPlayer.isPlayer()) {
-      const alliance = this.player.allianceWith(this.targetPlayer);
-      if (alliance !== null) {
-        this.player.breakAlliance(alliance);
-      }
-      if (this.targetPlayer !== this.player) {
-        this.targetPlayer.updateRelation(this.player, -100);
-      }
     }
     this.nuke.delete(false);
   }
@@ -169,15 +158,22 @@ export class MirvExecution implements Execution {
       if (this.mg.owner(tile) !== this.targetPlayer) {
         continue;
       }
-      for (const t of taken) {
-        if (this.mg.manhattanDist(tile, t) < 25) {
-          continue;
-        }
+      if (this.proximityCheck(tile, taken)) {
+        continue;
       }
       return tile;
     }
     console.log("couldn't find place, giving up");
     return null;
+  }
+
+  private proximityCheck(tile: TileRef, taken: TileRef[]): boolean {
+    for (const t of taken) {
+      if (this.mg.manhattanDist(tile, t) < 25) {
+        return true;
+      }
+    }
+    return false;
   }
 
   owner(): Player {
