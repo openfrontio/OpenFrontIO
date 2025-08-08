@@ -215,28 +215,40 @@ describe("Stats", () => {
     stats.emojiSend(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        emojis: [1n, 0n, 0n],
+        actions: {
+          emoji: [1n, 0n, 0n],
+        },
       },
       client2: {
-        emojis: [0n, 1n, 0n],
+        actions: {
+          emoji: [0n, 1n, 0n],
+        },
       },
     });
     stats.emojiSend(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        emojis: [2n, 0n, 0n],
+        actions: {
+          emoji: [2n, 0n, 0n],
+        },
       },
       client2: {
-        emojis: [0n, 2n, 0n],
+        actions: {
+          emoji: [0n, 2n, 0n],
+        },
       },
     });
     stats.emojiSend(player2, player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        emojis: [2n, 1n, 0n],
+        actions: {
+          emoji: [2n, 1n, 0n],
+        },
       },
       client2: {
-        emojis: [1n, 2n, 0n],
+        actions: {
+          emoji: [1n, 2n, 0n],
+        },
       },
     });
   });
@@ -245,7 +257,9 @@ describe("Stats", () => {
     stats.emojiBroadcast(player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        emojis: [0n, 0n, 1n],
+        actions: {
+          emoji: [0n, 0n, 1n],
+        },
       },
     });
 
@@ -254,7 +268,9 @@ describe("Stats", () => {
     stats.emojiBroadcast(player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        emojis: [0n, 0n, 3n],
+        actions: {
+          emoji: [0n, 0n, 3n],
+        },
       },
     });
   });
@@ -263,28 +279,40 @@ describe("Stats", () => {
     stats.quickChatSend(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        quickchats: [1n, 0n],
+        actions: {
+          quickchat: [1n, 0n],
+        },
       },
       client2: {
-        quickchats: [0n, 1n],
+        actions: {
+          quickchat: [0n, 1n],
+        },
       },
     });
     stats.quickChatSend(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        quickchats: [2n, 0n],
+        actions: {
+          quickchat: [2n, 0n],
+        },
       },
       client2: {
-        quickchats: [0n, 2n],
+        actions: {
+          quickchat: [0n, 2n],
+        },
       },
     });
     stats.quickChatSend(player2, player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        quickchats: [2n, 1n],
+        actions: {
+          quickchat: [2n, 1n],
+        },
       },
       client2: {
-        quickchats: [1n, 2n],
+        actions: {
+          quickchat: [1n, 2n],
+        },
       },
     });
   });
@@ -293,28 +321,40 @@ describe("Stats", () => {
     stats.targetSend(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        targets: [1n, 0n],
+        actions: {
+          target: [1n, 0n],
+        },
       },
       client2: {
-        targets: [0n, 1n],
+        actions: {
+          target: [0n, 1n],
+        },
       },
     });
     stats.targetSend(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        targets: [2n, 0n],
+        actions: {
+          target: [2n, 0n],
+        },
       },
       client2: {
-        targets: [0n, 2n],
+        actions: {
+          target: [0n, 2n],
+        },
       },
     });
     stats.targetSend(player2, player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        targets: [2n, 1n],
+        actions: {
+          target: [2n, 1n],
+        },
       },
       client2: {
-        targets: [1n, 2n],
+        actions: {
+          target: [1n, 2n],
+        },
       },
     });
   });
@@ -347,30 +387,42 @@ describe("Stats", () => {
     stats.troopsSend(player1, player2, 100);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        troopsDonated: [100n, 0n],
+        actions: {
+          troops: [100n, 0n],
+        },
       },
       client2: {
-        troopsDonated: [0n, 100n],
+        actions: {
+          troops: [0n, 100n],
+        },
       },
     });
 
     stats.troopsSend(player1, player2, 50);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        troopsDonated: [150n, 0n],
+        actions: {
+          troops: [150n, 0n],
+        },
       },
       client2: {
-        troopsDonated: [0n, 150n],
+        actions: {
+          troops: [0n, 150n],
+        },
       },
     });
 
     stats.troopsSend(player2, player1, 25);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        troopsDonated: [150n, 25n],
+        actions: {
+          troops: [150n, 25n],
+        },
       },
       client2: {
-        troopsDonated: [25n, 150n],
+        actions: {
+          troops: [25n, 150n],
+        },
       },
     });
   });
@@ -379,30 +431,42 @@ describe("Stats", () => {
     stats.goldSend(player1, player2, 1000n);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        goldDonated: [1000n, 0n],
+        actions: {
+          gold: [1000n, 0n],
+        },
       },
       client2: {
-        goldDonated: [0n, 1000n],
+        actions: {
+          gold: [0n, 1000n],
+        },
       },
     });
 
     stats.goldSend(player1, player2, 500n);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        goldDonated: [1500n, 0n],
+        actions: {
+          gold: [1500n, 0n],
+        },
       },
       client2: {
-        goldDonated: [0n, 1500n],
+        actions: {
+          gold: [0n, 1500n],
+        },
       },
     });
 
     stats.goldSend(player2, player1, 250n);
     expect(stats.stats()).toStrictEqual({
       client1: {
-        goldDonated: [1500n, 250n],
+        actions: {
+          gold: [1500n, 250n],
+        },
       },
       client2: {
-        goldDonated: [250n, 1500n],
+        actions: {
+          gold: [250n, 1500n],
+        },
       },
     });
   });

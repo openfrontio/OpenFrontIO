@@ -1,5 +1,9 @@
 import { AllPlayersStats } from "../Schemas";
 import {
+  Action,
+  ACTION_INDEX_BROADCAST,
+  ACTION_INDEX_RECV,
+  ACTION_INDEX_SENT,
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_RECV,
   ATTACK_INDEX_SENT,
@@ -14,11 +18,6 @@ import {
   CONQUER_INDEX_BOT,
   CONQUER_INDEX_NATION,
   CONQUER_INDEX_PLAYER,
-  EMOJI_INDEX_BROADCAST,
-  EMOJI_INDEX_RECV,
-  EMOJI_INDEX_SENT,
-  GOLD_DONATED_INDEX_RECV,
-  GOLD_DONATED_INDEX_SENT,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
@@ -31,12 +30,6 @@ import {
   OTHER_INDEX_UPGRADE,
   OtherUnitType,
   PlayerStats,
-  QUICKCHAT_INDEX_RECV,
-  QUICKCHAT_INDEX_SENT,
-  TARGET_INDEX_RECV,
-  TARGET_INDEX_SENT,
-  TROOPS_INDEX_RECV,
-  TROOPS_INDEX_SENT,
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
@@ -147,28 +140,18 @@ export class StatsImpl implements Stats {
     p.units[type][index] += _bigint(value);
   }
 
-  private _addEmoji(player: Player, index: number) {
+  private _addAction(
+    player: Player,
+    action: Action,
+    index: number,
+    value: BigIntLike,
+  ) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
-    p.emojis ??= [0n, 0n, 0n];
-    while (p.emojis.length <= index) p.emojis.push(0n);
-    p.emojis[index] += 1n;
-  }
-
-  private _addQuickChat(player: Player, index: number) {
-    const p = this._makePlayerStats(player);
-    if (p === undefined) return;
-    p.quickchats ??= [0n, 0n];
-    while (p.quickchats.length <= index) p.quickchats.push(0n);
-    p.quickchats[index] += 1n;
-  }
-
-  private _addTarget(player: Player, index: number) {
-    const p = this._makePlayerStats(player);
-    if (p === undefined) return;
-    p.targets ??= [0n, 0n];
-    while (p.targets.length <= index) p.targets.push(0n);
-    p.targets[index] += 1n;
+    p.actions ??= {};
+    p.actions[action] ??= action === "emoji" ? [0n, 0n, 0n] : [0n, 0n];
+    while (p.actions[action].length <= index) p.actions[action].push(0n);
+    p.actions[action][index] += _bigint(value);
   }
 
   private _addConquer(player: Player, index: number) {
@@ -177,22 +160,6 @@ export class StatsImpl implements Stats {
     p.conquers ??= [0n, 0n, 0n];
     while (p.conquers.length <= index) p.conquers.push(0n);
     p.conquers[index] += 1n;
-  }
-
-  private _addTroops(player: Player, index: number, value: BigIntLike) {
-    const p = this._makePlayerStats(player);
-    if (p === undefined) return;
-    p.troopsDonated ??= [0n, 0n];
-    while (p.troopsDonated.length <= index) p.troopsDonated.push(0n);
-    p.troopsDonated[index] += _bigint(value);
-  }
-
-  private _addGoldDonated(player: Player, index: number, value: BigIntLike) {
-    const p = this._makePlayerStats(player);
-    if (p === undefined) return;
-    p.goldDonated ??= [0n, 0n];
-    while (p.goldDonated.length <= index) p.goldDonated.push(0n);
-    p.goldDonated[index] += _bigint(value);
   }
 
   attack(
@@ -310,22 +277,32 @@ export class StatsImpl implements Stats {
   }
 
   emojiSend(player: Player, target: Player): void {
-    this._addEmoji(player, EMOJI_INDEX_SENT);
-    this._addEmoji(target, EMOJI_INDEX_RECV);
+    this._addAction(player, "emoji", ACTION_INDEX_SENT, 1);
+    this._addAction(target, "emoji", ACTION_INDEX_RECV, 1);
   }
 
-  emojiBroadcast(player: Player) {
-    this._addEmoji(player, EMOJI_INDEX_BROADCAST);
+  emojiBroadcast(player: Player): void {
+    this._addAction(player, "emoji", ACTION_INDEX_BROADCAST, 1);
   }
 
   quickChatSend(player: Player, target: Player): void {
-    this._addQuickChat(player, QUICKCHAT_INDEX_SENT);
-    this._addQuickChat(target, QUICKCHAT_INDEX_RECV);
+    this._addAction(player, "quickchat", ACTION_INDEX_SENT, 1);
+    this._addAction(target, "quickchat", ACTION_INDEX_RECV, 1);
   }
 
   targetSend(player: Player, target: Player): void {
-    this._addTarget(player, TARGET_INDEX_SENT);
-    this._addTarget(target, TARGET_INDEX_RECV);
+    this._addAction(player, "target", ACTION_INDEX_SENT, 1);
+    this._addAction(target, "target", ACTION_INDEX_RECV, 1);
+  }
+
+  troopsSend(player: Player, target: Player, troops: BigIntLike): void {
+    this._addAction(player, "troops", ACTION_INDEX_SENT, troops);
+    this._addAction(target, "troops", ACTION_INDEX_RECV, troops);
+  }
+
+  goldSend(player: Player, target: Player, gold: BigIntLike): void {
+    this._addAction(player, "gold", ACTION_INDEX_SENT, gold);
+    this._addAction(target, "gold", ACTION_INDEX_RECV, gold);
   }
 
   recordConquer(player: Player, type: "bot" | "nation" | "player"): void {
@@ -340,15 +317,5 @@ export class StatsImpl implements Stats {
         this._addConquer(player, CONQUER_INDEX_PLAYER);
         break;
     }
-  }
-
-  troopsSend(player: Player, target: Player, troops: BigIntLike): void {
-    this._addTroops(player, TROOPS_INDEX_SENT, troops);
-    this._addTroops(target, TROOPS_INDEX_RECV, troops);
-  }
-
-  goldSend(player: Player, target: Player, gold: number | bigint): void {
-    this._addGoldDonated(player, GOLD_DONATED_INDEX_SENT, gold);
-    this._addGoldDonated(target, GOLD_DONATED_INDEX_RECV, gold);
   }
 }

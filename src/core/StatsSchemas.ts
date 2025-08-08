@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { UnitType } from "./game/Game";
 
+export const ActionSchema = z.union([
+  z.literal("emoji"),
+  z.literal("gold"),
+  z.literal("quickchat"),
+  z.literal("target"),
+  z.literal("troops"),
+]);
+export type Action = z.infer<typeof ActionSchema>;
+
 export const BombUnitSchema = z.union([
   z.literal("abomb"),
   z.literal("hbomb"),
@@ -59,6 +68,11 @@ export const unitTypeToOtherUnit = {
   [UnitType.Factory]: "fact",
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
+// Unified action indices
+export const ACTION_INDEX_SENT = 0;
+export const ACTION_INDEX_RECV = 1;
+export const ACTION_INDEX_BROADCAST = 2; // Currently only used by emojis
+
 // Attacks
 export const ATTACK_INDEX_SENT = 0; // Outgoing attack troops
 export const ATTACK_INDEX_RECV = 1; // Incmoing attack troops
@@ -75,6 +89,11 @@ export const BOMB_INDEX_LAUNCH = 0; // Bombs launched
 export const BOMB_INDEX_LAND = 1; // Bombs landed
 export const BOMB_INDEX_INTERCEPT = 2; // Bombs intercepted
 
+// Conquers
+export const CONQUER_INDEX_BOT = 0; // Bots conquered
+export const CONQUER_INDEX_NATION = 1; // Nations conquered
+export const CONQUER_INDEX_PLAYER = 2; // Players conquered
+
 // Gold
 export const GOLD_INDEX_WORK = 0; // Gold earned by workers
 export const GOLD_INDEX_WAR = 1; // Gold earned by conquering players
@@ -88,32 +107,6 @@ export const OTHER_INDEX_CAPTURE = 2; // Structures captured
 export const OTHER_INDEX_LOST = 3; // Structures/warships destroyed/captured by others
 export const OTHER_INDEX_UPGRADE = 4; // Structures upgraded
 
-// Emojis
-export const EMOJI_INDEX_SENT = 0; // Emojis sent 1 on 1
-export const EMOJI_INDEX_RECV = 1; // Emojis received 1 on 1
-export const EMOJI_INDEX_BROADCAST = 2; // Emojis broadcasted to all players
-
-// QuickChats
-export const QUICKCHAT_INDEX_SENT = 0; // QuickChats sent
-export const QUICKCHAT_INDEX_RECV = 1; // QuickChats received
-
-// Targets
-export const TARGET_INDEX_SENT = 0; // Targeting a player (outgoing)
-export const TARGET_INDEX_RECV = 1; // Targeting received (incoming)
-
-// Bots, Nations, Players conquered
-export const CONQUER_INDEX_BOT = 0; // Bots conquered
-export const CONQUER_INDEX_NATION = 1; // Nations conquered
-export const CONQUER_INDEX_PLAYER = 2; // Players conquered
-
-// Troops
-export const TROOPS_INDEX_SENT = 0; // Troops sent to other players
-export const TROOPS_INDEX_RECV = 1; // Troops received from other players
-
-// Gold Donations
-export const GOLD_DONATED_INDEX_SENT = 0; // Gold sent to other players
-export const GOLD_DONATED_INDEX_RECV = 1; // Gold received from other players
-
 const BigIntStringSchema = z.preprocess((val) => {
   if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
   if (typeof val === "bigint") return val;
@@ -125,18 +118,14 @@ export type AtLeastOneNumber = z.infer<typeof AtLeastOneNumberSchema>;
 
 export const PlayerStatsSchema = z
   .object({
+    actions: z.partialRecord(ActionSchema, AtLeastOneNumberSchema).optional(),
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
     boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
+    conquers: AtLeastOneNumberSchema.optional(),
     gold: AtLeastOneNumberSchema.optional(),
     units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
-    emojis: AtLeastOneNumberSchema.optional(),
-    quickchats: AtLeastOneNumberSchema.optional(),
-    targets: AtLeastOneNumberSchema.optional(),
-    conquers: AtLeastOneNumberSchema.optional(),
-    troopsDonated: AtLeastOneNumberSchema.optional(),
-    goldDonated: AtLeastOneNumberSchema.optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;
