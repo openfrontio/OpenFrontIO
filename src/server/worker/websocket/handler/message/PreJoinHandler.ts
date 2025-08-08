@@ -134,7 +134,7 @@ async function handleJoinMessage(
     if (result === false) {
       return {
         code: 1002,
-        description: "Unauthorized: Invalid token",
+        description: "Invalid token",
         reason: "Unauthorized",
         success: false,
       };
@@ -149,7 +149,7 @@ async function handleJoinMessage(
       if (allowedFlares !== undefined) {
         return {
           code: 1002,
-          description: "Unauthorized: Anonymous user attempted to join game",
+          description: "Anonymous user attempted to join game",
           reason: "Unauthorized",
           success: false,
         };
@@ -160,7 +160,7 @@ async function handleJoinMessage(
       if (result === false) {
         return {
           code: 1002,
-          description: "Unauthorized: Anonymous user attempted to join game",
+          description: "Anonymous user attempted to join game",
           reason: "Unauthorized",
           success: false,
         };
@@ -176,7 +176,7 @@ async function handleJoinMessage(
           return {
             code: 1002,
             description:
-              "Forbidden: player without an allowed flare attempted to join game",
+              "player without an allowed flare attempted to join game",
             reason: "Forbidden",
             success: false,
           };
