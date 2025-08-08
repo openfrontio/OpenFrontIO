@@ -441,13 +441,40 @@ export class NameLayer implements Layer {
     const existingAlliance = iconsDiv.querySelector('[data-icon="alliance"]');
     if (myPlayer !== null && myPlayer.isAlliedWith(render.player)) {
       if (!existingAlliance) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            this.allianceIconImage.src,
-            iconSize,
-            "alliance",
-          ),
-        );
+        const alliance = myPlayer
+          .alliances()
+          .find((a) => a.other === render.player.id());
+
+        // Check if alliance timer is enabled in settings
+        if (this.userSettings.allianceTimer()) {
+          iconsDiv.appendChild(
+            this.createAllianceIconWithTimer(
+              this.allianceIconImage.src,
+              iconSize,
+              "alliance",
+              alliance?.expiresAt,
+            ),
+          );
+        } else {
+          iconsDiv.appendChild(
+            this.createIconElement(
+              this.allianceIconImage.src,
+              iconSize,
+              "alliance",
+            ),
+          );
+        }
+      } else {
+        // Update timer if it exists and setting is enabled
+        if (this.userSettings.allianceTimer()) {
+          const alliance = myPlayer
+            .alliances()
+            .find((a) => a.other === render.player.id());
+          this.updateAllianceTimer(
+            existingAlliance as HTMLElement,
+            alliance?.expiresAt,
+          );
+        }
       }
     } else if (existingAlliance) {
       existingAlliance.remove();
@@ -631,5 +658,62 @@ export class NameLayer implements Layer {
       icon.style.transform = "translateY(-50%)";
     }
     return icon;
+  }
+
+  private createAllianceIconWithTimer(
+    src: string,
+    size: number,
+    id: string,
+    expiresAt?: number,
+  ): HTMLElement {
+    const container = document.createElement("div");
+    container.setAttribute("data-icon", id);
+    container.style.position = "relative";
+    container.style.width = `${size}px`;
+    container.style.height = `${size}px`;
+
+    const timer = document.createElement("div");
+    timer.setAttribute("data-timer", "alliance-timer");
+    timer.style.fontSize = `${Math.max(6, Math.floor(size * 0.25))}px`;
+    timer.style.color = "white";
+    timer.style.fontWeight = "bold";
+    timer.style.position = "absolute";
+    timer.style.top = "50%";
+    timer.style.left = "50%";
+    timer.style.transform = "translate(-50%, -50%)";
+    timer.style.zIndex = "10";
+    timer.style.textAlign = "center";
+    timer.style.whiteSpace = "nowrap";
+
+    container.appendChild(this.createIconElement(src, size, id));
+    container.appendChild(timer);
+
+    if (expiresAt) {
+      this.updateAllianceTimer(container, expiresAt);
+    }
+
+    return container;
+  }
+
+  private updateAllianceTimer(
+    container: HTMLElement,
+    expiresAt?: number,
+  ): void {
+    const timer = container.querySelector(
+      '[data-timer="alliance-timer"]',
+    ) as HTMLElement;
+    if (!timer || !expiresAt) return;
+
+    const remainingTicks = expiresAt - this.game.ticks();
+    if (remainingTicks <= 0) {
+      timer.textContent = "0:00";
+      return;
+    }
+
+    const remainingSeconds = Math.max(0, Math.floor(remainingTicks / 10));
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+
+    timer.textContent = `${minutes}:${seconds.toString().padStart(2, "0")}`;
   }
 }
