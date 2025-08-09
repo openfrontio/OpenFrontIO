@@ -6,6 +6,7 @@ export const RefreshResponseSchema = z.object({
 });
 export type RefreshResponse = z.infer<typeof RefreshResponseSchema>;
 
+/* eslint-disable sort-keys */
 export const TokenPayloadSchema = z.object({
   jti: z.string(),
   sub: z

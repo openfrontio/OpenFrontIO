@@ -50,6 +50,17 @@ export default [
       // Enable rules
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
+      "sort-keys": "error",
+    },
+  },
+  {
+    files: [
+      "**/*.config.{js,ts,jsx,tsx}",
+      "**/*.test.{js,ts,jsx,tsx}",
+      "src/client/**/*.{js,ts,jsx,tsx}",
+    ],
+    rules: {
+      "sort-keys": "off",
     },
   },
 ];

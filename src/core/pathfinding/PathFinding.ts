@@ -148,6 +148,7 @@ export class PathFinder {
     }
 
     if (this.game.manhattanDist(curr, dst) < dist) {
+      // eslint-disable-next-line sort-keys
       return { type: PathFindResultType.Completed, node: curr };
     }
 
@@ -164,6 +165,7 @@ export class PathFinder {
         if (tile === undefined) {
           throw new Error("missing tile");
         }
+        // eslint-disable-next-line sort-keys
         return { type: PathFindResultType.NextTile, node: tile };
       }
     }

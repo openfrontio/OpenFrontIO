@@ -48,8 +48,8 @@ export async function loadTerrainMap(
     await mapFiles.miniMapBin(),
   );
   const result = {
-    manifest: await mapFiles.manifest(),
     gameMap: gameMap,
+    manifest: await mapFiles.manifest(),
     miniGameMap: miniGameMap,
   };
   loadedMaps.set(map, result);

@@ -126,6 +126,7 @@ export class PlayerImpl implements Player {
     );
     const stats = this.mg.stats().getPlayerStats(this);
 
+    /* eslint-disable sort-keys */
     return {
       type: GameUpdateType.Player,
       clientID: this.clientID(),
@@ -176,6 +177,7 @@ export class PlayerImpl implements Player {
       hasSpawned: this.hasSpawned(),
       betrayals: stats?.betrayals,
     };
+    /* eslint-enable sort-keys */
   }
 
   smallID(): number {
@@ -508,6 +510,7 @@ export class PlayerImpl implements Player {
   }
 
   target(other: Player): void {
+    // eslint-disable-next-line sort-keys
     this.targets_.push({ tick: this.mg.ticks(), target: other });
     this.mg.target(this, other);
   }
@@ -533,10 +536,10 @@ export class PlayerImpl implements Player {
       throw Error(`Cannot send emoji to oneself: ${this}`);
     }
     const msg: EmojiMessage = {
-      message: emoji,
-      senderID: this.smallID(),
-      recipientID: recipient === AllPlayers ? recipient : recipient.smallID(),
       createdAt: this.mg.ticks(),
+      message: emoji,
+      recipientID: recipient === AllPlayers ? recipient : recipient.smallID(),
+      senderID: this.smallID(),
     };
     this.outgoingEmojis_.push(msg);
     this.mg.sendEmojiUpdate(msg);
@@ -716,11 +719,11 @@ export class PlayerImpl implements Player {
     this._gold += toAdd;
     if (tile) {
       this.mg.addUpdate({
-        type: GameUpdateType.BonusEvent,
+        gold: Number(toAdd),
         player: this.id(),
         tile,
-        gold: Number(toAdd),
         troops: 0,
+        type: GameUpdateType.BonusEvent,
       });
     }
   }
@@ -837,12 +840,12 @@ export class PlayerImpl implements Player {
         }
       }
       return {
-        type: u,
         canBuild: this.mg.inSpawnPhase()
           ? false
           : this.canBuild(u, tile, validTiles),
         canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
+        type: u,
       } as BuildableUnit;
     });
   }
@@ -1042,13 +1045,13 @@ export class PlayerImpl implements Player {
 
   public playerProfile(): PlayerProfile {
     const rel = {
+      alliances: this.alliances().map((a) => a.other(this).smallID()),
       relations: Object.fromEntries(
         this.allRelationsSorted().map(({ player, relation }) => [
           player.smallID(),
           relation,
         ]),
       ),
-      alliances: this.alliances().map((a) => a.other(this).smallID()),
     };
     return rel;
   }

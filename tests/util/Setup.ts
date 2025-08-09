@@ -57,12 +57,12 @@ export async function setup(
   // Configure the game
   const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {
+    bots: 0,
+    difficulty: Difficulty.Medium,
+    disableNPCs: false,
     gameMap: GameMapType.Asia,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
-    difficulty: Difficulty.Medium,
-    disableNPCs: false,
-    bots: 0,
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
