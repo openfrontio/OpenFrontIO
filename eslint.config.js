@@ -48,6 +48,10 @@ export default [
   {
     rules: {
       // Enable rules
+      "@typescript-eslint/consistent-type-assertions": [
+        "warn", // TODO: Raise this to error, https://github.com/openfrontio/OpenFrontIO/issues/1033
+        { assertionStyle: "never" },
+      ],
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
       "sort-keys": "error",
