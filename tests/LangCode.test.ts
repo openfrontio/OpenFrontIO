@@ -16,11 +16,9 @@ describe("LangCode Filename Check", () => {
     }
 
     const schema = z.object({
-      lang: z
-        .object({
-          lang_code: z.string(),
-        })
-        .optional(),
+      lang: z.object({
+        lang_code: z.string(),
+      }),
     });
 
     for (const file of files) {
