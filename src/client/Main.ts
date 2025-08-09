@@ -1,6 +1,6 @@
-import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
@@ -11,6 +11,7 @@ import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
+import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
@@ -24,6 +25,7 @@ import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
+import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -58,6 +60,12 @@ declare global {
       spaNewPage: (url: string) => void;
     };
   }
+
+  // Extend the global interfaces to include your custom events
+  interface DocumentEventMap {
+    "join-lobby": CustomEvent<JoinLobbyEvent>;
+    "kick-player": CustomEvent;
+  }
 }
 
 export interface JoinLobbyEvent {
@@ -72,6 +80,7 @@ export interface JoinLobbyEvent {
 
 class Client {
   private gameStop: (() => void) | null = null;
+  private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -155,14 +164,15 @@ class Client {
       }
     });
 
-    setFavicon();
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
+    document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
 
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
+
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
     singlePlayer.addEventListener("click", () => {
@@ -183,6 +193,16 @@ class Client {
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
       hlpModal.open();
+    });
+
+    const flagInputModal = document.querySelector(
+      "flag-input-modal",
+    ) as FlagInputModal;
+    flagInputModal instanceof FlagInputModal;
+    const flgInput = document.getElementById("flag-input_");
+    if (flgInput === null) throw new Error("Missing flag-input_");
+    flgInput.addEventListener("click", () => {
+      flagInputModal.open();
     });
 
     const territoryModal = document.querySelector(
@@ -383,14 +403,18 @@ class Client {
     window.addEventListener("popstate", onHashUpdate);
     window.addEventListener("hashchange", onHashUpdate);
 
-    function updateSliderProgress(slider) {
+    function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
-        ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+        ((Number(slider.value) - Number(slider.min)) /
+          (Number(slider.max) - Number(slider.min))) *
+        100;
       slider.style.setProperty("--progress", `${percent}%`);
     }
 
     document
-      .querySelectorAll("#bots-count, #private-lobby-bots-count")
+      .querySelectorAll<HTMLInputElement>(
+        "#bots-count, #private-lobby-bots-count",
+      )
       .forEach((slider) => {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
@@ -399,8 +423,25 @@ class Client {
 
   private handleHash() {
     const { hash } = window.location;
+
+    const alertAndStrip = (message: string) => {
+      alert(message);
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    };
+
     if (hash.startsWith("#")) {
       const params = new URLSearchParams(hash.slice(1));
+      if (params.get("purchase-completed") === "true") {
+        alertAndStrip("purchase succeeded");
+        return;
+      } else if (params.get("purchase-completed") === "false") {
+        alertAndStrip("purchase failed");
+        return;
+      }
       const lobbyId = params.get("join");
       if (lobbyId && ID.safeParse(lobbyId).success) {
         this.joinModal.open(lobbyId);
@@ -419,6 +460,7 @@ class Client {
     const config = await getServerConfigFromClient();
 
     this.gameStop = joinLobby(
+      this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
@@ -450,6 +492,7 @@ class Client {
           "territory-patterns-modal",
           "language-modal",
           "news-modal",
+          "flag-input-modal",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
@@ -504,20 +547,21 @@ class Client {
     this.gameStop = null;
     this.publicLobby.leaveLobby();
   }
+
+  private handleKickPlayer(event: CustomEvent) {
+    const { target } = event.detail;
+
+    // Forward to eventBus if available
+    if (this.eventBus) {
+      this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
 }
 
 // Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
-
-function setFavicon(): void {
-  const link = document.createElement("link");
-  link.type = "image/x-icon";
-  link.rel = "shortcut icon";
-  link.href = favicon;
-  document.head.appendChild(link);
-}
 
 // WARNING: DO NOT EXPOSE THIS ID
 function getPlayToken(): string {

@@ -216,6 +216,7 @@ export class RailNetworkImpl implements RailNetwork {
 
     const visited = new Set<TrainStation>();
     const queue: Array<{ station: TrainStation; distance: number }> = [
+      // eslint-disable-next-line sort-keys
       { station: start, distance: 0 },
     ];
 
@@ -229,6 +230,7 @@ export class RailNetworkImpl implements RailNetwork {
       for (const neighbor of station.neighbors()) {
         if (neighbor === dest) return distance + 1;
         if (!visited.has(neighbor)) {
+          // eslint-disable-next-line sort-keys
           queue.push({ station: neighbor, distance: distance + 1 });
         }
       }

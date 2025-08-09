@@ -18,6 +18,7 @@ export class RailroadExecution implements Execution {
     return this.active;
   }
 
+  /* eslint-disable sort-keys */
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     const tiles = this.railRoad.tiles;
@@ -48,6 +49,7 @@ export class RailroadExecution implements Execution {
           : RailType.VERTICAL,
     });
   }
+  /* eslint-enable sort-keys */
 
   private computeExtremityDirection(tile: TileRef, next: TileRef): RailType {
     const x = this.mg.x(tile);
@@ -143,9 +145,9 @@ export class RailroadExecution implements Execution {
     }
     if (updatedRailTiles) {
       this.mg.addUpdate({
-        type: GameUpdateType.RailroadEvent,
         isActive: true,
         railTiles: updatedRailTiles,
+        type: GameUpdateType.RailroadEvent,
       });
     }
   }

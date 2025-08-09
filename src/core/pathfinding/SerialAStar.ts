@@ -49,6 +49,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       this.fwdGScore.set(startPoint, 0);
       this.fwdOpenSet.add({
         tile: startPoint,
+        // eslint-disable-next-line sort-keys
         fScore: this.heuristic(startPoint, dst),
       });
     });
@@ -57,6 +58,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     this.bwdGScore.set(dst, 0);
     this.bwdOpenSet.add({
       tile: dst,
+      // eslint-disable-next-line sort-keys
       fScore: this.heuristic(dst, this.findClosestSource(dst)),
     });
   }
@@ -145,6 +147,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
         const fScore =
           totalG +
           this.heuristic(neighbor, isForward ? this.dst : this.closestSource);
+        // eslint-disable-next-line sort-keys
         openSet.add({ tile: neighbor, fScore: fScore });
       }
     }

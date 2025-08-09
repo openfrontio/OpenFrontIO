@@ -1,36 +1,45 @@
-import { z } from "zod";
-import cosmetics_json from "../../resources/cosmetics/cosmetics.json" with { type: "json" };
+import { z } from "zod/v4";
 import { RequiredPatternSchema } from "./Schemas";
+
+export const ProductSchema = z.object({
+  productId: z.string(),
+  /* eslint-disable sort-keys */
+  priceId: z.string(),
+  price: z.string(),
+  /* eslint-enable sort-keys */
+});
+
+const PatternSchema = z.object({
+  name: z.string(),
+  pattern: RequiredPatternSchema,
+  product: ProductSchema.nullable(),
+});
 
 // Schema for resources/cosmetics/cosmetics.json
 export const CosmeticsSchema = z.object({
-  role_groups: z.record(z.string(), z.string().array().min(1)),
-  patterns: z.record(
-    RequiredPatternSchema,
-    z.object({
-      name: z.string(),
-      role_group: z.string().optional(),
-    }),
-  ),
-  flag: z.object({
-    layers: z.record(
-      z.string(),
-      z.object({
-        name: z.string(),
-        role_group: z.string().optional(),
-        flares: z.array(z.string()).optional(),
-      }),
-    ),
-    color: z.record(
-      z.string(),
-      z.object({
-        color: z.string(),
-        name: z.string(),
-        role_group: z.string().optional(),
-        flares: z.array(z.string()).optional(),
-      }),
-    ),
-  }),
+  patterns: z.record(z.string(), PatternSchema),
+  /* eslint-disable sort-keys */
+  flag: z
+    .object({
+      layers: z.record(
+        z.string(),
+        z.object({
+          name: z.string(),
+          flares: z.array(z.string()).optional(),
+        }),
+      ),
+      color: z.record(
+        z.string(),
+        z.object({
+          color: z.string(),
+          name: z.string(),
+          flares: z.array(z.string()).optional(),
+        }),
+      ),
+    })
+    .optional(),
+  /* eslint-enable sort-keys */
 });
 export type Cosmetics = z.infer<typeof CosmeticsSchema>;
-export const COSMETICS: Cosmetics = CosmeticsSchema.parse(cosmetics_json);
+export type Pattern = z.infer<typeof PatternSchema>;
+export type Product = z.infer<typeof ProductSchema>;

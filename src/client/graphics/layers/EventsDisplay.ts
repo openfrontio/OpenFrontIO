@@ -142,20 +142,20 @@ export class EventsDisplay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private updateMap = new Map([
-    [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
-    [GameUpdateType.DisplayChatEvent, (u) => this.onDisplayChatEvent(u)],
-    [GameUpdateType.AllianceRequest, (u) => this.onAllianceRequestEvent(u)],
+  private updateMap = [
+    [GameUpdateType.DisplayEvent, this.onDisplayMessageEvent.bind(this)],
+    [GameUpdateType.DisplayChatEvent, this.onDisplayChatEvent.bind(this)],
+    [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
     [
       GameUpdateType.AllianceRequestReply,
-      (u) => this.onAllianceRequestReplyEvent(u),
+      this.onAllianceRequestReplyEvent.bind(this),
     ],
-    [GameUpdateType.BrokeAlliance, (u) => this.onBrokeAllianceEvent(u)],
-    [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
-    [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
-    [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
-    [GameUpdateType.AllianceExpired, (u) => this.onAllianceExpiredEvent(u)],
-  ]);
+    [GameUpdateType.BrokeAlliance, this.onBrokeAllianceEvent.bind(this)],
+    [GameUpdateType.TargetPlayer, this.onTargetPlayerEvent.bind(this)],
+    [GameUpdateType.Emoji, this.onEmojiMessageEvent.bind(this)],
+    [GameUpdateType.UnitIncoming, this.onUnitIncomingEvent.bind(this)],
+    [GameUpdateType.AllianceExpired, this.onAllianceExpiredEvent.bind(this)],
+  ] as const;
 
   constructor() {
     super();
@@ -189,7 +189,7 @@ export class EventsDisplay extends LitElement implements Layer {
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       for (const [ut, fn] of this.updateMap) {
-        updates[ut]?.forEach(fn);
+        updates[ut]?.forEach(fn as (event: unknown) => void);
       }
     }
 
@@ -468,14 +468,30 @@ export class EventsDisplay extends LitElement implements Layer {
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
+    if (!myPlayer) {
+      return;
+    }
+    // myPlayer can deny alliances without clicking on the button
+    if (update.request.recipientID === myPlayer.smallID()) {
+      // Remove alliance requests whose requestors are the same as the reply's requestor
+      // Noop unless the request was denied through other means (e.g attacking the requestor)
+      this.events = this.events.filter(
+        (event) =>
+          !(
+            event.type === MessageType.ALLIANCE_REQUEST &&
+            event.focusID === update.request.requestorID
+          ),
+      );
+      this.requestUpdate();
+      return;
+    }
+    if (update.request.requestorID !== myPlayer.smallID()) {
       return;
     }
 
     const recipient = this.game.playerBySmallID(
       update.request.recipientID,
     ) as PlayerView;
-
     this.addEvent({
       description: translateText("events_display.alliance_request_status", {
         name: recipient.name(),
@@ -498,6 +514,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
+
+    if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
 
     if (!betrayed.isTraitor() && traitor === myPlayer) {
       const malusPercent = Math.round(

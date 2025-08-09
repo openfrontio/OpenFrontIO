@@ -32,6 +32,10 @@ export class TrainExecution implements Execution {
     private numCars: number,
   ) {}
 
+  public owner(): Player {
+    return this.player;
+  }
+
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     const stations = this.railNetwork.findStationsPath(
@@ -115,8 +119,8 @@ export class TrainExecution implements Execution {
     for (let i = 0; i < this.numCars; i++) {
       this.cars.push(
         this.player.buildUnit(UnitType.Train, tile, {
-          trainType: TrainType.Carriage,
           loaded: this.hasCargo,
+          trainType: TrainType.Carriage,
         }),
       );
     }

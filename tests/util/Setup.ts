@@ -48,25 +48,21 @@ export async function setup(
     JSON.parse(fs.readFileSync(manifestPath, "utf8")),
   );
 
-  // Convert Buffer to string (binary encoding)
-  const mapBinString = mapBinBuffer.toString("binary");
-  const miniMapBinString = miniMapBinBuffer.toString("binary");
-
-  const gameMap = await genTerrainFromBin(manifest.map, mapBinString);
+  const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(
     manifest.mini_map,
-    miniMapBinString,
+    miniMapBinBuffer,
   );
 
   // Configure the game
   const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {
+    bots: 0,
+    difficulty: Difficulty.Medium,
+    disableNPCs: false,
     gameMap: GameMapType.Asia,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
-    difficulty: Difficulty.Medium,
-    disableNPCs: false,
-    bots: 0,
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
