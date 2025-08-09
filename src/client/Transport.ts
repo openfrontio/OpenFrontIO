@@ -370,7 +370,7 @@ export class Transport {
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
       flag: this.lobbyConfig.flag,
-      pattern: this.lobbyConfig.pattern,
+      pattern: this.lobbyConfig.patternName,
     } satisfies ClientJoinMessage);
   }
 
@@ -433,8 +433,6 @@ export class Transport {
     this.sendIntent({
       type: "spawn",
       clientID: this.lobbyConfig.clientID,
-      flag: this.lobbyConfig.flag,
-      pattern: this.lobbyConfig.pattern,
       name: this.lobbyConfig.playerName,
       playerType: PlayerType.Human,
       tile: event.tile,

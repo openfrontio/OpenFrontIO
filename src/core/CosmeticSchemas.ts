@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { RequiredPatternSchema } from "./Schemas";
+import { RequiredPatternDataSchema } from "./Schemas";
 
 export const ProductSchema = z.object({
   productId: z.string(),
@@ -7,9 +7,9 @@ export const ProductSchema = z.object({
   price: z.string(),
 });
 
-const PatternSchema = z.object({
+export const PatternSchema = z.object({
   name: z.string(),
-  pattern: RequiredPatternSchema,
+  pattern: RequiredPatternDataSchema,
   product: ProductSchema.nullable(),
 });
 

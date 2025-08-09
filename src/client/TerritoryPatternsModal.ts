@@ -21,7 +21,7 @@ export class TerritoryPatternsModal extends LitElement {
   public previewButton: HTMLElement | null = null;
   public buttonWidth: number = 150;
 
-  @state() private selectedPattern: string | undefined;
+  @state() private selectedPattern: Pattern | undefined;
 
   @state() private lockedPatterns: string[] = [];
   @state() private lockedReasons: Record<string, string> = {};
@@ -31,7 +31,7 @@ export class TerritoryPatternsModal extends LitElement {
   @state() private keySequence: string[] = [];
   @state() private showChocoPattern = false;
 
-  private patterns: Pattern[] = [];
+  private patterns: Map<string, Pattern> = new Map();
   private me: UserMeResponse | null = null;
 
   public resizeObserver: ResizeObserver;
@@ -123,7 +123,7 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private renderPatternButton(pattern: Pattern): TemplateResult {
-    const isSelected = this.selectedPattern === pattern.pattern;
+    const isSelected = this.selectedPattern?.name === pattern.name;
 
     return html`
       <div style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);">
@@ -134,7 +134,7 @@ export class TerritoryPatternsModal extends LitElement {
             : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
           ${pattern.product !== null ? "opacity-50 cursor-not-allowed" : ""}"
           @click=${() =>
-            pattern.product === null && this.selectPattern(pattern.pattern)}
+            pattern.product === null && this.selectPattern(pattern)}
           @mouseenter=${(e: MouseEvent) => this.handleMouseEnter(pattern, e)}
           @mousemove=${(e: MouseEvent) => this.handleMouseMove(e)}
           @mouseleave=${() => this.handleMouseLeave()}
@@ -182,8 +182,8 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const pattern of this.patterns) {
-      if (!this.showChocoPattern && pattern.name === "choco") continue;
+    for (const [name, pattern] of this.patterns) {
+      if (!this.showChocoPattern && name === "choco") continue;
 
       const result = this.renderPatternButton(pattern);
       buttons.push(result);
@@ -240,20 +240,20 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   public open() {
+    this.isActive = true;
     this.modalEl?.open();
     window.addEventListener("keydown", this.handleKeyDown);
-    this.isActive = true;
     this.requestUpdate();
   }
 
   public close() {
+    this.isActive = false;
     this.modalEl?.close();
     window.removeEventListener("keydown", this.handleKeyDown);
     this.resizeObserver?.disconnect();
-    this.isActive = false;
   }
 
-  private selectPattern(pattern: string | undefined) {
+  private selectPattern(pattern: Pattern | undefined) {
     this.userSettings.setSelectedPattern(pattern);
     this.selectedPattern = pattern;
     this.updatePreview();
@@ -314,22 +314,12 @@ export class TerritoryPatternsModal extends LitElement {
 
   public updatePreview() {
     if (this.previewButton === null) return;
-    const preview = this.renderPatternPreview(this.selectedPattern, 48, 48);
+    const preview = this.renderPatternPreview(
+      this.selectedPattern?.pattern,
+      48,
+      48,
+    );
     render(preview, this.previewButton);
-  }
-
-  private setLockedPatterns(lockedPatterns: string[], reason: string) {
-    this.lockedPatterns = [...this.lockedPatterns, ...lockedPatterns];
-    this.lockedReasons = {
-      ...this.lockedReasons,
-      ...lockedPatterns.reduce(
-        (acc, key) => {
-          acc[key] = reason;
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-    };
   }
 
   private handleMouseEnter(pattern: Pattern, event: MouseEvent) {
@@ -366,7 +356,15 @@ export function generatePreviewDataUrl(
   }
 
   // Calculate canvas size
-  const decoder = new PatternDecoder(pattern, base64url.decode);
+  let decoder: PatternDecoder;
+  try {
+    decoder = new PatternDecoder(pattern, base64url.decode);
+  } catch (e) {
+    console.error("Error decoding pattern", e);
+    this.userSettings.setSelectedPattern(undefined);
+    return "";
+  }
+
   const scaledWidth = decoder.scaledWidth();
   const scaledHeight = decoder.scaledHeight();
 
