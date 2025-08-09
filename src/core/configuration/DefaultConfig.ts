@@ -328,9 +328,10 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numberOfStations: number): number {
     return Math.min(1400, Math.round(40 * Math.pow(numberOfStations, 0.5)));
   }
-  trainGold(): Gold {
-    return BigInt(4_000);
+  trainGold(isFriendly: boolean): Gold {
+    return isFriendly ? 100_000n : 25_000n;
   }
+
   trainStationMinRange(): number {
     return 15;
   }
