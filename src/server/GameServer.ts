@@ -4,7 +4,6 @@ import WebSocket from "ws";
 import { z } from "zod";
 import {
   ClientID,
-  ClientMessageSchema,
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
@@ -25,6 +24,7 @@ import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
 import { gatekeeper } from "./Gatekeeper";
+import { postJoinMessageHandler } from "./worker/websocket/handler/message/PostJoinHandler";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -41,7 +41,7 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  private LobbyCreatorID: string | undefined;
+  lobbyCreatorID: string | undefined;
   private allClients: Map<ClientID, Client> = new Map();
   private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
@@ -49,9 +49,9 @@ export class GameServer {
 
   private endTurnIntervalID: ReturnType<typeof setInterval> | undefined;
 
-  private lastPingUpdate = 0;
+  lastPingUpdate = 0;
 
-  private winner: ClientSendWinnerMessage | null = null;
+  winner: ClientSendWinnerMessage | null = null;
 
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
@@ -60,8 +60,8 @@ export class GameServer {
 
   private _hasPrestarted = false;
 
-  private kickedClients: Set<ClientID> = new Set();
-  private outOfSyncClients: Set<ClientID> = new Set();
+  kickedClients: Set<ClientID> = new Set();
+  outOfSyncClients: Set<ClientID> = new Set();
 
   private websockets: Set<WebSocket> = new Set();
 
@@ -74,7 +74,7 @@ export class GameServer {
     lobbyCreatorID?: string,
   ) {
     this.log = log_.child({ gameID: id });
-    this.LobbyCreatorID = lobbyCreatorID ?? undefined;
+    this.lobbyCreatorID = lobbyCreatorID ?? undefined;
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
@@ -121,9 +121,9 @@ export class GameServer {
       return;
     }
     // Log when lobby creator joins private game
-    if (client.clientID === this.LobbyCreatorID) {
+    if (client.clientID === this.lobbyCreatorID) {
       this.log.info("Lobby creator joined", {
-        creatorID: this.LobbyCreatorID,
+        creatorID: this.lobbyCreatorID,
         gameID: this.id,
       });
     }
@@ -200,122 +200,9 @@ export class GameServer {
     client.ws.removeAllListeners("message");
     client.ws.on(
       "message",
-      gatekeeper.wsHandler(client.ip, async (message: string) => {
-        try {
-          const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-          if (!parsed.success) {
-            const error = z.prettifyError(parsed.error);
-            this.log.error("Failed to parse client message", error, {
-              clientID: client.clientID,
-            });
-            client.ws.send(
-              JSON.stringify({
-                error,
-                message,
-                type: "error",
-              } satisfies ServerErrorMessage),
-            );
-            client.ws.close(1002, "ClientMessageSchema");
-            return;
-          }
-          const clientMsg = parsed.data;
-          switch (clientMsg.type) {
-            case "intent": {
-              if (clientMsg.intent.clientID !== client.clientID) {
-                this.log.warn(
-                  `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
-                );
-                return;
-              }
-              switch (clientMsg.intent.type) {
-                case "mark_disconnected": {
-                  this.log.warn(
-                    `Should not receive mark_disconnected intent from client`,
-                  );
-                  return;
-                }
-
-                // Handle kick_player intent via WebSocket
-                case "kick_player": {
-                  const authenticatedClientID = client.clientID;
-
-                  // Check if the authenticated client is the lobby creator
-                  if (authenticatedClientID !== this.LobbyCreatorID) {
-                    this.log.warn(`Only lobby creator can kick players`, {
-                      clientID: authenticatedClientID,
-                      creatorID: this.LobbyCreatorID,
-                      gameID: this.id,
-                      target: clientMsg.intent.target,
-                    });
-                    return;
-                  }
-
-                  // Don't allow lobby creator to kick themselves
-                  if (authenticatedClientID === clientMsg.intent.target) {
-                    this.log.warn(`Cannot kick yourself`, {
-                      clientID: authenticatedClientID,
-                    });
-                    return;
-                  }
-
-                  // Log and execute the kick
-                  this.log.info(`Lobby creator initiated kick of player`, {
-                    creatorID: authenticatedClientID,
-                    gameID: this.id,
-                    kickMethod: "websocket",
-                    target: clientMsg.intent.target,
-                  });
-
-                  this.kickClient(clientMsg.intent.target);
-                  return;
-                }
-                default: {
-                  this.addIntent(clientMsg.intent);
-                  break;
-                }
-              }
-              break;
-            }
-            case "ping": {
-              this.lastPingUpdate = Date.now();
-              client.lastPing = Date.now();
-              break;
-            }
-            case "hash": {
-              client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-              break;
-            }
-            case "winner": {
-              if (
-                this.outOfSyncClients.has(client.clientID) ||
-                this.kickedClients.has(client.clientID) ||
-                this.winner !== null
-              ) {
-                return;
-              }
-              this.winner = clientMsg;
-              this.archiveGame();
-              break;
-            }
-            default: {
-              this.log.warn(
-                `Unknown message type: ${(clientMsg as any).type}`,
-                {
-                  clientID: client.clientID,
-                },
-              );
-              break;
-            }
-          }
-        } catch (error) {
-          this.log.info(
-            `error handline websocket request in game server: ${error}`,
-            {
-              clientID: client.clientID,
-            },
-          );
-        }
-      }),
+      gatekeeper.wsHandler(client.ip, (message) =>
+        postJoinMessageHandler(this, this.log, client, message),
+      ),
     );
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
@@ -422,7 +309,7 @@ export class GameServer {
     });
   }
 
-  private addIntent(intent: Intent) {
+  addIntent(intent: Intent) {
     this.intents.push(intent);
   }
 
@@ -518,7 +405,7 @@ export class GameServer {
   }
 
   public isPrivateLobbyCreator(clientID: string): boolean {
-    return this.LobbyCreatorID === clientID;
+    return this.lobbyCreatorID === clientID;
   }
 
   phase(): GamePhase {
@@ -666,7 +553,7 @@ export class GameServer {
     });
   }
 
-  private archiveGame() {
+  archiveGame() {
     this.log.info("archiving game", {
       gameID: this.id,
       winner: this.winner?.winner,

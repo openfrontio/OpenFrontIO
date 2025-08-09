@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { GameMapLoader } from "./GameMapLoader";
@@ -10,25 +11,28 @@ export type TerrainMapData = {
 
 const loadedMaps = new Map<GameMapType, TerrainMapData>();
 
-export interface MapMetadata {
-  width: number;
-  height: number;
-  num_land_tiles: number;
-}
+export const MapMetadataSchema = z.object({
+  height: z.number(),
+  num_land_tiles: z.number(),
+  width: z.number(),
+});
+export type MapMetadata = z.infer<typeof MapMetadataSchema>;
 
-export interface MapManifest {
-  name: string;
-  map: MapMetadata;
-  mini_map: MapMetadata;
-  nations: Nation[];
-}
+export const NationSchema = z.object({
+  coordinates: z.tuple([z.number(), z.number()]),
+  flag: z.string(),
+  name: z.string(),
+  strength: z.number(),
+});
+export type Nation = z.infer<typeof NationSchema>;
 
-export interface Nation {
-  coordinates: [number, number];
-  flag: string;
-  name: string;
-  strength: number;
-}
+export const MapManifestSchema = z.object({
+  map: MapMetadataSchema,
+  mini_map: MapMetadataSchema,
+  name: z.string(),
+  nations: NationSchema.array(),
+});
+export type MapManifest = z.infer<typeof MapManifestSchema>;
 
 export async function loadTerrainMap(
   map: GameMapType,
