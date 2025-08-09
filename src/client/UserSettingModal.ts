@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { z } from "zod";
 import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
@@ -7,6 +8,8 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+
+const KeybindSchema = z.record(z.string(), z.string());
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
@@ -25,7 +28,7 @@ export class UserSettingModal extends LitElement {
     const savedKeybinds = localStorage.getItem("settings.keybinds");
     if (savedKeybinds) {
       try {
-        this.keybinds = JSON.parse(savedKeybinds);
+        this.keybinds = KeybindSchema.parse(JSON.parse(savedKeybinds));
       } catch (e) {
         console.warn("Invalid keybinds JSON:", e);
       }

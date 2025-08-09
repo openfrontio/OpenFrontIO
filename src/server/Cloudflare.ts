@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import { promises as fs } from "fs";
 import yaml from "js-yaml";
+import { z } from "zod";
 import { logger } from "./Logger";
 
 const log = logger.child({
@@ -40,6 +41,12 @@ interface CloudflaredConfig {
     service: string;
   }>;
 }
+
+const CloudflareTunnelConfigSchema = z.object({
+  a: z.string(),
+  s: z.string(),
+  t: z.string(),
+});
 
 export class Cloudflare {
   private baseUrl = "https://api.cloudflare.com/client/v4";
@@ -157,14 +164,12 @@ export class Cloudflare {
     tunnelName: string,
   ): Promise<void> {
     log.info(`Creating local config for tunnel ${subdomain}.${domain}...`);
-    const tokenData = JSON.parse(
-      Buffer.from(tunnelToken, "base64").toString("utf8"),
+    const tokenData = CloudflareTunnelConfigSchema.parse(
+      JSON.parse(Buffer.from(tunnelToken, "base64").toString("utf8")),
     );
 
     const credentials = {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       AccountTag: tokenData.a || this.accountId,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       TunnelID: tokenData.t || tunnelId,
       TunnelName: tunnelName,
       TunnelSecret: tokenData.s,

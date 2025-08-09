@@ -10,7 +10,11 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
-import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
+import {
+  CreateGameInputSchema,
+  GameInputSchema,
+  WorkerApiGameIdExists,
+} from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
@@ -201,7 +205,7 @@ export async function startWorker() {
       const lobbyId = req.params.id;
       res.json({
         exists: gm.game(lobbyId) !== null,
-      });
+      } satisfies WorkerApiGameIdExists);
     }),
   );
 

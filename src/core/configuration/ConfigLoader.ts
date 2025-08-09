@@ -1,3 +1,4 @@
+import { ApiEnvResponseSchema } from "../ExpressSchemas";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { Config, GameEnv, ServerConfig } from "./Config";
@@ -36,7 +37,8 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
       `Failed to fetch server config: ${response.status} ${response.statusText}`,
     );
   }
-  const config = await response.json();
+  const json = await response.json();
+  const config = ApiEnvResponseSchema.parse(json);
   // Log the retrieved configuration
   console.log("Server config loaded:", config);
 
