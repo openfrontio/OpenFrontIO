@@ -192,8 +192,8 @@ export const GameInfoSchema = z.object({
   clients: ClientInfoSchema.array().optional(),
   gameConfig: GameConfigSchema.optional(),
   gameID: ID,
-  msUntilStart: z.number().optional(),
-  numClients: z.number().optional(),
+  msUntilStart: z.number().int().nonnegative().optional(),
+  numClients: z.number().int().nonnegative().optional(),
 });
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 

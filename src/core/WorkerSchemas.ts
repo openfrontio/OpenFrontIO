@@ -18,23 +18,23 @@ export type WorkerApiGameIdExists = z.infer<typeof WorkerApiGameIdExistsSchema>;
 
 export const WorkerApiArchivedGameLobbySchema = z.union([
   z.object({
-    success: z.literal(false),
-    exists: z.literal(false),
     error: z.literal("Game not found"),
-  }),
-  z.object({
+    exists: z.literal(false),
     success: z.literal(false),
-    exists: z.literal(true),
-    error: z.literal("Version mismatch"),
-    details: z.object({
-      expectedCommit: z.string(),
-      actualCommit: z.string(),
-    }),
   }),
   z.object({
-    success: z.literal(true),
+    details: z.object({
+      actualCommit: z.string(),
+      expectedCommit: z.string(),
+    }),
+    error: z.literal("Version mismatch"),
+    exists: z.literal(true),
+    success: z.literal(false),
+  }),
+  z.object({
     exists: z.literal(true),
     gameRecord: GameRecordSchema,
+    success: z.literal(true),
   }),
 ]);
 export type WorkerApiArchivedGameLobby = z.infer<
