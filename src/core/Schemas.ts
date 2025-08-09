@@ -112,17 +112,6 @@ export type Player = z.infer<typeof PlayerSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 const PlayerTypeSchema = z.enum(PlayerType);
 
-// export interface GameInfo {
-//   gameID: GameID;
-//   clients?: ClientInfo[];
-//   numClients?: number;
-//   msUntilStart?: number;
-//   gameConfig?: GameConfig;
-// }
-// export interface ClientInfo {
-//   clientID: ClientID;
-//   username: string;
-// }
 export enum LogSeverity {
   Debug = "DEBUG",
   Info = "INFO",
