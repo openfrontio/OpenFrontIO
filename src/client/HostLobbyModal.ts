@@ -365,22 +365,6 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="infinite-gold"
-                  class="option-card ${this.infiniteGold ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-gold"
-                    @change=${this.handleInfiniteGoldChange}
-                    .checked=${this.infiniteGold}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_gold")}
-                  </div>
-                </label>
-
-                <label
                   for="donate-gold"
                   class="option-card ${this.donateGold ? "selected" : ""}"
                 >
@@ -397,22 +381,6 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="infinite-troops"
-                  class="option-card ${this.infiniteTroops ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-troops"
-                    @change=${this.handleInfiniteTroopsChange}
-                    .checked=${this.infiniteTroops}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_troops")}
-                  </div>
-                </label>
-
-                <label
                   for="donate-troops"
                   class="option-card ${this.donateTroops ? "selected" : ""}"
                 >
@@ -425,6 +393,38 @@ export class HostLobbyModal extends LitElement {
                   />
                   <div class="option-card-title">
                     ${translateText("host_modal.donate_troops")}
+                  </div>
+                </label>
+
+                <label
+                  for="infinite-gold"
+                  class="option-card ${this.infiniteGold ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="infinite-gold"
+                    @change=${this.handleInfiniteGoldChange}
+                    .checked=${this.infiniteGold}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.infinite_gold")}
+                  </div>
+                </label>
+
+                <label
+                  for="infinite-troops"
+                  class="option-card ${this.infiniteTroops ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="infinite-troops"
+                    @change=${this.handleInfiniteTroopsChange}
+                    .checked=${this.infiniteTroops}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.infinite_troops")}
                   </div>
                 </label>
 
