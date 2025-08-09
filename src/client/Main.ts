@@ -21,6 +21,7 @@ import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import { NewsModal } from "./NewsModal";
+import { PlayerInfoModal } from "./PlayerInfoModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -205,6 +206,16 @@ class Client {
       flagInputModal.open();
     });
 
+    const piModal = document.querySelector(
+      "player-info-modal",
+    ) as PlayerInfoModal;
+    piModal instanceof PlayerInfoModal;
+    document
+      .getElementById("player-info-button")
+      ?.addEventListener("click", () => {
+        piModal.open();
+      });
+
     const territoryModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
@@ -311,6 +322,7 @@ class Client {
         loginDiscordButton.translationKey = "main.login_discord";
         logoutDiscordButton.hidden = true;
         territoryModal.onUserMe(null);
+        piModal.onLoggedOut();
       } else {
         // Authorized
         console.log(
@@ -320,6 +332,7 @@ class Client {
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
         territoryModal.onUserMe(userMeResponse);
+        piModal.onUserMe(userMeResponse);
       }
     };
 
