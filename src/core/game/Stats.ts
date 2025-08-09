@@ -93,4 +93,25 @@ export interface Stats {
 
   // Player loses a unit of type
   unitLose(player: Player, type: OtherUnitType): void;
+
+  // Player sends an emoji to another player
+  emojiSend(player: Player, target: Player): void;
+
+  // Player broadcasts an emoji to all players
+  emojiBroadcast(player: Player): void;
+
+  // Player sends a quick chat to another player
+  quickChatSend(player: Player, target: Player): void;
+
+  // Player targets another player
+  targetSend(player: Player, target: Player): void;
+
+  // Player conquers a bot, nation, or player
+  recordConquer(player: Player, type: "bot" | "nation" | "player"): void;
+
+  // Player sends troops to another player
+  troopsSend(player: Player, target: Player, troops: number | bigint): void;
+
+  // Player sends gold to another player
+  goldSend(player: Player, target: Player, gold: number | bigint): void;
 }
