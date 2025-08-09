@@ -9,5 +9,6 @@
     "num_land_tiles": 10000,
     "width": 100
   },
+  "nations": [],
   "name": "Big Plains"
 }
