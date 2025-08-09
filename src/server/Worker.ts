@@ -10,6 +10,7 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import {
   CreateGameInputSchema,
   GameInputSchema,
@@ -226,9 +227,9 @@ export async function startWorker() {
     gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
       const gameRecord = await readGameRecord(req.params.id);
 
-      if (!gameRecord) {
+      if (typeof gameRecord === "string") {
         return res.status(404).json({
-          error: "Game not found",
+          error: gameRecord,
           exists: false,
           success: false,
         });
@@ -252,11 +253,19 @@ export async function startWorker() {
         });
       }
 
-      return res.status(200).json({
-        exists: true,
-        gameRecord: gameRecord,
-        success: true,
-      });
+      return res
+        .status(200)
+        .header("Content-Type", "application/json")
+        .send(
+          JSON.stringify(
+            {
+              exists: true,
+              gameRecord: gameRecord,
+              success: true,
+            },
+            replacer,
+          ),
+        );
     }),
   );
 

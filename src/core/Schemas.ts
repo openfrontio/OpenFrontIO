@@ -563,3 +563,16 @@ export const GameRecordSchema = AnalyticsRecordSchema.extend({
   turns: TurnSchema.array(),
 });
 export type GameRecord = z.infer<typeof GameRecordSchema>;
+
+export const RedactedGameRecordSchema = GameRecordSchema.omit({
+  info: true,
+}).extend({
+  info: GameEndInfoSchema.omit({
+    players: true,
+  }).extend({
+    players: PlayerRecordSchema.omit({
+      persistentID: true,
+    }).array(),
+  }),
+});
+export type RedactedGameRecord = z.infer<typeof RedactedGameRecordSchema>;

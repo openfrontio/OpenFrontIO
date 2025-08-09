@@ -94,4 +94,7 @@ export class TestServerConfig implements ServerConfig {
   r2SecretKey(): string {
     throw new Error("Method not implemented.");
   }
+  replayUrl(gameId: GameID): string {
+    throw new Error("Method not implemented.");
+  }
 }

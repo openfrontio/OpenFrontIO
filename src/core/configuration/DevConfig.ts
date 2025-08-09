@@ -1,6 +1,6 @@
 import { UnitInfo, UnitType } from "../game/Game";
 import { UserSettings } from "../game/UserSettings";
-import { GameConfig } from "../Schemas";
+import { GameConfig, GameID } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
@@ -41,6 +41,12 @@ export class DevServerConfig extends DefaultServerConfig {
 
   subdomain(): string {
     return "";
+  }
+
+  replayUrl(gameId: GameID): string {
+    const url = new URL("https://api.openfront.io");
+    url.pathname = `/game/${gameId}`;
+    return url.toString();
   }
 }
 

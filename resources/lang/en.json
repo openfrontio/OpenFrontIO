@@ -601,5 +601,10 @@
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
+  },
+  "replay": {
+    "not_found": "Replay data not found",
+    "error": "Failed to read replay data",
+    "invalid": "Failed to parse replay data"
   }
 }

@@ -62,6 +62,7 @@ export interface ServerConfig {
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
+  replayUrl(gameId: GameID): string;
 }
 
 export interface NukeMagnitude {

@@ -267,6 +267,9 @@ export class JoinPrivateLobbyModal extends LitElement {
       );
 
       return true;
+    } else if (archiveData.error) {
+      this.message = translateText(archiveData.error);
+      return true;
     }
 
     return false;
