@@ -601,5 +601,10 @@
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
+  },
+  "record": {
+    "not_found": "Record not found",
+    "error": "Failed to read record",
+    "invalid_data": "Failed to parse record data"
   }
 }

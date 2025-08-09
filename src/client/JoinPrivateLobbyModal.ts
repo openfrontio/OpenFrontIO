@@ -262,6 +262,15 @@ export class JoinPrivateLobbyModal extends LitElement {
       );
 
       return true;
+    } else if (archiveData.error === "Game not found") {
+      this.message = translateText("record.not_found");
+      return true;
+    } else if (archiveData.error === "Failed to read record") {
+      this.message = translateText("record.error");
+      return true;
+    } else if (archiveData.error === "Failed to parse record data") {
+      this.message = translateText("record.invalid_data");
+      return true;
     }
 
     return false;
