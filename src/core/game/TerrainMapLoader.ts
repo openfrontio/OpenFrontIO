@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { GameMapLoader } from "./GameMapLoader";

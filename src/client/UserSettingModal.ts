@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import z from "zod";
+import { z } from "zod";
 import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";

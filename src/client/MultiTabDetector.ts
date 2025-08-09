@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 const LockSchema = z.object({
   owner: z.string(),
