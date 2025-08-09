@@ -642,27 +642,40 @@ export class PlayerImpl implements Player {
     return !embargo && other.id() !== this.id();
   }
 
-  addEmbargo(other: PlayerID, isTemporary: boolean): void {
-    const embargo = this.embargoes.get(other);
+  getEmbargoes(): Embargo[] {
+    return [...this.embargoes.values()];
+  }
+
+  addEmbargo(other: Player, isTemporary: boolean): void {
+    const embargo = this.embargoes.get(other.id());
     if (embargo !== undefined && !embargo.isTemporary) return;
 
-    this.embargoes.set(other, {
+    this.mg.addUpdate({
+      type: GameUpdateType.EmbargoEvent,
+      event: "start",
+      playerID: this.smallID(),
+      embargoedID: other.smallID(),
+    });
+
+    this.embargoes.set(other.id(), {
       createdAt: this.mg.ticks(),
       isTemporary: isTemporary,
       target: other,
     });
   }
 
-  getEmbargoes(): Embargo[] {
-    return [...this.embargoes.values()];
+  stopEmbargo(other: Player): void {
+    this.embargoes.delete(other.id());
+    this.mg.addUpdate({
+      type: GameUpdateType.EmbargoEvent,
+      event: "stop",
+      playerID: this.smallID(),
+      embargoedID: other.smallID(),
+    });
   }
 
-  stopEmbargo(other: PlayerID): void {
-    this.embargoes.delete(other);
-  }
-
-  endTemporaryEmbargo(other: PlayerID): void {
-    const embargo = this.embargoes.get(other);
+  endTemporaryEmbargo(other: Player): void {
+    const embargo = this.embargoes.get(other.id());
     if (embargo !== undefined && !embargo.isTemporary) return;
 
     this.stopEmbargo(other);

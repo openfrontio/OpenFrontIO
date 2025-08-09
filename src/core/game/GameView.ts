@@ -326,6 +326,10 @@ export class PlayerView {
     return this.data.embargoes.has(other.id());
   }
 
+  hasEmbargo(other: PlayerView): boolean {
+    return this.hasEmbargoAgainst(other) || other.hasEmbargoAgainst(this);
+  }
+
   profile(): Promise<PlayerProfile> {
     return this.game.worker.playerProfile(this.smallID());
   }
