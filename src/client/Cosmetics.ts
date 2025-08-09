@@ -4,14 +4,14 @@ import { getApiBase, getAuthHeader } from "./jwt";
 
 export async function patterns(
   userMe: UserMeResponse | null,
-): Promise<Pattern[]> {
+): Promise<Map<string, Pattern>> {
   const cosmetics = await getCosmetics();
 
   if (cosmetics === undefined) {
-    return [];
+    return new Map();
   }
 
-  const patterns: Pattern[] = [];
+  const patterns: Map<string, Pattern> = new Map();
   const playerFlares = new Set(userMe?.player.flares);
 
   for (const name in cosmetics.patterns) {
@@ -20,10 +20,10 @@ export async function patterns(
     if (hasAccess) {
       // Remove product info because player already has access.
       patternData.product = null;
-      patterns.push(patternData);
+      patterns.set(name, patternData);
     } else if (patternData.product !== null) {
       // Player doesn't have access, but product is available for purchase.
-      patterns.push(patternData);
+      patterns.set(name, patternData);
     }
     // If player doesn't have access and product is null, don't show it.
   }

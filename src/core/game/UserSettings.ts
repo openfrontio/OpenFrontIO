@@ -1,3 +1,5 @@
+import { Pattern, PatternSchema } from "../CosmeticSchemas";
+
 const PATTERN_KEY = "territoryPattern";
 
 export class UserSettings {
@@ -111,15 +113,19 @@ export class UserSettings {
     }
   }
 
-  getSelectedPattern(): string | undefined {
-    return localStorage.getItem(PATTERN_KEY) ?? undefined;
+  getSelectedPattern(): Pattern | undefined {
+    const value = localStorage.getItem(PATTERN_KEY);
+    if (!value) return undefined;
+    try {
+      return PatternSchema.parse(JSON.parse(value));
+    } catch (error) {
+      this.setSelectedPattern(undefined);
+      console.error("Error parsing selected pattern JSON", error);
+      return undefined;
+    }
   }
 
-  setSelectedPattern(base64: string | undefined): void {
-    if (base64 === undefined) {
-      localStorage.removeItem(PATTERN_KEY);
-    } else {
-      localStorage.setItem(PATTERN_KEY, base64);
-    }
+  setSelectedPattern(pattern: Pattern | undefined): void {
+    localStorage.setItem(PATTERN_KEY, JSON.stringify(pattern));
   }
 }

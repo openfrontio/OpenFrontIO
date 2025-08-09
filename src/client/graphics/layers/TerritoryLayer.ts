@@ -455,7 +455,7 @@ export class TerritoryLayer implements Layer {
       }
     } else {
       // Interior tiles
-      const pattern = owner.cosmetics.pattern;
+      const pattern = owner.cosmetics.patternData;
       const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
 
       // Alternative view only shows borders.

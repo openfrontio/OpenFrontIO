@@ -24,6 +24,7 @@ import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
+import { assertNever } from "../core/Util";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -410,15 +411,29 @@ export async function startWorker() {
             }
           }
 
+          let patternData: string | undefined;
           // Check if the pattern is allowed
           if (clientMsg.pattern !== undefined) {
-            const allowed = privilegeRefresher
+            const result = privilegeRefresher
               .get()
               .isPatternAllowed(clientMsg.pattern, flares);
-            if (allowed !== true) {
-              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
-              ws.close(1002, `Pattern ${allowed}`);
-              return;
+            switch (result.type) {
+              case "allowed":
+                patternData = result.patternData;
+                break;
+              case "unknown":
+                // Api could be down, so allow player to join but disable pattern.
+                log.warn(`Pattern ${clientMsg.pattern} unknown`);
+                break;
+              case "forbidden":
+                log.warn(`Pattern ${clientMsg.pattern}: ${result.reason}`);
+                ws.close(
+                  1002,
+                  `Pattern ${clientMsg.pattern}: ${result.reason}`,
+                );
+                return;
+              default:
+                assertNever(result);
             }
           }
 
@@ -433,7 +448,7 @@ export async function startWorker() {
             clientMsg.username,
             ws,
             clientMsg.flag,
-            clientMsg.pattern,
+            patternData,
           );
 
           const wasFound = gm.addClient(

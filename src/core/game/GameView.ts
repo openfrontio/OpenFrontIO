@@ -40,7 +40,7 @@ import { UserSettings } from "./UserSettings";
 const userSettings: UserSettings = new UserSettings();
 
 interface PlayerCosmetics {
-  pattern?: string | undefined;
+  patternData?: string | undefined;
   flag?: string | undefined;
 }
 
@@ -196,9 +196,9 @@ export class PlayerView {
       );
     }
     this.decoder =
-      this.cosmetics.pattern === undefined
+      this.cosmetics.patternData === undefined
         ? undefined
-        : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
+        : new PatternDecoder(this.cosmetics.patternData, base64url.decode);
   }
 
   patternDecoder(): PatternDecoder | undefined {
@@ -381,15 +381,15 @@ export class GameView implements GameMap {
     private _mapData: TerrainMapData,
     private _myClientID: ClientID,
     private _gameID: GameID,
-    private _hunans: Player[],
+    private humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
-      this._hunans.map((h) => [
+      this.humans.map((h) => [
         h.clientID,
-        { flag: h.flag, pattern: h.pattern } satisfies PlayerCosmetics,
+        { flag: h.flag, patternData: h.patternData } satisfies PlayerCosmetics,
       ]),
     );
     for (const nation of this._mapData.manifest.nations) {

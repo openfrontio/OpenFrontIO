@@ -203,7 +203,7 @@ export const FlagSchema = z
     },
     { message: "Invalid flag: must be a valid country code or start with !" },
   );
-export const RequiredPatternSchema = z
+export const RequiredPatternDataSchema = z
   .string()
   .max(1403)
   .base64url()
@@ -225,7 +225,7 @@ export const RequiredPatternSchema = z
       message: "Invalid pattern",
     },
   );
-export const PatternSchema = RequiredPatternSchema.optional();
+export const PatternDataSchema = RequiredPatternDataSchema.optional();
 
 export const QuickChatKeySchema = z.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>
@@ -256,7 +256,7 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
   type: z.literal("spawn"),
   name: UsernameSchema,
   flag: FlagSchema,
-  pattern: PatternSchema,
+  pattern: PatternDataSchema,
   playerType: PlayerTypeSchema,
   tile: z.number(),
 });
@@ -397,7 +397,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   flag: FlagSchema,
-  pattern: PatternSchema,
+  patternData: PatternDataSchema,
 });
 
 export const GameStartInfoSchema = z.object({
@@ -503,7 +503,7 @@ export const ClientJoinMessageSchema = z.object({
   lastTurn: z.number(), // The last turn the client saw.
   username: UsernameSchema,
   flag: FlagSchema,
-  pattern: PatternSchema,
+  pattern: PatternDataSchema,
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [
