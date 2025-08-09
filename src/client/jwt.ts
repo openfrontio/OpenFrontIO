@@ -57,6 +57,10 @@ function getToken(): string | null {
   return localStorage.getItem("token");
 }
 
+export function isUserLoggedIn(): boolean {
+  return getToken() !== undefined;
+}
+
 async function clearToken() {
   localStorage.removeItem("token");
   __isLoggedIn = false;
@@ -108,6 +112,7 @@ export function isLoggedIn(): IsLoggedInResponse {
 
   return __isLoggedIn;
 }
+
 function _isLoggedIn(): IsLoggedInResponse {
   try {
     const token = getToken();
