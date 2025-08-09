@@ -129,7 +129,8 @@ describe("RadialMenuElements", () => {
       interaction: {
         canSendAllianceRequest: true,
         canBreakAlliance: false,
-        canDonate: true,
+        canDonateTroops: true,
+        canDonateGold: true,
       },
     };
 

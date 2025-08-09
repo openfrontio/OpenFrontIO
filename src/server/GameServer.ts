@@ -93,8 +93,14 @@ export class GameServer {
     if (gameConfig.infiniteGold !== undefined) {
       this.gameConfig.infiniteGold = gameConfig.infiniteGold;
     }
+    if (gameConfig.donateGold !== undefined) {
+      this.gameConfig.donateGold = gameConfig.donateGold;
+    }
     if (gameConfig.infiniteTroops !== undefined) {
       this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
+    }
+    if (gameConfig.donateTroops !== undefined) {
+      this.gameConfig.donateTroops = gameConfig.donateTroops;
     }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;

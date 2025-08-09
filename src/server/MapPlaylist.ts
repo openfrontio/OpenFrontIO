@@ -81,6 +81,8 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       disableNPCs: mode === GameMode.Team,
       disabledUnits: [],
+      donateGold: true,
+      donateTroops: true,
       gameMap: map,
       gameMode: mode,
       gameType: GameType.Public,

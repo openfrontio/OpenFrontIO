@@ -137,6 +137,8 @@ export const GameConfigSchema = z.object({
   difficulty: z.enum(Difficulty),
   disableNPCs: z.boolean(),
   disabledUnits: z.enum(UnitType).array().optional(),
+  donateGold: z.boolean(),
+  donateTroops: z.boolean(),
   gameMap: z.enum(GameMapType),
   gameMode: z.enum(GameMode),
   gameType: z.enum(GameType),

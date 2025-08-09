@@ -232,7 +232,8 @@ export class PlayerPanel extends LitElement implements Layer {
     }
     other = other as PlayerView;
 
-    const canDonate = this.actions?.interaction?.canDonate;
+    const canDonateGold = this.actions?.interaction?.canDonateGold;
+    const canDonateTroops = this.actions?.interaction?.canDonateTroops;
     const canSendAllianceRequest =
       this.actions?.interaction?.canSendAllianceRequest;
     const canSendEmoji =
@@ -421,7 +422,7 @@ export class PlayerPanel extends LitElement implements Layer {
                       <img src=${allianceIcon} alt="Alliance" class="w-6 h-6" />
                     </button>`
                   : ""}
-                ${canDonate
+                ${canDonateTroops
                   ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleDonateTroopClick(e, myPlayer, other)}
@@ -436,7 +437,7 @@ export class PlayerPanel extends LitElement implements Layer {
                       />
                     </button>`
                   : ""}
-                ${canDonate
+                ${canDonateGold
                   ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleDonateGoldClick(e, myPlayer, other)}

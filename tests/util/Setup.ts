@@ -66,6 +66,8 @@ export async function setup(
     bots: 0,
     difficulty: Difficulty.Medium,
     disableNPCs: false,
+    donateGold: false,
+    donateTroops: false,
     gameMap: GameMapType.Asia,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,

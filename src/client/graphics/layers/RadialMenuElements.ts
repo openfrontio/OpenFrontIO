@@ -208,7 +208,7 @@ const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
   name: "donate gold",
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonate,
+    !params.playerActions?.interaction?.canDonateGold,
   color: COLORS.ally,
   icon: donateGoldIcon,
   action: (params: MenuElementParams) => {
@@ -221,7 +221,7 @@ const allyDonateTroopsElement: MenuElement = {
   id: "ally_donate_troops",
   name: "donate troops",
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonate,
+    !params.playerActions?.interaction?.canDonateTroops,
   color: COLORS.ally,
   icon: donateTroopIcon,
   action: (params: MenuElementParams) => {
