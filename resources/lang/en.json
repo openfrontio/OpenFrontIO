@@ -602,9 +602,9 @@
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
   },
-  "record": {
-    "not_found": "Record not found",
-    "error": "Failed to read record",
-    "invalid_data": "Failed to parse record data"
+  "replay": {
+    "not_found": "Replay data not found",
+    "error": "Failed to read replay data",
+    "invalid": "Failed to parse replay data"
   }
 }

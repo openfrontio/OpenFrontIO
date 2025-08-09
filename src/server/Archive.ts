@@ -214,7 +214,7 @@ export async function readGameRecordFallback(
 
     if (!response.ok) {
       if (response.status === 404) {
-        return "record.not_found";
+        return "replay.not_found";
       }
 
       throw new Error(
@@ -248,7 +248,7 @@ export async function readGameRecordFallback(
         },
       );
     }
-    return "record.error";
+    return "replay.error";
   }
 }
 
@@ -261,7 +261,7 @@ function validateRecord(
   if (!parsed.success) {
     const error = z.prettifyError(parsed.error);
     log.error(`${gameId}: Error parsing game record: ${error}`);
-    return "record.invalid_data";
+    return "replay.invalid";
   }
 
   return parsed.data;
