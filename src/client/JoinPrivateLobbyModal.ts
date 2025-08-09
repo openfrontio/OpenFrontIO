@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { GameInfo } from "../core/Schemas";
+import { GameInfo, GameInfoSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import {
   WorkerApiArchivedGameLobbySchema,
@@ -11,6 +11,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -285,6 +286,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       },
     )
       .then((response) => response.json())
+      .then(GameInfoSchema.parse)
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
       })
