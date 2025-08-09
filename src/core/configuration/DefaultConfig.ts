@@ -205,7 +205,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
   workerPortByIndex(index: number): number {
     return 3001 + index;
   }
-  replayFallbackUrl(gameId: GameID): string {
+  replayUrl(gameId: GameID): string {
     const url = new URL(this.jwtIssuer());
     url.pathname = `/game/${gameId}`;
     return url.toString();

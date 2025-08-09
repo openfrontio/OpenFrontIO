@@ -205,7 +205,7 @@ export async function readGameRecordFallback(
   gameId: GameID,
 ): Promise<RedactedGameRecord | string> {
   try {
-    const response = await fetch(config.replayFallbackUrl(gameId), {
+    const response = await fetch(config.replayUrl(gameId), {
       headers: {
         Accept: "application/json",
       },
