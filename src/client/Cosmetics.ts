@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   StripeCreateCheckoutSessionResponseSchema,
   UserMeResponse,
@@ -63,8 +64,14 @@ export async function handlePurchase(priceId: string) {
   }
 
   const json = await response.json();
-  const result = StripeCreateCheckoutSessionResponseSchema.parse(json);
-  const { url } = result;
+  const parsed = StripeCreateCheckoutSessionResponseSchema.safeParse(json);
+  if (!parsed.success) {
+    const error = z.prettifyError(parsed.error);
+    console.error("Invalid checkout session response:", error);
+    alert("Checkout failed. Please try again later.");
+    return;
+  }
+  const { url } = parsed.data;
 
   // Redirect to Stripe checkout
   window.location.href = url;
