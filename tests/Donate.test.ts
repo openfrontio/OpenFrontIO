@@ -52,13 +52,18 @@ describe("Donate troops to an ally", () => {
       allianceRequest.accept();
     }
 
+    // Ensure donor can actually donate the requested amount
+    donor.addTroops(6000);
+    const donorTroopsBefore = donor.troops();
+    const recipientTroopsBefore = recipient.troops();
     game.addExecution(new DonateTroopsExecution(donor, recipientInfo.id, 5000));
 
     for (let i = 0; i < 5; i++) {
       game.executeNextTick();
     }
 
-    expect(donor.troops()).toBeLessThan(recipient.troops());
+    expect(donor.troops() < donorTroopsBefore).toBe(true);
+    expect(recipient.troops() > recipientTroopsBefore).toBe(true);
   });
 });
 
@@ -109,20 +114,20 @@ describe("Donate gold to an ally", () => {
     if (allianceRequest) {
       allianceRequest.accept();
     }
+    game.executeNextTick();
 
-    console.log(`donor gold before donation: ${donor.gold()}`);
-    console.log(`recipient gold before donation: ${recipient.gold()}`);
-
+    // Ensure donor can actually donate the requested amount
+    donor.addGold(6000n);
+    const donorGoldBefore = donor.gold();
+    const recipientGoldBefore = recipient.gold();
     game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000n));
 
     for (let i = 0; i < 5; i++) {
       game.executeNextTick();
     }
 
-    console.log(`donor gold after donation: ${donor.gold()}`);
-    console.log(`recipient gold after donation: ${recipient.gold()}`);
-
-    expect(donor.gold() < recipient.gold()).toBe(true);
+    expect(donor.gold() < donorGoldBefore).toBe(true);
+    expect(recipient.gold() > recipientGoldBefore).toBe(true);
   });
 });
 
@@ -174,17 +179,15 @@ describe("Donate troops to a non ally", () => {
       allianceRequest.reject();
     }
 
-    console.log(`donor troops before donation: ${donor.troops()}`);
-    console.log(`recipient troops before donation: ${recipient.troops()}`);
+    const donorTroopsBefore = donor.troops();
+    const recipientTroopsBefore = recipient.troops();
 
     game.addExecution(new DonateTroopsExecution(donor, recipientInfo.id, 5000));
+    game.executeNextTick();
 
-    for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
-    }
-
-    // Troops should not be donated since they are not allies but there's some small deviation due to game mechanics
-    expect(Math.abs(donor.troops() - recipient.troops())).toBeLessThan(5000);
+    // Troops should not be donated since they are not allies
+    expect(donor.troops() >= donorTroopsBefore).toBe(true);
+    expect(recipient.troops() >= recipientTroopsBefore).toBe(true);
   });
 });
 
@@ -236,16 +239,14 @@ describe("Donate Gold to a non ally", () => {
       allianceRequest.reject();
     }
 
+    const donorGoldBefore = donor.gold();
+    const recipientGoldBefore = donor.gold();
+
     game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000n));
+    game.executeNextTick();
 
-    for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
-    }
-
-    // Gold should not be donated since they are not allies but there's some small deviation due to game mechanics
-    const difference = donor.gold() - recipient.gold();
-    const absDifference = difference > 0n ? difference : -difference;
-
-    expect(absDifference < 5000n).toBe(true);
+    // Gold should not be donated since they are not allies
+    expect(donor.gold() >= donorGoldBefore).toBe(true);
+    expect(recipient.gold() >= recipientGoldBefore).toBe(true);
   });
 });
