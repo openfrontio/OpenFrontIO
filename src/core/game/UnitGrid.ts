@@ -144,7 +144,7 @@ export class UnitGrid {
       searchRange,
     );
     const rangeSquared = searchRange * searchRange;
-    const typeSet = Array.isArray(types) ? new Set(types) : new Set([types]);
+    const typeSet = new Set(typeof types === "object" ? types : [types]);
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const type of typeSet) {
