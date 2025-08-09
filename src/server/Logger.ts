@@ -29,6 +29,7 @@ if (config.otelEnabled()) {
   // Add OTLP exporter for logs
   const logExporter = new OTLPLogExporter({
     url: `${config.otelEndpoint()}/v1/logs`,
+    // eslint-disable-next-line sort-keys
     headers,
   });
 
@@ -56,6 +57,7 @@ const addSeverityFormat = winston.format((info) => {
 // Define your base/parent logger
 const logger = winston.createLogger({
   level: "info",
+  /* eslint-disable sort-keys */
   format: winston.format.combine(
     winston.format.timestamp(),
     addSeverityFormat(),
@@ -65,6 +67,7 @@ const logger = winston.createLogger({
     service: "openfront",
     environment: process.env.GAME_ENV ?? "prod",
   },
+  /* eslint-enable sort-keys */
   transports: [
     new winston.transports.Console(),
     new OpenTelemetryTransportV3(),

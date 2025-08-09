@@ -18,6 +18,7 @@ import {
   ClientInfo,
   GameConfig,
   GameInfo,
+  GameInfoSchema,
   TeamCountConfig,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -47,7 +48,7 @@ export class HostLobbyModal extends LitElement {
   @state() private copySuccess = false;
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
 
@@ -671,6 +672,7 @@ export class HostLobbyModal extends LitElement {
       },
     })
       .then((response) => response.json())
+      .then(GameInfoSchema.parse)
       .then((data: GameInfo) => {
         console.log(`got game info response: ${JSON.stringify(data)}`);
 

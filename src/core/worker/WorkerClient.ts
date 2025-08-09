@@ -66,10 +66,10 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "init",
-        id: messageId,
-        gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
+        gameStartInfo: this.gameStartInfo,
+        id: messageId,
+        type: "init",
       });
 
       // Add timeout for initialization
@@ -95,8 +95,8 @@ export class WorkerClient {
     }
 
     this.worker.postMessage({
-      type: "turn",
       turn,
+      type: "turn",
     });
   }
 
@@ -125,9 +125,9 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "player_profile",
         id: messageId,
-        playerID: playerID,
+        playerID,
+        type: "player_profile",
       });
     });
   }
@@ -151,9 +151,9 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "player_border_tiles",
         id: messageId,
-        playerID: playerID,
+        playerID,
+        type: "player_border_tiles",
       });
     });
   }
@@ -181,9 +181,9 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "player_actions",
         id: messageId,
-        playerID: playerID,
+        playerID,
+        type: "player_actions",
         x: x,
         y: y,
       });
@@ -217,10 +217,10 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "attack_average_position",
+        attackID,
         id: messageId,
-        playerID: playerID,
-        attackID: attackID,
+        playerID,
+        type: "attack_average_position",
       });
     });
   }
@@ -247,10 +247,10 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "transport_ship_spawn",
         id: messageId,
-        playerID: playerID,
-        targetTile: targetTile,
+        playerID,
+        targetTile,
+        type: "transport_ship_spawn",
       });
     });
   }

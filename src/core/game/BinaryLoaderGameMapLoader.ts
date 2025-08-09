@@ -37,6 +37,13 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
     const fileName = key?.toLowerCase();
 
     const mapData = {
+      manifest: this.createLazyLoader(() =>
+        (
+          import(
+            `../../../resources/maps/${fileName}/manifest.json`
+          ) as Promise<NationMapModule>
+        ).then((m) => m.default),
+      ),
       mapBin: this.createLazyLoader(() =>
         (
           import(
@@ -50,13 +57,6 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
             `!!binary-loader!../../../resources/maps/${fileName}/mini_map.bin`
           ) as Promise<BinModule>
         ).then((m) => this.toUInt8Array(m.default)),
-      ),
-      manifest: this.createLazyLoader(() =>
-        (
-          import(
-            `../../../resources/maps/${fileName}/manifest.json`
-          ) as Promise<NationMapModule>
-        ).then((m) => m.default),
       ),
       webpPath: this.createLazyLoader(() =>
         (
