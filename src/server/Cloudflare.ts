@@ -170,7 +170,6 @@ export class Cloudflare {
 
     const credentials = {
       AccountTag: tokenData.a || this.accountId,
-
       TunnelID: tokenData.t || tunnelId,
       TunnelName: tunnelName,
       TunnelSecret: tokenData.s,
