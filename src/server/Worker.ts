@@ -10,12 +10,12 @@ import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
-import { replacer } from "../core/Util";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { preJoinMessageHandler } from "./worker/websocket/handler/message/PreJoinHandler";
 import { initWorkerMetrics } from "./WorkerMetrics";
@@ -226,7 +226,6 @@ export async function startWorker() {
 
       if (typeof gameRecord === "string") {
         return res.status(404).json({
-          success: false,
           error: gameRecord,
           exists: false,
           success: false,
