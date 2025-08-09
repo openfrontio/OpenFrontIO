@@ -19,7 +19,7 @@ const LocalStatsDataSchema = z.record(
 );
 type LocalStatsData = z.infer<typeof LocalStatsDataSchema>;
 
-let _startTime: number;
+let _startTime: number | undefined;
 
 function getStats(): LocalStatsData {
   try {
