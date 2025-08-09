@@ -1,4 +1,8 @@
-import { UserMeResponse } from "../core/ApiSchemas";
+import { z } from "zod";
+import {
+  StripeCreateCheckoutSessionResponseSchema,
+  UserMeResponse,
+} from "../core/ApiSchemas";
 import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
 import { getPersistentID } from "./Main";
@@ -66,7 +70,15 @@ export async function handlePurchase(pattern: Pattern) {
     return;
   }
 
-  const { url } = await response.json();
+  const json = await response.json();
+  const parsed = StripeCreateCheckoutSessionResponseSchema.safeParse(json);
+  if (!parsed.success) {
+    const error = z.prettifyError(parsed.error);
+    console.error("Invalid checkout session response:", error);
+    alert("Checkout failed. Please try again later.");
+    return;
+  }
+  const { url } = parsed.data;
 
   // Redirect to Stripe checkout
   window.location.href = url;

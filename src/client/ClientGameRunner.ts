@@ -229,7 +229,7 @@ export class ClientGameRunner {
       players,
       // Not saving turns locally
       [],
-      startTime(),
+      startTime() ?? 0,
       Date.now(),
       update.winner,
       this.lobby.serverConfig,

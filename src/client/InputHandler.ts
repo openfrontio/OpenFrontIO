@@ -159,7 +159,7 @@ export class InputHandler {
       groundAttack: "KeyG",
       modifierKey: "ControlLeft",
       altKey: "AltLeft",
-      ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
+      ...(JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}") ?? {}),
     };
 
     // Mac users might have different keybinds

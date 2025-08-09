@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { z } from "zod";
 import {
   Difficulty,
   Game,
@@ -12,7 +13,7 @@ import {
 import { createGame } from "../../src/core/game/GameImpl";
 import {
   genTerrainFromBin,
-  MapManifest,
+  MapManifestSchema,
 } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
@@ -44,9 +45,14 @@ export async function setup(
 
   const mapBinBuffer = fs.readFileSync(mapBinPath);
   const miniMapBinBuffer = fs.readFileSync(miniMapBinPath);
-  const manifest = JSON.parse(
-    fs.readFileSync(manifestPath, "utf8"),
-  ) satisfies MapManifest;
+  const str = fs.readFileSync(manifestPath, "utf8");
+  const raw = JSON.parse(str);
+  const parsed = MapManifestSchema.safeParse(raw);
+  if (!parsed.success) {
+    const error = z.prettifyError(parsed.error);
+    throw new Error(`Error parsing ${manifestPath}: ${error}`);
+  }
+  const manifest = parsed.data;
 
   const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(
