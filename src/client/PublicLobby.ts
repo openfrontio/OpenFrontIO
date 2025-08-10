@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { ApiPublicLobbiesResponseSchema } from "../core/ExpressSchemas";
 import { GameMapType, GameMode } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -77,7 +78,8 @@ export class PublicLobby extends LitElement {
       const response = await fetch(`/api/public_lobbies`);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const json = await response.json();
+      const data = ApiPublicLobbiesResponseSchema.parse(json);
       return data.lobbies;
     } catch (error) {
       console.error("Error fetching lobbies:", error);
