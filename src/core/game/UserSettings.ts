@@ -63,7 +63,7 @@ export class UserSettings {
   }
 
   infoDisplayMode(): string {
-    return localStorage.getItem("settings.infoDisplayMode") ?? "both";
+    return localStorage.getItem("settings.infoDisplayMode") ?? "overlay";
   }
 
   setInfoDisplayMode(mode: string): void {
