@@ -42,13 +42,13 @@ export class SettingsModal extends LitElement implements Layer {
   shouldPause = false;
 
   @property({ type: Boolean })
-  isPausedOnOpen = false;
+  wasPausedWhenOpened = false;
 
   init() {
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;
-      this.isPausedOnOpen = event.isPaused;
+      this.wasPausedWhenOpened = event.isPaused;
       this.pauseGame(true);
     });
   }
@@ -99,8 +99,7 @@ export class SettingsModal extends LitElement implements Layer {
   }
 
   private pauseGame(pause: boolean) {
-    if (pause === undefined) return;
-    if (this.shouldPause && !this.isPausedOnOpen)
+    if (this.shouldPause && !this.wasPausedWhenOpened)
       this.eventBus.emit(new PauseGameEvent(pause));
   }
 

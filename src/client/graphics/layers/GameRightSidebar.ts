@@ -99,7 +99,7 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   private onSettingsButtonClick() {
-    const shouldPause = this._isSinglePlayer || this.game?.config()?.isReplay();
+    const shouldPause = this._isSinglePlayer;
     this.eventBus.emit(
       new ShowSettingsModalEvent(true, shouldPause, this.isPaused),
     );
