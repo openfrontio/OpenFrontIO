@@ -5,6 +5,10 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import {
+  ApiEnvResponse,
+  ApiPublicLobbiesResponse,
+} from "../core/ExpressSchemas";
 import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
@@ -59,7 +63,9 @@ app.use(
   }),
 );
 
-let publicLobbiesJsonStr = "";
+let publicLobbiesJsonStr = JSON.stringify({
+  lobbies: [],
+} satisfies ApiPublicLobbiesResponse);
 
 const publicLobbyIDs: Set<string> = new Set();
 
@@ -145,8 +151,8 @@ export async function startMaster() {
 app.get(
   "/api/env",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    const envConfig = {
-      game_env: process.env.GAME_ENV,
+    const envConfig: ApiEnvResponse = {
+      game_env: process.env.GAME_ENV ?? "",
     };
     if (!envConfig.game_env) return res.sendStatus(500);
     res.json(envConfig);
@@ -266,7 +272,7 @@ async function fetchLobbies(): Promise<number> {
   // Update the JSON string
   publicLobbiesJsonStr = JSON.stringify({
     lobbies: lobbyInfos,
-  });
+  } satisfies ApiPublicLobbiesResponse);
 
   return publicLobbyIDs.size;
 }

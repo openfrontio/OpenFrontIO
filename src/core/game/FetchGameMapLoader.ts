@@ -1,5 +1,6 @@
 import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
+import { MapManifestSchema } from "./TerrainMapLoader";
 
 export class FetchGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;
@@ -66,6 +67,6 @@ export class FetchGameMapLoader implements GameMapLoader {
       throw new Error(`Failed to load ${url}: ${response.statusText}`);
     }
 
-    return response.json();
+    return response.json().then(MapManifestSchema.parse);
   }
 }
