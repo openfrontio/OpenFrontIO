@@ -277,8 +277,8 @@
     },
     {
       "coordinates": [1030, 665],
-      "flag": "Apartheid South Africa",
-      "name": "South West Africa",
+      "flag": "na",
+      "name": "Namibia",
       "strength": 0.5
     },
     {
@@ -320,7 +320,7 @@
     {
       "coordinates": [419, 975],
       "flag": "aq",
-      "name": "West Antartica",
+      "name": "West Antarctica",
       "strength": 2
     },
     {
@@ -356,7 +356,7 @@
     {
       "coordinates": [1809, 977],
       "flag": "aq",
-      "name": "East Antartica",
+      "name": "East Antarctica",
       "strength": 2
     },
     {
