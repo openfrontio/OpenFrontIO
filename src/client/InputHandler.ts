@@ -68,6 +68,10 @@ export class AlternateViewEvent implements GameEvent {
   constructor(public readonly alternateView: boolean) {}
 }
 
+export class ForcePlayerInfoMouseOverlayEvent implements GameEvent {
+  constructor(public readonly forcePlayerInfoMouseOverlay: boolean) {}
+}
+
 export class CloseViewEvent implements GameEvent {}
 
 export class RefreshGraphicsEvent implements GameEvent {}
@@ -128,6 +132,7 @@ export class InputHandler {
   private pointerDown: boolean = false;
 
   private alternateView = false;
+  private forcePlayerInfoMouseOverlay = false;
 
   private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
@@ -146,6 +151,7 @@ export class InputHandler {
   initialize() {
     this.keybinds = {
       toggleView: "Space",
+      togglePlayerInfo: "ShiftRight",
       centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
@@ -262,6 +268,14 @@ export class InputHandler {
         }
       }
 
+      if (e.code === this.keybinds.forcePlayerInfoMouseOverlay) {
+        e.preventDefault();
+        if (!this.forcePlayerInfoMouseOverlay) {
+          this.forcePlayerInfoMouseOverlay = true;
+          this.eventBus.emit(new ForcePlayerInfoMouseOverlayEvent(true));
+        }
+      }
+
       if (e.code === "Escape") {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
@@ -298,6 +312,12 @@ export class InputHandler {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
+      }
+
+      if (e.code === this.keybinds.forcePlayerInfoMouseOverlay) {
+        e.preventDefault();
+        this.forcePlayerInfoMouseOverlay = false;
+        this.eventBus.emit(new ForcePlayerInfoMouseOverlayEvent(false));
       }
 
       if (e.key.toLowerCase() === "r" && e.altKey && !e.ctrlKey) {

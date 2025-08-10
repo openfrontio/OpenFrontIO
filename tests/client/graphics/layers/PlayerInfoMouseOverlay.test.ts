@@ -3,6 +3,7 @@
  */
 import { PlayerInfoManager } from "../../../../src/client/graphics/layers/PlayerInfoManager";
 import { TransformHandler } from "../../../../src/client/graphics/TransformHandler";
+import { ForcePlayerInfoMouseOverlayEvent } from "../../../../src/client/InputHandler";
 import { EventBus } from "../../../../src/core/EventBus";
 import { Relation } from "../../../../src/core/game/Game";
 import {
@@ -25,7 +26,8 @@ class MockPlayerInfoMouseOverlay {
   private isDragging = false;
   private player: PlayerView | null = null;
   private unit: UnitView | null = null;
-  private isVisible = false;
+  private hasInfo = false;
+  private forcePlayerInfoMouseOverlay = false;
   private playerInfoManager: any;
   private _isActive = false;
   private canvas: HTMLCanvasElement | null = null;
@@ -62,14 +64,15 @@ class MockPlayerInfoMouseOverlay {
   }
 
   private onHoverInfoUpdate(hoverInfo: any) {
-    if (!this.userSettings?.showPlayerInfoMouseOverlay()) {
-      this.resetHoverState();
-      return;
-    }
-
     this.player = hoverInfo.player;
     this.unit = hoverInfo.unit;
-    this.isVisible = !!(this.player ?? this.unit);
+    this.hasInfo = !!(this.player ?? this.unit);
+  }
+
+  private onForcePlayerInfoMouseOverlayEvent(
+    event: ForcePlayerInfoMouseOverlayEvent,
+  ) {
+    this.forcePlayerInfoMouseOverlay = event.forcePlayerInfoMouseOverlay;
   }
 
   connectedCallback() {
@@ -81,6 +84,11 @@ class MockPlayerInfoMouseOverlay {
   }
 
   private setupEventListeners() {
+    this.eventBus.on = jest.fn();
+    this.eventBus.on(
+      ForcePlayerInfoMouseOverlayEvent,
+      this.onForcePlayerInfoMouseOverlayEvent.bind(this),
+    );
     this.setupCanvasEventListeners();
   }
 
@@ -126,14 +134,22 @@ class MockPlayerInfoMouseOverlay {
     this.isDragging = false;
   }
 
-  private resetHoverState() {
-    this.player = null;
-    this.unit = null;
-    this.isVisible = false;
+  private shouldRender(): boolean {
+    return (
+      this._isActive &&
+      (this.userSettings?.showPlayerInfoMouseOverlay() ||
+        this.forcePlayerInfoMouseOverlay) &&
+      this.hasInfo &&
+      !this.isDragging
+    );
+  }
+
+  private getHudElement(): HTMLElement | null {
+    return this.querySelector(".mouse-hud") as HTMLElement;
   }
 
   private getHUDPosition(): { x: number; y: number } {
-    const hudElement = this.querySelector(".mouse-hud") as HTMLElement;
+    const hudElement = this.getHudElement();
     if (!hudElement) return { x: this.mouseX, y: this.mouseY };
 
     const w = hudElement.offsetWidth || 200;
@@ -167,15 +183,13 @@ class MockPlayerInfoMouseOverlay {
   }
 
   render() {
-    if (
-      !this.userSettings?.showPlayerInfoMouseOverlay() ||
-      !this.isVisible ||
-      this.isDragging
-    ) {
+    if (!this.shouldRender()) {
       return { strings: [""] };
     }
 
     const position = this.getHUDPosition();
+    const opacity =
+      this.isDragging || this.getHudElement() === null ? "0" : "1";
     let content = "";
 
     if (this.player) {
@@ -186,7 +200,9 @@ class MockPlayerInfoMouseOverlay {
     }
 
     return {
-      strings: [`left: ${position.x}px; top: ${position.y}px${content}`],
+      strings: [
+        `left: ${position.x}px; top: ${position.y}px; opacity: ${opacity}${content}`,
+      ],
     };
   }
 }
@@ -298,10 +314,10 @@ describe("PlayerInfoMouseOverlay", () => {
     });
 
     expect(overlay["player"]).toBe(mockPlayer);
-    expect(overlay["isVisible"]).toBe(true);
+    expect(overlay["hasInfo"]).toBe(true);
   });
 
-  it("should hide overlay when user settings disable it", () => {
+  it("should update hover info without checking user settings", () => {
     userSettings.showPlayerInfoMouseOverlay = jest.fn().mockReturnValue(false);
     overlay.init();
     const dataCallback = mockPlayerInfoManager.subscribeToData.mock.calls[0][0];
@@ -313,8 +329,55 @@ describe("PlayerInfoMouseOverlay", () => {
       mouseY: 200,
     });
 
-    expect(overlay["player"]).toBeNull();
-    expect(overlay["isVisible"]).toBe(false);
+    expect(overlay["player"]).toBe(mockPlayer);
+    expect(overlay["hasInfo"]).toBe(true);
+  });
+
+  it("should show overlay when forced even if user settings disable it", () => {
+    userSettings.showPlayerInfoMouseOverlay = jest.fn().mockReturnValue(false);
+    overlay.init();
+    overlay["hasInfo"] = true;
+    overlay["forcePlayerInfoMouseOverlay"] = true;
+    overlay["isDragging"] = false;
+
+    const result = overlay.render();
+    const htmlString = result.strings.join("");
+
+    expect(htmlString).not.toBe("");
+  });
+
+  it("should handle ForcePlayerInfoMouseOverlayEvent", () => {
+    const event = {
+      forcePlayerInfoMouseOverlay: true,
+    } as ForcePlayerInfoMouseOverlayEvent;
+
+    overlay["onForcePlayerInfoMouseOverlayEvent"](event);
+
+    expect(overlay["forcePlayerInfoMouseOverlay"]).toBe(true);
+  });
+
+  it("should setup event bus listener for ForcePlayerInfoMouseOverlayEvent", () => {
+    eventBus.on = jest.fn();
+    overlay.eventBus = eventBus;
+
+    overlay["setupEventListeners"]();
+
+    expect(eventBus.on).toHaveBeenCalledWith(
+      ForcePlayerInfoMouseOverlayEvent,
+      expect.any(Function),
+    );
+  });
+
+  it("should hide overlay when user settings disable it", () => {
+    userSettings.showPlayerInfoMouseOverlay = jest.fn().mockReturnValue(false);
+    overlay.init();
+    overlay["hasInfo"] = true;
+    overlay["forcePlayerInfoMouseOverlay"] = false;
+
+    const result = overlay.render();
+    const htmlString = result.strings.join("");
+
+    expect(htmlString).toBe("");
   });
 
   it("should hide overlay when hover info is empty", () => {
@@ -328,7 +391,7 @@ describe("PlayerInfoMouseOverlay", () => {
       mouseY: 200,
     });
 
-    expect(overlay["isVisible"]).toBe(false);
+    expect(overlay["hasInfo"]).toBe(false);
   });
 
   it("should setup canvas event listeners on connected", () => {
@@ -430,7 +493,7 @@ describe("PlayerInfoMouseOverlay", () => {
   it("should render player info correctly", () => {
     overlay.init();
     overlay["player"] = mockPlayer;
-    overlay["isVisible"] = true;
+    overlay["hasInfo"] = true;
     overlay["isDragging"] = false;
     overlay["mouseX"] = 100;
     overlay["mouseY"] = 200;
@@ -444,7 +507,7 @@ describe("PlayerInfoMouseOverlay", () => {
   it("should render unit info correctly", () => {
     overlay.init();
     overlay["unit"] = mockUnit;
-    overlay["isVisible"] = true;
+    overlay["hasInfo"] = true;
     overlay["isDragging"] = false;
     overlay["mouseX"] = 100;
     overlay["mouseY"] = 200;
@@ -454,6 +517,34 @@ describe("PlayerInfoMouseOverlay", () => {
 
     expect(htmlString).toContain("Warship");
     expect(htmlString).toContain("Health: 80");
+  });
+
+  it("should include opacity in render output", () => {
+    overlay.init();
+    overlay["player"] = mockPlayer;
+    overlay["hasInfo"] = true;
+    overlay["isDragging"] = false;
+    overlay["mouseX"] = 100;
+    overlay["mouseY"] = 200;
+
+    const result = overlay.render();
+    const htmlString = result.strings.join("");
+
+    expect(htmlString).toContain("opacity: 1");
+  });
+
+  it("should set opacity to 0 when dragging", () => {
+    overlay.init();
+    overlay["player"] = mockPlayer;
+    overlay["hasInfo"] = true;
+    overlay["isDragging"] = true;
+    overlay["mouseX"] = 100;
+    overlay["mouseY"] = 200;
+
+    const result = overlay.render();
+    const htmlString = result.strings.join("");
+
+    expect(htmlString).toBe("");
   });
 
   it("should not render when user settings disable overlay", () => {
@@ -467,7 +558,7 @@ describe("PlayerInfoMouseOverlay", () => {
 
   it("should not render when not visible", () => {
     overlay.init();
-    overlay["isVisible"] = false;
+    overlay["hasInfo"] = false;
 
     const result = overlay.render();
     const htmlString = result.strings.join("");
@@ -477,7 +568,6 @@ describe("PlayerInfoMouseOverlay", () => {
 
   it("should not render when dragging", () => {
     overlay.init();
-    overlay["isVisible"] = true;
     overlay["isDragging"] = true;
 
     const result = overlay.render();
@@ -498,17 +588,5 @@ describe("PlayerInfoMouseOverlay", () => {
 
   it("should not transform", () => {
     expect(overlay.shouldTransform()).toBe(false);
-  });
-
-  it("should reset hover state correctly", () => {
-    overlay["player"] = mockPlayer;
-    overlay["unit"] = mockUnit;
-    overlay["isVisible"] = true;
-
-    overlay["resetHoverState"]();
-
-    expect(overlay["player"]).toBeNull();
-    expect(overlay["unit"]).toBeNull();
-    expect(overlay["isVisible"]).toBe(false);
   });
 });

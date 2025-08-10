@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { ForcePlayerInfoMouseOverlayEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { PlayerInfoManager } from "./PlayerInfoManager";
@@ -38,7 +39,10 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   private unit: UnitView | null = null;
 
   @state()
-  private isVisible = false;
+  private hasInfo = false;
+
+  @state()
+  private forcePlayerInfoMouseOverlay = false;
 
   private playerInfoManager!: PlayerInfoManager;
   private _isActive = false;
@@ -79,14 +83,9 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   }
 
   private onHoverInfoUpdate(hoverInfo: HoverInfo) {
-    if (!this.userSettings?.showPlayerInfoMouseOverlay()) {
-      this.resetHoverState();
-      return;
-    }
-
     this.player = hoverInfo.player;
     this.unit = hoverInfo.unit;
-    this.isVisible = !!(this.player ?? this.unit);
+    this.hasInfo = !!(this.player ?? this.unit);
     this.requestUpdate();
   }
 
@@ -101,6 +100,9 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   }
 
   protected setupEventListeners() {
+    this.eventBus.on(ForcePlayerInfoMouseOverlayEvent, (e) =>
+      this.onForcePlayerInfoMouseOverlayEvent(e),
+    );
     this.setupCanvasEventListeners();
   }
 
@@ -122,23 +124,22 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
     }
   }
 
-  private resetHoverState() {
-    this.player = null;
-    this.unit = null;
-    this.isVisible = false;
-  }
-
   protected shouldRender(): boolean {
     return (
       this._isActive &&
-      this.userSettings?.showPlayerInfoMouseOverlay() &&
-      this.isVisible &&
+      (this.userSettings?.showPlayerInfoMouseOverlay() ||
+        this.forcePlayerInfoMouseOverlay) &&
+      this.hasInfo &&
       !this.isDragging
     );
   }
 
+  private getHudElement(): HTMLElement | null {
+    return this.querySelector(".mouse-hud") as HTMLElement;
+  }
+
   private getHUDPosition(): { x: number; y: number } {
-    const hudElement = this.querySelector(".mouse-hud") as HTMLElement;
+    const hudElement = this.getHudElement();
     if (!hudElement) return { x: this.mouseX, y: this.mouseY };
 
     const w = hudElement.offsetWidth || OVERLAY_CONFIG.defaultWidth;
@@ -188,6 +189,14 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
     `;
   }
 
+  private onForcePlayerInfoMouseOverlayEvent(
+    event: ForcePlayerInfoMouseOverlayEvent,
+  ) {
+    this.forcePlayerInfoMouseOverlay = event.forcePlayerInfoMouseOverlay;
+
+    this.requestUpdate();
+  }
+
   private renderUnitInfo(unit: UnitView): TemplateResult {
     const playerInfoService = this.playerInfoManager.getPlayerInfoService();
     const relation = playerInfoService.getRelation(unit.owner());
@@ -230,7 +239,8 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
     }
 
     const position = this.getHUDPosition();
-    const opacity = this.isDragging ? "0" : "1";
+    const opacity =
+      this.isDragging || this.getHudElement() === null ? "0" : "1";
 
     return html`
       <div

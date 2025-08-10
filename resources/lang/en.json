@@ -307,6 +307,8 @@
     "view_options": "View Options",
     "toggle_view": "Toggle View",
     "toggle_view_desc": "Alternate view (terrain/countries)",
+    "force_player_info_mouse_overlay": "Force player info on cursor",
+    "force_player_info_mouse_overlay_desc": "Hold to display player information overlay at cursor position",
     "attack_ratio_controls": "Attack Ratio Controls",
     "attack_ratio_up": "Increase Attack Ratio",
     "attack_ratio_up_desc": "Increase attack ratio by 10%",
