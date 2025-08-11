@@ -52,6 +52,11 @@ export default [
         "warn", // TODO: Raise this to error, https://github.com/openfrontio/OpenFrontIO/issues/1033
         { assertionStyle: "never" },
       ],
+      "@typescript-eslint/no-duplicate-enum-values": "error",
+      "@typescript-eslint/no-mixed-enums": "error",
+      "@typescript-eslint/no-require-imports": "error",
+      "@typescript-eslint/prefer-as-const": "error",
+      "@typescript-eslint/prefer-literal-enum-member": "error",
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
       "sort-keys": "error",
