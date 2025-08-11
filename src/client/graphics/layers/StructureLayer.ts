@@ -12,7 +12,6 @@ import missileSiloIcon from "../../../../resources/non-commercial/images/buildin
 import SAMMissileIcon from "../../../../resources/non-commercial/images/buildings/silo4.png";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
@@ -22,6 +21,12 @@ const BASE_BORDER_RADIUS = 16.5;
 const BASE_TERRITORY_RADIUS = 13.5;
 const RADIUS_SCALE_FACTOR = 0.5;
 const ZOOM_THRESHOLD = 3.5; // below this zoom level, structures are not rendered
+
+// SAM launcher visual constants
+const SAM_PROTECTION_RADIUS = 50; // MIRVWarheadProtectionRadius from game logic
+const SAM_CIRCLE_COLOR = "#ff00ff"; // Magenta for high visibility
+const SAM_DASH_PATTERN = [6, 6];
+const SAM_LINE_WIDTH = 2;
 
 interface UnitRenderConfig {
   icon: string;
@@ -100,7 +105,7 @@ export class StructureLayer implements Layer {
 
   private loadIconData() {
     Object.entries(this.unitConfigs).forEach(([unitType, config]) => {
-      this.loadIcon(unitType, config);
+      this.loadIcon(unitType, config as UnitRenderConfig);
     });
   }
 
@@ -108,14 +113,18 @@ export class StructureLayer implements Layer {
     return true;
   }
 
+  // ------------------
+  // NEW: ensure outdated visuals (e.g., SAM radius) are cleared every tick
+  //       by wiping the canvas first, then redrawing all current units.
+  // ------------------
   tick() {
-    const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
-    for (const u of unitUpdates) {
-      const unit = this.game.unit(u.id);
-      if (unit === undefined) continue;
-      this.handleUnitRendering(unit);
+    // Clear everything previously rendered so stale graphics disappear
+    if (this.context) {
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
+
+    // Draw a fresh frame with the current game state
+    this.game.units().forEach((u) => this.handleUnitRendering(u));
   }
 
   init() {
@@ -136,6 +145,10 @@ export class StructureLayer implements Layer {
     this.canvas.width = this.game.width() * 2;
     this.canvas.height = this.game.height() * 2;
     this.game.units().forEach((u) => this.handleUnitRendering(u));
+  }
+
+  structureSamRadiusColor(): string {
+    return SAM_CIRCLE_COLOR;
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -186,16 +199,44 @@ export class StructureLayer implements Layer {
     }
   }
 
+  private drawSamRadius(unit: UnitView) {
+    const ctx = this.context;
+    const centerX = this.game.x(unit.tile()) * 2 + 1;
+    const centerY = this.game.y(unit.tile()) * 2 + 1;
+    const tileToPx = 2;
+    const radius = SAM_PROTECTION_RADIUS * tileToPx; // 50 is MIRVWarheadProtectionRadius
+
+    ctx.save();
+    ctx.setLineDash(SAM_DASH_PATTERN);
+    ctx.lineWidth = SAM_LINE_WIDTH;
+    ctx.strokeStyle = SAM_CIRCLE_COLOR;
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ------------------
+  // NEW: centralized toggle helper to decide whether to show SAM radius
+  // ------------------
+  private shouldDrawSamRadius(unit: UnitView): boolean {
+    return (
+      unit.type() === UnitType.SAMLauncher &&
+      unit.isActive() &&
+      this.transformHandler.scale >= ZOOM_THRESHOLD
+    );
+  }
+
   private handleUnitRendering(unit: UnitView) {
     const unitType = unit.constructionType() ?? unit.type();
     const iconType = unitType;
     if (!this.isUnitTypeSupported(unitType)) return;
 
-    const config = this.unitConfigs[unitType];
+    const config = this.unitConfigs[unitType] as UnitRenderConfig;
     let icon: HTMLImageElement | undefined;
     let borderColor = this.theme.borderColor(unit.owner());
 
-    // Handle cooldown states and special icons
     if (unit.type() === UnitType.Construction) {
       icon = this.unitIcons.get(iconType);
       borderColor = underConstructionColor;
@@ -205,7 +246,7 @@ export class StructureLayer implements Layer {
 
     if (!config || !icon) return;
 
-    // Clear previous rendering
+    // Always clear the border area for this unit
     for (const tile of this.game.bfs(
       unit.tile(),
       euclDistFN(unit.tile(), config.borderRadius + 1, true),
@@ -216,6 +257,11 @@ export class StructureLayer implements Layer {
     if (!unit.isActive()) return;
 
     this.drawBorder(unit, borderColor, config);
+
+    // Draw magenta radius for active SAMLauncher when appropriate
+    if (this.shouldDrawSamRadius(unit)) {
+      this.drawSamRadius(unit);
+    }
 
     // Render icon at 1/2 scale for better quality
     const scaledWidth = icon.width >> 1;
