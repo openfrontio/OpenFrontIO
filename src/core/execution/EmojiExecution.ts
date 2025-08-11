@@ -47,10 +47,10 @@ export class EmojiExecution implements Execution {
 
       if (this.recipient === AllPlayers) {
         // track a broadcast
-        this.mg.stats().emojiBroadcast(this.requestor);
+        this.mg.stats().actionBroadcastEmoji(this.requestor);
       } else {
         // track a DM
-        this.mg.stats().emojiSend(this.requestor, this.recipient);
+        this.mg.stats().actionSendEmoji(this.requestor, this.recipient);
       }
 
       if (

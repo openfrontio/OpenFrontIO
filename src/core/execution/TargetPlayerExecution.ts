@@ -26,7 +26,7 @@ export class TargetPlayerExecution implements Execution {
   tick(ticks: number): void {
     if (this.requestor.canTarget(this.target)) {
       this.requestor.target(this.target);
-      this.mg.stats().targetSend(this.requestor, this.target);
+      this.mg.stats().actionSendTarget(this.requestor, this.target);
       this.target.updateRelation(this.requestor, -40);
     }
     this.active = false;

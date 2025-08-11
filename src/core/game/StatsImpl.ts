@@ -15,9 +15,9 @@ import {
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
-  CONQUER_INDEX_BOT,
-  CONQUER_INDEX_NATION,
-  CONQUER_INDEX_PLAYER,
+  CONQUER_INDEX_ELIMINATION,
+  CONQUER_INDEX_ENCIRCLEMENT,
+  ConqueredPlayerType,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
@@ -33,7 +33,7 @@ import {
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
-import { Player, TerraNullius } from "./Game";
+import { Player, PlayerType, TerraNullius } from "./Game";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;
@@ -68,6 +68,20 @@ export class StatsImpl implements Stats {
     const data = {} satisfies PlayerStats;
     this.data[clientID] = data;
     return data;
+  }
+
+  private _addAction(
+    player: Player,
+    action: Action,
+    index: number,
+    value: BigIntLike,
+  ) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.actions ??= {};
+    p.actions[action] ??= action === "emoji" ? [0n, 0n, 0n] : [0n, 0n];
+    while (p.actions[action].length <= index) p.actions[action].push(0n);
+    p.actions[action][index] += _bigint(value);
   }
 
   private _addAttack(player: Player, index: number, value: BigIntLike) {
@@ -117,6 +131,20 @@ export class StatsImpl implements Stats {
     p.bombs[type][index] += _bigint(value);
   }
 
+  private _addConquer(
+    player: Player,
+    playerType: ConqueredPlayerType,
+    index: number,
+  ) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.conquered ??= {};
+    p.conquered[playerType] ??= [0n, 0n];
+    while (p.conquered[playerType].length <= index)
+      p.conquered[playerType].push(0n);
+    p.conquered[playerType][index] += 1n;
+  }
+
   private _addGold(player: Player, index: number, value: BigIntLike) {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
@@ -140,26 +168,33 @@ export class StatsImpl implements Stats {
     p.units[type][index] += _bigint(value);
   }
 
-  private _addAction(
-    player: Player,
-    action: Action,
-    index: number,
-    value: BigIntLike,
-  ) {
-    const p = this._makePlayerStats(player);
-    if (p === undefined) return;
-    p.actions ??= {};
-    p.actions[action] ??= action === "emoji" ? [0n, 0n, 0n] : [0n, 0n];
-    while (p.actions[action].length <= index) p.actions[action].push(0n);
-    p.actions[action][index] += _bigint(value);
+  actionBroadcastEmoji(player: Player): void {
+    this._addAction(player, "emoji", ACTION_INDEX_BROADCAST, 1);
   }
 
-  private _addConquer(player: Player, index: number) {
-    const p = this._makePlayerStats(player);
-    if (p === undefined) return;
-    p.conquers ??= [0n, 0n, 0n];
-    while (p.conquers.length <= index) p.conquers.push(0n);
-    p.conquers[index] += 1n;
+  actionSendEmoji(player: Player, target: Player): void {
+    this._addAction(player, "emoji", ACTION_INDEX_SENT, 1);
+    this._addAction(target, "emoji", ACTION_INDEX_RECV, 1);
+  }
+
+  actionSendGold(player: Player, target: Player, gold: BigIntLike): void {
+    this._addAction(player, "gold", ACTION_INDEX_SENT, gold);
+    this._addAction(target, "gold", ACTION_INDEX_RECV, gold);
+  }
+
+  actionSendQuickChat(player: Player, target: Player): void {
+    this._addAction(player, "quickchat", ACTION_INDEX_SENT, 1);
+    this._addAction(target, "quickchat", ACTION_INDEX_RECV, 1);
+  }
+
+  actionSendTarget(player: Player, target: Player): void {
+    this._addAction(player, "target", ACTION_INDEX_SENT, 1);
+    this._addAction(target, "target", ACTION_INDEX_RECV, 1);
+  }
+
+  actionSendTroops(player: Player, target: Player, troops: BigIntLike): void {
+    this._addAction(player, "troops", ACTION_INDEX_SENT, troops);
+    this._addAction(target, "troops", ACTION_INDEX_RECV, troops);
   }
 
   attack(
@@ -248,6 +283,25 @@ export class StatsImpl implements Stats {
     this._addBomb(player, type, BOMB_INDEX_INTERCEPT, count);
   }
 
+  conquer(
+    player: Player,
+    target: Player,
+    method: "elimination" | "encirclement" = "elimination",
+  ): void {
+    const playerType: ConqueredPlayerType =
+      target.type() === PlayerType.Bot
+        ? "bot"
+        : target.type() === PlayerType.FakeHuman
+          ? "nation"
+          : "human";
+
+    const methodIndex =
+      method === "elimination"
+        ? CONQUER_INDEX_ELIMINATION
+        : CONQUER_INDEX_ENCIRCLEMENT;
+    this._addConquer(player, playerType, methodIndex);
+  }
+
   goldWork(player: Player, gold: BigIntLike): void {
     this._addGold(player, GOLD_INDEX_WORK, gold);
   }
@@ -274,48 +328,5 @@ export class StatsImpl implements Stats {
 
   unitLose(player: Player, type: OtherUnitType): void {
     this._addOtherUnit(player, type, OTHER_INDEX_LOST, 1);
-  }
-
-  emojiSend(player: Player, target: Player): void {
-    this._addAction(player, "emoji", ACTION_INDEX_SENT, 1);
-    this._addAction(target, "emoji", ACTION_INDEX_RECV, 1);
-  }
-
-  emojiBroadcast(player: Player): void {
-    this._addAction(player, "emoji", ACTION_INDEX_BROADCAST, 1);
-  }
-
-  quickChatSend(player: Player, target: Player): void {
-    this._addAction(player, "quickchat", ACTION_INDEX_SENT, 1);
-    this._addAction(target, "quickchat", ACTION_INDEX_RECV, 1);
-  }
-
-  targetSend(player: Player, target: Player): void {
-    this._addAction(player, "target", ACTION_INDEX_SENT, 1);
-    this._addAction(target, "target", ACTION_INDEX_RECV, 1);
-  }
-
-  troopsSend(player: Player, target: Player, troops: BigIntLike): void {
-    this._addAction(player, "troops", ACTION_INDEX_SENT, troops);
-    this._addAction(target, "troops", ACTION_INDEX_RECV, troops);
-  }
-
-  goldSend(player: Player, target: Player, gold: BigIntLike): void {
-    this._addAction(player, "gold", ACTION_INDEX_SENT, gold);
-    this._addAction(target, "gold", ACTION_INDEX_RECV, gold);
-  }
-
-  recordConquer(player: Player, type: "bot" | "nation" | "player"): void {
-    switch (type) {
-      case "bot":
-        this._addConquer(player, CONQUER_INDEX_BOT);
-        break;
-      case "nation":
-        this._addConquer(player, CONQUER_INDEX_NATION);
-        break;
-      case "player":
-        this._addConquer(player, CONQUER_INDEX_PLAYER);
-        break;
-    }
   }
 }

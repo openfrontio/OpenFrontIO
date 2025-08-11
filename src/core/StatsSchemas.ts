@@ -68,10 +68,13 @@ export const unitTypeToOtherUnit = {
   [UnitType.Factory]: "fact",
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
-// Unified action indices
-export const ACTION_INDEX_SENT = 0;
-export const ACTION_INDEX_RECV = 1;
-export const ACTION_INDEX_BROADCAST = 2; // Currently only used by emojis
+export const ConqueredPlayerTypeSchema = z.enum(["bot", "nation", "human"]);
+export type ConqueredPlayerType = z.infer<typeof ConqueredPlayerTypeSchema>;
+
+// Targeted actions
+export const ACTION_INDEX_SENT = 0; // Targeted actions sent
+export const ACTION_INDEX_RECV = 1; // Targeted actions received
+export const ACTION_INDEX_BROADCAST = 2; // Emojis broadcast
 
 // Attacks
 export const ATTACK_INDEX_SENT = 0; // Outgoing attack troops
@@ -90,9 +93,8 @@ export const BOMB_INDEX_LAND = 1; // Bombs landed
 export const BOMB_INDEX_INTERCEPT = 2; // Bombs intercepted
 
 // Conquers
-export const CONQUER_INDEX_BOT = 0; // Bots conquered
-export const CONQUER_INDEX_NATION = 1; // Nations conquered
-export const CONQUER_INDEX_PLAYER = 2; // Players conquered
+export const CONQUER_INDEX_ELIMINATION = 0; // Elimination by attacking
+export const CONQUER_INDEX_ENCIRCLEMENT = 1; // Encirclement capture
 
 // Gold
 export const GOLD_INDEX_WORK = 0; // Gold earned by workers
@@ -123,7 +125,9 @@ export const PlayerStatsSchema = z
     betrayals: BigIntStringSchema.optional(),
     boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
-    conquers: AtLeastOneNumberSchema.optional(),
+    conquered: z
+      .partialRecord(ConqueredPlayerTypeSchema, AtLeastOneNumberSchema)
+      .optional(),
     gold: AtLeastOneNumberSchema.optional(),
     units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
   })

@@ -32,7 +32,8 @@ export class DonateGoldExecution implements Execution {
       this.sender.canDonate(this.recipient) &&
       this.sender.donateGold(this.recipient, this.gold)
     ) {
-      this.mg.stats().goldSend(this.sender, this.recipient, this.gold); // stats for donated gold
+      // stats for donated gold
+      this.mg.stats().actionSendGold(this.sender, this.recipient, this.gold);
       this.recipient.updateRelation(this.sender, 50);
     } else {
       console.warn(

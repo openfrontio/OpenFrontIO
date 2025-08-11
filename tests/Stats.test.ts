@@ -211,8 +211,8 @@ describe("Stats", () => {
     });
   });
 
-  test("emojiSend", () => {
-    stats.emojiSend(player1, player2);
+  test("actionSendEmoji", () => {
+    stats.actionSendEmoji(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -225,7 +225,7 @@ describe("Stats", () => {
         },
       },
     });
-    stats.emojiSend(player1, player2);
+    stats.actionSendEmoji(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -238,7 +238,7 @@ describe("Stats", () => {
         },
       },
     });
-    stats.emojiSend(player2, player1);
+    stats.actionSendEmoji(player2, player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -253,8 +253,8 @@ describe("Stats", () => {
     });
   });
 
-  test("emojiBroadcast", () => {
-    stats.emojiBroadcast(player1);
+  test("actionBroadcastEmoji", () => {
+    stats.actionBroadcastEmoji(player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -264,8 +264,8 @@ describe("Stats", () => {
     });
 
     // multiple broadcasts accumulate
-    stats.emojiBroadcast(player1);
-    stats.emojiBroadcast(player1);
+    stats.actionBroadcastEmoji(player1);
+    stats.actionBroadcastEmoji(player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -275,8 +275,8 @@ describe("Stats", () => {
     });
   });
 
-  test("quickChatSend", () => {
-    stats.quickChatSend(player1, player2);
+  test("actionSendQuickChat", () => {
+    stats.actionSendQuickChat(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -289,7 +289,7 @@ describe("Stats", () => {
         },
       },
     });
-    stats.quickChatSend(player1, player2);
+    stats.actionSendQuickChat(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -302,7 +302,7 @@ describe("Stats", () => {
         },
       },
     });
-    stats.quickChatSend(player2, player1);
+    stats.actionSendQuickChat(player2, player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -317,8 +317,8 @@ describe("Stats", () => {
     });
   });
 
-  test("targetSend", () => {
-    stats.targetSend(player1, player2);
+  test("actionSendTarget", () => {
+    stats.actionSendTarget(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -331,7 +331,7 @@ describe("Stats", () => {
         },
       },
     });
-    stats.targetSend(player1, player2);
+    stats.actionSendTarget(player1, player2);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -344,7 +344,7 @@ describe("Stats", () => {
         },
       },
     });
-    stats.targetSend(player2, player1);
+    stats.actionSendTarget(player2, player1);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -359,32 +359,40 @@ describe("Stats", () => {
     });
   });
 
-  test("recordConquer", () => {
-    stats.recordConquer(player1, "bot");
+  test("conquer", () => {
+    stats.conquer(player1, player2, "encirclement");
     expect(stats.stats()).toStrictEqual({
       client1: {
-        conquers: [1n, 0n, 0n],
+        conquered: {
+          human: [0n, 1n],
+        },
       },
     });
-    stats.recordConquer(player1, "nation");
+    stats.conquer(player1, player2, "elimination");
     expect(stats.stats()).toStrictEqual({
       client1: {
-        conquers: [1n, 1n, 0n],
+        conquered: {
+          human: [1n, 1n],
+        },
       },
     });
-    stats.recordConquer(player2, "player");
+    stats.conquer(player2, player1, "elimination");
     expect(stats.stats()).toStrictEqual({
       client1: {
-        conquers: [1n, 1n, 0n],
+        conquered: {
+          human: [1n, 1n],
+        },
       },
       client2: {
-        conquers: [0n, 0n, 1n],
+        conquered: {
+          human: [1n, 0n],
+        },
       },
     });
   });
 
-  test("troopsSend", () => {
-    stats.troopsSend(player1, player2, 100);
+  test("actionSendTroops", () => {
+    stats.actionSendTroops(player1, player2, 100);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -398,7 +406,7 @@ describe("Stats", () => {
       },
     });
 
-    stats.troopsSend(player1, player2, 50);
+    stats.actionSendTroops(player1, player2, 50);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -412,7 +420,7 @@ describe("Stats", () => {
       },
     });
 
-    stats.troopsSend(player2, player1, 25);
+    stats.actionSendTroops(player2, player1, 25);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -427,8 +435,8 @@ describe("Stats", () => {
     });
   });
 
-  test("goldSend", () => {
-    stats.goldSend(player1, player2, 1000n);
+  test("actionSendGold", () => {
+    stats.actionSendGold(player1, player2, 1000n);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -442,7 +450,7 @@ describe("Stats", () => {
       },
     });
 
-    stats.goldSend(player1, player2, 500n);
+    stats.actionSendGold(player1, player2, 500n);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {
@@ -456,7 +464,7 @@ describe("Stats", () => {
       },
     });
 
-    stats.goldSend(player2, player1, 250n);
+    stats.actionSendGold(player2, player1, 250n);
     expect(stats.stats()).toStrictEqual({
       client1: {
         actions: {

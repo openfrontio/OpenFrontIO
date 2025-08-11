@@ -35,7 +35,10 @@ export class DonateTroopsExecution implements Execution {
       this.sender.canDonate(this.recipient) &&
       this.sender.donateTroops(this.recipient, this.troops)
     ) {
-      this.mg.stats().troopsSend(this.sender, this.recipient, this.troops); // stats for donated troops (uses backend # and not UI)
+      // stats for donated troops (uses backend # and not UI)
+      this.mg
+        .stats()
+        .actionSendTroops(this.sender, this.recipient, this.troops);
       this.recipient.updateRelation(this.sender, 50);
     } else {
       console.warn(
