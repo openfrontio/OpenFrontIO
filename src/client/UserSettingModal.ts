@@ -443,7 +443,7 @@ export class UserSettingModal extends LitElement {
         description=${translateText(
           "user_setting.force_player_info_mouse_overlay_desc",
         )}
-        defaultKey="ControlLeft"
+        defaultKey="ControlRight"
         .value=${this.keybinds["forcePlayerInfoMouseOverlay"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>

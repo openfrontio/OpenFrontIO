@@ -54,6 +54,9 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
     this.onHoverInfoUpdate(hoverInfo);
   private mouseCallback = (x: number, y: number) =>
     this.onMousePositionUpdate(x, y);
+  private forceOverlayEventHandler = (
+    event: ForcePlayerInfoMouseOverlayEvent,
+  ) => this.onForcePlayerInfoMouseOverlayEvent(event);
 
   init() {
     this.playerInfoManager = PlayerInfoManager.getInstance(
@@ -72,6 +75,10 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   destroy() {
     this.playerInfoManager?.unsubscribeFromData(this.hoverCallback);
     this.playerInfoManager?.unsubscribeFromMouse(this.mouseCallback);
+    this.eventBus.off(
+      ForcePlayerInfoMouseOverlayEvent,
+      this.forceOverlayEventHandler,
+    );
     this.removeCanvasEventListeners();
     this._isActive = false;
   }
@@ -100,10 +107,10 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   }
 
   protected setupEventListeners() {
-    this.eventBus.on(ForcePlayerInfoMouseOverlayEvent, (e) =>
-      this.onForcePlayerInfoMouseOverlayEvent(e),
+    this.eventBus.on(
+      ForcePlayerInfoMouseOverlayEvent,
+      this.forceOverlayEventHandler,
     );
-    this.setupCanvasEventListeners();
   }
 
   private setupCanvasEventListeners() {

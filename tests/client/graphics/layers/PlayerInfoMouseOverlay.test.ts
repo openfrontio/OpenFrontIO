@@ -31,6 +31,9 @@ class MockPlayerInfoMouseOverlay {
   private playerInfoManager: any;
   private _isActive = false;
   private canvas: HTMLCanvasElement | null = null;
+  private forceOverlayEventHandler = (
+    event: ForcePlayerInfoMouseOverlayEvent,
+  ) => this.onForcePlayerInfoMouseOverlayEvent(event);
 
   init() {
     this.playerInfoManager = PlayerInfoManager.getInstance(
@@ -53,6 +56,10 @@ class MockPlayerInfoMouseOverlay {
     );
     this.playerInfoManager?.unsubscribeFromMouse(
       this.onMousePositionUpdate.bind(this),
+    );
+    this.eventBus.off(
+      ForcePlayerInfoMouseOverlayEvent,
+      this.forceOverlayEventHandler,
     );
     this.removeCanvasEventListeners();
     this._isActive = false;
@@ -87,9 +94,8 @@ class MockPlayerInfoMouseOverlay {
     this.eventBus.on = jest.fn();
     this.eventBus.on(
       ForcePlayerInfoMouseOverlayEvent,
-      this.onForcePlayerInfoMouseOverlayEvent.bind(this),
+      this.forceOverlayEventHandler,
     );
-    this.setupCanvasEventListeners();
   }
 
   private setupCanvasEventListeners() {
@@ -284,11 +290,17 @@ describe("PlayerInfoMouseOverlay", () => {
   });
 
   it("should destroy and cleanup properly", () => {
+    eventBus.off = jest.fn();
+    overlay.eventBus = eventBus;
     overlay.init();
     overlay.destroy();
 
     expect(mockPlayerInfoManager.unsubscribeFromData).toHaveBeenCalled();
     expect(mockPlayerInfoManager.unsubscribeFromMouse).toHaveBeenCalled();
+    expect(eventBus.off).toHaveBeenCalledWith(
+      ForcePlayerInfoMouseOverlayEvent,
+      overlay["forceOverlayEventHandler"],
+    );
   });
 
   it("should update mouse position", () => {

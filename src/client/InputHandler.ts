@@ -151,7 +151,7 @@ export class InputHandler {
   initialize() {
     this.keybinds = {
       toggleView: "Space",
-      forcePlayerInfoMouseOverlay: "ControlLeft",
+      forcePlayerInfoMouseOverlay: "ControlRight",
       centerCamera: "KeyC",
       moveUp: "KeyW",
       moveDown: "KeyS",
