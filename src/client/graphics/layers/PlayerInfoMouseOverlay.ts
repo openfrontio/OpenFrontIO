@@ -59,6 +59,8 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   ) => this.onForcePlayerInfoMouseOverlayEvent(event);
 
   init() {
+    if (this._isActive) return;
+
     this.playerInfoManager = PlayerInfoManager.getInstance(
       this.game,
       this.transform,
@@ -104,6 +106,12 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.removeCanvasEventListeners();
+    if (this.eventBus) {
+      this.eventBus.off(
+        ForcePlayerInfoMouseOverlayEvent,
+        this.forceOverlayEventHandler,
+      );
+    }
   }
 
   protected setupEventListeners() {
@@ -160,6 +168,7 @@ export class PlayerInfoMouseOverlay extends LitElement implements Layer {
     if (x < 0) x = OVERLAY_CONFIG.margin;
     if (x + w > vw) x = vw - w - OVERLAY_CONFIG.margin;
     if (y + h > vh) y = this.mouseY - h - OVERLAY_CONFIG.margin;
+    if (y < OVERLAY_CONFIG.margin) y = OVERLAY_CONFIG.margin;
 
     return { x, y };
   }

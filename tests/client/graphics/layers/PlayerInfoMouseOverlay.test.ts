@@ -36,6 +36,8 @@ class MockPlayerInfoMouseOverlay {
   ) => this.onForcePlayerInfoMouseOverlayEvent(event);
 
   init() {
+    if (this._isActive) return;
+
     this.playerInfoManager = PlayerInfoManager.getInstance(
       this.game,
       this.transform,
@@ -88,6 +90,12 @@ class MockPlayerInfoMouseOverlay {
 
   disconnectedCallback() {
     this.removeCanvasEventListeners();
+    if (this.eventBus) {
+      this.eventBus.off(
+        ForcePlayerInfoMouseOverlayEvent,
+        this.forceOverlayEventHandler,
+      );
+    }
   }
 
   private setupEventListeners() {
@@ -169,6 +177,7 @@ class MockPlayerInfoMouseOverlay {
     if (x < 0) x = 10;
     if (x + w > vw) x = vw - w - 10;
     if (y + h > vh) y = this.mouseY - h - 10;
+    if (y < 10) y = 10;
 
     return { x, y };
   }
@@ -226,7 +235,10 @@ describe("PlayerInfoMouseOverlay", () => {
 
   beforeEach(() => {
     game = {} as GameView;
-    eventBus = {} as EventBus;
+    eventBus = {
+      on: jest.fn(),
+      off: jest.fn(),
+    } as any;
     transform = {} as TransformHandler;
 
     userSettings = {
@@ -600,5 +612,50 @@ describe("PlayerInfoMouseOverlay", () => {
 
   it("should not transform", () => {
     expect(overlay.shouldTransform()).toBe(false);
+  });
+
+  it("should not initialize if already active", () => {
+    overlay.init();
+    const firstManagerCall = mockPlayerInfoManager.init.mock.calls.length;
+
+    overlay.init();
+
+    expect(mockPlayerInfoManager.init.mock.calls.length).toBe(firstManagerCall);
+  });
+
+  it("should unsubscribe from event bus in disconnectedCallback", () => {
+    eventBus.off = jest.fn();
+    overlay.eventBus = eventBus;
+
+    overlay.disconnectedCallback();
+
+    expect(eventBus.off).toHaveBeenCalledWith(
+      ForcePlayerInfoMouseOverlayEvent,
+      overlay["forceOverlayEventHandler"],
+    );
+  });
+
+  it("should not call eventBus.off if eventBus is null in disconnectedCallback", () => {
+    overlay.eventBus = null as any;
+
+    expect(() => overlay.disconnectedCallback()).not.toThrow();
+  });
+
+  it("should adjust HUD position when y is below margin", () => {
+    overlay["mouseX"] = 100;
+    overlay["mouseY"] = -25;
+
+    Object.defineProperty(window, "innerWidth", {
+      value: 1920,
+      configurable: true,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      value: 1080,
+      configurable: true,
+    });
+
+    const position = overlay["getHUDPosition"]();
+
+    expect(position.y).toBe(10);
   });
 });
