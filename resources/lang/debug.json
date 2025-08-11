@@ -94,9 +94,7 @@
     "disable_nations": "single_modal.disable_nations",
     "instant_build": "single_modal.instant_build",
     "infinite_gold": "single_modal.infinite_gold",
-    "donate_gold": "single_modal.donate_gold",
     "infinite_troops": "single_modal.infinite_troops",
-    "donate_troops": "single_modal.donate_troops",
     "disable_nukes": "single_modal.disable_nukes",
     "start": "single_modal.start"
   },
