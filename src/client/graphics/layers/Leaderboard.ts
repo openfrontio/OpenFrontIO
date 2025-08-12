@@ -7,7 +7,7 @@ import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
-interface Entry {
+type Entry = {
   name: string;
   position: number;
   score: string;
@@ -15,7 +15,7 @@ interface Entry {
   troops: string;
   isMyPlayer: boolean;
   player: PlayerView;
-}
+};
 
 export class GoToPlayerEvent implements GameEvent {
   constructor(public player: PlayerView) {}

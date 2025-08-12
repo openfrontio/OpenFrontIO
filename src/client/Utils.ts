@@ -192,7 +192,7 @@ export function getMessageTypeClasses(type: MessageType): string {
 }
 
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
+  const isMac = navigator.userAgent.includes("Mac");
   if (isMac) {
     return "⌘"; // Command key
   } else {
@@ -201,7 +201,7 @@ export function getModifierKey(): string {
 }
 
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
+  const isMac = navigator.userAgent.includes("Mac");
   if (isMac) {
     return "⌥"; // Option key
   } else {

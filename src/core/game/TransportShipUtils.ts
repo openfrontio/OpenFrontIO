@@ -102,7 +102,7 @@ export function sourceDstOceanShore(
   const srcTile = closestShoreFromPlayer(gm, src, tile);
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    dstTile = closestShoreFromPlayer(gm, dst, tile);
   } else {
     dstTile = closestShoreTN(gm, tile, 50);
   }
@@ -113,7 +113,7 @@ export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
   const dst = gm.playerBySmallID(gm.ownerID(tile));
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    dstTile = closestShoreFromPlayer(gm, dst, tile);
   } else {
     dstTile = closestShoreTN(gm, tile, 50);
   }
@@ -235,7 +235,7 @@ export function candidateShoreTiles(
     extremumTiles.maxX,
     extremumTiles.maxY,
     ...sampledTiles,
-  ].filter(Boolean) as number[];
+  ].filter(Boolean);
 
   return candidates;
 }

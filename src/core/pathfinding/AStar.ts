@@ -1,7 +1,7 @@
-export interface AStar<NodeType> {
+export type AStar<NodeType> = {
   compute(): PathFindResultType;
   reconstructPath(): NodeType[];
-}
+};
 
 export enum PathFindResultType {
   NextTile,
@@ -25,7 +25,7 @@ export type AStarResult<NodeType> =
       type: PathFindResultType.PathNotFound;
     };
 
-export interface Point {
+export type Point = {
   x: number;
   y: number;
-}
+};

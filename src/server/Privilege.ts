@@ -1,7 +1,7 @@
 import { Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { PatternDecoder } from "../core/PatternDecoder";
 
-export interface PrivilegeChecker {
+export type PrivilegeChecker = {
   isPatternAllowed(
     base64: string,
     flares: readonly string[] | undefined,
@@ -10,7 +10,7 @@ export interface PrivilegeChecker {
     flag: string,
     flares: readonly string[] | undefined,
   ): true | "restricted" | "invalid";
-}
+};
 
 export class PrivilegeCheckerImpl implements PrivilegeChecker {
   private b64ToPattern: Record<string, Pattern> = {};

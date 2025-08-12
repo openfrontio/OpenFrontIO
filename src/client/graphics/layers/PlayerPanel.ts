@@ -40,7 +40,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private tile: TileRef | null = null;
 
   @state()
-  public isVisible: boolean = false;
+  public isVisible = false;
 
   @state()
   private allianceExpiryText: string | null = null;
@@ -224,13 +224,12 @@ export class PlayerPanel extends LitElement implements Layer {
     const myPlayer = this.g.myPlayer();
     if (myPlayer === null) return;
     if (this.tile === null) return;
-    let other = this.g.owner(this.tile);
+    const other = this.g.owner(this.tile);
     if (!other.isPlayer()) {
       this.hide();
       console.warn("Tile is not owned by a player");
       return;
     }
-    other = other as PlayerView;
 
     const canDonate = this.actions?.interaction?.canDonate;
     const canSendAllianceRequest =

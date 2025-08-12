@@ -391,7 +391,7 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  paintTerritory(tile: TileRef, isBorder: boolean = false) {
+  paintTerritory(tile: TileRef, isBorder = false) {
     if (isBorder && !this.game.hasOwner(tile)) {
       return;
     }

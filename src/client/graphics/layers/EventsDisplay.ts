@@ -48,7 +48,7 @@ import {
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
 
-interface GameEvent {
+type GameEvent = {
   description: string;
   unsafeDescription?: boolean;
   buttons?: {
@@ -66,14 +66,14 @@ interface GameEvent {
   duration?: Tick;
   focusID?: number;
   unitView?: UnitView;
-}
+};
 
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
 
-  private active: boolean = false;
+  private active = false;
   private events: GameEvent[] = [];
 
   // allianceID -> last checked at tick
@@ -82,11 +82,11 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private outgoingAttacks: AttackUpdate[] = [];
   @state() private outgoingLandAttacks: AttackUpdate[] = [];
   @state() private outgoingBoats: UnitView[] = [];
-  @state() private _hidden: boolean = false;
-  @state() private _isVisible: boolean = false;
-  @state() private newEvents: number = 0;
+  @state() private _hidden = false;
+  @state() private _isVisible = false;
+  @state() private newEvents = 0;
   @state() private latestGoldAmount: bigint | null = null;
-  @state() private goldAmountAnimating: boolean = false;
+  @state() private goldAmountAnimating = false;
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
     [MessageCategory.ATTACK, false],
@@ -261,7 +261,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
       this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
 
-      const other = this.game.player(alliance.other) as PlayerView;
+      const other = this.game.player(alliance.other);
       if (!other.isAlive()) continue;
 
       this.addEvent({
@@ -393,7 +393,7 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
-    let otherPlayerDiplayName: string = "";
+    let otherPlayerDiplayName = "";
     if (event.recipient !== null) {
       //'recipient' parameter contains sender ID or recipient ID
       const player = this.game.player(event.recipient);

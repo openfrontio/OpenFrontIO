@@ -19,7 +19,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     close: () => void;
   };
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
-  @state() private message: string = "";
+  @state() private message = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
 
@@ -110,7 +110,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     return this; // light DOM
   }
 
-  public open(id: string = "") {
+  public open(id = "") {
     this.modalEl?.open();
     if (id) {
       this.setLobbyId(id);

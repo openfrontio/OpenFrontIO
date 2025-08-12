@@ -16,13 +16,13 @@ export class TrainExecution implements Execution {
   private mg: Game | null = null;
   private train: Unit | null = null;
   private cars: Unit[] = [];
-  private hasCargo: boolean = false;
-  private currentTile: number = 0;
+  private hasCargo = false;
+  private currentTile = 0;
   private spacing = 2;
   private usedTiles: TileRef[] = []; // used for cars behind
   private stations: TrainStation[] = [];
   private currentRailroad: OrientedRailroad | null = null;
-  private speed: number = 2;
+  private speed = 2;
 
   constructor(
     private railNetwork: RailNetwork,

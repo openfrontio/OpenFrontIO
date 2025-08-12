@@ -8,7 +8,7 @@ export class ShellExecution implements Execution {
   private pathFinder: AirPathFinder;
   private shell: Unit | undefined;
   private mg: Game;
-  private destroyAtTick: number = -1;
+  private destroyAtTick = -1;
   private random: PseudoRandom;
 
   constructor(

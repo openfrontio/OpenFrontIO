@@ -3,10 +3,10 @@ import { html, TemplateResult } from "lit";
 import { UnitType } from "../../core/game/Game";
 import { translateText } from "../Utils";
 
-export interface UnitTypeRenderContext {
+export type UnitTypeRenderContext = {
   disabledUnits: UnitType[];
   toggleUnit: (unit: UnitType, checked: boolean) => void;
-}
+};
 
 const unitOptions: { type: UnitType; translationKey: string }[] = [
   { type: UnitType.City, translationKey: "unit_type.city" },

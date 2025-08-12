@@ -2,13 +2,13 @@ import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifest } from "./TerrainMapLoader";
 
-export interface BinModule {
+export type BinModule = {
   default: string;
-}
+};
 
-interface NationMapModule {
+type NationMapModule = {
   default: MapManifest;
-}
+};
 
 export class BinaryLoaderGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;

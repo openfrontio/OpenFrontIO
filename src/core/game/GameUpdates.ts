@@ -14,17 +14,17 @@ import {
 } from "./Game";
 import { TileRef, TileUpdate } from "./GameMap";
 
-export interface GameUpdateViewData {
+export type GameUpdateViewData = {
   tick: number;
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
   playerNameViewData: Record<string, NameViewData>;
-}
+};
 
-export interface ErrorUpdate {
+export type ErrorUpdate = {
   errMsg: string;
   stack?: string;
-}
+};
 
 export enum GameUpdateType {
   Tile,
@@ -67,13 +67,13 @@ export type GameUpdate =
   | RailroadUpdate
   | ConquestUpdate;
 
-export interface BonusEventUpdate {
+export type BonusEventUpdate = {
   type: GameUpdateType.BonusEvent;
   player: PlayerID;
   tile: TileRef;
   gold: number;
   troops: number;
-}
+};
 
 export enum RailType {
   VERTICAL,
@@ -84,30 +84,30 @@ export enum RailType {
   BOTTOM_RIGHT,
 }
 
-export interface RailTile {
+export type RailTile = {
   tile: TileRef;
   railType: RailType;
-}
+};
 
-export interface RailroadUpdate {
+export type RailroadUpdate = {
   type: GameUpdateType.RailroadEvent;
   isActive: boolean;
   railTiles: RailTile[];
-}
+};
 
-export interface ConquestUpdate {
+export type ConquestUpdate = {
   type: GameUpdateType.ConquestEvent;
   conquerorId: PlayerID;
   conqueredId: PlayerID;
   gold: Gold;
-}
+};
 
-export interface TileUpdateWrapper {
+export type TileUpdateWrapper = {
   type: GameUpdateType.Tile;
   update: TileUpdate;
-}
+};
 
-export interface UnitUpdate {
+export type UnitUpdate = {
   type: GameUpdateType.Unit;
   unitType: UnitType;
   troops: number;
@@ -130,17 +130,17 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
-}
+};
 
-export interface AttackUpdate {
+export type AttackUpdate = {
   attackerID: number;
   targetID: number;
   troops: number;
   id: string;
   retreating: boolean;
-}
+};
 
-export interface PlayerUpdate {
+export type PlayerUpdate = {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
   clientID: ClientID | null;
@@ -166,65 +166,65 @@ export interface PlayerUpdate {
   alliances: AllianceView[];
   hasSpawned: boolean;
   betrayals?: bigint;
-}
+};
 
-export interface AllianceView {
+export type AllianceView = {
   id: number;
   other: PlayerID;
   createdAt: Tick;
   expiresAt: Tick;
-}
+};
 
-export interface AllianceRequestUpdate {
+export type AllianceRequestUpdate = {
   type: GameUpdateType.AllianceRequest;
   requestorID: number;
   recipientID: number;
   createdAt: Tick;
-}
+};
 
-export interface AllianceRequestReplyUpdate {
+export type AllianceRequestReplyUpdate = {
   type: GameUpdateType.AllianceRequestReply;
   request: AllianceRequestUpdate;
   accepted: boolean;
-}
+};
 
-export interface BrokeAllianceUpdate {
+export type BrokeAllianceUpdate = {
   type: GameUpdateType.BrokeAlliance;
   traitorID: number;
   betrayedID: number;
-}
+};
 
-export interface AllianceExpiredUpdate {
+export type AllianceExpiredUpdate = {
   type: GameUpdateType.AllianceExpired;
   player1ID: number;
   player2ID: number;
-}
+};
 
-export interface AllianceExtensionUpdate {
+export type AllianceExtensionUpdate = {
   type: GameUpdateType.AllianceExtension;
   playerID: number;
   allianceID: number;
-}
+};
 
-export interface TargetPlayerUpdate {
+export type TargetPlayerUpdate = {
   type: GameUpdateType.TargetPlayer;
   playerID: number;
   targetID: number;
-}
+};
 
-export interface EmojiUpdate {
+export type EmojiUpdate = {
   type: GameUpdateType.Emoji;
   emoji: EmojiMessage;
-}
+};
 
-export interface DisplayMessageUpdate {
+export type DisplayMessageUpdate = {
   type: GameUpdateType.DisplayEvent;
   message: string;
   messageType: MessageType;
   goldAmount?: bigint;
   playerID: number | null;
   params?: Record<string, string | number>;
-}
+};
 
 export type DisplayChatMessageUpdate = {
   type: GameUpdateType.DisplayChatEvent;
@@ -236,22 +236,22 @@ export type DisplayChatMessageUpdate = {
   recipient: string;
 };
 
-export interface WinUpdate {
+export type WinUpdate = {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
   winner: Winner;
-}
+};
 
-export interface HashUpdate {
+export type HashUpdate = {
   type: GameUpdateType.Hash;
   tick: Tick;
   hash: number;
-}
+};
 
-export interface UnitIncomingUpdate {
+export type UnitIncomingUpdate = {
   type: GameUpdateType.UnitIncoming;
   unitID: number;
   message: string;
   messageType: MessageType;
   playerID: number;
-}
+};

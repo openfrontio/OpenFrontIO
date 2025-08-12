@@ -19,7 +19,7 @@ export class TerritoryPatternsModal extends LitElement {
   };
 
   public previewButton: HTMLElement | null = null;
-  public buttonWidth: number = 150;
+  public buttonWidth = 150;
 
   @state() private selectedPattern: string | undefined;
 
@@ -172,7 +172,7 @@ export class TerritoryPatternsModal extends LitElement {
                 }}
               >
                 ${translateText("territory_patterns.purchase")}
-                (${pattern.product!.price})
+                (${pattern.product.price})
               </button>
             `
           : null}

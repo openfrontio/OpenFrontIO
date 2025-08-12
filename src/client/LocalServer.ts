@@ -169,7 +169,7 @@ export class LocalServer {
     });
   }
 
-  public endGame(saveFullGame: boolean = false) {
+  public endGame(saveFullGame = false) {
     console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
     if (this.isReplay) {

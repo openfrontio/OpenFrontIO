@@ -14,7 +14,7 @@ export class ParabolaPathFinder {
   computeControlPoints(
     orig: TileRef,
     dst: TileRef,
-    increment: number = 3,
+    increment = 3,
     distanceBasedHeight = true,
   ) {
     const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
@@ -117,8 +117,8 @@ export class PathFinder {
   public static Mini(
     game: Game,
     iterations: number,
-    waterPath: boolean = true,
-    maxTries: number = 20,
+    waterPath = true,
+    maxTries = 20,
   ) {
     return new PathFinder(game, (curr: TileRef, dst: TileRef) => {
       return new MiniAStar(
@@ -136,7 +136,7 @@ export class PathFinder {
   nextTile(
     curr: TileRef | null,
     dst: TileRef | null,
-    dist: number = 1,
+    dist = 1,
   ): AStarResult<TileRef> {
     if (curr === null) {
       console.error("curr is null");

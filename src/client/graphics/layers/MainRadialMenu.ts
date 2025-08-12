@@ -110,7 +110,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     this.buildMenu.playerActions = actions;
 
     const tileOwner = this.game.owner(tile);
-    const recipient = tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
+    const recipient = tileOwner.isPlayer() ? tileOwner : null;
 
     if (myPlayer && recipient) {
       this.chatIntegration.setupChatModal(myPlayer, recipient);

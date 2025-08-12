@@ -49,10 +49,10 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Yenisei: 1,
 };
 
-interface MapWithMode {
+type MapWithMode = {
   map: GameMapType;
   mode: GameMode;
-}
+};
 
 const TEAM_COUNTS = [
   2,

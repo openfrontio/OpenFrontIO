@@ -53,10 +53,10 @@ import {
 } from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
 
-interface Target {
+type Target = {
   tick: Tick;
   target: Player;
-}
+};
 
 class Donation {
   constructor(
@@ -66,7 +66,7 @@ class Donation {
 }
 
 export class PlayerImpl implements Player {
-  public _lastTileChange: number = 0;
+  public _lastTileChange = 0;
   public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
@@ -278,7 +278,7 @@ export class PlayerImpl implements Player {
   }
 
   tiles(): ReadonlySet<TileRef> {
-    return new Set(this._tiles.values()) as Set<TileRef>;
+    return new Set(this._tiles.values());
   }
 
   borderTiles(): ReadonlySet<TileRef> {

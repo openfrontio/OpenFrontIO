@@ -60,7 +60,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private unit: UnitView | null = null;
 
   @state()
-  private _isInfoVisible: boolean = false;
+  private _isInfoVisible = false;
 
   private _isActive = false;
 
@@ -105,7 +105,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const owner = this.game.owner(tile);
 
     if (owner && owner.isPlayer()) {
-      this.player = owner as PlayerView;
+      this.player = owner;
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
@@ -225,7 +225,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             : "text-white"}"
         >
           ${player.cosmetics.flag
-            ? player.cosmetics.flag!.startsWith("!")
+            ? player.cosmetics.flag.startsWith("!")
               ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
                   ${ref((el) => {
@@ -238,7 +238,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 ></div>`
               : html`<img
                   class="h-8 mr-1 aspect-[3/4]"
-                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
+                  src=${"/flags/" + player.cosmetics.flag + ".svg"}
                 />`
             : html``}
           ${player.name()}

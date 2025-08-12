@@ -77,9 +77,9 @@ export class CubicBezierCurve {
  *  Useful to compute regular steps based on the curve rather than a t
  */
 export class DistanceBasedBezierCurve extends CubicBezierCurve {
-  private totalDistance: number = 0;
+  private totalDistance = 0;
   private cachedPoints: Point[] = [];
-  private currentIndex: number = 0;
+  private currentIndex = 0;
 
   constructor(
     p0: Point,

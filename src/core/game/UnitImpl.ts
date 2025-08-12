@@ -21,7 +21,7 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _retreating: boolean = false;
+  private _retreating = false;
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
@@ -30,14 +30,14 @@ export class UnitImpl implements Unit {
   private _troops: number;
   // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
-  private _hasTrainStation: boolean = false;
+  private _hasTrainStation = false;
   private _patrolTile: TileRef | undefined;
-  private _level: number = 1;
-  private _targetable: boolean = true;
+  private _level = 1;
+  private _targetable = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
   // Nuke only
-  private _trajectoryIndex: number = 0;
+  private _trajectoryIndex = 0;
   private _trajectory: TrajectoryTile[];
 
   constructor(
