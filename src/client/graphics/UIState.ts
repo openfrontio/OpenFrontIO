@@ -1,3 +1,3 @@
-export interface UIState {
+export type UIState = {
   attackRatio: number;
-}
+};

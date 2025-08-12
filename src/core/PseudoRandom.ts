@@ -4,9 +4,9 @@ export class PseudoRandom {
   private state1: number;
 
   // Keep these variables to maintain the exact same interface
-  private m: number = 0x80000000; // 2**31
-  private a: number = 1103515245;
-  private c: number = 12345;
+  private m = 0x80000000; // 2**31
+  private a = 1103515245;
+  private c = 12345;
   private state: number;
 
   private static readonly POW36_8 = Math.pow(36, 8); // Pre-compute 36^8

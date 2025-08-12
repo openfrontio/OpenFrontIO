@@ -55,3 +55,30 @@
     margin: 0 auto;
   }
 }
+
+.dark .c-button {
+  background: var(--primaryColorDark);
+  color: var(--fontColorLight);
+}
+
+.dark .c-button:hover,
+.dark .c-button:active,
+.dark .c-button:focus {
+  background: var(--primaryColorHoverDark);
+}
+
+.dark .c-button:disabled {
+  background: var(--primaryColorDisabledDark);
+  opacity: 0.7;
+}
+
+.dark .c-button--secondary {
+  background: var(--secondaryColorDark);
+  color: var(--fontColorDark);
+}
+
+.dark .c-button--secondary:hover,
+.dark .c-button--secondary:active,
+.dark .c-button--secondary:focus {
+  background: var(--secondaryColorHoverDark);
+}

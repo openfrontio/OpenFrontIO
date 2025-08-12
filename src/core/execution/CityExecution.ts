@@ -5,7 +5,7 @@ import { TrainStationExecution } from "./TrainStationExecution";
 export class CityExecution implements Execution {
   private mg: Game;
   private city: Unit | null = null;
-  private active: boolean = true;
+  private active = true;
 
   constructor(
     private player: Player,
@@ -48,7 +48,7 @@ export class CityExecution implements Execution {
   createStation(): void {
     if (this.city !== null) {
       const nearbyFactory = this.mg.hasUnitNearby(
-        this.city.tile()!,
+        this.city.tile(),
         this.mg.config().trainStationMaxRange(),
         UnitType.Factory,
         this.player.id(),

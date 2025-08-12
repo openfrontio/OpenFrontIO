@@ -4,7 +4,7 @@ import { TrainStationExecution } from "./TrainStationExecution";
 
 export class FactoryExecution implements Execution {
   private factory: Unit | null = null;
-  private active: boolean = true;
+  private active = true;
   private game: Game;
   constructor(
     private player: Player,
@@ -47,7 +47,7 @@ export class FactoryExecution implements Execution {
   createStation(): void {
     if (this.factory !== null) {
       const structures = this.game.nearbyUnits(
-        this.factory.tile()!,
+        this.factory.tile(),
         this.game.config().trainStationMaxRange(),
         [UnitType.City, UnitType.Port, UnitType.Factory],
       );

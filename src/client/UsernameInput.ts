@@ -8,13 +8,13 @@ import {
   validateUsername,
 } from "../core/validations/username";
 
-const usernameKey: string = "username";
+const usernameKey = "username";
 
 @customElement("username-input")
 export class UsernameInput extends LitElement {
-  @state() private username: string = "";
-  @property({ type: String }) validationError: string = "";
-  private _isValid: boolean = true;
+  @state() private username = "";
+  @property({ type: String }) validationError = "";
+  private _isValid = true;
   private userSettings: UserSettings = new UserSettings();
 
   // Remove static styles since we're using Tailwind

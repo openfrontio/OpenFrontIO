@@ -1,21 +1,22 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
+import { ApiPublicLobbiesResponseSchema } from "../core/ExpressSchemas";
 import { GameMapType, GameMode } from "../core/game/Game";
-import { terrainMapFileLoader } from "../core/game/TerrainMapFileLoader";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
-  @state() public isLobbyHighlighted: boolean = false;
-  @state() private isButtonDebounced: boolean = false;
+  @state() public isLobbyHighlighted = false;
+  @state() private isButtonDebounced = false;
   @state() private mapImages: Map<GameID, string> = new Map();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
-  private debounceDelay: number = 750;
+  private debounceDelay = 750;
   private lobbyIDToStart = new Map<GameID, number>();
 
   createRenderRoot() {
@@ -77,7 +78,8 @@ export class PublicLobby extends LitElement {
       const response = await fetch(`/api/public_lobbies`);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const json = await response.json();
+      const data = ApiPublicLobbiesResponseSchema.parse(json);
       return data.lobbies;
     } catch (error) {
       console.error("Error fetching lobbies:", error);

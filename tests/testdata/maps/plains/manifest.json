@@ -9,5 +9,6 @@
     "num_land_tiles": 2500,
     "width": 50
   },
+  "nations": [],
   "name": "Plains"
 }

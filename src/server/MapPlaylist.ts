@@ -2,12 +2,12 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
+  GameMapName,
   GameMapType,
   GameMode,
   GameType,
   Quads,
   Trios,
-  UnitType,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { pickRandomElement } from "../core/Random";
@@ -18,38 +18,42 @@ const log = logger.child({});
 
 const config = getServerConfigFromServer();
 
-const frequency = {
-  World: 3,
-  Europe: 2,
+// How many times each map should appear in the playlist.
+// Note: The Partial should eventually be removed for better type safety.
+const frequency: Partial<Record<GameMapName, number>> = {
   Africa: 2,
-  Australia: 1,
-  NorthAmerica: 1,
-  Britannia: 1,
-  GatewayToTheAtlantic: 1,
-  Iceland: 1,
-  SouthAmerica: 1,
-  KnownWorld: 1,
-  DeglaciatedAntarctica: 1,
-  EuropeClassic: 1,
-  Mena: 1,
-  Pangaea: 1,
   Asia: 1,
-  Mars: 1,
+  Australia: 1,
+  Baikal: 2,
   BetweenTwoSeas: 1,
-  EastAsia: 1,
   BlackSea: 1,
-  FaroeIslands: 1,
+  Britannia: 1,
+  DeglaciatedAntarctica: 1,
+  EastAsia: 1,
+  Europe: 2,
+  EuropeClassic: 1,
   FalklandIslands: 1,
-  Baikal: 1,
+  FaroeIslands: 1,
+  GatewayToTheAtlantic: 1,
   Halkidiki: 1,
-  StraitOfGibraltar: 1,
+  Iceland: 1,
   Italia: 1,
+  Mars: 1,
+  MarsRevised: 1,
+  Mena: 1,
+  NorthAmerica: 1,
+  Pangaea: 1,
+  Pluto: 1,
+  SouthAmerica: 1,
+  StraitOfGibraltar: 1,
+  World: 3,
+  Yenisei: 1,
 };
 
-interface MapWithMode {
+type MapWithMode = {
   map: GameMapType;
   mode: GameMode;
-}
+};
 
 const TEAM_COUNTS = [
   2,
@@ -74,18 +78,20 @@ export class MapPlaylist {
 
     // Create the default public game config (from your GameManager)
     return {
-      gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
-      gameType: GameType.Public,
+      bots: 400,
       difficulty: Difficulty.Medium,
+      disableNPCs: mode === GameMode.Team,
+      disabledUnits: [],
+      donateGold: true,
+      donateTroops: true,
+      gameMap: map,
+      gameMode: mode,
+      gameType: GameType.Public,
       infiniteGold: false,
       infiniteTroops: false,
       instantBuild: false,
-      disableNPCs: mode === GameMode.Team,
-      gameMode: mode,
+      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       playerTeams,
-      bots: 400,
-      disabledUnits: [UnitType.Train, UnitType.Factory],
     } satisfies GameConfig;
   }
 
@@ -110,8 +116,8 @@ export class MapPlaylist {
 
   private shuffleMapsPlaylist(): boolean {
     const maps: GameMapType[] = [];
-    Object.keys(GameMapType).forEach((key) => {
-      for (let i = 0; i < parseInt(frequency[key]); i++) {
+    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
+      for (let i = 0; i < (frequency[key] ?? 0); i++) {
         maps.push(GameMapType[key]);
       }
     });

@@ -36,8 +36,8 @@ export class MiniAStar implements AStar<TileRef> {
     private dst: TileRef,
     iterations: number,
     maxTries: number,
-    waterPath: boolean = true,
-    directionChangePenalty: number = 0,
+    waterPath = true,
+    directionChangePenalty = 0,
   ) {
     const srcArray: TileRef[] = Array.isArray(src) ? src : [src];
     const miniSrc = srcArray.map((srcPoint) =>
@@ -113,7 +113,7 @@ function fixExtremes(upscaled: Cell[], cellDst: Cell, cellSrc?: Cell): Cell[] {
   return upscaled;
 }
 
-function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
+function upscalePath(path: Cell[], scaleFactor = 2): Cell[] {
   // Scale up each point
   const scaledPath = path.map(
     (point) => new Cell(point.x * scaleFactor, point.y * scaleFactor),

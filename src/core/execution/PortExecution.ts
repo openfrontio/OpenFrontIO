@@ -90,7 +90,7 @@ export class PortExecution implements Execution {
   createStation(): void {
     if (this.port !== null) {
       const nearbyFactory = this.mg.hasUnitNearby(
-        this.port.tile()!,
+        this.port.tile(),
         this.mg.config().trainStationMaxRange(),
         UnitType.Factory,
         this.player.id(),

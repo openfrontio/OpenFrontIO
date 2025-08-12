@@ -60,6 +60,7 @@
     "ui_options_desc": "Följande alternativ finns:",
     "ui_playeroverlay": "Överlägg för spelar info",
     "ui_playeroverlay_desc": "När du håller över ett land så kommer Spelarinformationen visas under Alternativ. Det visar typen av spelare: Människa, Nation (smart bot), eller Bot. En Nations attityd mot dig, från ondsint till vänlig. Och skyddande trupper, guld, plus mängden Krigsskepp och olika byggnader spelaren har.",
+    "ui_wilderness": "Vildmark",
     "option_pause": "Pausa/Avpausa spelet - Enbart tillgänglig i läget Enspelarläge.",
     "option_timer": "Timer - Tiden som gått sedan spelets start.",
     "option_exit": "Avsluta knappen.",
@@ -89,6 +90,8 @@
     "build_desc": "Beskrivning",
     "build_city": "Stad",
     "build_city_desc": "Ökar din max befolkningsmängd. Användbar när du inte kan expandera ditt territorium eller om du kommer nå taket för din befolkningsmängd.",
+    "build_factory": "Fabrik",
+    "build_factory_desc": "Skapar järnvägar automatiskt med närliggande byggnader, och producerar tåg sporadiskt.",
     "build_defense": "Försvarspost",
     "build_defense_desc": "Ökar försvaret runt närliggande gränser, vilket visas som ett rutigt mönster. Anfall från fiender är långsammare och tar mer skada.",
     "build_port": "Hamn",
@@ -112,7 +115,8 @@
     "icon_ally": "Handskakning - Allierad. Den här spelaren är din allierade.",
     "icon_embargo": "Stoppskylt med dollartecken - Embargo. Den här spelaren har avbrutit handel med dig automatiskt eller manuellt.",
     "icon_request": "Kuvert - Alliansförfrågan. Denna spelare har skickat dig en alliansförfrågan.",
-    "info_enemy_panel": "Fiendeinfopanel"
+    "info_enemy_panel": "Fiendeinfopanel",
+    "exit_confirmation": "Är du säker på att du vill avsluta spelet?"
   },
   "single_modal": {
     "title": "Enspelarläge",
@@ -255,16 +259,27 @@
     "tab_keybinds": "Tangentbindningar",
     "dark_mode_label": "Mörkt Tema",
     "dark_mode_desc": "Ändrar hemsidans utseende mellan mörkt och ljust tema.",
+    "dark_mode_enabled": "Mörkt tema aktiverad",
+    "light_mode_enabled": "Ljust tema aktiverad",
     "emojis_label": "Emojis",
+    "emojis_visible": "Emojis är synliga",
+    "emojis_hidden": "Emojis är dolda",
     "emojis_desc": "Välj om emojis ska visas i spelet",
     "alert_frame_label": "Alertruta",
     "alert_frame_desc": "Aktivera eller inaktivera varningsrutan. När den är aktiverad visas rutan när du blir förrådd.",
     "special_effects_label": "Specialeffekter",
     "special_effects_desc": "Välj om specialeffekter visas. Avaktivera för att öka prestandan",
+    "special_effects_enabled": "Specialeffekter aktiverad",
+    "special_effects_disabled": "Specialeffekter avaktiverad",
     "anonymous_names_label": "Dolda Namn",
     "anonymous_names_desc": "Dölj riktiga spelarnamn med slumpmässiga namn på din skärm.",
+    "anonymous_names_enabled": "Anonyma namn aktiverad",
+    "real_names_shown": "Riktiga namn visas",
     "left_click_label": "Vänsterklicka för att Öppna Menyn",
     "left_click_desc": "När det är PÅ öppnar vänsterklick en meny, och svärdknappen anfaller. När det är AV, anfaller vänster musknapp direkt.",
+    "left_click_menu": "Vänsterklicksmeny",
+    "left_click_opens_menu": "Vänsterklick öppnar menyn",
+    "right_click_opens_menu": "Högerklick öppnar menyn",
     "attack_ratio_label": "⚔️ Anfallsskala",
     "attack_ratio_desc": "Vilken procent av dina trupper som ska skickas in vid ett anfall.(1–100%)",
     "troop_ratio_label": "🪖🛠️ Trupp- och Arbetarskala",
@@ -305,7 +320,14 @@
     "move_right": "Flytta Kameran Höger",
     "move_right_desc": "Flytta kameran åt höger",
     "reset": "Återställ",
-    "unbind": "Ta bort knappbindning"
+    "unbind": "Ta bort knappbindning",
+    "on": "På",
+    "off": "Av",
+    "toggle_terrain": "Växla Terräng",
+    "terrain_enabled": "Terräng vy aktiverad",
+    "terrain_disabled": "Terräng vy avaktiverad",
+    "exit_game_label": "Avsluta Spelet",
+    "exit_game_info": "Återgå till huvudmenyn"
   },
   "chat": {
     "title": "Snabbchat",
@@ -389,8 +411,9 @@
       "sam_launcher": "Skyddar mot inkommande kärnvapen",
       "warship": "Fångar in handelsfartyg, förstör skepp och båtar",
       "port": "Skickar handelsfartyg för att generera guld",
-      "defense_post": "Ökar försvaret av närliggande gränser",
-      "city": "Ökar max befolkning"
+      "defense_post": "Ökar försvaret mot närliggande gränser",
+      "city": "Ökar max befolkning",
+      "factory": "Skapar järnvägar och producerar tåg"
     },
     "not_enough_money": "Ej tillräckligt med guld"
   },
@@ -412,9 +435,7 @@
     "team": "Lag",
     "owned": "Ägd",
     "gold": "Guld",
-    "troops": "Trupper",
-    "show_top_5": "Visa Topp 5",
-    "show_all": "Visa Alla"
+    "troops": "Trupper"
   },
   "player_info_overlay": {
     "type": "Typ",
@@ -437,9 +458,22 @@
   "events_display": {
     "retreating": "retirerar",
     "boat": "Båt",
+    "alliance_request_status": "{name} {status} din alliansförfrågan",
+    "alliance_accepted": "accepterade",
+    "alliance_rejected": "nekade",
+    "duration_second": "1 sekund",
+    "betrayal_description": "Du bröt din allians med {name}, vilket gör dig till en FÖRRÄDARE ({malusPercent}% försvagat försvar under {durationText})",
+    "duration_seconds_plural": "{seconds} sekunder",
+    "betrayed_you": "{name} bröt sin allians med dig",
     "about_to_expire": "Din allians med {name} håller på att gå ut!",
+    "alliance_expired": "Din allians med {name} har löpt ut",
+    "attack_request": "{name} begär att du angriper {target}",
+    "sent_emoji": "Skickat {name}: {emoji}",
     "renew_alliance": "Begär att förnya",
+    "request_alliance": "{name} begär en allians!",
     "focus": "Centrera",
+    "accept_alliance": "Acceptera",
+    "reject_alliance": "Neka",
     "alliance_renewed": "Din allians med {name} har förnyats",
     "ignore": "Ignorera"
   },
@@ -483,7 +517,8 @@
   },
   "replay_panel": {
     "replay_speed": "Återspelningshastighet",
-    "game_speed": "Spelhastighet"
+    "game_speed": "Spelhastighet",
+    "fastest_game_speed": "max"
   },
   "error_modal": {
     "crashed": "Spelet kraschade!",
@@ -538,5 +573,11 @@
       "grogu_head": "Grogu Huvud",
       "grogu": "Grogu"
     }
+  },
+  "auth": {
+    "login_required": "Inloggning krävs för att komma åt den här webbplatsen.",
+    "redirecting": "Du blir omdirigerad...",
+    "not_authorized": "Du har inte behörighet att komma åt den här webbplatsen.",
+    "contact_admin": "Om du tror att du ser detta meddelande felaktigt, kontakta webbplatsens administratör."
   }
 }

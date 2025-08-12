@@ -1,4 +1,4 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
+import { renderTroops } from "../../client/Utils";
 import {
   Attack,
   Execution,
@@ -17,7 +17,8 @@ import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if neede
 const malusForRetreat = 25;
 export class AttackExecution implements Execution {
   private breakAlliance = false;
-  private active: boolean = true;
+  private wasAlliedAtInit = false; // Store alliance state at initialization
+  private active = true;
   private toConquer = new FlatBinaryHeap();
 
   private random = new PseudoRandom(123);
@@ -33,7 +34,7 @@ export class AttackExecution implements Execution {
     private _owner: Player,
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
-    private removeTroops: boolean = true,
+    private removeTroops = true,
   ) {}
 
   public targetID(): PlayerID | null {
@@ -61,21 +62,22 @@ export class AttackExecution implements Execution {
         ? mg.terraNullius()
         : mg.player(this._targetID);
 
+    if (this._owner === this.target) {
+      console.error(`Player ${this._owner} cannot attack itself`);
+      this.active = false;
+      return;
+    }
+
     if (this.target && this.target.isPlayer()) {
-      const targetPlayer = this.target as Player;
+      const targetPlayer = this.target;
       if (
         targetPlayer.type() !== PlayerType.Bot &&
         this._owner.type() !== PlayerType.Bot
       ) {
         // Don't let bots embargo since they can't trade anyway.
         targetPlayer.addEmbargo(this._owner.id(), true);
+        this.rejectIncomingAllianceRequests(targetPlayer);
       }
-    }
-
-    if (this._owner === this.target) {
-      console.error(`Player ${this._owner} cannot attack itself`);
-      this.active = false;
-      return;
     }
 
     if (this.target.isPlayer()) {
@@ -147,8 +149,9 @@ export class AttackExecution implements Execution {
     }
 
     if (this.target.isPlayer()) {
-      if (this._owner.isAlliedWith(this.target)) {
-        // No updates should happen in init.
+      // Store the alliance state at initialization time to prevent race conditions
+      this.wasAlliedAtInit = this._owner.isAlliedWith(this.target);
+      if (this.wasAlliedAtInit) {
         this.breakAlliance = true;
       }
       this.target.updateRelation(this._owner, -80);
@@ -185,8 +188,11 @@ export class AttackExecution implements Execution {
     this.attack.delete();
     this.active = false;
 
-    // Record stats
-    this.mg.stats().attackCancel(this._owner, this.target, survivors);
+    // Not all retreats are canceled attacks
+    if (this.attack.retreated()) {
+      // Record stats
+      this.mg.stats().attackCancel(this._owner, this.target, survivors);
+    }
   }
 
   tick(ticks: number) {
@@ -223,8 +229,13 @@ export class AttackExecution implements Execution {
       this.breakAlliance = false;
       this._owner.breakAlliance(alliance);
     }
-    if (targetPlayer && this._owner.isAlliedWith(targetPlayer)) {
+    if (
+      targetPlayer &&
+      this._owner.isAlliedWith(targetPlayer) &&
+      !this.wasAlliedAtInit
+    ) {
       // In this case a new alliance was created AFTER the attack started.
+      // We should retreat to avoid the attacker becoming a traitor.
       this.retreat();
       return;
     }
@@ -285,6 +296,15 @@ export class AttackExecution implements Execution {
     }
   }
 
+  private rejectIncomingAllianceRequests(target: Player) {
+    const request = this._owner
+      .incomingAllianceRequests()
+      .find((ar) => ar.requestor() === target);
+    if (request !== undefined) {
+      request.reject();
+    }
+  }
+
   private addNeighbors(tile: TileRef) {
     if (this.attack === null) {
       throw new Error("Attack not initialized");
@@ -331,17 +351,7 @@ export class AttackExecution implements Execution {
   private handleDeadDefender() {
     if (!(this.target.isPlayer() && this.target.numTilesOwned() < 100)) return;
 
-    const gold = this.target.gold();
-    this.mg.displayMessage(
-      `Conquered ${this.target.displayName()} received ${renderNumber(
-        gold,
-      )} gold`,
-      MessageType.CONQUERED_PLAYER,
-      this._owner.id(),
-      gold,
-    );
-    this.target.removeGold(gold);
-    this._owner.addGold(gold);
+    this.mg.conquerPlayer(this._owner, this.target);
 
     for (let i = 0; i < 10; i++) {
       for (const tile of this.target.tiles()) {
