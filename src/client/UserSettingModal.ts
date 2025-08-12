@@ -244,8 +244,8 @@ export class UserSettingModal extends LitElement {
               <button
                 class="w-1/2 text-center px-3 py-1 rounded-l 
       ${this.settingsMode === "basic"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+        ? "bg-white/10 text-white"
+        : "bg-transparent text-gray-400"}"
                 @click=${() => (this.settingsMode = "basic")}
               >
                 ${translateText("user_setting.tab_basic")}
@@ -253,8 +253,8 @@ export class UserSettingModal extends LitElement {
               <button
                 class="w-1/2 text-center px-3 py-1 rounded-r 
       ${this.settingsMode === "keybinds"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+        ? "bg-white/10 text-white"
+        : "bg-transparent text-gray-400"}"
                 @click=${() => (this.settingsMode = "keybinds")}
               >
                 ${translateText("user_setting.tab_keybinds")}

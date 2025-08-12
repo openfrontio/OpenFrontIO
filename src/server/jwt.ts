@@ -11,9 +11,9 @@ import { PersistentIdSchema } from "../core/Schemas";
 
 type TokenVerificationResult =
   | {
-      persistentId: string;
-      claims: TokenPayload | null;
-    }
+    persistentId: string;
+    claims: TokenPayload | null;
+  }
   | false;
 
 export async function verifyClientToken(

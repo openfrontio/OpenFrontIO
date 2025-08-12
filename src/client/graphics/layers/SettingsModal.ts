@@ -374,8 +374,8 @@ export class SettingsModal extends LitElement implements Layer {
                   ${this.userSettings.performanceOverlay()
                     ? translateText("user_setting.performance_overlay_enabled")
                     : translateText(
-                        "user_setting.performance_overlay_disabled",
-                      )}
+                      "user_setting.performance_overlay_disabled",
+                    )}
                 </div>
               </div>
               <div class="text-sm text-slate-400">

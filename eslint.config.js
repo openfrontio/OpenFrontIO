@@ -1,5 +1,6 @@
 import { includeIgnoreFile } from "@eslint/compat";
 import pluginJs from "@eslint/js";
+import stylisticTs from "@stylistic/eslint-plugin";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 import globals from "globals";
 import path from "node:path";
@@ -46,8 +47,12 @@ export default [
     },
   },
   {
+    plugins: {
+      "@stylistic/ts": stylisticTs,
+    },
     rules: {
       // Enable rules
+      "@stylistic/ts/indent": ["error", 2],
       "@typescript-eslint/consistent-type-definitions": [
         "error",
         "type",
@@ -64,6 +69,7 @@ export default [
       "@typescript-eslint/prefer-literal-enum-member": "error",
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
+      indent: "off", // @stylistic/ts/indent
       "sort-keys": "error",
     },
   },
