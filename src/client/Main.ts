@@ -1,6 +1,7 @@
 import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { generateCryptoRandomUUID } from "../core/Random";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
@@ -27,11 +28,7 @@ import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import {
-  generateCryptoRandomUUID,
-  incrementGamesPlayed,
-  translateText,
-} from "./Utils";
+import { incrementGamesPlayed, translateText } from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";

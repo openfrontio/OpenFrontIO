@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
+import { pickRandomElement } from "../core/Random";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
 import { logger } from "./Logger";
 
@@ -89,7 +90,7 @@ export class MapPlaylist {
   }
 
   private getTeamCount(): TeamCountConfig {
-    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
+    return pickRandomElement(TEAM_COUNTS);
   }
 
   private getNextMap(): MapWithMode {

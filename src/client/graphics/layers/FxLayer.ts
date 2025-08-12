@@ -6,6 +6,7 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { generateRandomNumber } from "../../../core/Random";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "../fx/Fx";
@@ -148,8 +149,7 @@ export class FxLayer implements Layer {
   onRailroadEvent(railroad: RailroadUpdate) {
     const railTiles = railroad.railTiles;
     for (const rail of railTiles) {
-      // No need for pseudorandom, this is fx
-      const chanceFx = Math.floor(Math.random() * 3);
+      const chanceFx = generateRandomNumber(2);
       if (chanceFx === 0) {
         const x = this.game.x(rail.tile);
         const y = this.game.y(rail.tile);

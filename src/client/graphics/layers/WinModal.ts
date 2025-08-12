@@ -5,6 +5,7 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { generateRandomBoolean } from "../../../core/Random";
 import { SendWinnerEvent } from "../../Transport";
 import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
@@ -23,7 +24,7 @@ export class WinModal extends LitElement implements Layer {
   showButtons = false;
 
   @state()
-  private showSteamContent = Math.random() > 0.5;
+  private showSteamContent = generateRandomBoolean();
 
   private _title: string;
 

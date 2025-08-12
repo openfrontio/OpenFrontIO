@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { GameEnv } from "../../../core/configuration/Config";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { generateRandomNumber } from "../../../core/Random";
 import { MultiTabDetector } from "../../MultiTabDetector";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -51,15 +52,13 @@ export class MultiTabModal extends LitElement implements Layer {
 
   // Generate fake IP in format xxx.xxx.xxx.xxx
   private generateFakeIp(): string {
-    return Array.from({ length: 4 }, () =>
-      Math.floor(Math.random() * 255),
-    ).join(".");
+    return Array.from({ length: 4 }, () => generateRandomNumber(255)).join(".");
   }
 
   // Generate fake device fingerprint (32 character hex)
   private generateDeviceFingerprint(): string {
     return Array.from({ length: 32 }, () =>
-      Math.floor(Math.random() * 16).toString(16),
+      generateRandomNumber(15).toString(16),
     ).join("");
   }
 

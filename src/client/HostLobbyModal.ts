@@ -13,6 +13,7 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { pickRandomElement } from "../core/Random";
 import { GameConfig, GameInfo, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
@@ -515,8 +516,7 @@ export class HostLobbyModal extends LitElement {
 
   private getRandomMap(): GameMapType {
     const maps = Object.values(GameMapType);
-    const randIdx = Math.floor(Math.random() * maps.length);
-    return maps[randIdx] as GameMapType;
+    return pickRandomElement(maps) as GameMapType;
   }
 
   private async startGame() {

@@ -14,6 +14,7 @@ import {
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import { pickRandomElement } from "../core/Random";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
@@ -371,8 +372,7 @@ export class SinglePlayerModal extends LitElement {
 
   private getRandomMap(): GameMapType {
     const maps = Object.values(GameMapType);
-    const randIdx = Math.floor(Math.random() * maps.length);
-    return maps[randIdx] as GameMapType;
+    return pickRandomElement(maps) as GameMapType;
   }
 
   private toggleUnit(unit: UnitType, checked: boolean): void {
