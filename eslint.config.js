@@ -1,11 +1,11 @@
-import { includeIgnoreFile } from "@eslint/compat";
-import pluginJs from "@eslint/js";
-import stylisticTs from "@stylistic/eslint-plugin";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 import globals from "globals";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import pluginJs from "@eslint/js";
+import stylisticTs from "@stylistic/eslint-plugin";
 import tseslint from "typescript-eslint";
+import { fileURLToPath } from "node:url";
+import { includeIgnoreFile } from "@eslint/compat";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,10 +40,9 @@ export default [
   {
     rules: {
       // Disable rules that would fail. The failures should be fixed, and the entries here removed.
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-expressions": "off",
-      "@typescript-eslint/no-unused-vars": "off",
-      "no-case-declarations": "off",
+      "@typescript-eslint/no-explicit-any": "off", // https://github.com/openfrontio/OpenFrontIO/issues/1789
+      "@typescript-eslint/no-unused-expressions": "off", // https://github.com/openfrontio/OpenFrontIO/issues/1790
+      "no-case-declarations": "off", // https://github.com/openfrontio/OpenFrontIO/issues/1791
     },
   },
   {
@@ -52,11 +51,25 @@ export default [
     },
     rules: {
       // Enable rules
+      // '@stylistic/ts/quotes': ['error', 'single'], TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1788
       "@stylistic/ts/indent": ["error", 2],
+      "@stylistic/ts/semi": "error",
+      "@stylistic/ts/space-infix-ops": "error",
+      "@stylistic/ts/type-annotation-spacing": [
+        "error",
+        {
+          after: true,
+          before: true,
+          overrides: {
+            colon: {
+              before: false,
+            },
+          },
+        },
+      ],
       "@typescript-eslint/consistent-type-definitions": [
         "error",
         "type",
-        // TODO: { assertionStyle: "never" }, https://github.com/openfrontio/OpenFrontIO/issues/1033
       ],
       "@typescript-eslint/no-duplicate-enum-values": "error",
       "@typescript-eslint/no-inferrable-types": "error",
@@ -71,6 +84,21 @@ export default [
       eqeqeq: "error",
       indent: "off", // @stylistic/ts/indent
       "sort-keys": "error",
+      // "@typescript-eslint/no-unsafe-argument": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1780
+      // "@typescript-eslint/no-unsafe-assignment": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1781
+      // "@typescript-eslint/no-unsafe-member-access": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1783
+      // "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1784
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/prefer-for-of": "error",
+      "max-depth": ["error", { max: 5 }],
+      // "max-len": ["error", { code: 120 }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1785
+      "max-lines": ["error", { max: 1065, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["error", { max: 561 }],
+      "no-loss-of-precision": "error",
+      // "no-undef": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1786
+      "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
+      // 'sort-imports': 'error', // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1787
+      "space-infix-ops": "off",
     },
   },
   {
