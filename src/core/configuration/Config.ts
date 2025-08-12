@@ -130,7 +130,7 @@ export interface Config {
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number, numPorts: number): Gold;
-  tradeShipSpawnRate(numberOfPorts: number): number;
+  tradeShipSpawnRate(numTradeShips: number, numPlayerPorts: number): number;
   trainGold(isFriendly: boolean): Gold;
   trainSpawnRate(numberOfStations: number): number;
   trainStationMinRange(): number;

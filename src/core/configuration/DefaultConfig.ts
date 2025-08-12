@@ -24,7 +24,7 @@ import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
-import { assertNever, simpleHash, within } from "../Util";
+import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
@@ -343,28 +343,41 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(50000 + 100 * dist);
-    const basePortBonus = 0.25;
-    const diminishingFactor = 0.9;
-
+    const baseGold = Math.floor(50_000 + 100 * dist);
+    const basePortBonus = 0.5;
+    const diminishingFactor = 0.8;
     let totalMultiplier = 1;
-    for (let i = 0; i < numPorts; i++) {
-      totalMultiplier += basePortBonus * Math.pow(diminishingFactor, i);
+    for (let i = 1; i < numPorts; i++) {
+      totalMultiplier += Math.max(
+        0.05,
+        basePortBonus * Math.pow(diminishingFactor, i - 1),
+      );
     }
-
     return BigInt(Math.floor(baseGold * totalMultiplier));
   }
 
-  // Chance to spawn a trade ship in one second,
-  tradeShipSpawnRate(numTradeShips: number): number {
-    if (numTradeShips < 20) {
-      return 5;
-    }
-    if (numTradeShips <= 150) {
-      const additional = numTradeShips - 20;
-      return Math.floor(Math.pow(additional, 0.85) + 5);
-    }
-    return 1_000_000;
+  // Probability of trade ship spawn = 1 / tradeShipSpawnRate
+  tradeShipSpawnRate(numTradeShips: number, numPlayerPorts: number): number {
+    // Geometric mean of base spawn rate and port multiplier
+    const combined = Math.sqrt(
+      this.tradeShipBaseSpawn(numTradeShips) *
+        this.tradeShipPortMultiplier(numPlayerPorts),
+    );
+
+    return Math.floor(10 / combined);
+  }
+
+  private tradeShipBaseSpawn(numTradeShips: number): number {
+    const decayRate = Math.log(2) / 30;
+    return 1 - sigmoid(numTradeShips, decayRate, 100);
+  }
+
+  private tradeShipPortMultiplier(numPlayerPorts: number): number {
+    // Higher number => faster expected number of trade ships levels off
+    // This decays gradually to prevent the scenario where more ports => fewer trade ships
+    // Expected number of trade ships is proportional to numPlayerPorts * tradeShipPortMultiplier
+    const decayRate = 0.1;
+    return 1 / (1 + decayRate * numPlayerPorts);
   }
 
   unitInfo(type: UnitType): UnitInfo {
