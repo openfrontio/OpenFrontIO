@@ -29,6 +29,9 @@ import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
 
+const DEFENSE_DEBUFF_MIDPOINT = 70000;
+const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 20000;
+
 const JwksSchema = z.object({
   keys: z
     .object({
@@ -632,29 +635,30 @@ export class DefaultConfig implements Config {
       }
     }
 
-    let largeLossModifier = 1;
-    if (attacker.numTilesOwned() > 100_000) {
-      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
-    }
-    let largeSpeedMalus = 1;
-    if (attacker.numTilesOwned() > 75_000) {
-      // sqrt is only exponent 1/2 which doesn't slow enough huge players
-      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
-    }
-
     if (defender.isPlayer()) {
+      const defenseSig =
+        1 -
+        sigmoid(
+          defender.numTilesOwned(),
+          DEFENSE_DEBUFF_DECAY_RATE,
+          DEFENSE_DEBUFF_MIDPOINT,
+        );
+
+      const speedDebuff = 0.25 + 0.75 * defenseSig;
+      const defenseDebuff = 0.5 + 0.5 * defenseSig;
+
       return {
         attackerTroopLoss:
           within(defender.troops() / attackTroops, 0.6, 2) *
           mag *
-          0.8 *
-          largeLossModifier *
+          defenseDebuff *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
+        // Lower is faster
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
-          largeSpeedMalus *
+          speedDebuff *
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
