@@ -329,10 +329,10 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   trainSpawnRate(numberOfStations: number): number {
-    return Math.min(1400, Math.round(40 * Math.pow(numberOfStations, 0.5)));
+    return Math.min(3000, Math.round(80 * Math.pow(numberOfStations, 0.5)));
   }
   trainGold(isFriendly: boolean): Gold {
-    return isFriendly ? 100_000n : 25_000n;
+    return isFriendly ? 50_000n : 10_000n;
   }
 
   trainStationMinRange(): number {
