@@ -128,6 +128,7 @@ export class MapPlaylist {
     const team: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
+    // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < maps.length; i++) {
       if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
         return false;
