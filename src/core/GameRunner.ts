@@ -190,7 +190,8 @@ export class GameRunner {
       const other = this.game.owner(tile) as Player;
       actions.interaction = {
         canBreakAlliance: player.isAlliedWith(other),
-        canDonate: player.canDonate(other),
+        canDonateGold: player.canDonateGold(other),
+        canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
         canSendAllianceRequest: player.canSendAllianceRequest(other),
         canSendEmoji: player.canSendEmoji(other),

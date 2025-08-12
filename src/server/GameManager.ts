@@ -43,6 +43,8 @@ export class GameManager {
         difficulty: Difficulty.Medium,
         disableNPCs: false,
         disabledUnits: [],
+        donateGold: false,
+        donateTroops: false,
         gameMap: GameMapType.World,
         gameMode: GameMode.FFA,
         gameType: GameType.Private,
