@@ -92,8 +92,8 @@ export default [
       "@typescript-eslint/prefer-for-of": "error",
       "max-depth": ["error", { max: 5 }],
       // "max-len": ["error", { code: 120 }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1785
-      "max-lines": ["error", { max: 2000, skipBlankLines: true, skipComments: true }],
-      "max-lines-per-function": ["error", { max: 508 }],
+      "max-lines": ["error", { max: 1065, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["error", { max: 561 }],
       "no-loss-of-precision": "error",
       // "no-undef": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1786
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
