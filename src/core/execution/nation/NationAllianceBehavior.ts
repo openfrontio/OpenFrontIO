@@ -1,10 +1,4 @@
-import {
-  Difficulty,
-  Game,
-  Player,
-  PlayerType,
-  Relation,
-} from "../../game/Game";
+import { Game, Player, PlayerType, Relation } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
@@ -47,13 +41,13 @@ export class NationAllianceBehavior {
     const { difficulty } = this.game.config().gameConfig();
     const shouldSendAllianceRequest = () => {
       switch (difficulty) {
-        case Difficulty.Easy:
+        case "Easy":
           return this.random.chance(35);
-        case Difficulty.Medium:
+        case "Medium":
           return this.random.chance(30);
-        case Difficulty.Hard:
+        case "Hard":
           return this.random.chance(25);
-        case Difficulty.Impossible:
+        case "Impossible":
           return this.random.chance(20);
         default:
           assertNever(difficulty);
@@ -62,7 +56,7 @@ export class NationAllianceBehavior {
 
     // Only easy nations are allowed to send alliance requests to bots
     const isAcceptablePlayerType = (p: Player) =>
-      (p.type() === PlayerType.Bot && difficulty === Difficulty.Easy) ||
+      (p.type() === PlayerType.Bot && difficulty === "Easy") ||
       p.type() !== PlayerType.Bot;
 
     for (const enemy of borderingEnemies) {
@@ -113,13 +107,13 @@ export class NationAllianceBehavior {
   private isConfused(): boolean {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
-      case Difficulty.Easy:
+      case "Easy":
         return this.random.chance(10); // 10% chance to be confused on easy
-      case Difficulty.Medium:
+      case "Medium":
         return this.random.chance(20); // 5% chance to be confused on medium
-      case Difficulty.Hard:
+      case "Hard":
         return this.random.chance(40); // 2.5% chance to be confused on hard
-      case Difficulty.Impossible:
+      case "Impossible":
         return false; // No confusion on impossible
       default:
         assertNever(difficulty);
@@ -129,20 +123,20 @@ export class NationAllianceBehavior {
   private isAlliancePartnerThreat(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
-      case Difficulty.Easy:
+      case "Easy":
         // On easy we are very dumb, we don't see anybody as a threat
         return false;
-      case Difficulty.Medium:
+      case "Medium":
         // On medium we just see players with much more troops as a threat
         return otherPlayer.troops() > this.player.troops() * 2.5;
-      case Difficulty.Hard:
+      case "Hard":
         // On hard we are smarter, we check for maxTroops to see the actual strength
         return (
           otherPlayer.troops() > this.player.troops() &&
           this.game.config().maxTroops(otherPlayer) >
             this.game.config().maxTroops(this.player) * 2
         );
-      case Difficulty.Impossible: {
+      case "Impossible": {
         // On impossible we check for multiple factors and try to not mess with stronger players (we want to steamroll over weaklings)
         const otherHasMoreTroops =
           otherPlayer.troops() > this.player.troops() * 1.5;
@@ -163,12 +157,12 @@ export class NationAllianceBehavior {
   private checkAlreadyEnoughAlliances(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
-      case Difficulty.Easy:
+      case "Easy":
         return false; // On easy we never think we have enough alliances
-      case Difficulty.Medium:
+      case "Medium":
         return this.player.alliances().length >= this.random.nextInt(5, 8);
-      case Difficulty.Hard:
-      case Difficulty.Impossible: {
+      case "Hard":
+      case "Impossible": {
         // On hard and impossible we try to not ally with all our neighbors (If we have 3+ neighbors)
         const borderingPlayers = this.player
           .neighbors()
@@ -184,7 +178,7 @@ export class NationAllianceBehavior {
         ) {
           return borderingPlayers.length <= borderingFriends.length + 1;
         }
-        if (difficulty === Difficulty.Hard) {
+        if (difficulty === "Hard") {
           return this.player.alliances().length >= this.random.nextInt(3, 6);
         }
         return this.player.alliances().length >= this.random.nextInt(2, 5);
@@ -197,15 +191,15 @@ export class NationAllianceBehavior {
   private isAlliancePartnerFriendly(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
-      case Difficulty.Easy:
-      case Difficulty.Medium:
+      case "Easy":
+      case "Medium":
         return this.player.relation(otherPlayer) === Relation.Friendly;
-      case Difficulty.Hard:
+      case "Hard":
         return (
           this.player.relation(otherPlayer) === Relation.Friendly &&
           this.random.nextInt(0, 100) >= 17
         );
-      case Difficulty.Impossible:
+      case "Impossible":
         return (
           this.player.relation(otherPlayer) === Relation.Friendly &&
           this.random.nextInt(0, 100) >= 33
@@ -219,22 +213,22 @@ export class NationAllianceBehavior {
   private isAlliancePartnerSimilarlyStrong(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
-      case Difficulty.Easy:
+      case "Easy":
         return (
           otherPlayer.troops() >
           this.player.troops() * (this.random.nextInt(60, 70) / 100)
         );
-      case Difficulty.Medium:
+      case "Medium":
         return (
           otherPlayer.troops() >
           this.player.troops() * (this.random.nextInt(70, 80) / 100)
         );
-      case Difficulty.Hard:
+      case "Hard":
         return (
           otherPlayer.troops() >
           this.player.troops() * (this.random.nextInt(75, 85) / 100)
         );
-      case Difficulty.Impossible:
+      case "Impossible":
         return (
           otherPlayer.troops() >
           this.player.troops() * (this.random.nextInt(80, 90) / 100)

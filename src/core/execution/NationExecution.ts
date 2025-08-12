@@ -1,6 +1,5 @@
 import {
   Cell,
-  Difficulty,
   Execution,
   Game,
   Gold,
@@ -85,7 +84,7 @@ export class NationExecution implements Execution {
     if (
       this.player !== null &&
       this.player.isAlive() &&
-      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
+      this.mg.config().gameConfig().difficulty !== "Easy"
     ) {
       this.trackTransportShipsAndRetaliate();
       this.trackTradeShipsAndRetaliate();
@@ -208,9 +207,9 @@ export class NationExecution implements Execution {
     const { difficulty } = this.mg.config().gameConfig();
     // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
     if (
-      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
-      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
-      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
+      (difficulty === "Medium" && this.random.nextInt(0, 100) < 15) ||
+      (difficulty === "Hard" && this.random.nextInt(0, 100) < 50) ||
+      (difficulty === "Impossible" && this.random.nextInt(0, 100) < 80)
     ) {
       const canBuild = this.player.canBuild(UnitType.Warship, tile);
       if (canBuild === false) {

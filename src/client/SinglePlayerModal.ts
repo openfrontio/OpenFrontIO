@@ -4,6 +4,7 @@ import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
   Difficulty,
+  DifficultySchema,
   Duos,
   GameMapSize,
   GameMapType,
@@ -35,7 +36,7 @@ export class SinglePlayerModal extends LitElement {
     close: () => void;
   };
   @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private selectedDifficulty: Difficulty = "Medium";
   @state() private disableNations: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -139,25 +140,23 @@ export class SinglePlayerModal extends LitElement {
               ${translateText("difficulty.difficulty")}
             </div>
             <div class="option-cards">
-              ${Object.entries(Difficulty)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
-                    >
-                      <difficulty-display
-                        .difficultyKey=${key}
-                      ></difficulty-display>
-                      <p class="option-card-title">
-                        ${translateText(`difficulty.${key}`)}
-                      </p>
-                    </div>
-                  `,
-                )}
+              ${DifficultySchema.options.map(
+                (value) => html`
+                  <div
+                    class="option-card ${this.selectedDifficulty === value
+                      ? "selected"
+                      : ""}"
+                    @click=${() => this.handleDifficultySelection(value)}
+                  >
+                    <difficulty-display
+                      .difficultyKey=${value}
+                    ></difficulty-display>
+                    <p class="option-card-title">
+                      ${translateText(`difficulty.${value}`)}
+                    </p>
+                  </div>
+                `,
+              )}
             </div>
           </div>
 

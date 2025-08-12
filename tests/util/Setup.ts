@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import {
-  Difficulty,
   Game,
   GameMapSize,
   GameMapType,
@@ -60,7 +59,7 @@ export async function setup(
     gameMapSize: GameMapSize.Normal,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
-    difficulty: Difficulty.Medium,
+    difficulty: "Medium",
     disableNations: false,
     donateGold: false,
     donateTroops: false,

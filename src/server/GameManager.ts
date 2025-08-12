@@ -2,7 +2,6 @@ import { Logger } from "winston";
 import WebSocket from "ws";
 import { ServerConfig } from "../core/configuration/Config";
 import {
-  Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
@@ -64,7 +63,7 @@ export class GameManager {
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Medium,
+        difficulty: "Medium",
         disableNations: false,
         infiniteGold: false,
         infiniteTroops: false,

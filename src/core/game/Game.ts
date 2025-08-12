@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { getClanTag } from "../Util";
@@ -39,14 +40,15 @@ export interface MapPos {
   y: number;
 }
 
-export enum Difficulty {
-  Easy = "Easy",
-  Medium = "Medium",
-  Hard = "Hard",
-  Impossible = "Impossible",
-}
+export const DifficultySchema = z.enum([
+  "Easy",
+  "Medium",
+  "Hard",
+  "Impossible",
+]);
+export type Difficulty = z.infer<typeof DifficultySchema>;
 export const isDifficulty = (value: unknown): value is Difficulty =>
-  isEnumValue(Difficulty, value);
+  DifficultySchema.safeParse(value).success;
 
 export type Team = string;
 

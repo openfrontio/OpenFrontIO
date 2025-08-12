@@ -1,7 +1,6 @@
 import { JWK } from "jose";
 import { z } from "zod";
 import {
-  Difficulty,
   Duos,
   Game,
   GameMapType,
@@ -803,13 +802,13 @@ export class DefaultConfig implements Config {
     }
     if (playerInfo.playerType === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
-        case Difficulty.Easy:
+        case "Easy":
           return 18_750;
-        case Difficulty.Medium:
+        case "Medium":
           return 25_000; // Like humans
-        case Difficulty.Hard:
+        case "Hard":
           return 31_250;
-        case Difficulty.Impossible:
+        case "Impossible":
           return 37_500;
         default:
           assertNever(this._gameConfig.difficulty);
@@ -838,13 +837,13 @@ export class DefaultConfig implements Config {
     }
 
     switch (this._gameConfig.difficulty) {
-      case Difficulty.Easy:
+      case "Easy":
         return maxTroops * 0.75;
-      case Difficulty.Medium:
+      case "Medium":
         return maxTroops * 1; // Like humans
-      case Difficulty.Hard:
+      case "Hard":
         return maxTroops * 1.25;
-      case Difficulty.Impossible:
+      case "Impossible":
         return maxTroops * 1.5;
       default:
         assertNever(this._gameConfig.difficulty);
@@ -865,16 +864,16 @@ export class DefaultConfig implements Config {
 
     if (player.type() === PlayerType.Nation) {
       switch (this._gameConfig.difficulty) {
-        case Difficulty.Easy:
+        case "Easy":
           toAdd *= 0.95;
           break;
-        case Difficulty.Medium:
+        case "Medium":
           toAdd *= 1; // Like humans
           break;
-        case Difficulty.Hard:
+        case "Hard":
           toAdd *= 1.05;
           break;
-        case Difficulty.Impossible:
+        case "Impossible":
           toAdd *= 1.1;
           break;
         default:

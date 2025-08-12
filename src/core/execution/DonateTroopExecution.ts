@@ -1,4 +1,4 @@
-import { Difficulty, Execution, Game, Player, PlayerID } from "../game/Game";
+import { Execution, Game, Player, PlayerID } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { assertNever } from "../Util";
 
@@ -61,25 +61,25 @@ export class DonateTroopsExecution implements Execution {
 
     switch (difficulty) {
       // ~7.7k - ~9.1k troops (for 100k troops)
-      case Difficulty.Easy:
+      case "Easy":
         return this.random.nextInt(
           recipientMaxTroops / 13,
           recipientMaxTroops / 11,
         );
       // ~9.1k - ~11.1k troops (for 100k troops)
-      case Difficulty.Medium:
+      case "Medium":
         return this.random.nextInt(
           recipientMaxTroops / 11,
           recipientMaxTroops / 9,
         );
       // ~11.1k - ~14.3k troops (for 100k troops)
-      case Difficulty.Hard:
+      case "Hard":
         return this.random.nextInt(
           recipientMaxTroops / 9,
           recipientMaxTroops / 7,
         );
       // ~14.3k - ~20k troops (for 100k troops)
-      case Difficulty.Impossible:
+      case "Impossible":
         return this.random.nextInt(
           recipientMaxTroops / 7,
           recipientMaxTroops / 5,

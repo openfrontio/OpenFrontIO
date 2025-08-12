@@ -1,5 +1,4 @@
 import {
-  Difficulty,
   Game,
   Player,
   PlayerType,
@@ -219,14 +218,14 @@ export class AiAttackBehavior {
   getBotAttackMaxParallelism(): number {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
-      case Difficulty.Easy:
+      case "Easy":
         return 1;
-      case Difficulty.Medium:
+      case "Medium":
         return 2;
-      case Difficulty.Hard:
+      case "Hard":
         return 4;
       // On impossible difficulty, attack as much bots as possible in parallel
-      case Difficulty.Impossible: {
+      case "Impossible": {
         return 100;
       }
       default:
@@ -352,7 +351,7 @@ export class AiAttackBehavior {
         neighbor.type() === PlayerType.Nation ||
         neighbor.type() === PlayerType.Human
       ) {
-        if (this.random.chance(2) || difficulty === Difficulty.Easy) {
+        if (this.random.chance(2) || difficulty === "Easy") {
           continue;
         }
       }
@@ -403,10 +402,10 @@ export class AiAttackBehavior {
     }
 
     const { difficulty } = this.game.config().gameConfig();
-    if (difficulty === Difficulty.Easy && this.random.chance(2)) {
+    if (difficulty === "Easy" && this.random.chance(2)) {
       return false;
     }
-    if (difficulty === Difficulty.Medium && this.random.chance(4)) {
+    if (difficulty === "Medium" && this.random.chance(4)) {
       return false;
     }
     return true;
@@ -492,7 +491,7 @@ export class AiAttackBehavior {
 
   calculateBotAttackTroops(target: Player, maxTroops: number): number {
     const { difficulty } = this.game.config().gameConfig();
-    if (difficulty === Difficulty.Easy) {
+    if (difficulty === "Easy") {
       this.botAttackTroopsSent += maxTroops;
       return maxTroops;
     }

@@ -8,7 +8,7 @@ import {
 } from "./CosmeticSchemas";
 import {
   AllPlayers,
-  Difficulty,
+  DifficultySchema,
   Duos,
   GameMapSize,
   GameMapType,
@@ -158,7 +158,7 @@ export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
-  difficulty: z.enum(Difficulty),
+  difficulty: DifficultySchema,
   donateGold: z.boolean(), // Configures donations to humans only
   donateTroops: z.boolean(), // Configures donations to humans only
   gameType: z.enum(GameType),

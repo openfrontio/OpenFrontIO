@@ -3,13 +3,12 @@ import {
   RankType,
 } from "../src/client/components/baseComponents/ranking/GameInfoRanking";
 import {
-  Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
 } from "../src/core/game/Game";
-import { AnalyticsRecord } from "../src/core/Schemas";
+import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
@@ -19,7 +18,7 @@ import {
 describe("Ranking class", () => {
   const mockConfig = {
     gameMap: GameMapType.Montreal,
-    difficulty: Difficulty.Medium,
+    difficulty: "Medium",
     donateGold: false,
     donateTroops: false,
     gameType: GameType.Public,
@@ -33,7 +32,7 @@ describe("Ranking class", () => {
     maxPlayers: 40,
     disabledUnits: [],
     randomSpawn: false,
-  };
+  } as const satisfies Partial<GameConfig>;
 
   const gameTickDuration = 1000;
   const gameDuration = gameTickDuration / 10;
