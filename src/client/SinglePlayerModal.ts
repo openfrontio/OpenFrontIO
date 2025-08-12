@@ -34,14 +34,14 @@ export class SinglePlayerModal extends LitElement {
   };
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
-  @state() private disableNPCs: boolean = false;
-  @state() private bots: number = 400;
-  @state() private infiniteGold: boolean = false;
-  @state() private donateGold: boolean = false;
-  @state() private infiniteTroops: boolean = false;
-  @state() private donateTroops: boolean = false;
-  @state() private instantBuild: boolean = false;
-  @state() private useRandomMap: boolean = false;
+  @state() private disableNPCs = false;
+  @state() private bots = 400;
+  @state() private infiniteGold = false;
+  @state() private donateGold = false;
+  @state() private infiniteTroops = false;
+  @state() private donateTroops = false;
+  @state() private instantBuild = false;
+  @state() private useRandomMap = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
