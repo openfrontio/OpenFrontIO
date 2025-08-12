@@ -31,7 +31,7 @@ export class MirvExecution implements Execution {
 
   private separateDst: TileRef;
 
-  private speed: number = -1;
+  private speed = -1;
 
   constructor(
     private player: Player,

@@ -79,7 +79,7 @@ export class WarshipExecution implements Execution {
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
     const ships = this.mg.nearbyUnits(
-      this.warship.tile()!,
+      this.warship.tile(),
       this.mg.config().warshipTargettingRange(),
       [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
     );
@@ -238,11 +238,11 @@ export class WarshipExecution implements Execution {
     return false;
   }
 
-  randomTile(allowShoreline: boolean = false): TileRef | undefined {
+  randomTile(allowShoreline = false): TileRef | undefined {
     let warshipPatrolRange = this.mg.config().warshipPatrolRange();
-    const maxAttemptBeforeExpand: number = 500;
-    let attempts: number = 0;
-    let expandCount: number = 0;
+    const maxAttemptBeforeExpand = 500;
+    let attempts = 0;
+    let expandCount = 0;
     while (expandCount < 3) {
       const x =
         this.mg.x(this.warship.patrolTile()!) +

@@ -32,7 +32,7 @@ export class NewsModal extends LitElement {
 
   @property({ type: String }) markdown = "Loading...";
 
-  private initialized: boolean = false;
+  private initialized = false;
 
   static styles = css`
     :host {

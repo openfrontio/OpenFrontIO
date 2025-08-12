@@ -8,39 +8,39 @@ const log = logger.child({
   module: "cloudflare",
 });
 
-export interface TunnelConfig {
+export type TunnelConfig = {
   domain: string;
   subdomain: string;
   subdomainToService: Map<string, string>;
-}
+};
 
-interface TunnelResponse {
+type TunnelResponse = {
   result: {
     id: string;
     token: string;
   };
-}
+};
 
-interface ZoneResponse {
+type ZoneResponse = {
   result: Array<{
     id: string;
   }>;
-}
+};
 
-interface DNSRecordResponse {
+type DNSRecordResponse = {
   result: Array<{
     id: string;
   }>;
-}
+};
 
-interface CloudflaredConfig {
+type CloudflaredConfig = {
   tunnel: string;
   "credentials-file": string;
   ingress: Array<{
     hostname?: string;
     service: string;
   }>;
-}
+};
 
 const CloudflareTunnelConfigSchema = z.object({
   a: z.string(),
@@ -63,7 +63,7 @@ export class Cloudflare {
 
   private async makeRequest<T>(
     url: string,
-    method: string = "GET",
+    method = "GET",
     data?: any,
   ): Promise<T> {
     const response = await fetch(url, {

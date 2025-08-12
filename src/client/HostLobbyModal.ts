@@ -39,19 +39,19 @@ export class HostLobbyModal extends LitElement {
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
-  @state() private bots: number = 400;
-  @state() private infiniteGold: boolean = false;
-  @state() private donateGold: boolean = false;
-  @state() private infiniteTroops: boolean = false;
-  @state() private donateTroops: boolean = false;
-  @state() private instantBuild: boolean = false;
+  @state() private bots = 400;
+  @state() private infiniteGold = false;
+  @state() private donateGold = false;
+  @state() private infiniteTroops = false;
+  @state() private donateTroops = false;
+  @state() private instantBuild = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private clients: ClientInfo[] = [];
-  @state() private useRandomMap: boolean = false;
+  @state() private useRandomMap = false;
   @state() private disabledUnits: UnitType[] = [];
-  @state() private lobbyCreatorClientID: string = "";
-  @state() private lobbyIdVisible: boolean = true;
+  @state() private lobbyCreatorClientID = "";
+  @state() private lobbyIdVisible = true;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes

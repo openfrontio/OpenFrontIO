@@ -115,17 +115,17 @@ export class AutoUpgradeEvent implements GameEvent {
 }
 
 export class InputHandler {
-  private lastPointerX: number = 0;
-  private lastPointerY: number = 0;
+  private lastPointerX = 0;
+  private lastPointerY = 0;
 
-  private lastPointerDownX: number = 0;
-  private lastPointerDownY: number = 0;
+  private lastPointerDownX = 0;
+  private lastPointerDownY = 0;
 
   private pointers: Map<number, PointerEvent> = new Map();
 
-  private lastPinchDistance: number = 0;
+  private lastPinchDistance = 0;
 
-  private pointerDown: boolean = false;
+  private pointerDown = false;
 
   private alternateView = false;
 
@@ -163,7 +163,7 @@ export class InputHandler {
     };
 
     // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
+    const isMac = navigator.userAgent.includes("Mac");
     if (isMac) {
       this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
     }

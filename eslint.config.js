@@ -48,10 +48,20 @@ export default [
   {
     rules: {
       // Enable rules
-      "@typescript-eslint/consistent-type-assertions": [
-        "warn", // TODO: Raise this to error, https://github.com/openfrontio/OpenFrontIO/issues/1033
-        { assertionStyle: "never" },
+      "@typescript-eslint/consistent-type-definitions": [
+        "error",
+        "type",
+        // TODO: { assertionStyle: "never" }, https://github.com/openfrontio/OpenFrontIO/issues/1033
       ],
+      "@typescript-eslint/no-duplicate-enum-values": "error",
+      "@typescript-eslint/no-inferrable-types": "error",
+      "@typescript-eslint/no-mixed-enums": "error",
+      "@typescript-eslint/no-require-imports": "error",
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      "@typescript-eslint/prefer-as-const": "error",
+      "@typescript-eslint/prefer-function-type": "error",
+      "@typescript-eslint/prefer-includes": "error",
+      "@typescript-eslint/prefer-literal-enum-member": "error",
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
       "sort-keys": "error",

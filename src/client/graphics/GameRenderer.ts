@@ -249,7 +249,7 @@ export function createRenderer(
       eventBus,
       game,
       transformHandler,
-      emojiTable as EmojiTable,
+      emojiTable,
       buildMenu,
       uiState,
       playerPanel,

@@ -22,19 +22,19 @@ export class GameRightSidebar extends LitElement implements Layer {
   public eventBus: EventBus;
 
   @state()
-  private _isSinglePlayer: boolean = false;
+  private _isSinglePlayer = false;
 
   @state()
-  private _isReplayVisible: boolean = false;
+  private _isReplayVisible = false;
 
   @state()
-  private _isVisible: boolean = true;
+  private _isVisible = true;
 
   @state()
-  private isPaused: boolean = false;
+  private isPaused = false;
 
   @state()
-  private timer: number = 0;
+  private timer = 0;
 
   private hasWinner = false;
 

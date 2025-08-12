@@ -198,7 +198,7 @@ export class GameRunner {
         canTarget: player.canTarget(other),
         sharedBorder: player.sharesBorderWith(other),
       };
-      const alliance = player.allianceWith(other as Player);
+      const alliance = player.allianceWith(other);
       if (alliance) {
         actions.interaction.allianceExpiresAt = alliance.expiresAt();
       }

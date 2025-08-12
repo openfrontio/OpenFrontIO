@@ -1,8 +1,8 @@
 export type GameEvent = object;
 
-export interface EventConstructor<T extends GameEvent = GameEvent> {
-  new (...args: any[]): T;
-}
+export type EventConstructor<T extends GameEvent = GameEvent> = new (
+  ...args: any[]
+) => T;
 
 export class EventBus {
   private listeners: Map<EventConstructor, Array<(event: GameEvent) => void>> =

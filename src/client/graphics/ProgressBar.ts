@@ -7,7 +7,7 @@ export class ProgressBar {
     private y: number,
     private w: number,
     private h: number,
-    private progress: number = 0, // Progress from 0 to 1
+    private progress = 0, // Progress from 0 to 1
   ) {
     this.setProgress(progress);
   }

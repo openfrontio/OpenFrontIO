@@ -18,9 +18,9 @@ import { Layer } from "./Layer";
 
 export class ShowSettingsModalEvent {
   constructor(
-    public readonly isVisible: boolean = true,
-    public readonly shouldPause: boolean = false,
-    public readonly isPaused: boolean = false,
+    public readonly isVisible = true,
+    public readonly shouldPause = false,
+    public readonly isPaused = false,
   ) {}
 }
 
@@ -30,10 +30,10 @@ export class SettingsModal extends LitElement implements Layer {
   public userSettings: UserSettings;
 
   @state()
-  private isVisible: boolean = false;
+  private isVisible = false;
 
   @state()
-  private alternateView: boolean = false;
+  private alternateView = false;
 
   @query(".modal-overlay")
   private modalOverlay!: HTMLElement;

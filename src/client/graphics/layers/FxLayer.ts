@@ -20,8 +20,8 @@ export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
 
-  private lastRefresh: number = 0;
-  private refreshRate: number = 10;
+  private lastRefresh = 0;
+  private refreshRate = 10;
   private theme: Theme;
   private animatedSpriteLoader: AnimatedSpriteLoader =
     new AnimatedSpriteLoader();

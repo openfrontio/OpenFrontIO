@@ -1,8 +1,8 @@
 import { Game, MutableAlliance, Player, Tick } from "./Game";
 
 export class AllianceImpl implements MutableAlliance {
-  private extensionRequestedRequestor_: boolean = false;
-  private extensionRequestedRecipient_: boolean = false;
+  private extensionRequestedRequestor_ = false;
+  private extensionRequestedRecipient_ = false;
 
   private expiresAt_: Tick;
 

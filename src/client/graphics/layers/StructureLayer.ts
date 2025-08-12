@@ -23,11 +23,11 @@ const BASE_TERRITORY_RADIUS = 13.5;
 const RADIUS_SCALE_FACTOR = 0.5;
 const ZOOM_THRESHOLD = 4.3; // below this zoom level, structures are not rendered
 
-interface UnitRenderConfig {
+type UnitRenderConfig = {
   icon: string;
   borderRadius: number;
   territoryRadius: number;
-}
+};
 
 export class StructureLayer implements Layer {
   private canvas: HTMLCanvasElement;

@@ -1,7 +1,7 @@
 import { Execution, Game, MessageType, Player } from "../game/Game";
 
 export class DeleteUnitExecution implements Execution {
-  private active: boolean = true;
+  private active = true;
   private mg: Game;
 
   constructor(

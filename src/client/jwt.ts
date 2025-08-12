@@ -98,7 +98,7 @@ export function getAuthHeader(): string {
   return `Bearer ${token}`;
 }
 
-export async function logOut(allSessions: boolean = false) {
+export async function logOut(allSessions = false) {
   const token = getToken();
   if (token === null) return;
   clearToken();

@@ -19,15 +19,15 @@ import { Layer } from "./Layer";
 type ShapeType = "triangle" | "square" | "pentagon" | "octagon" | "circle";
 
 class StructureRenderInfo {
-  public isOnScreen: boolean = false;
+  public isOnScreen = false;
   constructor(
     public unit: UnitView,
     public owner: PlayerID,
     public iconContainer: PIXI.Container,
     public levelContainer: PIXI.Container,
     public dotContainer: PIXI.Container,
-    public level: number = 0,
-    public underConstruction: boolean = true,
+    public level = 0,
+    public underConstruction = true,
   ) {}
 }
 
@@ -58,7 +58,7 @@ export class StructureIconsLayer implements Layer {
   private iconsStage: PIXI.Container;
   private levelsStage: PIXI.Container;
   private dotsStage: PIXI.Container;
-  private shouldRedraw: boolean = true;
+  private shouldRedraw = true;
   private textureCache: Map<string, PIXI.Texture> = new Map();
   private theme: Theme;
   private renderer: PIXI.Renderer;

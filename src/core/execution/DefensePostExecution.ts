@@ -5,7 +5,7 @@ import { ShellExecution } from "./ShellExecution";
 export class DefensePostExecution implements Execution {
   private mg: Game;
   private post: Unit | null = null;
-  private active: boolean = true;
+  private active = true;
 
   private target: Unit | null = null;
   private lastShellAttack = 0;

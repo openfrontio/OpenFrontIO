@@ -6,7 +6,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderNumber, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
-interface TeamEntry {
+type TeamEntry = {
   teamName: string;
   totalScoreStr: string;
   totalGold: string;
@@ -17,7 +17,7 @@ interface TeamEntry {
   totalCities: string;
   totalScoreSort: number;
   players: PlayerView[];
-}
+};
 
 @customElement("team-stats")
 export class TeamStats extends LitElement implements Layer {

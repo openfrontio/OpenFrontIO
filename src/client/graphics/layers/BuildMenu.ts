@@ -35,13 +35,13 @@ import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-export interface BuildItemDisplay {
+export type BuildItemDisplay = {
   unitType: UnitType;
   icon: string;
   description?: string;
   key?: string;
   countable?: boolean;
-}
+};
 
 export const buildTable: BuildItemDisplay[][] = [
   [

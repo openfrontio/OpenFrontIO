@@ -32,9 +32,9 @@ export class ChatModal extends LitElement {
 
   private players: PlayerView[] = [];
 
-  private playerSearchQuery: string = "";
+  private playerSearchQuery = "";
   private previewText: string | null = null;
-  private requiresPlayerSelection: boolean = false;
+  private requiresPlayerSelection = false;
   private selectedCategory: string | null = null;
   private selectedPhraseText: string | null = null;
   private selectedPhraseTemplate: string | null = null;

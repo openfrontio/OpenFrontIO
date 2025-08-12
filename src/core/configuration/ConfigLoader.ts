@@ -12,7 +12,7 @@ export let cachedSC: ServerConfig | null = null;
 export async function getConfig(
   gameConfig: GameConfig,
   userSettings: UserSettings | null,
-  isReplay: boolean = false,
+  isReplay = false,
 ): Promise<Config> {
   const sc = await getServerConfigFromClient();
   switch (sc.env()) {
