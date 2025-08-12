@@ -43,8 +43,8 @@ export class TradeShipExecution implements Execution {
         return;
       }
       this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, spawn, {
-        targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
+        targetUnit: this._dstPort,
       });
       this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner());
     }

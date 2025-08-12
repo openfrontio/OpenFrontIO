@@ -50,33 +50,34 @@ export function validateUsername(username: string): {
   error?: string;
 } {
   if (typeof username !== "string") {
+    // eslint-disable-next-line sort-keys
     return { isValid: false, error: translateText("username.not_string") };
   }
 
   if (username.length < MIN_USERNAME_LENGTH) {
     return {
-      isValid: false,
       error: translateText("username.too_short", {
         min: MIN_USERNAME_LENGTH,
       }),
+      isValid: false,
     };
   }
 
   if (username.length > MAX_USERNAME_LENGTH) {
     return {
-      isValid: false,
       error: translateText("username.too_long", {
         max: MAX_USERNAME_LENGTH,
       }),
+      isValid: false,
     };
   }
 
   if (!validPattern.test(username)) {
     return {
-      isValid: false,
       error: translateText("username.invalid_chars", {
         max: MAX_USERNAME_LENGTH,
       }),
+      isValid: false,
     };
   }
 

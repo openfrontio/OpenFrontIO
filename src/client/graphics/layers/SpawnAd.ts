@@ -13,12 +13,12 @@ export class SpawnAd extends LitElement implements Layer {
   public g: GameView;
 
   @state()
-  private isVisible: boolean = false;
+  private isVisible = false;
 
   @state()
-  private adLoaded: boolean = false;
+  private adLoaded = false;
 
-  private gamesPlayed: number = 0;
+  private gamesPlayed = 0;
 
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {

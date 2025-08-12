@@ -5,7 +5,6 @@ import { ClientID, Winner } from "../core/Schemas";
 
 export class Client {
   public lastPing: number = Date.now();
-  public isDisconnected: boolean = false;
 
   public hashes: Map<Tick, number> = new Map();
 

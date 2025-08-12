@@ -1,3 +1,4 @@
+import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -39,7 +40,7 @@ import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid } from "./UnitGrid";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -81,7 +82,7 @@ export class GameImpl implements Game {
   private _railNetwork: RailNetwork = createRailNetwork(this);
 
   // Used to assign unique IDs to each new alliance
-  private nextAllianceID: number = 0;
+  private nextAllianceID = 0;
 
   constructor(
     private _humans: PlayerInfo[],
@@ -291,9 +292,9 @@ export class GameImpl implements Game {
       recipient.endTemporaryEmbargo(requestor.id());
 
     this.addUpdate({
-      type: GameUpdateType.AllianceRequestReply,
-      request: request.toUpdate(),
       accepted: true,
+      request: request.toUpdate(),
+      type: GameUpdateType.AllianceRequestReply,
     });
   }
 
@@ -305,9 +306,9 @@ export class GameImpl implements Game {
       request,
     );
     this.addUpdate({
-      type: GameUpdateType.AllianceRequestReply,
-      request: request.toUpdate(),
       accepted: false,
+      request: request.toUpdate(),
+      type: GameUpdateType.AllianceRequestReply,
     });
   }
 
@@ -357,9 +358,9 @@ export class GameImpl implements Game {
     }
     if (this.ticks() % 10 === 0) {
       this.addUpdate({
-        type: GameUpdateType.Hash,
-        tick: this.ticks(),
         hash: this.hash(),
+        tick: this.ticks(),
+        type: GameUpdateType.Hash,
       });
     }
     this._ticks++;
@@ -572,9 +573,9 @@ export class GameImpl implements Game {
 
   target(targeter: Player, target: Player) {
     this.addUpdate({
-      type: GameUpdateType.TargetPlayer,
       playerID: targeter.smallID(),
       targetID: target.smallID(),
+      type: GameUpdateType.TargetPlayer,
     });
   }
 
@@ -590,7 +591,7 @@ export class GameImpl implements Game {
         `${breaker} not allied with ${other}, cannot break alliance`,
       );
     }
-    if (!other.isTraitor()) {
+    if (!other.isTraitor() && !other.isDisconnected()) {
       breaker.markTraitor();
     }
 
@@ -603,9 +604,9 @@ export class GameImpl implements Game {
     }
     this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
     this.addUpdate({
-      type: GameUpdateType.BrokeAlliance,
-      traitorID: breaker.smallID(),
       betrayedID: other.smallID(),
+      traitorID: breaker.smallID(),
+      type: GameUpdateType.BrokeAlliance,
     });
   }
 
@@ -622,24 +623,24 @@ export class GameImpl implements Game {
     }
     this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
     this.addUpdate({
-      type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
       player2ID: alliance.recipient().smallID(),
+      type: GameUpdateType.AllianceExpired,
     });
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
     this.addUpdate({
-      type: GameUpdateType.Emoji,
       emoji: msg,
+      type: GameUpdateType.Emoji,
     });
   }
 
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
+      allPlayersStats,
       type: GameUpdateType.Win,
       winner: this.makeWinner(winner),
-      allPlayersStats,
     });
   }
 
@@ -682,12 +683,12 @@ export class GameImpl implements Game {
       id = this.player(playerID).smallID();
     }
     this.addUpdate({
-      type: GameUpdateType.DisplayEvent,
+      goldAmount,
+      message,
       messageType: type,
-      message: message,
+      params,
       playerID: id,
-      goldAmount: goldAmount,
-      params: params,
+      type: GameUpdateType.DisplayEvent,
     });
   }
 
@@ -704,13 +705,13 @@ export class GameImpl implements Game {
       id = this.player(playerID).smallID();
     }
     this.addUpdate({
-      type: GameUpdateType.DisplayChatEvent,
-      key: message,
-      category: category,
-      target: target,
-      playerID: id,
+      category,
       isFrom,
-      recipient: recipient,
+      key: message,
+      playerID: id,
+      recipient,
+      target,
+      type: GameUpdateType.DisplayChatEvent,
     });
   }
 
@@ -723,11 +724,11 @@ export class GameImpl implements Game {
     const id = this.player(playerID).smallID();
 
     this.addUpdate({
-      type: GameUpdateType.UnitIncoming,
-      unitID: unitID,
-      message: message,
+      message,
       messageType: type,
       playerID: id,
+      type: GameUpdateType.UnitIncoming,
+      unitID,
     });
   }
 
@@ -757,7 +758,7 @@ export class GameImpl implements Game {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
       tile,
@@ -874,6 +875,28 @@ export class GameImpl implements Game {
   }
   railNetwork(): RailNetwork {
     return this._railNetwork;
+  }
+  conquerPlayer(conqueror: Player, conquered: Player) {
+    const gold = conquered.gold();
+    this.displayMessage(
+      `Conquered ${conquered.displayName()} received ${renderNumber(
+        gold,
+      )} gold`,
+      MessageType.CONQUERED_PLAYER,
+      conqueror.id(),
+      gold,
+    );
+    conqueror.addGold(gold);
+    conquered.removeGold(gold);
+    this.addUpdate({
+      conqueredId: conquered.id(),
+      conquerorId: conqueror.id(),
+      gold,
+      type: GameUpdateType.ConquestEvent,
+    });
+
+    // Record stats
+    this.stats().goldWar(conqueror, conquered, gold);
   }
 }
 

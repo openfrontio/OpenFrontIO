@@ -1,6 +1,5 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import twemoji from "twemoji";
 import { Cell, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
@@ -89,6 +88,7 @@ export function calculateBoundingBox(
     maxY = Math.max(maxY, cell.y);
   });
 
+  // eslint-disable-next-line sort-keys
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
 }
 
@@ -142,45 +142,12 @@ export function sanitize(name: string): string {
     .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
 }
 
-export function processName(name: string): string {
-  // First sanitize the raw input - strip everything except text and emojis
-  const sanitizedName = sanitize(name);
-  // Process emojis with twemoji
-  const withEmojis = twemoji.parse(sanitizedName, {
-    base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-    folder: "svg",
-    ext: ".svg",
-  });
-
-  // Add CSS styles inline to the wrapper span
-  const styledHTML = `
-        <span class="player-name" style="
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-weight: 500;
-            vertical-align: middle;
-        ">
-            ${withEmojis}
-        </span>
-    `;
-
-  // Add CSS for the emoji images
-  const withEmojiStyles = styledHTML.replace(
-    /<img/g,
-    '<img style="height: 1.2em; width: 1.2em; vertical-align: -0.2em; margin: 0 0.05em 0 0.1em;"',
-  );
-
-  // Sanitize the final HTML, allowing styles and specific attributes
-  return onlyImages(withEmojiStyles);
-}
-
 export function onlyImages(html: string) {
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["span", "img"],
-    ALLOWED_ATTR: ["src", "alt", "class", "style"],
-    ALLOWED_URI_REGEXP: /^https:\/\/cdn\.jsdelivr\.net\/gh\/twitter\/twemoji/,
     ADD_ATTR: ["style"],
+    ALLOWED_ATTR: ["src", "alt", "class", "style"],
+    ALLOWED_TAGS: ["span", "img"],
+    ALLOWED_URI_REGEXP: /^https:\/\/cdn\.jsdelivr\.net\/gh\/twitter\/twemoji/,
   });
 }
 
@@ -205,21 +172,21 @@ export function createGameRecord(
     (t) => t.intents.length !== 0 || t.hash !== undefined,
   );
   const record: GameRecord = {
+    domain,
+    gitCommit,
     info: {
-      gameID,
       config,
+      duration,
+      end,
+      gameID,
+      num_turns,
       players,
       start,
-      end,
-      duration,
-      num_turns,
       winner,
     },
-    version,
-    gitCommit,
     subdomain,
-    domain,
     turns,
+    version,
   };
   return record;
 }
@@ -231,8 +198,8 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     while (lastTurnNum < turn.turnNumber - 1) {
       lastTurnNum++;
       turns.push({
-        turnNumber: lastTurnNum,
         intents: [],
+        turnNumber: lastTurnNum,
       });
     }
     turns.push(turn);
@@ -241,8 +208,8 @@ export function decompressGameRecord(gameRecord: GameRecord) {
   const turnLength = turns.length;
   for (let i = turnLength; i < gameRecord.info.num_turns; i++) {
     turns.push({
-      turnNumber: i,
       intents: [],
+      turnNumber: i,
     });
   }
   gameRecord.turns = turns;

@@ -102,7 +102,7 @@ export function sourceDstOceanShore(
   const srcTile = closestShoreFromPlayer(gm, src, tile);
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    dstTile = closestShoreFromPlayer(gm, dst, tile);
   } else {
     dstTile = closestShoreTN(gm, tile, 50);
   }
@@ -113,7 +113,7 @@ export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
   const dst = gm.playerBySmallID(gm.ownerID(tile));
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
+    dstTile = closestShoreFromPlayer(gm, dst, tile);
   } else {
     dstTile = closestShoreTN(gm, tile, 50);
   }
@@ -148,7 +148,7 @@ export function bestShoreDeploymentSource(
   if (t === null) return false;
 
   const candidates = candidateShoreTiles(gm, player, t);
-  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 500_000, 1);
+  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 1);
   const result = aStar.compute();
   if (result !== PathFindResultType.Completed) {
     console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
@@ -183,10 +183,10 @@ export function candidateShoreTiles(
 
   let bestByManhattan: TileRef | null = null;
   const extremumTiles: Record<string, TileRef | null> = {
-    minX: null,
-    minY: null,
     maxX: null,
     maxY: null,
+    minX: null,
+    minY: null,
   };
 
   const borderShoreTiles = Array.from(player.borderTiles()).filter((t) =>
@@ -235,7 +235,7 @@ export function candidateShoreTiles(
     extremumTiles.maxX,
     extremumTiles.maxY,
     ...sampledTiles,
-  ].filter(Boolean) as number[];
+  ].filter(Boolean);
 
   return candidates;
 }

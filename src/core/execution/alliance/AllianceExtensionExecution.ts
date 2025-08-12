@@ -39,7 +39,7 @@ export class AllianceExtensionExecution implements Execution {
     // Mark this player's intent to extend
     alliance.addExtensionRequest(this.from);
 
-    if (alliance.canExtend()) {
+    if (alliance.bothAgreedToExtend()) {
       alliance.extend();
 
       mg.displayMessage(

@@ -1,0 +1,162 @@
+import { Logger } from "winston";
+import { z } from "zod";
+import {
+  ClientMessageSchema,
+  ClientSendWinnerMessage,
+  ServerErrorMessage,
+} from "../../../../../core/Schemas";
+import { Client } from "../../../../Client";
+import { GameServer } from "../../../../GameServer";
+
+export async function postJoinMessageHandler(
+  gs: GameServer,
+  log: Logger,
+  client: Client,
+  message: string,
+) {
+  try {
+    const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+    if (!parsed.success) {
+      const error = z.prettifyError(parsed.error);
+      log.error("Failed to parse client message", error, {
+        clientID: client.clientID,
+      });
+      client.ws.send(
+        JSON.stringify({
+          error,
+          message,
+          type: "error",
+        } satisfies ServerErrorMessage),
+      );
+      client.ws.close(1002, "ClientMessageSchema");
+      client.ws.removeAllListeners();
+      return;
+    }
+    const clientMsg = parsed.data;
+    switch (clientMsg.type) {
+      case "intent": {
+        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+        if (!parsed.success) {
+          const error = z.prettifyError(parsed.error);
+          log.error("Failed to parse client message", error, {
+            clientID: client.clientID,
+          });
+          client.ws.send(
+            JSON.stringify({
+              error,
+              message,
+              type: "error",
+            } satisfies ServerErrorMessage),
+          );
+          client.ws.close(1002, "ClientMessageSchema");
+          client.ws.removeAllListeners();
+          return;
+        }
+        const clientMsg = parsed.data;
+        if (clientMsg.type === "intent") {
+          if (clientMsg.intent.clientID !== client.clientID) {
+            log.warn(
+              `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
+            );
+            return;
+          }
+          if (clientMsg.intent.type === "mark_disconnected") {
+            log.warn(
+              `Should not receive mark_disconnected intent from client`,
+            );
+            return;
+          }
+          gs.addIntent(clientMsg.intent);
+        }
+        if (clientMsg.type === "ping") {
+          gs.lastPingUpdate = Date.now();
+          client.lastPing = Date.now();
+        }
+        if (clientMsg.type === "hash") {
+          client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+        }
+        if (clientMsg.type === "winner") {
+          handleWinner(gs, log, client, clientMsg);
+        }
+        break;
+      }
+
+      case "ping": {
+        gs.lastPingUpdate = Date.now();
+        client.lastPing = Date.now();
+        break;
+      }
+      case "hash": {
+        client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+        break;
+      }
+      case "winner": {
+        if (
+          gs.outOfSyncClients.has(client.clientID) ||
+          gs.kickedClients.has(client.clientID) ||
+          gs.winner !== null
+        ) {
+          return;
+        }
+        gs.winner = clientMsg;
+        gs.archiveGame();
+        break;
+      }
+      default: {
+        log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
+          clientID: client.clientID,
+        });
+        break;
+      }
+    }
+  } catch (error) {
+    log.info(`error handline websocket request in game server: ${error}`, {
+      clientID: client.clientID,
+    });
+  }
+}
+
+function handleWinner(
+  gs: GameServer,
+  log: Logger,
+  client: Client, clientMsg: ClientSendWinnerMessage) {
+  if (
+    gs.outOfSyncClients.has(client.clientID) ||
+      gs.kickedClients.has(client.clientID) ||
+      gs.winner !== null ||
+      client.reportedWinner !== null
+  ) {
+    return;
+  }
+  client.reportedWinner = clientMsg.winner;
+
+  // Add client vote
+  const winnerKey = JSON.stringify(clientMsg.winner);
+  if (!gs.winnerVotes.has(winnerKey)) {
+    gs.winnerVotes.set(winnerKey, {  ips: new Set() ,winner: clientMsg});
+  }
+  const potentialWinner = gs.winnerVotes.get(winnerKey)!;
+  potentialWinner.ips.add(client.ip);
+
+  // Check if winner has majority
+  const activeUniqueIPs = new Set(gs.activeClients.map((c) => c.ip));
+  if (activeUniqueIPs.size < 1) {
+    return;
+  }
+
+  const percentVotes =
+      (potentialWinner.ips.size / activeUniqueIPs.size) * 99;
+  if (percentVotes < 50) {
+    return;
+  }
+
+  gs.winner = potentialWinner.winner;
+  log.info(
+    `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
+    {
+      gameID: gs.id,
+      winnerKey: winnerKey,
+    },
+  );
+  gs.archiveGame();
+}

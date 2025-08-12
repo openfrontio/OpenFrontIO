@@ -9,5 +9,6 @@
     "num_land_tiles": 50,
     "width": 8
   },
+  "nations": [],
   "name": "Ocean and Land"
 }

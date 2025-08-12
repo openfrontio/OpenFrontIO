@@ -6,14 +6,14 @@ import { ColoredTeams, Team } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import {
-  blue,
-  botColor,
-  green,
-  orange,
-  purple,
-  red,
-  teal,
-  yellow,
+  blueTeamColors,
+  botTeamColors,
+  greenTeamColors,
+  orangeTeamColors,
+  purpleTeamColors,
+  redTeamColors,
+  tealTeamColors,
+  yellowTeamColors,
 } from "./Colors";
 extend([lchPlugin]);
 extend([labPlugin]);
@@ -22,10 +22,34 @@ export class ColorAllocator {
   private availableColors: Colord[];
   private fallbackColors: Colord[];
   private assigned = new Map<string, Colord>();
+  private teamPlayerColors = new Map<string, Colord>();
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
     this.fallbackColors = [...colors, ...fallback];
+  }
+
+  private getTeamColorVariations(team: Team): Colord[] {
+    switch (team) {
+      case ColoredTeams.Blue:
+        return blueTeamColors;
+      case ColoredTeams.Red:
+        return redTeamColors;
+      case ColoredTeams.Teal:
+        return tealTeamColors;
+      case ColoredTeams.Purple:
+        return purpleTeamColors;
+      case ColoredTeams.Yellow:
+        return yellowTeamColors;
+      case ColoredTeams.Orange:
+        return orangeTeamColors;
+      case ColoredTeams.Green:
+        return greenTeamColors;
+      case ColoredTeams.Bot:
+        return botTeamColors;
+      default:
+        throw new Error(`Unknown team color: ${team}`);
+    }
   }
 
   assignColor(id: string): Colord {
@@ -58,26 +82,23 @@ export class ColorAllocator {
   }
 
   assignTeamColor(team: Team): Colord {
-    switch (team) {
-      case ColoredTeams.Blue:
-        return blue;
-      case ColoredTeams.Red:
-        return red;
-      case ColoredTeams.Teal:
-        return teal;
-      case ColoredTeams.Purple:
-        return purple;
-      case ColoredTeams.Yellow:
-        return yellow;
-      case ColoredTeams.Orange:
-        return orange;
-      case ColoredTeams.Green:
-        return green;
-      case ColoredTeams.Bot:
-        return botColor;
-      default:
-        return this.assignColor(team);
+    const teamColors = this.getTeamColorVariations(team);
+    return teamColors[0];
+  }
+
+  assignTeamPlayerColor(team: Team, playerId: string): Colord {
+    if (this.teamPlayerColors.has(playerId)) {
+      return this.teamPlayerColors.get(playerId)!;
     }
+
+    const teamColors = this.getTeamColorVariations(team);
+    const hashValue = simpleHash(playerId);
+    const colorIndex = hashValue % teamColors.length;
+    const color = teamColors[colorIndex];
+
+    this.teamPlayerColors.set(playerId, color);
+
+    return color;
   }
 }
 

@@ -1,19 +1,19 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode } from "../../../core/game/Game";
+import { GameMode, Team } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderNumber, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
-interface TeamEntry {
+type TeamEntry = {
   teamName: string;
   totalScoreStr: string;
   totalGold: string;
   totalTroops: string;
   totalScoreSort: number;
   players: PlayerView[];
-}
+};
 
 @customElement("team-stats")
 export class TeamStats extends LitElement implements Layer {
@@ -47,7 +47,7 @@ export class TeamStats extends LitElement implements Layer {
 
   private updateTeamStats() {
     const players = this.game.playerViews();
-    const grouped: Record<number, PlayerView[]> = {};
+    const grouped: Record<Team, PlayerView[]> = {};
 
     for (const player of players) {
       const team = player.team();
@@ -102,7 +102,7 @@ export class TeamStats extends LitElement implements Layer {
           .visible
           ? ""
           : "hidden"}"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
           class="grid w-full"
@@ -167,8 +167,6 @@ export class TeamStats extends LitElement implements Layer {
 
 function formatPercentage(value: number): string {
   const perc = value * 100;
-  if (perc > 99.5) return "100%";
-  if (perc < 0.01) return "0%";
-  if (perc < 0.1) return perc.toPrecision(1) + "%";
+  if (Number.isNaN(perc)) return "0%";
   return perc.toPrecision(2) + "%";
 }

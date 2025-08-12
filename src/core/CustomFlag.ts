@@ -1,22 +1,36 @@
-import { COSMETICS } from "./CosmeticSchemas";
+import { Cosmetics } from "./CosmeticSchemas";
 
 const ANIMATION_DURATIONS: Record<string, number> = {
   rainbow: 4000,
+  /* eslint-disable sort-keys */
   "bright-rainbow": 4000,
   "copper-glow": 3000,
   "silver-glow": 3000,
   "gold-glow": 3000,
   neon: 3000,
   lava: 6000,
+  /* eslint-enable sort-keys */
   water: 6200,
 };
 
-export function renderPlayerFlag(flag: string, target: HTMLElement) {
+// TODO: Pass in cosmetics as a parameter when
+// remote cosmetics are implemented for custom flags
+export function renderPlayerFlag(
+  flag: string,
+  target: HTMLElement,
+  cosmetics: Cosmetics | undefined = undefined,
+) {
+  if (cosmetics === undefined) {
+    console.warn("No cosmetics provided for flag", flag);
+    return;
+  }
+
   if (!flag.startsWith("!")) return;
 
   const code = flag.slice("!".length);
   const layers = code.split("_").map((segment) => {
     const [layerKey, colorKey] = segment.split("-");
+    // eslint-disable-next-line sort-keys
     return { layerKey, colorKey };
   });
 
@@ -26,7 +40,7 @@ export function renderPlayerFlag(flag: string, target: HTMLElement) {
   target.style.aspectRatio = "3/4";
 
   for (const { layerKey, colorKey } of layers) {
-    const layerName = COSMETICS.flag.layers[layerKey]?.name ?? layerKey;
+    const layerName = cosmetics?.flag?.layers[layerKey]?.name ?? layerKey;
 
     const mask = `/flags/custom/${layerName}.svg`;
     if (!mask) continue;
@@ -38,7 +52,7 @@ export function renderPlayerFlag(flag: string, target: HTMLElement) {
     layer.style.width = "100%";
     layer.style.height = "100%";
 
-    const colorValue = COSMETICS.flag.color[colorKey]?.color ?? colorKey;
+    const colorValue = cosmetics?.flag?.color[colorKey]?.color ?? colorKey;
     const isSpecial =
       !colorValue.startsWith("#") &&
       !/^([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(colorValue);

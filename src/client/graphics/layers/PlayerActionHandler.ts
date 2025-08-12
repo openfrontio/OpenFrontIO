@@ -7,6 +7,7 @@ import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendBreakAllianceIntentEvent,
+  SendDeleteUnitIntentEvent,
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,
   SendEmbargoIntentEvent,
@@ -98,5 +99,9 @@ export class PlayerActionHandler {
 
   handleQuickChat(recipient: PlayerView, chatKey: string, params: any = {}) {
     this.eventBus.emit(new SendQuickChatEvent(recipient, chatKey, params));
+  }
+
+  handleDeleteUnit(unitId: number) {
+    this.eventBus.emit(new SendDeleteUnitIntentEvent(unitId));
   }
 }

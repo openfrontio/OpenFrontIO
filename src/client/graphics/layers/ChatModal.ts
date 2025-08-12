@@ -6,6 +6,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 
 import quickChatData from "../../../../resources/QuickChat.json";
 import { EventBus } from "../../../core/EventBus";
+import { CloseViewEvent } from "../../InputHandler";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 
@@ -31,9 +32,9 @@ export class ChatModal extends LitElement {
 
   private players: PlayerView[] = [];
 
-  private playerSearchQuery: string = "";
+  private playerSearchQuery = "";
   private previewText: string | null = null;
-  private requiresPlayerSelection: boolean = false;
+  private requiresPlayerSelection = false;
   private selectedCategory: string | null = null;
   private selectedPhraseText: string | null = null;
   private selectedPhraseTemplate: string | null = null;
@@ -170,6 +171,15 @@ export class ChatModal extends LitElement {
         </div>
       </o-modal>
     `;
+  }
+
+  initEventBus(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    eventBus.on(CloseViewEvent, (e) => {
+      if (!this.hidden) {
+        this.close();
+      }
+    });
   }
 
   private selectCategory(categoryId: string) {
