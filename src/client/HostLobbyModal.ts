@@ -296,8 +296,8 @@ export class HostLobbyModal extends LitElement {
                               ${typeof o === "string"
                                 ? translateText(`public_lobby.teams_${o}`)
                                 : translateText("public_lobby.teams", {
-                                    num: o,
-                                  })}
+                                  num: o,
+                                })}
                             </div>
                           </div>
                         `,
@@ -441,9 +441,9 @@ export class HostLobbyModal extends LitElement {
                   style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
                 >
                    ${renderUnitTypeOptions({
-                     disabledUnits: this.disabledUnits,
-                     toggleUnit: this.toggleUnit.bind(this),
-                   })}
+                      disabledUnits: this.disabledUnits,
+                      toggleUnit: this.toggleUnit.bind(this),
+                    })}
                   </div>
                 </div>
               </div>

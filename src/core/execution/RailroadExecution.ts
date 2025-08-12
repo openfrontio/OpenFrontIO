@@ -43,9 +43,9 @@ export class RailroadExecution implements Execution {
       railType:
         tiles.length > 0
           ? this.computeExtremityDirection(
-              tiles[tiles.length - 1],
-              tiles[tiles.length - 2],
-            )
+            tiles[tiles.length - 1],
+            tiles[tiles.length - 2],
+          )
           : RailType.VERTICAL,
     });
   }

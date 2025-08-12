@@ -276,16 +276,16 @@ export class LangSelector extends LitElement {
       this.languageList.find((l) => l.code === this.currentLang) ??
       (this.currentLang === "debug"
         ? {
-            code: "debug",
-            native: "Debug",
-            en: "Debug",
-            svg: "xx",
-          }
+          code: "debug",
+          native: "Debug",
+          en: "Debug",
+          svg: "xx",
+        }
         : {
-            native: "English",
-            en: "English",
-            svg: "uk_us_flag",
-          });
+          native: "English",
+          en: "English",
+          svg: "uk_us_flag",
+        });
 
     return html`
       <div class="container__row">

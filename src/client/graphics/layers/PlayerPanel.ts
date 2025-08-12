@@ -351,9 +351,9 @@ export class PlayerPanel extends LitElement implements Layer {
                 >
                   ${other.allies().length > 0
                     ? other
-                        .allies()
-                        .map((p) => p.name())
-                        .join(", ")
+                      .allies()
+                      .map((p) => p.name())
+                      .join(", ")
                     : translateText("player_panel.none")}
                 </div>
               </div>

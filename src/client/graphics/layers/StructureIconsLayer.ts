@@ -353,12 +353,12 @@ export class StructureIconsLayer implements Layer {
     const shape = STRUCTURE_SHAPES[structureType];
     const texture = shape
       ? this.createIcon(
-          unit.owner(),
-          structureType,
-          isConstruction,
-          shape,
-          renderIcon,
-        )
+        unit.owner(),
+        structureType,
+        isConstruction,
+        shape,
+        renderIcon,
+      )
       : PIXI.Texture.EMPTY;
 
     this.textureCache.set(cacheKey, texture);

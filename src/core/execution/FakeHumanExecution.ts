@@ -455,8 +455,8 @@ export class FakeHumanExecution implements Execution {
     const tiles =
       type === UnitType.Port
         ? Array.from(this.player.borderTiles()).filter((t) =>
-            this.mg.isOceanShore(t),
-          )
+          this.mg.isOceanShore(t),
+        )
         : Array.from(this.player.tiles());
     if (tiles.length === 0) return null;
     return this.random.randElement(tiles);

@@ -57,13 +57,13 @@ export async function createGameRunner(
   const nations = gameStart.config.disableNPCs
     ? []
     : gameMap.manifest.nations.map(
-        (n) =>
-          new Nation(
-            new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
-          ),
-      );
+      (n) =>
+        new Nation(
+          new Cell(n.coordinates[0], n.coordinates[1]),
+          n.strength,
+          new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+        ),
+    );
 
   const game: Game = createGame(
     humans,
