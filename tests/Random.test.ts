@@ -352,10 +352,11 @@ describe("Random utilities", () => {
   });
 
   describe("Edge cases and error handling", () => {
-    it("should return undefined for empty array in pickRandomElement", () => {
+    it("should throw error for empty array in pickRandomElement", () => {
       const array: string[] = [];
-      const result = pickRandomElement(array);
-      expect(result).toBeUndefined();
+      expect(() => pickRandomElement(array)).toThrow(
+        "Cannot pick random element from empty array",
+      );
     });
 
     it("should handle very large numbers in generateRandomNumber", () => {

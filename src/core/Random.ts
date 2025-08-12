@@ -1,16 +1,16 @@
-export function generateRandomFloat(max: number, min: number = 0): number {
+export function generateRandomFloat(max = 8, min = 0): number {
   return Math.random() * (max - min) + min;
 }
 
-export function generateRandomNumber(max: number = 8, min: number = 0): number {
-  return Math.floor(generateRandomFloat(max, min + 1));
+export function generateRandomNumber(max = 8, min = 0): number {
+  return Math.floor(generateRandomFloat(max + 1, min));
 }
 
 export function generateRandomBoolean(): boolean {
   return Math.random() >= 0.5;
 }
 
-export interface RandomStringOptions {
+export type RandomStringOptions = {
   minLength?: number;
   maxLength?: number;
   includeLowercase?: boolean;
@@ -19,7 +19,7 @@ export interface RandomStringOptions {
   includeSpecial?: boolean;
   customCharacters?: string;
   secure?: boolean;
-}
+};
 
 export function generateRandomString(
   options: RandomStringOptions | null,
@@ -55,7 +55,7 @@ export function generateRandomString(
   const length =
     config.minLength === config.maxLength
       ? config.minLength!
-      : generateRandomNumber(config.maxLength!, config.minLength!);
+      : generateRandomNumber(config.maxLength, config.minLength);
 
   let result = "";
   for (let i = 0; i < length; i++) {
@@ -66,6 +66,10 @@ export function generateRandomString(
 }
 
 export function pickRandomElement<T>(array: T[]): T {
+  if (array.length === 0) {
+    throw new Error("Cannot pick random element from empty array");
+  }
+
   return array[generateRandomNumber(array.length - 1)];
 }
 
