@@ -84,20 +84,20 @@ export default [
       eqeqeq: "error",
       indent: "off", // @stylistic/ts/indent
       "sort-keys": "error",
-      // "@typescript-eslint/no-unsafe-argument": "warn", // TODO: Raise to error, https://github.com/openfrontio/OpenFrontIO/issues/1780
-      // "@typescript-eslint/no-unsafe-assignment": "warn", // TODO: Raise to error, https://github.com/openfrontio/OpenFrontIO/issues/1781
-      // "@typescript-eslint/no-unsafe-member-access": "warn", // TODO: Raise to error, https://github.com/openfrontio/OpenFrontIO/issues/1783
-      // "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }], // TODO: Raise to error, https://github.com/openfrontio/OpenFrontIO/issues/1784
+      // "@typescript-eslint/no-unsafe-argument": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1780
+      // "@typescript-eslint/no-unsafe-assignment": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1781
+      // "@typescript-eslint/no-unsafe-member-access": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1783
+      // "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1784
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/prefer-for-of": "error",
       "max-depth": ["error", { max: 5 }],
-      // "max-len": ["warn", { code: 120 }], // TODO: Raise to error, https://github.com/openfrontio/OpenFrontIO/issues/1785
+      // "max-len": ["error", { code: 120 }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1785
       "max-lines": ["error", { max: 2000, skipBlankLines: true, skipComments: true }],
       "max-lines-per-function": ["error", { max: 508 }],
       "no-loss-of-precision": "error",
-      // "no-undef": "warn", // TODO: Raise to error, https://github.com/openfrontio/OpenFrontIO/issues/1786
+      // "no-undef": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1786
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
-      // 'sort-imports': 'warn', // TODO: Raise to error, https://github.com/openfrontio/OpenFrontIO/issues/1787
+      // 'sort-imports': 'error', // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1787
       "space-infix-ops": "off",
     },
   },
