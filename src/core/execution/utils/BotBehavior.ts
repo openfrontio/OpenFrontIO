@@ -1,6 +1,5 @@
 import {
   AllianceRequest,
-  Difficulty,
   Game,
   Player,
   PlayerType,
@@ -119,10 +118,7 @@ export class BotBehavior {
       return false;
     }
     const { difficulty } = this.game.config().gameConfig();
-    if (
-      difficulty === Difficulty.Hard ||
-      difficulty === Difficulty.Impossible
-    ) {
+    if (difficulty === "Hard" || difficulty === "Impossible") {
       return false;
     }
     if (other.type() !== PlayerType.Human) {

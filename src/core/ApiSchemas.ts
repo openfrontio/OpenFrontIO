@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMapType, GameMode, GameType } from "./game/Game";
+import { DifficultySchema, GameMapType, GameMode, GameType } from "./game/Game";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -67,7 +67,7 @@ export const PlayerStatsTreeSchema = z.partialRecord(
   z.enum(GameType),
   z.partialRecord(
     z.enum(GameMode),
-    z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
+    z.partialRecord(DifficultySchema, PlayerStatsLeafSchema),
   ),
 );
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
@@ -78,7 +78,7 @@ export const PlayerGameSchema = z.object({
   mode: z.enum(GameMode),
   type: z.enum(GameType),
   map: z.enum(GameMapType),
-  difficulty: z.enum(Difficulty),
+  difficulty: DifficultySchema,
   clientId: z.string().optional(),
 });
 export type PlayerGame = z.infer<typeof PlayerGameSchema>;

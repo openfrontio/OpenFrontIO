@@ -19,7 +19,7 @@ export class PlayerStatsTreeView extends LitElement {
   @property({ type: Object }) statsTree?: PlayerStatsTree;
   @state() selectedType: GameType = GameType.Public;
   @state() selectedMode: GameMode = GameMode.FFA;
-  @state() selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() selectedDifficulty: Difficulty = "Medium";
 
   private get availableTypes(): GameType[] {
     if (!this.statsTree) return [];
