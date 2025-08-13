@@ -216,13 +216,6 @@ class Client {
       throw new Error("territory-patterns-input-preview-button");
     territoryModal.previewButton = patternButton;
     territoryModal.updatePreview();
-    territoryModal.resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target.classList.contains("preview-container")) {
-          territoryModal.buttonWidth = entry.contentRect.width;
-        }
-      }
-    });
     patternButton.addEventListener("click", () => {
       territoryModal.open();
     });
@@ -464,7 +457,7 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern: this.userSettings.getSelectedPattern(),
+        patternName: this.userSettings.getSelectedPatternName(),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""

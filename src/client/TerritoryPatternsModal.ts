@@ -11,6 +11,8 @@ import "./components/Maps";
 import { handlePurchase, patterns } from "./Cosmetics";
 import { translateText } from "./Utils";
 
+const BUTTON_WIDTH = 150;
+
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -19,22 +21,16 @@ export class TerritoryPatternsModal extends LitElement {
   };
 
   public previewButton: HTMLElement | null = null;
-  public buttonWidth: number = 150;
 
-  @state() private selectedPattern: string | undefined;
+  @state() private selectedPattern: Pattern | undefined;
 
-  @state() private lockedPatterns: string[] = [];
-  @state() private lockedReasons: Record<string, string> = {};
   @state() private hoveredPattern: Pattern | null = null;
   @state() private hoverPosition = { x: 0, y: 0 };
 
   @state() private keySequence: string[] = [];
   @state() private showChocoPattern = false;
 
-  private patterns: Pattern[] = [];
-  private me: UserMeResponse | null = null;
-
-  public resizeObserver: ResizeObserver;
+  private patterns: Map<string, Pattern> = new Map();
 
   private userSettings: UserSettings = new UserSettings();
 
@@ -47,14 +43,7 @@ export class TerritoryPatternsModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
-    this.selectedPattern = this.userSettings.getSelectedPattern();
     this.updateComplete.then(() => {
-      const containers = this.renderRoot.querySelectorAll(".preview-container");
-      if (this.resizeObserver) {
-        containers.forEach((container) =>
-          this.resizeObserver.observe(container),
-        );
-      }
       this.updatePreview();
     });
     this.open();
@@ -67,7 +56,10 @@ export class TerritoryPatternsModal extends LitElement {
 
   async onUserMe(userMeResponse: UserMeResponse | null) {
     this.patterns = await patterns(userMeResponse);
-    this.me = userMeResponse;
+    const storedPatternName = this.userSettings.getSelectedPatternName();
+    if (storedPatternName) {
+      this.selectedPattern = this.patterns.get(storedPatternName);
+    }
     this.requestUpdate();
   }
 
@@ -123,7 +115,7 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private renderPatternButton(pattern: Pattern): TemplateResult {
-    const isSelected = this.selectedPattern === pattern.pattern;
+    const isSelected = this.selectedPattern?.name === pattern.name;
 
     return html`
       <div style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);">
@@ -134,7 +126,7 @@ export class TerritoryPatternsModal extends LitElement {
             : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
           ${pattern.product !== null ? "opacity-50 cursor-not-allowed" : ""}"
           @click=${() =>
-            pattern.product === null && this.selectPattern(pattern.pattern)}
+            pattern.product === null && this.selectPattern(pattern)}
           @mouseenter=${(e: MouseEvent) => this.handleMouseEnter(pattern, e)}
           @mousemove=${(e: MouseEvent) => this.handleMouseMove(e)}
           @mouseleave=${() => this.handleMouseLeave()}
@@ -157,8 +149,8 @@ export class TerritoryPatternsModal extends LitElement {
           >
             ${this.renderPatternPreview(
               pattern.pattern,
-              this.buttonWidth,
-              this.buttonWidth,
+              BUTTON_WIDTH,
+              BUTTON_WIDTH,
             )}
           </div>
         </button>
@@ -182,8 +174,8 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const pattern of this.patterns) {
-      if (!this.showChocoPattern && pattern.name === "choco") continue;
+    for (const [name, pattern] of this.patterns) {
+      if (!this.showChocoPattern && name === "choco") continue;
 
       const result = this.renderPatternButton(pattern);
       buttons.push(result);
@@ -218,7 +210,7 @@ export class TerritoryPatternsModal extends LitElement {
               overflow: hidden;
             "
           >
-            ${this.renderBlankPreview(this.buttonWidth, this.buttonWidth)}
+            ${this.renderBlankPreview(BUTTON_WIDTH, BUTTON_WIDTH)}
           </div>
         </button>
         ${buttons}
@@ -240,21 +232,20 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   public open() {
+    this.isActive = true;
     this.modalEl?.open();
     window.addEventListener("keydown", this.handleKeyDown);
-    this.isActive = true;
     this.requestUpdate();
   }
 
   public close() {
+    this.isActive = false;
     this.modalEl?.close();
     window.removeEventListener("keydown", this.handleKeyDown);
-    this.resizeObserver?.disconnect();
-    this.isActive = false;
   }
 
-  private selectPattern(pattern: string | undefined) {
-    this.userSettings.setSelectedPattern(pattern);
+  private selectPattern(pattern: Pattern | undefined) {
+    this.userSettings.setSelectedPatternName(pattern?.name);
     this.selectedPattern = pattern;
     this.updatePreview();
     this.close();
@@ -314,22 +305,12 @@ export class TerritoryPatternsModal extends LitElement {
 
   public updatePreview() {
     if (this.previewButton === null) return;
-    const preview = this.renderPatternPreview(this.selectedPattern, 48, 48);
+    const preview = this.renderPatternPreview(
+      this.selectedPattern?.pattern,
+      48,
+      48,
+    );
     render(preview, this.previewButton);
-  }
-
-  private setLockedPatterns(lockedPatterns: string[], reason: string) {
-    this.lockedPatterns = [...this.lockedPatterns, ...lockedPatterns];
-    this.lockedReasons = {
-      ...this.lockedReasons,
-      ...lockedPatterns.reduce(
-        (acc, key) => {
-          acc[key] = reason;
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-    };
   }
 
   private handleMouseEnter(pattern: Pattern, event: MouseEvent) {
@@ -360,13 +341,21 @@ export function generatePreviewDataUrl(
   height?: number,
 ): string {
   pattern ??= DEFAULT_PATTERN_B64;
+  const patternLookupKey = `${pattern}-${width}-${height}`;
 
-  if (patternCache.has(pattern)) {
-    return patternCache.get(pattern)!;
+  if (patternCache.has(patternLookupKey)) {
+    return patternCache.get(patternLookupKey)!;
   }
 
   // Calculate canvas size
-  const decoder = new PatternDecoder(pattern, base64url.decode);
+  let decoder: PatternDecoder;
+  try {
+    decoder = new PatternDecoder(pattern, base64url.decode);
+  } catch (e) {
+    console.error("Error decoding pattern", e);
+    return "";
+  }
+
   const scaledWidth = decoder.scaledWidth();
   const scaledHeight = decoder.scaledHeight();
 
@@ -403,6 +392,6 @@ export function generatePreviewDataUrl(
   // Create a data URL
   ctx.putImageData(imageData, 0, 0);
   const dataUrl = canvas.toDataURL("image/png");
-  patternCache.set(pattern, dataUrl);
+  patternCache.set(patternLookupKey, dataUrl);
   return dataUrl;
 }
