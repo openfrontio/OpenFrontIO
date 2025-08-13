@@ -1,283 +1,429 @@
 {
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 1179420,
+    "width": 2000
+  },
+  "mini_map": {
+    "height": 1000,
+    "num_land_tiles": 287083,
+    "width": 1000
+  },
   "name": "NorthernHemisphere",
-  "width": 2000,
-  "height": 2000,
   "nations": [
     {
-      "coordinates": [1398, 1386],
+      "coordinates": [
+        1398,
+        1386
+      ],
+      "flag": "af",
       "name": "Afghanistan",
-      "strength": 1,
-      "flag": "af"
+      "strength": 1
     },
     {
-      "coordinates": [986, 723],
+      "coordinates": [
+        986,
+        723
+      ],
+      "flag": "Alaska",
       "name": "Alaska",
-      "strength": 1,
-      "flag": "Alaska"
+      "strength": 1
     },
     {
-      "coordinates": [1659, 1234],
+      "coordinates": [
+        1659,
+        1234
+      ],
+      "flag": "bd",
       "name": "Bangladesh",
-      "strength": 2,
-      "flag": "bd"
+      "strength": 2
     },
     {
-      "coordinates": [747, 688],
+      "coordinates": [
+        747,
+        688
+      ],
+      "flag": "British_Columbia",
       "name": "British Columbia",
-      "strength": 1,
-      "flag": "British_Columbia"
+      "strength": 1
     },
     {
-      "coordinates": [626, 866],
+      "coordinates": [
+        626,
+        866
+      ],
+      "flag": "ca",
       "name": "Canada",
-      "strength": 1,
-      "flag": "ca"
+      "strength": 1
     },
     {
-      "coordinates": [654, 588],
+      "coordinates": [
+        654,
+        588
+      ],
+      "flag": "California",
       "name": "California Republic",
-      "strength": 1,
-      "flag": "California"
+      "strength": 1
     },
     {
-      "coordinates": [1598, 1010],
+      "coordinates": [
+        1598,
+        1010
+      ],
+      "flag": "cn",
       "name": "China",
-      "strength": 3,
-      "flag": "cn"
+      "strength": 3
     },
     {
-      "coordinates": [790, 1735],
+      "coordinates": [
+        790,
+        1735
+      ],
+      "flag": "Confederation_of_Sahel",
       "name": "Confederation of Sahel States",
-      "strength": 1,
-      "flag": "Confederation_of_Sahel"
+      "strength": 1
     },
     {
-      "coordinates": [281, 908],
+      "coordinates": [
+        281,
+        908
+      ],
+      "flag": "cu",
       "name": "Cuba",
-      "strength": 1,
-      "flag": "cu"
+      "strength": 1
     },
     {
-      "coordinates": [1056, 1638],
+      "coordinates": [
+        1056,
+        1638
+      ],
+      "flag": "eg",
       "name": "Egypt",
-      "strength": 2,
-      "flag": "eg"
+      "strength": 2
     },
     {
-      "coordinates": [1270, 1836],
+      "coordinates": [
+        1270,
+        1836
+      ],
+      "flag": "et",
       "name": "Ethiopia",
-      "strength": 2,
-      "flag": "et"
+      "strength": 2
     },
     {
-      "coordinates": [913, 1377],
+      "coordinates": [
+        913,
+        1377
+      ],
+      "flag": "eu",
       "name": "European Union",
-      "strength": 3,
-      "flag": "eu"
+      "strength": 3
     },
     {
-      "coordinates": [257, 734],
+      "coordinates": [
+        257,
+        734
+      ],
+      "flag": "Federal_Republic_of_Central_America",
       "name": "Republic of Central America",
-      "strength": 1,
-      "flag": "Federal_Republic_of_Central_America"
+      "strength": 1
     },
     {
-      "coordinates": [1778, 332],
+      "coordinates": [
+        1778,
+        332
+      ],
+      "flag": "fm",
       "name": "Micronesia",
-      "strength": 1,
-      "flag": "fm"
+      "strength": 1
     },
     {
-      "coordinates": [820, 1094],
+      "coordinates": [
+        820,
+        1094
+      ],
+      "flag": "gl",
       "name": "Greenland",
-      "strength": 1,
-      "flag": "gl"
+      "strength": 1
     },
     {
-      "coordinates": [1608, 1374],
+      "coordinates": [
+        1608,
+        1374
+      ],
+      "flag": "in",
       "name": "India",
-      "strength": 3,
-      "flag": "in"
+      "strength": 3
     },
     {
-      "coordinates": [849, 1185],
+      "coordinates": [
+        849,
+        1185
+      ],
+      "flag": "is",
       "name": "Iceland",
-      "strength": 1,
-      "flag": "is"
+      "strength": 1
     },
     {
-      "coordinates": [1484, 739],
+      "coordinates": [
+        1484,
+        739
+      ],
+      "flag": "jp",
       "name": "Japan",
-      "strength": 2,
-      "flag": "jp"
+      "strength": 2
     },
     {
-      "coordinates": [958, 1273],
+      "coordinates": [
+        958,
+        1273
+      ],
+      "flag": "Kalmar_Union",
       "name": "Kalmar Union",
-      "strength": 1,
-      "flag": "Kalmar_Union"
+      "strength": 1
     },
     {
-      "coordinates": [1869, 1421],
+      "coordinates": [
+        1869,
+        1421
+      ],
+      "flag": "lk",
       "name": "Sri Lanka",
-      "strength": 1,
-      "flag": "lk"
+      "strength": 1
     },
     {
-      "coordinates": [794, 1570],
+      "coordinates": [
+        794,
+        1570
+      ],
+      "flag": "Maghreb",
       "name": "Maghreb",
-      "strength": 2,
-      "flag": "Maghreb"
+      "strength": 2
     },
     {
-      "coordinates": [1437, 1084],
+      "coordinates": [
+        1437,
+        1084
+      ],
+      "flag": "mn",
       "name": "Mongolia",
-      "strength": 1,
-      "flag": "mn"
+      "strength": 1
     },
     {
-      "coordinates": [1081, 1340],
+      "coordinates": [
+        1081,
+        1340
+      ],
+      "flag": "Moscow",
       "name": "Central District",
-      "strength": 1,
-      "flag": "Moscow"
+      "strength": 1
     },
     {
-      "coordinates": [407, 635],
+      "coordinates": [
+        407,
+        635
+      ],
+      "flag": "mx",
       "name": "Mexico",
-      "strength": 2,
-      "flag": "mx"
+      "strength": 2
     },
     {
-      "coordinates": [1970, 955],
+      "coordinates": [
+        1970,
+        955
+      ],
+      "flag": "my",
       "name": "Malaysia",
-      "strength": 1,
-      "flag": "my"
+      "strength": 1
     },
     {
-      "coordinates": [874, 1898],
+      "coordinates": [
+        874,
+        1898
+      ],
+      "flag": "ng",
       "name": "Nigeria",
-      "strength": 2,
-      "flag": "ng"
+      "strength": 2
     },
     {
-      "coordinates": [1155, 1306],
+      "coordinates": [
+        1155,
+        1306
+      ],
+      "flag": "Nizhny_Novgorod",
       "name": "Volga District",
-      "strength": 1,
-      "flag": "Nizhny_Novgorod"
+      "strength": 1
     },
     {
-      "coordinates": [814, 808],
+      "coordinates": [
+        814,
+        808
+      ],
+      "flag": "Northwest_Territories",
       "name": "Northwest Territories",
-      "strength": 1,
-      "flag": "Northwest_Territories"
+      "strength": 1
     },
     {
-      "coordinates": [1256, 1005],
+      "coordinates": [
+        1256,
+        1005
+      ],
+      "flag": "Novosibirsk",
       "name": "Siberian District",
-      "strength": 1,
-      "flag": "Novosibirsk"
+      "strength": 1
     },
     {
-      "coordinates": [778, 995],
+      "coordinates": [
+        778,
+        995
+      ],
+      "flag": "Nunavut",
       "name": "Nunavut",
-      "strength": 1,
-      "flag": "Nunavut"
+      "strength": 1
     },
     {
-      "coordinates": [627, 719],
+      "coordinates": [
+        627,
+        719
+      ],
+      "flag": "Oglala",
       "name": "Oglala Sioux Tribe",
-      "strength": 1,
-      "flag": "Oglala"
+      "strength": 1
     },
     {
-      "coordinates": [1773, 858],
+      "coordinates": [
+        1773,
+        858
+      ],
+      "flag": "ph",
       "name": "Philippines",
-      "strength": 2,
-      "flag": "ph"
+      "strength": 2
     },
     {
-      "coordinates": [1521, 1436],
+      "coordinates": [
+        1521,
+        1436
+      ],
+      "flag": "pk",
       "name": "Pakistan",
-      "strength": 2,
-      "flag": "pk"
+      "strength": 2
     },
     {
-      "coordinates": [1206, 1441],
+      "coordinates": [
+        1206,
+        1441
+      ],
+      "flag": "Pyatigorsk",
       "name": "North Caucasian District",
-      "strength": 1,
-      "flag": "Pyatigorsk"
+      "strength": 1
     },
     {
-      "coordinates": [1098, 1413],
+      "coordinates": [
+        1098,
+        1413
+      ],
+      "flag": "Rostov-na-Don",
       "name": "Southern District",
-      "strength": 1,
-      "flag": "Rostov-na-Don"
+      "strength": 1
     },
     {
-      "coordinates": [1319, 1634],
+      "coordinates": [
+        1319,
+        1634
+      ],
+      "flag": "sa",
       "name": "Saudi Arabia",
-      "strength": 1,
-      "flag": "sa"
+      "strength": 1
     },
     {
-      "coordinates": [1071, 1287],
+      "coordinates": [
+        1071,
+        1287
+      ],
+      "flag": "Saint_Petersburg",
       "name": "Northwestern District",
-      "strength": 1,
-      "flag": "Saint_Petersburg"
+      "strength": 1
     },
     {
-      "coordinates": [1045, 1865],
+      "coordinates": [
+        1045,
+        1865
+      ],
+      "flag": "sd",
       "name": "Sudan",
-      "strength": 1,
-      "flag": "sd"
+      "strength": 1
     },
     {
-      "coordinates": [1504, 844],
+      "coordinates": [
+        1504,
+        844
+      ],
+      "flag": "Unified_Korea",
       "name": "Unified Korea",
-      "strength": 1,
-      "flag": "Unified_Korea"
+      "strength": 1
     },
     {
-      "coordinates": [513, 860],
+      "coordinates": [
+        513,
+        860
+      ],
+      "flag": "us",
       "name": "United States of America",
-      "strength": 3,
-      "flag": "us"
+      "strength": 3
     },
     {
-      "coordinates": [83, 1033],
+      "coordinates": [
+        83,
+        1033
+      ],
+      "flag": "ve",
       "name": "Venezuela",
-      "strength": 1,
-      "flag": "ve"
+      "strength": 1
     },
     {
-      "coordinates": [1268, 862],
+      "coordinates": [
+        1268,
+        862
+      ],
+      "flag": "Vladivostok",
       "name": "Far Eastern District",
-      "strength": 1,
-      "flag": "Vladivostok"
+      "strength": 1
     },
     {
-      "coordinates": [1814, 1030],
+      "coordinates": [
+        1814,
+        1030
+      ],
+      "flag": "vn",
       "name": "Vietnam",
-      "strength": 2,
-      "flag": "vn"
+      "strength": 2
     },
     {
-      "coordinates": [1240, 1213],
+      "coordinates": [
+        1240,
+        1213
+      ],
+      "flag": "Yekaterinburg",
       "name": "Ural District",
-      "strength": 1,
-      "flag": "Yekaterinburg"
+      "strength": 1
     },
     {
-      "coordinates": [982, 1455],
+      "coordinates": [
+        982,
+        1455
+      ],
+      "flag": "Yugoslavia",
       "name": "Yugoslavia",
-      "strength": 1,
-      "flag": "Yugoslavia"
+      "strength": 1
     },
     {
-      "coordinates": [925, 777],
+      "coordinates": [
+        925,
+        777
+      ],
+      "flag": "Yukon",
       "name": "Yukon",
-      "strength": 1,
-      "flag": "Yukon"
+      "strength": 1
     }
   ]
 }
