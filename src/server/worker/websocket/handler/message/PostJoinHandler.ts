@@ -98,13 +98,14 @@ function handleWinner(
   const potentialWinner = gs.winnerVotes.get(winnerKey)!;
   potentialWinner.ips.add(client.ip);
 
-  // Check if winner has majority
   const activeUniqueIPs = new Set(gs.activeClients.map((c) => c.ip));
-  if (activeUniqueIPs.size < 1) {
+
+  // Require at least two unique IPs to agree
+  if (activeUniqueIPs.size < 2) {
     return;
   }
 
-  // Require >50% of active IPs to agree before archiving a game record
+  // Check if winner has majority
   if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
     return;
   }
