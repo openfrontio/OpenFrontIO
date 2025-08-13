@@ -1,35 +1,22 @@
-import { consolex } from "../Consolex";
-import {
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
+import { TrainStationExecution } from "./TrainStationExecution";
 
 export class PortExecution implements Execution {
   private active = true;
-  private mg: Game | null = null;
+  private mg: Game;
   private port: Unit | null = null;
-  private random: PseudoRandom | null = null;
-  private checkOffset: number | null = null;
+  private random: PseudoRandom;
+  private checkOffset: number;
 
   constructor(
-    private _owner: PlayerID,
+    private player: Player,
     private tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this._owner)) {
-      console.warn(`PortExecution: player ${this._owner} not found`);
-      this.active = false;
-      return;
-    }
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
     this.checkOffset = mg.ticks() % 10;
@@ -41,14 +28,16 @@ export class PortExecution implements Execution {
     }
     if (this.port === null) {
       const tile = this.tile;
-      const player = this.mg.player(this._owner);
-      const spawn = player.canBuild(UnitType.Port, tile);
+      const spawn = this.player.canBuild(UnitType.Port, tile);
       if (spawn === false) {
-        consolex.warn(`player ${player} cannot build port at ${this.tile}`);
+        console.warn(
+          `player ${this.player.id()} cannot build port at ${this.tile}`,
+        );
         this.active = false;
         return;
       }
-      this.port = player.buildUnit(UnitType.Port, spawn, {});
+      this.port = this.player.buildUnit(UnitType.Port, spawn, {});
+      this.createStation();
     }
 
     if (!this.port.isActive()) {
@@ -56,8 +45,8 @@ export class PortExecution implements Execution {
       return;
     }
 
-    if (this._owner !== this.port.owner().id()) {
-      this._owner = this.port.owner().id();
+    if (this.player.id() !== this.port.owner().id()) {
+      this.player = this.port.owner();
     }
 
     // Only check every 10 ticks for performance.
@@ -65,24 +54,18 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const totalNbOfPorts = this.mg.units(UnitType.Port).length;
-    if (
-      !this.random.chance(this.mg.config().tradeShipSpawnRate(totalNbOfPorts))
-    ) {
+    if (!this.shouldSpawnTradeShip()) {
       return;
     }
 
-    const ports = this.player().tradingPorts(this.port);
+    const ports = this.player.tradingPorts(this.port);
 
     if (ports.length === 0) {
       return;
     }
 
     const port = this.random.randElement(ports);
-    const pf = PathFinder.Mini(this.mg, 2500);
-    this.mg.addExecution(
-      new TradeShipExecution(this.player().id(), this.port, port, pf),
-    );
+    this.mg.addExecution(new TradeShipExecution(this.player, this.port, port));
   }
 
   isActive(): boolean {
@@ -93,10 +76,28 @@ export class PortExecution implements Execution {
     return false;
   }
 
-  player(): Player {
-    if (this.port === null) {
-      throw new Error("Not initialized");
+  shouldSpawnTradeShip(): boolean {
+    const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
+    const spawnRate = this.mg.config().tradeShipSpawnRate(numTradeShips);
+    for (let i = 0; i < this.port!.level(); i++) {
+      if (this.random.chance(spawnRate)) {
+        return true;
+      }
     }
-    return this.port.owner();
+    return false;
+  }
+
+  createStation(): void {
+    if (this.port !== null) {
+      const nearbyFactory = this.mg.hasUnitNearby(
+        this.port.tile()!,
+        this.mg.config().trainStationMaxRange(),
+        UnitType.Factory,
+        this.player.id(),
+      );
+      if (nearbyFactory) {
+        this.mg.addExecution(new TrainStationExecution(this.port));
+      }
+    }
   }
 }

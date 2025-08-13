@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { Config, GameEnv, ServerConfig } from "./Config";
@@ -20,7 +19,7 @@ export async function getConfig(
       return new DevConfig(sc, gameConfig, userSettings, isReplay);
     case GameEnv.Preprod:
     case GameEnv.Prod:
-      consolex.log("using prod config");
+      console.log("using prod config");
       return new DefaultConfig(sc, gameConfig, userSettings, isReplay);
     default:
       throw Error(`unsupported server configuration: ${process.env.GAME_ENV}`);
@@ -51,13 +50,13 @@ export function getServerConfigFromServer(): ServerConfig {
 export function getServerConfig(gameEnv: string) {
   switch (gameEnv) {
     case "dev":
-      consolex.log("using dev server config");
+      console.log("using dev server config");
       return new DevServerConfig();
     case "staging":
-      consolex.log("using preprod server config");
+      console.log("using preprod server config");
       return preprodConfig;
     case "prod":
-      consolex.log("using prod server config");
+      console.log("using prod server config");
       return prodConfig;
     default:
       throw Error(`unsupported server configuration: ${gameEnv}`);

@@ -1,4 +1,5 @@
 import { decodeJwt } from "jose";
+import { z } from "zod/v4";
 import {
   RefreshResponseSchema,
   TokenPayload,
@@ -6,6 +7,7 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 
 function getAudience() {
   const { hostname } = new URL(window.location.href);
@@ -13,7 +15,7 @@ function getAudience() {
   return domainname;
 }
 
-function getApiBase() {
+export function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
     ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
@@ -21,35 +23,67 @@ function getApiBase() {
 }
 
 function getToken(): string | null {
+  // Check window hash
   const { hash } = window.location;
   if (hash.startsWith("#")) {
     const params = new URLSearchParams(hash.slice(1));
     const token = params.get("token");
     if (token) {
       localStorage.setItem("token", token);
+      params.delete("token");
+      params.toString();
     }
     // Clean the URL
     history.replaceState(
       null,
       "",
-      window.location.pathname + window.location.search,
+      window.location.pathname +
+        window.location.search +
+        (params.size > 0 ? "#" + params.toString() : ""),
     );
   }
+
+  // Check cookie
+  const cookie = document.cookie
+    .split(";")
+    .find((c) => c.trim().startsWith("token="))
+    ?.trim()
+    .substring(6);
+  if (cookie !== undefined) {
+    return cookie;
+  }
+
+  // Check local storage
   return localStorage.getItem("token");
+}
+
+async function clearToken() {
+  localStorage.removeItem("token");
+  __isLoggedIn = false;
+  const config = await getServerConfigFromClient();
+  const audience = config.jwtAudience();
+  const isSecure = window.location.protocol === "https:";
+  const secure = isSecure ? "; Secure" : "";
+  document.cookie = `token=logged_out; Path=/; Max-Age=0; Domain=${audience}${secure}`;
 }
 
 export function discordLogin() {
   window.location.href = `${getApiBase()}/login/discord?redirect_uri=${window.location.href}`;
 }
 
+export function getAuthHeader(): string {
+  const token = getToken();
+  if (!token) return "";
+  return `Bearer ${token}`;
+}
+
 export async function logOut(allSessions: boolean = false) {
-  const token = localStorage.getItem("token");
+  const token = getToken();
   if (token === null) return;
-  localStorage.removeItem("token");
-  __isLoggedIn = false;
+  clearToken();
 
   const response = await fetch(
-    getApiBase() + allSessions ? "/revoke" : "/logout",
+    getApiBase() + (allSessions ? "/revoke" : "/logout"),
     {
       method: "POST",
       headers: {
@@ -65,14 +99,16 @@ export async function logOut(allSessions: boolean = false) {
   return true;
 }
 
-let __isLoggedIn: TokenPayload | false | undefined = undefined;
-export function isLoggedIn(): TokenPayload | false {
-  if (__isLoggedIn === undefined) {
-    __isLoggedIn = _isLoggedIn();
-  }
+export type IsLoggedInResponse =
+  | { token: string; claims: TokenPayload }
+  | false;
+let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
+export function isLoggedIn(): IsLoggedInResponse {
+  __isLoggedIn ??= _isLoggedIn();
+
   return __isLoggedIn;
 }
-export function _isLoggedIn(): TokenPayload | false {
+function _isLoggedIn(): IsLoggedInResponse {
   try {
     const token = getToken();
     if (!token) {
@@ -121,7 +157,7 @@ export function _isLoggedIn(): TokenPayload | false {
       logOut();
       return false;
     }
-    const refreshAge: number = 6 * 3600; // 6 hours
+    const refreshAge: number = 3 * 24 * 3600; // 3 days
     if (iat !== undefined && now >= iat + refreshAge) {
       console.log("Refreshing access token...");
       postRefresh().then((success) => {
@@ -129,22 +165,21 @@ export function _isLoggedIn(): TokenPayload | false {
           console.log("Refreshed access token successfully.");
         } else {
           console.error("Failed to refresh access token.");
+          // TODO: Update the UI to show logged out state
         }
       });
     }
 
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
+      const error = z.prettifyError(result.error);
       // Invalid response
-      console.error(
-        "Invalid payload",
-        // JSON.stringify(payload),
-        JSON.stringify(result.error),
-      );
+      console.error("Invalid payload", error);
       return false;
     }
 
-    return result.data;
+    const claims = result.data;
+    return { token, claims };
   } catch (e) {
     console.log(e);
     return false;
@@ -163,20 +198,22 @@ export async function postRefresh(): Promise<boolean> {
         authorization: `Bearer ${token}`,
       },
     });
+    if (response.status === 401) {
+      clearToken();
+      return false;
+    }
     if (response.status !== 200) return false;
     const body = await response.json();
     const result = RefreshResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
       return false;
     }
     localStorage.setItem("token", result.data.token);
     return true;
   } catch (e) {
+    __isLoggedIn = false;
     return false;
   }
 }
@@ -192,19 +229,21 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
         authorization: `Bearer ${token}`,
       },
     });
+    if (response.status === 401) {
+      clearToken();
+      return false;
+    }
     if (response.status !== 200) return false;
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
+      const error = z.prettifyError(result.error);
+      console.error("Invalid response", error);
       return false;
     }
     return result.data;
   } catch (e) {
+    __isLoggedIn = false;
     return false;
   }
 }

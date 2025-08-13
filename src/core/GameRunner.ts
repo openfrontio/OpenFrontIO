@@ -42,30 +42,23 @@ export async function createGameRunner(
   const humans = gameStart.players.map(
     (p) =>
       new PlayerInfo(
-        p.flag,
         p.clientID === clientID
           ? sanitize(p.username)
           : fixProfaneUsername(sanitize(p.username)),
         PlayerType.Human,
         p.clientID,
-        p.playerID,
+        random.nextID(),
       ),
   );
 
   const nations = gameStart.config.disableNPCs
     ? []
-    : gameMap.nationMap.nations.map(
+    : gameMap.manifest.nations.map(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
             n.strength,
-            new PlayerInfo(
-              n.flag || "",
-              n.name,
-              PlayerType.FakeHuman,
-              null,
-              random.nextID(),
-            ),
+            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
           ),
       );
 
@@ -203,12 +196,13 @@ export class GameRunner {
       };
       const alliance = player.allianceWith(other as Player);
       if (alliance) {
-        actions.interaction.allianceCreatedAtTick = alliance.createdAt();
+        actions.interaction.allianceExpiresAt = alliance.expiresAt();
       }
     }
 
     return actions;
   }
+
   public playerProfile(playerID: number): PlayerProfile {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
@@ -225,6 +219,27 @@ export class GameRunner {
       borderTiles: player.borderTiles(),
     } as PlayerBorderTiles;
   }
+
+  public attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Cell | null {
+    const player = this.game.playerBySmallID(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+
+    const condition = (a) => a.id() === attackID;
+    const attack =
+      player.outgoingAttacks().find(condition) ??
+      player.incomingAttacks().find(condition);
+    if (attack === undefined) {
+      return null;
+    }
+
+    return attack.averagePosition();
+  }
+
   public bestTransportShipSpawn(
     playerID: PlayerID,
     targetTile: TileRef,

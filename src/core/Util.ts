@@ -1,17 +1,18 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import twemoji from "twemoji";
-import { Cell, Team, Unit } from "./game/Game";
+import { Cell, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
-  ClientID,
+  GameConfig,
   GameID,
   GameRecord,
-  GameStartInfo,
   PlayerRecord,
   Turn,
+  Winner,
 } from "./Schemas";
 
+import { ServerConfig } from "./configuration/Config";
 import {
   BOT_NAME_PREFIXES,
   BOT_NAME_SUFFIXES,
@@ -118,7 +119,7 @@ export function getMode(list: Set<number>): number {
   // Count occurrences
   const counts = new Map<number, number>();
   for (const item of list) {
-    counts.set(item, (counts.get(item) || 0) + 1);
+    counts.set(item, (counts.get(item) ?? 0) + 1);
   }
 
   // Find the item with the highest count
@@ -138,7 +139,7 @@ export function getMode(list: Set<number>): number {
 export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
-    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}\[\]_]/gu, "");
+    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
 }
 
 export function processName(name: string): string {
@@ -184,53 +185,42 @@ export function onlyImages(html: string) {
 }
 
 export function createGameRecord(
-  id: GameID,
-  gameStartInfo: GameStartInfo,
+  gameID: GameID,
+  config: GameConfig,
   // username does not need to be set.
   players: PlayerRecord[],
-  turns: Turn[],
-  startTimestampMS: number,
-  endTimestampMS: number,
-  winner: ClientID | Team | null,
-  winnerType: "player" | "team" | null,
+  allTurns: Turn[],
+  start: number,
+  end: number,
+  winner: Winner,
+  serverConfig: ServerConfig,
 ): GameRecord {
-  const durationSeconds = Math.floor(
-    (endTimestampMS - startTimestampMS) / 1000,
-  );
-  const date = new Date().toISOString().split("T")[0];
+  const duration = Math.floor((end - start) / 1000);
   const version = "v0.0.2";
-  const gitCommit = "";
+  const gitCommit = serverConfig.gitCommit();
+  const subdomain = serverConfig.subdomain();
+  const domain = serverConfig.domain();
+  const num_turns = allTurns.length;
+  const turns = allTurns.filter(
+    (t) => t.intents.length !== 0 || t.hash !== undefined,
+  );
   const record: GameRecord = {
-    gitCommit,
-    id,
-    gameStartInfo,
-    players,
-    startTimestampMS,
-    endTimestampMS,
-    durationSeconds,
-    date,
-    num_turns: 0,
-    turns: [],
+    info: {
+      gameID,
+      config,
+      players,
+      start,
+      end,
+      duration,
+      num_turns,
+      winner,
+    },
     version,
-    winner,
-    winnerType,
+    gitCommit,
+    subdomain,
+    domain,
+    turns,
   };
-
-  for (const turn of turns) {
-    if (turn.intents.length !== 0 || turn.hash !== undefined) {
-      record.turns.push(turn);
-      for (const intent of turn.intents) {
-        if (intent.type === "spawn") {
-          for (const playerRecord of players) {
-            if (playerRecord.clientID === intent.clientID) {
-              playerRecord.username = intent.name;
-            }
-          }
-        }
-      }
-    }
-  }
-  record.num_turns = turns.length;
   return record;
 }
 
@@ -249,7 +239,7 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     lastTurnNum = turn.turnNumber;
   }
   const turnLength = turns.length;
-  for (let i = turnLength; i < gameRecord.num_turns; i++) {
+  for (let i = turnLength; i < gameRecord.info.num_turns; i++) {
     turns.push({
       turnNumber: i,
       intents: [],
@@ -324,3 +314,10 @@ export const emojiTable: string[][] = [
 ];
 // 2d to 1d array
 export const flattenedEmojiTable: string[] = emojiTable.flat();
+
+/**
+ * JSON.stringify replacer function that converts bigint values to strings.
+ */
+export function replacer(_key: string, value: any): any {
+  return typeof value === "bigint" ? value.toString() : value;
+}

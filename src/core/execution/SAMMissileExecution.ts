@@ -1,4 +1,3 @@
-import { NukeType } from "../ArchiveSchemas";
 import {
   Execution,
   Game,
@@ -10,6 +9,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { NukeType } from "../StatsSchemas";
 
 export class SAMMissileExecution implements Execution {
   private active = true;
@@ -31,13 +31,11 @@ export class SAMMissileExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.SAMMissile === undefined) {
-      this.SAMMissile = this._owner.buildUnit(
-        UnitType.SAMMissile,
-        this.spawn,
-        {},
-      );
-    }
+    this.SAMMissile ??= this._owner.buildUnit(
+      UnitType.SAMMissile,
+      this.spawn,
+      {},
+    );
     if (!this.SAMMissile.isActive()) {
       this.active = false;
       return;
@@ -62,7 +60,7 @@ export class SAMMissileExecution implements Execution {
       if (result === true) {
         this.mg.displayMessage(
           `Missile intercepted ${this.target.type()}`,
-          MessageType.SUCCESS,
+          MessageType.SAM_HIT,
           this._owner.id(),
         );
         this.active = false;
@@ -72,11 +70,7 @@ export class SAMMissileExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .bombIntercept(
-            this._owner,
-            this.target.owner(),
-            this.target.type() as NukeType,
-          );
+          .bombIntercept(this._owner, this.target.type() as NukeType, 1);
         return;
       } else {
         this.SAMMissile.move(result);

@@ -10,11 +10,6 @@ export class EmbargoExecution implements Execution {
   ) {}
 
   init(mg: Game, _: number): void {
-    if (!mg.hasPlayer(this.player.id())) {
-      console.warn(`EmbargoExecution: sender ${this.player.id()} not found`);
-      this.active = false;
-      return;
-    }
     if (!mg.hasPlayer(this.targetID)) {
       console.warn(`EmbargoExecution recipient ${this.targetID} not found`);
       this.active = false;

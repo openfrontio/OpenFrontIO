@@ -5,16 +5,35 @@ export default {
   extensionsToTreatAsEsm: [".ts"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
+    "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$":
+      "<rootDir>/__mocks__/fileMock.js",
+    "\\.(css|less)$": "<rootDir>/__mocks__/fileMock.js",
   },
   transform: {
     "^.+\\.tsx?$": [
       "ts-jest",
       {
         useESM: true,
-        tsconfig: "tsconfig.jest.json",
+        tsconfig: {
+          target: "ES2020",
+          module: "es2022",
+          moduleResolution: "node",
+          experimentalDecorators: true,
+          types: ["jest", "node"],
+        },
       },
     ],
   },
   transformIgnorePatterns: ["node_modules/(?!(node:)/)"],
   preset: "ts-jest/presets/default-esm",
+  collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
+  coverageThreshold: {
+    global: {
+      branches: 0,
+      functions: 0,
+      lines: 0,
+      statements: 0,
+    },
+  },
+  coverageReporters: ["text", "lcov", "html"],
 };

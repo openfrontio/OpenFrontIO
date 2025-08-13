@@ -1,7 +1,16 @@
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
+import {
+  Difficulty,
+  Duos,
+  GameMapType,
+  GameMode,
+  GameType,
+  Quads,
+  Trios,
+  UnitType,
+} from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
-import { GameConfig } from "../core/Schemas";
+import { GameConfig, TeamCountConfig } from "../core/Schemas";
 import { logger } from "./Logger";
 
 const log = logger.child({});
@@ -26,12 +35,14 @@ const frequency = {
   Asia: 1,
   Mars: 1,
   BetweenTwoSeas: 1,
-  Japan: 1,
+  EastAsia: 1,
   BlackSea: 1,
   FaroeIslands: 1,
   FalklandIslands: 1,
   Baikal: 1,
   Halkidiki: 1,
+  StraitOfGibraltar: 1,
+  Italia: 1,
 };
 
 interface MapWithMode {
@@ -39,30 +50,46 @@ interface MapWithMode {
   mode: GameMode;
 }
 
+const TEAM_COUNTS = [
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  Duos,
+  Trios,
+  Quads,
+] as const satisfies TeamCountConfig[];
+
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
 
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
-    const numPlayerTeams =
-      mode === GameMode.Team ? 2 + Math.floor(Math.random() * 5) : undefined;
+    const playerTeams =
+      mode === GameMode.Team ? this.getTeamCount() : undefined;
 
     // Create the default public game config (from your GameManager)
     return {
       gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode),
+      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
       instantBuild: false,
       disableNPCs: mode === GameMode.Team,
-      disableNukes: false,
       gameMode: mode,
-      playerTeams: numPlayerTeams,
+      playerTeams,
       bots: 400,
-    } as GameConfig;
+      disabledUnits: [UnitType.Train, UnitType.Factory],
+    } satisfies GameConfig;
+  }
+
+  private getTeamCount(): TeamCountConfig {
+    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
   }
 
   private getNextMap(): MapWithMode {
@@ -92,7 +119,6 @@ export class MapPlaylist {
 
     const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
     const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
     const team: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
@@ -101,9 +127,6 @@ export class MapPlaylist {
         return false;
       }
       if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
         return false;
       }
       if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {
