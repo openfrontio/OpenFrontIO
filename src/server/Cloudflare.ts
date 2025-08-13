@@ -69,7 +69,7 @@ export class Cloudflare {
     const response = await fetch(url, {
       body: data ? JSON.stringify(data) : undefined,
       headers: {
-        Authorization: `Bearer ${this.apiToken}`,
+        "Authorization": `Bearer ${this.apiToken}`,
         "Content-Type": "application/json",
       },
       method,
@@ -184,7 +184,7 @@ export class Cloudflare {
 
     const tunnelConfig: CloudflaredConfig = {
       "credentials-file": this.credsPath,
-      ingress: [
+      "ingress": [
         ...Array.from(subdomainToService.entries()).map(
           ([subdomain, service]) => ({
             hostname: `${subdomain}.${domain}`,
@@ -195,7 +195,7 @@ export class Cloudflare {
           service: "http_status:404",
         },
       ],
-      tunnel: tunnelId,
+      "tunnel": tunnelId,
     };
 
     // Write config file
