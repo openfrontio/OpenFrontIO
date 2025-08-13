@@ -4,6 +4,7 @@ import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
+  Attack,
   Cell,
   Game,
   GameUpdates,
@@ -19,6 +20,7 @@ import {
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
+import { GameMapLoader } from "./game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -33,41 +35,35 @@ import { fixProfaneUsername } from "./validations/username";
 export async function createGameRunner(
   gameStart: GameStartInfo,
   clientID: ClientID,
-  callBack: (gu: GameUpdateViewData) => void,
+  mapLoader: GameMapLoader,
+  callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
-  const gameMap = await loadGameMap(gameStart.config.gameMap);
+  const gameMap = await loadGameMap(gameStart.config.gameMap, mapLoader);
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map(
     (p) =>
       new PlayerInfo(
-        p.flag,
         p.clientID === clientID
           ? sanitize(p.username)
           : fixProfaneUsername(sanitize(p.username)),
         PlayerType.Human,
         p.clientID,
-        p.playerID,
+        random.nextID(),
       ),
   );
 
   const nations = gameStart.config.disableNPCs
     ? []
-    : gameMap.nationMap.nations.map(
-        (n) =>
-          new Nation(
-            new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(
-              n.flag || "",
-              n.name,
-              PlayerType.FakeHuman,
-              null,
-              random.nextID(),
-            ),
-          ),
-      );
+    : gameMap.manifest.nations.map(
+      (n) =>
+        new Nation(
+          new Cell(n.coordinates[0], n.coordinates[1]),
+          n.strength,
+          new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+        ),
+    );
 
   const game: Game = createGame(
     humans,
@@ -169,10 +165,10 @@ export class GameRunner {
     updates[GameUpdateType.Tile] = [];
 
     this.callBack({
-      tick: this.game.ticks(),
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
-      updates: updates,
       playerNameViewData: this.playerViewData,
+      tick: this.game.ticks(),
+      updates: updates,
     });
     this.isExecuting = false;
   }
@@ -185,30 +181,32 @@ export class GameRunner {
     const player = this.game.player(playerID);
     const tile = this.game.ref(x, y);
     const actions = {
-      canAttack: player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
+      canAttack: player.canAttack(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 
     if (this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
       actions.interaction = {
-        sharedBorder: player.sharesBorderWith(other),
+        canBreakAlliance: player.isAlliedWith(other),
+        canDonateGold: player.canDonateGold(other),
+        canDonateTroops: player.canDonateTroops(other),
+        canEmbargo: !player.hasEmbargoAgainst(other),
+        canSendAllianceRequest: player.canSendAllianceRequest(other),
         canSendEmoji: player.canSendEmoji(other),
         canTarget: player.canTarget(other),
-        canSendAllianceRequest: player.canSendAllianceRequest(other),
-        canBreakAlliance: player.isAlliedWith(other),
-        canDonate: player.canDonate(other),
-        canEmbargo: !player.hasEmbargoAgainst(other),
+        sharedBorder: player.sharesBorderWith(other),
       };
-      const alliance = player.allianceWith(other as Player);
+      const alliance = player.allianceWith(other);
       if (alliance) {
-        actions.interaction.allianceCreatedAtTick = alliance.createdAt();
+        actions.interaction.allianceExpiresAt = alliance.expiresAt();
       }
     }
 
     return actions;
   }
+
   public playerProfile(playerID: number): PlayerProfile {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
@@ -225,6 +223,27 @@ export class GameRunner {
       borderTiles: player.borderTiles(),
     } as PlayerBorderTiles;
   }
+
+  public attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Cell | null {
+    const player = this.game.playerBySmallID(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+
+    const condition = (a: Attack) => a.id() === attackID;
+    const attack =
+      player.outgoingAttacks().find(condition) ??
+      player.incomingAttacks().find(condition);
+    if (attack === undefined) {
+      return null;
+    }
+
+    return attack.averagePosition();
+  }
+
   public bestTransportShipSpawn(
     playerID: PlayerID,
     targetTile: TileRef,

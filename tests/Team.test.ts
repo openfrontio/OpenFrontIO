@@ -10,7 +10,7 @@ let game: Game;
 
 describe("Teams", () => {
   test("bots are on the same team, but can attack each other", async () => {
-    game = await setup("Plains", { gameMode: GameMode.Team, playerTeams: 2 });
+    game = await setup("plains", { gameMode: GameMode.Team, playerTeams: 2 });
 
     const bot1 = game.addPlayer(playerInfo("bot1", PlayerType.Bot));
     const bot2 = game.addPlayer(playerInfo("bot2", PlayerType.Bot));
@@ -25,7 +25,7 @@ describe("Teams", () => {
 
   test("humans spawn on different teams", async () => {
     game = await setup(
-      "Plains",
+      "plains",
       {
         gameMode: GameMode.Team,
         playerTeams: 2,

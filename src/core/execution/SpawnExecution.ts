@@ -5,7 +5,7 @@ import { PlayerExecution } from "./PlayerExecution";
 import { getSpawnTiles } from "./Util";
 
 export class SpawnExecution implements Execution {
-  active: boolean = true;
+  active = true;
   private mg: Game;
 
   constructor(
@@ -19,6 +19,11 @@ export class SpawnExecution implements Execution {
 
   tick(ticks: number) {
     this.active = false;
+
+    if (!this.mg.isValidRef(this.tile)) {
+      console.warn(`SpawnExecution: tile ${this.tile} not valid`);
+      return;
+    }
 
     if (!this.mg.inSpawnPhase()) {
       this.active = false;
@@ -38,7 +43,7 @@ export class SpawnExecution implements Execution {
     });
 
     if (!player.hasSpawned()) {
-      this.mg.addExecution(new PlayerExecution(player.id()));
+      this.mg.addExecution(new PlayerExecution(player));
       if (player.type() === PlayerType.Bot) {
         this.mg.addExecution(new BotExecution(player));
       }

@@ -3,9 +3,9 @@ import { Cell, TerrainType } from "./Game";
 export type TileRef = number;
 export type TileUpdate = bigint;
 
-export interface GameMap {
+export type GameMap = {
   ref(x: number, y: number): TileRef;
-
+  isValidRef(ref: TileRef): boolean;
   x(ref: TileRef): number;
   y(ref: TileRef): number;
   cell(ref: TileRef): Cell;
@@ -48,7 +48,7 @@ export interface GameMap {
   updateTile(tu: TileUpdate): TileRef;
 
   numTilesWithFallout(): number;
-}
+};
 
 export class GameMapImpl implements GameMap {
   private _numTilesWithFallout = 0;
@@ -67,11 +67,9 @@ export class GameMapImpl implements GameMap {
   private static readonly IS_LAND_BIT = 7;
   private static readonly SHORELINE_BIT = 6;
   private static readonly OCEAN_BIT = 5;
-  private static readonly MAGNITUDE_OFFSET = 4; // Uses bits 3-7 (5 bits)
   private static readonly MAGNITUDE_MASK = 0x1f; // 11111 in binary
 
   // State bits (Uint16Array)
-  private static readonly PLAYER_ID_OFFSET = 0; // Uses bits 0-11 (12 bits)
   private static readonly PLAYER_ID_MASK = 0xfff;
   private static readonly FALLOUT_BIT = 13;
   private static readonly DEFENSE_BONUS_BIT = 14;
@@ -115,6 +113,10 @@ export class GameMapImpl implements GameMap {
       throw new Error(`Invalid coordinates: ${x},${y}`);
     }
     return this.yToRef[y] + x;
+  }
+
+  isValidRef(ref: TileRef): boolean {
+    return ref >= 0 && ref < this.refToX.length;
   }
 
   x(ref: TileRef): number {
@@ -339,7 +341,7 @@ export class GameMapImpl implements GameMap {
 export function euclDistFN(
   root: TileRef,
   dist: number,
-  center: boolean = false,
+  center = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
   const dist2 = dist * dist;
   if (!center) {
@@ -362,7 +364,7 @@ export function euclDistFN(
 export function manhattanDistFN(
   root: TileRef,
   dist: number,
-  center: boolean = false,
+  center = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
   if (!center) {
     return (gm: GameMap, n: TileRef) => gm.manhattanDist(root, n) <= dist;
@@ -380,7 +382,7 @@ export function manhattanDistFN(
 export function rectDistFN(
   root: TileRef,
   dist: number,
-  center: boolean = false,
+  center = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
   if (!center) {
     return (gm: GameMap, n: TileRef) => {
@@ -399,10 +401,43 @@ export function rectDistFN(
   }
 }
 
+function isInIsometricTile(
+  center: { x: number; y: number },
+  tile: { x: number; y: number },
+  yOffset: number,
+  distance: number,
+): boolean {
+  const dx = Math.abs(tile.x - center.x);
+  const dy = Math.abs(tile.y - (center.y + yOffset));
+  return dx + dy * 2 <= distance + 1;
+}
+
+export function isometricDistFN(
+  root: TileRef,
+  dist: number,
+  center = false,
+): (gm: GameMap, tile: TileRef) => boolean {
+  if (!center) {
+    return (gm: GameMap, n: TileRef) => gm.manhattanDist(root, n) <= dist;
+  } else {
+    return (gm: GameMap, n: TileRef) => {
+      const rootX = gm.x(root) - 0.5;
+      const rootY = gm.y(root) - 0.5;
+
+      return isInIsometricTile(
+        { x: rootX, y: rootY },
+        { x: gm.x(n), y: gm.y(n) },
+        0,
+        dist,
+      );
+    };
+  }
+}
+
 export function hexDistFN(
   root: TileRef,
   dist: number,
-  center: boolean = false,
+  center = false,
 ): (gm: GameMap, tile: TileRef) => boolean {
   if (!center) {
     return (gm: GameMap, n: TileRef) => {

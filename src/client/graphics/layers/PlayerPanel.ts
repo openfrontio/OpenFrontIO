@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
@@ -9,16 +9,11 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import {
-  AllPlayers,
-  PlayerActions,
-  PlayerID,
-  UnitType,
-} from "../../../core/game/Game";
+import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
-import { MouseUpEvent } from "../../InputHandler";
+import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -29,6 +24,7 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
+import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
@@ -38,12 +34,13 @@ export class PlayerPanel extends LitElement implements Layer {
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
+  public uiState: UIState;
 
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
 
   @state()
-  private isVisible: boolean = false;
+  public isVisible = false;
 
   @state()
   private allianceExpiryText: string | null = null;
@@ -91,7 +88,12 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateTroopsIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(
+      new SendDonateTroopsIntentEvent(
+        other,
+        myPlayer.troops() * this.uiState.attackRatio,
+      ),
+    );
     this.hide();
   }
 
@@ -101,7 +103,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateGoldIntentEvent(myPlayer, other, null));
+    this.eventBus.emit(new SendDonateGoldIntentEvent(other, null));
     this.hide();
   }
 
@@ -111,7 +113,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other, "start"));
+    this.eventBus.emit(new SendEmbargoIntentEvent(other, "start"));
     this.hide();
   }
 
@@ -121,7 +123,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other, "stop"));
+    this.eventBus.emit(new SendEmbargoIntentEvent(other, "stop"));
     this.hide();
   }
 
@@ -160,10 +162,22 @@ export class PlayerPanel extends LitElement implements Layer {
     return this;
   }
 
-  private ctModal;
+  private ctModal: ChatModal;
+
+  initEventBus(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    eventBus.on(CloseViewEvent, (e) => {
+      if (!this.hidden) {
+        this.hide();
+      }
+    });
+  }
 
   init() {
-    this.eventBus.on(MouseUpEvent, (e: MouseEvent) => this.hide());
+    this.eventBus.on(MouseUpEvent, () => this.hide());
+    this.eventBus.on(CloseViewEvent, (e) => {
+      this.hide();
+    });
 
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
   }
@@ -174,11 +188,9 @@ export class PlayerPanel extends LitElement implements Layer {
       if (myPlayer !== null && myPlayer.isAlive()) {
         this.actions = await myPlayer.actions(this.tile);
 
-        if (this.actions?.interaction?.allianceCreatedAtTick !== undefined) {
-          const createdAt = this.actions.interaction.allianceCreatedAtTick;
-          const durationTicks = this.g.config().allianceDuration();
-          const expiryTick = createdAt + durationTicks;
-          const remainingTicks = expiryTick - this.g.ticks();
+        if (this.actions?.interaction?.allianceExpiresAt !== undefined) {
+          const expiresAt = this.actions.interaction.allianceExpiresAt;
+          const remainingTicks = expiresAt - this.g.ticks();
 
           if (remainingTicks > 0) {
             const remainingSeconds = Math.max(
@@ -205,28 +217,6 @@ export class PlayerPanel extends LitElement implements Layer {
     return time.trim();
   }
 
-  getTotalNukesSent(otherId: PlayerID): number {
-    const stats = this.g.player(otherId).stats();
-    if (!stats) {
-      return 0;
-    }
-    let sum = 0;
-    const player = this.g.myPlayer();
-    if (player === null) {
-      return 0;
-    }
-    const nukes = stats.sentNukes[player.id()];
-    if (!nukes) {
-      return 0;
-    }
-    for (const nukeType in nukes) {
-      if (nukeType !== UnitType.MIRVWarhead) {
-        sum += nukes[nukeType];
-      }
-    }
-    return sum;
-  }
-
   render() {
     if (!this.isVisible) {
       return html``;
@@ -234,15 +224,15 @@ export class PlayerPanel extends LitElement implements Layer {
     const myPlayer = this.g.myPlayer();
     if (myPlayer === null) return;
     if (this.tile === null) return;
-    let other = this.g.owner(this.tile);
+    const other = this.g.owner(this.tile);
     if (!other.isPlayer()) {
       this.hide();
       console.warn("Tile is not owned by a player");
       return;
     }
-    other = other as PlayerView;
 
-    const canDonate = this.actions?.interaction?.canDonate;
+    const canDonateGold = this.actions?.interaction?.canDonateGold;
+    const canDonateTroops = this.actions?.interaction?.canDonateTroops;
     const canSendAllianceRequest =
       this.actions?.interaction?.canSendAllianceRequest;
     const canSendEmoji =
@@ -255,9 +245,9 @@ export class PlayerPanel extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none overflow-auto"
-        @contextmenu=${(e) => e.preventDefault()}
-        @wheel=${(e) => e.stopPropagation()}
+        class="fixed inset-0 flex items-center justify-center z-[1001] pointer-events-none overflow-auto"
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
+        @wheel=${(e: MouseEvent) => e.stopPropagation()}
       >
         <div
           class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[240px] w-auto px-4 py-2"
@@ -327,6 +317,16 @@ export class PlayerPanel extends LitElement implements Layer {
                 </div>
               </div>
 
+              <!-- Betrayals -->
+              <div class="flex flex-col gap-1">
+                <div class="text-white text-opacity-80 text-sm px-2">
+                  ${translateText("player_panel.betrayals")}
+                </div>
+                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                  ${other.data.betrayals ?? 0}
+                </div>
+              </div>
+
               <!-- Embargo -->
               <div class="flex flex-col gap-1">
                 <div class="text-white text-opacity-80 text-sm px-2">
@@ -336,6 +336,25 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${other.hasEmbargoAgainst(myPlayer)
                     ? translateText("player_panel.yes")
                     : translateText("player_panel.no")}
+                </div>
+              </div>
+
+              <!-- Alliances -->
+              <div class="flex flex-col gap-1">
+                <div class="text-white text-opacity-80 text-sm px-2">
+                  ${translateText("player_panel.alliances")}
+                  (${other.allies().length})
+                </div>
+                <div
+                  class="bg-opacity-50 bg-gray-700 rounded p-2 text-white max-w-72 max-h-20 overflow-y-auto"
+                  translate="no"
+                >
+                  ${other.allies().length > 0
+                    ? other
+                      .allies()
+                      .map((p) => p.name())
+                      .join(", ")
+                    : translateText("player_panel.none")}
                 </div>
               </div>
 
@@ -353,20 +372,12 @@ export class PlayerPanel extends LitElement implements Layer {
                     </div>
                   `
                 : ""}
-              <!-- Stats -->
-              <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
-                  ${translateText("player_panel.nuke")}
-                </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                  ${this.getTotalNukesSent(other.id())}
-                </div>
-              </div>
 
               <!-- Action buttons -->
               <div class="flex justify-center gap-2">
                 <button
-                  @click=${(e) => this.handleChat(e, myPlayer, other)}
+                  @click=${(e: MouseEvent) =>
+                    this.handleChat(e, myPlayer, other)}
                   class="w-10 h-10 flex items-center justify-center
                            bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
@@ -375,7 +386,8 @@ export class PlayerPanel extends LitElement implements Layer {
                 </button>
                 ${canTarget
                   ? html`<button
-                      @click=${(e) => this.handleTargetClick(e, other)}
+                      @click=${(e: MouseEvent) =>
+                        this.handleTargetClick(e, other)}
                       class="w-10 h-10 flex items-center justify-center
                            bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
@@ -385,7 +397,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   : ""}
                 ${canBreakAlliance
                   ? html`<button
-                      @click=${(e) =>
+                      @click=${(e: MouseEvent) =>
                         this.handleBreakAllianceClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
                            bg-opacity-50 bg-gray-700 hover:bg-opacity-70
@@ -400,7 +412,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   : ""}
                 ${canSendAllianceRequest
                   ? html`<button
-                      @click=${(e) =>
+                      @click=${(e: MouseEvent) =>
                         this.handleAllianceClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
                            bg-opacity-50 bg-gray-700 hover:bg-opacity-70
@@ -409,9 +421,9 @@ export class PlayerPanel extends LitElement implements Layer {
                       <img src=${allianceIcon} alt="Alliance" class="w-6 h-6" />
                     </button>`
                   : ""}
-                ${canDonate
+                ${canDonateTroops
                   ? html`<button
-                      @click=${(e) =>
+                      @click=${(e: MouseEvent) =>
                         this.handleDonateTroopClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
                            bg-opacity-50 bg-gray-700 hover:bg-opacity-70
@@ -424,9 +436,9 @@ export class PlayerPanel extends LitElement implements Layer {
                       />
                     </button>`
                   : ""}
-                ${canDonate
+                ${canDonateGold
                   ? html`<button
-                      @click=${(e) =>
+                      @click=${(e: MouseEvent) =>
                         this.handleDonateGoldClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
@@ -437,7 +449,8 @@ export class PlayerPanel extends LitElement implements Layer {
                   : ""}
                 ${canSendEmoji
                   ? html`<button
-                      @click=${(e) => this.handleEmojiClick(e, myPlayer, other)}
+                      @click=${(e: MouseEvent) =>
+                        this.handleEmojiClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
                            bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
@@ -448,7 +461,8 @@ export class PlayerPanel extends LitElement implements Layer {
               </div>
               ${canEmbargo && other !== myPlayer
                 ? html`<button
-                    @click=${(e) => this.handleEmbargoClick(e, myPlayer, other)}
+                    @click=${(e: MouseEvent) =>
+                      this.handleEmbargoClick(e, myPlayer, other)}
                     class="w-100 h-10 flex items-center justify-center
                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                           text-white rounded-lg transition-colors"
@@ -458,7 +472,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 : ""}
               ${!canEmbargo && other !== myPlayer
                 ? html`<button
-                    @click=${(e) =>
+                    @click=${(e: MouseEvent) =>
                       this.handleStopEmbargoClick(e, myPlayer, other)}
                     class="w-100 h-10 flex items-center justify-center
                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70

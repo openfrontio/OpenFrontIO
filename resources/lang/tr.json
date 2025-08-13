@@ -112,7 +112,6 @@
     "pangaea": "Pangea",
     "map": "Harita",
     "betweentwoseas": "İki Deniz Arası",
-    "japan": "Japonya ve Komşuları",
     "knownworld": "Bilinen Dünya"
   },
   "private_lobby": {
@@ -161,7 +160,7 @@
     "difficulty": "Zorluk"
   },
   "game_starting_modal": {
-    "title": "Boyun Başlıyor...",
+    "title": "Oyun Başlıyor...",
     "desc": "Oyun başlamak üzere hazırlanıyor. Lütfen bekleyin."
   },
   "lang": {

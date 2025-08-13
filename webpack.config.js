@@ -1,3 +1,4 @@
+import { execSync } from "child_process";
 import CopyPlugin from "copy-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
@@ -7,6 +8,9 @@ import webpack from "webpack";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const gitCommit =
+  process.env.GIT_COMMIT ?? execSync("git rev-parse HEAD").toString().trim();
 
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
@@ -30,6 +34,10 @@ export default async (env, argv) => {
         },
         {
           test: /\.txt$/,
+          type: "asset/source",
+        },
+        {
+          test: /\.md$/,
           type: "asset/resource", // Changed from raw-loader
           generator: {
             filename: "text/[name].[contenthash][ext]", // Added content hash
@@ -79,7 +87,7 @@ export default async (env, argv) => {
           },
         },
         {
-          test: /\.(woff|woff2|eot|ttf|otf)$/,
+          test: /\.(woff|woff2|eot|ttf|otf|xml)$/,
           type: "asset/resource", // Changed from file-loader
           generator: {
             filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
@@ -103,22 +111,24 @@ export default async (env, argv) => {
         // Add optimization for HTML
         minify: isProduction
           ? {
-              collapseWhitespace: true,
-              removeComments: true,
-              removeRedundantAttributes: true,
-              removeScriptTypeAttributes: true,
-              removeStyleLinkTypeAttributes: true,
-              useShortDoctype: true,
-            }
+            collapseWhitespace: true,
+            removeComments: true,
+            removeRedundantAttributes: true,
+            removeScriptTypeAttributes: true,
+            removeStyleLinkTypeAttributes: true,
+            useShortDoctype: true,
+          }
           : false,
       }),
       new webpack.DefinePlugin({
         "process.env.WEBSOCKET_URL": JSON.stringify(
           isProduction ? "" : "localhost:3000",
         ),
-      }),
-      new webpack.DefinePlugin({
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
+        "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
+        "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
+          process.env.STRIPE_PUBLISHABLE_KEY,
+        ),
       }),
       new CopyPlugin({
         patterns: [
@@ -150,91 +160,91 @@ export default async (env, argv) => {
     devServer: isProduction
       ? {}
       : {
-          devMiddleware: { writeToDisk: true },
-          static: {
-            directory: path.join(__dirname, "static"),
-          },
-          historyApiFallback: true,
-          compress: true,
-          port: 9000,
-          proxy: [
-            // WebSocket proxies
-            {
-              context: ["/socket"],
-              target: "ws://localhost:3000",
-              ws: true,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            // Worker WebSocket proxies - using direct paths without /socket suffix
-            {
-              context: ["/w0"],
-              target: "ws://localhost:3001",
-              ws: true,
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            {
-              context: ["/w1"],
-              target: "ws://localhost:3002",
-              ws: true,
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            {
-              context: ["/w2"],
-              target: "ws://localhost:3003",
-              ws: true,
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            // Worker proxies for HTTP requests
-            {
-              context: ["/w0"],
-              target: "http://localhost:3001",
-              pathRewrite: { "^/w0": "" },
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            {
-              context: ["/w1"],
-              target: "http://localhost:3002",
-              pathRewrite: { "^/w1": "" },
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            {
-              context: ["/w2"],
-              target: "http://localhost:3003",
-              pathRewrite: { "^/w2": "" },
-              secure: false,
-              changeOrigin: true,
-              logLevel: "debug",
-            },
-            // Original API endpoints
-            {
-              context: [
-                "/api/env",
-                "/api/game",
-                "/api/public_lobbies",
-                "/api/join_game",
-                "/api/start_game",
-                "/api/create_game",
-                "/api/archive_singleplayer_game",
-                "/api/auth/callback",
-                "/api/auth/discord",
-                "/api/kick_player",
-              ],
-              target: "http://localhost:3000",
-              secure: false,
-              changeOrigin: true,
-            },
-          ],
+        devMiddleware: { writeToDisk: true },
+        static: {
+          directory: path.join(__dirname, "static"),
         },
+        historyApiFallback: true,
+        compress: true,
+        port: 9000,
+        proxy: [
+          // WebSocket proxies
+          {
+            context: ["/socket"],
+            target: "ws://localhost:3000",
+            ws: true,
+            changeOrigin: true,
+            logLevel: "debug",
+          },
+          // Worker WebSocket proxies - using direct paths without /socket suffix
+          {
+            context: ["/w0"],
+            target: "ws://localhost:3001",
+            ws: true,
+            secure: false,
+            changeOrigin: true,
+            logLevel: "debug",
+          },
+          {
+            context: ["/w1"],
+            target: "ws://localhost:3002",
+            ws: true,
+            secure: false,
+            changeOrigin: true,
+            logLevel: "debug",
+          },
+          {
+            context: ["/w2"],
+            target: "ws://localhost:3003",
+            ws: true,
+            secure: false,
+            changeOrigin: true,
+            logLevel: "debug",
+          },
+          // Worker proxies for HTTP requests
+          {
+            context: ["/w0"],
+            target: "http://localhost:3001",
+            pathRewrite: { "^/w0": "" },
+            secure: false,
+            changeOrigin: true,
+            logLevel: "debug",
+          },
+          {
+            context: ["/w1"],
+            target: "http://localhost:3002",
+            pathRewrite: { "^/w1": "" },
+            secure: false,
+            changeOrigin: true,
+            logLevel: "debug",
+          },
+          {
+            context: ["/w2"],
+            target: "http://localhost:3003",
+            pathRewrite: { "^/w2": "" },
+            secure: false,
+            changeOrigin: true,
+            logLevel: "debug",
+          },
+          // Original API endpoints
+          {
+            context: [
+              "/api/env",
+              "/api/game",
+              "/api/public_lobbies",
+              "/api/join_game",
+              "/api/start_game",
+              "/api/create_game",
+              "/api/archive_singleplayer_game",
+              "/api/auth/callback",
+              "/api/auth/discord",
+              "/api/kick_player",
+            ],
+            target: "http://localhost:3000",
+            secure: false,
+            changeOrigin: true,
+          },
+        ],
+      },
   };
 };

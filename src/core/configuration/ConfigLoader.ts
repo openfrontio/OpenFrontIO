@@ -1,4 +1,4 @@
-import { consolex } from "../Consolex";
+import { ApiEnvResponseSchema } from "../ExpressSchemas";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { Config, GameEnv, ServerConfig } from "./Config";
@@ -12,7 +12,7 @@ export let cachedSC: ServerConfig | null = null;
 export async function getConfig(
   gameConfig: GameConfig,
   userSettings: UserSettings | null,
-  isReplay: boolean = false,
+  isReplay = false,
 ): Promise<Config> {
   const sc = await getServerConfigFromClient();
   switch (sc.env()) {
@@ -20,7 +20,7 @@ export async function getConfig(
       return new DevConfig(sc, gameConfig, userSettings, isReplay);
     case GameEnv.Preprod:
     case GameEnv.Prod:
-      consolex.log("using prod config");
+      console.log("using prod config");
       return new DefaultConfig(sc, gameConfig, userSettings, isReplay);
     default:
       throw Error(`unsupported server configuration: ${process.env.GAME_ENV}`);
@@ -37,7 +37,8 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
       `Failed to fetch server config: ${response.status} ${response.statusText}`,
     );
   }
-  const config = await response.json();
+  const json = await response.json();
+  const config = ApiEnvResponseSchema.parse(json);
   // Log the retrieved configuration
   console.log("Server config loaded:", config);
 
@@ -51,13 +52,13 @@ export function getServerConfigFromServer(): ServerConfig {
 export function getServerConfig(gameEnv: string) {
   switch (gameEnv) {
     case "dev":
-      consolex.log("using dev server config");
+      console.log("using dev server config");
       return new DevServerConfig();
     case "staging":
-      consolex.log("using preprod server config");
+      console.log("using preprod server config");
       return preprodConfig;
     case "prod":
-      consolex.log("using prod server config");
+      console.log("using prod server config");
       return prodConfig;
     default:
       throw Error(`unsupported server configuration: ${gameEnv}`);
