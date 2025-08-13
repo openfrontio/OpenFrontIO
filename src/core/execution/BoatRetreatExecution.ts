@@ -1,4 +1,4 @@
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 
 export class BoatRetreatExecution implements Execution {
   private active = true;
@@ -13,8 +13,7 @@ export class BoatRetreatExecution implements Execution {
     const unit = this.player
       .units()
       .find(
-        (unit) =>
-          unit.id() === this.unitID && unit.type() === UnitType.TransportShip,
+        (unit) => unit.id() === this.unitID && unit.type() === "Transport Ship",
       );
 
     if (!unit) {

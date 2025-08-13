@@ -387,52 +387,52 @@ export class InputHandler {
 
       if (e.code === this.keybinds.buildCity) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.City);
+        this.setGhostStructure("City");
       }
 
       if (e.code === this.keybinds.buildFactory) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.Factory);
+        this.setGhostStructure("Factory");
       }
 
       if (e.code === this.keybinds.buildPort) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.Port);
+        this.setGhostStructure("Port");
       }
 
       if (e.code === this.keybinds.buildDefensePost) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.DefensePost);
+        this.setGhostStructure("Defense Post");
       }
 
       if (e.code === this.keybinds.buildMissileSilo) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.MissileSilo);
+        this.setGhostStructure("Missile Silo");
       }
 
       if (e.code === this.keybinds.buildSamLauncher) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.SAMLauncher);
+        this.setGhostStructure("SAM Launcher");
       }
 
       if (e.code === this.keybinds.buildAtomBomb) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.AtomBomb);
+        this.setGhostStructure("Atom Bomb");
       }
 
       if (e.code === this.keybinds.buildHydrogenBomb) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.HydrogenBomb);
+        this.setGhostStructure("Hydrogen Bomb");
       }
 
       if (e.code === this.keybinds.buildWarship) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.Warship);
+        this.setGhostStructure("Warship");
       }
 
       if (e.code === this.keybinds.buildMIRV) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.MIRV);
+        this.setGhostStructure("MIRV");
       }
 
       // Shift-D to toggle performance overlay

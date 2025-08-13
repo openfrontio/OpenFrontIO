@@ -1,5 +1,4 @@
 import type { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type {
   GameView,
@@ -40,7 +39,7 @@ export class SAMRadiusLayer implements Layer {
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
-    this.hoveredShow = !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
+    this.hoveredShow = !!types && types.indexOf("SAM Launcher") !== -1;
     this.updateVisibility();
   }
 
@@ -70,7 +69,7 @@ export class SAMRadiusLayer implements Layer {
     if (unitUpdates) {
       for (const update of unitUpdates) {
         const unit = this.game.unit(update.id);
-        if (unit && unit.type() === UnitType.SAMLauncher) {
+        if (unit && unit.type() === "SAM Launcher") {
           if (this.hasChanged(unit)) {
             this.needsRedraw = true; // A SAM changed: radiuses shall be recomputed when necessary
             break;
@@ -81,10 +80,10 @@ export class SAMRadiusLayer implements Layer {
 
     // show when in ghost mode for silo/sam/atom/hydrogen
     this.ghostShow =
-      this.uiState.ghostStructure === UnitType.MissileSilo ||
-      this.uiState.ghostStructure === UnitType.SAMLauncher ||
-      this.uiState.ghostStructure === UnitType.AtomBomb ||
-      this.uiState.ghostStructure === UnitType.HydrogenBomb;
+      this.uiState.ghostStructure === "Missile Silo" ||
+      this.uiState.ghostStructure === "SAM Launcher" ||
+      this.uiState.ghostStructure === "Atom Bomb" ||
+      this.uiState.ghostStructure === "Hydrogen Bomb";
     this.updateVisibility();
   }
 
@@ -129,7 +128,7 @@ export class SAMRadiusLayer implements Layer {
   private getAllSamRanges(): SAMRadius[] {
     // Get all active SAM launchers
     const samLaunchers = this.game
-      .units(UnitType.SAMLauncher)
+      .units("SAM Launcher")
       .filter((unit) => unit.isActive());
 
     // Update our tracking set

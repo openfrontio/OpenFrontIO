@@ -190,24 +190,25 @@ export interface UnitInfo {
   experimental?: boolean;
 }
 
-export enum UnitType {
-  TransportShip = "Transport",
-  Warship = "Warship",
-  Shell = "Shell",
-  SAMMissile = "SAMMissile",
-  Port = "Port",
-  AtomBomb = "Atom Bomb",
-  HydrogenBomb = "Hydrogen Bomb",
-  TradeShip = "Trade Ship",
-  MissileSilo = "Missile Silo",
-  DefensePost = "Defense Post",
-  SAMLauncher = "SAM Launcher",
-  City = "City",
-  MIRV = "MIRV",
-  MIRVWarhead = "MIRV Warhead",
-  Train = "Train",
-  Factory = "Factory",
-}
+export const UnitTypeSchema = z.enum([
+  "Transport Ship",
+  "Warship",
+  "Shell",
+  "SAM Missile",
+  "Port",
+  "Atom Bomb",
+  "Hydrogen Bomb",
+  "Trade Ship",
+  "Missile Silo",
+  "Defense Post",
+  "SAM Launcher",
+  "City",
+  "MIRV",
+  "MIRV Warhead",
+  "Train",
+  "Factory",
+]);
+export type UnitType = z.infer<typeof UnitTypeSchema>;
 
 export enum TrainType {
   Engine = "Engine",
@@ -215,12 +216,12 @@ export enum TrainType {
 }
 
 const _structureTypes: ReadonlySet<UnitType> = new Set([
-  UnitType.City,
-  UnitType.DefensePost,
-  UnitType.SAMLauncher,
-  UnitType.MissileSilo,
-  UnitType.Port,
-  UnitType.Factory,
+  "City",
+  "Defense Post",
+  "SAM Launcher",
+  "Missile Silo",
+  "Port",
+  "Factory",
 ]);
 
 export function isStructureType(type: UnitType): boolean {
@@ -236,57 +237,57 @@ export type TrajectoryTile = {
   targetable: boolean;
 };
 export interface UnitParamsMap {
-  [UnitType.TransportShip]: {
+  ["Transport Ship"]: {
     troops?: number;
     destination?: TileRef;
   };
 
-  [UnitType.Warship]: {
+  ["Warship"]: {
     patrolTile: TileRef;
   };
 
-  [UnitType.Shell]: Record<string, never>;
+  ["Shell"]: Record<string, never>;
 
-  [UnitType.SAMMissile]: Record<string, never>;
+  ["SAM Missile"]: Record<string, never>;
 
-  [UnitType.Port]: Record<string, never>;
+  ["Port"]: Record<string, never>;
 
-  [UnitType.AtomBomb]: {
+  ["Atom Bomb"]: {
     targetTile?: number;
     trajectory: TrajectoryTile[];
   };
 
-  [UnitType.HydrogenBomb]: {
+  ["Hydrogen Bomb"]: {
     targetTile?: number;
     trajectory: TrajectoryTile[];
   };
 
-  [UnitType.TradeShip]: {
+  ["Trade Ship"]: {
     targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
 
-  [UnitType.Train]: {
+  ["Train"]: {
     trainType: TrainType;
     targetUnit?: Unit;
     loaded?: boolean;
   };
 
-  [UnitType.Factory]: Record<string, never>;
+  ["Factory"]: Record<string, never>;
 
-  [UnitType.MissileSilo]: Record<string, never>;
+  ["Missile Silo"]: Record<string, never>;
 
-  [UnitType.DefensePost]: Record<string, never>;
+  ["Defense Post"]: Record<string, never>;
 
-  [UnitType.SAMLauncher]: Record<string, never>;
+  ["SAM Launcher"]: Record<string, never>;
 
-  [UnitType.City]: Record<string, never>;
+  ["City"]: Record<string, never>;
 
-  [UnitType.MIRV]: {
+  ["MIRV"]: {
     targetTile?: number;
   };
 
-  [UnitType.MIRVWarhead]: {
+  ["MIRV Warhead"]: {
     targetTile?: number;
   };
 }
@@ -297,10 +298,10 @@ export type UnitParams<T extends UnitType> = UnitParamsMap[T];
 export type AllUnitParams = UnitParamsMap[keyof UnitParamsMap];
 
 export const nukeTypes = [
-  UnitType.AtomBomb,
-  UnitType.HydrogenBomb,
-  UnitType.MIRVWarhead,
-  UnitType.MIRV,
+  "Atom Bomb",
+  "Hydrogen Bomb",
+  "MIRV Warhead",
+  "MIRV",
 ] as UnitType[];
 
 export enum Relation {

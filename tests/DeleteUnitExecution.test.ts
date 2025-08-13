@@ -6,7 +6,6 @@ import {
   PlayerInfo,
   PlayerType,
   Unit,
-  UnitType,
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { GameID } from "../src/core/Schemas";
@@ -73,7 +72,7 @@ describe("DeleteUnitExecution Security Tests", () => {
       throw new Error("Player has no tiles");
     }
     const spawnTile = playerTiles[0];
-    unit = player.buildUnit(UnitType.City, spawnTile, {});
+    unit = player.buildUnit("City", spawnTile, {});
 
     const tileOwner = game.owner(unit.tile());
     if (!tileOwner.isPlayer() || tileOwner.id() !== player.id()) {
@@ -87,7 +86,7 @@ describe("DeleteUnitExecution Security Tests", () => {
   describe("Security Validations", () => {
     it("should prevent deleting units not owned by player", () => {
       const enemyUnit = enemyPlayer.buildUnit(
-        UnitType.City,
+        "City",
         Array.from(enemyPlayer.tiles())[0],
         {},
       );

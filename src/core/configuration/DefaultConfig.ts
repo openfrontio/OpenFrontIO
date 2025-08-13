@@ -416,55 +416,55 @@ export class DefaultConfig implements Config {
 
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
-      case UnitType.TransportShip:
+      case "Transport Ship":
         return {
           cost: () => 0n,
           territoryBound: false,
         };
-      case UnitType.Warship:
+      case "Warship":
         return {
           cost: this.costWrapper(
             (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 250_000),
-            UnitType.Warship,
+            "Warship",
           ),
           territoryBound: false,
           maxHealth: 1000,
         };
-      case UnitType.Shell:
+      case "Shell":
         return {
           cost: () => 0n,
           territoryBound: false,
           damage: 250,
         };
-      case UnitType.SAMMissile:
+      case "SAM Missile":
         return {
           cost: () => 0n,
           territoryBound: false,
         };
-      case UnitType.Port:
+      case "Port":
         return {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
-            UnitType.Port,
-            UnitType.Factory,
+            "Port",
+            "Factory",
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
           canBuildTrainStation: true,
         };
-      case UnitType.AtomBomb:
+      case "Atom Bomb":
         return {
-          cost: this.costWrapper(() => 750_000, UnitType.AtomBomb),
+          cost: this.costWrapper(() => 750_000, "Atom Bomb"),
           territoryBound: false,
         };
-      case UnitType.HydrogenBomb:
+      case "Hydrogen Bomb":
         return {
-          cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
+          cost: this.costWrapper(() => 5_000_000, "Hydrogen Bomb"),
           territoryBound: false,
         };
-      case UnitType.MIRV:
+      case "MIRV":
         return {
           cost: (game: Game, player: Player) => {
             if (player.type() === PlayerType.Human && this.infiniteGold()) {
@@ -474,62 +474,62 @@ export class DefaultConfig implements Config {
           },
           territoryBound: false,
         };
-      case UnitType.MIRVWarhead:
+      case "MIRV Warhead":
         return {
           cost: () => 0n,
           territoryBound: false,
         };
-      case UnitType.TradeShip:
+      case "Trade Ship":
         return {
           cost: () => 0n,
           territoryBound: false,
         };
-      case UnitType.MissileSilo:
+      case "Missile Silo":
         return {
-          cost: this.costWrapper(() => 1_000_000, UnitType.MissileSilo),
+          cost: this.costWrapper(() => 1_000_000, "Missile Silo"),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
-      case UnitType.DefensePost:
+      case "Defense Post":
         return {
           cost: this.costWrapper(
             (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
-            UnitType.DefensePost,
+            "Defense Post",
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
-      case UnitType.SAMLauncher:
+      case "SAM Launcher":
         return {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(3_000_000, (numUnits + 1) * 1_500_000),
-            UnitType.SAMLauncher,
+            "SAM Launcher",
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
         };
-      case UnitType.City:
+      case "City":
         return {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
-            UnitType.City,
+            "City",
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
           canBuildTrainStation: true,
         };
-      case UnitType.Factory:
+      case "Factory":
         return {
           cost: this.costWrapper(
             (numUnits: number) =>
               Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
-            UnitType.Factory,
-            UnitType.Port,
+            "Factory",
+            "Port",
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -537,7 +537,7 @@ export class DefaultConfig implements Config {
           experimental: true,
           upgradable: true,
         };
-      case UnitType.Train:
+      case "Train":
         return {
           cost: () => 0n,
           territoryBound: false,
@@ -665,7 +665,7 @@ export class DefaultConfig implements Config {
       for (const dp of gm.nearbyUnits(
         tileToConquer,
         gm.config().defensePostRange(),
-        UnitType.DefensePost,
+        "Defense Post",
       )) {
         if (dp.unit.owner() === defender) {
           mag *= this.defensePostDefenseBonus();
@@ -823,7 +823,7 @@ export class DefaultConfig implements Config {
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player
-            .units(UnitType.City)
+            .units("City")
             .map((city) => city.level())
             .reduce((a, b) => a + b, 0) *
             this.cityTroopIncrease();
@@ -893,11 +893,11 @@ export class DefaultConfig implements Config {
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
     switch (unitType) {
-      case UnitType.MIRVWarhead:
+      case "MIRV Warhead":
         return { inner: 12, outer: 18 };
-      case UnitType.AtomBomb:
+      case "Atom Bomb":
         return { inner: 12, outer: 30 };
-      case UnitType.HydrogenBomb:
+      case "Hydrogen Bomb":
         return { inner: 80, outer: 100 };
     }
     throw new Error(`Unknown nuke type: ${unitType}`);
@@ -939,7 +939,7 @@ export class DefaultConfig implements Config {
     tilesOwned: number,
     maxTroops: number,
   ): number {
-    if (nukeType !== UnitType.MIRVWarhead) {
+    if (nukeType !== "MIRV Warhead") {
       return (5 * humans) / Math.max(1, tilesOwned);
     }
     const targetTroops = 0.03 * maxTroops;

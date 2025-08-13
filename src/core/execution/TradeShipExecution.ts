@@ -1,12 +1,5 @@
 import { renderNumber } from "../../client/Utils";
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, MessageType, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
@@ -33,16 +26,13 @@ export class TradeShipExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.tradeShip === undefined) {
-      const spawn = this.origOwner.canBuild(
-        UnitType.TradeShip,
-        this.srcPort.tile(),
-      );
+      const spawn = this.origOwner.canBuild("Trade Ship", this.srcPort.tile());
       if (spawn === false) {
         console.warn(`cannot build trade ship`);
         this.active = false;
         return;
       }
-      this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, spawn, {
+      this.tradeShip = this.origOwner.buildUnit("Trade Ship", spawn, {
         targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
@@ -84,7 +74,7 @@ export class TradeShipExecution implements Execution {
     ) {
       const ports = this.tradeShip
         .owner()
-        .units(UnitType.Port)
+        .units("Port")
         .sort(distSortUnit(this.mg, this.tradeShip));
       if (ports.length === 0) {
         this.tradeShip.delete(false);
@@ -137,7 +127,7 @@ export class TradeShipExecution implements Execution {
       .config()
       .tradeShipGold(
         this.tilesTraveled,
-        this.tradeShip!.owner().unitCount(UnitType.Port),
+        this.tradeShip!.owner().unitCount("Port"),
       );
 
     if (this.wasCaptured) {

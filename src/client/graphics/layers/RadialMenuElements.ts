@@ -325,27 +325,27 @@ function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
   };
 
   if (myPlayer) {
-    addStructureIfEnabled(UnitType.City);
-    addStructureIfEnabled(UnitType.DefensePost);
-    addStructureIfEnabled(UnitType.Port);
-    addStructureIfEnabled(UnitType.MissileSilo);
-    addStructureIfEnabled(UnitType.SAMLauncher);
-    addStructureIfEnabled(UnitType.Factory);
+    addStructureIfEnabled("City");
+    addStructureIfEnabled("Defense Post");
+    addStructureIfEnabled("Port");
+    addStructureIfEnabled("Missile Silo");
+    addStructureIfEnabled("SAM Launcher");
+    addStructureIfEnabled("Factory");
   } else {
-    addStructureIfEnabled(UnitType.Warship);
-    addStructureIfEnabled(UnitType.HydrogenBomb);
-    addStructureIfEnabled(UnitType.MIRV);
-    addStructureIfEnabled(UnitType.AtomBomb);
+    addStructureIfEnabled("Warship");
+    addStructureIfEnabled("Hydrogen Bomb");
+    addStructureIfEnabled("MIRV");
+    addStructureIfEnabled("Atom Bomb");
   }
 
   return Units;
 }
 
 const ATTACK_UNIT_TYPES: UnitType[] = [
-  UnitType.AtomBomb,
-  UnitType.MIRV,
-  UnitType.HydrogenBomb,
-  UnitType.Warship,
+  "Atom Bomb",
+  "MIRV",
+  "Hydrogen Bomb",
+  "Warship",
 ];
 
 function createMenuElements(
@@ -514,7 +514,7 @@ export const boatMenuElement: MenuElement = {
   name: "boat",
   disabled: (params: MenuElementParams) =>
     !params.playerActions.buildableUnits.some(
-      (unit) => unit.type === UnitType.TransportShip && unit.canBuild,
+      (unit) => unit.type === "Transport Ship" && unit.canBuild,
     ),
   icon: boatIcon,
   color: COLORS.boat,

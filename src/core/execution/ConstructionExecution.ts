@@ -101,38 +101,38 @@ export class ConstructionExecution implements Execution {
     }
     const player = this.player;
     switch (this.constructionType) {
-      case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
+      case "Atom Bomb":
+      case "Hydrogen Bomb":
         this.mg.addExecution(
           new NukeExecution(this.constructionType, player, this.tile),
         );
         break;
-      case UnitType.MIRV:
+      case "MIRV":
         this.mg.addExecution(new MirvExecution(player, this.tile));
         break;
-      case UnitType.Warship:
+      case "Warship":
         this.mg.addExecution(
           new WarshipExecution({ owner: player, patrolTile: this.tile }),
         );
         break;
-      case UnitType.Port:
+      case "Port":
         this.mg.addExecution(new PortExecution(this.structure!));
         break;
-      case UnitType.MissileSilo:
+      case "Missile Silo":
         this.mg.addExecution(new MissileSiloExecution(this.structure!));
         break;
-      case UnitType.DefensePost:
+      case "Defense Post":
         this.mg.addExecution(new DefensePostExecution(this.structure!));
         break;
-      case UnitType.SAMLauncher:
+      case "SAM Launcher":
         this.mg.addExecution(
           new SAMLauncherExecution(player, null, this.structure!),
         );
         break;
-      case UnitType.City:
+      case "City":
         this.mg.addExecution(new CityExecution(this.structure!));
         break;
-      case UnitType.Factory:
+      case "Factory":
         this.mg.addExecution(new FactoryExecution(this.structure!));
         break;
       default:
@@ -145,12 +145,12 @@ export class ConstructionExecution implements Execution {
 
   private isStructure(type: UnitType): boolean {
     switch (type) {
-      case UnitType.Port:
-      case UnitType.MissileSilo:
-      case UnitType.DefensePost:
-      case UnitType.SAMLauncher:
-      case UnitType.City:
-      case UnitType.Factory:
+      case "Port":
+      case "Missile Silo":
+      case "Defense Post":
+      case "SAM Launcher":
+      case "City":
+      case "Factory":
         return true;
       default:
         return false;

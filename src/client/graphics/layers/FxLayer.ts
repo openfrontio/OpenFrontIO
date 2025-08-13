@@ -1,5 +1,4 @@
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
   ConquestUpdate,
@@ -169,7 +168,7 @@ export class FxLayer implements Layer {
 
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
-      case UnitType.TransportShip: {
+      case "Transport Ship": {
         const my = this.game.myPlayer();
         if (!my) return;
         if (unit.owner() !== my) return;
@@ -186,37 +185,37 @@ export class FxLayer implements Layer {
         }
         break;
       }
-      case UnitType.AtomBomb: {
+      case "Atom Bomb": {
         this.createNukeTargetFxIfOwned(unit);
         this.onNukeEvent(unit, 70);
         break;
       }
-      case UnitType.MIRV:
+      case "MIRV":
         this.addSparks(unit);
         break;
-      case UnitType.MIRVWarhead:
+      case "MIRV Warhead":
         this.onNukeEvent(unit, 70);
         break;
-      case UnitType.HydrogenBomb: {
+      case "Hydrogen Bomb": {
         this.createNukeTargetFxIfOwned(unit);
         this.onNukeEvent(unit, 160);
         break;
       }
-      case UnitType.Warship:
+      case "Warship":
         this.onWarshipEvent(unit);
         break;
-      case UnitType.Shell:
+      case "Shell":
         this.onShellEvent(unit);
         break;
-      case UnitType.Train:
+      case "Train":
         this.onTrainEvent(unit);
         break;
-      case UnitType.DefensePost:
-      case UnitType.City:
-      case UnitType.Port:
-      case UnitType.MissileSilo:
-      case UnitType.SAMLauncher:
-      case UnitType.Factory:
+      case "Defense Post":
+      case "City":
+      case "Port":
+      case "Missile Silo":
+      case "SAM Launcher":
+      case "Factory":
         this.onStructureEvent(unit);
         break;
     }

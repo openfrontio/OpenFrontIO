@@ -42,10 +42,10 @@ export class NationMIRVBehavior {
 
   considerMIRV(): boolean {
     if (this.player === null) throw new Error("not initialized");
-    if (this.player.units(UnitType.MissileSilo).length === 0) {
+    if (this.player.units("Missile Silo").length === 0) {
       return false;
     }
-    if (this.player.gold() < this.cost(UnitType.MIRV)) {
+    if (this.player.gold() < this.cost("MIRV")) {
       return false;
     }
 
@@ -199,7 +199,7 @@ export class NationMIRVBehavior {
 
   private isInboundMIRVFrom(attacker: Player): boolean {
     if (this.player === null) throw new Error("not initialized");
-    const enemyMirvs = attacker.units(UnitType.MIRV);
+    const enemyMirvs = attacker.units("MIRV");
     for (const mirv of enemyMirvs) {
       const dst = mirv.targetTile();
       if (!dst) continue;
@@ -219,7 +219,7 @@ export class NationMIRVBehavior {
     this.emojiBehavior.maybeSendHeckleEmoji(enemy);
 
     const centerTile = this.calculateTerritoryCenter(enemy);
-    if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
+    if (centerTile && this.player.canBuild("MIRV", centerTile)) {
       this.sendMIRV(centerTile);
       return;
     }
@@ -253,7 +253,7 @@ export class NationMIRVBehavior {
   }
 
   private countCities(p: Player): number {
-    return p.unitCount(UnitType.City);
+    return p.unitCount("City");
   }
 
   private calculateTerritoryCenter(target: Player): TileRef | null {

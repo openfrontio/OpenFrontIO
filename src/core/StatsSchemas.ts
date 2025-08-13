@@ -1,30 +1,25 @@
 import { z } from "zod";
-import { UnitType } from "./game/Game";
 
 export const bombUnits = ["abomb", "hbomb", "mirv", "mirvw"] as const;
 export const BombUnitSchema = z.enum(bombUnits);
 export type BombUnit = z.infer<typeof BombUnitSchema>;
-export type NukeType =
-  | UnitType.AtomBomb
-  | UnitType.HydrogenBomb
-  | UnitType.MIRV
-  | UnitType.MIRVWarhead;
+export type NukeType = "Atom Bomb" | "Hydrogen Bomb" | "MIRV" | "MIRV Warhead";
 
 export const unitTypeToBombUnit = {
-  [UnitType.AtomBomb]: "abomb",
-  [UnitType.HydrogenBomb]: "hbomb",
-  [UnitType.MIRV]: "mirv",
-  [UnitType.MIRVWarhead]: "mirvw",
+  ["Atom Bomb"]: "abomb",
+  ["Hydrogen Bomb"]: "hbomb",
+  ["MIRV"]: "mirv",
+  ["MIRV Warhead"]: "mirvw",
 } as const satisfies Record<NukeType, BombUnit>;
 
 export const boatUnits = ["trade", "trans"] as const;
 export const BoatUnitSchema = z.enum(boatUnits);
 export type BoatUnit = z.infer<typeof BoatUnitSchema>;
-export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
+export type BoatUnitType = "Trade Ship" | "Transport Ship";
 
 // export const unitTypeToBoatUnit = {
-//   [UnitType.TradeShip]: "trade",
-//   [UnitType.TransportShip]: "trans",
+//   ["Trade Ship"]: "trade",
+//   ["Transport Ship"]: "trans",
 // } as const satisfies Record<BoatUnitType, BoatUnit>;
 
 export const otherUnits = [
@@ -39,22 +34,22 @@ export const otherUnits = [
 export const OtherUnitSchema = z.enum(otherUnits);
 export type OtherUnit = z.infer<typeof OtherUnitSchema>;
 export type OtherUnitType =
-  | UnitType.City
-  | UnitType.DefensePost
-  | UnitType.MissileSilo
-  | UnitType.Port
-  | UnitType.SAMLauncher
-  | UnitType.Warship
-  | UnitType.Factory;
+  | "City"
+  | "Defense Post"
+  | "Missile Silo"
+  | "Port"
+  | "SAM Launcher"
+  | "Warship"
+  | "Factory";
 
 export const unitTypeToOtherUnit = {
-  [UnitType.City]: "city",
-  [UnitType.DefensePost]: "defp",
-  [UnitType.MissileSilo]: "silo",
-  [UnitType.Port]: "port",
-  [UnitType.SAMLauncher]: "saml",
-  [UnitType.Warship]: "wshp",
-  [UnitType.Factory]: "fact",
+  ["City"]: "city",
+  ["Defense Post"]: "defp",
+  ["Missile Silo"]: "silo",
+  ["Port"]: "port",
+  ["SAM Launcher"]: "saml",
+  ["Warship"]: "wshp",
+  ["Factory"]: "fact",
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
 // Attacks

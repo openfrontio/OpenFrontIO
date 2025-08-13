@@ -1,7 +1,7 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { Game, Player, PlayerType, UnitType } from "../src/core/game/Game";
+import { Game, Player, PlayerType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
 
@@ -88,9 +88,9 @@ describe("AllianceRequestExecution", () => {
     expect(player2.incomingAllianceRequests().length).toBe(1);
 
     // Player 1 Builds a silo & launches a missile at player 2.
-    constructionExecution(game, player1, 0, 0, UnitType.MissileSilo);
+    constructionExecution(game, player1, 0, 0, "Missile Silo");
     game.addExecution(
-      new NukeExecution(UnitType.AtomBomb, player1, game.ref(0, 1), null),
+      new NukeExecution("Atom Bomb", player1, game.ref(0, 1), null),
     );
     game.executeNextTick();
     game.executeNextTick();

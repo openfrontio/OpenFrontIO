@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
@@ -49,7 +49,7 @@ export class PlayerExecution implements Execution {
       }
 
       const captor = this.mg!.player(owner.id());
-      if (u.type() === UnitType.DefensePost) {
+      if (u.type() === "Defense Post") {
         u.decreaseLevel(captor);
         if (u.isActive()) {
           captor.captureUnit(u);
@@ -65,10 +65,10 @@ export class PlayerExecution implements Execution {
       this.player.removeGold(gold);
       this.player.units().forEach((u) => {
         if (
-          u.type() !== UnitType.AtomBomb &&
-          u.type() !== UnitType.HydrogenBomb &&
-          u.type() !== UnitType.MIRVWarhead &&
-          u.type() !== UnitType.MIRV
+          u.type() !== "Atom Bomb" &&
+          u.type() !== "Hydrogen Bomb" &&
+          u.type() !== "MIRV Warhead" &&
+          u.type() !== "MIRV"
         ) {
           u.delete();
         }

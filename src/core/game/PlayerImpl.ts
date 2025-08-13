@@ -35,6 +35,7 @@ import {
   Unit,
   UnitParams,
   UnitType,
+  UnitTypeSchema,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
@@ -934,7 +935,7 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
+    return UnitTypeSchema.options.map((u) => {
       let canUpgrade: number | false = false;
       if (!this.mg.inSpawnPhase()) {
         const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
@@ -968,34 +969,34 @@ export class PlayerImpl implements Player {
       return false;
     }
     switch (unitType) {
-      case UnitType.MIRV:
+      case "MIRV":
         if (!this.mg.hasOwner(targetTile)) {
           return false;
         }
         return this.nukeSpawn(targetTile);
-      case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
+      case "Atom Bomb":
+      case "Hydrogen Bomb":
         return this.nukeSpawn(targetTile);
-      case UnitType.MIRVWarhead:
+      case "MIRV Warhead":
         return targetTile;
-      case UnitType.Port:
+      case "Port":
         return this.portSpawn(targetTile, validTiles);
-      case UnitType.Warship:
+      case "Warship":
         return this.warshipSpawn(targetTile);
-      case UnitType.Shell:
-      case UnitType.SAMMissile:
+      case "Shell":
+      case "SAM Missile":
         return targetTile;
-      case UnitType.TransportShip:
+      case "Transport Ship":
         return canBuildTransportShip(this.mg, this, targetTile);
-      case UnitType.TradeShip:
+      case "Trade Ship":
         return this.tradeShipSpawn(targetTile);
-      case UnitType.Train:
+      case "Train":
         return this.landBasedUnitSpawn(targetTile);
-      case UnitType.MissileSilo:
-      case UnitType.DefensePost:
-      case UnitType.SAMLauncher:
-      case UnitType.City:
-      case UnitType.Factory:
+      case "Missile Silo":
+      case "Defense Post":
+      case "SAM Launcher":
+      case "City":
+      case "Factory":
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
@@ -1010,7 +1011,7 @@ export class PlayerImpl implements Player {
       }
     }
     // only get missilesilos that are not on cooldown and not under construction
-    const spawns = this.units(UnitType.MissileSilo)
+    const spawns = this.units("Missile Silo")
       .filter((silo) => {
         return !silo.isInCooldown() && !silo.isUnderConstruction();
       })
@@ -1048,7 +1049,7 @@ export class PlayerImpl implements Player {
     if (!this.mg.isOcean(tile)) {
       return false;
     }
-    const spawns = this.units(UnitType.Port).sort(
+    const spawns = this.units("Port").sort(
       (a, b) =>
         this.mg.manhattanDist(a.tile(), tile) -
         this.mg.manhattanDist(b.tile(), tile),
@@ -1080,7 +1081,7 @@ export class PlayerImpl implements Player {
     }
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
-    const types = Object.values(UnitType).filter((unitTypeValue) => {
+    const types = UnitTypeSchema.options.filter((unitTypeValue) => {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 
@@ -1118,9 +1119,7 @@ export class PlayerImpl implements Player {
   }
 
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
-    const spawns = this.units(UnitType.Port).filter(
-      (u) => u.tile() === targetTile,
-    );
+    const spawns = this.units("Port").filter((u) => u.tile() === targetTile);
     if (spawns.length === 0) {
       return false;
     }

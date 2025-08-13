@@ -42,8 +42,8 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       this.currentGhostStructure = e.ghostStructure;
       // Clear trajectory if ghost structure changed
       if (
-        e.ghostStructure !== UnitType.AtomBomb &&
-        e.ghostStructure !== UnitType.HydrogenBomb
+        e.ghostStructure !== "Atom Bomb" &&
+        e.ghostStructure !== "Hydrogen Bomb"
       ) {
         this.trajectoryPoints = [];
         this.lastTargetTile = null;
@@ -69,8 +69,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   private updateTrajectoryPreview() {
     const ghostStructure = this.currentGhostStructure;
     const isNukeType =
-      ghostStructure === UnitType.AtomBomb ||
-      ghostStructure === UnitType.HydrogenBomb;
+      ghostStructure === "Atom Bomb" || ghostStructure === "Hydrogen Bomb";
 
     // Clear trajectory if not a nuke type
     if (!isNukeType) {
@@ -164,8 +163,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   private updateTrajectoryPath() {
     const ghostStructure = this.currentGhostStructure;
     const isNukeType =
-      ghostStructure === UnitType.AtomBomb ||
-      ghostStructure === UnitType.HydrogenBomb;
+      ghostStructure === "Atom Bomb" || ghostStructure === "Hydrogen Bomb";
 
     // Clear trajectory if not a nuke type or no cached spawn tile
     if (!isNukeType || !this.cachedSpawnTile) {
@@ -258,7 +256,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       for (const sam of this.game.nearbyUnits(
         tile,
         this.game.config().maxSamRange(),
-        UnitType.SAMLauncher,
+        "SAM Launcher",
       )) {
         if (
           sam.unit.owner().isMe() ||
@@ -287,8 +285,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   private drawTrajectoryPreview(context: CanvasRenderingContext2D) {
     const ghostStructure = this.currentGhostStructure;
     const isNukeType =
-      ghostStructure === UnitType.AtomBomb ||
-      ghostStructure === UnitType.HydrogenBomb;
+      ghostStructure === "Atom Bomb" || ghostStructure === "Hydrogen Bomb";
 
     if (!isNukeType || this.trajectoryPoints.length === 0) {
       return;

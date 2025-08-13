@@ -1,4 +1,4 @@
-import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Unit } from "../game/Game";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class FactoryExecution implements Execution {
@@ -35,7 +35,7 @@ export class FactoryExecution implements Execution {
     const structures = this.game.nearbyUnits(
       this.factory.tile()!,
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Port, UnitType.Factory],
+      ["City", "Port", "Factory"],
     );
 
     this.game.addExecution(new TrainStationExecution(this.factory, true));

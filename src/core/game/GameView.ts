@@ -102,7 +102,7 @@ export class UnitView {
     return this.data.troops;
   }
   retreating(): boolean {
-    if (this.type() !== UnitType.TransportShip) {
+    if (this.type() !== "Transport Ship") {
       throw Error("Must be a transport ship");
     }
     return this.data.retreating;
@@ -155,7 +155,7 @@ export class UnitView {
     let readiness = missilesReady / maxMissiles;
 
     const cooldownDuration =
-      this.data.unitType === UnitType.SAMLauncher
+      this.data.unitType === "SAM Launcher"
         ? this.gameView.config().SAMCooldown()
         : this.gameView.config().SiloCooldown();
 

@@ -940,11 +940,7 @@ export class GameImpl implements Game {
     if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
       const ships = conquered
         .units()
-        .filter(
-          (u) =>
-            u.type() === UnitType.Warship ||
-            u.type() === UnitType.TransportShip,
-        );
+        .filter((u) => u.type() === "Warship" || u.type() === "Transport Ship");
 
       for (const ship of ships) {
         conqueror.captureUnit(ship);

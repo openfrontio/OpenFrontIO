@@ -128,7 +128,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
       const units = this.game
-        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
+        .units("Warship", "Trade Ship", "Transport Ship")
         .filter((u) => euclideanDistWorld(worldCoord, u.tile(), this.game) < 50)
         .sort(distSortUnitWorld(worldCoord, this.game));
 
@@ -397,37 +397,37 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               <div class="flex flex-wrap max-w-3xl gap-1">
                 ${this.displayUnitCount(
                   player,
-                  UnitType.City,
+                  "City",
                   cityIcon,
                   "player_info_overlay.cities",
                 )}
                 ${this.displayUnitCount(
                   player,
-                  UnitType.Factory,
+                  "Factory",
                   factoryIcon,
                   "player_info_overlay.factories",
                 )}
                 ${this.displayUnitCount(
                   player,
-                  UnitType.Port,
+                  "Port",
                   portIcon,
                   "player_info_overlay.ports",
                 )}
                 ${this.displayUnitCount(
                   player,
-                  UnitType.MissileSilo,
+                  "Missile Silo",
                   missileSiloIcon,
                   "player_info_overlay.missile_launchers",
                 )}
                 ${this.displayUnitCount(
                   player,
-                  UnitType.SAMLauncher,
+                  "SAM Launcher",
                   samLauncherIcon,
                   "player_info_overlay.sams",
                 )}
                 ${this.displayUnitCount(
                   player,
-                  UnitType.Warship,
+                  "Warship",
                   warshipIcon,
                   "player_info_overlay.warships",
                 )}

@@ -17,7 +17,7 @@ import {
   HumansVsNations,
   Quads,
   Trios,
-  UnitType,
+  UnitTypeSchema,
 } from "./game/Game";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
@@ -172,7 +172,7 @@ export const GameConfigSchema = z.object({
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
-  disabledUnits: z.enum(UnitType).array().optional(),
+  disabledUnits: UnitTypeSchema.array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
 });
 
@@ -306,13 +306,13 @@ export const DonateTroopIntentSchema = BaseIntentSchema.extend({
 
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
-  unit: z.enum(UnitType),
+  unit: UnitTypeSchema,
   tile: z.number(),
 });
 
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
   type: z.literal("upgrade_structure"),
-  unit: z.enum(UnitType),
+  unit: UnitTypeSchema,
   unitId: z.number(),
 });
 

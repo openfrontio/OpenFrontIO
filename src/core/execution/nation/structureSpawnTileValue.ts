@@ -10,12 +10,12 @@ export function structureSpawnTileValue(
   const borderTiles = player.borderTiles();
   const otherUnits = player.units(type);
   // Prefer spacing structures out of atom bomb range
-  const borderSpacing = mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+  const borderSpacing = mg.config().nukeMagnitudes("Atom Bomb").outer;
   const structureSpacing = borderSpacing * 2;
   switch (type) {
-    case UnitType.City:
-    case UnitType.Factory:
-    case UnitType.MissileSilo: {
+    case "City":
+    case "Factory":
+    case "Missile Silo": {
       return (tile) => {
         let w = 0;
 
@@ -41,7 +41,7 @@ export function structureSpawnTileValue(
         return w;
       };
     }
-    case UnitType.Port: {
+    case "Port": {
       return (tile) => {
         let w = 0;
 
@@ -56,7 +56,7 @@ export function structureSpawnTileValue(
         return w;
       };
     }
-    case UnitType.DefensePost: {
+    case "Defense Post": {
       return (tile) => {
         let w = 0;
 
@@ -101,14 +101,14 @@ export function structureSpawnTileValue(
         return w;
       };
     }
-    case UnitType.SAMLauncher: {
+    case "SAM Launcher": {
       const protectTiles: Set<TileRef> = new Set();
       for (const unit of player.units()) {
         switch (unit.type()) {
-          case UnitType.City:
-          case UnitType.Factory:
-          case UnitType.MissileSilo:
-          case UnitType.Port:
+          case "City":
+          case "Factory":
+          case "Missile Silo":
+          case "Port":
             protectTiles.add(unit.tile());
         }
       }

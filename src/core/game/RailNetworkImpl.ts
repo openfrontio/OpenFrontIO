@@ -2,7 +2,7 @@ import { RailroadExecution } from "../execution/RailroadExecution";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
 import { SerialAStar } from "../pathfinding/SerialAStar";
-import { Game, Unit, UnitType } from "./Game";
+import { Game, Unit } from "./Game";
 import { TileRef } from "./GameMap";
 import { RailNetwork } from "./RailNetwork";
 import { Railroad } from "./Railroad";
@@ -134,7 +134,7 @@ export class RailNetworkImpl implements RailNetwork {
     const neighbors = this.game.nearbyUnits(
       station.tile(),
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Factory, UnitType.Port],
+      ["City", "Factory", "Port"],
     );
 
     const editedClusters = new Set<Cluster>();

@@ -14,6 +14,7 @@ import {
   Quads,
   Trios,
   UnitType,
+  UnitTypeSchema,
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -587,7 +588,7 @@ export class SinglePlayerModal extends LitElement {
               instantBuild: this.instantBuild,
               randomSpawn: this.randomSpawn,
               disabledUnits: this.disabledUnits
-                .map((u) => Object.values(UnitType).find((ut) => ut === u))
+                .map((u) => UnitTypeSchema.options.find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
               ...(this.gameMode === GameMode.Team &&
               this.teamCount === HumansVsNations

@@ -12,16 +12,16 @@ import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
 
 export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
-  [UnitType.City]: "circle",
-  [UnitType.Port]: "pentagon",
-  [UnitType.Factory]: "circle",
-  [UnitType.DefensePost]: "octagon",
-  [UnitType.SAMLauncher]: "square",
-  [UnitType.MissileSilo]: "triangle",
-  [UnitType.Warship]: "cross",
-  [UnitType.AtomBomb]: "cross",
-  [UnitType.HydrogenBomb]: "cross",
-  [UnitType.MIRV]: "cross",
+  ["City"]: "circle",
+  ["Port"]: "pentagon",
+  ["Factory"]: "circle",
+  ["Defense Post"]: "octagon",
+  ["SAM Launcher"]: "square",
+  ["Missile Silo"]: "triangle",
+  ["Warship"]: "cross",
+  ["Atom Bomb"]: "cross",
+  ["Hydrogen Bomb"]: "cross",
+  ["MIRV"]: "cross",
 };
 export const LEVEL_SCALE_FACTOR = 3;
 export const ICON_SCALE_FACTOR_ZOOMED_IN = 3.5;
@@ -57,12 +57,12 @@ export class SpriteFactory {
     UnitType,
     { iconPath: string; image: HTMLImageElement | null }
   > = new Map([
-    [UnitType.City, { iconPath: cityIcon, image: null }],
-    [UnitType.Factory, { iconPath: factoryIcon, image: null }],
-    [UnitType.DefensePost, { iconPath: shieldIcon, image: null }],
-    [UnitType.Port, { iconPath: anchorIcon, image: null }],
-    [UnitType.MissileSilo, { iconPath: missileSiloIcon, image: null }],
-    [UnitType.SAMLauncher, { iconPath: SAMMissileIcon, image: null }],
+    ["City", { iconPath: cityIcon, image: null }],
+    ["Factory", { iconPath: factoryIcon, image: null }],
+    ["Defense Post", { iconPath: shieldIcon, image: null }],
+    ["Port", { iconPath: anchorIcon, image: null }],
+    ["Missile Silo", { iconPath: missileSiloIcon, image: null }],
+    ["SAM Launcher", { iconPath: SAMMissileIcon, image: null }],
   ]);
   constructor(
     theme: Theme,
@@ -461,20 +461,20 @@ export class SpriteFactory {
     const circle = new PIXI.Graphics();
     let radius = 0;
     switch (type) {
-      case UnitType.SAMLauncher:
+      case "SAM Launcher":
         radius = this.game.config().samRange(level ?? 1);
         break;
-      case UnitType.Factory:
+      case "Factory":
         radius = this.game.config().trainStationMaxRange();
         break;
-      case UnitType.DefensePost:
+      case "Defense Post":
         radius = this.game.config().defensePostRange();
         break;
-      case UnitType.AtomBomb:
-        radius = this.game.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+      case "Atom Bomb":
+        radius = this.game.config().nukeMagnitudes("Atom Bomb").outer;
         break;
-      case UnitType.HydrogenBomb:
-        radius = this.game.config().nukeMagnitudes(UnitType.HydrogenBomb).outer;
+      case "Hydrogen Bomb":
+        radius = this.game.config().nukeMagnitudes("Hydrogen Bomb").outer;
         break;
       default:
         return null;

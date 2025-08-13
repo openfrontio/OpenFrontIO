@@ -1,10 +1,4 @@
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { Stats } from "../src/core/game/Stats";
 import { StatsImpl } from "../src/core/game/StatsImpl";
 import { replacer } from "../src/core/Util";
@@ -137,21 +131,21 @@ describe("Stats", () => {
   });
 
   test("bombLaunch", () => {
-    stats.bombLaunch(player1, player2, UnitType.AtomBomb);
+    stats.bombLaunch(player1, player2, "Atom Bomb");
     expect(stats.stats()).toStrictEqual({
       client1: { bombs: { abomb: [1n] } },
     });
   });
 
   test("bombLand", () => {
-    stats.bombLand(player1, player2, UnitType.HydrogenBomb);
+    stats.bombLand(player1, player2, "Hydrogen Bomb");
     expect(stats.stats()).toStrictEqual({
       client1: { bombs: { hbomb: [0n, 1n] } },
     });
   });
 
   test("bombIntercept", () => {
-    stats.bombIntercept(player1, UnitType.MIRVWarhead, 1);
+    stats.bombIntercept(player1, "MIRV Warhead", 1);
     expect(stats.stats()).toStrictEqual({
       client1: { bombs: { mirvw: [0n, 0n, 1n] } },
     });
@@ -182,14 +176,14 @@ describe("Stats", () => {
   });
 
   test("unitBuild", () => {
-    stats.unitBuild(player1, UnitType.City);
+    stats.unitBuild(player1, "City");
     expect(stats.stats()).toStrictEqual({
       client1: { units: { city: [1n] } },
     });
   });
 
   test("unitCapture", () => {
-    stats.unitCapture(player1, UnitType.DefensePost);
+    stats.unitCapture(player1, "Defense Post");
     expect(stats.stats()).toStrictEqual({
       client1: {
         units: {
@@ -200,7 +194,7 @@ describe("Stats", () => {
   });
 
   test("unitDestroy", () => {
-    stats.unitDestroy(player1, UnitType.MissileSilo);
+    stats.unitDestroy(player1, "Missile Silo");
     expect(stats.stats()).toStrictEqual({
       client1: {
         units: {
@@ -211,7 +205,7 @@ describe("Stats", () => {
   });
 
   test("unitLose", () => {
-    stats.unitLose(player1, UnitType.Port);
+    stats.unitLose(player1, "Port");
     expect(stats.stats()).toStrictEqual({
       client1: {
         units: {
@@ -235,7 +229,7 @@ describe("Stats", () => {
   });
 
   test("stringify", () => {
-    stats.unitLose(player1, UnitType.Port);
+    stats.unitLose(player1, "Port");
     expect(JSON.stringify(stats.stats(), replacer)).toBe(
       '{"client1":{"units":{"port":["0","0","0","1"]}}}',
     );

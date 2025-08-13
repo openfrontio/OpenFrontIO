@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, Team, UnitType } from "../../../core/game/Game";
+import { GameMode, Team } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderNumber, renderTroops, translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -83,10 +83,10 @@ export class TeamStats extends LitElement implements Layer {
             totalMaxTroops += this.game.config().maxTroops(p);
             totalGold += p.gold();
             totalScoreSort += p.numTilesOwned();
-            totalLaunchers += p.totalUnitLevels(UnitType.MissileSilo);
-            totalSAMs += p.totalUnitLevels(UnitType.SAMLauncher);
-            totalWarShips += p.totalUnitLevels(UnitType.Warship);
-            totalCities += p.totalUnitLevels(UnitType.City);
+            totalLaunchers += p.totalUnitLevels("Missile Silo");
+            totalSAMs += p.totalUnitLevels("SAM Launcher");
+            totalWarShips += p.totalUnitLevels("Warship");
+            totalCities += p.totalUnitLevels("City");
           }
         }
 

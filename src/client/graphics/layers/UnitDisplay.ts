@@ -55,16 +55,16 @@ export class UnitDisplay extends LitElement implements Layer {
     }
 
     this.allDisabled =
-      config.isUnitDisabled(UnitType.City) &&
-      config.isUnitDisabled(UnitType.Factory) &&
-      config.isUnitDisabled(UnitType.Port) &&
-      config.isUnitDisabled(UnitType.DefensePost) &&
-      config.isUnitDisabled(UnitType.MissileSilo) &&
-      config.isUnitDisabled(UnitType.SAMLauncher) &&
-      config.isUnitDisabled(UnitType.Warship) &&
-      config.isUnitDisabled(UnitType.AtomBomb) &&
-      config.isUnitDisabled(UnitType.HydrogenBomb) &&
-      config.isUnitDisabled(UnitType.MIRV);
+      config.isUnitDisabled("City") &&
+      config.isUnitDisabled("Factory") &&
+      config.isUnitDisabled("Port") &&
+      config.isUnitDisabled("Defense Post") &&
+      config.isUnitDisabled("Missile Silo") &&
+      config.isUnitDisabled("SAM Launcher") &&
+      config.isUnitDisabled("Warship") &&
+      config.isUnitDisabled("Atom Bomb") &&
+      config.isUnitDisabled("Hydrogen Bomb") &&
+      config.isUnitDisabled("MIRV");
     this.requestUpdate();
   }
 
@@ -81,17 +81,17 @@ export class UnitDisplay extends LitElement implements Layer {
     if (this.game?.config().isUnitDisabled(item)) return false;
     const player = this.game?.myPlayer();
     switch (item) {
-      case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
-      case UnitType.MIRV:
+      case "Atom Bomb":
+      case "Hydrogen Bomb":
+      case "MIRV":
         return (
           this.cost(item) <= (player?.gold() ?? 0n) &&
-          (player?.units(UnitType.MissileSilo).length ?? 0) > 0
+          (player?.units("Missile Silo").length ?? 0) > 0
         );
-      case UnitType.Warship:
+      case "Warship":
         return (
           this.cost(item) <= (player?.gold() ?? 0n) &&
-          (player?.units(UnitType.Port).length ?? 0) > 0
+          (player?.units("Port").length ?? 0) > 0
         );
       default:
         return this.cost(item) <= (player?.gold() ?? 0n);
@@ -104,13 +104,13 @@ export class UnitDisplay extends LitElement implements Layer {
       this.playerActions = actions;
     });
     if (!player) return;
-    this._cities = player.totalUnitLevels(UnitType.City);
-    this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
-    this._port = player.totalUnitLevels(UnitType.Port);
-    this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
-    this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
-    this._factories = player.totalUnitLevels(UnitType.Factory);
-    this._warships = player.totalUnitLevels(UnitType.Warship);
+    this._cities = player.totalUnitLevels("City");
+    this._missileSilo = player.totalUnitLevels("Missile Silo");
+    this._port = player.totalUnitLevels("Port");
+    this._defensePost = player.totalUnitLevels("Defense Post");
+    this._samLauncher = player.totalUnitLevels("SAM Launcher");
+    this._factories = player.totalUnitLevels("Factory");
+    this._warships = player.totalUnitLevels("Warship");
     this.requestUpdate();
   }
 
@@ -137,42 +137,42 @@ export class UnitDisplay extends LitElement implements Layer {
             ${this.renderUnitItem(
               cityIcon,
               this._cities,
-              UnitType.City,
+              "City",
               "city",
               this.keybinds["buildCity"]?.key ?? "1",
             )}
             ${this.renderUnitItem(
               factoryIcon,
               this._factories,
-              UnitType.Factory,
+              "Factory",
               "factory",
               this.keybinds["buildFactory"]?.key ?? "2",
             )}
             ${this.renderUnitItem(
               portIcon,
               this._port,
-              UnitType.Port,
+              "Port",
               "port",
               this.keybinds["buildPort"]?.key ?? "3",
             )}
             ${this.renderUnitItem(
               defensePostIcon,
               this._defensePost,
-              UnitType.DefensePost,
+              "Defense Post",
               "defense_post",
               this.keybinds["buildDefensePost"]?.key ?? "4",
             )}
             ${this.renderUnitItem(
               missileSiloIcon,
               this._missileSilo,
-              UnitType.MissileSilo,
+              "Missile Silo",
               "missile_silo",
               this.keybinds["buildMissileSilo"]?.key ?? "5",
             )}
             ${this.renderUnitItem(
               samLauncherIcon,
               this._samLauncher,
-              UnitType.SAMLauncher,
+              "SAM Launcher",
               "sam_launcher",
               this.keybinds["buildSamLauncher"]?.key ?? "6",
             )}
@@ -183,28 +183,28 @@ export class UnitDisplay extends LitElement implements Layer {
             ${this.renderUnitItem(
               warshipIcon,
               this._warships,
-              UnitType.Warship,
+              "Warship",
               "warship",
               this.keybinds["buildWarship"]?.key ?? "7",
             )}
             ${this.renderUnitItem(
               atomBombIcon,
               null,
-              UnitType.AtomBomb,
+              "Atom Bomb",
               "atom_bomb",
               this.keybinds["buildAtomBomb"]?.key ?? "8",
             )}
             ${this.renderUnitItem(
               hydrogenBombIcon,
               null,
-              UnitType.HydrogenBomb,
+              "Hydrogen Bomb",
               "hydrogen_bomb",
               this.keybinds["buildHydrogenBomb"]?.key ?? "9",
             )}
             ${this.renderUnitItem(
               mirvIcon,
               null,
-              UnitType.MIRV,
+              "MIRV",
               "mirv",
               this.keybinds["buildMIRV"]?.key ?? "0",
             )}
@@ -279,17 +279,14 @@ export class UnitDisplay extends LitElement implements Layer {
           }}
           @mouseenter=${() => {
             switch (unitType) {
-              case UnitType.AtomBomb:
-              case UnitType.HydrogenBomb:
+              case "Atom Bomb":
+              case "Hydrogen Bomb":
                 this.eventBus?.emit(
-                  new ToggleStructureEvent([
-                    UnitType.MissileSilo,
-                    UnitType.SAMLauncher,
-                  ]),
+                  new ToggleStructureEvent(["Missile Silo", "SAM Launcher"]),
                 );
                 break;
-              case UnitType.Warship:
-                this.eventBus?.emit(new ToggleStructureEvent([UnitType.Port]));
+              case "Warship":
+                this.eventBus?.emit(new ToggleStructureEvent(["Port"]));
                 break;
               default:
                 this.eventBus?.emit(new ToggleStructureEvent([unitType]));

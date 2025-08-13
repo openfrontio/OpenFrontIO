@@ -1,7 +1,6 @@
 import { colord, Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
@@ -90,7 +89,7 @@ export class UnitLayer implements Layer {
   private findWarshipsNearCell(clickRef: TileRef): UnitView[] {
     // Only select warships owned by the player
     return this.game
-      .units(UnitType.Warship)
+      .units("Warship")
       .filter(
         (unit) =>
           unit.isActive() &&
@@ -307,30 +306,30 @@ export class UnitLayer implements Layer {
     }
 
     switch (unit.type()) {
-      case UnitType.TransportShip:
+      case "Transport Ship":
         this.handleBoatEvent(unit);
         break;
-      case UnitType.Warship:
+      case "Warship":
         this.handleWarShipEvent(unit);
         break;
-      case UnitType.Shell:
+      case "Shell":
         this.handleShellEvent(unit);
         break;
-      case UnitType.SAMMissile:
+      case "SAM Missile":
         this.handleMissileEvent(unit);
         break;
-      case UnitType.TradeShip:
+      case "Trade Ship":
         this.handleTradeShipEvent(unit);
         break;
-      case UnitType.Train:
+      case "Train":
         this.handleTrainEvent(unit);
         break;
-      case UnitType.MIRVWarhead:
+      case "MIRV Warhead":
         this.handleMIRVWarhead(unit);
         break;
-      case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
-      case UnitType.MIRV:
+      case "Atom Bomb":
+      case "Hydrogen Bomb":
+      case "MIRV":
         this.handleNuke(unit);
         break;
     }
@@ -549,7 +548,7 @@ export class UnitLayer implements Layer {
     if (this.alternateView) {
       let rel = this.relationship(unit);
       const dstPortId = unit.targetUnitId();
-      if (unit.type() === UnitType.TradeShip && dstPortId !== undefined) {
+      if (unit.type() === "Trade Ship" && dstPortId !== undefined) {
         const target = this.game.unit(dstPortId)?.owner();
         const myPlayer = this.game.myPlayer();
         if (myPlayer !== null && target !== undefined) {

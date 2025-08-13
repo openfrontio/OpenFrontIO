@@ -6,7 +6,6 @@ import {
   Nation,
   PlayerInfo,
   PlayerType,
-  UnitType,
 } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
@@ -52,7 +51,7 @@ describe("Nation MIRV Retaliation", () => {
         }
       }
     }
-    attacker.buildUnit(UnitType.MissileSilo, game.ref(10, 10), {});
+    attacker.buildUnit("Missile Silo", game.ref(10, 10), {});
 
     // Give nation territory and missile silo
     for (let x = 25; x < 75; x++) {
@@ -63,19 +62,19 @@ describe("Nation MIRV Retaliation", () => {
         }
       }
     }
-    nation.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    nation.buildUnit("Missile Silo", game.ref(50, 50), {});
 
     // Give both players enough gold for MIRVs
     attacker.addGold(1_000_000_000n);
     nation.addGold(1_000_000_000n);
     // Verify preconditions
-    expect(attacker.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(nation.units(UnitType.MissileSilo)).toHaveLength(1);
+    expect(attacker.units("Missile Silo")).toHaveLength(1);
+    expect(nation.units("Missile Silo")).toHaveLength(1);
     expect(attacker.gold()).toBeGreaterThan(35_000_000n);
     expect(nation.gold()).toBeGreaterThan(35_000_000n);
 
     // Track MIRVs before nation retaliates
-    const mirvCountBefore = nation.units(UnitType.MIRV).length;
+    const mirvCountBefore = nation.units("MIRV").length;
 
     // Initialize nation with NationExecution to enable retaliation logic
     const testExecutionNation = new Nation(new Cell(50, 50), nation.info());
@@ -101,7 +100,7 @@ describe("Nation MIRV Retaliation", () => {
         }
 
         // Check if nation attempted retaliation
-        if (nation.units(UnitType.MIRV).length > mirvCountBefore) {
+        if (nation.units("MIRV").length > mirvCountBefore) {
           retaliationAttempted = true;
           break;
         }
@@ -117,11 +116,11 @@ describe("Nation MIRV Retaliation", () => {
     executeTicks(game, 2);
 
     // Assert: Nation launched a retaliatory MIRV
-    const mirvCountAfter = nation.units(UnitType.MIRV).length;
+    const mirvCountAfter = nation.units("MIRV").length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
     // Verify the retaliatory MIRV targets the attacker's territory
-    const nationMirvs = nation.units(UnitType.MIRV);
+    const nationMirvs = nation.units("MIRV");
     expect(nationMirvs.length).toBeGreaterThan(0);
 
     const retaliationMirv = nationMirvs[nationMirvs.length - 1];
@@ -196,7 +195,7 @@ describe("Nation MIRV Retaliation", () => {
     // Build missile silo on one of the nation's tiles
     const nationTile = Array.from(nation.tiles())[0];
     if (nationTile) {
-      nation.buildUnit(UnitType.MissileSilo, nationTile, {});
+      nation.buildUnit("Missile Silo", nationTile, {});
     }
 
     // Then give dominant player a large amount of territory
@@ -228,10 +227,10 @@ describe("Nation MIRV Retaliation", () => {
     nation.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(dominantPlayer.units(UnitType.MissileSilo)).toHaveLength(0);
-    expect(nation.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(nation.units(UnitType.MIRV)).toHaveLength(0);
-    expect(dominantPlayer.units(UnitType.MIRV)).toHaveLength(0);
+    expect(dominantPlayer.units("Missile Silo")).toHaveLength(0);
+    expect(nation.units("Missile Silo")).toHaveLength(1);
+    expect(nation.units("MIRV")).toHaveLength(0);
+    expect(dominantPlayer.units("MIRV")).toHaveLength(0);
     expect(dominantPlayer.gold()).toBeGreaterThan(35_000_000n);
     expect(nation.gold()).toBeGreaterThan(35_000_000n);
     expect(nation.isAlive()).toBe(true);
@@ -243,7 +242,7 @@ describe("Nation MIRV Retaliation", () => {
     expect(dominantTerritoryShare).toBeGreaterThan(0.65);
 
     // Track MIRVs before nation considers victory denial
-    const mirvCountBefore = nation.units(UnitType.MIRV).length;
+    const mirvCountBefore = nation.units("MIRV").length;
 
     // Initialize nation with NationExecution to enable victory denial logic
     const testExecutionNation = new Nation(new Cell(50, 50), nation.info());
@@ -262,7 +261,7 @@ describe("Nation MIRV Retaliation", () => {
         if (tick % 10 === 0) {
           game.executeNextTick();
         }
-        if (nation.units(UnitType.MIRV).length > mirvCountBefore) {
+        if (nation.units("MIRV").length > mirvCountBefore) {
           victoryDenialSuccessful = true;
           break;
         }
@@ -278,11 +277,11 @@ describe("Nation MIRV Retaliation", () => {
     executeTicks(game, 2);
 
     // Assert: Nation launched a victory denial MIRV
-    const mirvCountAfter = nation.units(UnitType.MIRV).length;
+    const mirvCountAfter = nation.units("MIRV").length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
     // Verify the victory denial MIRV targets the dominant player's territory
-    const nationMirvs = nation.units(UnitType.MIRV);
+    const nationMirvs = nation.units("MIRV");
     expect(nationMirvs.length).toBeGreaterThan(0);
 
     const victoryDenialMirv = nationMirvs[nationMirvs.length - 1];
@@ -346,7 +345,7 @@ describe("Nation MIRV Retaliation", () => {
     }
     const nationTile = Array.from(nation.tiles())[0];
     if (nationTile) {
-      nation.buildUnit(UnitType.MissileSilo, nationTile, {});
+      nation.buildUnit("Missile Silo", nationTile, {});
     }
 
     // Give second player some territory and cities
@@ -362,7 +361,7 @@ describe("Nation MIRV Retaliation", () => {
     for (let i = 0; i < 5; i++) {
       const secondPlayerTile = Array.from(secondPlayer.tiles())[0];
       if (secondPlayerTile) {
-        secondPlayer.buildUnit(UnitType.City, secondPlayerTile, {});
+        secondPlayer.buildUnit("City", secondPlayerTile, {});
       }
     }
 
@@ -380,7 +379,7 @@ describe("Nation MIRV Retaliation", () => {
     for (let i = 0; i < minLeaderCities + 2; i++) {
       const steamrollerTile = Array.from(steamroller.tiles())[0];
       if (steamrollerTile) {
-        steamroller.buildUnit(UnitType.City, steamrollerTile, {});
+        steamroller.buildUnit("City", steamrollerTile, {});
       }
     }
 
@@ -390,13 +389,13 @@ describe("Nation MIRV Retaliation", () => {
     nation.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(nation.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(steamroller.unitCount(UnitType.City)).toBe(minLeaderCities + 2);
-    expect(secondPlayer.unitCount(UnitType.City)).toBe(5);
-    expect(nation.units(UnitType.MIRV)).toHaveLength(0);
+    expect(nation.units("Missile Silo")).toHaveLength(1);
+    expect(steamroller.unitCount("City")).toBe(minLeaderCities + 2);
+    expect(secondPlayer.unitCount("City")).toBe(5);
+    expect(nation.units("MIRV")).toHaveLength(0);
 
     // Track MIRVs before nation considers steamroll stop
-    const mirvCountBefore = nation.units(UnitType.MIRV).length;
+    const mirvCountBefore = nation.units("MIRV").length;
 
     // Initialize nation with NationExecution to enable steamroll stop logic
     const testExecutionNation = new Nation(new Cell(50, 50), nation.info());
@@ -415,7 +414,7 @@ describe("Nation MIRV Retaliation", () => {
         if (tick % 10 === 0) {
           game.executeNextTick();
         }
-        if (nation.units(UnitType.MIRV).length > mirvCountBefore) {
+        if (nation.units("MIRV").length > mirvCountBefore) {
           steamrollStopSuccessful = true;
           break;
         }
@@ -431,11 +430,11 @@ describe("Nation MIRV Retaliation", () => {
     executeTicks(game, 2);
 
     // Assert: Nation launched a steamroll stop MIRV
-    const mirvCountAfter = nation.units(UnitType.MIRV).length;
+    const mirvCountAfter = nation.units("MIRV").length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
     // Verify the steamroll stop MIRV targets the steamroller's territory
-    const nationMirvs = nation.units(UnitType.MIRV);
+    const nationMirvs = nation.units("MIRV");
     expect(nationMirvs.length).toBeGreaterThan(0);
 
     const steamrollStopMirv = nationMirvs[nationMirvs.length - 1];
@@ -499,7 +498,7 @@ describe("Nation MIRV Retaliation", () => {
     }
     const nationTile = Array.from(nation.tiles())[0];
     if (nationTile) {
-      nation.buildUnit(UnitType.MissileSilo, nationTile, {});
+      nation.buildUnit("Missile Silo", nationTile, {});
     }
 
     // Give second player territory and cities (5 cities)
@@ -514,7 +513,7 @@ describe("Nation MIRV Retaliation", () => {
     for (let i = 0; i < 5; i++) {
       const secondPlayerTile = Array.from(secondPlayer.tiles())[0];
       if (secondPlayerTile) {
-        secondPlayer.buildUnit(UnitType.City, secondPlayerTile, {});
+        secondPlayer.buildUnit("City", secondPlayerTile, {});
       }
     }
 
@@ -531,7 +530,7 @@ describe("Nation MIRV Retaliation", () => {
     for (let i = 0; i < minLeaderCities; i++) {
       const steamrollerTile = Array.from(steamroller.tiles())[0];
       if (steamrollerTile) {
-        steamroller.buildUnit(UnitType.City, steamrollerTile, {});
+        steamroller.buildUnit("City", steamrollerTile, {});
       }
     }
 
@@ -541,13 +540,13 @@ describe("Nation MIRV Retaliation", () => {
     nation.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(nation.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(steamroller.unitCount(UnitType.City)).toBe(minLeaderCities);
-    expect(secondPlayer.unitCount(UnitType.City)).toBe(5);
-    expect(nation.units(UnitType.MIRV)).toHaveLength(0);
+    expect(nation.units("Missile Silo")).toHaveLength(1);
+    expect(steamroller.unitCount("City")).toBe(minLeaderCities);
+    expect(secondPlayer.unitCount("City")).toBe(5);
+    expect(nation.units("MIRV")).toHaveLength(0);
 
     // Track MIRVs before nation considers steamroll stop
-    const mirvCountBefore = nation.units(UnitType.MIRV).length;
+    const mirvCountBefore = nation.units("MIRV").length;
 
     // Initialize nation with NationExecution to enable steamroll stop logic
     const testExecutionNation = new Nation(new Cell(50, 50), nation.info());
@@ -566,7 +565,7 @@ describe("Nation MIRV Retaliation", () => {
       }
 
       // Check if any MIRVs were launched for steamroll stop
-      const nationMirvs = nation.units(UnitType.MIRV);
+      const nationMirvs = nation.units("MIRV");
       if (nationMirvs.length > mirvCountBefore) {
         steamrollStopAttempted = true;
         break;
@@ -630,7 +629,7 @@ describe("Nation MIRV Retaliation", () => {
     }
     const nationTile = Array.from(nation.tiles())[0];
     if (nationTile) {
-      nation.buildUnit(UnitType.MissileSilo, nationTile, {});
+      nation.buildUnit("Missile Silo", nationTile, {});
     }
 
     // Give team players a large amount of territory to exceed team threshold,
@@ -666,8 +665,8 @@ describe("Nation MIRV Retaliation", () => {
     nation.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(nation.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(nation.units(UnitType.MIRV)).toHaveLength(0);
+    expect(nation.units("Missile Silo")).toHaveLength(1);
+    expect(nation.units("MIRV")).toHaveLength(0);
     expect(teamPlayer1.gold()).toBeGreaterThan(35_000_000n);
     expect(teamPlayer2.gold()).toBeGreaterThan(35_000_000n);
     expect(nation.gold()).toBeGreaterThan(35_000_000n);
@@ -681,7 +680,7 @@ describe("Nation MIRV Retaliation", () => {
     expect(teamShare).toBeGreaterThan(0.8); //
 
     // Track MIRVs before nation considers team victory denial
-    const mirvCountBefore = nation.units(UnitType.MIRV).length;
+    const mirvCountBefore = nation.units("MIRV").length;
 
     // Initialize nation with NationExecution to enable team victory denial logic
     const testExecutionNation = new Nation(new Cell(50, 50), nation.info());
@@ -700,7 +699,7 @@ describe("Nation MIRV Retaliation", () => {
         if (tick % 10 === 0) {
           game.executeNextTick();
         }
-        if (nation.units(UnitType.MIRV).length > mirvCountBefore) {
+        if (nation.units("MIRV").length > mirvCountBefore) {
           teamVictoryDenialSuccessful = true;
           break;
         }
@@ -716,11 +715,11 @@ describe("Nation MIRV Retaliation", () => {
     executeTicks(game, 2);
 
     // Assert: Nation launched a team victory denial MIRV
-    const mirvCountAfter = nation.units(UnitType.MIRV).length;
+    const mirvCountAfter = nation.units("MIRV").length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
     // Verify the team victory denial MIRV targets the largest member of the team
-    const nationMirvs = nation.units(UnitType.MIRV);
+    const nationMirvs = nation.units("MIRV");
     expect(nationMirvs.length).toBeGreaterThan(0);
 
     const teamVictoryDenialMirv = nationMirvs[nationMirvs.length - 1];
