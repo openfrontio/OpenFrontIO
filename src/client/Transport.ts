@@ -1,7 +1,7 @@
+import { z } from "zod/v4";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
-  Cell,
   GameType,
   Gold,
   PlayerID,
@@ -9,12 +9,14 @@ import {
   Tick,
   UnitType,
 } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
 import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
+  ClientMessage,
   ClientPingMessage,
   ClientSendWinnerMessage,
   Intent,
@@ -60,8 +62,12 @@ export class SendAllianceReplyIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendAllianceExtensionIntentEvent implements GameEvent {
+  constructor(public readonly recipient: PlayerView) {}
+}
+
 export class SendSpawnIntentEvent implements GameEvent {
-  constructor(public readonly cell: Cell) {}
+  constructor(public readonly tile: TileRef) {}
 }
 
 export class SendAttackIntentEvent implements GameEvent {
@@ -74,16 +80,16 @@ export class SendAttackIntentEvent implements GameEvent {
 export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID | null,
-    public readonly dst: Cell,
+    public readonly dst: TileRef,
     public readonly troops: number,
-    public readonly src: Cell | null = null,
+    public readonly src: TileRef | null = null,
   ) {}
 }
 
 export class BuildUnitIntentEvent implements GameEvent {
   constructor(
     public readonly unit: UnitType,
-    public readonly cell: Cell,
+    public readonly tile: TileRef,
   ) {}
 }
 
@@ -116,7 +122,7 @@ export class SendQuickChatEvent implements GameEvent {
   constructor(
     public readonly recipient: PlayerView,
     public readonly quickChatKey: string,
-    public readonly variables: { [key: string]: string },
+    public readonly target?: PlayerID,
   ) {}
 }
 
@@ -187,6 +193,9 @@ export class Transport {
     this.eventBus.on(SendAllianceReplyIntentEvent, (e) =>
       this.onAllianceRequestReplyUIEvent(e),
     );
+    this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
+      this.onSendAllianceExtensionIntent(e),
+    );
     this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
     );
@@ -235,18 +244,14 @@ export class Transport {
   }
 
   private startPing() {
-    if (this.isLocal || this.pingInterval) return;
-    if (this.pingInterval === null) {
-      this.pingInterval = window.setInterval(() => {
-        if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
-          this.sendMsg(
-            JSON.stringify({
-              type: "ping",
-            } satisfies ClientPingMessage),
-          );
-        }
-      }, 5 * 1000);
-    }
+    if (this.isLocal) return;
+    this.pingInterval ??= window.setInterval(() => {
+      if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
+        this.sendMsg({
+          type: "ping",
+        } satisfies ClientPingMessage);
+      }
+    }, 5 * 1000);
   }
 
   private stopPing() {
@@ -297,6 +302,10 @@ export class Transport {
     this.onmessage = onmessage;
     this.socket.onopen = () => {
       console.log("Connected to game server!");
+      if (this.socket === null) {
+        console.error("socket is null");
+        return;
+      }
       while (this.buffer.length > 0) {
         console.log("sending dropped message");
         const msg = this.buffer.pop();
@@ -304,18 +313,23 @@ export class Transport {
           console.warn("msg is undefined");
           continue;
         }
-        this.sendMsg(msg);
+        this.socket.send(msg);
       }
       onconnect();
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
-        const serverMsg = ServerMessageSchema.parse(JSON.parse(event.data));
-        this.onmessage(serverMsg);
-      } catch (error) {
-        console.error(
-          `Failed to process server message ${event.data}: ${error}, ${error.stack}`,
-        );
+        const parsed = JSON.parse(event.data);
+        const result = ServerMessageSchema.safeParse(parsed);
+        if (!result.success) {
+          const error = z.prettifyError(result.error);
+          console.error("Error parsing server message", error);
+          return;
+        }
+        this.onmessage(result.data);
+      } catch (e) {
+        console.error("Error in onmessage handler:", e, event.data);
+        return;
       }
     };
     this.socket.onerror = (err) => {
@@ -327,8 +341,11 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code !== 1000) {
-        console.log(`reconnecting`);
+      if (event.code === 1002) {
+        // TODO: make this a modal
+        alert(`connection refused: ${event.reason}`);
+      } else if (event.code !== 1000) {
+        console.log(`recieved error code ${event.code}, reconnecting`);
         this.reconnect();
       }
     };
@@ -345,17 +362,16 @@ export class Transport {
   }
 
   joinGame(numTurns: number) {
-    this.sendMsg(
-      JSON.stringify({
-        type: "join",
-        gameID: this.lobbyConfig.gameID,
-        clientID: this.lobbyConfig.clientID,
-        lastTurn: numTurns,
-        token: this.lobbyConfig.token,
-        username: this.lobbyConfig.playerName,
-        flag: this.lobbyConfig.flag,
-      } satisfies ClientJoinMessage),
-    );
+    this.sendMsg({
+      type: "join",
+      gameID: this.lobbyConfig.gameID,
+      clientID: this.lobbyConfig.clientID,
+      lastTurn: numTurns,
+      token: this.lobbyConfig.token,
+      username: this.lobbyConfig.playerName,
+      flag: this.lobbyConfig.flag,
+      pattern: this.lobbyConfig.pattern,
+    } satisfies ClientJoinMessage);
   }
 
   leaveGame(saveFullGame: boolean = false) {
@@ -403,15 +419,25 @@ export class Transport {
     });
   }
 
+  private onSendAllianceExtensionIntent(
+    event: SendAllianceExtensionIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "allianceExtension",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+    });
+  }
+
   private onSendSpawnIntentEvent(event: SendSpawnIntentEvent) {
     this.sendIntent({
       type: "spawn",
       clientID: this.lobbyConfig.clientID,
       flag: this.lobbyConfig.flag,
+      pattern: this.lobbyConfig.pattern,
       name: this.lobbyConfig.playerName,
       playerType: PlayerType.Human,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 
@@ -430,10 +456,8 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
       troops: event.troops,
-      dstX: event.dst.x,
-      dstY: event.dst.y,
-      srcX: event.src?.x ?? null,
-      srcY: event.src?.y ?? null,
+      dst: event.dst,
+      src: event.src,
     });
   }
 
@@ -488,7 +512,7 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       quickChatKey: event.quickChatKey,
-      variables: event.variables,
+      target: event.target,
     });
   }
 
@@ -514,8 +538,7 @@ export class Transport {
       type: "build_unit",
       clientID: this.lobbyConfig.clientID,
       unit: event.unit,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 
@@ -533,12 +556,11 @@ export class Transport {
 
   private onSendWinnerEvent(event: SendWinnerEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
-      const msg = {
+      this.sendMsg({
         type: "winner",
         winner: event.winner,
         allPlayersStats: event.allPlayersStats,
-      } satisfies ClientSendWinnerMessage;
-      this.sendMsg(JSON.stringify(msg, replacer));
+      } satisfies ClientSendWinnerMessage);
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -550,13 +572,11 @@ export class Transport {
 
   private onSendHashEvent(event: SendHashEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
-      this.sendMsg(
-        JSON.stringify({
-          type: "hash",
-          turnNumber: event.tick,
-          hash: event.hash,
-        } satisfies ClientHashMessage),
-      );
+      this.sendMsg({
+        type: "hash",
+        turnNumber: event.tick,
+        hash: event.hash,
+      } satisfies ClientHashMessage);
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -597,7 +617,7 @@ export class Transport {
         type: "intent",
         intent: intent,
       } satisfies ClientIntentMessage;
-      this.sendMsg(JSON.stringify(msg));
+      this.sendMsg(msg);
     } else {
       console.log(
         "WebSocket is not open. Current state:",
@@ -607,23 +627,26 @@ export class Transport {
     }
   }
 
-  private sendMsg(msg: string) {
+  private sendMsg(msg: ClientMessage) {
     if (this.isLocal) {
+      // Forward message to local server
       this.localServer.onMessage(msg);
+      return;
+    } else if (this.socket === null) {
+      // Socket missing, do nothing
+      return;
+    }
+    const str = JSON.stringify(msg, replacer);
+    if (this.socket.readyState === WebSocket.CLOSED) {
+      // Buffer message
+      console.warn("socket not ready, closing and trying later");
+      this.socket.close();
+      this.socket = null;
+      this.connectRemote(this.onconnect, this.onmessage);
+      this.buffer.push(str);
     } else {
-      if (this.socket === null) return;
-      if (
-        this.socket.readyState === WebSocket.CLOSED ||
-        this.socket.readyState === WebSocket.CLOSED
-      ) {
-        console.warn("socket not ready, closing and trying later");
-        this.socket.close();
-        this.socket = null;
-        this.connectRemote(this.onconnect, this.onmessage);
-        this.buffer.push(msg);
-      } else {
-        this.socket.send(msg);
-      }
+      // Send the message directly
+      this.socket.send(str);
     }
   }
 

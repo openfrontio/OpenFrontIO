@@ -10,6 +10,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
+import { FactoryExecution } from "./FactoryExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
@@ -29,12 +30,26 @@ export class ConstructionExecution implements Execution {
 
   constructor(
     private player: Player,
-    private tile: TileRef,
     private constructionType: UnitType,
+    private tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
+
+    if (this.mg.config().isUnitDisabled(this.constructionType)) {
+      console.warn(
+        `cannot build construction ${this.constructionType} because it is disabled`,
+      );
+      this.active = false;
+      return;
+    }
+
+    if (!this.mg.isValidRef(this.tile)) {
+      console.warn(`cannot build construction invalid tile ${this.tile}`);
+      this.active = false;
+      return;
+    }
   }
 
   tick(ticks: number): void {
@@ -119,8 +134,14 @@ export class ConstructionExecution implements Execution {
       case UnitType.OilWell:
         this.mg.addExecution(new OilWellExecution(player, this.tile));
         break;
+      case UnitType.Factory:
+        this.mg.addExecution(new FactoryExecution(player, this.tile));
+        break;
       default:
-        throw Error(`unit type ${this.constructionType} not supported`);
+        console.warn(
+          `unit type ${this.constructionType} cannot be constructed`,
+        );
+        break;
     }
   }
 

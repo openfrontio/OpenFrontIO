@@ -97,11 +97,9 @@ export class AttackExecution implements Execution {
       }
     }
 
-    if (this.startTroops === null) {
-      this.startTroops = this.mg
-        .config()
-        .attackAmount(this._owner, this.target);
-    }
+    this.startTroops ??= this.mg
+      .config()
+      .attackAmount(this._owner, this.target);
     if (this.removeTroops) {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
       this._owner.removeTroops(this.startTroops);
@@ -122,6 +120,20 @@ export class AttackExecution implements Execution {
     // Record stats
     this.mg.stats().attack(this._owner, this.target, this.startTroops);
 
+    for (const incoming of this._owner.incomingAttacks()) {
+      if (incoming.attacker() === this.target) {
+        // Target has opposing attack, cancel them out
+        if (incoming.troops() > this.attack.troops()) {
+          incoming.setTroops(incoming.troops() - this.attack.troops());
+          this.attack.delete();
+          this.active = false;
+          return;
+        } else {
+          this.attack.setTroops(this.attack.troops() - incoming.troops());
+          incoming.delete();
+        }
+      }
+    }
     for (const outgoing of this._owner.outgoingAttacks()) {
       if (
         outgoing !== this.attack &&
@@ -173,8 +185,11 @@ export class AttackExecution implements Execution {
     this.attack.delete();
     this.active = false;
 
-    // Record stats
-    this.mg.stats().attackCancel(this._owner, this.target, survivors);
+    // Not all retreats are canceled attacks
+    if (this.attack.retreated()) {
+      // Record stats
+      this.mg.stats().attackCancel(this._owner, this.target, survivors);
+    }
   }
 
   tick(ticks: number) {
@@ -330,6 +345,7 @@ export class AttackExecution implements Execution {
     );
     this.target.removeGold(gold);
     this._owner.addGold(gold);
+    this.mg.stats().goldWar(this._owner, this.target, gold);
 
     for (let i = 0; i < 10; i++) {
       for (const tile of this.target.tiles()) {

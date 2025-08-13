@@ -46,7 +46,7 @@ export class BotSpawner {
       }
     }
     return new SpawnExecution(
-      new PlayerInfo("", botName, PlayerType.Bot, null, this.random.nextID()),
+      new PlayerInfo(botName, PlayerType.Bot, null, this.random.nextID()),
       tile,
     );
   }

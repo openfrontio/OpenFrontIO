@@ -4,6 +4,7 @@ import {
   MessageType,
   Player,
   Tick,
+  TrainType,
   Unit,
   UnitInfo,
   UnitType,
@@ -26,10 +27,15 @@ export class UnitImpl implements Unit {
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
+  // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
-  private _readyMissileCount: number = 1;
+  private _hasTrainStation: boolean = false;
   private _patrolTile: TileRef | undefined;
   private _level: number = 1;
+  private _targetable: boolean = true;
+  private _loaded: boolean | undefined;
+  private _trainType: TrainType | undefined;
+
   constructor(
     private _type: UnitType,
     private mg: GameImpl,
@@ -51,6 +57,9 @@ export class UnitImpl implements Unit {
       "patrolTile" in params ? (params.patrolTile ?? undefined) : undefined;
     this._targetUnit =
       "targetUnit" in params ? (params.targetUnit ?? undefined) : undefined;
+    this._loaded =
+      "loaded" in params ? (params.loaded ?? undefined) : undefined;
+    this._trainType = "trainType" in params ? params.trainType : undefined;
 
     switch (this._type) {
       case UnitType.Warship:
@@ -62,6 +71,17 @@ export class UnitImpl implements Unit {
       case UnitType.OilWell:
         this.mg.stats().unitBuild(_owner, this._type);
     }
+  }
+
+  setTargetable(targetable: boolean): void {
+    if (this._targetable !== targetable) {
+      this._targetable = targetable;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  isTargetable(): boolean {
+    return this._targetable;
   }
 
   setPatrolTile(tile: TileRef): void {
@@ -102,14 +122,17 @@ export class UnitImpl implements Unit {
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       pos: this._tile,
+      targetable: this._targetable,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
-      readyMissileCount: this._readyMissileCount,
       level: this.level(),
+      hasTrainStation: this._hasTrainStation,
+      trainType: this._trainType,
+      loaded: this._loaded,
     };
   }
 
@@ -125,10 +148,9 @@ export class UnitImpl implements Unit {
     if (tile === null) {
       throw new Error("tile cannot be null");
     }
-    this.mg.removeUnit(this);
     this._lastTile = this._tile;
     this._tile = tile;
-    this.mg.addUnit(this);
+    this.mg.updateUnitTile(this);
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -228,6 +250,7 @@ export class UnitImpl implements Unit {
         case UnitType.Port:
         case UnitType.SAMLauncher:
         case UnitType.Warship:
+        case UnitType.Factory:
           this.mg.stats().unitDestroy(destroyer, this._type);
           this.mg.stats().unitLose(this.owner(), this._type);
           break;
@@ -275,7 +298,6 @@ export class UnitImpl implements Unit {
 
   launch(): void {
     this._missileTimerQueue.push(this.mg.ticks());
-    this._readyMissileCount--;
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -284,12 +306,15 @@ export class UnitImpl implements Unit {
   }
 
   isInCooldown(): boolean {
-    return this._readyMissileCount === 0;
+    return this._missileTimerQueue.length === this._level;
+  }
+
+  missileTimerQueue(): number[] {
+    return this._missileTimerQueue;
   }
 
   reloadMissile(): void {
     this._missileTimerQueue.shift();
-    this._readyMissileCount++;
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -340,11 +365,35 @@ export class UnitImpl implements Unit {
     return this._level;
   }
 
+  setTrainStation(trainStation: boolean): void {
+    this._hasTrainStation = trainStation;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  hasTrainStation(): boolean {
+    return this._hasTrainStation;
+  }
+
   increaseLevel(): void {
     this._level++;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
-      this._readyMissileCount++;
+      this._missileTimerQueue.push(this.mg.ticks());
     }
     this.mg.addUpdate(this.toUpdate());
+  }
+
+  trainType(): TrainType | undefined {
+    return this._trainType;
+  }
+
+  isLoaded(): boolean | undefined {
+    return this._loaded;
+  }
+
+  setLoaded(loaded: boolean): void {
+    if (this._loaded !== loaded) {
+      this._loaded = loaded;
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 }

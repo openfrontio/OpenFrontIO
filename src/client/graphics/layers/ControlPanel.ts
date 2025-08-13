@@ -4,6 +4,7 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
 import { SendSetTargetTroopRatioEvent } from "../../Transport";
 import { renderNumber, renderTroops } from "../../Utils";
@@ -13,6 +14,7 @@ import { Layer } from "./Layer";
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
   public game: GameView;
+  public clientID: ClientID;
   public eventBus: EventBus;
   public uiState: UIState;
 
@@ -52,9 +54,9 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private _goldPerSecond: Gold;
 
-  private _lastPopulationIncreaseRate: number;
-
   private _popRateIsIncreasing: boolean = true;
+
+  private _lastPopulationIncreaseRate: number;
 
   private init_: boolean = false;
 
@@ -112,11 +114,8 @@ export class ControlPanel extends LitElement implements Layer {
       return;
     }
 
-    const popIncreaseRate = player.population() - this._population;
     if (this.game.ticks() % 5 === 0) {
-      this._popRateIsIncreasing =
-        popIncreaseRate >= this._lastPopulationIncreaseRate;
-      this._lastPopulationIncreaseRate = popIncreaseRate;
+      this.updatePopulationIncrease();
     }
 
     this._population = player.population();
@@ -129,6 +128,15 @@ export class ControlPanel extends LitElement implements Layer {
 
     this.currentTroopRatio = player.troops() / player.population();
     this.requestUpdate();
+  }
+
+  private updatePopulationIncrease() {
+    const player = this.game?.myPlayer();
+    if (player === null) return;
+    const popIncreaseRate = this.game.config().populationIncreaseRate(player);
+    this._popRateIsIncreasing =
+      popIncreaseRate >= this._lastPopulationIncreaseRate;
+    this._lastPopulationIncreaseRate = popIncreaseRate;
   }
 
   onAttackRatioChange(newRatio: number) {
@@ -204,11 +212,11 @@ export class ControlPanel extends LitElement implements Layer {
       </style>
       <div
         class="${this._isVisible
-          ? "w-full text-sm lg:text-m lg:w-72 bg-gray-800/70 p-2 pr-3 lg:p-4 shadow-lg lg:rounded-lg backdrop-blur"
+          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
           : "hidden"}"
         @contextmenu=${(e) => e.preventDefault()}
       >
-        <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
+        <div class="block bg-black/30 text-white mb-4 p-2 rounded">
           <div class="flex justify-between mb-1">
             <span class="font-bold"
               >${translateText("control_panel.pop")}:</span
@@ -236,7 +244,7 @@ export class ControlPanel extends LitElement implements Layer {
           </div>
         </div>
 
-        <div class="relative mb-4 lg:mb-4">
+        <div class="relative mb-4 sm:mb-4">
           <label class="block text-white mb-1" translate="no"
             >${translateText("control_panel.troops")}:
             <span translate="no">${renderTroops(this._troops)}</span> |
@@ -269,7 +277,7 @@ export class ControlPanel extends LitElement implements Layer {
           </div>
         </div>
 
-        <div class="relative mb-0 lg:mb-4">
+        <div class="relative mb-0 sm:mb-4">
           <label class="block text-white mb-1" translate="no"
             >${translateText("control_panel.attack_ratio")}:
             ${(this.attackRatio * 100).toFixed(0)}%

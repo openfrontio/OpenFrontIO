@@ -27,7 +27,7 @@ export class WarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathfinder = PathFinder.Mini(mg, 5000);
+    this.pathfinder = PathFinder.Mini(mg, 10_000, true, 100);
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -55,7 +55,7 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
-    const hasPort = this.warship.owner().units(UnitType.Port).length > 0;
+    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     if (hasPort) {
       this.warship.modifyHealth(1);
     }
@@ -75,7 +75,7 @@ export class WarshipExecution implements Execution {
   }
 
   private findTargetUnit(): Unit | undefined {
-    const hasPort = this.warship.owner().units(UnitType.Port).length > 0;
+    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
     const ships = this.mg.nearbyUnits(
@@ -120,19 +120,7 @@ export class WarshipExecution implements Execution {
       const { unit: unitA, distSquared: distA } = a;
       const { unit: unitB, distSquared: distB } = b;
 
-      // Prioritize Warships
-      if (
-        unitA.type() === UnitType.Warship &&
-        unitB.type() !== UnitType.Warship
-      )
-        return -1;
-      if (
-        unitA.type() !== UnitType.Warship &&
-        unitB.type() === UnitType.Warship
-      )
-        return 1;
-
-      // Then favor Transport Ships over Trade Ships
+      // Prioritize Transport Ships above all other units
       if (
         unitA.type() === UnitType.TransportShip &&
         unitB.type() !== UnitType.TransportShip
@@ -144,6 +132,18 @@ export class WarshipExecution implements Execution {
       )
         return 1;
 
+      // Then prioritize Warships.
+      if (
+        unitA.type() === UnitType.Warship &&
+        unitB.type() !== UnitType.Warship
+      )
+        return -1;
+      if (
+        unitA.type() !== UnitType.Warship &&
+        unitB.type() === UnitType.Warship
+      )
+        return 1;
+
       // If both are the same type, sort by distance (lower `distSquared` means closer)
       return distA - distB;
     })[0]?.unit;
@@ -152,7 +152,10 @@ export class WarshipExecution implements Execution {
   private shootTarget() {
     const shellAttackRate = this.mg.config().warshipShellAttackRate();
     if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
-      this.lastShellAttack = this.mg.ticks();
+      if (this.warship.targetUnit()?.type() !== UnitType.TransportShip) {
+        // Warships don't need to reload when attacking transport ships.
+        this.lastShellAttack = this.mg.ticks();
+      }
       this.mg.addExecution(
         new ShellExecution(
           this.warship.tile(),
@@ -185,7 +188,7 @@ export class WarshipExecution implements Execution {
           this.warship.move(this.warship.tile());
           return;
         case PathFindResultType.NextTile:
-          this.warship.move(result.tile);
+          this.warship.move(result.node);
           break;
         case PathFindResultType.Pending:
           this.warship.touch();
@@ -212,10 +215,10 @@ export class WarshipExecution implements Execution {
     switch (result.type) {
       case PathFindResultType.Completed:
         this.warship.setTargetTile(undefined);
-        this.warship.move(result.tile);
+        this.warship.move(result.node);
         break;
       case PathFindResultType.NextTile:
-        this.warship.move(result.tile);
+        this.warship.move(result.node);
         break;
       case PathFindResultType.Pending:
         this.warship.touch();

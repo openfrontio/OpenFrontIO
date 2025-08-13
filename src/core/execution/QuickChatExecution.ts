@@ -10,7 +10,7 @@ export class QuickChatExecution implements Execution {
     private sender: Player,
     private recipientID: PlayerID,
     private quickChatKey: string,
-    private variables: Record<string, string>,
+    private target: PlayerID | undefined,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -27,28 +27,28 @@ export class QuickChatExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    const message = this.getMessageFromKey(this.quickChatKey, this.variables);
+    const message = this.getMessageFromKey(this.quickChatKey);
 
     this.mg.displayChat(
       message[1],
       message[0],
-      this.variables,
+      this.target,
       this.recipient.id(),
       true,
-      this.sender.name(),
+      this.sender.id(),
     );
 
     this.mg.displayChat(
       message[1],
       message[0],
-      this.variables,
+      this.target,
       this.sender.id(),
       false,
-      this.recipient.name(),
+      this.recipient.id(),
     );
 
     console.log(
-      `[QuickChat] ${this.sender.name} → ${this.recipient.name}: ${message}`,
+      `[QuickChat] ${this.sender.name} → ${this.recipient.displayName}: ${message}`,
     );
 
     this.active = false;
@@ -66,10 +66,7 @@ export class QuickChatExecution implements Execution {
     return false;
   }
 
-  private getMessageFromKey(
-    fullKey: string,
-    vars: Record<string, string>,
-  ): string[] {
+  private getMessageFromKey(fullKey: string): string[] {
     const translated = fullKey.split(".");
     return translated;
   }

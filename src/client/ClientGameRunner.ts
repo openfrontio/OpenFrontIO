@@ -7,12 +7,11 @@ import {
   GameStartInfo,
   PlayerRecord,
   ServerMessage,
-  Winner,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { Cell, PlayerActions, UnitType } from "../core/game/Game";
+import { PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import {
   ErrorUpdate,
@@ -27,6 +26,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
   DoBoatAttackEvent,
+  DoGroundAttackEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -45,6 +45,7 @@ import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
+  pattern: string | undefined;
   flag: string;
   playerName: string;
   clientID: ClientID;
@@ -99,6 +100,17 @@ export function joinLobby(
         terrainLoad,
       ).then((r) => r.start());
     }
+    if (message.type === "error") {
+      showErrorModal(
+        message.error,
+        message.message,
+        lobbyConfig.gameID,
+        lobbyConfig.clientID,
+        true,
+        false,
+        "error_modal.connection_error",
+      );
+    }
   };
   transport.connect(onconnect, onmessage);
   return () => {
@@ -107,7 +119,7 @@ export function joinLobby(
   };
 }
 
-export async function createClientGame(
+async function createClientGame(
   lobbyConfig: LobbyConfig,
   eventBus: EventBus,
   transport: Transport,
@@ -137,9 +149,10 @@ export async function createClientGame(
   const gameView = new GameView(
     worker,
     config,
-    gameMap.gameMap,
+    gameMap,
     lobbyConfig.clientID,
     lobbyConfig.gameStartInfo.gameID,
+    lobbyConfig.gameStartInfo.players,
   );
 
   console.log("going to init path finder");
@@ -186,13 +199,6 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private getWinner(update: WinUpdate): Winner {
-    if (update.winner[0] !== "player") return update.winner;
-    const clientId = this.gameView.playerBySmallID(update.winner[1]).clientID();
-    if (clientId === null) return;
-    return ["player", clientId];
-  }
-
   private saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
@@ -205,7 +211,6 @@ export class ClientGameRunner {
         stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];
-    const winner = this.getWinner(update);
 
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
@@ -218,7 +223,8 @@ export class ClientGameRunner {
       [],
       startTime(),
       Date.now(),
-      winner,
+      update.winner,
+      this.lobby.serverConfig,
     );
     endGame(record);
   }
@@ -234,9 +240,16 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
-    this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
-    this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
-    this.eventBus.on(DoBoatAttackEvent, (e) => this.doBoatAttackUnderCursor());
+    this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
+    this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
+    this.eventBus.on(
+      DoBoatAttackEvent,
+      this.doBoatAttackUnderCursor.bind(this),
+    );
+    this.eventBus.on(
+      DoGroundAttackEvent,
+      this.doGroundAttackUnderCursor.bind(this),
+    );
 
     this.renderer.initialize();
     this.input.initialize();
@@ -309,7 +322,19 @@ export class ClientGameRunner {
           this.lobby.gameStartInfo.gameID,
           this.lobby.clientID,
           true,
-          translateText("error_modal.desync_notice"),
+          false,
+          "error_modal.desync_notice",
+        );
+      }
+      if (message.type === "error") {
+        showErrorModal(
+          message.error,
+          message.message,
+          this.lobby.gameID,
+          this.lobby.clientID,
+          true,
+          false,
+          "error_modal.connection_error",
         );
       }
       if (message.type === "turn") {
@@ -360,7 +385,7 @@ export class ClientGameRunner {
       !this.gameView.hasOwner(tile) &&
       this.gameView.inSpawnPhase()
     ) {
-      this.eventBus.emit(new SendSpawnIntentEvent(cell));
+      this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;
     }
     if (this.gameView.inSpawnPhase()) {
@@ -381,7 +406,7 @@ export class ClientGameRunner {
           ),
         );
       } else if (this.canBoatAttack(actions, tile)) {
-        this.sendBoatAttackIntent(tile, cell);
+        this.sendBoatAttackIntent(tile);
       }
 
       const owner = this.gameView.owner(tile);
@@ -394,19 +419,8 @@ export class ClientGameRunner {
   }
 
   private doBoatAttackUnderCursor(): void {
-    if (!this.isActive || !this.lastMousePosition) {
-      return;
-    }
-    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
-      this.lastMousePosition.x,
-      this.lastMousePosition.y,
-    );
-    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-
-    const tile = this.gameView.ref(cell.x, cell.y);
-    if (this.gameView.inSpawnPhase()) {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) {
       return;
     }
 
@@ -418,9 +432,51 @@ export class ClientGameRunner {
 
     this.myPlayer.actions(tile).then((actions) => {
       if (!actions.canAttack && this.canBoatAttack(actions, tile)) {
-        this.sendBoatAttackIntent(tile, cell);
+        this.sendBoatAttackIntent(tile);
       }
     });
+  }
+
+  private doGroundAttackUnderCursor(): void {
+    const tile = this.getTileUnderCursor();
+    if (tile === null) {
+      return;
+    }
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    this.myPlayer.actions(tile).then((actions) => {
+      if (this.myPlayer === null) return;
+      if (actions.canAttack) {
+        this.eventBus.emit(
+          new SendAttackIntentEvent(
+            this.gameView.owner(tile).id(),
+            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+          ),
+        );
+      }
+    });
+  }
+
+  private getTileUnderCursor(): TileRef | null {
+    if (!this.isActive || !this.lastMousePosition) {
+      return null;
+    }
+    if (this.gameView.inSpawnPhase()) {
+      return null;
+    }
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      this.lastMousePosition.x,
+      this.lastMousePosition.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return null;
+    }
+    return this.gameView.ref(cell.x, cell.y);
   }
 
   private canBoatAttack(actions: PlayerActions, tile: TileRef): boolean {
@@ -438,26 +494,20 @@ export class ClientGameRunner {
     );
   }
 
-  private sendBoatAttackIntent(tile: TileRef, cell: Cell) {
+  private sendBoatAttackIntent(tile: TileRef) {
     if (!this.myPlayer) return;
 
-    this.myPlayer
-      .bestTransportShipSpawn(this.gameView.ref(cell.x, cell.y))
-      .then((spawn: number | false) => {
-        if (this.myPlayer === null) throw new Error("not initialized");
-        let spawnCell: Cell | null = null;
-        if (spawn !== false) {
-          spawnCell = new Cell(this.gameView.x(spawn), this.gameView.y(spawn));
-        }
-        this.eventBus.emit(
-          new SendBoatAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            cell,
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-            spawnCell,
-          ),
-        );
-      });
+    this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
+      if (this.myPlayer === null) throw new Error("not initialized");
+      this.eventBus.emit(
+        new SendBoatAttackIntentEvent(
+          this.gameView.owner(tile).id(),
+          tile,
+          this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+          spawn === false ? null : spawn,
+        ),
+      );
+    });
   }
 
   private shouldBoat(tile: TileRef, src: TileRef) {
@@ -505,11 +555,10 @@ export class ClientGameRunner {
           UnitType.TradeShip,
           UnitType.TransportShip,
         ])
-        .sort((a, b) => a.distSquared - b.distSquared)
-        .map((u) => u.unit);
+        .sort((a, b) => a.distSquared - b.distSquared);
 
       if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].owner() as PlayerView);
+        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
       } else {
         this.gameView.setFocusedPlayer(null);
       }
@@ -533,24 +582,31 @@ export class ClientGameRunner {
 }
 
 function showErrorModal(
-  errMsg: string,
-  stack: string,
+  error: string,
+  message: string | undefined,
   gameID: GameID,
   clientID: ClientID,
   closable = false,
-  heading = translateText("error_modal.crashed"),
+  showDiscord = true,
+  heading = "error_modal.crashed",
 ) {
-  const errorText = `Error: ${errMsg}\nStack: ${stack}`;
-
   if (document.querySelector("#error-modal")) {
     return;
   }
 
   const modal = document.createElement("div");
-
   modal.id = "error-modal";
 
-  const content = `${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${translateText("error_modal.paste_discord")}\n${errorText}`;
+  const content = [
+    showDiscord ? translateText("error_modal.paste_discord") : null,
+    translateText(heading),
+    `game id: ${gameID}`,
+    `client id: ${clientID}`,
+    `Error: ${error}`,
+    message ? `Message: ${message}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   // Create elements
   const pre = document.createElement("pre");

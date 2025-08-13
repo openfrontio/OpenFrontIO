@@ -17,17 +17,18 @@ let botBehavior: BotBehavior;
 
 describe("BotBehavior.handleAllianceRequests", () => {
   beforeEach(async () => {
-    game = await setup("BigPlains", { infiniteGold: true, instantBuild: true });
+    game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
 
     const playerInfo = new PlayerInfo(
-      "us",
       "player_id",
       PlayerType.Bot,
       null,
       "player_id",
     );
     const requestorInfo = new PlayerInfo(
-      "fr",
       "requestor_id",
       PlayerType.Human,
       null,
@@ -42,7 +43,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
 
     const random = new PseudoRandom(42);
 
-    botBehavior = new BotBehavior(random, game, player, 0.5, 0.5);
+    botBehavior = new BotBehavior(random, game, player, 0.5, 0.5, 0.2);
   });
 
   function setupAllianceRequest({

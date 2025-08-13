@@ -1,11 +1,9 @@
 import { colord, Colord } from "colord";
 import {
-  blue,
-  botColor,
   ColorAllocator,
-  red,
-  teal,
-} from "../src/core/configuration/Colors";
+  selectDistinctColorIndex,
+} from "../src/core/configuration/ColorAllocator";
+import { blue, botColor, red, teal } from "../src/core/configuration/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
@@ -18,6 +16,8 @@ const fallbackMockColors: Colord[] = [
   colord({ r: 0, g: 0, b: 0 }),
   colord({ r: 255, g: 255, b: 255 }),
 ];
+
+const fallbackColors = [...fallbackMockColors, ...mockColors];
 
 describe("ColorAllocator", () => {
   let allocator: ColorAllocator;
@@ -50,7 +50,7 @@ describe("ColorAllocator", () => {
     const fallback = allocator.assignColor("4");
     const fallback2 = allocator.assignColor("5");
 
-    const match = fallbackMockColors.some((color) => color.isEqual(fallback));
+    const match = fallbackColors.some((color) => color.isEqual(fallback));
     expect(match).toBe(true);
 
     const match2 = fallback.isEqual(fallback2);
@@ -77,5 +77,24 @@ describe("ColorAllocator", () => {
     expect(allocator.assignTeamColor(ColoredTeams.Red)).toEqual(red);
     expect(allocator.assignTeamColor(ColoredTeams.Teal)).toEqual(teal);
     expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
+  });
+});
+
+describe("selectDistinctColor", () => {
+  test("returns the most distant color", () => {
+    const assignedColors = [colord({ r: 255, g: 0, b: 0 })]; // bright red
+    const availableColors = [
+      colord({ r: 254, g: 1, b: 1 }), // too close
+      colord({ r: 0, g: 255, b: 0 }), // distinct green
+      colord({ r: 0, g: 0, b: 255 }), // distinct blue
+    ];
+
+    const result = selectDistinctColorIndex(availableColors, assignedColors);
+    expect(result).not.toBeNull();
+    const rgb = availableColors[result!].toRgb();
+    expect([
+      { r: 0, g: 255, b: 0, a: 1 },
+      { r: 0, g: 0, b: 255, a: 1 },
+    ]).toContainEqual(rgb);
   });
 });

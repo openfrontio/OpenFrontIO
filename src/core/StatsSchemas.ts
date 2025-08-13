@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { UnitType } from "./game/Game";
 
 export const BombUnitSchema = z.union([
@@ -38,6 +38,7 @@ export const OtherUnitSchema = z.union([
   z.literal("wshp"),
   z.literal("silo"),
   z.literal("saml"),
+  z.literal("fact"),
 ]);
 export type OtherUnit = z.infer<typeof OtherUnitSchema>;
 export type OtherUnitType =
@@ -47,7 +48,8 @@ export type OtherUnitType =
   | UnitType.MissileSilo
   | UnitType.Port
   | UnitType.SAMLauncher
-  | UnitType.Warship;
+  | UnitType.Warship
+  | UnitType.Factory;
 
 export const unitTypeToOtherUnit = {
   [UnitType.City]: "city",
@@ -57,6 +59,7 @@ export const unitTypeToOtherUnit = {
   [UnitType.Port]: "port",
   [UnitType.SAMLauncher]: "saml",
   [UnitType.Warship]: "wshp",
+  [UnitType.Factory]: "fact",
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
 // Attacks
@@ -89,7 +92,7 @@ export const OTHER_INDEX_LOST = 3; // Structures/warships destroyed/captured by 
 export const OTHER_INDEX_UPGRADE = 4; // Structures upgraded
 
 const BigIntStringSchema = z.preprocess((val) => {
-  if (typeof val === "string" && /^\d+$/.test(val)) return BigInt(val);
+  if (typeof val === "string" && /^-?\d+$/.test(val)) return BigInt(val);
   if (typeof val === "bigint") return val;
   return val;
 }, z.bigint());
@@ -101,10 +104,10 @@ export const PlayerStatsSchema = z
   .object({
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
-    boats: z.record(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
-    bombs: z.record(BombUnitSchema, AtLeastOneNumberSchema).optional(),
+    boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
+    bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),
-    units: z.record(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
+    units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;

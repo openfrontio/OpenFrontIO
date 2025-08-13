@@ -1,17 +1,18 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { GameMode } from "../core/game/Game";
+import { GameMapType, GameMode } from "../core/game/Game";
+import { terrainMapFileLoader } from "../core/game/TerrainMapFileLoader";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
-import { getMapsImage } from "./utilities/Maps";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
   @state() public isLobbyHighlighted: boolean = false;
   @state() private isButtonDebounced: boolean = false;
+  @state() private mapImages: Map<GameID, string> = new Map();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
@@ -48,9 +49,26 @@ export class PublicLobby extends LitElement {
           const msUntilStart = l.msUntilStart ?? 0;
           this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
         }
+
+        // Load map image if not already loaded
+        if (l.gameConfig && !this.mapImages.has(l.gameID)) {
+          this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+        }
       });
     } catch (error) {
       console.error("Error fetching lobbies:", error);
+    }
+  }
+
+  private async loadMapImage(gameID: GameID, gameMap: string) {
+    try {
+      // Convert string to GameMapType enum value
+      const mapType = gameMap as GameMapType;
+      const data = terrainMapFileLoader.getMapData(mapType);
+      this.mapImages.set(gameID, await data.webpPath());
+      this.requestUpdate();
+    } catch (error) {
+      console.error("Failed to load map image:", error);
     }
   }
 
@@ -92,8 +110,10 @@ export class PublicLobby extends LitElement {
 
     const teamCount =
       lobby.gameConfig.gameMode === GameMode.Team
-        ? lobby.gameConfig.playerTeams || 0
+        ? (lobby.gameConfig.playerTeams ?? 0)
         : null;
+
+    const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
       <button
@@ -107,12 +127,16 @@ export class PublicLobby extends LitElement {
           ? "opacity-70 cursor-not-allowed"
           : ""}"
       >
-        <img
-          src="${getMapsImage(lobby.gameConfig.gameMap)}"
-          alt="${lobby.gameConfig.gameMap}"
-          class="place-self-start col-span-full row-span-full h-full -z-10"
-          style="mask-image: linear-gradient(to left, transparent, #fff)"
-        />
+        ${mapImageSrc
+          ? html`<img
+              src="${mapImageSrc}"
+              alt="${lobby.gameConfig.gameMap}"
+              class="place-self-start col-span-full row-span-full h-full -z-10"
+              style="mask-image: linear-gradient(to left, transparent, #fff)"
+            />`
+          : html`<div
+              class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
+            ></div>`}
         <div
           class="flex flex-col justify-between h-full col-span-full row-span-full p-4 md:p-6 text-right z-0"
         >
@@ -127,7 +151,11 @@ export class PublicLobby extends LitElement {
                   : "text-blue-600"} bg-white rounded-sm px-1"
               >
                 ${lobby.gameConfig.gameMode === GameMode.Team
-                  ? translateText("public_lobby.teams", { num: teamCount ?? 0 })
+                  ? typeof teamCount === "string"
+                    ? translateText(`public_lobby.teams_${teamCount}`)
+                    : translateText("public_lobby.teams", {
+                        num: teamCount ?? 0,
+                      })
                   : translateText("game_mode.ffa")}</span
               >
               <span

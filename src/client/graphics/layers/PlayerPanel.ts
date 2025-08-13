@@ -13,7 +13,7 @@ import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
-import { MouseUpEvent } from "../../InputHandler";
+import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -167,6 +167,10 @@ export class PlayerPanel extends LitElement implements Layer {
   init() {
     this.eventBus.on(MouseUpEvent, (e: MouseEvent) => this.hide());
 
+    this.eventBus.on(CloseViewEvent, (e) => {
+      this.hide();
+    });
+
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
   }
 
@@ -176,11 +180,9 @@ export class PlayerPanel extends LitElement implements Layer {
       if (myPlayer !== null && myPlayer.isAlive()) {
         this.actions = await myPlayer.actions(this.tile);
 
-        if (this.actions?.interaction?.allianceCreatedAtTick !== undefined) {
-          const createdAt = this.actions.interaction.allianceCreatedAtTick;
-          const durationTicks = this.g.config().allianceDuration();
-          const expiryTick = createdAt + durationTicks;
-          const remainingTicks = expiryTick - this.g.ticks();
+        if (this.actions?.interaction?.allianceExpiresAt !== undefined) {
+          const expiresAt = this.actions.interaction.allianceExpiresAt;
+          const remainingTicks = expiresAt - this.g.ticks();
 
           if (remainingTicks > 0) {
             const remainingSeconds = Math.max(
@@ -235,7 +237,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none overflow-auto"
+        class="fixed inset-0 flex items-center justify-center z-[1001] pointer-events-none overflow-auto"
         @contextmenu=${(e) => e.preventDefault()}
         @wheel=${(e) => e.stopPropagation()}
       >

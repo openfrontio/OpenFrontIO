@@ -34,6 +34,10 @@ export default async (env, argv) => {
         },
         {
           test: /\.txt$/,
+          type: "asset/source",
+        },
+        {
+          test: /\.md$/,
           type: "asset/resource", // Changed from raw-loader
           generator: {
             filename: "text/[name].[contenthash][ext]", // Added content hash
@@ -83,7 +87,7 @@ export default async (env, argv) => {
           },
         },
         {
-          test: /\.(woff|woff2|eot|ttf|otf)$/,
+          test: /\.(woff|woff2|eot|ttf|otf|xml)$/,
           type: "asset/resource", // Changed from file-loader
           generator: {
             filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
@@ -122,6 +126,9 @@ export default async (env, argv) => {
         ),
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
+        "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
+          process.env.STRIPE_PUBLISHABLE_KEY,
+        ),
       }),
       new CopyPlugin({
         patterns: [

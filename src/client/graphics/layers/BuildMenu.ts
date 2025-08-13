@@ -2,22 +2,38 @@ import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
 import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
 import OilWellIcon from "../../../../resources/images/OilWellIcon.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
-import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
+import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, Gold, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  BuildableUnit,
+  Gold,
+  PlayerActions,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
-import { BuildUnitIntentEvent } from "../../Transport";
+import {
+  CloseViewEvent,
+  MouseDownEvent,
+  ShowBuildMenuEvent,
+  ShowEmojiMenuEvent,
+} from "../../InputHandler";
+import {
+  BuildUnitIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 import { renderNumber } from "../../Utils";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export interface BuildItemDisplay {
@@ -100,6 +116,11 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: OilWellIcon,
       description: "build_menu.desc.oil_well",
       key: "unit_type.oil_well",
+      unitType: UnitType.Factory,
+      icon: factoryIcon,
+      description: "build_menu.desc.factory",
+      key: "unit_type.factory",
+
       countable: true,
     },
   ],
@@ -114,6 +135,35 @@ export class BuildMenu extends LitElement implements Layer {
   private clickedTile: TileRef;
   public playerActions: PlayerActions | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
+  public transformHandler: TransformHandler;
+
+  init() {
+    this.eventBus.on(ShowBuildMenuEvent, (e) => {
+      if (!this.game.myPlayer()?.isAlive()) {
+        return;
+      }
+      if (!this._hidden) {
+        // Players sometimes hold control while building a unit,
+        // so if the menu is already open, ignore the event.
+        return;
+      }
+      const clickedCell = this.transformHandler.screenToWorldCoordinates(
+        e.x,
+        e.y,
+      );
+      if (clickedCell === null) {
+        return;
+      }
+      if (!this.game.isValidCoord(clickedCell.x, clickedCell.y)) {
+        return;
+      }
+      const tile = this.game.ref(clickedCell.x, clickedCell.y);
+      this.showMenu(tile);
+    });
+    this.eventBus.on(CloseViewEvent, () => this.hideMenu());
+    this.eventBus.on(ShowEmojiMenuEvent, () => this.hideMenu());
+    this.eventBus.on(MouseDownEvent, () => this.hideMenu());
+  }
 
   tick() {
     if (!this._hidden) {
@@ -313,7 +363,7 @@ export class BuildMenu extends LitElement implements Layer {
   @state()
   private _hidden = true;
 
-  public canBuild(item: BuildItemDisplay): boolean {
+  public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerActions === null) {
       return false;
     }
@@ -322,7 +372,7 @@ export class BuildMenu extends LitElement implements Layer {
     if (unit.length === 0) {
       return false;
     }
-    return unit[0].canBuild !== false;
+    return unit[0].canBuild !== false || unit[0].canUpgrade !== false;
   }
 
   public cost(item: BuildItemDisplay): Gold {
@@ -340,18 +390,22 @@ export class BuildMenu extends LitElement implements Layer {
       return "?";
     }
 
-    return player.units(item.unitType).length.toString();
+    return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public onBuildSelected = (item: BuildItemDisplay) => {
-    this.eventBus.emit(
-      new BuildUnitIntentEvent(
-        item.unitType,
-        new Cell(this.game.x(this.clickedTile), this.game.y(this.clickedTile)),
-      ),
-    );
+  public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
+    if (buildableUnit.canUpgrade !== false) {
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          buildableUnit.canUpgrade,
+          buildableUnit.type,
+        ),
+      );
+    } else if (buildableUnit.canBuild) {
+      this.eventBus.emit(new BuildUnitIntentEvent(buildableUnit.type, tile));
+    }
     this.hideMenu();
-  };
+  }
 
   render() {
     return html`
@@ -362,13 +416,23 @@ export class BuildMenu extends LitElement implements Layer {
         ${this.filteredBuildTable.map(
           (row) => html`
             <div class="build-row">
-              ${row.map(
-                (item) => html`
+              ${row.map((item) => {
+                const buildableUnit = this.playerActions?.buildableUnits.find(
+                  (bu) => bu.type === item.unitType,
+                );
+                if (buildableUnit === undefined) {
+                  return html``;
+                }
+                const enabled =
+                  buildableUnit.canBuild !== false ||
+                  buildableUnit.canUpgrade !== false;
+                return html`
                   <button
                     class="build-button"
-                    @click=${() => this.onBuildSelected(item)}
-                    ?disabled=${!this.canBuild(item)}
-                    title=${!this.canBuild(item)
+                    @click=${() =>
+                      this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
+                    ?disabled=${!enabled}
+                    title=${!enabled
                       ? translateText("build_menu.not_enough_money")
                       : ""}
                   >
@@ -403,8 +467,8 @@ export class BuildMenu extends LitElement implements Layer {
                         </div>`
                       : ""}
                   </button>
-                `,
-              )}
+                `;
+              })}
             </div>
           `,
         )}

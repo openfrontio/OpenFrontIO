@@ -71,7 +71,7 @@ export interface Stats {
   bombLand(player: Player, target: Player | TerraNullius, type: NukeType): void;
 
   // Player's SAM intercepts a bomb from attacker
-  bombIntercept(player: Player, attacker: Player, type: NukeType): void;
+  bombIntercept(player: Player, type: NukeType, count: number | bigint): void;
 
   // Player earns gold from conquering tiles or trade ships from captured
   goldWar(player: Player, captured: Player, gold: number | bigint): void;

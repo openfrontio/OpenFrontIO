@@ -1,12 +1,13 @@
 import { LitElement, css, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
-import { getMapsImage } from "../utilities/Maps";
+import { terrainMapFileLoader } from "../../core/game/TerrainMapFileLoader";
+import { translateText } from "../Utils";
 
 // Add map descriptions
 export const MapDescription: Record<keyof typeof GameMapType, string> = {
   World: "World",
-  WorldMapGiant: "Giant World Map",
+  GiantWorldMap: "Giant World Map",
   Europe: "Europe",
   EuropeClassic: "Europe Classic",
   Mena: "MENA",
@@ -29,6 +30,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   FalklandIslands: "Falkland Islands",
   Baikal: "Baikal",
   Halkidiki: "Halkidiki",
+  StraitOfGibraltar: "Strait of Gibraltar",
+  Italia: "Italia",
 };
 
 @customElement("map-display")
@@ -36,6 +39,9 @@ export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
   @property({ type: Boolean }) selected = false;
   @property({ type: String }) translation: string = "";
+  @state() private mapWebpPath: string | null = null;
+  @state() private mapName: string | null = null;
+  @state() private isLoading = true;
 
   static styles = css`
     .option-card {
@@ -86,25 +92,42 @@ export class MapDisplay extends LitElement {
     }
   `;
 
-  render() {
-    const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
+  connectedCallback() {
+    super.connectedCallback();
+    this.loadMapData();
+  }
 
+  private async loadMapData() {
+    if (!this.mapKey) return;
+
+    try {
+      this.isLoading = true;
+      const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
+      const data = terrainMapFileLoader.getMapData(mapValue);
+      this.mapWebpPath = await data.webpPath();
+      this.mapName = (await data.manifest()).name;
+    } catch (error) {
+      console.error("Failed to load map data:", error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  render() {
     return html`
       <div class="option-card ${this.selected ? "selected" : ""}">
-        ${getMapsImage(mapValue)
-          ? html`<img
-              src="${getMapsImage(mapValue)}"
-              alt="${this.mapKey}"
-              class="option-image"
-            />`
-          : html`<div class="option-image">
-              <p>${this.mapKey}</p>
-            </div>`}
-        <div class="option-card-title">
-          <!-- ${MapDescription[this.mapKey as keyof typeof GameMapType]}-->
-          ${this.translation ||
-          MapDescription[this.mapKey as keyof typeof GameMapType]}
-        </div>
+        ${this.isLoading
+          ? html`<div class="option-image">
+              ${translateText("map_component.loading")}
+            </div>`
+          : this.mapWebpPath
+            ? html`<img
+                src="${this.mapWebpPath}"
+                alt="${this.mapKey}"
+                class="option-image"
+              />`
+            : html`<div class="option-image">Error</div>`}
+        <div class="option-card-title">${this.translation || this.mapName}</div>
       </div>
     `;
   }

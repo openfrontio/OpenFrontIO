@@ -1,6 +1,8 @@
 import { LitElement, TemplateResult, html } from "lit";
+import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -11,10 +13,11 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { MouseMoveEvent } from "../../InputHandler";
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { CloseRadialMenuEvent } from "./RadialMenu";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -67,6 +70,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
       this.onMouseEvent(e),
     );
+    this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
+      this.maybeShow(e.x, e.y),
+    );
+    this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
     this._isActive = true;
   }
 
@@ -163,6 +170,18 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
   }
 
+  private displayUnitCount(
+    player: PlayerView,
+    type: UnitType,
+    description: string,
+  ) {
+    return !this.game.config().isUnitDisabled(type)
+      ? html`<div class="text-sm opacity-80" translate="no">
+          ${translateText(description)}: ${player.totalUnitLevels(type)}
+        </div>`
+      : "";
+  }
+
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
@@ -205,12 +224,23 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             ? "text-green-500"
             : "text-white"}"
         >
-          ${player.flag()
-            ? html`<img
-                class="h-8 mr-1 aspect-[3/4]"
-                src=${"/flags/" + player.flag() + ".svg"}
-              />`
-            : ""}
+          ${player.cosmetics.flag
+            ? player.cosmetics.flag!.startsWith("!")
+              ? html`<div
+                  class="h-8 mr-1 aspect-[3/4] player-flag"
+                  ${ref((el) => {
+                    if (el instanceof HTMLElement) {
+                      requestAnimationFrame(() => {
+                        renderPlayerFlag(player.cosmetics.flag!, el);
+                      });
+                    }
+                  })}
+                ></div>`
+              : html`<img
+                  class="h-8 mr-1 aspect-[3/4]"
+                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
+                />`
+            : html``}
           ${player.name()}
         </div>
         ${player.team() !== null
@@ -311,6 +341,36 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${translateText("player_info_overlay.warships")}:
           ${player.units(UnitType.Warship).length}
         </div>
+        ${this.displayUnitCount(
+          player,
+          UnitType.Port,
+          "player_info_overlay.ports",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.City,
+          "player_info_overlay.cities",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.Factory,
+          "player_info_overlay.factories",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.MissileSilo,
+          "player_info_overlay.missile_launchers",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.SAMLauncher,
+          "player_info_overlay.sams",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.Warship,
+          "player_info_overlay.warships",
+        )}
         ${relationHtml}
       </div>
     `;
@@ -353,11 +413,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex w-full z-50 flex-col"
+        class="block lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
-          class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

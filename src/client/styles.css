@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url("./styles/core/flag-animation.css");
 @import url("./styles/core/variables.css");
 @import url("./styles/core/typography.css");
 @import url("./styles/layout/header.css");
@@ -34,6 +35,14 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 .start-game-button {
@@ -362,6 +371,10 @@ label.option-card:hover {
 
 #helpModal .oil-well-icon {
   mask: url("../../resources/images/OilWellIcon.svg") no-repeat center / cover;
+
+#helpModal .factory-icon {
+  mask: url("../../resources/images/FactoryIconWhite.svg") no-repeat center /
+    cover;
 }
 
 #helpModal .defense-post-icon {
@@ -379,13 +392,13 @@ label.option-card:hover {
 }
 
 #helpModal .missile-silo-icon {
-  mask: url("../../resources/images/MissileSiloIconWhite.svg") no-repeat
-    center / cover;
+  mask: url("../../resources/non-commercial/svg/MissileSiloIconWhite.svg")
+    no-repeat center / cover;
 }
 
 #helpModal .sam-launcher-icon {
-  mask: url("../../resources/images/SamLauncherIconWhite.svg") no-repeat
-    center / cover;
+  mask: url("../../resources/non-commercial/svg/SamLauncherIconWhite.svg")
+    no-repeat center / cover;
 }
 
 #helpModal .atom-bomb-icon {
@@ -486,6 +499,7 @@ label.option-card:hover {
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-height: 400px;
 }
 
 #error-modal button.copy-btn {
@@ -617,4 +631,38 @@ label.option-card:hover {
   font-size: 14px;
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* News Button Notification */
+news-button .active button {
+  position: relative;
+  border-color: #2563eb !important;
+  border-width: 2px !important;
+  box-shadow:
+    0 0 0 1px rgba(37, 99, 235, 0.5),
+    0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+news-button .active button::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: #f59e0b;
+  border: 2px solid white;
+  border-radius: 50%;
+  animation: newsPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes newsPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.4);
+  }
 }

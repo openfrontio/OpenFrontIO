@@ -1,9 +1,10 @@
 import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
-import { Tick, UnitType } from "../../../core/game/Game";
+import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { UnitSelectionEvent } from "../../InputHandler";
 import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
@@ -16,7 +17,7 @@ const COLOR_PROGRESSION = [
   "rgb(44, 239, 18)",
 ];
 const HEALTHBAR_WIDTH = 11; // Width of the health bar
-const LOADINGBAR_WIDTH = 18; // Width of the loading bar
+const LOADINGBAR_WIDTH = 14; // Width of the loading bar
 const PROGRESSBAR_HEIGHT = 3; // Height of a bar
 
 /**
@@ -26,12 +27,12 @@ const PROGRESSBAR_HEIGHT = 3; // Height of a bar
 export class UILayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D | null;
-
   private theme: Theme | null = null;
+  private userSettings: UserSettings = new UserSettings();
   private selectionAnimTime = 0;
   private allProgressBars: Map<
     number,
-    { unit: UnitView; startTick: Tick; endTick: Tick; progressBar: ProgressBar }
+    { unit: UnitView; progressBar: ProgressBar }
   > = new Map();
   private allHealthBars: Map<number, ProgressBar> = new Map();
   // Keep track of currently selected unit
@@ -75,7 +76,6 @@ export class UILayer implements Layer {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
       });
-
     this.updateProgressBars();
   }
 
@@ -105,37 +105,48 @@ export class UILayer implements Layer {
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
       case UnitType.Construction: {
-        const playerId = this.game.myPlayer()?.id();
-        if (
-          unit.isActive() &&
-          playerId !== undefined &&
-          unit.owner().id() === playerId
-        ) {
-          const constructionType = unit.constructionType();
-          if (constructionType === undefined) {
-            // Skip units without construction type
-            return;
-          }
-          const endTick =
-            this.game.unitInfo(constructionType).constructionDuration || 0;
-          this.drawLoadingBar(unit, endTick);
+        const constructionType = unit.constructionType();
+        if (constructionType === undefined) {
+          // Skip units without construction type
+          return;
         }
+        this.createLoadingBar(unit);
         break;
       }
       case UnitType.Warship: {
         this.drawHealthBar(unit);
         break;
       }
-      case UnitType.SAMLauncher:
       case UnitType.MissileSilo:
-        if (unit.isActive() && unit.isInCooldown()) {
-          const endTick = unit.ticksLeftInCooldown() || 0;
-          this.drawLoadingBar(unit, endTick);
-        }
+        this.createLoadingBar(unit);
+        break;
+      case UnitType.SAMLauncher:
+        this.createLoadingBar(unit);
         break;
       default:
         return;
     }
+  }
+
+  private clearIcon(icon: HTMLImageElement, startX: number, startY: number) {
+    if (this.context !== null) {
+      this.context.clearRect(startX, startY, icon.width, icon.height);
+    }
+  }
+
+  private drawIcon(
+    icon: HTMLImageElement,
+    unit: UnitView,
+    startX: number,
+    startY: number,
+  ) {
+    if (this.context === null || this.theme === null) {
+      return;
+    }
+    const color = this.theme.borderColor(unit.owner());
+    this.context.fillStyle = color.toRgbString();
+    this.context.fillRect(startX, startY, icon.width, icon.height);
+    this.context.drawImage(icon, startX, startY);
   }
 
   /**
@@ -263,7 +274,11 @@ export class UILayer implements Layer {
       // full hp/dead warships dont need a hp bar
       this.allHealthBars.get(unit.id())?.clear();
       this.allHealthBars.delete(unit.id());
-    } else if (unit.health() < maxHealth && unit.health() > 0) {
+    } else if (
+      unit.isActive() &&
+      unit.health() < maxHealth &&
+      unit.health() > 0
+    ) {
       this.allHealthBars.get(unit.id())?.clear();
       const healthBar = new ProgressBar(
         COLOR_PROGRESSION,
@@ -280,20 +295,47 @@ export class UILayer implements Layer {
   }
 
   private updateProgressBars() {
-    const currentTick = this.game.ticks();
     this.allProgressBars.forEach((progressBarInfo, unitId) => {
-      const progress =
-        (currentTick - progressBarInfo.startTick) / progressBarInfo.endTick;
-      if (progress >= 1 || !progressBarInfo.unit.isActive()) {
+      const progress = this.getProgress(progressBarInfo.unit);
+      if (progress >= 1) {
         this.allProgressBars.get(unitId)?.progressBar.clear();
         this.allProgressBars.delete(unitId);
         return;
+      } else {
+        progressBarInfo.progressBar.setProgress(progress);
       }
-      progressBarInfo.progressBar.setProgress(progress);
     });
   }
 
-  public drawLoadingBar(unit: UnitView, endTick: Tick) {
+  private getProgress(unit: UnitView): number {
+    if (!unit.isActive()) {
+      return 1;
+    }
+    switch (unit.type()) {
+      case UnitType.Construction:
+        const constructionType = unit.constructionType();
+        if (constructionType === undefined) {
+          return 1;
+        }
+        const constDuration =
+          this.game.unitInfo(constructionType).constructionDuration;
+        if (constDuration === undefined) {
+          throw new Error("unit does not have constructionTime");
+        }
+        return (
+          (this.game.ticks() - unit.createdAt()) /
+          (constDuration === 0 ? 1 : constDuration)
+        );
+
+      case UnitType.MissileSilo:
+      case UnitType.SAMLauncher:
+        return unit.missileReadinesss();
+      default:
+        return 1;
+    }
+  }
+
+  public createLoadingBar(unit: UnitView) {
     if (!this.context) {
       return;
     }
@@ -301,16 +343,14 @@ export class UILayer implements Layer {
       const progressBar = new ProgressBar(
         COLOR_PROGRESSION,
         this.context,
-        this.game.x(unit.tile()) - 8,
-        this.game.y(unit.tile()) - 10,
+        this.game.x(unit.tile()) - 6,
+        this.game.y(unit.tile()) + 6,
         LOADINGBAR_WIDTH,
         PROGRESSBAR_HEIGHT,
         0,
       );
       this.allProgressBars.set(unit.id(), {
         unit,
-        startTick: this.game.ticks(),
-        endTick,
         progressBar,
       });
     }

@@ -13,9 +13,10 @@ import {
   Intent,
   PlayerRecord,
   ServerDesyncSchema,
+  ServerErrorMessage,
   ServerPrestartMessageSchema,
-  ServerStartGameMessageSchema,
-  ServerTurnMessageSchema,
+  ServerStartGameMessage,
+  ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
 import { createGameRecord } from "../core/Util";
@@ -59,6 +60,8 @@ export class GameServer {
 
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
+
+  private websockets: Set<WebSocket> = new Set();
 
   constructor(
     public readonly id: string,
@@ -106,6 +109,7 @@ export class GameServer {
   }
 
   public addClient(client: Client, lastTurn: number) {
+    this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
@@ -172,7 +176,6 @@ export class GameServer {
       client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
 
-      existing.ws.removeAllListeners("message");
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
@@ -193,7 +196,14 @@ export class GameServer {
             this.log.error("Failed to parse client message", error, {
               clientID: client.clientID,
             });
-            client.ws.close();
+            client.ws.send(
+              JSON.stringify({
+                type: "error",
+                error,
+                message,
+              } satisfies ServerErrorMessage),
+            );
+            client.ws.close(1002, "ClientMessageSchema");
             return;
           }
           const clientMsg = parsed.data;
@@ -240,7 +250,6 @@ export class GameServer {
         }
       }),
     );
-    client.ws.removeAllListeners("close");
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
         clientID: client.clientID,
@@ -250,10 +259,9 @@ export class GameServer {
         (c) => c.clientID !== client.clientID,
       );
     });
-    client.ws.removeAllListeners("error");
     client.ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        client.ws.close(1002);
+        client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
 
@@ -317,15 +325,22 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
-    this.gameStartInfo = GameStartInfoSchema.parse({
+    const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
         clientID: c.clientID,
+        pattern: c.pattern,
         flag: c.flag,
       })),
-    } satisfies GameStartInfo);
+    });
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      this.log.error("Error parsing game start info", { message: error });
+      return;
+    }
+    this.gameStartInfo = result.data satisfies GameStartInfo;
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -347,13 +362,11 @@ export class GameServer {
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
     try {
       ws.send(
-        JSON.stringify(
-          ServerStartGameMessageSchema.parse({
-            type: "start",
-            turns: this.turns.slice(lastTurn),
-            gameStartInfo: this.gameStartInfo,
-          }),
-        ),
+        JSON.stringify({
+          type: "start",
+          turns: this.turns.slice(lastTurn),
+          gameStartInfo: this.gameStartInfo,
+        } satisfies ServerStartGameMessage),
       );
     } catch (error) {
       throw new Error(
@@ -376,22 +389,10 @@ export class GameServer {
     this.handleSynchronization();
     this.checkDisconnectedStatus();
 
-    let msg = "";
-    try {
-      msg = JSON.stringify(
-        ServerTurnMessageSchema.parse({
-          type: "turn",
-          turn: pastTurn,
-        }),
-      );
-    } catch (error) {
-      this.log.info(
-        `error sending message for game: ${error.substring(0, 250)}`,
-        {},
-      );
-      return;
-    }
-
+    const msg = JSON.stringify({
+      type: "turn",
+      turn: pastTurn,
+    } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
     });
@@ -400,10 +401,9 @@ export class GameServer {
   async end() {
     // Close all WebSocket connections
     clearInterval(this.endTurnIntervalID);
-    this.allClients.forEach((client) => {
-      client.ws.removeAllListeners("message");
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.close(1000, "game has ended");
+    this.websockets.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(1000, "game has ended");
       }
     });
     if (!this._hasPrestarted && !this._hasStarted) {
@@ -543,6 +543,12 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "Kicked from game (you may have been playing on another tab)",
+        } satisfies ServerErrorMessage),
+      );
       client.ws.close(1000, "Kicked from game");
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== clientID,
@@ -616,6 +622,7 @@ export class GameServer {
         this._startTime ?? 0,
         Date.now(),
         this.winner?.winner,
+        this.config,
       ),
     );
   }
@@ -681,7 +688,7 @@ export class GameServer {
     for (const client of this.activeClients) {
       if (client.hashes.has(turnNumber)) {
         const clientHash = client.hashes.get(turnNumber)!;
-        counts.set(clientHash, (counts.get(clientHash) || 0) + 1);
+        counts.set(clientHash, (counts.get(clientHash) ?? 0) + 1);
       }
     }
 

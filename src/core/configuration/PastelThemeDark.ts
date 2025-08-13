@@ -3,13 +3,8 @@ import { PseudoRandom } from "../PseudoRandom";
 import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
-import {
-  botColors,
-  ColorAllocator,
-  fallbackColors,
-  humanColors,
-  nationColors,
-} from "./Colors";
+import { ColorAllocator } from "./ColorAllocator";
+import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Config";
 
 type ColorCache = Map<string, Colord>;
@@ -69,6 +64,16 @@ export class PastelThemeDark implements Theme {
       g: Math.max(tc.g - 50, 0),
       b: Math.max(tc.b - 50, 0),
     });
+  }
+
+  railroadColor(player: PlayerView): Colord {
+    const tc = this.territoryColor(player).rgba;
+    const color = colord({
+      r: Math.max(tc.r - 10, 0),
+      g: Math.max(tc.g - 10, 0),
+      b: Math.max(tc.b - 10, 0),
+    });
+    return color;
   }
 
   borderColor(player: PlayerView): Colord {

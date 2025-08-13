@@ -116,6 +116,28 @@ export class PseudoRandom {
   }
 
   /**
+   * Selects a random element from a set.
+   */
+  randFromSet<T>(set: Set<T>): T {
+    const size = set.size;
+    if (size === 0) {
+      throw new Error("set must not be empty");
+    }
+
+    const index = this.nextInt(0, size);
+    let i = 0;
+    for (const item of set) {
+      if (i === index) {
+        return item;
+      }
+      i++;
+    }
+
+    // This should never happen
+    throw new Error("Unexpected error selecting element from set");
+  }
+
+  /**
    * Returns true with probability 1/odds.
    */
   chance(odds: number): boolean {

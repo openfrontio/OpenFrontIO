@@ -21,10 +21,14 @@
     "instructions": "Instructions",
     "how_to_play": "How to Play",
     "advertise": "Advertise",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Privacy Policy",
+    "terms_of_service": "Terms of Service"
   },
   "news": {
-    "title": "Version 23 released!"
+    "full_changelog": "See the complete change log",
+    "github_link": "on GitHub",
+    "title": "Release Notes"
   },
   "help_modal": {
     "hotkeys": "Hotkeys",
@@ -41,6 +45,7 @@
     "action_reset_gfx": "Reset graphics",
     "ui_section": "Game UI",
     "ui_leaderboard": "Leaderboard",
+    "ui_your_team": "Your team:",
     "ui_leaderboard_desc": "Shows the top players of the game and their names, % owned land, gold and troops. Using Show All shows all players in the game. If you don't want to see the leaderboard, click Hide.",
     "ui_control": "Control panel",
     "ui_control_desc": "The control panel contains the following elements:",
@@ -57,6 +62,7 @@
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
     "ui_playeroverlay_desc": "When you hover over a country, the Player info overlay is displayed under Options. It shows the type of player: Human, Nation (smart bot), or Bot. A Nation's attitude towards you, ranging from Hostile to Friendly. And defending troops, gold, plus the number of Warships and various buildings the player has.",
+    "ui_wilderness": "Wilderness",
     "option_pause": "Pause/Unpause the game - Only available in single player mode.",
     "option_timer": "Timer - Time passed since the start of the game.",
     "option_exit": "Exit button.",
@@ -64,6 +70,7 @@
     "radial_title": "Radial menu",
     "radial_desc": "Right clicking (or touch on mobile) opens the Radial menu. Right click outside it to close it. From the menu you can:",
     "radial_build": "Open the Build menu.",
+    "radial_attack": "Open the Attack menu.",
     "radial_info": "Open the Info menu.",
     "radial_boat": "Send a Boat (transport ship) to attack at the selected location. Only available if you have access to water.",
     "radial_close": "Close the menu.",
@@ -88,6 +95,8 @@
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
     "build_oil_well": "Oil Well",
     "build_oil_well_desc": "Generates gold over time. Can be built on any land tile. The more Oil Wells you have, the more gold you generate.",
+    "build_factory": "Factory",
+    "build_factory_desc": "Creates railroads automatically with nearby structures, and spawns trains sporadically.",
     "build_defense": "Defense Post",
     "build_defense_desc": "Increases defenses around nearby borders, which show a checkered pattern. Attacks from enemies are slower and have more casualties.",
     "build_port": "Port",
@@ -111,7 +120,8 @@
     "icon_ally": "Handshake - Ally. This player is your ally.",
     "icon_embargo": "Dollar stop sign - Embargo. This player has stopped trading with you automatically or manually.",
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
-    "info_enemy_panel": "Enemy info panel"
+    "info_enemy_panel": "Enemy info panel",
+    "exit_confirmation": "Are you sure you want to exit the game?"
   },
   "single_modal": {
     "title": "Single Player",
@@ -130,7 +140,7 @@
   "map": {
     "map": "Map",
     "world": "World",
-    "worldmapgiant": "Giant World Map",
+    "giantworldmap": "Giant World Map",
     "europe": "Europe",
     "mena": "MENA",
     "northamerica": "North America",
@@ -153,12 +163,17 @@
     "europeclassic": "Europe (classic)",
     "falklandislands": "Falkland Islands",
     "baikal": "Baikal",
-    "halkidiki": "Halkidiki"
+    "halkidiki": "Halkidiki",
+    "straitofgibraltar": "Strait of Gibraltar",
+    "italia": "Italia"
   },
   "map_categories": {
     "continental": "Continental",
     "regional": "Regional",
     "fantasy": "Other"
+  },
+  "map_component": {
+    "loading": "Loading..."
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -174,6 +189,9 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
+    "teams_Duos": "Duos (teams of 2)",
+    "teams_Trios": "Trios (teams of 3)",
+    "teams_Quads": "Quads (teams of 4)",
     "teams": "{num} teams"
   },
   "username": {
@@ -199,6 +217,16 @@
     "players": "Players",
     "waiting": "Waiting for players...",
     "start": "Start Game"
+  },
+  "team_colors": {
+    "red": "Red",
+    "blue": "Blue",
+    "teal": "Teal",
+    "purple": "Purple",
+    "yellow": "Yellow",
+    "orange": "Orange",
+    "green": "Green",
+    "bot": "Bot"
   },
   "game_starting_modal": {
     "title": "Game is Starting...",
@@ -228,26 +256,42 @@
     "sam_launcher": "SAM Launcher",
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "factory": "Factory"
   },
   "user_setting": {
     "title": "User Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
-    "dark_mode_label": "🌙 Dark Mode",
+    "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
-    "emojis_label": "😊 Emojis",
+    "dark_mode_enabled": "Dark mode enabled",
+    "light_mode_enabled": "Light mode enabled",
+    "emojis_label": "Emojis",
+    "emojis_visible": "Emojis are visible",
+    "emojis_hidden": "Emojis are hidden",
     "emojis_desc": "Toggle whether emojis are shown in game",
-    "special_effects_label": "💥 Special effects",
+    "alert_frame_label": "Alert Frame",
+    "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed.",
+    "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
-    "anonymous_names_label": "🥷 Hidden Names",
+    "special_effects_enabled": "Special effects enabled",
+    "special_effects_disabled": "Special effects disabled",
+    "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
-    "left_click_label": "🖱️ Left Click to Open Menu",
+    "anonymous_names_enabled": "Anonymous names enabled",
+    "real_names_shown": "Real names shown",
+    "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
+    "left_click_menu": "Left Click Menu",
+    "left_click_opens_menu": "Left click opens menu",
+    "right_click_opens_menu": "Right click opens menu",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
     "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
+    "territory_patterns_label": "🏳️ Territory Patterns",
+    "territory_patterns_desc": "Choose whether to display territory pattern designs in game",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -263,6 +307,8 @@
     "attack_keybinds": "Attack Keybinds",
     "boat_attack": "Boat Attack",
     "boat_attack_desc": "Send a boat attack to the tile under your cursor.",
+    "ground_attack": "Ground Attack",
+    "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
     "zoom_controls": "Zoom Controls",
     "zoom_out": "Zoom Out",
     "zoom_out_desc": "Zoom out the map",
@@ -280,7 +326,14 @@
     "move_right": "Move Camera Right",
     "move_right_desc": "Move the camera to the right",
     "reset": "Reset",
-    "unbind": "Unbind"
+    "unbind": "Unbind",
+    "on": "On",
+    "off": "Off",
+    "toggle_terrain": "Toggle Terrain",
+    "terrain_enabled": "Terrain view enabled",
+    "terrain_disabled": "Terrain view disabled",
+    "exit_game_label": "Exit Game",
+    "exit_game_info": "Return to main menu"
   },
   "chat": {
     "title": "Quick Chat",
@@ -366,7 +419,8 @@
       "port": "Sends trade ships to generate gold",
       "defense_post": "Increase defenses of nearby borders",
       "city": "Increase max population",
-      "oil_well": "Generates gold over time"
+      "oil_well": "Generates gold over time"",
+      "factory": "Creates railroads and spawns trains"
     },
     "not_enough_money": "Not enough money"
   },
@@ -385,6 +439,7 @@
     "hide": "Hide",
     "rank": "Rank",
     "player": "Player",
+    "team": "Team",
     "owned": "Owned",
     "gold": "Gold",
     "troops": "Troops"
@@ -401,6 +456,7 @@
     "ports": "Ports",
     "cities": "Cities",
     "oil_wells": "Oil wells",
+    "factories": "Factories",
     "missile_launchers": "Missile launchers",
     "sams": "SAMs",
     "warships": "Warships",
@@ -410,7 +466,25 @@
   },
   "events_display": {
     "retreating": "retreating",
-    "boat": "Boat"
+    "boat": "Boat",
+    "alliance_request_status": "{name} {status} your alliance request",
+    "alliance_accepted": "accepted",
+    "alliance_rejected": "rejected",
+    "duration_second": "1 second",
+    "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
+    "duration_seconds_plural": "{seconds} seconds",
+    "betrayed_you": "{name} broke their alliance with you",
+    "about_to_expire": "Your alliance with {name} is about to expire!",
+    "alliance_expired": "Your alliance with {name} expired",
+    "attack_request": "{name} requests you attack {target}",
+    "sent_emoji": "Sent {name}: {emoji}",
+    "renew_alliance": "Request to renew",
+    "request_alliance": "{name} requests an alliance!",
+    "focus": "Focus",
+    "accept_alliance": "Accept",
+    "reject_alliance": "Reject",
+    "alliance_renewed": "Your alliance with {name} has been renewed",
+    "ignore": "Ignore"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
@@ -452,10 +526,12 @@
   },
   "replay_panel": {
     "replay_speed": "Replay speed",
-    "game_speed": "Game speed"
+    "game_speed": "Game speed",
+    "fastest_game_speed": "max"
   },
   "error_modal": {
     "crashed": "Game crashed!",
+    "connection_error": "Connection error!",
     "paste_discord": "Please paste the following in your bug report in Discord:",
     "copy_clipboard": "Copy to clipboard",
     "copied": "Copied!",
@@ -464,5 +540,56 @@
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location"
+  },
+  "territory_patterns": {
+    "title": "Select Territory Pattern",
+    "purchase": "Purchase",
+    "blocked": {
+      "login": "You must be logged in to access this pattern.",
+      "purchase": "Purchase this pattern to unlock it."
+    },
+    "pattern": {
+      "default": "Default",
+      "custom": "Custom",
+      "stripes_v": "Vertical",
+      "stripes_h": "Horizontal",
+      "horizontal_stripes": "Horizontal (Alt)",
+      "vertical_bars": "Vertical (Alt)",
+      "checkerboard": "Checkerboard",
+      "choco": "Choco",
+      "diagonal": "Diagonal",
+      "cross": "Cross",
+      "mini_cross": "Mini Cross",
+      "sword": "Sword",
+      "sparse_dots": "Sparse Dots",
+      "evan": "Evan",
+      "diagonal_stripe": "Diagonal Stripe",
+      "mountain_ridge": "Mountain Ridge",
+      "scattered_dots": "Scattered Dots",
+      "circuit_board": "Circuit Board",
+      "shells": "Shells",
+      "-w-": ".w.",
+      "white_rabbit": "White Rabbit",
+      "goat": "Goat",
+      "cats": "Cats",
+      "cursor": "Cursor",
+      "hand": "Hand",
+      "radiation": "Radiation",
+      "openfront_qr": "OpenFront.io QR code",
+      "openfront": "OpenFront",
+      "t_rex": "T-Rex",
+      "embelem": "Emblem",
+      "grogu_head": "Grogu Head",
+      "grogu": "Grogu"
+    }
+  },
+  "spawn_ad": {
+    "loading": "Loading advertisement..."
+  },
+  "auth": {
+    "login_required": "Login is required to access this website.",
+    "redirecting": "You are being redirected...",
+    "not_authorized": "You are not authorized to access this website.",
+    "contact_admin": "If you believe you are seeing this message in error, please contact the website administrator."
   }
 }

@@ -7,6 +7,7 @@ import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
+import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 const button = ({
@@ -74,7 +75,9 @@ export class OptionsMenu extends LitElement implements Layer {
   private onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm("Are you sure you want to exit the game?");
+      const isConfirmed = confirm(
+        translateText("help_modal.exit_confirmation"),
+      );
       if (!isConfirmed) return;
     }
     // redirect to the home page
@@ -100,6 +103,11 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleAlertFrameButtonClick() {
+    this.userSettings.toggleAlertFrame();
+    this.requestUpdate();
+  }
+
   private onToggleSpecialEffectsButtonClick() {
     this.userSettings.toggleFxLayer();
     this.requestUpdate();
@@ -122,6 +130,11 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
+  }
+
+  private onToggleTerritoryPatterns() {
+    this.userSettings.toggleTerritoryPatterns();
+    this.requestUpdate();
   }
 
   init() {
@@ -167,7 +180,7 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-15 h-8 lg:w-24 lg:h-10 flex items-center justify-center w-full
+              class="w-[55px] h-8 lg:w-24 lg:h-10 flex items-center justify-center
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
@@ -203,9 +216,20 @@ export class OptionsMenu extends LitElement implements Layer {
             children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
           })}
           ${button({
+            onClick: this.onToggleAlertFrameButtonClick,
+            title: "Toggle Alert frame",
+            children: "🚨: " + (this.userSettings.alertFrame() ? "On" : "Off"),
+          })}
+          ${button({
             onClick: this.onToggleSpecialEffectsButtonClick,
             title: "Toggle Special effects",
             children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleTerritoryPatterns,
+            title: "Territory Patterns",
+            children:
+              "🏳️: " + (this.userSettings.territoryPatterns() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleDarkModeButtonClick,
