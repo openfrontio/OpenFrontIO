@@ -40,13 +40,52 @@ export async function postJoinMessageHandler(
           );
           return;
         }
-        if (clientMsg.intent.type === "mark_disconnected") {
-          log.warn(
-            `Should not receive mark_disconnected intent from client`,
-          );
-          return;
+        switch (clientMsg.intent.type) {
+          case "mark_disconnected": {
+            log.warn(`Should not receive mark_disconnected intent from client`);
+            return;
+          }
+
+          // Handle kick_player intent via WebSocket
+          case "kick_player": {
+            const authenticatedClientID = client.clientID;
+
+            // Check if the authenticated client is the lobby creator
+            if (authenticatedClientID !== gs.lobbyCreatorID) {
+              log.warn(`Only lobby creator can kick players`, {
+                clientID: authenticatedClientID,
+                creatorID: gs.lobbyCreatorID,
+                gameID: gs.id,
+                target: clientMsg.intent.target,
+              });
+              return;
+            }
+
+            // Don't allow lobby creator to kick themselves
+            if (authenticatedClientID === clientMsg.intent.target) {
+              log.warn(`Cannot kick yourself`, {
+                clientID: authenticatedClientID,
+              });
+              return;
+            }
+
+            // Log and execute the kick
+            log.info(`Lobby creator initiated kick of player`, {
+              creatorID: authenticatedClientID,
+              gameID: gs.id,
+              kickMethod: "websocket",
+              target: clientMsg.intent.target,
+            });
+
+            gs.kickClient(clientMsg.intent.target);
+            return;
+          }
+
+          default: {
+            gs.addIntent(clientMsg.intent);
+            break;
+          }
         }
-        gs.addIntent(clientMsg.intent);
         break;
       }
       case "ping": {
@@ -82,9 +121,9 @@ function handleWinner(
   client: Client, clientMsg: ClientSendWinnerMessage) {
   if (
     gs.outOfSyncClients.has(client.clientID) ||
-      gs.kickedClients.has(client.clientID) ||
-      gs.winner !== null ||
-      client.reportedWinner !== null
+    gs.kickedClients.has(client.clientID) ||
+    gs.winner !== null ||
+    client.reportedWinner !== null
   ) {
     return;
   }
