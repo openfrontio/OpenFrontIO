@@ -132,7 +132,7 @@ export interface Config {
   tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(numTradeShips: number, numPlayerPorts: number): number;
   trainGold(isFriendly: boolean): Gold;
-  trainSpawnRate(numberOfStations: number): number;
+  trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
   railroadMaxSize(): number;
