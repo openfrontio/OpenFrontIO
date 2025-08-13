@@ -23,6 +23,7 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { NukePreview } from "./layers/NukePreview";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -48,7 +49,7 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = { attackRatio: 20 };
+  const uiState = { attackRatio: 20, nukePreview: undefined };
 
   //hide when the game renders
   const startingModal = document.querySelector(
@@ -72,6 +73,7 @@ export function createRenderer(
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
   buildMenu.transformHandler = transformHandler;
+  buildMenu.uiState = uiState;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!leaderboard || !(leaderboard instanceof Leaderboard)) {
@@ -269,6 +271,7 @@ export function createRenderer(
     gutterAdModal,
     alertFrame,
     fpsDisplay,
+    new NukePreview(game, transformHandler, uiState),
   ];
 
   return new GameRenderer(
