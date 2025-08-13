@@ -1,15 +1,15 @@
 export class AnimatedSprite {
   private frameHeight: number;
-  private currentFrame: number = 0;
-  private elapsedTime: number = 0;
-  private active: boolean = true;
+  private currentFrame = 0;
+  private elapsedTime = 0;
+  private active = true;
 
   constructor(
     private image: CanvasImageSource,
     private frameWidth: number,
     private frameCount: number,
     private frameDuration: number, // in milliseconds
-    private looping: boolean = true,
+    private looping = false,
     private originX: number,
     private originY: number,
   ) {
@@ -40,6 +40,13 @@ export class AnimatedSprite {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  lifeTime(): number | undefined {
+    if (this.looping) {
+      return undefined;
+    }
+    return this.frameDuration * this.frameCount;
   }
 
   draw(ctx: CanvasRenderingContext2D, x: number, y: number) {

@@ -11,7 +11,14 @@ export function getOtelResource() {
   return resourceFromAttributes({
     [ATTR_SERVICE_NAME]: "openfront",
     [ATTR_SERVICE_VERSION]: "1.0.0",
+    ...getPromLabels(),
+  });
+}
+
+export function getPromLabels() {
+  return {
     "service.instance.id": process.env.HOSTNAME,
+    /* eslint-disable sort-keys */
     "openfront.environment": config.env(),
     "openfront.host": process.env.HOST,
     "openfront.domain": process.env.DOMAIN,
@@ -19,9 +26,6 @@ export function getOtelResource() {
     "openfront.component": process.env.WORKER_ID
       ? "Worker " + process.env.WORKER_ID
       : "Master",
-    // The comma-separated list tells OpenTelemetry which resource attributes
-    // should be converted to Loki labels
-    "loki.resource.labels":
-      "service.name,service.instance.id,openfront.environment,openfront.host,openfront.domain,openfront.subdomain,openfront.component",
-  });
+    /* eslint-enable sort-keys */
+  };
 }

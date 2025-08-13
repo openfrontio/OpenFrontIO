@@ -3,22 +3,31 @@ import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { consolex } from "../core/Consolex";
 import {
   Difficulty,
   Duos,
   GameMapType,
   GameMode,
+  Quads,
+  Trios,
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { GameConfig, GameInfo } from "../core/Schemas";
+import { UserSettings } from "../core/game/UserSettings";
+import {
+  ClientInfo,
+  GameConfig,
+  GameInfo,
+  GameInfoSchema,
+  TeamCountConfig,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
+import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -30,51 +39,128 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: number | typeof Duos = 2;
-  @state() private bots: number = 400;
-  @state() private infiniteGold: boolean = false;
-  @state() private infiniteTroops: boolean = false;
-  @state() private instantBuild: boolean = false;
+  @state() private teamCount: TeamCountConfig = 2;
+  @state() private bots = 400;
+  @state() private infiniteGold = false;
+  @state() private donateGold = false;
+  @state() private infiniteTroops = false;
+  @state() private donateTroops = false;
+  @state() private instantBuild = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
-  @state() private players: string[] = [];
-  @state() private useRandomMap: boolean = false;
+  @state() private clients: ClientInfo[] = [];
+  @state() private useRandomMap = false;
   @state() private disabledUnits: UnitType[] = [];
+  @state() private lobbyCreatorClientID = "";
+  @state() private lobbyIdVisible = true;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
+  private userSettings: UserSettings = new UserSettings();
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   render() {
     return html`
       <o-modal title=${translateText("host_modal.title")}>
         <div class="lobby-id-box">
-          <button
-            class="lobby-id-button"
-            @click=${this.copyToClipboard}
-            ?disabled=${this.copySuccess}
-          >
-            <span class="lobby-id">${this.lobbyId}</span>
+          <button class="lobby-id-button">
+            <!-- Visibility toggle icon on the left -->
             ${
-              this.copySuccess
-                ? html`<span class="copy-success-icon">✓</span>`
-                : html`
-                    <svg
-                      class="clipboard-icon"
+              this.lobbyIdVisible
+                ? html`<svg
+                    class="visibility-icon"
+                    @click=${() => {
+                      this.lobbyIdVisible = !this.lobbyIdVisible;
+                      this.requestUpdate();
+                    }}
+                    style="margin-right: 8px; cursor: pointer;"
+                    stroke="currentColor"
+                    fill="currentColor"
+                    stroke-width="0"
+                    viewBox="0 0 512 512"
+                    height="18px"
+                    width="18px"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
+                    ></path>
+                  </svg>`
+                : html`<svg
+                    class="visibility-icon"
+                    @click=${() => {
+                      this.lobbyIdVisible = !this.lobbyIdVisible;
+                      this.requestUpdate();
+                    }}
+                    style="margin-right: 8px; cursor: pointer;"
+                    stroke="currentColor"
+                    fill="currentColor"
+                    stroke-width="0"
+                    viewBox="0 0 512 512"
+                    height="18px"
+                    width="18px"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
+                      fill="none"
                       stroke="currentColor"
-                      fill="currentColor"
-                      stroke-width="0"
-                      viewBox="0 0 512 512"
-                      height="18px"
-                      width="18px"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
-                      ></path>
-                    </svg>
-                  `
+                      stroke-width="32"
+                    ></path>
+                    <path
+                      d="M144 256l224 0"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="32"
+                      stroke-linecap="round"
+                    ></path>
+                  </svg>`
             }
+            <!-- Lobby ID (conditionally shown) -->
+            <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
+              ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
+            </span>
+
+            <!-- Copy icon/success indicator -->
+            <div @click=${this.copyToClipboard} style="margin-left: 8px; cursor: pointer;">
+              ${
+                this.copySuccess
+                  ? html`<span class="copy-success-icon">✓</span>`
+                  : html`
+                      <svg
+                        class="clipboard-icon"
+                        stroke="currentColor"
+                        fill="currentColor"
+                        stroke-width="0"
+                        viewBox="0 0 512 512"
+                        height="18px"
+                        width="18px"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M296 48H176.5C154.4 48 136 65.4 136 87.5V96h-7.5C106.4 96 88 113.4 88 135.5v288c0 22.1 18.4 40.5 40.5 40.5h208c22.1 0 39.5-18.4 39.5-40.5V416h8.5c22.1 0 39.5-18.4 39.5-40.5V176L296 48zm0 44.6l83.4 83.4H296V92.6zm48 330.9c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5h7.5v255.5c0 22.1 10.4 32.5 32.5 32.5H344v7.5zm48-48c0 4.7-3.4 8.5-7.5 8.5h-208c-4.4 0-8.5-4.1-8.5-8.5v-288c0-4.1 3.8-7.5 8.5-7.5H264v128h128v167.5z"
+                        ></path>
+                      </svg>
+                    `
+              }
+            </div>
           </button>
         </div>
         <div class="options-layout">
@@ -94,7 +180,9 @@ export class HostLobbyModal extends LitElement {
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
                         const mapKey = Object.keys(GameMapType).find(
-                          (key) => GameMapType[key] === mapValue,
+                          (key) =>
+                            GameMapType[key as keyof typeof GameMapType] ===
+                            mapValue,
                         );
                         return html`
                           <div
@@ -154,7 +242,7 @@ export class HostLobbyModal extends LitElement {
                       ></difficulty-display>
                       <p class="option-card-title">
                         ${translateText(
-                          `difficulty.${DifficultyDescription[key]}`,
+                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
                         )}
                       </p>
                     </div>
@@ -196,7 +284,7 @@ export class HostLobbyModal extends LitElement {
                       ${translateText("host_modal.team_count")}
                     </div>
                     <div class="option-cards">
-                      ${[Duos, 2, 3, 4, 5, 6, 7].map(
+                      ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
                         (o) => html`
                           <div
                             class="option-card ${this.teamCount === o
@@ -204,7 +292,13 @@ export class HostLobbyModal extends LitElement {
                               : ""}"
                             @click=${() => this.handleTeamCountSelection(o)}
                           >
-                            <div class="option-card-title">${o}</div>
+                            <div class="option-card-title">
+                              ${typeof o === "string"
+                                ? translateText(`public_lobby.teams_${o}`)
+                                : translateText("public_lobby.teams", {
+                                  num: o,
+                                })}
+                            </div>
                           </div>
                         `,
                       )}
@@ -272,6 +366,38 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
+                  for="donate-gold"
+                  class="option-card ${this.donateGold ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="donate-gold"
+                    @change=${this.handleDonateGoldChange}
+                    .checked=${this.donateGold}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.donate_gold")}
+                  </div>
+                </label>
+
+                <label
+                  for="donate-troops"
+                  class="option-card ${this.donateTroops ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="donate-troops"
+                    @change=${this.handleDonateTroopsChange}
+                    .checked=${this.donateTroops}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.donate_troops")}
+                  </div>
+                </label>
+
+                <label
                   for="infinite-gold"
                   class="option-card ${this.infiniteGold ? "selected" : ""}"
                 >
@@ -314,59 +440,10 @@ export class HostLobbyModal extends LitElement {
                 <div
                   style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
                 >
-                  ${[
-                    [UnitType.City, "unit_type.city"],
-                    [UnitType.DefensePost, "unit_type.defense_post"],
-                    [UnitType.Port, "unit_type.port"],
-                    [UnitType.Warship, "unit_type.warship"],
-                    [UnitType.MissileSilo, "unit_type.missile_silo"],
-                    [UnitType.SAMLauncher, "unit_type.sam_launcher"],
-                    [UnitType.AtomBomb, "unit_type.atom_bomb"],
-                    [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
-                    [UnitType.MIRV, "unit_type.mirv"],
-                  ].map(
-                    ([unitType, translationKey]: [UnitType, string]) => html`
-                      <label
-                        class="option-card ${this.disabledUnits.includes(
-                          unitType,
-                        )
-                          ? ""
-                          : "selected"}"
-                        style="width: 140px;"
-                      >
-                        <div class="checkbox-icon"></div>
-                        <input
-                          type="checkbox"
-                          @change=${(e: Event) => {
-                            const checked = (e.target as HTMLInputElement)
-                              .checked;
-                            const parsedUnitType =
-                              UnitType[unitType as keyof typeof UnitType];
-                            if (parsedUnitType) {
-                              if (checked) {
-                                this.disabledUnits = [
-                                  ...this.disabledUnits,
-                                  parsedUnitType,
-                                ];
-                              } else {
-                                this.disabledUnits = this.disabledUnits.filter(
-                                  (u) => u !== parsedUnitType,
-                                );
-                              }
-                              this.putGameConfig();
-                            }
-                          }}
-                          .checked=${this.disabledUnits.includes(unitType)}
-                        />
-                        <div
-                          class="option-card-title"
-                          style="text-align: center;"
-                        >
-                          ${translateText(translationKey)}
-                        </div>
-                      </label>
-                    `,
-                  )}
+                   ${renderUnitTypeOptions({
+                      disabledUnits: this.disabledUnits,
+                      toggleUnit: this.toggleUnit.bind(this),
+                    })}
                   </div>
                 </div>
               </div>
@@ -376,29 +453,45 @@ export class HostLobbyModal extends LitElement {
         <!-- Lobby Selection -->
         <div class="options-section">
           <div class="option-title">
-            ${this.players.length}
+            ${this.clients.length}
             ${
-              this.players.length === 1
+              this.clients.length === 1
                 ? translateText("host_modal.player")
                 : translateText("host_modal.players")
             }
           </div>
 
           <div class="players-list">
-            ${this.players.map(
-              (player) => html`<span class="player-tag">${player}</span>`,
+            ${this.clients.map(
+              (client) => html`
+                <span class="player-tag">
+                  ${client.username}
+                  ${client.clientID === this.lobbyCreatorClientID
+                    ? html`<span class="host-badge"
+                        >(${translateText("host_modal.host_badge")})</span
+                      >`
+                    : html`
+                        <button
+                          class="remove-player-btn"
+                          @click=${() => this.kickPlayer(client.clientID)}
+                          title="Remove ${client.username}"
+                        >
+                          ×
+                        </button>
+                      `}
+                </span>
+              `,
             )}
-          </div>
         </div>
 
         <div class="start-game-button-container">
           <button
             @click=${this.startGame}
-            ?disabled=${this.players.length < 2}
+            ?disabled=${this.clients.length < 2}
             class="start-game-button"
           >
             ${
-              this.players.length === 1
+              this.clients.length === 1
                 ? translateText("host_modal.waiting")
                 : translateText("host_modal.start")
             }
@@ -415,7 +508,13 @@ export class HostLobbyModal extends LitElement {
   }
 
   public open() {
-    createLobby()
+    this.lobbyCreatorClientID = generateID();
+    this.lobbyIdVisible = this.userSettings.get(
+      "settings.lobbyIdVisibility",
+      true,
+    );
+
+    createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
         // join lobby
@@ -425,7 +524,7 @@ export class HostLobbyModal extends LitElement {
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
-              clientID: generateID(),
+              clientID: this.lobbyCreatorClientID,
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -498,14 +597,24 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleDonateGoldChange(e: Event) {
+    this.donateGold = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private handleInfiniteTroopsChange(e: Event) {
     this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
   }
 
+  private handleDonateTroopsChange(e: Event) {
+    this.donateTroops = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
-    consolex.log(`updating disable npcs to ${this.disableNPCs}`);
+    console.log(`updating disable npcs to ${this.disableNPCs}`);
     this.putGameConfig();
   }
 
@@ -514,8 +623,8 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private async handleTeamCountSelection(value: number | typeof Duos) {
-    this.teamCount = value === Duos ? Duos : Number(value);
+  private async handleTeamCountSelection(value: TeamCountConfig) {
+    this.teamCount = value;
     this.putGameConfig();
   }
 
@@ -534,7 +643,9 @@ export class HostLobbyModal extends LitElement {
           disableNPCs: this.disableNPCs,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
+          donateGold: this.donateGold,
           infiniteTroops: this.infiniteTroops,
+          donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
@@ -543,6 +654,15 @@ export class HostLobbyModal extends LitElement {
       },
     );
     return response;
+  }
+
+  private toggleUnit(unit: UnitType, checked: boolean): void {
+    console.log(`Toggling unit type: ${unit} to ${checked}`);
+    this.disabledUnits = checked
+      ? [...this.disabledUnits, unit]
+      : this.disabledUnits.filter((u) => u !== unit);
+
+    this.putGameConfig();
   }
 
   private getRandomMap(): GameMapType {
@@ -557,8 +677,8 @@ export class HostLobbyModal extends LitElement {
     }
 
     await this.putGameConfig();
-    consolex.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+    console.log(
+      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
     const config = await getServerConfigFromClient();
@@ -578,14 +698,14 @@ export class HostLobbyModal extends LitElement {
     try {
       //TODO: Convert id to url and copy
       await navigator.clipboard.writeText(
-        `${location.origin}/join/${this.lobbyId}`,
+        `${location.origin}/#join=${this.lobbyId}`,
       );
       this.copySuccess = true;
       setTimeout(() => {
         this.copySuccess = false;
       }, 2000);
     } catch (err) {
-      consolex.error(`Failed to copy text: ${err}`);
+      console.error(`Failed to copy text: ${err}`);
     }
   }
 
@@ -598,19 +718,32 @@ export class HostLobbyModal extends LitElement {
       },
     })
       .then((response) => response.json())
+      .then(GameInfoSchema.parse)
       .then((data: GameInfo) => {
         console.log(`got game info response: ${JSON.stringify(data)}`);
-        this.players = data.clients?.map((p) => p.username) ?? [];
+
+        this.clients = data.clients ?? [];
       });
+  }
+
+  private kickPlayer(clientID: string) {
+    // Dispatch event to be handled by WebSocket instead of HTTP
+    this.dispatchEvent(
+      new CustomEvent("kick-player", {
+        detail: { target: clientID },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }
 
-async function createLobby(): Promise<GameInfo> {
+async function createLobby(creatorClientID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
     const response = await fetch(
-      `/${config.workerPath(id)}/api/create_game/${id}`,
+      `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
       {
         method: "POST",
         headers: {
@@ -621,15 +754,17 @@ async function createLobby(): Promise<GameInfo> {
     );
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Server error response:", errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    consolex.log("Success:", data);
+    console.log("Success:", data);
 
     return data as GameInfo;
   } catch (error) {
-    consolex.error("Error creating lobby:", error);
-    throw error; // Re-throw the error so the caller can handle it
+    console.error("Error creating lobby:", error);
+    throw error;
   }
 }

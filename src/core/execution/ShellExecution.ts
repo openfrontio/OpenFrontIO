@@ -8,7 +8,8 @@ export class ShellExecution implements Execution {
   private pathFinder: AirPathFinder;
   private shell: Unit | undefined;
   private mg: Game;
-  private destroyAtTick: number = -1;
+  private destroyAtTick = -1;
+  private random: PseudoRandom;
 
   constructor(
     private spawn: TileRef,
@@ -20,12 +21,11 @@ export class ShellExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
     this.mg = mg;
+    this.random = new PseudoRandom(mg.ticks());
   }
 
   tick(ticks: number): void {
-    if (this.shell === undefined) {
-      this.shell = this._owner.buildUnit(UnitType.Shell, this.spawn, {});
-    }
+    this.shell ??= this._owner.buildUnit(UnitType.Shell, this.spawn, {});
     if (!this.shell.isActive()) {
       this.active = false;
       return;
@@ -51,7 +51,8 @@ export class ShellExecution implements Execution {
       );
       if (result === true) {
         this.active = false;
-        this.target.modifyHealth(-this.effectOnTarget());
+        this.target.modifyHealth(-this.effectOnTarget(), this._owner);
+        this.shell.setReachedTarget();
         this.shell.delete(false);
         return;
       } else {
@@ -62,7 +63,16 @@ export class ShellExecution implements Execution {
 
   private effectOnTarget(): number {
     const { damage } = this.mg.config().unitInfo(UnitType.Shell);
-    return damage ?? 0;
+    const baseDamage = damage ?? 250;
+
+    const roll = this.random.nextInt(1, 6);
+    const damageMultiplier = (roll - 1) * 25 + 200;
+
+    return Math.round((baseDamage / 250) * damageMultiplier);
+  }
+
+  public getEffectOnTargetForTesting(): number {
+    return this.effectOnTarget();
   }
 
   isActive(): boolean {

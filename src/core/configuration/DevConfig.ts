@@ -17,10 +17,6 @@ export class DevServerConfig extends DefaultServerConfig {
     return 5 * 1000;
   }
 
-  lobbyMaxPlayers(): number {
-    return Math.random() < 0.5 ? 2 : 3;
-  }
-
   samWarheadHittingChance(): number {
     return 1;
   }
@@ -37,6 +33,14 @@ export class DevServerConfig extends DefaultServerConfig {
   }
   gitCommit(): string {
     return "DEV";
+  }
+
+  domain(): string {
+    return "localhost";
+  }
+
+  subdomain(): string {
+    return "";
   }
 }
 
@@ -68,10 +72,6 @@ export class DevConfig extends DefaultConfig {
 
   // percentageTilesOwnedToWin(): number {
   //     return 1
-  // }
-
-  // populationIncreaseRate(player: Player): number {
-  //     return this.maxPopulation(player)
   // }
 
   // boatMaxDistance(): number {

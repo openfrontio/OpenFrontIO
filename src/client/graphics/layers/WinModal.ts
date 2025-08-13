@@ -2,10 +2,10 @@ import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Team } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView } from "../../../core/game/GameView";
 import { SendWinnerEvent } from "../../Transport";
+import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
 
 @customElement("win-modal")
@@ -17,6 +17,9 @@ export class WinModal extends LitElement implements Layer {
 
   @state()
   isVisible = false;
+
+  @state()
+  showButtons = false;
 
   private _title: string;
 
@@ -136,7 +139,9 @@ export class WinModal extends LitElement implements Layer {
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title || ""}</h2>
         ${this.innerHtml()}
-        <div class="button-container">
+        <div
+          class="button-container ${this.showButtons ? "visible" : "hidden"}"
+        >
           <button @click=${this._handleExit}>
             ${translateText("win_modal.exit")}
           </button>
@@ -149,16 +154,42 @@ export class WinModal extends LitElement implements Layer {
   }
 
   innerHtml() {
-    return html``;
+    return html`<p>
+      <a
+        href="https://store.steampowered.com/app/3560670"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="
+          color: #4a9eff;
+          text-decoration: underline;
+          font-weight: 500;
+          transition: color 0.2s ease;
+          font-size: 24px;
+        "
+        onmouseover="this.style.color='#6db3ff'"
+        onmouseout="this.style.color='#4a9eff'"
+      >
+        ${translateText("win_modal.wishlist")}
+      </a>
+    </p>`;
   }
 
   show() {
-    this.isVisible = true;
-    this.requestUpdate();
+    this.eventBus.emit(new GutterAdModalEvent(true));
+    setTimeout(() => {
+      this.isVisible = true;
+      this.requestUpdate();
+    }, 1500);
+    setTimeout(() => {
+      this.showButtons = true;
+      this.requestUpdate();
+    }, 3000);
   }
 
   hide() {
+    this.eventBus.emit(new GutterAdModalEvent(false));
     this.isVisible = false;
+    this.showButtons = false;
     this.requestUpdate();
   }
 
@@ -185,32 +216,34 @@ export class WinModal extends LitElement implements Layer {
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
     winUpdates.forEach((wu) => {
-      if (wu.winnerType === "team") {
-        this.eventBus.emit(
-          new SendWinnerEvent(wu.winner as Team, wu.allPlayersStats, "team"),
-        );
-        if (wu.winner === this.game.myPlayer()?.team()) {
+      if (wu.winner === undefined) {
+        // ...
+      } else if (wu.winner[0] === "team") {
+        this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
+        if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
         } else {
           this._title = translateText("win_modal.other_team", {
-            team: wu.winner,
+            team: wu.winner[1],
           });
         }
         this.show();
       } else {
-        const winner = this.game.playerBySmallID(
-          wu.winner as number,
-        ) as PlayerView;
+        const winner = this.game.playerByClientID(wu.winner[1]);
+        if (!winner?.isPlayer()) return;
         const winnerClient = winner.clientID();
         if (winnerClient !== null) {
           this.eventBus.emit(
-            new SendWinnerEvent(winnerClient, wu.allPlayersStats, "player"),
+            new SendWinnerEvent(["player", winnerClient], wu.allPlayersStats),
           );
         }
-        if (winner === this.game.myPlayer()) {
+        if (
+          winnerClient !== null &&
+          winnerClient === this.game.myPlayer()?.clientID()
+        ) {
           this._title = translateText("win_modal.you_won");
         } else {
-          this._title = translateText("win_modal.you_won", {
+          this._title = translateText("win_modal.other_won", {
             player: winner.name(),
           });
         }

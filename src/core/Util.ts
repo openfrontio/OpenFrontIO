@@ -1,18 +1,17 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import twemoji from "twemoji";
-import { Cell, Team, Unit } from "./game/Game";
+import { Cell, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
-  AllPlayersStats,
-  ClientID,
+  GameConfig,
   GameID,
   GameRecord,
-  GameStartInfo,
   PlayerRecord,
   Turn,
+  Winner,
 } from "./Schemas";
 
+import { ServerConfig } from "./configuration/Config";
 import {
   BOT_NAME_PREFIXES,
   BOT_NAME_SUFFIXES,
@@ -89,6 +88,7 @@ export function calculateBoundingBox(
     maxY = Math.max(maxY, cell.y);
   });
 
+  // eslint-disable-next-line sort-keys
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
 }
 
@@ -119,7 +119,7 @@ export function getMode(list: Set<number>): number {
   // Count occurrences
   const counts = new Map<number, number>();
   for (const item of list) {
-    counts.set(item, (counts.get(item) || 0) + 1);
+    counts.set(item, (counts.get(item) ?? 0) + 1);
   }
 
   // Find the item with the highest count
@@ -139,94 +139,55 @@ export function getMode(list: Set<number>): number {
 export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
-    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}\[\]_]/gu, "");
-}
-
-export function processName(name: string): string {
-  // First sanitize the raw input - strip everything except text and emojis
-  const sanitizedName = sanitize(name);
-  // Process emojis with twemoji
-  const withEmojis = twemoji.parse(sanitizedName, {
-    base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-    folder: "svg",
-    ext: ".svg",
-  });
-
-  // Add CSS styles inline to the wrapper span
-  const styledHTML = `
-        <span class="player-name" style="
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-weight: 500;
-            vertical-align: middle;
-        ">
-            ${withEmojis}
-        </span>
-    `;
-
-  // Add CSS for the emoji images
-  const withEmojiStyles = styledHTML.replace(
-    /<img/g,
-    '<img style="height: 1.2em; width: 1.2em; vertical-align: -0.2em; margin: 0 0.05em 0 0.1em;"',
-  );
-
-  // Sanitize the final HTML, allowing styles and specific attributes
-  return onlyImages(withEmojiStyles);
+    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
 }
 
 export function onlyImages(html: string) {
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["span", "img"],
-    ALLOWED_ATTR: ["src", "alt", "class", "style"],
-    ALLOWED_URI_REGEXP: /^https:\/\/cdn\.jsdelivr\.net\/gh\/twitter\/twemoji/,
     ADD_ATTR: ["style"],
+    ALLOWED_ATTR: ["src", "alt", "class", "style"],
+    ALLOWED_TAGS: ["span", "img"],
+    ALLOWED_URI_REGEXP: /^https:\/\/cdn\.jsdelivr\.net\/gh\/twitter\/twemoji/,
   });
 }
 
 export function createGameRecord(
-  id: GameID,
-  gameStart: GameStartInfo,
+  gameID: GameID,
+  config: GameConfig,
   // username does not need to be set.
   players: PlayerRecord[],
-  turns: Turn[],
+  allTurns: Turn[],
   start: number,
   end: number,
-  winner: ClientID | Team | null,
-  winnerType: "player" | "team" | null,
-  allPlayersStats: AllPlayersStats,
+  winner: Winner,
+  serverConfig: ServerConfig,
 ): GameRecord {
+  const duration = Math.floor((end - start) / 1000);
+  const version = "v0.0.2";
+  const gitCommit = serverConfig.gitCommit();
+  const subdomain = serverConfig.subdomain();
+  const domain = serverConfig.domain();
+  const num_turns = allTurns.length;
+  const turns = allTurns.filter(
+    (t) => t.intents.length !== 0 || t.hash !== undefined,
+  );
   const record: GameRecord = {
-    id: id,
-    gameStartInfo: gameStart,
-    players,
-    startTimestampMS: start,
-    endTimestampMS: end,
-    durationSeconds: Math.floor((end - start) / 1000),
-    date: new Date().toISOString().split("T")[0],
-    num_turns: 0,
-    turns: [],
-    allPlayersStats,
-    version: "v0.0.1",
-    winner,
-    winnerType,
+    domain,
+    gitCommit,
+    info: {
+      config,
+      duration,
+      end,
+      gameID,
+      num_turns,
+      players,
+      start,
+      winner,
+    },
+    subdomain,
+    turns,
+    version,
   };
-
-  for (const turn of turns) {
-    if (turn.intents.length !== 0 || turn.hash !== undefined) {
-      record.turns.push(turn);
-      for (const intent of turn.intents) {
-        if (intent.type === "spawn") {
-          for (const playerRecord of players) {
-            if (playerRecord.clientID === intent.clientID) {
-              playerRecord.username = intent.name;
-            }
-          }
-        }
-      }
-    }
-  }
-  record.num_turns = turns.length;
   return record;
 }
 
@@ -237,18 +198,18 @@ export function decompressGameRecord(gameRecord: GameRecord) {
     while (lastTurnNum < turn.turnNumber - 1) {
       lastTurnNum++;
       turns.push({
-        turnNumber: lastTurnNum,
         intents: [],
+        turnNumber: lastTurnNum,
       });
     }
     turns.push(turn);
     lastTurnNum = turn.turnNumber;
   }
   const turnLength = turns.length;
-  for (let i = turnLength; i < gameRecord.num_turns; i++) {
+  for (let i = turnLength; i < gameRecord.info.num_turns; i++) {
     turns.push({
-      turnNumber: i,
       intents: [],
+      turnNumber: i,
     });
   }
   gameRecord.turns = turns;
@@ -320,3 +281,10 @@ export const emojiTable: string[][] = [
 ];
 // 2d to 1d array
 export const flattenedEmojiTable: string[] = emojiTable.flat();
+
+/**
+ * JSON.stringify replacer function that converts bigint values to strings.
+ */
+export function replacer(_key: string, value: any): any {
+  return typeof value === "bigint" ? value.toString() : value;
+}

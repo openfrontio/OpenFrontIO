@@ -1,44 +1,71 @@
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
+import {
+  Difficulty,
+  Duos,
+  GameMapName,
+  GameMapType,
+  GameMode,
+  GameType,
+  Quads,
+  Trios,
+} from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
-import { GameConfig } from "../core/Schemas";
+import { GameConfig, TeamCountConfig } from "../core/Schemas";
 import { logger } from "./Logger";
 
 const log = logger.child({});
 
 const config = getServerConfigFromServer();
 
-const frequency = {
-  World: 3,
-  Europe: 2,
+// How many times each map should appear in the playlist.
+// Note: The Partial should eventually be removed for better type safety.
+const frequency: Partial<Record<GameMapName, number>> = {
   Africa: 2,
-  Australia: 1,
-  NorthAmerica: 1,
-  Britannia: 1,
-  GatewayToTheAtlantic: 1,
-  Iceland: 1,
-  SouthAmerica: 1,
-  KnownWorld: 1,
-  DeglaciatedAntarctica: 1,
-  EuropeClassic: 1,
-  Mena: 1,
-  Pangaea: 1,
   Asia: 1,
-  Mars: 1,
+  Australia: 1,
+  Baikal: 2,
   BetweenTwoSeas: 1,
-  Japan: 1,
   BlackSea: 1,
-  FaroeIslands: 1,
+  Britannia: 1,
+  DeglaciatedAntarctica: 1,
+  EastAsia: 1,
+  Europe: 2,
+  EuropeClassic: 1,
   FalklandIslands: 1,
-  Baikal: 1,
+  FaroeIslands: 1,
+  GatewayToTheAtlantic: 1,
   Halkidiki: 1,
   NorthernHemisphere: 1,
+  Iceland: 1,
+  Italia: 1,
+  Mars: 1,
+  MarsRevised: 1,
+  Mena: 1,
+  NorthAmerica: 1,
+  Pangaea: 1,
+  Pluto: 1,
+  SouthAmerica: 1,
+  StraitOfGibraltar: 1,
+  World: 3,
+  Yenisei: 1,
 };
 
-interface MapWithMode {
+type MapWithMode = {
   map: GameMapType;
   mode: GameMode;
-}
+};
+
+const TEAM_COUNTS = [
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  Duos,
+  Trios,
+  Quads,
+] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
@@ -46,24 +73,30 @@ export class MapPlaylist {
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
-    const numPlayerTeams =
-      mode === GameMode.Team ? 2 + Math.floor(Math.random() * 5) : undefined;
+    const playerTeams =
+      mode === GameMode.Team ? this.getTeamCount() : undefined;
 
     // Create the default public game config (from your GameManager)
     return {
-      gameMap: map,
-      maxPlayers: config.lobbyMaxPlayers(map, mode),
-      gameType: GameType.Public,
+      bots: 400,
       difficulty: Difficulty.Medium,
+      disableNPCs: mode === GameMode.Team,
+      disabledUnits: [],
+      donateGold: true,
+      donateTroops: true,
+      gameMap: map,
+      gameMode: mode,
+      gameType: GameType.Public,
       infiniteGold: false,
       infiniteTroops: false,
       instantBuild: false,
-      disableNPCs: mode === GameMode.Team,
-      disableNukes: false,
-      gameMode: mode,
-      playerTeams: numPlayerTeams,
-      bots: 400,
-    } as GameConfig;
+      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
+      playerTeams,
+    } satisfies GameConfig;
+  }
+
+  private getTeamCount(): TeamCountConfig {
+    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
   }
 
   private getNextMap(): MapWithMode {
@@ -83,8 +116,8 @@ export class MapPlaylist {
 
   private shuffleMapsPlaylist(): boolean {
     const maps: GameMapType[] = [];
-    Object.keys(GameMapType).forEach((key) => {
-      for (let i = 0; i < parseInt(frequency[key]); i++) {
+    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
+      for (let i = 0; i < (frequency[key] ?? 0); i++) {
         maps.push(GameMapType[key]);
       }
     });
@@ -93,18 +126,15 @@ export class MapPlaylist {
 
     const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
     const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
     const team: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
+    // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < maps.length; i++) {
       if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
         return false;
       }
       if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
         return false;
       }
       if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {

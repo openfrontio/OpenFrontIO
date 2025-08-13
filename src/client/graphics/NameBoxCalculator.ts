@@ -1,17 +1,17 @@
 import { Cell, Game, NameViewData, Player } from "../../core/game/Game";
 import { calculateBoundingBox } from "../../core/Util";
 
-export interface Point {
+export type Point = {
   x: number;
   y: number;
-}
+};
 
-export interface Rectangle {
+export type Rectangle = {
   x: number;
   y: number;
   width: number;
   height: number;
-}
+};
 
 export function placeName(game: Game, player: Player): NameViewData {
   const boundingBox =

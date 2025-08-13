@@ -10,8 +10,8 @@ import {
 import { TileRef } from "../../src/core/game/GameMap";
 
 export class TestConfig extends DefaultConfig {
-  private _proximityBonusPortsNb: number = 0;
-  private _defaultNukeSpeed: number = 4;
+  private _proximityBonusPortsNb = 0;
+  private _defaultNukeSpeed = 4;
 
   samHittingChance(): number {
     return 1;
@@ -40,6 +40,14 @@ export class TestConfig extends DefaultConfig {
 
   defaultNukeSpeed(): number {
     return this._defaultNukeSpeed;
+  }
+
+  defaultNukeTargetableRange(): number {
+    return 20;
+  }
+
+  defaultSamRange(): number {
+    return 20;
   }
 
   spawnImmunityDuration(): Tick {

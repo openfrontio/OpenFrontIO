@@ -1,6 +1,8 @@
 import { LitElement, TemplateResult, html } from "lit";
+import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -11,11 +13,11 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
-import { MouseMoveEvent } from "../../InputHandler";
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { CloseRadialMenuEvent } from "./RadialMenu";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -42,9 +44,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
 
-  @property({ type: String })
-  public clientID!: ClientID;
-
   @property({ type: Object })
   public eventBus!: EventBus;
 
@@ -61,16 +60,22 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private unit: UnitView | null = null;
 
   @state()
-  private _isInfoVisible: boolean = false;
+  private _isInfoVisible = false;
 
   private _isActive = false;
 
   private lastMouseUpdate = 0;
 
+  private showDetails = true;
+
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
       this.onMouseEvent(e),
     );
+    this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
+      this.maybeShow(e.x, e.y),
+    );
+    this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
     this._isActive = true;
   }
 
@@ -102,7 +107,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const owner = this.game.owner(tile);
 
     if (owner && owner.isPlayer()) {
-      this.player = owner as PlayerView;
+      this.player = owner;
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
@@ -137,13 +142,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private myPlayer(): PlayerView | null {
-    if (!this.game) {
-      return null;
-    }
-    return this.game.playerByClientID(this.clientID);
-  }
-
   private getRelationClass(relation: Relation): string {
     switch (relation) {
       case Relation.Hostile:
@@ -174,8 +172,20 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
   }
 
+  private displayUnitCount(
+    player: PlayerView,
+    type: UnitType,
+    description: string,
+  ) {
+    return !this.game.config().isUnitDisabled(type)
+      ? html`<div class="text-sm opacity-80" translate="no">
+          ${translateText(description)}: ${player.totalUnitLevels(type)}
+        </div>`
+      : "";
+  }
+
   private renderPlayerInfo(player: PlayerView) {
-    const myPlayer = this.myPlayer();
+    const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
     let relationHtml: TemplateResult | null = null;
     const attackingTroops = player
@@ -211,72 +221,104 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div class="p-2">
-        <div
-          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex ${isFriendly
+        <button
+          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
+          @click=${() => {
+            this.showDetails = !this.showDetails;
+            this.requestUpdate?.();
+          }}
         >
-          ${player.flag()
-            ? html`<img
-                class="h-8 mr-1 aspect-[3/4]"
-                src=${"/flags/" + player.flag() + ".svg"}
-              />`
-            : ""}
+          ${player.cosmetics.flag
+            ? player.cosmetics.flag.startsWith("!")
+              ? html`<div
+                  class="h-8 mr-1 aspect-[3/4] player-flag"
+                  ${ref((el) => {
+                    if (el instanceof HTMLElement) {
+                      requestAnimationFrame(() => {
+                        renderPlayerFlag(player.cosmetics.flag!, el);
+                      });
+                    }
+                  })}
+                ></div>`
+              : html`<img
+                  class="h-8 mr-1 aspect-[3/4]"
+                  src=${"/flags/" + player.cosmetics.flag + ".svg"}
+                />`
+            : html``}
           ${player.name()}
-        </div>
-        ${player.team() !== null
-          ? html`<div class="text-sm opacity-80">
-              ${translateText("player_info_overlay.team")}: ${player.team()}
-            </div>`
+        </button>
+
+        <!-- Collapsible section -->
+        ${this.showDetails
+          ? html`
+              ${player.team() !== null
+                ? html`<div class="text-sm opacity-80">
+                    ${translateText("player_info_overlay.team")}:
+                    ${player.team()}
+                  </div>`
+                : ""}
+              <div class="text-sm opacity-80">
+                ${translateText("player_info_overlay.type")}: ${playerType}
+              </div>
+              ${player.troops() >= 1
+                ? html`<div class="text-sm opacity-80" translate="no">
+                    ${translateText("player_info_overlay.d_troops")}:
+                    ${renderTroops(player.troops())}
+                  </div>`
+                : ""}
+              ${attackingTroops >= 1
+                ? html`<div class="text-sm opacity-80" translate="no">
+                    ${translateText("player_info_overlay.a_troops")}:
+                    ${renderTroops(attackingTroops)}
+                  </div>`
+                : ""}
+              <div class="text-sm opacity-80" translate="no">
+                ${translateText("player_info_overlay.gold")}:
+                ${renderNumber(player.gold())}
+              </div>
+              ${this.displayUnitCount(
+                player,
+                UnitType.Port,
+                "player_info_overlay.ports",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.City,
+                "player_info_overlay.cities",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.Factory,
+                "player_info_overlay.factories",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.MissileSilo,
+                "player_info_overlay.missile_launchers",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.SAMLauncher,
+                "player_info_overlay.sams",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.Warship,
+                "player_info_overlay.warships",
+              )}
+              ${relationHtml}
+            `
           : ""}
-        <div class="text-sm opacity-80">
-          ${translateText("player_info_overlay.type")}: ${playerType}
-        </div>
-        ${player.troops() >= 1
-          ? html`<div class="text-sm opacity-80" translate="no">
-              ${translateText("player_info_overlay.d_troops")}:
-              ${renderTroops(player.troops())}
-            </div>`
-          : ""}
-        ${attackingTroops >= 1
-          ? html`<div class="text-sm opacity-80" translate="no">
-              ${translateText("player_info_overlay.a_troops")}:
-              ${renderTroops(attackingTroops)}
-            </div>`
-          : ""}
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.gold")}:
-          ${renderNumber(player.gold())}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.ports")}:
-          ${player.units(UnitType.Port).length}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.cities")}:
-          ${player.units(UnitType.City).length}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.missile_launchers")}:
-          ${player.units(UnitType.MissileSilo).length}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.sams")}:
-          ${player.units(UnitType.SAMLauncher).length}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.warships")}:
-          ${player.units(UnitType.Warship).length}
-        </div>
-        ${relationHtml}
       </div>
     `;
   }
 
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
-      (unit.owner() === this.myPlayer() ||
-        this.myPlayer()?.isFriendly(unit.owner())) ??
+      (unit.owner() === this.game.myPlayer() ||
+        this.game.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
     return html`
@@ -310,11 +352,11 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex w-full z-50 flex-col"
-        @contextmenu=${(e) => e.preventDefault()}
+        class="block lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
