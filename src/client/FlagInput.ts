@@ -1,11 +1,11 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../core/CustomFlag";
-const flagKey: string = "flag";
+const flagKey = "flag";
 
 @customElement("flag-input")
 export class FlagInput extends LitElement {
-  @state() public flag: string = "";
+  @state() public flag = "";
 
   static styles = css`
     @media (max-width: 768px) {

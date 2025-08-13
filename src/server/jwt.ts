@@ -11,9 +11,9 @@ import { PersistentIdSchema } from "../core/Schemas";
 
 type TokenVerificationResult =
   | {
-      persistentId: string;
-      claims: TokenPayload | null;
-    }
+    persistentId: string;
+    claims: TokenPayload | null;
+  }
   | false;
 
 export async function verifyClientToken(
@@ -21,6 +21,7 @@ export async function verifyClientToken(
   config: ServerConfig,
 ): Promise<TokenVerificationResult> {
   if (PersistentIdSchema.safeParse(token).success) {
+    // eslint-disable-next-line sort-keys
     return { persistentId: token, claims: null };
   }
   try {
@@ -29,8 +30,8 @@ export async function verifyClientToken(
     const key = await config.jwkPublicKey();
     const { payload, protectedHeader } = await jwtVerify(token, key, {
       algorithms: ["EdDSA"],
-      issuer,
       audience,
+      issuer,
     });
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
@@ -40,7 +41,7 @@ export async function verifyClientToken(
     }
     const claims = result.data;
     const persistentId = claims.sub;
-    return { persistentId, claims };
+    return { claims, persistentId };
   } catch (e) {
     return false;
   }

@@ -57,13 +57,13 @@ export async function createGameRunner(
   const nations = gameStart.config.disableNPCs
     ? []
     : gameMap.manifest.nations.map(
-        (n) =>
-          new Nation(
-            new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
-          ),
-      );
+      (n) =>
+        new Nation(
+          new Cell(n.coordinates[0], n.coordinates[1]),
+          n.strength,
+          new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+        ),
+    );
 
   const game: Game = createGame(
     humans,
@@ -165,10 +165,10 @@ export class GameRunner {
     updates[GameUpdateType.Tile] = [];
 
     this.callBack({
-      tick: this.game.ticks(),
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
-      updates: updates,
       playerNameViewData: this.playerViewData,
+      tick: this.game.ticks(),
+      updates: updates,
     });
     this.isExecuting = false;
   }
@@ -181,23 +181,24 @@ export class GameRunner {
     const player = this.game.player(playerID);
     const tile = this.game.ref(x, y);
     const actions = {
-      canAttack: player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
+      canAttack: player.canAttack(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 
     if (this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
       actions.interaction = {
-        sharedBorder: player.sharesBorderWith(other),
+        canBreakAlliance: player.isAlliedWith(other),
+        canDonateGold: player.canDonateGold(other),
+        canDonateTroops: player.canDonateTroops(other),
+        canEmbargo: !player.hasEmbargoAgainst(other),
+        canSendAllianceRequest: player.canSendAllianceRequest(other),
         canSendEmoji: player.canSendEmoji(other),
         canTarget: player.canTarget(other),
-        canSendAllianceRequest: player.canSendAllianceRequest(other),
-        canBreakAlliance: player.isAlliedWith(other),
-        canDonate: player.canDonate(other),
-        canEmbargo: !player.hasEmbargoAgainst(other),
+        sharedBorder: player.sharesBorderWith(other),
       };
-      const alliance = player.allianceWith(other as Player);
+      const alliance = player.allianceWith(other);
       if (alliance) {
         actions.interaction.allianceExpiresAt = alliance.expiresAt();
       }

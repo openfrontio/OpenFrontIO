@@ -28,7 +28,7 @@ export class NukeExecution implements Execution {
     private player: Player,
     private dst: TileRef,
     private src?: TileRef | null,
-    private speed: number = -1,
+    private speed = -1,
     private waitTicks = 0,
   ) {}
 
@@ -184,9 +184,10 @@ export class NukeExecution implements Execution {
       this.mg.config().defaultNukeTargetableRange() ** 2;
     const allTiles: TileRef[] = this.pathFinder.allTiles();
     for (const tile of allTiles) {
+      const targetable = this.isTargetable(target, tile, targetRangeSquared);
       trajectoryTiles.push({
+        targetable,
         tile,
-        targetable: this.isTargetable(target, tile, targetRangeSquared),
       });
     }
 

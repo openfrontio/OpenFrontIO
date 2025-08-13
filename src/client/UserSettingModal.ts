@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { z } from "zod";
 import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
@@ -7,6 +8,8 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+
+const KeybindSchema = z.record(z.string(), z.string());
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
@@ -25,7 +28,7 @@ export class UserSettingModal extends LitElement {
     const savedKeybinds = localStorage.getItem("settings.keybinds");
     if (savedKeybinds) {
       try {
-        this.keybinds = JSON.parse(savedKeybinds);
+        this.keybinds = KeybindSchema.parse(JSON.parse(savedKeybinds));
       } catch (e) {
         console.warn("Invalid keybinds JSON:", e);
       }
@@ -94,6 +97,14 @@ export class UserSettingModal extends LitElement {
     } else {
       document.documentElement.classList.remove("dark");
     }
+
+    this.dispatchEvent(
+      new CustomEvent("dark-mode-changed", {
+        detail: { darkMode: enabled },
+        bubbles: true,
+        composed: true,
+      }),
+    );
 
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
@@ -233,8 +244,8 @@ export class UserSettingModal extends LitElement {
               <button
                 class="w-1/2 text-center px-3 py-1 rounded-l 
       ${this.settingsMode === "basic"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+        ? "bg-white/10 text-white"
+        : "bg-transparent text-gray-400"}"
                 @click=${() => (this.settingsMode = "basic")}
               >
                 ${translateText("user_setting.tab_basic")}
@@ -242,8 +253,8 @@ export class UserSettingModal extends LitElement {
               <button
                 class="w-1/2 text-center px-3 py-1 rounded-r 
       ${this.settingsMode === "keybinds"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+        ? "bg-white/10 text-white"
+        : "bg-transparent text-gray-400"}"
                 @click=${() => (this.settingsMode = "keybinds")}
               >
                 ${translateText("user_setting.tab_keybinds")}

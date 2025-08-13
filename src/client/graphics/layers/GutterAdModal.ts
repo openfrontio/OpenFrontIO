@@ -13,16 +13,16 @@ export class GutterAdModal extends LitElement implements Layer {
   public eventBus: EventBus;
 
   @state()
-  private isVisible: boolean = false;
+  private isVisible = false;
 
   @state()
-  private adLoaded: boolean = false;
+  private adLoaded = false;
 
-  private leftAdType: string = "left_rail";
-  private rightAdType: string = "right_rail";
-  private leftContainerId: string = "gutter-ad-container-left";
-  private rightContainerId: string = "gutter-ad-container-right";
-  private margin: string = "10px";
+  private leftAdType = "left_rail";
+  private rightAdType = "right_rail";
+  private leftContainerId = "gutter-ad-container-left";
+  private rightContainerId = "gutter-ad-container-right";
+  private margin = "10px";
 
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {

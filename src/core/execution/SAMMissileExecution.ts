@@ -16,7 +16,7 @@ export class SAMMissileExecution implements Execution {
   private pathFinder: AirPathFinder;
   private SAMMissile: Unit | undefined;
   private mg: Game;
-  private speed: number = 0;
+  private speed = 0;
 
   constructor(
     private spawn: TileRef,

@@ -26,6 +26,7 @@ import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
+  AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
   InputHandler,
@@ -40,12 +41,13 @@ import {
   SendBoatAttackIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
+  SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
-export interface LobbyConfig {
+export type LobbyConfig = {
   serverConfig: ServerConfig;
   pattern: string | undefined;
   flag: string;
@@ -57,7 +59,7 @@ export interface LobbyConfig {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
-}
+};
 
 export function joinLobby(
   eventBus: EventBus,
@@ -190,7 +192,7 @@ export class ClientGameRunner {
 
   private lastMousePosition: { x: number; y: number } | null = null;
 
-  private lastMessageTime: number = 0;
+  private lastMessageTime = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(
@@ -227,7 +229,7 @@ export class ClientGameRunner {
       players,
       // Not saving turns locally
       [],
-      startTime(),
+      startTime() ?? 0,
       Date.now(),
       update.winner,
       this.lobby.serverConfig,
@@ -248,6 +250,7 @@ export class ClientGameRunner {
     }, 20000);
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
+    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
     this.eventBus.on(
       DoBoatAttackEvent,
       this.doBoatAttackUnderCursor.bind(this),
@@ -361,7 +364,7 @@ export class ClientGameRunner {
     this.transport.connect(onconnect, onmessage);
   }
 
-  public stop(saveFullGame: boolean = false) {
+  public stop(saveFullGame = false) {
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -417,9 +420,79 @@ export class ClientGameRunner {
 
       const owner = this.gameView.owner(tile);
       if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
+        this.gameView.setFocusedPlayer(owner);
       } else {
         this.gameView.setFocusedPlayer(null);
+      }
+    });
+  }
+
+  private autoUpgradeEvent(event: AutoUpgradeEvent) {
+    if (!this.isActive) {
+      return;
+    }
+
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
+    const tile = this.gameView.ref(cell.x, cell.y);
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    if (this.gameView.inSpawnPhase()) {
+      return;
+    }
+
+    this.findAndUpgradeNearestBuilding(tile);
+  }
+
+  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
+    this.myPlayer!.actions(clickedTile).then((actions) => {
+      const upgradeUnits: {
+        unitId: number;
+        unitType: UnitType;
+        distance: number;
+      }[] = [];
+
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade !== false) {
+          const existingUnit = this.gameView
+            .units()
+            .find((unit) => unit.id() === bu.canUpgrade);
+          if (existingUnit) {
+            const distance = this.gameView.manhattanDist(
+              clickedTile,
+              existingUnit.tile(),
+            );
+
+            upgradeUnits.push({
+              unitId: bu.canUpgrade,
+              unitType: bu.type,
+              distance: distance,
+            });
+          }
+        }
+      }
+
+      if (upgradeUnits.length > 0) {
+        upgradeUnits.sort((a, b) => a.distance - b.distance);
+        const bestUpgrade = upgradeUnits[0];
+
+        this.eventBus.emit(
+          new SendUpgradeStructureIntentEvent(
+            bestUpgrade.unitId,
+            bestUpgrade.unitType,
+          ),
+        );
       }
     });
   }
@@ -550,7 +623,7 @@ export class ClientGameRunner {
     if (this.gameView.isLand(tile)) {
       const owner = this.gameView.owner(tile);
       if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
+        this.gameView.setFocusedPlayer(owner);
       } else {
         this.gameView.setFocusedPlayer(null);
       }
@@ -564,7 +637,7 @@ export class ClientGameRunner {
         .sort((a, b) => a.distSquared - b.distSquared);
 
       if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
+        this.gameView.setFocusedPlayer(units[0].unit.owner());
       } else {
         this.gameView.setFocusedPlayer(null);
       }

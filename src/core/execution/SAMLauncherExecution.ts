@@ -98,6 +98,7 @@ class SAMTargetingSystem {
       }
       const interceptionTile = this.computeInterceptionTile(nuke.unit);
       if (interceptionTile !== undefined) {
+        // eslint-disable-next-line sort-keys
         targets.push({ unit: nuke.unit, tile: interceptionTile });
       } else {
         // Store unreachable nukes in order to prevent useless interception computation
@@ -127,7 +128,7 @@ class SAMTargetingSystem {
 
 export class SAMLauncherExecution implements Execution {
   private mg: Game;
-  private active: boolean = true;
+  private active = true;
 
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)

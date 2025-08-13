@@ -48,7 +48,7 @@ import {
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
 
-interface GameEvent {
+type GameEvent = {
   description: string;
   unsafeDescription?: boolean;
   buttons?: {
@@ -66,14 +66,14 @@ interface GameEvent {
   duration?: Tick;
   focusID?: number;
   unitView?: UnitView;
-}
+};
 
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
 
-  private active: boolean = false;
+  private active = false;
   private events: GameEvent[] = [];
 
   // allianceID -> last checked at tick
@@ -82,11 +82,11 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private outgoingAttacks: AttackUpdate[] = [];
   @state() private outgoingLandAttacks: AttackUpdate[] = [];
   @state() private outgoingBoats: UnitView[] = [];
-  @state() private _hidden: boolean = false;
-  @state() private _isVisible: boolean = false;
-  @state() private newEvents: number = 0;
+  @state() private _hidden = false;
+  @state() private _isVisible = false;
+  @state() private newEvents = 0;
   @state() private latestGoldAmount: bigint | null = null;
-  @state() private goldAmountAnimating: boolean = false;
+  @state() private goldAmountAnimating = false;
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
     [MessageCategory.ATTACK, false],
@@ -261,7 +261,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
       this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
 
-      const other = this.game.player(alliance.other) as PlayerView;
+      const other = this.game.player(alliance.other);
       if (!other.isAlive()) continue;
 
       this.addEvent({
@@ -393,7 +393,7 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
-    let otherPlayerDiplayName: string = "";
+    let otherPlayerDiplayName = "";
     if (event.recipient !== null) {
       //'recipient' parameter contains sender ID or recipient ID
       const player = this.game.player(event.recipient);
@@ -468,7 +468,24 @@ export class EventsDisplay extends LitElement implements Layer {
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
+    if (!myPlayer) {
+      return;
+    }
+    // myPlayer can deny alliances without clicking on the button
+    if (update.request.recipientID === myPlayer.smallID()) {
+      // Remove alliance requests whose requestors are the same as the reply's requestor
+      // Noop unless the request was denied through other means (e.g attacking the requestor)
+      this.events = this.events.filter(
+        (event) =>
+          !(
+            event.type === MessageType.ALLIANCE_REQUEST &&
+            event.focusID === update.request.requestorID
+          ),
+      );
+      this.requestUpdate();
+      return;
+    }
+    if (update.request.requestorID !== myPlayer.smallID()) {
       return;
     }
 
@@ -512,8 +529,8 @@ export class EventsDisplay extends LitElement implements Layer {
         traitorDuration === 1
           ? translateText("events_display.duration_second")
           : translateText("events_display.duration_seconds_plural", {
-              seconds: traitorDuration,
-            });
+            seconds: traitorDuration,
+          });
 
       this.addEvent({
         description: translateText("events_display.betrayal_description", {
@@ -751,11 +768,11 @@ export class EventsDisplay extends LitElement implements Layer {
                     })}
                     ${!attack.retreating
                       ? this.renderButton({
-                          content: "❌",
-                          onClick: () => this.emitCancelAttackIntent(attack.id),
-                          className: "text-left flex-shrink-0",
-                          disabled: attack.retreating,
-                        })
+                        content: "❌",
+                        onClick: () => this.emitCancelAttackIntent(attack.id),
+                        className: "text-left flex-shrink-0",
+                        disabled: attack.retreating,
+                      })
                       : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
@@ -786,12 +803,12 @@ export class EventsDisplay extends LitElement implements Layer {
                     })}
                     ${!landAttack.retreating
                       ? this.renderButton({
-                          content: "❌",
-                          onClick: () =>
-                            this.emitCancelAttackIntent(landAttack.id),
-                          className: "text-left flex-shrink-0",
-                          disabled: landAttack.retreating,
-                        })
+                        content: "❌",
+                        onClick: () =>
+                          this.emitCancelAttackIntent(landAttack.id),
+                        className: "text-left flex-shrink-0",
+                        disabled: landAttack.retreating,
+                      })
                       : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
@@ -823,11 +840,11 @@ export class EventsDisplay extends LitElement implements Layer {
                     })}
                     ${!boat.retreating()
                       ? this.renderButton({
-                          content: "❌",
-                          onClick: () => this.emitBoatCancelIntent(boat.id()),
-                          className: "text-left flex-shrink-0",
-                          disabled: boat.retreating(),
-                        })
+                        content: "❌",
+                        onClick: () => this.emitBoatCancelIntent(boat.id()),
+                        className: "text-left flex-shrink-0",
+                        disabled: boat.retreating(),
+                      })
                       : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
@@ -1016,24 +1033,24 @@ export class EventsDisplay extends LitElement implements Layer {
                             >
                               ${event.focusID
                                 ? this.renderButton({
-                                    content: this.getEventDescription(event),
-                                    onClick: () => {
-                                      event.focusID &&
+                                  content: this.getEventDescription(event),
+                                  onClick: () => {
+                                    event.focusID &&
                                         this.emitGoToPlayerEvent(event.focusID);
-                                    },
-                                    className: "text-left",
-                                  })
+                                  },
+                                  className: "text-left",
+                                })
                                 : event.unitView
                                   ? this.renderButton({
-                                      content: this.getEventDescription(event),
-                                      onClick: () => {
-                                        event.unitView &&
+                                    content: this.getEventDescription(event),
+                                    onClick: () => {
+                                      event.unitView &&
                                           this.emitGoToUnitEvent(
                                             event.unitView,
                                           );
-                                      },
-                                      className: "text-left",
-                                    })
+                                    },
+                                    className: "text-left",
+                                  })
                                   : this.getEventDescription(event)}
                               <!-- Events with buttons (Alliance requests) -->
                               ${event.buttons
@@ -1044,12 +1061,12 @@ export class EventsDisplay extends LitElement implements Layer {
                                           <button
                                             class="inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
-                                              ? "bg-blue-500 hover:bg-blue-600"
-                                              : btn.className.includes(
-                                                    "btn-gray",
-                                                  )
-                                                ? "bg-gray-500 hover:bg-gray-600"
-                                                : "bg-green-600 hover:bg-green-700"}"
+                              ? "bg-blue-500 hover:bg-blue-600"
+                              : btn.className.includes(
+                                "btn-gray",
+                              )
+                                ? "bg-gray-500 hover:bg-gray-600"
+                                : "bg-green-600 hover:bg-green-700"}"
                                             @click=${() => {
                                               btn.action();
                                               if (!btn.preventClose) {

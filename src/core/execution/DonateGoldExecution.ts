@@ -29,7 +29,7 @@ export class DonateGoldExecution implements Execution {
   tick(ticks: number): void {
     if (this.gold === null) throw new Error("not initialized");
     if (
-      this.sender.canDonate(this.recipient) &&
+      this.sender.canDonateGold(this.recipient) &&
       this.sender.donateGold(this.recipient, this.gold)
     ) {
       // stats for donated gold

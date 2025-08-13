@@ -9,22 +9,18 @@ import { z } from "zod";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
+import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
 import {
-  ClientMessageSchema,
-  GameRecord,
-  GameRecordSchema,
-  ID,
-  ServerErrorMessage,
-} from "../core/Schemas";
-import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
+  CreateGameInputSchema,
+  GameInputSchema,
+  WorkerApiGameIdExists,
+} from "../core/WorkerSchemas";
 import { archive, readGameRecord } from "./Archive";
-import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
-
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { preJoinMessageHandler } from "./worker/websocket/handler/message/PreJoinHandler";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
@@ -85,8 +81,8 @@ export async function startWorker() {
   app.use(express.static(path.join(__dirname, "../../out")));
   app.use(
     rateLimit({
-      windowMs: 1000, // 1 second
       max: 20, // 20 requests per IP per second
+      windowMs: 1000, // 1 second
     }),
   );
 
@@ -209,7 +205,7 @@ export async function startWorker() {
       const lobbyId = req.params.id;
       res.json({
         exists: gm.game(lobbyId) !== null,
-      });
+      } satisfies WorkerApiGameIdExists);
     }),
   );
 
@@ -232,9 +228,9 @@ export async function startWorker() {
 
       if (!gameRecord) {
         return res.status(404).json({
-          success: false,
           error: "Game not found",
           exists: false,
+          success: false,
         });
       }
 
@@ -246,20 +242,20 @@ export async function startWorker() {
           `git commit mismatch for game ${req.params.id}, expected ${config.gitCommit()}, got ${gameRecord.gitCommit}`,
         );
         return res.status(409).json({
-          success: false,
+          details: {
+            actualCommit: gameRecord.gitCommit,
+            expectedCommit: config.gitCommit(),
+          },
           error: "Version mismatch",
           exists: true,
-          details: {
-            expectedCommit: config.gitCommit(),
-            actualCommit: gameRecord.gitCommit,
-          },
+          success: false,
         });
       }
 
       return res.status(200).json({
-        success: true,
         exists: true,
         gameRecord: gameRecord,
+        success: true,
       });
     }),
   );
@@ -307,159 +303,9 @@ export async function startWorker() {
   wss.on("connection", (ws: WebSocket, req) => {
     ws.on(
       "message",
-      gatekeeper.wsHandler(req, async (message: string) => {
-        const forwarded = req.headers["x-forwarded-for"];
-        const ip = Array.isArray(forwarded)
-          ? forwarded[0]
-          : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-            forwarded || req.socket.remoteAddress || "unknown";
-
-        try {
-          // Parse and handle client messages
-          const parsed = ClientMessageSchema.safeParse(
-            JSON.parse(message.toString()),
-          );
-          if (!parsed.success) {
-            const error = z.prettifyError(parsed.error);
-            log.warn("Error parsing client message", error);
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                error: error.toString(),
-              } satisfies ServerErrorMessage),
-            );
-            ws.close(1002, "ClientJoinMessageSchema");
-            return;
-          }
-          const clientMsg = parsed.data;
-
-          if (clientMsg.type === "ping") {
-            // Ignore ping
-            return;
-          } else if (clientMsg.type !== "join") {
-            log.warn(
-              `Invalid message before join: ${JSON.stringify(clientMsg)}`,
-            );
-            return;
-          }
-
-          // Verify this worker should handle this game
-          const expectedWorkerId = config.workerIndex(clientMsg.gameID);
-          if (expectedWorkerId !== workerId) {
-            log.warn(
-              `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
-            );
-            return;
-          }
-
-          // Verify token signature
-          const result = await verifyClientToken(clientMsg.token, config);
-          if (result === false) {
-            log.warn("Unauthorized: Invalid token");
-            ws.close(1002, "Unauthorized");
-            return;
-          }
-          const { persistentId, claims } = result;
-
-          let roles: string[] | undefined;
-          let flares: string[] | undefined;
-
-          const allowedFlares = config.allowedFlares();
-          if (claims === null) {
-            if (allowedFlares !== undefined) {
-              log.warn("Unauthorized: Anonymous user attempted to join game");
-              ws.close(1002, "Unauthorized");
-              return;
-            }
-          } else {
-            // Verify token and get player permissions
-            const result = await getUserMe(clientMsg.token, config);
-            if (result === false) {
-              log.warn("Unauthorized: Invalid session");
-              ws.close(1002, "Unauthorized");
-              return;
-            }
-            roles = result.player.roles;
-            flares = result.player.flares;
-
-            if (allowedFlares !== undefined) {
-              const allowed =
-                allowedFlares.length === 0 ||
-                allowedFlares.some((f) => flares?.includes(f));
-              if (!allowed) {
-                log.warn(
-                  "Forbidden: player without an allowed flare attempted to join game",
-                );
-                ws.close(1002, "Forbidden");
-                return;
-              }
-            }
-          }
-
-          // Check if the flag is allowed
-          if (clientMsg.flag !== undefined) {
-            if (clientMsg.flag.startsWith("!")) {
-              const allowed = privilegeRefresher
-                .get()
-                .isCustomFlagAllowed(clientMsg.flag, flares);
-              if (allowed !== true) {
-                log.warn(`Custom flag ${allowed}: ${clientMsg.flag}`);
-                ws.close(1002, `Custom flag ${allowed}`);
-                return;
-              }
-            }
-          }
-
-          // Check if the pattern is allowed
-          if (clientMsg.pattern !== undefined) {
-            const allowed = privilegeRefresher
-              .get()
-              .isPatternAllowed(clientMsg.pattern, flares);
-            if (allowed !== true) {
-              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
-              ws.close(1002, `Pattern ${allowed}`);
-              return;
-            }
-          }
-
-          // Create client and add to game
-          const client = new Client(
-            clientMsg.clientID,
-            persistentId,
-            claims,
-            roles,
-            flares,
-            ip,
-            clientMsg.username,
-            ws,
-            clientMsg.flag,
-            clientMsg.pattern,
-          );
-
-          const wasFound = gm.addClient(
-            client,
-            clientMsg.gameID,
-            clientMsg.lastTurn,
-          );
-
-          if (!wasFound) {
-            log.info(
-              `game ${clientMsg.gameID} not found on worker ${workerId}`,
-            );
-            // Handle game not found case
-          }
-
-          // Handle other message types
-        } catch (error) {
-          ws.close(1011, "Internal server error");
-          log.warn(
-            `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
-              0,
-              250,
-            ),
-          );
-        }
-      }),
+      gatekeeper.wsHandler(req, (message) =>
+        preJoinMessageHandler(req, ws, privilegeRefresher, gm, message),
+      ),
     );
 
     ws.on("error", (error: Error) => {

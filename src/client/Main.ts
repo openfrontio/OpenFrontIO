@@ -43,6 +43,7 @@ import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     PageOS: {
       session: {
@@ -62,13 +63,14 @@ declare global {
   }
 
   // Extend the global interfaces to include your custom events
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
-    "kick-player": CustomEvent;
+    "kick-player": CustomEvent<KickPlayerEvent>;
   }
 }
 
-export interface JoinLobbyEvent {
+export type JoinLobbyEvent = {
   clientID: string;
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
@@ -76,7 +78,11 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
-}
+};
+
+export type KickPlayerEvent = {
+  target: string;
+};
 
 class Client {
   private gameStop: (() => void) | null = null;
@@ -423,8 +429,25 @@ class Client {
 
   private handleHash() {
     const { hash } = window.location;
+
+    const alertAndStrip = (message: string) => {
+      alert(message);
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    };
+
     if (hash.startsWith("#")) {
       const params = new URLSearchParams(hash.slice(1));
+      if (params.get("purchase-completed") === "true") {
+        alertAndStrip("purchase succeeded");
+        return;
+      } else if (params.get("purchase-completed") === "false") {
+        alertAndStrip("purchase failed");
+        return;
+      }
       const lobbyId = params.get("join");
       if (lobbyId && ID.safeParse(lobbyId).success) {
         this.joinModal.open(lobbyId);
@@ -475,6 +498,7 @@ class Client {
           "territory-patterns-modal",
           "language-modal",
           "news-modal",
+          "flag-input-modal",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
@@ -530,7 +554,7 @@ class Client {
     this.publicLobby.leaveLobby();
   }
 
-  private handleKickPlayer(event: CustomEvent) {
+  private handleKickPlayer(event: CustomEvent<KickPlayerEvent>) {
     const { target } = event.detail;
 
     // Forward to eventBus if available

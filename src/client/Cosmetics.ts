@@ -1,4 +1,8 @@
-import { UserMeResponse } from "../core/ApiSchemas";
+import { z } from "zod";
+import {
+  StripeCreateCheckoutSessionResponseSchema,
+  UserMeResponse,
+} from "../core/ApiSchemas";
 import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
 
@@ -41,9 +45,8 @@ export async function handlePurchase(priceId: string) {
       },
       body: JSON.stringify({
         priceId: priceId,
-
-        successUrl: `${window.location.href}purchase-success`,
-        cancelUrl: `${window.location.href}purchase-cancel`,
+        successUrl: `${window.location.origin}#purchase-completed=true`,
+        cancelUrl: `${window.location.origin}#purchase-completed=false`,
       }),
     },
   );
@@ -60,7 +63,15 @@ export async function handlePurchase(priceId: string) {
     return;
   }
 
-  const { url } = await response.json();
+  const json = await response.json();
+  const parsed = StripeCreateCheckoutSessionResponseSchema.safeParse(json);
+  if (!parsed.success) {
+    const error = z.prettifyError(parsed.error);
+    console.error("Invalid checkout session response:", error);
+    alert("Checkout failed. Please try again later.");
+    return;
+  }
+  const { url } = parsed.data;
 
   // Redirect to Stripe checkout
   window.location.href = url;

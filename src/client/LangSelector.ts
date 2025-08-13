@@ -34,13 +34,13 @@ import zh_CN from "../../resources/lang/zh-CN.json";
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
-  @state() private defaultTranslations: Record<string, string> | undefined;
-  @state() private currentLang: string = "en";
+  @state() public defaultTranslations: Record<string, string> | undefined;
+  @state() public currentLang = "en";
   @state() private languageList: any[] = [];
-  @state() private showModal: boolean = false;
-  @state() private debugMode: boolean = false;
+  @state() private showModal = false;
+  @state() private debugMode = false;
 
-  private debugKeyPressed: boolean = false;
+  private debugKeyPressed = false;
 
   private languageMap: Record<string, any> = {
     ar,
@@ -276,16 +276,16 @@ export class LangSelector extends LitElement {
       this.languageList.find((l) => l.code === this.currentLang) ??
       (this.currentLang === "debug"
         ? {
-            code: "debug",
-            native: "Debug",
-            en: "Debug",
-            svg: "xx",
-          }
+          code: "debug",
+          native: "Debug",
+          en: "Debug",
+          svg: "xx",
+        }
         : {
-            native: "English",
-            en: "English",
-            svg: "uk_us_flag",
-          });
+          native: "English",
+          en: "English",
+          svg: "uk_us_flag",
+        });
 
     return html`
       <div class="container__row">

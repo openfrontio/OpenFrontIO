@@ -10,6 +10,7 @@ import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { BotSpawner } from "./BotSpawner";
 import { ConstructionExecution } from "./ConstructionExecution";
+import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
@@ -107,6 +108,8 @@ export class Executor {
 
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
+      case "delete_unit":
+        return new DeleteUnitExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
           player,

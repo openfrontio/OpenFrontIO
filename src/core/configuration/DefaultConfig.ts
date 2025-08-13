@@ -54,6 +54,7 @@ const numPlayersConfig = {
   [GameMapType.FalklandIslands]: [80, 50, 30],
   [GameMapType.Baikal]: [60, 50, 40],
   [GameMapType.Mena]: [60, 50, 30],
+  [GameMapType.MarsRevised]: [70, 50, 40],
   [GameMapType.Mars]: [50, 40, 30],
   [GameMapType.Oceania]: [30, 20, 10],
   [GameMapType.EastAsia]: [50, 40, 30],
@@ -322,8 +323,14 @@ export class DefaultConfig implements Config {
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }
+  donateGold(): boolean {
+    return this._gameConfig.donateGold;
+  }
   infiniteTroops(): boolean {
     return this._gameConfig.infiniteTroops;
+  }
+  donateTroops(): boolean {
+    return this._gameConfig.donateTroops;
   }
   trainSpawnRate(numberOfStations: number): number {
     return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
@@ -366,6 +373,7 @@ export class DefaultConfig implements Config {
     return 1_000_000;
   }
 
+  /* eslint-disable sort-keys */
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
       case UnitType.TransportShip:
@@ -487,6 +495,7 @@ export class DefaultConfig implements Config {
         assertNever(type);
     }
   }
+  /* eslint-enable sort-keys */
 
   private costWrapper(
     type: UnitType,
@@ -506,6 +515,9 @@ export class DefaultConfig implements Config {
   }
   donateCooldown(): Tick {
     return 10 * 10;
+  }
+  deleteUnitCooldown(): Tick {
+    return 5 * 10;
   }
   emojiMessageDuration(): Tick {
     return 5 * 10;

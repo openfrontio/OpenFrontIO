@@ -113,7 +113,7 @@ export class UnitGrid {
       gridY + Math.ceil((range - (cellSize - (y % cellSize))) / cellSize),
     );
 
-    return { startGridX, endGridX, startGridY, endGridY };
+    return { endGridX, endGridY, startGridX, startGridY };
   }
 
   private squaredDistanceFromTile(
@@ -144,7 +144,12 @@ export class UnitGrid {
       searchRange,
     );
     const rangeSquared = searchRange * searchRange;
-    const typeSet = Array.isArray(types) ? new Set(types) : new Set([types]);
+    const typeSet = new Set(
+      // Using typeof check instead of Array.isArray due to a typescript
+      // narrowing limitation. For more information, see the full issue
+      // discussion at https://github.com/mattpocock/ts-reset/issues/48
+      typeof types === "object" ? types : [types],
+    );
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const type of typeSet) {
@@ -154,6 +159,7 @@ export class UnitGrid {
             if (!unit.isActive()) continue;
             const distSquared = this.squaredDistanceFromTile(unit, tile);
             if (distSquared > rangeSquared) continue;
+            // eslint-disable-next-line sort-keys
             const value = { unit, distSquared };
             if (predicate !== undefined && !predicate(value)) continue;
             nearby.push(value);
