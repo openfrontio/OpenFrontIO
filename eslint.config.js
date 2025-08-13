@@ -91,22 +91,31 @@ export default [
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/prefer-for-of": "error",
       "array-bracket-newline": ["error", "consistent"],
+      "array-bracket-spacing": ["error", "never"],
       "array-element-newline": ["error", "consistent"],
       "arrow-parens": ["error", "always"],
       "comma-dangle": ["error", "always-multiline"],
+      "comma-spacing": ["error", { before: false, after: true }],
+      "func-call-spacing": ["error", "never"],
       "function-call-argument-newline": ["error", "consistent"],
       "max-depth": ["error", { max: 5 }],
       // "max-len": ["error", { code: 120 }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1785
       "max-lines": ["error", { max: 1065, skipBlankLines: true, skipComments: true }],
       "max-lines-per-function": ["error", { max: 561 }],
-      "object-curly-newline": ["error", { multiline: true, consistent: true }],
-      "object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
       "no-loss-of-precision": "error",
       "no-multi-spaces": "error",
+      "object-curly-newline": ["error", { multiline: true, consistent: true }],
+      "object-curly-spacing": ["error", "always"],
+      "object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
       // "no-undef": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1786
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
       "quote-props": ["error", "consistent-as-needed"],
       // 'sort-imports': 'error', // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1787
+      "space-before-function-paren": ["error", {
+        anonymous: "always",
+        named: "never",
+        asyncArrow: "always",
+      }],
       "space-infix-ops": "off",
     },
   },
