@@ -11,7 +11,7 @@ import {
   DifficultySchema,
   Duos,
   GameMapSize,
-  GameMapType,
+  GameMapTypeSchema,
   GameMode,
   GameType,
   HumansVsNations,
@@ -157,7 +157,7 @@ const TeamCountConfigSchema = z.union([
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 export const GameConfigSchema = z.object({
-  gameMap: z.enum(GameMapType),
+  gameMap: GameMapTypeSchema,
   difficulty: DifficultySchema,
   donateGold: z.boolean(), // Configures donations to humans only
   donateTroops: z.boolean(), // Configures donations to humans only
@@ -462,7 +462,7 @@ export const ServerPingMessageSchema = z.object({
 
 export const ServerPrestartMessageSchema = z.object({
   type: z.literal("prestart"),
-  gameMap: z.enum(GameMapType),
+  gameMap: GameMapTypeSchema,
   gameMapSize: z.enum(GameMapSize),
 });
 

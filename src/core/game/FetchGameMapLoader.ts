@@ -1,4 +1,4 @@
-import { GameMapType } from "./Game";
+import { GameMapType, GameMapTypeSchema } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 
 export class FetchGameMapLoader implements GameMapLoader {
@@ -17,10 +17,10 @@ export class FetchGameMapLoader implements GameMapLoader {
       return cachedMap;
     }
 
-    const key = Object.keys(GameMapType).find(
-      (k) => GameMapType[k as keyof typeof GameMapType] === map,
+    const key = GameMapTypeSchema.options.find(
+      (option) => (option as GameMapType) === map,
     );
-    const fileName = key?.toLowerCase();
+    const fileName = key?.toLowerCase().replace(/ /g, "");
 
     if (!fileName) {
       throw new Error(`Unknown map: ${map}`);

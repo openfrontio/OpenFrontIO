@@ -2,12 +2,7 @@ import {
   Ranking,
   RankType,
 } from "../src/client/components/baseComponents/ranking/GameInfoRanking";
-import {
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  GameType,
-} from "../src/core/game/Game";
+import { GameMapSize, GameMode, GameType } from "../src/core/game/Game";
 import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
@@ -17,7 +12,7 @@ import {
 
 describe("Ranking class", () => {
   const mockConfig = {
-    gameMap: GameMapType.Montreal,
+    gameMap: "Montreal",
     difficulty: "Medium",
     donateGold: false,
     donateTroops: false,

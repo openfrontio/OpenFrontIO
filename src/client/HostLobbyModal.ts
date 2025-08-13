@@ -9,6 +9,7 @@ import {
   Duos,
   GameMapSize,
   GameMapType,
+  GameMapTypeSchema,
   GameMode,
   HumansVsNations,
   Quads,
@@ -37,7 +38,7 @@ export class HostLobbyModal extends LitElement {
     open: () => void;
     close: () => void;
   };
-  @state() private selectedMap: GameMapType = GameMapType.World;
+  @state() private selectedMap: GameMapType = "World";
   @state() private selectedDifficulty: Difficulty = "Medium";
   @state() private disableNations = false;
   @state() private gameMode: GameMode = GameMode.FFA;
@@ -187,10 +188,8 @@ export class HostLobbyModal extends LitElement {
                     </h3>
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
-                        const mapKey = Object.keys(GameMapType).find(
-                          (key) =>
-                            GameMapType[key as keyof typeof GameMapType] ===
-                            mapValue,
+                        const mapKey = GameMapTypeSchema.options.find(
+                          (option) => option === mapValue,
                         );
                         return html`
                           <div
@@ -201,7 +200,7 @@ export class HostLobbyModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey?.toLowerCase()}`,
+                                `map.${mapKey?.toLowerCase().replace(/\s+/g, "")}`,
                               )}
                             ></map-display>
                           </div>
@@ -802,7 +801,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
+    const maps = GameMapTypeSchema.options;
     const randIdx = Math.floor(Math.random() * maps.length);
     return maps[randIdx] as GameMapType;
   }
@@ -810,7 +809,7 @@ export class HostLobbyModal extends LitElement {
   private async startGame() {
     await this.putGameConfig();
     console.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting private game with map: ${this.selectedMap as GameMapType} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
     const config = await getServerConfigFromClient();
