@@ -1,13 +1,7 @@
 import { DefensePostExecution } from "../src/core/execution/DefensePostExecution";
 import { ShellExecution } from "../src/core/execution/ShellExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 
 const coastX = 7;
@@ -38,13 +32,9 @@ describe("Shell Random Damage", () => {
   });
 
   test("Shell damage varies randomly between 200-300 base damage", () => {
-    const target = player2.buildUnit(
-      UnitType.Warship,
-      game.ref(coastX + 5, 10),
-      {
-        patrolTile: game.ref(coastX + 5, 10),
-      },
-    );
+    const target = player2.buildUnit("Warship", game.ref(coastX + 5, 10), {
+      patrolTile: game.ref(coastX + 5, 10),
+    });
     const initialHealth = target.health();
 
     const damages: number[] = [];
@@ -54,7 +44,7 @@ describe("Shell Random Damage", () => {
       const shell = new ShellExecution(
         game.ref(coastX, 10),
         player1,
-        player1.buildUnit(UnitType.Warship, game.ref(coastX, 10), {
+        player1.buildUnit("Warship", game.ref(coastX, 10), {
           patrolTile: game.ref(coastX, 10),
         }),
         target,
@@ -76,7 +66,7 @@ describe("Shell Random Damage", () => {
 
     expect(damages.length).toBeGreaterThan(0);
 
-    const baseDamage = game.config().unitInfo(UnitType.Shell).damage ?? 250;
+    const baseDamage = game.config().unitInfo("Shell").damage ?? 250;
     const minExpectedDamage = Math.round((baseDamage / 250) * 200);
     const maxExpectedDamage = Math.round((baseDamage / 250) * 300);
 
@@ -89,23 +79,15 @@ describe("Shell Random Damage", () => {
   });
 
   test("Warship shell attacks have random damage", () => {
-    player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
+    player1.buildUnit("Port", game.ref(coastX, 10), {});
 
-    const warship = player1.buildUnit(
-      UnitType.Warship,
-      game.ref(coastX + 1, 10),
-      {
-        patrolTile: game.ref(coastX + 1, 10),
-      },
-    );
+    const warship = player1.buildUnit("Warship", game.ref(coastX + 1, 10), {
+      patrolTile: game.ref(coastX + 1, 10),
+    });
 
-    const target = player2.buildUnit(
-      UnitType.Warship,
-      game.ref(coastX + 2, 10),
-      {
-        patrolTile: game.ref(coastX + 2, 10),
-      },
-    );
+    const target = player2.buildUnit("Warship", game.ref(coastX + 2, 10), {
+      patrolTile: game.ref(coastX + 2, 10),
+    });
     const initialHealth = target.health();
 
     warship.setTargetUnit(target);
@@ -134,7 +116,7 @@ describe("Shell Random Damage", () => {
     const uniqueDamages = new Set(damages);
     expect(uniqueDamages.size).toBeGreaterThan(1);
 
-    const baseDamage = game.config().unitInfo(UnitType.Shell).damage ?? 250;
+    const baseDamage = game.config().unitInfo("Shell").damage ?? 250;
     const minExpectedDamage = Math.round((baseDamage / 250) * 200);
     const maxExpectedDamage = Math.round((baseDamage / 250) * 300);
 
@@ -146,20 +128,16 @@ describe("Shell Random Damage", () => {
 
   test("Defense post shell attacks have random damage", () => {
     player1.conquer(game.ref(coastX, 5));
-    const spawn = player1.canBuild(UnitType.DefensePost, game.ref(coastX, 5));
+    const spawn = player1.canBuild("Defense Post", game.ref(coastX, 5));
     if (spawn === false) {
       throw new Error("Unable to build defense post for test");
     }
-    const defensePostUnit = player1.buildUnit(UnitType.DefensePost, spawn, {});
+    const defensePostUnit = player1.buildUnit("Defense Post", spawn, {});
     const defensePost = new DefensePostExecution(defensePostUnit);
 
-    const target = player2.buildUnit(
-      UnitType.Warship,
-      game.ref(coastX + 1, 10),
-      {
-        patrolTile: game.ref(coastX + 1, 10),
-      },
-    );
+    const target = player2.buildUnit("Warship", game.ref(coastX + 1, 10), {
+      patrolTile: game.ref(coastX + 1, 10),
+    });
     const initialHealth = target.health();
 
     defensePost.init(game, game.ticks());
@@ -186,7 +164,7 @@ describe("Shell Random Damage", () => {
       const uniqueDamages = new Set(damages);
       expect(uniqueDamages.size).toBeGreaterThan(1);
 
-      const baseDamage = game.config().unitInfo(UnitType.Shell).damage ?? 250;
+      const baseDamage = game.config().unitInfo("Shell").damage ?? 250;
       const minExpectedDamage = Math.round((baseDamage / 250) * 200);
       const maxExpectedDamage = Math.round((baseDamage / 250) * 300);
 
@@ -198,13 +176,9 @@ describe("Shell Random Damage", () => {
   });
 
   test("Shell damage distribution follows expected pattern", () => {
-    const target = player2.buildUnit(
-      UnitType.Warship,
-      game.ref(coastX + 5, 10),
-      {
-        patrolTile: game.ref(coastX + 5, 10),
-      },
-    );
+    const target = player2.buildUnit("Warship", game.ref(coastX + 5, 10), {
+      patrolTile: game.ref(coastX + 5, 10),
+    });
     const initialHealth = target.health();
 
     const damages: number[] = [];
@@ -214,7 +188,7 @@ describe("Shell Random Damage", () => {
       const shell = new ShellExecution(
         game.ref(coastX, 10),
         player1,
-        player1.buildUnit(UnitType.Warship, game.ref(coastX, 10), {
+        player1.buildUnit("Warship", game.ref(coastX, 10), {
           patrolTile: game.ref(coastX, 10),
         }),
         target,
@@ -251,19 +225,15 @@ describe("Shell Random Damage", () => {
   });
 
   test("Shell damage is consistent with same random seed", () => {
-    const target = player2.buildUnit(
-      UnitType.Warship,
-      game.ref(coastX + 5, 10),
-      {
-        patrolTile: game.ref(coastX + 5, 10),
-      },
-    );
+    const target = player2.buildUnit("Warship", game.ref(coastX + 5, 10), {
+      patrolTile: game.ref(coastX + 5, 10),
+    });
     const initialHealth = target.health();
 
     const shell1 = new ShellExecution(
       game.ref(coastX, 10),
       player1,
-      player1.buildUnit(UnitType.Warship, game.ref(coastX, 10), {
+      player1.buildUnit("Warship", game.ref(coastX, 10), {
         patrolTile: game.ref(coastX, 10),
       }),
       target,
@@ -272,7 +242,7 @@ describe("Shell Random Damage", () => {
     const shell2 = new ShellExecution(
       game.ref(coastX, 10),
       player1,
-      player1.buildUnit(UnitType.Warship, game.ref(coastX, 10), {
+      player1.buildUnit("Warship", game.ref(coastX, 10), {
         patrolTile: game.ref(coastX, 10),
       }),
       target,

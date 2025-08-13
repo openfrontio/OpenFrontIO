@@ -276,10 +276,10 @@ export class FakeHumanExecution implements Execution {
 
   private maybeSendNuke(other: Player) {
     if (this.player === null) throw new Error("not initialized");
-    const silos = this.player.units(UnitType.MissileSilo);
+    const silos = this.player.units("Missile Silo");
     if (
       silos.length === 0 ||
-      this.player.gold() < this.cost(UnitType.AtomBomb) ||
+      this.player.gold() < this.cost("Atom Bomb") ||
       other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to fakehumans and humans)
       this.player.isOnSameTeam(other)
     ) {
@@ -287,17 +287,17 @@ export class FakeHumanExecution implements Execution {
     }
 
     const nukeType =
-      this.player.gold() > this.cost(UnitType.HydrogenBomb)
-        ? UnitType.HydrogenBomb
-        : UnitType.AtomBomb;
-    const range = nukeType === UnitType.HydrogenBomb ? 60 : 15;
+      this.player.gold() > this.cost("Hydrogen Bomb")
+        ? "Hydrogen Bomb"
+        : "Atom Bomb";
+    const range = nukeType === "Hydrogen Bomb" ? 60 : 15;
 
     const structures = other.units(
-      UnitType.City,
-      UnitType.DefensePost,
-      UnitType.MissileSilo,
-      UnitType.Port,
-      UnitType.SAMLauncher,
+      "City",
+      "Defense Post",
+      "Missile Silo",
+      "Port",
+      "SAM Launcher",
     );
     const structureTiles = structures.map((u) => u.tile());
     const randomTiles = this.randTerritoryTileArray(10);
@@ -340,10 +340,7 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
-  private sendNuke(
-    tile: TileRef,
-    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
-  ) {
+  private sendNuke(tile: TileRef, nukeType: "Atom Bomb" | "Hydrogen Bomb") {
     if (this.player === null) throw new Error("not initialized");
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
@@ -357,13 +354,13 @@ export class FakeHumanExecution implements Execution {
       .filter((unit) => dist(this.mg, unit.tile()))
       .map((unit): number => {
         switch (unit.type()) {
-          case UnitType.City:
+          case "City":
             return 25_000;
-          case UnitType.DefensePost:
+          case "Defense Post":
             return 5_000;
-          case UnitType.MissileSilo:
+          case "Missile Silo":
             return 50_000;
-          case UnitType.Port:
+          case "Port":
             return 10_000;
           default:
             return 0;
@@ -377,7 +374,7 @@ export class FakeHumanExecution implements Execution {
       50_000 *
       targets.filter(
         (unit) =>
-          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
+          unit.type() === "SAM Launcher" && dist50(this.mg, unit.tile()),
       ).length;
 
     // Prefer tiles that are closer to a silo
@@ -424,13 +421,13 @@ export class FakeHumanExecution implements Execution {
 
   private handleUnits() {
     return (
-      this.maybeSpawnStructure(UnitType.City, (num) => num) ||
-      this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
+      this.maybeSpawnStructure("City", (num) => num) ||
+      this.maybeSpawnStructure("Port", (num) => num) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, (num) => num) ||
-      this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
-      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => num ** 2) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num ** 2)
+      this.maybeSpawnStructure("Factory", (num) => num) ||
+      this.maybeSpawnStructure("Defense Post", (num) => (num + 2) ** 2) ||
+      this.maybeSpawnStructure("SAM Launcher", (num) => num ** 2) ||
+      this.maybeSpawnStructure("Missile Silo", (num) => num ** 2)
     );
   }
 
@@ -462,7 +459,7 @@ export class FakeHumanExecution implements Execution {
     if (this.mg === undefined) throw new Error("Not initialized");
     if (this.player === null) throw new Error("Not initialized");
     const tiles =
-      type === UnitType.Port
+      type === "Port"
         ? this.randCoastalTileArray(25)
         : this.randTerritoryTileArray(25);
     if (tiles.length === 0) return null;
@@ -507,25 +504,25 @@ export class FakeHumanExecution implements Execution {
     if (!this.random.chance(50)) {
       return false;
     }
-    const ports = this.player.units(UnitType.Port);
-    const ships = this.player.units(UnitType.Warship);
+    const ports = this.player.units("Port");
+    const ships = this.player.units("Warship");
     if (
       ports.length > 0 &&
       ships.length === 0 &&
-      this.player.gold() > this.cost(UnitType.Warship)
+      this.player.gold() > this.cost("Warship")
     ) {
       const port = this.random.randElement(ports);
       const targetTile = this.warshipSpawnTile(port.tile());
       if (targetTile === null) {
         return false;
       }
-      const canBuild = this.player.canBuild(UnitType.Warship, targetTile);
+      const canBuild = this.player.canBuild("Warship", targetTile);
       if (canBuild === false) {
         console.warn("cannot spawn destroyer");
         return false;
       }
       this.mg.addExecution(
-        new ConstructionExecution(this.player, UnitType.Warship, targetTile),
+        new ConstructionExecution(this.player, "Warship", targetTile),
       );
       return true;
     }
@@ -702,10 +699,10 @@ export class FakeHumanExecution implements Execution {
   // MIRV Strategy Methods
   private considerMIRV(): boolean {
     if (this.player === null) throw new Error("not initialized");
-    if (this.player.units(UnitType.MissileSilo).length === 0) {
+    if (this.player.units("Missile Silo").length === 0) {
       return false;
     }
-    if (this.player.gold() < this.cost(UnitType.MIRV)) {
+    if (this.player.gold() < this.cost("MIRV")) {
       return false;
     }
 
@@ -858,7 +855,7 @@ export class FakeHumanExecution implements Execution {
 
   private isInboundMIRVFrom(attacker: Player): boolean {
     if (this.player === null) throw new Error("not initialized");
-    const enemyMirvs = attacker.units(UnitType.MIRV);
+    const enemyMirvs = attacker.units("MIRV");
     for (const mirv of enemyMirvs) {
       const dst = mirv.targetTile();
       if (!dst) continue;
@@ -872,7 +869,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private countCities(p: Player): number {
-    return p.unitCount(UnitType.City);
+    return p.unitCount("City");
   }
 
   private calculateTerritoryCenter(target: Player): TileRef | null {
@@ -886,7 +883,7 @@ export class FakeHumanExecution implements Execution {
     this.maybeSendEmoji(enemy);
 
     const centerTile = this.calculateTerritoryCenter(enemy);
-    if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
+    if (centerTile && this.player.canBuild("MIRV", centerTile)) {
       this.sendMIRV(centerTile);
       return;
     }
@@ -925,7 +922,7 @@ export class FakeHumanExecution implements Execution {
 
     // Add any currently owned transport ships to our tracking set
     this.player
-      .units(UnitType.TransportShip)
+      .units("Transport Ship")
       .forEach((u) => this.trackedTransportShips.add(u));
 
     // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
@@ -946,7 +943,7 @@ export class FakeHumanExecution implements Execution {
 
     // Add any currently owned trade ships to our tracking map
     this.player
-      .units(UnitType.TradeShip)
+      .units("Trade Ship")
       .forEach((u) => this.trackedTradeShips.add(u));
 
     // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
@@ -973,12 +970,12 @@ export class FakeHumanExecution implements Execution {
       (difficulty === "Hard" && this.random.nextInt(0, 100) < 50) ||
       (difficulty === "Impossible" && this.random.nextInt(0, 100) < 80)
     ) {
-      const canBuild = this.player.canBuild(UnitType.Warship, tile);
+      const canBuild = this.player.canBuild("Warship", tile);
       if (canBuild === false) {
         return;
       }
       this.mg.addExecution(
-        new ConstructionExecution(this.player, UnitType.Warship, tile),
+        new ConstructionExecution(this.player, "Warship", tile),
       );
     }
   }

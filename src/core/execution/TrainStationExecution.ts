@@ -1,4 +1,4 @@
-import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Unit } from "../game/Game";
 import { TrainStation } from "../game/TrainStation";
 import { PseudoRandom } from "../PseudoRandom";
 import { TrainExecution } from "./TrainExecution";
@@ -51,7 +51,7 @@ export class TrainStationExecution implements Execution {
   private shouldSpawnTrain(): boolean {
     const spawnRate = this.mg
       .config()
-      .trainSpawnRate(this.unit.owner().unitCount(UnitType.Factory));
+      .trainSpawnRate(this.unit.owner().unitCount("Factory"));
     for (let i = 0; i < this.unit!.level(); i++) {
       if (this.random.chance(spawnRate)) {
         return true;

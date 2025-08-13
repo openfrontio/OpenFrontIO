@@ -9,7 +9,6 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
-  UnitType,
 } from "../src/core/game/Game";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
@@ -222,7 +221,7 @@ describe("Disconnected", () => {
 
     test("Team Warships should not attack disconnected team mate ships", () => {
       const warship = player1.buildUnit(
-        UnitType.Warship,
+        "Warship",
         game.map().ref(coastX + 1, 10),
         {
           patrolTile: game.map().ref(coastX + 1, 10),
@@ -231,7 +230,7 @@ describe("Disconnected", () => {
       game.addExecution(new WarshipExecution(warship));
 
       const transportShip = player2.buildUnit(
-        UnitType.TransportShip,
+        "Transport Ship",
         game.map().ref(coastX + 1, 11),
         {
           troops: 100,
@@ -248,7 +247,7 @@ describe("Disconnected", () => {
 
     test("Disconnected player Warship should not attack team members' ships", () => {
       const warship = player2.buildUnit(
-        UnitType.Warship,
+        "Warship",
         game.map().ref(coastX + 1, 5),
         {
           patrolTile: game.map().ref(coastX + 1, 10),
@@ -257,7 +256,7 @@ describe("Disconnected", () => {
       game.addExecution(new WarshipExecution(warship));
 
       const transportShip = player1.buildUnit(
-        UnitType.TransportShip,
+        "Transport Ship",
         game.map().ref(coastX + 1, 6),
         {
           troops: 100,
@@ -314,14 +313,14 @@ describe("Disconnected", () => {
 
     test("Conqueror gets conquered disconnected team member's transport- and warships", () => {
       const warship = player2.buildUnit(
-        UnitType.Warship,
+        "Warship",
         game.map().ref(coastX + 1, 1),
         {
           patrolTile: game.map().ref(coastX + 1, 1),
         },
       );
       const transportShip = player2.buildUnit(
-        UnitType.TransportShip,
+        "Transport Ship",
         game.map().ref(coastX + 1, 3),
         {
           troops: 100,
@@ -360,8 +359,8 @@ describe("Disconnected", () => {
       executeTicks(game, 1);
 
       expect(player2.isAlive()).toBe(true);
-      const transportShip = player2.units(UnitType.TransportShip)[0];
-      expect(player2.units(UnitType.TransportShip).length).toBe(1);
+      const transportShip = player2.units("Transport Ship")[0];
+      expect(player2.units("Transport Ship").length).toBe(1);
 
       player2.markDisconnected(true);
       game.addExecution(new AttackExecution(1000, player1, player2.id(), null));
@@ -394,8 +393,8 @@ describe("Disconnected", () => {
       );
       executeTicks(game, 1);
 
-      const transportShip = player2.units(UnitType.TransportShip)[0];
-      expect(player2.units(UnitType.TransportShip).length).toBe(1);
+      const transportShip = player2.units("Transport Ship")[0];
+      expect(player2.units("Transport Ship").length).toBe(1);
 
       expect(transportShip.targetTile()).toBe(enemyShoreTile);
 
@@ -432,8 +431,8 @@ describe("Disconnected", () => {
       );
       executeTicks(game, 1);
 
-      const transportShip = player2.units(UnitType.TransportShip)[0];
-      expect(player2.units(UnitType.TransportShip).length).toBe(1);
+      const transportShip = player2.units("Transport Ship")[0];
+      expect(player2.units("Transport Ship").length).toBe(1);
 
       player2.markDisconnected(true);
       game.addExecution(new AttackExecution(1000, player1, player2.id(), null));

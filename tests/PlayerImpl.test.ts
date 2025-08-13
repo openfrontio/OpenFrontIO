@@ -1,10 +1,4 @@
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;
@@ -36,29 +30,26 @@ describe("PlayerImpl", () => {
   });
 
   test("City can be upgraded", () => {
-    const city = player.buildUnit(UnitType.City, game.ref(0, 0), {});
+    const city = player.buildUnit("City", game.ref(0, 0), {});
     const buCity = player
       .buildableUnits(game.ref(0, 0))
-      .find((bu) => bu.type === UnitType.City);
+      .find((bu) => bu.type === "City");
     expect(buCity).toBeDefined();
     expect(buCity!.canUpgrade).toBe(city.id());
   });
 
   test("DefensePost cannot be upgraded", () => {
-    player.buildUnit(UnitType.DefensePost, game.ref(0, 0), {});
+    player.buildUnit("Defense Post", game.ref(0, 0), {});
     const buDefensePost = player
       .buildableUnits(game.ref(0, 0))
-      .find((bu) => bu.type === UnitType.DefensePost);
+      .find((bu) => bu.type === "Defense Post");
     expect(buDefensePost).toBeDefined();
     expect(buDefensePost!.canUpgrade).toBeFalsy();
   });
 
   test("City can be upgraded from another city", () => {
-    const city = player.buildUnit(UnitType.City, game.ref(0, 0), {});
-    const cityToUpgrade = player.findUnitToUpgrade(
-      UnitType.City,
-      game.ref(0, 1),
-    );
+    const city = player.buildUnit("City", game.ref(0, 0), {});
+    const cityToUpgrade = player.findUnitToUpgrade("City", game.ref(0, 1));
     expect(cityToUpgrade).toBeTruthy();
     if (cityToUpgrade === false) {
       return;
@@ -66,20 +57,14 @@ describe("PlayerImpl", () => {
     expect(cityToUpgrade.id()).toBe(city.id());
   });
   test("City cannot be upgraded when too far away", () => {
-    player.buildUnit(UnitType.City, game.ref(0, 0), {});
-    const cityToUpgrade = player.findUnitToUpgrade(
-      UnitType.City,
-      game.ref(50, 50),
-    );
+    player.buildUnit("City", game.ref(0, 0), {});
+    const cityToUpgrade = player.findUnitToUpgrade("City", game.ref(50, 50));
     expect(cityToUpgrade).toBe(false);
   });
   test("Unit cannot be upgraded when not enough gold", () => {
-    player.buildUnit(UnitType.City, game.ref(0, 0), {});
+    player.buildUnit("City", game.ref(0, 0), {});
     player.removeGold(BigInt(1000000));
-    const cityToUpgrade = player.findUnitToUpgrade(
-      UnitType.City,
-      game.ref(0, 1),
-    );
+    const cityToUpgrade = player.findUnitToUpgrade("City", game.ref(0, 1));
     expect(cityToUpgrade).toBe(false);
   });
 

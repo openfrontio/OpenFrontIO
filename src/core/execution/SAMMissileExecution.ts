@@ -1,11 +1,4 @@
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, MessageType, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
@@ -33,17 +26,13 @@ export class SAMMissileExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    this.SAMMissile ??= this._owner.buildUnit(
-      UnitType.SAMMissile,
-      this.spawn,
-      {},
-    );
+    this.SAMMissile ??= this._owner.buildUnit("SAM Missile", this.spawn, {});
     if (!this.SAMMissile.isActive()) {
       this.active = false;
       return;
     }
     // Mirv warheads are too fast, and mirv shouldn't be stopped ever
-    const nukesWhitelist = [UnitType.AtomBomb, UnitType.HydrogenBomb];
+    const nukesWhitelist = ["Atom Bomb", "Hydrogen Bomb"];
     if (
       !this.target.isActive() ||
       !this.ownerUnit.isActive() ||

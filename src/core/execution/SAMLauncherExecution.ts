@@ -86,7 +86,7 @@ class SAMTargetingSystem {
     const nukes = this.mg.nearbyUnits(
       this.sam.tile(),
       detectionRange,
-      [UnitType.AtomBomb, UnitType.HydrogenBomb],
+      ["Atom Bomb", "Hydrogen Bomb"],
       ({ unit }) => {
         return (
           isUnit(unit) &&
@@ -144,13 +144,13 @@ class SAMTargetingSystem {
       targets.sort((a: Target, b: Target) => {
         // Prioritize Hydrogen Bombs
         if (
-          a.unit.type() === UnitType.HydrogenBomb &&
-          b.unit.type() !== UnitType.HydrogenBomb
+          a.unit.type() === "Hydrogen Bomb" &&
+          b.unit.type() !== "Hydrogen Bomb"
         )
           return -1;
         if (
-          a.unit.type() !== UnitType.HydrogenBomb &&
-          b.unit.type() === UnitType.HydrogenBomb
+          a.unit.type() !== "Hydrogen Bomb" &&
+          b.unit.type() === "Hydrogen Bomb"
         )
           return 1;
 
@@ -187,11 +187,11 @@ export class SAMLauncherExecution implements Execution {
   }
 
   private isHit(type: UnitType, random: number): boolean {
-    if (type === UnitType.AtomBomb) {
+    if (type === "Atom Bomb") {
       return true;
     }
 
-    if (type === UnitType.MIRVWarhead) {
+    if (type === "MIRV Warhead") {
       return random < this.mg.config().samWarheadHittingChance();
     }
 
@@ -206,13 +206,13 @@ export class SAMLauncherExecution implements Execution {
       if (this.tile === null) {
         throw new Error("tile is null");
       }
-      const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
+      const spawnTile = this.player.canBuild("SAM Launcher", this.tile);
       if (spawnTile === false) {
         console.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }
-      this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {});
+      this.sam = this.player.buildUnit("SAM Launcher", spawnTile, {});
     }
     this.targetingSystem ??= new SAMTargetingSystem(this.mg, this.sam);
 
@@ -248,7 +248,7 @@ export class SAMLauncherExecution implements Execution {
     const mirvWarheadTargets = this.mg.nearbyUnits(
       this.sam.tile(),
       this.MIRVWarheadSearchRadius,
-      UnitType.MIRVWarhead,
+      "MIRV Warhead",
       ({ unit }) => {
         if (!isUnit(unit)) return false;
         if (unit.owner() === this.player) return false;
@@ -275,9 +275,7 @@ export class SAMLauncherExecution implements Execution {
     if (isSingleTarget || mirvWarheadTargets.length > 0) {
       this.sam.launch();
       const type =
-        mirvWarheadTargets.length > 0
-          ? UnitType.MIRVWarhead
-          : target?.unit.type();
+        mirvWarheadTargets.length > 0 ? "MIRV Warhead" : target?.unit.type();
       if (type === undefined) throw new Error("Unknown unit type");
       const random = this.pseudoRandom.next();
       const hit = this.isHit(type, random);
@@ -305,11 +303,7 @@ export class SAMLauncherExecution implements Execution {
         // Record stats
         this.mg
           .stats()
-          .bombIntercept(
-            samOwner,
-            UnitType.MIRVWarhead,
-            mirvWarheadTargets.length,
-          );
+          .bombIntercept(samOwner, "MIRV Warhead", mirvWarheadTargets.length);
       } else if (target !== null) {
         target.unit.setTargetedBySAM(true);
         this.mg.addExecution(

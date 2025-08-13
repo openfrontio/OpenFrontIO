@@ -2,13 +2,7 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import {
-  Cell,
-  ColoredTeams,
-  PlayerType,
-  Team,
-  UnitType,
-} from "../../../core/game/Game";
+import { Cell, ColoredTeams, PlayerType, Team } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -89,7 +83,7 @@ export class TerritoryLayer implements Layer {
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
     unitUpdates.forEach((update) => {
-      if (update.unitType === UnitType.DefensePost) {
+      if (update.unitType === "Defense Post") {
         // Only update borders if the defense post is not under construction
         if (update.underConstruction) {
           return; // Skip barrier creation while under construction
@@ -516,7 +510,7 @@ export class TerritoryLayer implements Layer {
       const isDefended = this.game.hasUnitNearby(
         tile,
         this.game.config().defensePostRange(),
-        UnitType.DefensePost,
+        "Defense Post",
         owner.id(),
       );
 

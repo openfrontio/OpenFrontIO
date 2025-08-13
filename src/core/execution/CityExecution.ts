@@ -1,4 +1,4 @@
-import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Unit } from "../game/Game";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class CityExecution implements Execution {
@@ -35,7 +35,7 @@ export class CityExecution implements Execution {
     const nearbyFactory = this.mg.hasUnitNearby(
       this.city.tile()!,
       this.mg.config().trainStationMaxRange(),
-      UnitType.Factory,
+      "Factory",
     );
     if (nearbyFactory) {
       this.mg.addExecution(new TrainStationExecution(this.city));

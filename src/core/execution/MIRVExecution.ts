@@ -5,7 +5,6 @@ import {
   Player,
   TerraNullius,
   Unit,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
@@ -46,7 +45,7 @@ export class MirvExecution implements Execution {
     this.speed = this.mg.config().defaultNukeSpeed();
 
     // Record stats
-    this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
+    this.mg.stats().bombLaunch(this.player, this.targetPlayer, "MIRV");
 
     // Betrayal on launch
     if (this.targetPlayer.isPlayer()) {
@@ -62,13 +61,13 @@ export class MirvExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
+      const spawn = this.player.canBuild("MIRV", this.dst);
       if (spawn === false) {
         console.warn(`cannot build MIRV`);
         this.active = false;
         return;
       }
-      this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
+      this.nuke = this.player.buildUnit("MIRV", spawn, {
         targetTile: this.dst,
       });
       const x = Math.floor(
@@ -92,7 +91,7 @@ export class MirvExecution implements Execution {
       this.separate();
       this.active = false;
       // Record stats
-      this.mg.stats().bombLand(this.player, this.targetPlayer, UnitType.MIRV);
+      this.mg.stats().bombLand(this.player, this.targetPlayer, "MIRV");
       return;
     } else {
       this.nuke.move(result);
@@ -121,7 +120,7 @@ export class MirvExecution implements Execution {
     for (const [i, dst] of dsts.entries()) {
       this.mg.addExecution(
         new NukeExecution(
-          UnitType.MIRVWarhead,
+          "MIRV Warhead",
           this.player,
           dst,
           this.nuke.tile(),

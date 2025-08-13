@@ -65,9 +65,9 @@ export function createTrainStopHandlers(
   random: PseudoRandom,
 ): Partial<Record<UnitType, TrainStopHandler>> {
   return {
-    [UnitType.City]: new CityStopHandler(),
-    [UnitType.Port]: new PortStopHandler(random),
-    [UnitType.Factory]: new FactoryStopHandler(),
+    ["City"]: new CityStopHandler(),
+    ["Port"]: new PortStopHandler(random),
+    ["Factory"]: new FactoryStopHandler(),
   };
 }
 
@@ -229,8 +229,7 @@ export class Cluster {
     const tradingStations = new Set<TrainStation>();
     for (const station of this.stations) {
       if (
-        (station.unit.type() === UnitType.City ||
-          station.unit.type() === UnitType.Port) &&
+        (station.unit.type() === "City" || station.unit.type() === "Port") &&
         station.tradeAvailable(player)
       ) {
         tradingStations.add(station);

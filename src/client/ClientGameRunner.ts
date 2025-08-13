@@ -639,7 +639,7 @@ export class ClientGameRunner {
 
   private canBoatAttack(actions: PlayerActions): false | TileRef {
     const bu = actions.buildableUnits.find(
-      (bu) => bu.type === UnitType.TransportShip,
+      (bu) => bu.type === "Transport Ship",
     );
     if (bu === undefined) {
       console.warn(`no transport ship buildable units`);

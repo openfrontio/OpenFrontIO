@@ -1,5 +1,5 @@
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
-import { Game, Player, Unit, UnitType } from "../../../src/core/game/Game";
+import { Game, Player, Unit } from "../../../src/core/game/Game";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 
 jest.mock("../../../src/core/game/Game");
@@ -46,7 +46,7 @@ describe("TrainStation", () => {
   });
 
   it("handles City stop", () => {
-    unit.type.mockReturnValue(UnitType.City);
+    unit.type.mockReturnValue("City");
     const station = new TrainStation(game, unit);
 
     station.onTrainStop(trainExecution);
@@ -55,7 +55,7 @@ describe("TrainStation", () => {
   });
 
   it("handles allied trade", () => {
-    unit.type.mockReturnValue(UnitType.City);
+    unit.type.mockReturnValue("City");
     player.isFriendly.mockReturnValue(true);
     const station = new TrainStation(game, unit);
 

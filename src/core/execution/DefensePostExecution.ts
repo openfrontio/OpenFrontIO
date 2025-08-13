@@ -58,7 +58,7 @@ export class DefensePostExecution implements Execution {
     //   .nearbyUnits(
     //     this.post.tile(),
     //     this.mg.config().defensePostTargettingRange(),
-    //     [UnitType.TransportShip, UnitType.Warship],
+    //     ["Transport Ship", "Warship"],
     //   )
     //   .filter(
     //     ({ unit }) =>
@@ -75,13 +75,13 @@ export class DefensePostExecution implements Execution {
     //
     //     // Prioritize TransportShip
     //     if (
-    //       unitA.type() === UnitType.TransportShip &&
-    //       unitB.type() !== UnitType.TransportShip
+    //       unitA.type() === "Transport Ship" &&
+    //       unitB.type() !== "Transport Ship"
     //     )
     //       return -1;
     //     if (
-    //       unitA.type() !== UnitType.TransportShip &&
-    //       unitB.type() === UnitType.TransportShip
+    //       unitA.type() !== "Transport Ship" &&
+    //       unitB.type() === "Transport Ship"
     //     )
     //       return 1;
     //

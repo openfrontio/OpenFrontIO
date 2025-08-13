@@ -1,4 +1,4 @@
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 
 export class MoveWarshipExecution implements Execution {
@@ -14,7 +14,7 @@ export class MoveWarshipExecution implements Execution {
       return;
     }
     const warship = this.owner
-      .units(UnitType.Warship)
+      .units("Warship")
       .find((u) => u.id() === this.unitId);
     if (!warship) {
       console.warn("MoveWarshipExecution: warship not found");
