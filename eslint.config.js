@@ -111,6 +111,7 @@ export default [
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
       "quote-props": ["error", "consistent-as-needed"],
       // 'sort-imports': 'error', // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1787
+      "space-before-blocks": ["error", "always"],
       "space-before-function-paren": ["error", {
         anonymous: "always",
         named: "never",

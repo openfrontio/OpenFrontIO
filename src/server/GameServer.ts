@@ -64,6 +64,11 @@ export class GameServer {
 
   private websockets: Set<WebSocket> = new Set();
 
+  winnerVotes: Map<
+    string,
+    { winner: ClientSendWinnerMessage; ips: Set<string> }
+  > = new Map();
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -190,6 +195,7 @@ export class GameServer {
       }
 
       client.lastPing = existing.lastPing;
+      client.reportedWinner = existing.reportedWinner;
 
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
