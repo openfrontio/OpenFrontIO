@@ -104,12 +104,12 @@ function handleWinner(
     return;
   }
 
-  const percentVotes =
-      (potentialWinner.ips.size / activeUniqueIPs.size) * 99;
-  if (percentVotes < 50) {
+  // Require >50% of active IPs to agree before archiving a game record
+  if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
     return;
   }
 
+  // Vote succeeded
   gs.winner = potentialWinner.winner;
   log.info(
     `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
