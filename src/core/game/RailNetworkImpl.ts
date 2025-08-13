@@ -13,12 +13,12 @@ import { Cluster, TrainStation, TrainStationMapAdapter } from "./TrainStation";
  * but it would be expensive to look through the graph to find a station.
  * This class stores the existing stations for quick access
  */
-export interface StationManager {
+export type StationManager = {
   addStation(station: TrainStation): void;
   removeStation(station: TrainStation): void;
   findStation(unit: Unit): TrainStation | null;
   getAll(): Set<TrainStation>;
-}
+};
 
 export class StationManagerImpl implements StationManager {
   private stations: Set<TrainStation> = new Set();
@@ -43,10 +43,10 @@ export class StationManagerImpl implements StationManager {
   }
 }
 
-export interface RailPathFinderService {
+export type RailPathFinderService = {
   findTilePath(from: TileRef, to: TileRef): TileRef[];
   findStationsPath(from: TrainStation, to: TrainStation): TrainStation[];
-}
+};
 
 class RailPathFinderServiceImpl implements RailPathFinderService {
   constructor(private game: Game) {}
@@ -88,7 +88,7 @@ export function createRailNetwork(game: Game): RailNetwork {
 }
 
 export class RailNetworkImpl implements RailNetwork {
-  private maxConnectionDistance: number = 4;
+  private maxConnectionDistance = 4;
 
   constructor(
     private game: Game,

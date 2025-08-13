@@ -41,7 +41,7 @@ export async function handlePurchase(priceId: string) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        authorization: getAuthHeader(),
+        "authorization": getAuthHeader(),
       },
       body: JSON.stringify({
         priceId: priceId,

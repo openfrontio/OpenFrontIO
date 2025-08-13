@@ -49,10 +49,10 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Yenisei: 1,
 };
 
-interface MapWithMode {
+type MapWithMode = {
   map: GameMapType;
   mode: GameMode;
-}
+};
 
 const TEAM_COUNTS = [
   2,
@@ -81,6 +81,8 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       disableNPCs: mode === GameMode.Team,
       disabledUnits: [],
+      donateGold: true,
+      donateTroops: true,
       gameMap: map,
       gameMode: mode,
       gameType: GameType.Public,
@@ -126,6 +128,7 @@ export class MapPlaylist {
     const team: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
+    // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < maps.length; i++) {
       if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
         return false;

@@ -1,7 +1,7 @@
-export interface AStar<NodeType> {
+export type AStar<NodeType> = {
   compute(): PathFindResultType;
   reconstructPath(): NodeType[];
-}
+};
 
 export enum PathFindResultType {
   NextTile,
@@ -11,21 +11,21 @@ export enum PathFindResultType {
 }
 export type AStarResult<NodeType> =
   | {
-      type: PathFindResultType.NextTile;
-      node: NodeType;
-    }
+    type: PathFindResultType.NextTile;
+    node: NodeType;
+  }
   | {
-      type: PathFindResultType.Pending;
-    }
+    type: PathFindResultType.Pending;
+  }
   | {
-      type: PathFindResultType.Completed;
-      node: NodeType;
-    }
+    type: PathFindResultType.Completed;
+    node: NodeType;
+  }
   | {
-      type: PathFindResultType.PathNotFound;
-    };
+    type: PathFindResultType.PathNotFound;
+  };
 
-export interface Point {
+export type Point = {
   x: number;
   y: number;
-}
+};

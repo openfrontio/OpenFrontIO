@@ -2,6 +2,7 @@ import { Logger } from "winston";
 import { z } from "zod";
 import {
   ClientMessageSchema,
+  ClientSendWinnerMessage,
   ServerErrorMessage,
 } from "../../../../../core/Schemas";
 import { Client } from "../../../../Client";
@@ -39,51 +40,13 @@ export async function postJoinMessageHandler(
           );
           return;
         }
-        switch (clientMsg.intent.type) {
-          case "mark_disconnected": {
-            log.warn(`Should not receive mark_disconnected intent from client`);
-            return;
-          }
-
-          // Handle kick_player intent via WebSocket
-          case "kick_player": {
-            const authenticatedClientID = client.clientID;
-
-            // Check if the authenticated client is the lobby creator
-            if (authenticatedClientID !== gs.lobbyCreatorID) {
-              log.warn(`Only lobby creator can kick players`, {
-                clientID: authenticatedClientID,
-                creatorID: gs.lobbyCreatorID,
-                gameID: gs.id,
-                target: clientMsg.intent.target,
-              });
-              return;
-            }
-
-            // Don't allow lobby creator to kick themselves
-            if (authenticatedClientID === clientMsg.intent.target) {
-              log.warn(`Cannot kick yourself`, {
-                clientID: authenticatedClientID,
-              });
-              return;
-            }
-
-            // Log and execute the kick
-            log.info(`Lobby creator initiated kick of player`, {
-              creatorID: authenticatedClientID,
-              gameID: gs.id,
-              kickMethod: "websocket",
-              target: clientMsg.intent.target,
-            });
-
-            gs.kickClient(clientMsg.intent.target);
-            return;
-          }
-          default: {
-            gs.addIntent(clientMsg.intent);
-            break;
-          }
+        if (clientMsg.intent.type === "mark_disconnected") {
+          log.warn(
+            `Should not receive mark_disconnected intent from client`,
+          );
+          return;
         }
+        gs.addIntent(clientMsg.intent);
         break;
       }
       case "ping": {
@@ -96,15 +59,7 @@ export async function postJoinMessageHandler(
         break;
       }
       case "winner": {
-        if (
-          gs.outOfSyncClients.has(client.clientID) ||
-          gs.kickedClients.has(client.clientID) ||
-          gs.winner !== null
-        ) {
-          return;
-        }
-        gs.winner = clientMsg;
-        gs.archiveGame();
+        handleWinner(gs, log, client, clientMsg);
         break;
       }
       default: {
@@ -119,4 +74,50 @@ export async function postJoinMessageHandler(
       clientID: client.clientID,
     });
   }
+}
+
+function handleWinner(
+  gs: GameServer,
+  log: Logger,
+  client: Client, clientMsg: ClientSendWinnerMessage) {
+  if (
+    gs.outOfSyncClients.has(client.clientID) ||
+      gs.kickedClients.has(client.clientID) ||
+      gs.winner !== null ||
+      client.reportedWinner !== null
+  ) {
+    return;
+  }
+  client.reportedWinner = clientMsg.winner;
+
+  // Add client vote
+  const winnerKey = JSON.stringify(clientMsg.winner);
+  if (!gs.winnerVotes.has(winnerKey)) {
+    gs.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg });
+  }
+  const potentialWinner = gs.winnerVotes.get(winnerKey)!;
+  potentialWinner.ips.add(client.ip);
+
+  const activeUniqueIPs = new Set(gs.activeClients.map((c) => c.ip));
+
+  // Require at least two unique IPs to agree
+  if (activeUniqueIPs.size < 2) {
+    return;
+  }
+
+  // Check if winner has majority
+  if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
+    return;
+  }
+
+  // Vote succeeded
+  gs.winner = potentialWinner.winner;
+  log.info(
+    `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
+    {
+      gameID: gs.id,
+      winnerKey: winnerKey,
+    },
+  );
+  gs.archiveGame();
 }

@@ -12,7 +12,7 @@ export enum LimiterType {
   WebSocket = "websocket",
 }
 
-export interface Gatekeeper {
+export type Gatekeeper = {
   // The wrapper for request handlers with optional rate limiting
   httpHandler: (
     limiterType: LimiterType,
@@ -24,7 +24,7 @@ export interface Gatekeeper {
     req: http.IncomingMessage | string,
     fn: (message: string) => Promise<void>,
   ) => (message: string) => Promise<void>;
-}
+};
 
 let gk: Gatekeeper | null = null;
 

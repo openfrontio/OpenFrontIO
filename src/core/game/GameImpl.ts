@@ -82,7 +82,7 @@ export class GameImpl implements Game {
   private _railNetwork: RailNetwork = createRailNetwork(this);
 
   // Used to assign unique IDs to each new alliance
-  private nextAllianceID: number = 0;
+  private nextAllianceID = 0;
 
   constructor(
     private _humans: PlayerInfo[],

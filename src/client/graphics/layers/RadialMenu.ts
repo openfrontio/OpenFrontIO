@@ -15,12 +15,12 @@ export class CloseRadialMenuEvent implements GameEvent {
   constructor() {}
 }
 
-export interface TooltipItem {
+export type TooltipItem = {
   text: string;
   className: string;
-}
+};
 
-export interface RadialMenuConfig {
+export type RadialMenuConfig = {
   menuSize?: number;
   submenuScale?: number;
   centerButtonSize?: number;
@@ -33,7 +33,7 @@ export interface RadialMenuConfig {
   maxNestedLevels?: number;
   innerRadiusIncrement?: number;
   tooltipStyle?: string;
-}
+};
 
 type CenterButtonState = "default" | "back";
 
@@ -42,9 +42,9 @@ type RequiredRadialMenuConfig = Required<RadialMenuConfig>;
 export class RadialMenu implements Layer {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private tooltipElement: HTMLDivElement | null = null;
-  private isVisible: boolean = false;
+  private isVisible = false;
 
-  private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
+  private currentLevel = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
   private menuStack: MenuElement[][] = []; // Stack to track menu navigation history
   private currentMenuItems: MenuElement[] = []; // Current active menu items (changes based on level)
 
@@ -53,9 +53,9 @@ export class RadialMenu implements Layer {
 
   private centerButtonState: CenterButtonState = "default";
 
-  private isTransitioning: boolean = false;
-  private lastHideTime: number = 0;
-  private reopenCooldownMs: number = 300;
+  private isTransitioning = false;
+  private lastHideTime = 0;
+  private reopenCooldownMs = 300;
 
   private menuGroups: Map<
     number,
@@ -73,8 +73,8 @@ export class RadialMenu implements Layer {
   private selectedItemId: string | null = null;
   private submenuHoverTimeout: number | null = null;
   private backButtonHoverTimeout: number | null = null;
-  private navigationInProgress: boolean = false;
-  private originalCenterButtonIcon: string = "";
+  private navigationInProgress = false;
+  private originalCenterButtonIcon = "";
 
   private params: MenuElementParams | null = null;
 

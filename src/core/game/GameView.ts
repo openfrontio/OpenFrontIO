@@ -39,10 +39,10 @@ import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
 
-interface PlayerCosmetics {
+type PlayerCosmetics = {
   pattern?: string | undefined;
   flag?: string | undefined;
-}
+};
 
 export class UnitView {
   public _wasUpdated = true;
@@ -106,7 +106,7 @@ export class UnitView {
     return this.data.pos;
   }
   owner(): PlayerView {
-    return this.gameView.playerBySmallID(this.data.ownerID)! as PlayerView;
+    return this.gameView.playerBySmallID(this.data.ownerID) as PlayerView;
   }
   isActive(): boolean {
     return this.data.isActive;

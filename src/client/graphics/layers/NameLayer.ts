@@ -59,7 +59,7 @@ export class NameLayer implements Layer {
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
   private userSettings: UserSettings = new UserSettings();
-  private isVisible: boolean = true;
+  private isVisible = true;
 
   constructor(
     private game: GameView,
@@ -617,7 +617,7 @@ export class NameLayer implements Layer {
     src: string,
     size: number,
     id: string,
-    center: boolean = false,
+    center = false,
   ): HTMLImageElement {
     const icon = document.createElement("img");
     icon.src = src;

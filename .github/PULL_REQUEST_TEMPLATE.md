@@ -8,7 +8,6 @@ Describe the PR.
 - [ ] I process any text displayed to the user through translateText() and I've added it to the en.json file
 - [ ] I have added relevant tests to the test directory
 - [ ] I confirm I have thoroughly tested these changes and take full responsibility for any bugs introduced
-- [ ] I have read and accepted the CLA agreement (only required once).
 
 ## Please put your Discord username so you can be contacted if a bug or regression is found:
 

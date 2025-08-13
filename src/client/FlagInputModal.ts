@@ -9,7 +9,7 @@ export class FlagInputModal extends LitElement {
     close: () => void;
   };
 
-  @state() private search: string = "";
+  @state() private search = "";
 
   createRenderRoot() {
     return this;

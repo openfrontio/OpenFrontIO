@@ -7,7 +7,7 @@ import { FadeFx, SpriteFx } from "./SpriteFx";
  * Shockwave effect: draw a growing 1px white circle
  */
 export class ShockwaveFx implements Fx {
-  private lifeTime: number = 0;
+  private lifeTime = 0;
   constructor(
     private x: number,
     private y: number,

@@ -2,6 +2,7 @@ import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     adsbygoogle: unknown[];
   }
@@ -108,7 +109,7 @@ const isElectron = () => {
   if (
     typeof navigator === "object" &&
     typeof navigator.userAgent === "string" &&
-    navigator.userAgent.indexOf("Electron") >= 0
+    navigator.userAgent.includes("Electron")
   ) {
     return true;
   }

@@ -57,13 +57,13 @@ export async function createGameRunner(
   const nations = gameStart.config.disableNPCs
     ? []
     : gameMap.manifest.nations.map(
-        (n) =>
-          new Nation(
-            new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
-          ),
-      );
+      (n) =>
+        new Nation(
+          new Cell(n.coordinates[0], n.coordinates[1]),
+          n.strength,
+          new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+        ),
+    );
 
   const game: Game = createGame(
     humans,
@@ -190,14 +190,15 @@ export class GameRunner {
       const other = this.game.owner(tile) as Player;
       actions.interaction = {
         canBreakAlliance: player.isAlliedWith(other),
-        canDonate: player.canDonate(other),
+        canDonateGold: player.canDonateGold(other),
+        canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
         canSendAllianceRequest: player.canSendAllianceRequest(other),
         canSendEmoji: player.canSendEmoji(other),
         canTarget: player.canTarget(other),
         sharedBorder: player.sharesBorderWith(other),
       };
-      const alliance = player.allianceWith(other as Player);
+      const alliance = player.allianceWith(other);
       if (alliance) {
         actions.interaction.allianceExpiresAt = alliance.expiresAt();
       }

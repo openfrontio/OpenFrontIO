@@ -47,7 +47,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
-export interface LobbyConfig {
+export type LobbyConfig = {
   serverConfig: ServerConfig;
   pattern: string | undefined;
   flag: string;
@@ -59,7 +59,7 @@ export interface LobbyConfig {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
-}
+};
 
 export function joinLobby(
   eventBus: EventBus,
@@ -192,7 +192,7 @@ export class ClientGameRunner {
 
   private lastMousePosition: { x: number; y: number } | null = null;
 
-  private lastMessageTime: number = 0;
+  private lastMessageTime = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(
@@ -364,7 +364,7 @@ export class ClientGameRunner {
     this.transport.connect(onconnect, onmessage);
   }
 
-  public stop(saveFullGame: boolean = false) {
+  public stop(saveFullGame = false) {
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -420,7 +420,7 @@ export class ClientGameRunner {
 
       const owner = this.gameView.owner(tile);
       if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
+        this.gameView.setFocusedPlayer(owner);
       } else {
         this.gameView.setFocusedPlayer(null);
       }
@@ -623,7 +623,7 @@ export class ClientGameRunner {
     if (this.gameView.isLand(tile)) {
       const owner = this.gameView.owner(tile);
       if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
+        this.gameView.setFocusedPlayer(owner);
       } else {
         this.gameView.setFocusedPlayer(null);
       }
@@ -637,7 +637,7 @@ export class ClientGameRunner {
         .sort((a, b) => a.distSquared - b.distSquared);
 
       if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
+        this.gameView.setFocusedPlayer(units[0].unit.owner());
       } else {
         this.gameView.setFocusedPlayer(null);
       }

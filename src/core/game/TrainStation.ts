@@ -9,16 +9,16 @@ import { Railroad } from "./Railroad";
 /**
  * Handle train stops at various station types
  */
-interface TrainStopHandler {
+type TrainStopHandler = {
   onStop(mg: Game, station: TrainStation, trainExecution: TrainExecution): void;
-}
+};
 
 /**
  * All stop handlers share the same logic for the time being
  * Behavior to be defined
  */
 class CityStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
+  private factor = BigInt(2);
   onStop(
     mg: Game,
     station: TrainStation,
@@ -38,7 +38,7 @@ class CityStopHandler implements TrainStopHandler {
 }
 
 class PortStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
+  private factor = BigInt(2);
   constructor(private random: PseudoRandom) {}
   onStop(
     mg: Game,
@@ -59,7 +59,7 @@ class PortStopHandler implements TrainStopHandler {
 }
 
 class FactoryStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
+  private factor = BigInt(2);
   onStop(
     mg: Game,
     station: TrainStation,

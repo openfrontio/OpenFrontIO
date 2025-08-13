@@ -8,7 +8,7 @@ import {
   RailTile,
   RailType,
 } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 import { getRailroadRects } from "./RailroadSprites";
 
@@ -151,7 +151,7 @@ export class RailroadLayer implements Layer {
     const x = this.game.x(railRoad.tile);
     const y = this.game.y(railRoad.tile);
     const owner = this.game.owner(railRoad.tile);
-    const recipient = owner.isPlayer() ? (owner as PlayerView) : null;
+    const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
       ? this.theme.railroadColor(recipient)
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });

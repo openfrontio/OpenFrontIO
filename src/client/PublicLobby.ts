@@ -11,12 +11,12 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
-  @state() public isLobbyHighlighted: boolean = false;
-  @state() private isButtonDebounced: boolean = false;
+  @state() public isLobbyHighlighted = false;
+  @state() private isButtonDebounced = false;
   @state() private mapImages: Map<GameID, string> = new Map();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
-  private debounceDelay: number = 750;
+  private debounceDelay = 750;
   private lobbyIDToStart = new Map<GameID, number>();
 
   createRenderRoot() {
@@ -156,8 +156,8 @@ export class PublicLobby extends LitElement {
                   ? typeof teamCount === "string"
                     ? translateText(`public_lobby.teams_${teamCount}`)
                     : translateText("public_lobby.teams", {
-                        num: teamCount ?? 0,
-                      })
+                      num: teamCount ?? 0,
+                    })
                   : translateText("game_mode.ffa")}</span
               >
               <span

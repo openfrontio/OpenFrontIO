@@ -18,7 +18,7 @@ const malusForRetreat = 25;
 export class AttackExecution implements Execution {
   private breakAlliance = false;
   private wasAlliedAtInit = false; // Store alliance state at initialization
-  private active: boolean = true;
+  private active = true;
   private toConquer = new FlatBinaryHeap();
 
   private random = new PseudoRandom(123);
@@ -34,7 +34,7 @@ export class AttackExecution implements Execution {
     private _owner: Player,
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
-    private removeTroops: boolean = true,
+    private removeTroops = true,
   ) {}
 
   public targetID(): PlayerID | null {
@@ -69,7 +69,7 @@ export class AttackExecution implements Execution {
     }
 
     if (this.target && this.target.isPlayer()) {
-      const targetPlayer = this.target as Player;
+      const targetPlayer = this.target;
       if (
         targetPlayer.type() !== PlayerType.Bot &&
         this._owner.type() !== PlayerType.Bot

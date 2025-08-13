@@ -63,14 +63,14 @@ async function handleJoinMessage(
 ): Promise<
   | undefined
   | {
-      success: true;
-    }
+    success: true;
+  }
   | {
-      success: false;
-      code: 1002;
-      description: string;
-      error?: string;
-      reason:
+    success: false;
+    code: 1002;
+    description: string;
+    error?: string;
+    reason:
         | "ClientJoinMessageSchema"
         | "Flag invalid"
         | "Flag restricted"
@@ -80,20 +80,20 @@ async function handleJoinMessage(
         | "Pattern restricted"
         | "Pattern unlisted"
         | "Unauthorized";
-    }
+  }
   | {
-      success: false;
-      code: 1011;
-      reason: "Internal server error";
-      error: string;
-      description: string;
-    }
+    success: false;
+    code: 1011;
+    reason: "Internal server error";
+    error: string;
+    description: string;
+  }
 > {
   const forwarded = req.headers["x-forwarded-for"];
   const ip = Array.isArray(forwarded)
     ? forwarded[0]
     : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-      forwarded || req.socket.remoteAddress || "unknown";
+    forwarded || req.socket.remoteAddress || "unknown";
 
   try {
     // Parse and handle client messages

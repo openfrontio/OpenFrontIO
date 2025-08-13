@@ -14,29 +14,29 @@ export class FPSDisplay extends LitElement implements Layer {
   public userSettings!: UserSettings;
 
   @state()
-  private currentFPS: number = 0;
+  private currentFPS = 0;
 
   @state()
-  private averageFPS: number = 0;
+  private averageFPS = 0;
 
   @state()
-  private frameTime: number = 0;
+  private frameTime = 0;
 
   @state()
-  private isVisible: boolean = false;
+  private isVisible = false;
 
   @state()
-  private isDragging: boolean = false;
+  private isDragging = false;
 
   @state()
   private position: { x: number; y: number } = { x: 50, y: 20 }; // Percentage values
 
-  private frameCount: number = 0;
-  private lastTime: number = 0;
+  private frameCount = 0;
+  private lastTime = 0;
   private frameTimes: number[] = [];
   private fpsHistory: number[] = [];
-  private lastSecondTime: number = 0;
-  private framesThisSecond: number = 0;
+  private lastSecondTime = 0;
+  private framesThisSecond = 0;
   private dragStart: { x: number; y: number } = { x: 0, y: 0 };
 
   static styles = css`

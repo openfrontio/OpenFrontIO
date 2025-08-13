@@ -13,10 +13,10 @@ export const CAMERA_MAX_SPEED = 15;
 export const CAMERA_SMOOTHING = 0.03;
 
 export class TransformHandler {
-  public scale: number = 1.8;
+  public scale = 1.8;
   private _boundingRect: DOMRect;
-  private offsetX: number = -350;
-  private offsetY: number = -200;
+  private offsetX = -350;
+  private offsetY = -200;
   private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;
@@ -267,7 +267,7 @@ export class TransformHandler {
     this.target = null;
   }
 
-  override(x: number = 0, y: number = 0, s: number = 1) {
+  override(x = 0, y = 0, s = 1) {
     //hardset view position
     this.clearTarget();
     this.offsetX = x;
@@ -276,7 +276,7 @@ export class TransformHandler {
     this.changed = true;
   }
 
-  centerAll(fit: number = 1) {
+  centerAll(fit = 1) {
     //position entire map centered on the screen
 
     const vpWidth = this.boundingRect().width;

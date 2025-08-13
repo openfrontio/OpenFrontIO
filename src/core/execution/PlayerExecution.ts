@@ -28,11 +28,11 @@ export class PlayerExecution implements Execution {
   tick(ticks: number) {
     this.player.decayRelations();
     this.player.units().forEach((u) => {
-      const tileOwner = this.mg!.owner(u.tile());
+      const tileOwner = this.mg.owner(u.tile());
       if (u.info().territoryBound) {
         if (tileOwner.isPlayer()) {
           if (tileOwner !== this.player) {
-            this.mg!.player(tileOwner.id()).captureUnit(u);
+            this.mg.player(tileOwner.id()).captureUnit(u);
           }
         } else {
           u.delete();
@@ -218,7 +218,7 @@ export class PlayerExecution implements Execution {
     }
 
     let largestNeighborAttack: Player | null = null;
-    let largestTroopCount: number = 0;
+    let largestTroopCount = 0;
     for (const id of neighborsIDs) {
       const neighbor = this.mg.playerBySmallID(id);
       if (!neighbor.isPlayer() || this.player.isFriendly(neighbor)) {

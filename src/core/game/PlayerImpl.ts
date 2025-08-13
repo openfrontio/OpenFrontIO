@@ -53,10 +53,10 @@ import {
 } from "./TransportShipUtils";
 import { UnitImpl } from "./UnitImpl";
 
-interface Target {
+type Target = {
   tick: Tick;
   target: Player;
-}
+};
 
 class Donation {
   constructor(
@@ -66,7 +66,7 @@ class Donation {
 }
 
 export class PlayerImpl implements Player {
-  public _lastTileChange: number = 0;
+  public _lastTileChange = 0;
   public _pseudo_random: PseudoRandom;
 
   private _gold: bigint;
@@ -278,7 +278,7 @@ export class PlayerImpl implements Player {
   }
 
   tiles(): ReadonlySet<TileRef> {
-    return new Set(this._tiles.values()) as Set<TileRef>;
+    return new Set(this._tiles.values());
   }
 
   borderTiles(): ReadonlySet<TileRef> {
@@ -572,7 +572,7 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  canDonate(recipient: Player): boolean {
+  canDonateGold(recipient: Player): boolean {
     if (!this.isFriendly(recipient)) {
       return false;
     }
@@ -581,6 +581,36 @@ export class PlayerImpl implements Player {
       this.mg.config().gameConfig().gameMode === GameMode.FFA &&
       this.mg.config().gameConfig().gameType === GameType.Public
     ) {
+      return false;
+    }
+    if (this.mg.config().donateGold() === false) {
+      return false;
+    }
+    for (const donation of this.sentDonations) {
+      if (donation.recipient === recipient) {
+        if (
+          this.mg.ticks() - donation.tick <
+          this.mg.config().donateCooldown()
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  canDonateTroops(recipient: Player): boolean {
+    if (!this.isFriendly(recipient)) {
+      return false;
+    }
+    if (
+      recipient.type() === PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode === GameMode.FFA &&
+      this.mg.config().gameConfig().gameType === GameType.Public
+    ) {
+      return false;
+    }
+    if (this.mg.config().donateTroops() === false) {
       return false;
     }
     for (const donation of this.sentDonations) {

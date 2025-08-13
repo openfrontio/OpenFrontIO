@@ -25,7 +25,7 @@ import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
 
-export interface MenuElementParams {
+export type MenuElementParams = {
   myPlayer: PlayerView;
   selected: PlayerView | null;
   tile: TileRef;
@@ -38,9 +38,9 @@ export interface MenuElementParams {
   chatIntegration: ChatIntegration;
   eventBus: EventBus;
   closeMenu: () => void;
-}
+};
 
-export interface MenuElement {
+export type MenuElement = {
   id: string;
   name: string;
   displayed?: boolean | ((params: MenuElementParams) => boolean);
@@ -54,18 +54,18 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
-}
+};
 
-export interface TooltipKey {
+export type TooltipKey = {
   key: string;
   className: string;
   params?: Record<string, string | number>;
-}
+};
 
-export interface CenterButtonElement {
+export type CenterButtonElement = {
   disabled: (params: MenuElementParams) => boolean;
   action: (params: MenuElementParams) => void;
-}
+};
 
 export const COLORS = {
   build: "#ebe250",
@@ -208,7 +208,7 @@ const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
   name: "donate gold",
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonate,
+    !params.playerActions?.interaction?.canDonateGold,
   color: COLORS.ally,
   icon: donateGoldIcon,
   action: (params: MenuElementParams) => {
@@ -221,7 +221,7 @@ const allyDonateTroopsElement: MenuElement = {
   id: "ally_donate_troops",
   name: "donate troops",
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonate,
+    !params.playerActions?.interaction?.canDonateTroops,
   color: COLORS.ally,
   icon: donateTroopIcon,
   action: (params: MenuElementParams) => {
@@ -566,8 +566,7 @@ export const rootMenuElement: MenuElement = {
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
-      tileOwner.isPlayer() &&
-      (tileOwner as PlayerView).id() === params.myPlayer.id();
+      tileOwner.isPlayer() && tileOwner.id() === params.myPlayer.id();
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
