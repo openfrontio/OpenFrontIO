@@ -744,7 +744,7 @@ export class DefaultConfig implements Config {
             this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
-      return maxTroops / 2;
+      return maxTroops / 3;
     }
 
     if (player.type() === PlayerType.Human) {
@@ -796,6 +796,9 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
+    if (player.type() === PlayerType.Bot) {
+      return 50n;
+    }
     return 100n;
   }
 
