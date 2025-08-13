@@ -31,6 +31,7 @@ export class PastelThemeDark implements Theme {
 
   private _selfColor = colord({ r: 0, g: 255, b: 0 });
   private _allyColor = colord({ r: 255, g: 255, b: 0 });
+  private _neutralColor = colord({ r: 128, g: 128, b: 128 });
   private _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
@@ -160,6 +161,9 @@ export class PastelThemeDark implements Theme {
   }
   allyColor(): Colord {
     return this._allyColor;
+  }
+  neutralColor(): Colord {
+    return this._neutralColor;
   }
   enemyColor(): Colord {
     return this._enemyColor;

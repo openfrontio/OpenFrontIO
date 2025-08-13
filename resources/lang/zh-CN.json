@@ -21,7 +21,9 @@
     "instructions": "操作说明",
     "how_to_play": "如何游玩",
     "advertise": "广告",
-    "wiki": "游戏百科"
+    "wiki": "游戏百科",
+    "privacy_policy": "隐私政策",
+    "terms_of_service": "服务条款"
   },
   "news": {
     "full_changelog": "查看完整的更新日志",
@@ -448,6 +450,7 @@
     "gold": "黄金",
     "ports": "港口",
     "cities": "城市",
+    "factories": "工厂",
     "missile_launchers": "导弹发射井",
     "sams": "防空塔",
     "warships": "军舰",
@@ -573,6 +576,9 @@
       "grogu_head": "格罗古的头",
       "grogu": "格罗古"
     }
+  },
+  "spawn_ad": {
+    "loading": "正在加载广告……"
   },
   "auth": {
     "login_required": "需要登录才能访问此网站。",

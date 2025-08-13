@@ -16,7 +16,8 @@ describe("TrainStation", () => {
     game = {
       ticks: jest.fn().mockReturnValue(123),
       config: jest.fn().mockReturnValue({
-        trainGold: () => BigInt(4000),
+        trainGold: (isFriendly: boolean) =>
+          isFriendly ? BigInt(1000) : BigInt(500),
       }),
       addUpdate: jest.fn(),
       addExecution: jest.fn(),
@@ -50,7 +51,7 @@ describe("TrainStation", () => {
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(4000n, unit.tile());
+    expect(unit.owner().addGold).toHaveBeenCalledWith(1000n, unit.tile());
   });
 
   it("handles allied trade", () => {
@@ -60,9 +61,9 @@ describe("TrainStation", () => {
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(5000n, unit.tile());
+    expect(unit.owner().addGold).toHaveBeenCalledWith(2000n, unit.tile());
     expect(trainExecution.owner().addGold).toHaveBeenCalledWith(
-      5000n,
+      2000n,
       unit.tile(),
     );
   });

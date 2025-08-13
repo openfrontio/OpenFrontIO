@@ -21,7 +21,9 @@
     "instructions": "説明書",
     "how_to_play": "遊び方",
     "advertise": "広告",
-    "wiki": "ウィキ"
+    "wiki": "ウィキ",
+    "privacy_policy": "プライバシーポリシー",
+    "terms_of_service": "利用規約"
   },
   "news": {
     "full_changelog": "完全な変更ログを見る",
@@ -448,6 +450,7 @@
     "gold": "資金",
     "ports": "港",
     "cities": "都市",
+    "factories": "工場",
     "missile_launchers": "ミサイル格納庫",
     "sams": "SAM",
     "warships": "戦艦",
@@ -573,6 +576,9 @@
       "grogu_head": "グローグーの顔模様",
       "grogu": "グローグー模様"
     }
+  },
+  "spawn_ad": {
+    "loading": "広告を読み込み中…"
   },
   "auth": {
     "login_required": "このサイトにアクセスするにはログインが必要です。",

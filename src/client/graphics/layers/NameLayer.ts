@@ -531,17 +531,13 @@ export class NameLayer implements Layer {
 
     // Embargo icon
     let existingEmbargo = iconsDiv.querySelector('[data-icon="embargo"]');
-    const hasEmbargo =
-      myPlayer &&
-      (render.player.hasEmbargoAgainst(myPlayer) ||
-        myPlayer.hasEmbargoAgainst(render.player));
     const isThemeEmbargoIcon =
       existingEmbargo?.getAttribute("dark-mode") === isDarkMode.toString();
     const embargoIconImageSrc = isDarkMode
       ? this.embargoWhiteIconImage.src
       : this.embargoBlackIconImage.src;
 
-    if (myPlayer && hasEmbargo) {
+    if (myPlayer?.hasEmbargo(render.player)) {
       // Create new icon to match theme
       if (existingEmbargo && !isThemeEmbargoIcon) {
         existingEmbargo.remove();

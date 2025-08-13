@@ -489,7 +489,7 @@ export interface TerraNullius {
 export interface Embargo {
   createdAt: Tick;
   isTemporary: boolean;
-  target: PlayerID;
+  target: Player;
 }
 
 export interface Player {
@@ -599,10 +599,10 @@ export interface Player {
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
-  addEmbargo(other: PlayerID, isTemporary: boolean): void;
+  addEmbargo(other: Player, isTemporary: boolean): void;
   getEmbargoes(): Embargo[];
-  stopEmbargo(other: PlayerID): void;
-  endTemporaryEmbargo(other: PlayerID): void;
+  stopEmbargo(other: Player): void;
+  endTemporaryEmbargo(other: Player): void;
   canTrade(other: Player): boolean;
 
   // Attacking.

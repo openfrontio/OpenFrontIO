@@ -18,19 +18,18 @@ interface TrainStopHandler {
  * Behavior to be defined
  */
 class CityStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
     const level = BigInt(station.unit.level() + 1);
-    let goldBonus = (mg.config().trainGold() * level) / this.factor;
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
+    const isFriendly = stationOwner.isFriendly(trainOwner);
+    const goldBonus = mg.config().trainGold(isFriendly) * level;
     // Share revenue with the station owner if it's not the current player
-    if (stationOwner.isFriendly(trainOwner)) {
-      goldBonus += BigInt(1_000); // Bonus for everybody when trading with an ally!
+    if (isFriendly) {
       stationOwner.addGold(goldBonus, station.tile());
     }
     trainOwner.addGold(goldBonus, station.tile());
@@ -38,7 +37,6 @@ class CityStopHandler implements TrainStopHandler {
 }
 
 class PortStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
   constructor(private random: PseudoRandom) {}
   onStop(
     mg: Game,
@@ -46,12 +44,12 @@ class PortStopHandler implements TrainStopHandler {
     trainExecution: TrainExecution,
   ): void {
     const level = BigInt(station.unit.level() + 1);
-    let goldBonus = (mg.config().trainGold() * level) / this.factor;
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    // Share revenue with the station owner if it's not the current player
-    if (stationOwner.isFriendly(trainOwner)) {
-      goldBonus += BigInt(1_000); // Bonus for everybody when trading with an ally!
+    const isFriendly = stationOwner.isFriendly(trainOwner);
+    const goldBonus = mg.config().trainGold(isFriendly) * level;
+
+    if (isFriendly) {
       stationOwner.addGold(goldBonus, station.tile());
     }
     trainOwner.addGold(goldBonus, station.tile());
@@ -59,18 +57,17 @@ class PortStopHandler implements TrainStopHandler {
 }
 
 class FactoryStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    let goldBonus = mg.config().trainGold();
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
+    const isFriendly = stationOwner.isFriendly(trainOwner);
+    const goldBonus = mg.config().trainGold(isFriendly);
     // Share revenue with the station owner if it's not the current player
-    if (stationOwner.isFriendly(trainOwner)) {
-      goldBonus += BigInt(1_000); // Bonus for everybody when trading with an ally!
+    if (isFriendly) {
       stationOwner.addGold(goldBonus, station.tile());
     }
     trainOwner.addGold(goldBonus, station.tile());
