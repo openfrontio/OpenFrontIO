@@ -60,7 +60,6 @@ export async function postJoinMessageHandler(
       }
       case "winner": {
         handleWinner(gs, log, client, clientMsg);
-        gs.archiveGame();
         break;
       }
       default: {
@@ -119,4 +118,5 @@ function handleWinner(
       winnerKey: winnerKey,
     },
   );
+  gs.archiveGame();
 }
