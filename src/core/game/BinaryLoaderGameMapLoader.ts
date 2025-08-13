@@ -1,4 +1,4 @@
-import { GameMapType } from "./Game";
+import { GameMapType, GameMapTypeSchema } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifest } from "./TerrainMapLoader";
 
@@ -31,8 +31,8 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
       return cachedMap;
     }
 
-    const key = Object.keys(GameMapType).find(
-      (k) => GameMapType[k as keyof typeof GameMapType] === map,
+    const key = GameMapTypeSchema.options.find(
+      (option) => (option as GameMapType) === map,
     );
     const fileName = key?.toLowerCase();
 
