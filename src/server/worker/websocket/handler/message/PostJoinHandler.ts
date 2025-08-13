@@ -29,58 +29,26 @@ export async function postJoinMessageHandler(
         } satisfies ServerErrorMessage),
       );
       client.ws.close(1002, "ClientMessageSchema");
-      client.ws.removeAllListeners();
       return;
     }
     const clientMsg = parsed.data;
     switch (clientMsg.type) {
       case "intent": {
-        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-        if (!parsed.success) {
-          const error = z.prettifyError(parsed.error);
-          log.error("Failed to parse client message", error, {
-            clientID: client.clientID,
-          });
-          client.ws.send(
-            JSON.stringify({
-              error,
-              message,
-              type: "error",
-            } satisfies ServerErrorMessage),
+        if (clientMsg.intent.clientID !== client.clientID) {
+          log.warn(
+            `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
           );
-          client.ws.close(1002, "ClientMessageSchema");
-          client.ws.removeAllListeners();
           return;
         }
-        const clientMsg = parsed.data;
-        if (clientMsg.type === "intent") {
-          if (clientMsg.intent.clientID !== client.clientID) {
-            log.warn(
-              `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
-            );
-            return;
-          }
-          if (clientMsg.intent.type === "mark_disconnected") {
-            log.warn(
-              `Should not receive mark_disconnected intent from client`,
-            );
-            return;
-          }
-          gs.addIntent(clientMsg.intent);
+        if (clientMsg.intent.type === "mark_disconnected") {
+          log.warn(
+            `Should not receive mark_disconnected intent from client`,
+          );
+          return;
         }
-        if (clientMsg.type === "ping") {
-          gs.lastPingUpdate = Date.now();
-          client.lastPing = Date.now();
-        }
-        if (clientMsg.type === "hash") {
-          client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-        }
-        if (clientMsg.type === "winner") {
-          handleWinner(gs, log, client, clientMsg);
-        }
+        gs.addIntent(clientMsg.intent);
         break;
       }
-
       case "ping": {
         gs.lastPingUpdate = Date.now();
         client.lastPing = Date.now();
@@ -91,14 +59,7 @@ export async function postJoinMessageHandler(
         break;
       }
       case "winner": {
-        if (
-          gs.outOfSyncClients.has(client.clientID) ||
-          gs.kickedClients.has(client.clientID) ||
-          gs.winner !== null
-        ) {
-          return;
-        }
-        gs.winner = clientMsg;
+        handleWinner(gs, log, client, clientMsg);
         gs.archiveGame();
         break;
       }
@@ -133,7 +94,7 @@ function handleWinner(
   // Add client vote
   const winnerKey = JSON.stringify(clientMsg.winner);
   if (!gs.winnerVotes.has(winnerKey)) {
-    gs.winnerVotes.set(winnerKey, {  ips: new Set() ,winner: clientMsg});
+    gs.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg });
   }
   const potentialWinner = gs.winnerVotes.get(winnerKey)!;
   potentialWinner.ips.add(client.ip);
@@ -158,5 +119,4 @@ function handleWinner(
       winnerKey: winnerKey,
     },
   );
-  gs.archiveGame();
 }
