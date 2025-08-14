@@ -1,12 +1,5 @@
 import { GameEvent } from "../EventBus";
-import {
-  ColoredTeams,
-  Execution,
-  Game,
-  GameMode,
-  Player,
-  Team,
-} from "../game/Game";
+import { ColoredTeams, Execution, Game, Player, Team } from "../game/Game";
 
 export class WinEvent implements GameEvent {
   constructor(public readonly winner: Player) {}
@@ -29,7 +22,7 @@ export class WinCheckExecution implements Execution {
     }
     if (this.mg === null) throw new Error("Not initialized");
 
-    if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
+    if (this.mg.config().gameConfig().gameMode === "Free For All") {
       this.checkWinnerFFA();
     } else {
       this.checkWinnerTeam();

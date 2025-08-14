@@ -24,7 +24,7 @@ export interface TeamPreviewData {
 
 @customElement("lobby-team-view")
 export class LobbyTeamView extends LitElement {
-  @property({ type: String }) gameMode: GameMode = GameMode.FFA;
+  @property({ type: String }) gameMode: GameMode = "Free For All";
   @property({ type: Array }) clients: ClientInfo[] = [];
   @state() private teamPreview: TeamPreviewData[] = [];
   @state() private teamMaxSize: number = 0;
@@ -53,7 +53,7 @@ export class LobbyTeamView extends LitElement {
 
   render() {
     return html`<div class="players-list">
-      ${this.gameMode === GameMode.Team
+      ${this.gameMode === "Team"
         ? this.renderTeamMode()
         : this.renderFreeForAll()}
     </div>`;
@@ -207,7 +207,7 @@ export class LobbyTeamView extends LitElement {
   }
 
   private getTeamList(): Team[] {
-    if (this.gameMode !== GameMode.Team) return [];
+    if (this.gameMode !== "Team") return [];
     const playerCount = this.clients.length + this.nationCount;
     const config = this.teamCount;
 
@@ -249,7 +249,7 @@ export class LobbyTeamView extends LitElement {
   }
 
   private computeTeamPreview(teams: Team[] = []) {
-    if (this.gameMode !== GameMode.Team) {
+    if (this.gameMode !== "Team") {
       this.teamPreview = [];
       this.teamMaxSize = 0;
       return;

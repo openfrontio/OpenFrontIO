@@ -1,12 +1,6 @@
 import { FakeHumanExecution } from "../src/core/execution/FakeHumanExecution";
 import { MirvExecution } from "../src/core/execution/MIRVExecution";
-import {
-  Cell,
-  GameMode,
-  Nation,
-  PlayerInfo,
-  PlayerType,
-} from "../src/core/game/Game";
+import { Cell, Nation, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
@@ -602,7 +596,7 @@ describe("FakeHuman MIRV Retaliation", () => {
       {
         infiniteGold: true,
         instantBuild: true,
-        gameMode: GameMode.Team,
+        gameMode: "Team",
         playerTeams: 2,
       },
       [teamPlayer1Info, teamPlayer2Info, fakehumanInfo],
