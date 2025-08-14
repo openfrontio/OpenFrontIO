@@ -294,7 +294,7 @@ export async function startWorker() {
         return;
       }
 
-      game.kickClient(clientID);
+      game.kickClient(clientID, "kick_admin");
       res.status(200).send("Player kicked successfully");
     }),
   );

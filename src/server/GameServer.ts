@@ -175,7 +175,7 @@ export class GameServer {
         });
         // Kick the existing client instead of the new one, because this was causing issues when
         // a client wanted to replay the game afterwards.
-        this.kickClient(conflicting.clientID);
+        this.kickClient(conflicting.clientID, "kick_multi_tab");
       }
     }
 
@@ -502,7 +502,8 @@ export class GameServer {
     return this.gameConfig.gameType === GameType.Public;
   }
 
-  public kickClient(clientID: ClientID): void {
+
+  public kickClient(clientID: ClientID, kickReason?: "kick_admin" | "kick_multi_tab" | "kick_lobby_creator"): void {
     if (this.kickedClients.has(clientID)) {
       this.log.warn(`cannot kick client, already kicked`, {
         clientID,
@@ -513,11 +514,13 @@ export class GameServer {
     if (client) {
       this.log.info("Kicking client from game", {
         clientID: client.clientID,
+        kickReason,
         persistentID: client.persistentID,
       });
       client.ws.send(
         JSON.stringify({
-          error: "Kicked from game (you may have been playing on another tab)",
+          error: "Kicked from game",
+          kickReason,
           type: "error",
         } satisfies ServerErrorMessage),
       );

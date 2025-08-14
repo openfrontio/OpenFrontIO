@@ -105,15 +105,31 @@ export function joinLobby(
       ).then((r) => r.start());
     }
     if (message.type === "error") {
-      showErrorModal(
-        message.error,
-        message.message,
-        lobbyConfig.gameID,
-        lobbyConfig.clientID,
-        true,
-        false,
-        "error_modal.connection_error",
-      );
+      if (message.kickReason) {
+        const kickMessage = translateText("error_modal.kicked_message");
+        const reasonKey = `error_modal.kicked_reason_${message.kickReason.replace("kick_", "")}`;
+        const reasonMessage = translateText(reasonKey);
+
+        showErrorModal(
+          kickMessage,
+          `${reasonMessage}\nError Code: ${message.kickReason.toUpperCase()}`,
+          lobbyConfig.gameID,
+          lobbyConfig.clientID,
+          true,
+          false,
+          "error_modal.connection_error",
+        );
+      } else {
+        showErrorModal(
+          message.error,
+          message.message,
+          lobbyConfig.gameID,
+          lobbyConfig.clientID,
+          true,
+          false,
+          "error_modal.connection_error",
+        );
+      }
     }
   };
   transport.connect(onconnect, onmessage);
@@ -336,15 +352,31 @@ export class ClientGameRunner {
         );
       }
       if (message.type === "error") {
-        showErrorModal(
-          message.error,
-          message.message,
-          this.lobby.gameID,
-          this.lobby.clientID,
-          true,
-          false,
-          "error_modal.connection_error",
-        );
+        if (message.kickReason) {
+          const kickMessage = translateText("error_modal.kicked_message");
+          const reasonKey = `error_modal.kicked_reason_${message.kickReason.replace("kick_", "")}`;
+          const reasonMessage = translateText(reasonKey);
+
+          showErrorModal(
+            kickMessage,
+            `${reasonMessage}\nError Code: ${message.kickReason.toUpperCase()}`,
+            this.lobby.gameID,
+            this.lobby.clientID,
+            true,
+            false,
+            "error_modal.connection_error",
+          );
+        } else {
+          showErrorModal(
+            message.error,
+            message.message,
+            this.lobby.gameID,
+            this.lobby.clientID,
+            true,
+            false,
+            "error_modal.connection_error",
+          );
+        }
       }
       if (message.type === "turn") {
         if (!this.hasJoined) {
