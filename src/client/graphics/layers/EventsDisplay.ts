@@ -13,7 +13,6 @@ import {
   getMessageCategory,
   MessageCategory,
   MessageType,
-  PlayerType,
   Tick,
 } from "../../../core/game/Game";
 import {
@@ -255,7 +254,7 @@ export class EventsDisplay extends LitElement implements Layer {
     // Update attacks
     this.incomingAttacks = myPlayer.incomingAttacks().filter((a) => {
       const t = (this.game.playerBySmallID(a.attackerID) as PlayerView).type();
-      return t !== PlayerType.Bot;
+      return t !== "BOT";
     });
 
     this.outgoingAttacks = myPlayer
@@ -309,7 +308,7 @@ export class EventsDisplay extends LitElement implements Layer {
         description: translateText("events_display.about_to_expire", {
           name: other.name(),
         }),
-        type: MessageType.RENEW_ALLIANCE,
+        type: "RENEW_ALLIANCE",
         duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
         buttons: [
           {
@@ -446,7 +445,7 @@ export class EventsDisplay extends LitElement implements Layer {
       }),
       createdAt: this.game.ticks(),
       highlight: true,
-      type: MessageType.CHAT,
+      type: "CHAT",
       unsafeDescription: false,
     });
   }
@@ -493,7 +492,7 @@ export class EventsDisplay extends LitElement implements Layer {
         },
       ],
       highlight: true,
-      type: MessageType.ALLIANCE_REQUEST,
+      type: "ALLIANCE_REQUEST",
       createdAt: this.game.ticks(),
       priority: 0,
       duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
@@ -517,7 +516,7 @@ export class EventsDisplay extends LitElement implements Layer {
       this.events = this.events.filter(
         (event) =>
           !(
-            event.type === MessageType.ALLIANCE_REQUEST &&
+            event.type === "ALLIANCE_REQUEST" &&
             event.focusID === update.request.requestorID
           ),
       );
@@ -538,9 +537,7 @@ export class EventsDisplay extends LitElement implements Layer {
           ? translateText("events_display.alliance_accepted")
           : translateText("events_display.alliance_rejected"),
       }),
-      type: update.accepted
-        ? MessageType.ALLIANCE_ACCEPTED
-        : MessageType.ALLIANCE_REJECTED,
+      type: update.accepted ? "ALLIANCE_ACCEPTED" : "ALLIANCE_REJECTED",
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: update.request.recipientID,
@@ -577,7 +574,7 @@ export class EventsDisplay extends LitElement implements Layer {
           malusPercent: malusPercent,
           durationText: durationText,
         }),
-        type: MessageType.ALLIANCE_BROKEN,
+        type: "ALLIANCE_BROKEN",
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.betrayedID,
@@ -595,7 +592,7 @@ export class EventsDisplay extends LitElement implements Layer {
         description: translateText("events_display.betrayed_you", {
           name: traitor.name(),
         }),
-        type: MessageType.ALLIANCE_BROKEN,
+        type: "ALLIANCE_BROKEN",
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.traitorID,
@@ -622,7 +619,7 @@ export class EventsDisplay extends LitElement implements Layer {
       description: translateText("events_display.alliance_expired", {
         name: other.name(),
       }),
-      type: MessageType.ALLIANCE_EXPIRED,
+      type: "ALLIANCE_EXPIRED",
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: otherID,
@@ -641,7 +638,7 @@ export class EventsDisplay extends LitElement implements Layer {
         name: other.name(),
         target: target.name(),
       }),
-      type: MessageType.ATTACK_REQUEST,
+      type: "ATTACK_REQUEST",
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: event.targetID,
@@ -690,7 +687,7 @@ export class EventsDisplay extends LitElement implements Layer {
       this.addEvent({
         description: `${sender.displayName()}: ${update.emoji.message}`,
         unsafeDescription: true,
-        type: MessageType.CHAT,
+        type: "CHAT",
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.emoji.senderID,
@@ -702,7 +699,7 @@ export class EventsDisplay extends LitElement implements Layer {
           emoji: update.emoji.message,
         }),
         unsafeDescription: true,
-        type: MessageType.CHAT,
+        type: "CHAT",
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: recipient.smallID(),

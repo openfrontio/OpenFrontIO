@@ -276,21 +276,21 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private identityChipProps(type: PlayerType) {
     switch (type) {
-      case PlayerType.Nation:
+      case "NATION":
         return {
           labelKey: "player_type.nation",
           aria: "Nation player",
           classes: "border-indigo-400/25 bg-indigo-500/10 text-indigo-200",
           icon: "🏛️",
         };
-      case PlayerType.Bot:
+      case "BOT":
         return {
           labelKey: "player_type.bot",
           aria: "Bot",
           classes: "border-purple-400/25 bg-purple-500/10 text-purple-200",
           icon: "🤖",
         };
-      case PlayerType.Human:
+      case "HUMAN":
       default:
         return {
           labelKey: "player_type.player",
@@ -388,7 +388,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private renderRelationPillIfNation(other: PlayerView, my: PlayerView) {
-    if (other.type() !== PlayerType.Nation) return html``;
+    if (other.type() !== "NATION") return html``;
     if (other.isTraitor()) return html``;
     if (my?.isAlliedWith && my.isAlliedWith(other)) return html``;
     if (!this.otherProfile || !my) return html``;
@@ -412,9 +412,7 @@ export class PlayerPanel extends LitElement implements Layer {
         : undefined;
 
     const chip =
-      other.type() === PlayerType.Human
-        ? null
-        : this.identityChipProps(other.type());
+      other.type() === "HUMAN" ? null : this.identityChipProps(other.type());
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">

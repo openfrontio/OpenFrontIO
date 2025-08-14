@@ -1,7 +1,7 @@
 import { DefensePostExecution } from "../src/core/execution/DefensePostExecution";
 import { ShellExecution } from "../src/core/execution/ShellExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 
 const coastX = 7;
@@ -18,8 +18,8 @@ describe("Shell Random Damage", () => {
         instantBuild: true,
       },
       [
-        new PlayerInfo("attacker", PlayerType.Human, null, "player_1_id"),
-        new PlayerInfo("defender", PlayerType.Human, null, "player_2_id"),
+        new PlayerInfo("attacker", "HUMAN", null, "player_1_id"),
+        new PlayerInfo("defender", "HUMAN", null, "player_2_id"),
       ],
     );
 

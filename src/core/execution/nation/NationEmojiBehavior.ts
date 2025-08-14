@@ -1,4 +1,4 @@
-import { Game, Player, PlayerType, Tick } from "../../game/Game";
+import { Game, Player, Tick } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import { flattenedEmojiTable } from "../../Util";
 import { EmojiExecution } from "../EmojiExecution";
@@ -25,7 +25,7 @@ export class NationEmojiBehavior {
   ) {}
 
   sendEmoji(player: Player, emojisList: number[]) {
-    if (player.type() !== PlayerType.Human) return;
+    if (player.type() !== "HUMAN") return;
     this.game.addExecution(
       new EmojiExecution(
         this.player,
@@ -36,8 +36,8 @@ export class NationEmojiBehavior {
   }
 
   maybeSendHeckleEmoji(enemy: Player) {
-    if (this.player.type() === PlayerType.Bot) return;
-    if (enemy.type() !== PlayerType.Human) return;
+    if (this.player.type() === "BOT") return;
+    if (enemy.type() !== "HUMAN") return;
     const lastSent = this.lastEmojiSent.get(enemy) ?? -300;
     if (this.game.ticks() - lastSent <= 300) return;
     this.lastEmojiSent.set(enemy, this.game.ticks());

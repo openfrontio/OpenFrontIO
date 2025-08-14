@@ -1,4 +1,4 @@
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { Stats } from "../src/core/game/Stats";
 import { StatsImpl } from "../src/core/game/StatsImpl";
 import { replacer } from "../src/core/Util";
@@ -13,8 +13,8 @@ describe("Stats", () => {
   beforeEach(async () => {
     stats = new StatsImpl();
     game = await setup("half_land_half_ocean", {}, [
-      new PlayerInfo("boat dude", PlayerType.Human, "client1", "player_1_id"),
-      new PlayerInfo("boat dude", PlayerType.Human, "client2", "player_2_id"),
+      new PlayerInfo("boat dude", "HUMAN", "client1", "player_1_id"),
+      new PlayerInfo("boat dude", "HUMAN", "client2", "player_2_id"),
     ]);
 
     while (game.inSpawnPhase()) {

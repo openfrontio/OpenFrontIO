@@ -21,7 +21,6 @@ import {
   Embargo,
   EmojiMessage,
   Gold,
-  MessageType,
   MutableAlliance,
   Player,
   PlayerID,
@@ -606,7 +605,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (
-      recipient.type() === PlayerType.Human &&
+      recipient.type() === "HUMAN" &&
       this.mg.config().donateGold() === false
     ) {
       return false;
@@ -633,7 +632,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (
-      recipient.type() === PlayerType.Human &&
+      recipient.type() === "HUMAN" &&
       this.mg.config().donateTroops() === false
     ) {
       return false;
@@ -660,12 +659,12 @@ export class PlayerImpl implements Player {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
-      MessageType.SENT_TROOPS_TO_PLAYER,
+      "SENT_TROOPS_TO_PLAYER",
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderTroops(troops)} troops from ${this.name()}`,
-      MessageType.RECEIVED_TROOPS_FROM_PLAYER,
+      "RECEIVED_TROOPS_FROM_PLAYER",
       recipient.id(),
     );
     return true;
@@ -680,12 +679,12 @@ export class PlayerImpl implements Player {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
       `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
-      MessageType.SENT_GOLD_TO_PLAYER,
+      "SENT_GOLD_TO_PLAYER",
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderNumber(gold)} gold from ${this.name()}`,
-      MessageType.RECEIVED_GOLD_FROM_PLAYER,
+      "RECEIVED_GOLD_FROM_PLAYER",
       recipient.id(),
       gold,
     );
@@ -714,7 +713,7 @@ export class PlayerImpl implements Player {
     // At least one eligible player exists
     for (const p of this.mg.players()) {
       if (p.id() === this.id()) continue;
-      if (p.type() === PlayerType.Bot) continue;
+      if (p.type() === "BOT") continue;
       if (this.isOnSameTeam(p)) continue;
       return true;
     }

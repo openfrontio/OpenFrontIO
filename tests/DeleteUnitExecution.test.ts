@@ -1,12 +1,6 @@
 import { DeleteUnitExecution } from "../src/core/execution/DeleteUnitExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  Unit,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo, Unit } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
@@ -28,13 +22,13 @@ describe("DeleteUnitExecution Security Tests", () => {
 
     const player1Info = new PlayerInfo(
       "TestPlayer",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "TestPlayer",
     );
     const player2Info = new PlayerInfo(
       "EnemyPlayer",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "EnemyPlayer",
     );

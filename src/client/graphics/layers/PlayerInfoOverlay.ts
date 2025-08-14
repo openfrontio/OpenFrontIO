@@ -13,7 +13,6 @@ import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
-  PlayerType,
   Relation,
   Unit,
   UnitType,
@@ -260,7 +259,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
 
-    if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
+    if (player.type() === "NATION" && myPlayer !== null && !isAllied) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? "Neutral";
       const relationClass = this.getRelationClass(relation);
@@ -292,13 +291,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
     let playerType = "";
     switch (player.type()) {
-      case PlayerType.Bot:
+      case "BOT":
         playerType = translateText("player_type.bot");
         break;
-      case PlayerType.Nation:
+      case "NATION":
         playerType = translateText("player_type.nation");
         break;
-      case PlayerType.Human:
+      case "HUMAN":
         playerType = translateText("player_type.player");
         break;
     }

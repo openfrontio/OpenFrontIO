@@ -1,5 +1,5 @@
 import { PortExecution } from "../src/core/execution/PortExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;
@@ -14,8 +14,8 @@ describe("PortExecution", () => {
         instantBuild: true,
       },
       [
-        new PlayerInfo("player", PlayerType.Human, null, "player_id"),
-        new PlayerInfo("other", PlayerType.Human, null, "other_id"),
+        new PlayerInfo("player", "HUMAN", null, "player_id"),
+        new PlayerInfo("other", "HUMAN", null, "other_id"),
       ],
     );
 

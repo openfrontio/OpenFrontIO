@@ -1,11 +1,4 @@
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  TerraNullius,
-  Unit,
-} from "../game/Game";
+import { Execution, Game, Player, TerraNullius, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
@@ -79,7 +72,7 @@ export class MirvExecution implements Execution {
         this.nuke.id(),
         // TODO TranslateText
         `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
-        MessageType.MIRV_INBOUND,
+        "MIRV_INBOUND",
         this.targetPlayer.id(),
       );
     }

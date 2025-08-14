@@ -16,7 +16,6 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerProfile,
-  PlayerType,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
@@ -49,7 +48,7 @@ export async function createGameRunner(
   const humans = gameStart.players.map((p) => {
     return new PlayerInfo(
       p.clientID === clientID ? p.username : censorNameWithClanTag(p.username),
-      PlayerType.Human,
+      "HUMAN",
       p.clientID,
       random.nextID(),
     );
@@ -61,7 +60,7 @@ export async function createGameRunner(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
-            new PlayerInfo(n.name, PlayerType.Nation, null, random.nextID()),
+            new PlayerInfo(n.name, "NATION", null, random.nextID()),
           ),
       );
 
@@ -152,10 +151,7 @@ export class GameRunner {
     if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
       this.game
         .players()
-        .filter(
-          (p) =>
-            p.type() === PlayerType.Human || p.type() === PlayerType.Nation,
-        )
+        .filter((p) => p.type() === "HUMAN" || p.type() === "NATION")
         .forEach(
           (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
         );

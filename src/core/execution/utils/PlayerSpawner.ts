@@ -1,4 +1,4 @@
-import { Game, PlayerType } from "../../game/Game";
+import { Game } from "../../game/Game";
 import { GameID } from "../../Schemas";
 import { SpawnExecution } from "../SpawnExecution";
 
@@ -12,7 +12,7 @@ export class PlayerSpawner {
 
   spawnPlayers(): SpawnExecution[] {
     for (const player of this.gm.allPlayers()) {
-      if (player.type() !== PlayerType.Human) {
+      if (player.type() !== "HUMAN") {
         continue;
       }
 

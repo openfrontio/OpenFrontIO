@@ -1,10 +1,4 @@
-import {
-  Game,
-  getRelationValue,
-  Player,
-  PlayerType,
-  TerraNullius,
-} from "../../game/Game";
+import { Game, getRelationValue, Player, TerraNullius } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import {
   assertNever,
@@ -169,9 +163,9 @@ export class AiAttackBehavior {
   private findIncomingAttackPlayer(): Player | null {
     // Ignore bot attacks if we are not a bot.
     let incomingAttacks = this.player.incomingAttacks();
-    if (this.player.type() !== PlayerType.Bot) {
+    if (this.player.type() !== "BOT") {
       incomingAttacks = incomingAttacks.filter(
-        (attack) => attack.attacker().type() !== PlayerType.Bot,
+        (attack) => attack.attacker().type() !== "BOT",
       );
     }
     let largestAttack = 0;
@@ -196,7 +190,7 @@ export class AiAttackBehavior {
         (n): n is Player =>
           n.isPlayer() &&
           this.player.isFriendly(n) === false &&
-          n.type() === PlayerType.Bot,
+          n.type() === "BOT",
       );
 
     if (bots.length === 0) {
@@ -350,10 +344,7 @@ export class AiAttackBehavior {
     for (const neighbor of this.random.shuffleArray(neighbors)) {
       if (!neighbor.isPlayer()) continue;
       if (this.player.isFriendly(neighbor)) continue;
-      if (
-        neighbor.type() === PlayerType.Nation ||
-        neighbor.type() === PlayerType.Human
-      ) {
+      if (neighbor.type() === "NATION" || neighbor.type() === "HUMAN") {
         if (this.random.chance(2) || difficulty === "Easy") {
           continue;
         }
@@ -398,7 +389,7 @@ export class AiAttackBehavior {
     // Always attack Terra Nullius, non-humans and traitors
     if (
       other.isPlayer() === false ||
-      other.type() !== PlayerType.Human ||
+      other.type() !== "HUMAN" ||
       other.isTraitor()
     ) {
       return true;
@@ -424,8 +415,8 @@ export class AiAttackBehavior {
     let troops;
     if (
       target.isPlayer() &&
-      target.type() === PlayerType.Bot &&
-      this.player.type() !== PlayerType.Bot
+      target.type() === "BOT" &&
+      this.player.type() !== "BOT"
     ) {
       troops = this.calculateBotAttackTroops(
         target,
@@ -447,7 +438,7 @@ export class AiAttackBehavior {
       ),
     );
 
-    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
+    if (target.isPlayer() && this.player.type() === "NATION") {
       if (this.emojiBehavior === undefined) throw new Error("not initialized");
       this.emojiBehavior.maybeSendHeckleEmoji(target);
     }
@@ -466,7 +457,7 @@ export class AiAttackBehavior {
     }
 
     let troops;
-    if (target.type() === PlayerType.Bot) {
+    if (target.type() === "BOT") {
       troops = this.calculateBotAttackTroops(target, this.player.troops() / 5);
     } else {
       troops = this.player.troops() / 5;
@@ -486,7 +477,7 @@ export class AiAttackBehavior {
       ),
     );
 
-    if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
+    if (target.isPlayer() && this.player.type() === "NATION") {
       if (this.emojiBehavior === undefined) throw new Error("not initialized");
       this.emojiBehavior.maybeSendHeckleEmoji(target);
     }

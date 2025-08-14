@@ -21,7 +21,6 @@ import {
   Player,
   PlayerID,
   PlayerInfo,
-  PlayerType,
   Quads,
   Team,
   TerrainType,
@@ -461,7 +460,7 @@ export class GameImpl implements Game {
     if (this._config.gameConfig().gameMode !== "Team") {
       return null;
     }
-    if (player.playerType === PlayerType.Bot) {
+    if (player.playerType === "BOT") {
       return this.botTeam;
     }
     const rand = simpleHash(player.id);
@@ -951,7 +950,7 @@ export class GameImpl implements Game {
       `Conquered ${conquered.displayName()} received ${renderNumber(
         gold,
       )} gold`,
-      MessageType.CONQUERED_PLAYER,
+      "CONQUERED_PLAYER",
       conqueror.id(),
       gold,
     );

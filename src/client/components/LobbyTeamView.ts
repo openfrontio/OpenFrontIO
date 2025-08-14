@@ -8,7 +8,6 @@ import {
   GameMode,
   HumansVsNations,
   PlayerInfo,
-  PlayerType,
   Quads,
   Team,
   Trios,
@@ -266,8 +265,7 @@ export class LobbyTeamView extends LitElement {
     }
 
     const players = this.clients.map(
-      (c) =>
-        new PlayerInfo(c.username, PlayerType.Human, c.clientID, c.clientID),
+      (c) => new PlayerInfo(c.username, "HUMAN", c.clientID, c.clientID),
     );
     const assignment = assignTeamsLobbyPreview(
       players,

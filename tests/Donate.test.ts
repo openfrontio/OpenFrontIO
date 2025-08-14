@@ -1,7 +1,7 @@
 import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
 import { DonateTroopsExecution } from "../src/core/execution/DonateTroopExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { PlayerInfo } from "../src/core/game/Game";
 import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
 
@@ -13,15 +13,10 @@ describe("Donate troops to an ally", () => {
       donateTroops: true,
     });
 
-    const donorInfo = new PlayerInfo(
-      "donor",
-      PlayerType.Human,
-      null,
-      "donor_id",
-    );
+    const donorInfo = new PlayerInfo("donor", "HUMAN", null, "donor_id");
     const recipientInfo = new PlayerInfo(
       "recipient",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "recipient_id",
     );
@@ -77,15 +72,10 @@ describe("Donate gold to an ally", () => {
     });
     const gameID: GameID = "game_id";
 
-    const donorInfo = new PlayerInfo(
-      "donor",
-      PlayerType.Human,
-      null,
-      "donor_id",
-    );
+    const donorInfo = new PlayerInfo("donor", "HUMAN", null, "donor_id");
     const recipientInfo = new PlayerInfo(
       "recipient",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "recipient_id",
     );
@@ -142,15 +132,10 @@ describe("Donate troops to a non ally", () => {
     });
     const gameID: GameID = "game_id";
 
-    const donorInfo = new PlayerInfo(
-      "donor",
-      PlayerType.Human,
-      null,
-      "donor_id",
-    );
+    const donorInfo = new PlayerInfo("donor", "HUMAN", null, "donor_id");
     const recipientInfo = new PlayerInfo(
       "recipient",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "recipient_id",
     );
@@ -203,15 +188,10 @@ describe("Donate Gold to a non ally", () => {
     });
     const gameID: GameID = "game_id";
 
-    const donorInfo = new PlayerInfo(
-      "donor",
-      PlayerType.Human,
-      null,
-      "donor_id",
-    );
+    const donorInfo = new PlayerInfo("donor", "HUMAN", null, "donor_id");
     const recipientInfo = new PlayerInfo(
       "recipient",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "recipient_id",
     );

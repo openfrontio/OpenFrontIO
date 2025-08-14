@@ -1,7 +1,7 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
@@ -30,14 +30,14 @@ describe("Attack", () => {
     });
     const attackerInfo = new PlayerInfo(
       "attacker dude",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "attacker_id",
     );
     game.addPlayer(attackerInfo);
     const defenderInfo = new PlayerInfo(
       "defender dude",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "defender_id",
     );
@@ -158,20 +158,10 @@ describe("Attack race condition with alliance requests", () => {
       infiniteTroops: true,
     });
 
-    const playerAInfo = new PlayerInfo(
-      "playerA",
-      PlayerType.Human,
-      null,
-      "playerA_id",
-    );
+    const playerAInfo = new PlayerInfo("playerA", "HUMAN", null, "playerA_id");
     playerA = addPlayerToGame(playerAInfo, game, game.ref(0, 10));
 
-    const playerBInfo = new PlayerInfo(
-      "playerB",
-      PlayerType.Human,
-      null,
-      "playerB_id",
-    );
+    const playerBInfo = new PlayerInfo("playerB", "HUMAN", null, "playerB_id");
     playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 10));
 
     while (game.inSpawnPhase()) {
@@ -281,12 +271,7 @@ describe("Attack race condition with alliance requests", () => {
 
   test("should cancel the proper alliance request among many", async () => {
     // Add a new player to have more alliance requests
-    const playerCInfo = new PlayerInfo(
-      "playerB",
-      PlayerType.Human,
-      null,
-      "playerB_id",
-    );
+    const playerCInfo = new PlayerInfo("playerB", "HUMAN", null, "playerB_id");
     const playerC = addPlayerToGame(playerCInfo, game, game.ref(10, 10));
 
     // Player A sends alliance request to Player B

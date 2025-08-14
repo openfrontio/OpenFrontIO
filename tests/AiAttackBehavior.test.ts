@@ -1,5 +1,5 @@
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 
@@ -18,18 +18,8 @@ describe("Ai Attack Behavior", () => {
     });
 
     // Add players
-    const botInfo = new PlayerInfo(
-      "bot_test",
-      PlayerType.Bot,
-      null,
-      "bot_test",
-    );
-    const humanInfo = new PlayerInfo(
-      "human_test",
-      PlayerType.Human,
-      null,
-      "human_test",
-    );
+    const botInfo = new PlayerInfo("bot_test", "BOT", null, "bot_test");
+    const humanInfo = new PlayerInfo("human_test", "HUMAN", null, "human_test");
     testGame.addPlayer(botInfo);
     testGame.addPlayer(humanInfo);
 
@@ -116,7 +106,7 @@ describe("Ai Attack Behavior", () => {
     // Create nation
     const nationInfo = new PlayerInfo(
       "nation_test",
-      PlayerType.Nation,
+      "NATION",
       null,
       "nation_test",
     );

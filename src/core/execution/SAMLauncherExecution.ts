@@ -1,11 +1,4 @@
-import {
-  Execution,
-  Game,
-  isUnit,
-  MessageType,
-  Player,
-  Unit,
-} from "../game/Game";
+import { Execution, Game, isUnit, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
@@ -270,7 +263,7 @@ export class SAMLauncherExecution implements Execution {
         // Message
         this.mg.displayMessage(
           `${mirvWarheadTargets.length} MIRV warheads intercepted`,
-          MessageType.SAM_HIT,
+          "SAM_HIT",
           samOwner.id(),
         );
 

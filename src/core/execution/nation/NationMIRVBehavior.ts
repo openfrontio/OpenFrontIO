@@ -1,11 +1,4 @@
-import {
-  Game,
-  Gold,
-  Player,
-  PlayerType,
-  Tick,
-  UnitType,
-} from "../../game/Game";
+import { Game, Gold, Player, Tick, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { MirvExecution } from "../MIRVExecution";
@@ -188,7 +181,7 @@ export class NationMIRVBehavior {
       return (
         p !== this.player &&
         p.isPlayer() &&
-        p.type() !== PlayerType.Bot &&
+        p.type() !== "BOT" &&
         !this.player!.isOnSameTeam(p)
       );
     });

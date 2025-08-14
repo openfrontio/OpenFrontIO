@@ -2,7 +2,6 @@ import {
   Execution,
   Game,
   isStructureType,
-  MessageType,
   Player,
   TerraNullius,
   TrajectoryTile,
@@ -126,7 +125,7 @@ export class NukeExecution implements Execution {
             this.nuke.id(),
             // TODO TranslateText
             `${this.player.name()} - atom bomb inbound`,
-            MessageType.NUKE_INBOUND,
+            "NUKE_INBOUND",
             target.id(),
           );
         } else if (this.nukeType === "Hydrogen Bomb") {
@@ -134,7 +133,7 @@ export class NukeExecution implements Execution {
             this.nuke.id(),
             // TODO TranslateText
             `${this.player.name()} - hydrogen bomb inbound`,
-            MessageType.HYDROGEN_BOMB_INBOUND,
+            "HYDROGEN_BOMB_INBOUND",
             target.id(),
           );
         }

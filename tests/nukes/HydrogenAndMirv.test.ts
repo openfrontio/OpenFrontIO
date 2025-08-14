@@ -1,6 +1,6 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 
@@ -11,7 +11,7 @@ describe("Hydrogen Bomb and MIRV flows", () => {
 
   beforeEach(async () => {
     game = await setup("plains", { infiniteGold: true, instantBuild: true });
-    const info = new PlayerInfo("p", PlayerType.Human, null, "p");
+    const info = new PlayerInfo("p", "HUMAN", null, "p");
     game.addPlayer(info);
     game.addExecution(new SpawnExecution(gameID, info, game.ref(1, 1)));
     while (game.inSpawnPhase()) game.executeNextTick();
@@ -50,7 +50,7 @@ describe("Hydrogen Bomb and MIRV flows", () => {
       infiniteGold: false,
       instantBuild: false,
     });
-    const info = new PlayerInfo("p", PlayerType.Human, null, "p");
+    const info = new PlayerInfo("p", "HUMAN", null, "p");
     gameWithConstruction.addPlayer(info);
     gameWithConstruction.addExecution(
       new SpawnExecution(gameID, info, gameWithConstruction.ref(1, 1)),

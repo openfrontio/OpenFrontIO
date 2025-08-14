@@ -1,4 +1,4 @@
-import { Game, getRelationValue, Player, PlayerType } from "../../game/Game";
+import { Game, getRelationValue, Player } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
@@ -56,8 +56,7 @@ export class NationAllianceBehavior {
 
     // Only easy nations are allowed to send alliance requests to bots
     const isAcceptablePlayerType = (p: Player) =>
-      (p.type() === PlayerType.Bot && difficulty === "Easy") ||
-      p.type() !== PlayerType.Bot;
+      (p.type() === "BOT" && difficulty === "Easy") || p.type() !== "BOT";
 
     for (const enemy of borderingEnemies) {
       if (
@@ -169,9 +168,7 @@ export class NationAllianceBehavior {
         // On hard and impossible we try to not ally with all our neighbors (If we have 3+ neighbors)
         const borderingPlayers = this.player
           .neighbors()
-          .filter(
-            (n): n is Player => n.isPlayer() && n.type() !== PlayerType.Bot,
-          );
+          .filter((n): n is Player => n.isPlayer() && n.type() !== "BOT");
         const borderingFriends = borderingPlayers.filter(
           (o) => this.player?.isFriendly(o) === true,
         );

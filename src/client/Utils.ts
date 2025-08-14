@@ -165,35 +165,35 @@ export const severityColors: Record<string, string> = {
  */
 export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
-    case MessageType.SAM_HIT:
-    case MessageType.CAPTURED_ENEMY_UNIT:
-    case MessageType.RECEIVED_GOLD_FROM_TRADE:
-    case MessageType.CONQUERED_PLAYER:
+    case "SAM_HIT":
+    case "CAPTURED_ENEMY_UNIT":
+    case "RECEIVED_GOLD_FROM_TRADE":
+    case "CONQUERED_PLAYER":
       return severityColors["success"];
-    case MessageType.ATTACK_FAILED:
-    case MessageType.ALLIANCE_REJECTED:
-    case MessageType.ALLIANCE_BROKEN:
-    case MessageType.UNIT_CAPTURED_BY_ENEMY:
-    case MessageType.UNIT_DESTROYED:
+    case "ATTACK_FAILED":
+    case "ALLIANCE_REJECTED":
+    case "ALLIANCE_BROKEN":
+    case "UNIT_CAPTURED_BY_ENEMY":
+    case "UNIT_DESTROYED":
       return severityColors["fail"];
-    case MessageType.ATTACK_CANCELLED:
-    case MessageType.ATTACK_REQUEST:
-    case MessageType.ALLIANCE_ACCEPTED:
-    case MessageType.SENT_GOLD_TO_PLAYER:
-    case MessageType.SENT_TROOPS_TO_PLAYER:
-    case MessageType.RECEIVED_GOLD_FROM_PLAYER:
-    case MessageType.RECEIVED_TROOPS_FROM_PLAYER:
+    case "ATTACK_CANCELLED":
+    case "ATTACK_REQUEST":
+    case "ALLIANCE_ACCEPTED":
+    case "SENT_GOLD_TO_PLAYER":
+    case "SENT_TROOPS_TO_PLAYER":
+    case "RECEIVED_GOLD_FROM_PLAYER":
+    case "RECEIVED_TROOPS_FROM_PLAYER":
       return severityColors["blue"];
-    case MessageType.MIRV_INBOUND:
-    case MessageType.NUKE_INBOUND:
-    case MessageType.HYDROGEN_BOMB_INBOUND:
-    case MessageType.SAM_MISS:
-    case MessageType.ALLIANCE_EXPIRED:
-    case MessageType.NAVAL_INVASION_INBOUND:
-    case MessageType.RENEW_ALLIANCE:
+    case "MIRV_INBOUND":
+    case "NUKE_INBOUND":
+    case "HYDROGEN_BOMB_INBOUND":
+    case "SAM_MISS":
+    case "ALLIANCE_EXPIRED":
+    case "NAVAL_INVASION_INBOUND":
+    case "RENEW_ALLIANCE":
       return severityColors["warn"];
-    case MessageType.CHAT:
-    case MessageType.ALLIANCE_REQUEST:
+    case "CHAT":
+    case "ALLIANCE_REQUEST":
       return severityColors["info"];
     default:
       console.warn(`Message type ${type} has no explicit color`);

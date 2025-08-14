@@ -1,7 +1,7 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { Game, Player, PlayerType } from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
 
@@ -19,9 +19,9 @@ describe("AllianceRequestExecution", () => {
         infiniteTroops: true,
       },
       [
-        playerInfo("player1", PlayerType.Human),
-        playerInfo("player2", PlayerType.Human),
-        playerInfo("player3", PlayerType.Nation),
+        playerInfo("player1", "HUMAN"),
+        playerInfo("player2", "HUMAN"),
+        playerInfo("player3", "NATION"),
       ],
     );
 

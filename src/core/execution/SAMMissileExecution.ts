@@ -1,4 +1,4 @@
-import { Execution, Game, MessageType, Player, Unit } from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
@@ -51,7 +51,7 @@ export class SAMMissileExecution implements Execution {
       if (result === true) {
         this.mg.displayMessage(
           `Missile intercepted ${this.target.type()}`,
-          MessageType.SAM_HIT,
+          "SAM_HIT",
           this._owner.id(),
         );
         this.active = false;

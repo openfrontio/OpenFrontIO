@@ -2,7 +2,6 @@ import { renderTroops } from "../../client/Utils";
 import {
   Execution,
   Game,
-  MessageType,
   Player,
   PlayerID,
   TerraNullius,
@@ -76,7 +75,7 @@ export class TransportShipExecution implements Execution {
     ) {
       mg.displayMessage(
         `No boats available, max ${mg.config().boatMaxNumber()}`,
-        MessageType.ATTACK_FAILED,
+        "ATTACK_FAILED",
         this.attacker.id(),
       );
       this.active = false;
@@ -146,7 +145,7 @@ export class TransportShipExecution implements Execution {
         this.boat.id(),
         // TODO TranslateText
         `Naval invasion incoming from ${this.attacker.displayName()}`,
-        MessageType.NAVAL_INVASION_INBOUND,
+        "NAVAL_INVASION_INBOUND",
         this.targetID,
       );
     }
@@ -232,7 +231,7 @@ export class TransportShipExecution implements Execution {
           if (deaths) {
             this.mg.displayMessage(
               `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
-              MessageType.ATTACK_CANCELLED,
+              "ATTACK_CANCELLED",
               this.attacker.id(),
             );
           }

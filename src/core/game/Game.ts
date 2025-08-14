@@ -347,11 +347,8 @@ export const TerrainTypeSchema = z.enum([
 ]);
 export type TerrainType = z.infer<typeof TerrainTypeSchema>;
 
-export enum PlayerType {
-  Bot = "BOT",
-  Human = "HUMAN",
-  Nation = "NATION",
-}
+export const PlayerTypeSchema = z.enum(["BOT", "HUMAN", "NATION"]);
+export type PlayerType = z.infer<typeof PlayerTypeSchema>;
 
 export interface Execution {
   isActive(): boolean;
@@ -806,33 +803,34 @@ export interface EmojiMessage {
   createdAt: Tick;
 }
 
-export enum MessageType {
-  ATTACK_FAILED,
-  ATTACK_CANCELLED,
-  ATTACK_REQUEST,
-  CONQUERED_PLAYER,
-  MIRV_INBOUND,
-  NUKE_INBOUND,
-  HYDROGEN_BOMB_INBOUND,
-  NAVAL_INVASION_INBOUND,
-  SAM_MISS,
-  SAM_HIT,
-  CAPTURED_ENEMY_UNIT,
-  UNIT_CAPTURED_BY_ENEMY,
-  UNIT_DESTROYED,
-  ALLIANCE_ACCEPTED,
-  ALLIANCE_REJECTED,
-  ALLIANCE_REQUEST,
-  ALLIANCE_BROKEN,
-  ALLIANCE_EXPIRED,
-  SENT_GOLD_TO_PLAYER,
-  RECEIVED_GOLD_FROM_PLAYER,
-  RECEIVED_GOLD_FROM_TRADE,
-  SENT_TROOPS_TO_PLAYER,
-  RECEIVED_TROOPS_FROM_PLAYER,
-  CHAT,
-  RENEW_ALLIANCE,
-}
+export const MessageTypeSchema = z.enum([
+  "ATTACK_FAILED",
+  "ATTACK_CANCELLED",
+  "ATTACK_REQUEST",
+  "CONQUERED_PLAYER",
+  "MIRV_INBOUND",
+  "NUKE_INBOUND",
+  "HYDROGEN_BOMB_INBOUND",
+  "NAVAL_INVASION_INBOUND",
+  "SAM_MISS",
+  "SAM_HIT",
+  "CAPTURED_ENEMY_UNIT",
+  "UNIT_CAPTURED_BY_ENEMY",
+  "UNIT_DESTROYED",
+  "ALLIANCE_ACCEPTED",
+  "ALLIANCE_REJECTED",
+  "ALLIANCE_REQUEST",
+  "ALLIANCE_BROKEN",
+  "ALLIANCE_EXPIRED",
+  "RENEW_ALLIANCE",
+  "SENT_GOLD_TO_PLAYER",
+  "RECEIVED_GOLD_FROM_PLAYER",
+  "RECEIVED_GOLD_FROM_TRADE",
+  "SENT_TROOPS_TO_PLAYER",
+  "RECEIVED_TROOPS_FROM_PLAYER",
+  "CHAT",
+]);
+export type MessageType = z.infer<typeof MessageTypeSchema>;
 
 // Message categories used for filtering events in the EventsDisplay
 export enum MessageCategory {
@@ -845,31 +843,31 @@ export enum MessageCategory {
 
 // Ensures that all message types are included in a category
 export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
-  [MessageType.ATTACK_FAILED]: MessageCategory.ATTACK,
-  [MessageType.ATTACK_CANCELLED]: MessageCategory.ATTACK,
-  [MessageType.ATTACK_REQUEST]: MessageCategory.ATTACK,
-  [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
-  [MessageType.MIRV_INBOUND]: MessageCategory.NUKE,
-  [MessageType.NUKE_INBOUND]: MessageCategory.NUKE,
-  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.NUKE,
-  [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
-  [MessageType.SAM_MISS]: MessageCategory.ATTACK,
-  [MessageType.SAM_HIT]: MessageCategory.ATTACK,
-  [MessageType.CAPTURED_ENEMY_UNIT]: MessageCategory.ATTACK,
-  [MessageType.UNIT_CAPTURED_BY_ENEMY]: MessageCategory.ATTACK,
-  [MessageType.UNIT_DESTROYED]: MessageCategory.ATTACK,
-  [MessageType.ALLIANCE_ACCEPTED]: MessageCategory.ALLIANCE,
-  [MessageType.ALLIANCE_REJECTED]: MessageCategory.ALLIANCE,
-  [MessageType.ALLIANCE_REQUEST]: MessageCategory.ALLIANCE,
-  [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
-  [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
-  [MessageType.RENEW_ALLIANCE]: MessageCategory.ALLIANCE,
-  [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,
-  [MessageType.SENT_TROOPS_TO_PLAYER]: MessageCategory.TRADE,
-  [MessageType.RECEIVED_TROOPS_FROM_PLAYER]: MessageCategory.TRADE,
-  [MessageType.CHAT]: MessageCategory.CHAT,
+  ["ATTACK_FAILED"]: MessageCategory.ATTACK,
+  ["ATTACK_CANCELLED"]: MessageCategory.ATTACK,
+  ["ATTACK_REQUEST"]: MessageCategory.ATTACK,
+  ["CONQUERED_PLAYER"]: MessageCategory.ATTACK,
+  ["MIRV_INBOUND"]: MessageCategory.NUKE,
+  ["NUKE_INBOUND"]: MessageCategory.NUKE,
+  ["HYDROGEN_BOMB_INBOUND"]: MessageCategory.NUKE,
+  ["NAVAL_INVASION_INBOUND"]: MessageCategory.ATTACK,
+  ["SAM_MISS"]: MessageCategory.ATTACK,
+  ["SAM_HIT"]: MessageCategory.ATTACK,
+  ["CAPTURED_ENEMY_UNIT"]: MessageCategory.ATTACK,
+  ["UNIT_CAPTURED_BY_ENEMY"]: MessageCategory.ATTACK,
+  ["UNIT_DESTROYED"]: MessageCategory.ATTACK,
+  ["ALLIANCE_ACCEPTED"]: MessageCategory.ALLIANCE,
+  ["ALLIANCE_REJECTED"]: MessageCategory.ALLIANCE,
+  ["ALLIANCE_REQUEST"]: MessageCategory.ALLIANCE,
+  ["ALLIANCE_BROKEN"]: MessageCategory.ALLIANCE,
+  ["ALLIANCE_EXPIRED"]: MessageCategory.ALLIANCE,
+  ["RENEW_ALLIANCE"]: MessageCategory.ALLIANCE,
+  ["SENT_GOLD_TO_PLAYER"]: MessageCategory.TRADE,
+  ["RECEIVED_GOLD_FROM_PLAYER"]: MessageCategory.TRADE,
+  ["RECEIVED_GOLD_FROM_TRADE"]: MessageCategory.TRADE,
+  ["SENT_TROOPS_TO_PLAYER"]: MessageCategory.TRADE,
+  ["RECEIVED_TROOPS_FROM_PLAYER"]: MessageCategory.TRADE,
+  ["CHAT"]: MessageCategory.CHAT,
 } as const;
 
 /**

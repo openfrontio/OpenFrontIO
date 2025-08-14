@@ -7,7 +7,6 @@ import {
   Nation,
   Player,
   PlayerID,
-  PlayerType,
   Tick,
   Unit,
   UnitType,
@@ -54,7 +53,7 @@ export class NationExecution implements Execution {
 
   constructor(
     private gameID: GameID,
-    private nation: Nation, // Nation contains PlayerInfo with PlayerType.Nation
+    private nation: Nation, // Nation contains PlayerInfo with "NATION"
   ) {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
@@ -534,7 +533,7 @@ export class NationExecution implements Execution {
       let matchesCriteria = false;
       if (highInterestOnly) {
         // High-interest targeting: prioritize unowned tiles or tiles owned by bots
-        matchesCriteria = !owner.isPlayer() || owner.type() === PlayerType.Bot;
+        matchesCriteria = !owner.isPlayer() || owner.type() === "BOT";
       } else {
         // Normal targeting: return unowned tiles or tiles owned by non-friendly players
         matchesCriteria = !owner.isPlayer() || !owner.isFriendly(this.player);
@@ -563,7 +562,7 @@ export class NationExecution implements Execution {
       silos.length === 0 ||
       this.player.gold() < this.cost("Atom Bomb") ||
       other === null ||
-      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to nations and humans)
+      other.type() === "BOT" || // Don't nuke bots (as opposed to nations and humans)
       this.player.isOnSameTeam(other)
     ) {
       return;

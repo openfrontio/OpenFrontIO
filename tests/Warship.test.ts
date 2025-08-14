@@ -1,6 +1,6 @@
 import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
@@ -18,8 +18,8 @@ describe("Warship", () => {
         instantBuild: true,
       },
       [
-        new PlayerInfo("boat dude", PlayerType.Human, null, "player_1_id"),
-        new PlayerInfo("boat dude", PlayerType.Human, null, "player_2_id"),
+        new PlayerInfo("boat dude", "HUMAN", null, "player_1_id"),
+        new PlayerInfo("boat dude", "HUMAN", null, "player_2_id"),
       ],
     );
 

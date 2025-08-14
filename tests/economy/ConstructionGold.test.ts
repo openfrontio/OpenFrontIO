@@ -1,7 +1,7 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { NukeExecution } from "../../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 
@@ -10,13 +10,8 @@ describe("Construction economy", () => {
   const gameID: GameID = "game_id";
   let player: Player;
   let other: Player;
-  const builderInfo = new PlayerInfo(
-    "builder",
-    PlayerType.Human,
-    null,
-    "builder_id",
-  );
-  const otherInfo = new PlayerInfo("other", PlayerType.Human, null, "other_id");
+  const builderInfo = new PlayerInfo("builder", "HUMAN", null, "builder_id");
+  const otherInfo = new PlayerInfo("other", "HUMAN", null, "other_id");
 
   beforeEach(async () => {
     game = await setup(
