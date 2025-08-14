@@ -192,7 +192,7 @@ export class BuildMenu extends LitElement implements Layer {
         background-color 120ms ease;
     }
     .build-menu.dim {
-      opacity: 0.55;
+      opacity: 0.2;
       background-color: rgba(30, 30, 30, 0.75);
     }
     .build-description {
