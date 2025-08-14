@@ -1,9 +1,9 @@
 import {
   AllianceRequest,
   Game,
+  getRelationValue,
   Player,
   PlayerType,
-  Relation,
   TerraNullius,
   Tick,
 } from "../../game/Game";
@@ -59,7 +59,7 @@ export class BotBehavior {
       const human = alliance.other(this.player);
       if (
         this.player.type() === PlayerType.FakeHuman &&
-        this.player.relation(human) === Relation.Neutral
+        this.player.relation(human) === "Neutral"
       ) {
         if (!this.random.chance(1.5)) continue;
       }
@@ -176,7 +176,10 @@ export class BotBehavior {
   assistAllies() {
     for (const ally of this.player.allies()) {
       if (ally.targets().length === 0) continue;
-      if (this.player.relation(ally) < Relation.Friendly) {
+      if (
+        getRelationValue(this.player.relation(ally)) <
+        getRelationValue("Friendly")
+      ) {
         this.emoji(ally, this.random.randElement(EMOJI_RELATION_TOO_LOW));
         continue;
       }
@@ -240,10 +243,7 @@ export class BotBehavior {
       if (this.enemy === null && this.random.chance(2)) {
         // 50% chance
         const mostHated = this.player.allRelationsSorted()[0];
-        if (
-          mostHated !== undefined &&
-          mostHated.relation === Relation.Hostile
-        ) {
+        if (mostHated !== undefined && mostHated.relation === "Hostile") {
           this.setNewEnemy(mostHated.player);
         }
       }
@@ -403,7 +403,10 @@ export class BotBehavior {
 }
 
 function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
-  if (player.relation(request.requestor()) < Relation.Neutral) {
+  if (
+    getRelationValue(player.relation(request.requestor())) <
+    getRelationValue("Neutral")
+  ) {
     return false; // Reject if hasMalice
   }
   if (request.requestor().isTraitor()) {

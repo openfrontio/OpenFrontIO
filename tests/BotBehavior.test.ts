@@ -6,7 +6,6 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
-  Relation,
   Tick,
 } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
@@ -202,7 +201,7 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
   });
 
   it("should always extend if Nation and relation is Friendly", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Friendly);
+    mockPlayer.relation.mockReturnValue("Friendly");
     botBehavior.handleAllianceExtensionRequests();
     expect(mockGame.addExecution).toHaveBeenCalledTimes(1);
     expect(mockGame.addExecution.mock.calls[0][0]).toBeInstanceOf(
@@ -211,7 +210,7 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
   });
 
   it("should extend if Nation, relation is Neutral and random chance is true", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Neutral);
+    mockPlayer.relation.mockReturnValue("Neutral");
     mockRandom.chance.mockReturnValue(true);
     botBehavior.handleAllianceExtensionRequests();
     expect(mockGame.addExecution).toHaveBeenCalledTimes(1);
@@ -221,7 +220,7 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
   });
 
   it("should NOT extend if Nation, relation is Neutral and random chance is false", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Neutral);
+    mockPlayer.relation.mockReturnValue("Neutral");
     mockRandom.chance.mockReturnValue(false);
     botBehavior.handleAllianceExtensionRequests();
     expect(mockGame.addExecution).not.toHaveBeenCalled();

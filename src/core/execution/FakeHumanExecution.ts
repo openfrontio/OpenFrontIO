@@ -2,18 +2,18 @@ import {
   Cell,
   Execution,
   Game,
+  getRelationValue,
   Gold,
   Nation,
   Player,
   PlayerID,
   PlayerType,
-  Relation,
   TerrainType,
   Tick,
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef, euclDistFN } from "../game/GameMap";
+import { euclDistFN, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
@@ -123,13 +123,15 @@ export class FakeHumanExecution implements Execution {
     others.forEach((other: Player) => {
       /* When player is hostile starts embargo. Do not stop until neutral again */
       if (
-        player.relation(other) <= Relation.Hostile &&
+        getRelationValue(player.relation(other)) <=
+          getRelationValue("Hostile") &&
         !player.hasEmbargoAgainst(other) &&
         !player.isOnSameTeam(other)
       ) {
         player.addEmbargo(other, false);
       } else if (
-        player.relation(other) >= Relation.Neutral &&
+        getRelationValue(player.relation(other)) >=
+          getRelationValue("Neutral") &&
         player.hasEmbargoAgainst(other)
       ) {
         player.stopEmbargo(other);

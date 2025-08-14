@@ -307,13 +307,13 @@ export class PlayerPanel extends LitElement implements Layer {
       "shadow-[inset_0_0_8px_rgba(255,255,255,0.04)]";
 
     switch (relation) {
-      case Relation.Hostile:
+      case "Hostile":
         return `${base} border-red-400/30 bg-red-500/10 text-red-200`;
-      case Relation.Distrustful:
+      case "Distrustful":
         return `${base} border-red-300/40 bg-red-300/10 text-red-300`;
-      case Relation.Friendly:
+      case "Friendly":
         return `${base} border-emerald-400/30 bg-emerald-500/10 text-emerald-200`;
-      case Relation.Neutral:
+      case "Neutral":
       default:
         return `${base} border-zinc-400/30 bg-zinc-500/10 text-zinc-200`;
     }
@@ -321,13 +321,13 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private getRelationName(relation: Relation): string {
     switch (relation) {
-      case Relation.Hostile:
+      case "Hostile":
         return translateText("relation.hostile");
-      case Relation.Distrustful:
+      case "Distrustful":
         return translateText("relation.distrustful");
-      case Relation.Friendly:
+      case "Friendly":
         return translateText("relation.friendly");
-      case Relation.Neutral:
+      case "Neutral":
       default:
         return translateText("relation.neutral");
     }
@@ -393,8 +393,7 @@ export class PlayerPanel extends LitElement implements Layer {
     if (my?.isAlliedWith && my.isAlliedWith(other)) return html``;
     if (!this.otherProfile || !my) return html``;
 
-    const relation =
-      this.otherProfile.relations?.[my.smallID()] ?? Relation.Neutral;
+    const relation = this.otherProfile.relations?.[my.smallID()] ?? "Neutral";
     const cls = this.getRelationClass(relation);
     const name = this.getRelationName(relation);
 
