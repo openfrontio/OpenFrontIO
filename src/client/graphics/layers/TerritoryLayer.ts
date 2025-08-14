@@ -2,7 +2,7 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, ColoredTeams, PlayerType, Team } from "../../../core/game/Game";
+import { Cell, ColoredTeams, Team } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -171,9 +171,7 @@ export class TerritoryLayer implements Layer {
 
     this.drawFocusedPlayerHighlight();
 
-    const humans = this.game
-      .playerViews()
-      .filter((p) => p.type() === PlayerType.Human);
+    const humans = this.game.playerViews().filter((p) => p.type() === "HUMAN");
 
     const focusedPlayer = this.game.focusedPlayer();
     const teamColors = Object.values(ColoredTeams);

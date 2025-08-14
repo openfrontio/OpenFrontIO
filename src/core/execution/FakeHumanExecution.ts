@@ -7,7 +7,6 @@ import {
   Nation,
   Player,
   PlayerID,
-  PlayerType,
   Tick,
   Unit,
   UnitType,
@@ -72,7 +71,7 @@ export class FakeHumanExecution implements Execution {
 
   constructor(
     gameID: GameID,
-    private nation: Nation, // Nation contains PlayerInfo with PlayerType.FakeHuman
+    private nation: Nation, // Nation contains PlayerInfo with "FAKEHUMAN"
   ) {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
@@ -262,7 +261,7 @@ export class FakeHumanExecution implements Execution {
 
   private maybeSendEmoji(enemy: Player) {
     if (this.player === null) throw new Error("not initialized");
-    if (enemy.type() !== PlayerType.Human) return;
+    if (enemy.type() !== "HUMAN") return;
     const lastSent = this.lastEmojiSent.get(enemy) ?? -300;
     if (this.mg.ticks() - lastSent <= 300) return;
     this.lastEmojiSent.set(enemy, this.mg.ticks());
@@ -281,7 +280,7 @@ export class FakeHumanExecution implements Execution {
     if (
       silos.length === 0 ||
       this.player.gold() < this.cost("Atom Bomb") ||
-      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to fakehumans and humans)
+      other.type() === "BOT" || // Don't nuke bots (as opposed to fakehumans and humans)
       this.player.isOnSameTeam(other)
     ) {
       return;
@@ -681,7 +680,7 @@ export class FakeHumanExecution implements Execution {
       }
       // High-interest targeting: prioritize unowned tiles or tiles owned by bots
       if (highInterestOnly) {
-        if (!owner.isPlayer() || owner.type() === PlayerType.Bot) {
+        if (!owner.isPlayer() || owner.type() === "BOT") {
           return randTile;
         }
       } else {
@@ -842,7 +841,7 @@ export class FakeHumanExecution implements Execution {
       return (
         p !== this.player &&
         p.isPlayer() &&
-        p.type() !== PlayerType.Bot &&
+        p.type() !== "BOT" &&
         !this.player!.isOnSameTeam(p)
       );
     });

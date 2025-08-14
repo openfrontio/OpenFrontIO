@@ -1,5 +1,5 @@
 import { renderNumber } from "../../client/Utils";
-import { Execution, Game, MessageType, Player, Unit } from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
@@ -134,7 +134,7 @@ export class TradeShipExecution implements Execution {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
-        MessageType.CAPTURED_ENEMY_UNIT,
+        "CAPTURED_ENEMY_UNIT",
         this.tradeShip!.owner().id(),
         gold,
       );
@@ -147,13 +147,13 @@ export class TradeShipExecution implements Execution {
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
+        "RECEIVED_GOLD_FROM_TRADE",
         this._dstPort.owner().id(),
         gold,
       );
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
+        "RECEIVED_GOLD_FROM_TRADE",
         this.srcPort.owner().id(),
         gold,
       );

@@ -1,6 +1,6 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../src/core/game/Game";
 import { setup } from "../util/Setup";
 
 describe("Construction economy", () => {
@@ -13,12 +13,7 @@ describe("Construction economy", () => {
       instantBuild: false,
       infiniteTroops: true,
     });
-    const info = new PlayerInfo(
-      "builder",
-      PlayerType.Human,
-      null,
-      "builder_id",
-    );
+    const info = new PlayerInfo("builder", "HUMAN", null, "builder_id");
     game.addPlayer(info);
     const spawn = game.ref(0, 10);
     game.addExecution(new SpawnExecution(info, spawn));

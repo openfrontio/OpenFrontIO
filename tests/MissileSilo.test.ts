@@ -1,7 +1,7 @@
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { setup } from "./util/Setup";
 import { constructionExecution, executeTicks } from "./util/utils";
@@ -26,7 +26,7 @@ describe("MissileSilo", () => {
     game = await setup("plains", { infiniteGold: true, instantBuild: true });
     const attacker_info = new PlayerInfo(
       "attacker_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "attacker_id",
     );

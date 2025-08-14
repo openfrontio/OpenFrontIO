@@ -2,12 +2,7 @@ import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../../src/core/game/Game";
 import { setup } from "../../util/Setup";
 import { constructionExecution, executeTicks } from "../../util/utils";
 
@@ -25,25 +20,25 @@ describe("SAM", () => {
     });
     const defender_info = new PlayerInfo(
       "defender_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "defender_id",
     );
     const middle_defender_info = new PlayerInfo(
       "middle_defender_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "middle_defender_id",
     );
     const far_defender_info = new PlayerInfo(
       "far_defender_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "far_defender_id",
     );
     const attacker_info = new PlayerInfo(
       "attacker_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "attacker_id",
     );

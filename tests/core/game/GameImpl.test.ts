@@ -3,12 +3,7 @@ import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 //import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
 import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../../../src/core/execution/alliance/AllianceRequestReplyExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
 import { setup } from "../../util/Setup";
 
@@ -27,14 +22,14 @@ describe("GameImpl", () => {
     });
     const attackerInfo = new PlayerInfo(
       "attacker dude",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "attacker_id",
     );
     game.addPlayer(attackerInfo);
     const defenderInfo = new PlayerInfo(
       "defender dude",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "defender_id",
     );

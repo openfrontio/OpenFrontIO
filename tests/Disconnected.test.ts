@@ -3,7 +3,7 @@ import { MarkDisconnectedExecution } from "../src/core/execution/MarkDisconnecte
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";
@@ -23,14 +23,14 @@ describe("Disconnected", () => {
 
     const player1Info = new PlayerInfo(
       "Active Player",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "player1_id",
     );
 
     const player2Info = new PlayerInfo(
       "Disconnected Player",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "player2_id",
     );
@@ -171,13 +171,13 @@ describe("Disconnected", () => {
     beforeEach(async () => {
       const player1Info = new PlayerInfo(
         "[CLAN]Player1",
-        PlayerType.Human,
+        "HUMAN",
         null,
         "player_1_id",
       );
       const player2Info = new PlayerInfo(
         "[CLAN]Player2",
-        PlayerType.Human,
+        "HUMAN",
         null,
         "player_2_id",
       );
@@ -436,12 +436,7 @@ describe("Disconnected", () => {
       expect(transportShip.owner()).toBe(player1);
 
       // Make sure player1 has no shore tiles for the ship to retreat to anymore
-      const enemyInfo = new PlayerInfo(
-        "Enemy",
-        PlayerType.Human,
-        null,
-        "enemy_id",
-      );
+      const enemyInfo = new PlayerInfo("Enemy", "HUMAN", null, "enemy_id");
       enemy = game.addPlayer(enemyInfo);
 
       const shoreTiles = Array.from(player1.borderTiles()).filter((t) =>

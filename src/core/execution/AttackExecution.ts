@@ -3,10 +3,8 @@ import {
   Attack,
   Execution,
   Game,
-  MessageType,
   Player,
   PlayerID,
-  PlayerType,
   TerraNullius,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
@@ -79,10 +77,7 @@ export class AttackExecution implements Execution {
 
     if (this.target && this.target.isPlayer()) {
       const targetPlayer = this.target as Player;
-      if (
-        targetPlayer.type() !== PlayerType.Bot &&
-        this._owner.type() !== PlayerType.Bot
-      ) {
+      if (targetPlayer.type() !== "BOT" && this._owner.type() !== "BOT") {
         // Don't let bots embargo since they can't trade anyway.
         targetPlayer.addEmbargo(this._owner, true);
         this.rejectIncomingAllianceRequests(targetPlayer);
@@ -176,7 +171,7 @@ export class AttackExecution implements Execution {
     if (deaths) {
       this.mg.displayMessage(
         `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
-        MessageType.ATTACK_CANCELLED,
+        "ATTACK_CANCELLED",
         this._owner.id(),
       );
     }

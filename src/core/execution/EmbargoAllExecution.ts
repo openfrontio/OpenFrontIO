@@ -1,4 +1,4 @@
-import { Execution, Game, Player, PlayerType } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 
 export class EmbargoAllExecution implements Execution {
   constructor(
@@ -13,7 +13,7 @@ export class EmbargoAllExecution implements Execution {
     const me = this.player;
     for (const p of mg.players()) {
       if (p.id() === me.id()) continue;
-      if (p.type() === PlayerType.Bot) continue;
+      if (p.type() === "BOT") continue;
       if (me.isOnSameTeam(p)) continue;
 
       if (this.action === "start") {

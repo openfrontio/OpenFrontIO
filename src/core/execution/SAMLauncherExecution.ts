@@ -1,12 +1,4 @@
-import {
-  Execution,
-  Game,
-  isUnit,
-  MessageType,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, isUnit, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
@@ -282,7 +274,7 @@ export class SAMLauncherExecution implements Execution {
       if (!hit) {
         this.mg.displayMessage(
           `Missile failed to intercept ${type}`,
-          MessageType.SAM_MISS,
+          "SAM_MISS",
           this.sam.owner().id(),
         );
       } else if (mirvWarheadTargets.length > 0) {
@@ -291,7 +283,7 @@ export class SAMLauncherExecution implements Execution {
         // Message
         this.mg.displayMessage(
           `${mirvWarheadTargets.length} MIRV warheads intercepted`,
-          MessageType.SAM_HIT,
+          "SAM_HIT",
           samOwner.id(),
         );
 

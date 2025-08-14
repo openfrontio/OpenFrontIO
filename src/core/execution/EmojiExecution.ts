@@ -1,11 +1,4 @@
-import {
-  AllPlayers,
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  PlayerType,
-} from "../game/Game";
+import { AllPlayers, Execution, Game, Player, PlayerID } from "../game/Game";
 import { flattenedEmojiTable } from "../Util";
 
 export class EmojiExecution implements Execution {
@@ -43,7 +36,7 @@ export class EmojiExecution implements Execution {
       if (
         emojiString === "🖕" &&
         this.recipient !== AllPlayers &&
-        this.recipient.type() === PlayerType.FakeHuman
+        this.recipient.type() === "FAKEHUMAN"
       ) {
         this.recipient.updateRelation(this.requestor, -100);
       }

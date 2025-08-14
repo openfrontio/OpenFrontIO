@@ -1,10 +1,5 @@
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../../src/core/game/Game";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";
@@ -22,8 +17,8 @@ describe("NukeExecution", () => {
         instantBuild: true,
       },
       [
-        new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id"),
-        new PlayerInfo("other", PlayerType.Human, "client_id2", "other_id"),
+        new PlayerInfo("player", "HUMAN", "client_id1", "player_id"),
+        new PlayerInfo("other", "HUMAN", "client_id2", "other_id"),
       ],
     );
 

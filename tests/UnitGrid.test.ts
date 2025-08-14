@@ -1,4 +1,4 @@
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/Game";
+import { PlayerInfo, UnitType } from "../src/core/game/Game";
 import { UnitGrid } from "../src/core/game/UnitGrid";
 import { setup } from "./util/Setup";
 
@@ -11,7 +11,7 @@ async function checkRange(
   const game = await setup(mapName, { infiniteGold: true, instantBuild: true });
   const grid = new UnitGrid(game.map());
   const player = game.addPlayer(
-    new PlayerInfo("test_player", PlayerType.Human, null, "test_id"),
+    new PlayerInfo("test_player", "HUMAN", null, "test_id"),
   );
   const unitTile = game.map().ref(unitPosX, 0);
   grid.addUnit(player.buildUnit("Defense Post", unitTile, {}));
@@ -29,7 +29,7 @@ async function nearbyUnits(
   const game = await setup(mapName, { infiniteGold: true, instantBuild: true });
   const grid = new UnitGrid(game.map());
   const player = game.addPlayer(
-    new PlayerInfo("test_player", PlayerType.Human, null, "test_id"),
+    new PlayerInfo("test_player", "HUMAN", null, "test_id"),
   );
   const unitTile = game.map().ref(unitPosX, 0);
   for (const unitType of unitTypes) {
@@ -96,7 +96,7 @@ describe("Unit Grid range tests", () => {
       });
       const grid = new UnitGrid(game.map());
       const player = game.addPlayer(
-        new PlayerInfo("test_player", PlayerType.Human, null, "test_id"),
+        new PlayerInfo("test_player", "HUMAN", null, "test_id"),
       );
       const unitTile = game.map().ref(0, 0);
       grid.addUnit(player.buildUnit("City", unitTile, {}));
@@ -111,7 +111,7 @@ describe("Unit Grid range tests", () => {
       });
       const grid = new UnitGrid(game.map());
       const player = game.addPlayer(
-        new PlayerInfo("test_player", PlayerType.Human, null, "test_id"),
+        new PlayerInfo("test_player", "HUMAN", null, "test_id"),
       );
       const unitType = "City";
       const unitTile = game.map().ref(0, 0);

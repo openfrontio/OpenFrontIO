@@ -1,4 +1,4 @@
-import { Game, PlayerInfo, PlayerType } from "../game/Game";
+import { Game, PlayerInfo } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
@@ -55,7 +55,7 @@ export class BotSpawner {
       }
     }
     return new SpawnExecution(
-      new PlayerInfo(botName, PlayerType.Bot, null, this.random.nextID()),
+      new PlayerInfo(botName, "BOT", null, this.random.nextID()),
       tile,
     );
   }

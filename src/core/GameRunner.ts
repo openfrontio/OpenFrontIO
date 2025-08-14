@@ -16,7 +16,6 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerProfile,
-  PlayerType,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
@@ -51,7 +50,7 @@ export async function createGameRunner(
       p.clientID === clientID
         ? sanitize(p.username)
         : censorNameWithClanTag(p.username),
-      PlayerType.Human,
+      "HUMAN",
       p.clientID,
       random.nextID(),
     );
@@ -65,7 +64,7 @@ export async function createGameRunner(
             new Cell(n.coordinates[0], n.coordinates[1]),
             new PlayerInfo(
               n.name,
-              PlayerType.FakeHuman,
+              "FAKEHUMAN",
               null,
               random.nextID(),
               n.strength,
@@ -160,10 +159,7 @@ export class GameRunner {
     if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
       this.game
         .players()
-        .filter(
-          (p) =>
-            p.type() === PlayerType.Human || p.type() === PlayerType.FakeHuman,
-        )
+        .filter((p) => p.type() === "HUMAN" || p.type() === "FAKEHUMAN")
         .forEach(
           (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
         );

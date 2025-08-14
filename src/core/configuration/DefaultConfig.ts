@@ -10,7 +10,6 @@ import {
   HumansVsNations,
   Player,
   PlayerInfo,
-  PlayerType,
   Quads,
   TerraNullius,
   Tick,
@@ -567,7 +566,7 @@ export class DefaultConfig implements Config {
     ...types: UnitType[]
   ): (p: Player) => bigint {
     return (p: Player) => {
-      if (p.type() === PlayerType.Human && this.infiniteGold()) {
+      if (p.type() === "HUMAN" && this.infiniteGold()) {
         return 0n;
       }
       const numUnits = types.reduce(
@@ -696,16 +695,10 @@ export class DefaultConfig implements Config {
         // No troop loss if defender is disconnected and on same team
         mag = 0;
       }
-      if (
-        attacker.type() === PlayerType.Human &&
-        defender.type() === PlayerType.Bot
-      ) {
+      if (attacker.type() === "HUMAN" && defender.type() === "BOT") {
         mag *= 0.8;
       }
-      if (
-        attacker.type() === PlayerType.FakeHuman &&
-        defender.type() === PlayerType.Bot
-      ) {
+      if (attacker.type() === "FAKEHUMAN" && defender.type() === "BOT") {
         mag *= 0.8;
       }
     }
@@ -749,8 +742,7 @@ export class DefaultConfig implements Config {
       };
     } else {
       return {
-        attackerTroopLoss:
-          attacker.type() === PlayerType.Bot ? mag / 10 : mag / 5,
+        attackerTroopLoss: attacker.type() === "BOT" ? mag / 10 : mag / 5,
         defenderTroopLoss: 0,
         tilesPerTickUsed: within(
           (2000 * Math.max(10, speed)) / attackTroops,
@@ -799,7 +791,7 @@ export class DefaultConfig implements Config {
   }
 
   attackAmount(attacker: Player, defender: Player | TerraNullius) {
-    if (attacker.type() === PlayerType.Bot) {
+    if (attacker.type() === "BOT") {
       return attacker.troops() / 20;
     } else {
       return attacker.troops() / 5;
@@ -814,10 +806,10 @@ export class DefaultConfig implements Config {
   }
 
   startManpower(playerInfo: PlayerInfo): number {
-    if (playerInfo.playerType === PlayerType.Bot) {
+    if (playerInfo.playerType === "BOT") {
       return 10_000;
     }
-    if (playerInfo.playerType === PlayerType.FakeHuman) {
+    if (playerInfo.playerType === "FAKEHUMAN") {
       const strength = this.useNationStrengthForStartManpower()
         ? (playerInfo.nationStrength ?? 1)
         : 1;
@@ -840,7 +832,7 @@ export class DefaultConfig implements Config {
 
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
-      player.type() === PlayerType.Human && this.infiniteTroops()
+      player.type() === "HUMAN" && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player
@@ -849,11 +841,11 @@ export class DefaultConfig implements Config {
             .reduce((a, b) => a + b, 0) *
             this.cityTroopIncrease();
 
-    if (player.type() === PlayerType.Bot) {
+    if (player.type() === "BOT") {
       return maxTroops / 3;
     }
 
-    if (player.type() === PlayerType.Human) {
+    if (player.type() === "HUMAN") {
       return maxTroops;
     }
 
@@ -879,11 +871,11 @@ export class DefaultConfig implements Config {
     const ratio = 1 - player.troops() / max;
     toAdd *= ratio;
 
-    if (player.type() === PlayerType.Bot) {
+    if (player.type() === "BOT") {
       toAdd *= 0.6;
     }
 
-    if (player.type() === PlayerType.FakeHuman) {
+    if (player.type() === "FAKEHUMAN") {
       switch (this._gameConfig.difficulty) {
         case "Easy":
           toAdd *= 0.9;
@@ -907,7 +899,7 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
-    if (player.type() === PlayerType.Bot) {
+    if (player.type() === "BOT") {
       return 50n;
     }
     return 100n;

@@ -5,7 +5,6 @@ import {
   Game,
   Player,
   PlayerInfo,
-  PlayerType,
   Tick,
 } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
@@ -23,15 +22,10 @@ describe("BotBehavior.handleAllianceRequests", () => {
       instantBuild: true,
     });
 
-    const playerInfo = new PlayerInfo(
-      "player_id",
-      PlayerType.Bot,
-      null,
-      "player_id",
-    );
+    const playerInfo = new PlayerInfo("player_id", "BOT", null, "player_id");
     const requestorInfo = new PlayerInfo(
       "requestor_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "requestor_id",
     );
@@ -172,7 +166,7 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
       alliances: jest.fn(() => [mockAlliance]),
       relation: jest.fn(),
       id: jest.fn(() => "bot_id"),
-      type: jest.fn(() => PlayerType.FakeHuman),
+      type: jest.fn(() => "FAKEHUMAN"),
     };
 
     botBehavior = new BotBehavior(
@@ -192,7 +186,7 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
   });
 
   it("should always extend if type Bot", () => {
-    mockPlayer.type.mockReturnValue(PlayerType.Bot);
+    mockPlayer.type.mockReturnValue("BOT");
     botBehavior.handleAllianceExtensionRequests();
     expect(mockGame.addExecution).toHaveBeenCalledTimes(1);
     expect(mockGame.addExecution.mock.calls[0][0]).toBeInstanceOf(
@@ -242,18 +236,8 @@ describe("BotBehavior Attack Behavior", () => {
     });
 
     // Add players
-    const botInfo = new PlayerInfo(
-      "bot_test",
-      PlayerType.Bot,
-      null,
-      "bot_test",
-    );
-    const humanInfo = new PlayerInfo(
-      "human_test",
-      PlayerType.Human,
-      null,
-      "human_test",
-    );
+    const botInfo = new PlayerInfo("bot_test", "BOT", null, "bot_test");
+    const humanInfo = new PlayerInfo("human_test", "HUMAN", null, "human_test");
     testGame.addPlayer(botInfo);
     testGame.addPlayer(humanInfo);
 
@@ -340,7 +324,7 @@ describe("BotBehavior Attack Behavior", () => {
     // Create nation
     const nationInfo = new PlayerInfo(
       "nation_test",
-      PlayerType.FakeHuman,
+      "FAKEHUMAN",
       null,
       "nation_test",
     );

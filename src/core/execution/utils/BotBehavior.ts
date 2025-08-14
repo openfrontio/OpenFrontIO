@@ -3,7 +3,6 @@ import {
   Game,
   getRelationValue,
   Player,
-  PlayerType,
   TerraNullius,
   Tick,
 } from "../../game/Game";
@@ -58,7 +57,7 @@ export class BotBehavior {
       // If Friendly or Bot, always agree to extend. If Neutral, have random chance decide
       const human = alliance.other(this.player);
       if (
-        this.player.type() === PlayerType.FakeHuman &&
+        this.player.type() === "FAKEHUMAN" &&
         this.player.relation(human) === "Neutral"
       ) {
         if (!this.random.chance(1.5)) continue;
@@ -71,7 +70,7 @@ export class BotBehavior {
   }
 
   private emoji(player: Player, emoji: number) {
-    if (player.type() !== PlayerType.Human) return;
+    if (player.type() !== "HUMAN") return;
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
@@ -121,7 +120,7 @@ export class BotBehavior {
     if (difficulty === "Hard" || difficulty === "Impossible") {
       return false;
     }
-    if (other.type() !== PlayerType.Human) {
+    if (other.type() !== "HUMAN") {
       return false;
     }
     // Only discourage attacks on Humans who are not traitors on easy or medium difficulty.
@@ -212,9 +211,7 @@ export class BotBehavior {
       // Prefer neighboring bots
       const bots = this.player
         .neighbors()
-        .filter(
-          (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
-        );
+        .filter((n): n is Player => n.isPlayer() && n.type() === "BOT");
       if (bots.length > 0) {
         const density = (p: Player) => p.troops() / p.numTilesOwned();
         let lowestDensityBot: Player | undefined;
@@ -336,7 +333,7 @@ export class BotBehavior {
       for (const neighbor of this.random.shuffleArray(neighbors)) {
         if (!neighbor.isPlayer()) continue;
         if (this.player.isFriendly(neighbor)) continue;
-        if (neighbor.type() === PlayerType.FakeHuman) {
+        if (neighbor.type() === "FAKEHUMAN") {
           if (this.random.chance(2)) {
             continue;
           }
