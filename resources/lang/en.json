@@ -345,7 +345,11 @@
     "terrain_enabled": "Terrain view enabled",
     "terrain_disabled": "Terrain view disabled",
     "exit_game_label": "Exit Game",
-    "exit_game_info": "Return to main menu"
+    "exit_game_info": "Return to main menu",
+    "alliance_timer_label": "Alliance Timer",
+    "alliance_timer_desc": "Show countdown timer on alliance icons indicating when the alliance expires",
+    "alliance_timer_enabled": "Show countdown timers on alliance icons",
+    "alliance_timer_disabled": "Show regular alliance icons without timers"
   },
   "chat": {
     "title": "Quick Chat",
