@@ -1,8 +1,8 @@
 import {
   Game,
+  getRelationValue,
   Player,
   PlayerType,
-  Relation,
   TerraNullius,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
@@ -42,7 +42,10 @@ export class AiAttackBehavior {
 
     for (const ally of this.player.allies()) {
       if (ally.targets().length === 0) continue;
-      if (this.player.relation(ally) < Relation.Friendly) {
+      if (
+        getRelationValue(this.player.relation(ally)) <
+        getRelationValue("Friendly")
+      ) {
         this.emojiBehavior.sendEmoji(ally, EMOJI_ASSIST_RELATION_TOO_LOW);
         continue;
       }
@@ -94,7 +97,7 @@ export class AiAttackBehavior {
     const mostHated = this.player.allRelationsSorted()[0];
     if (
       mostHated !== undefined &&
-      mostHated.relation === Relation.Hostile &&
+      mostHated.relation === "Hostile" &&
       this.player.isFriendly(mostHated.player) === false
     ) {
       this.sendAttack(mostHated.player);
@@ -129,7 +132,7 @@ export class AiAttackBehavior {
     const mostHated = this.player.allRelationsSorted()[0];
     if (
       mostHated !== undefined &&
-      mostHated.relation === Relation.Hostile &&
+      mostHated.relation === "Hostile" &&
       this.player.isFriendly(mostHated.player) === false
     ) {
       return mostHated.player;

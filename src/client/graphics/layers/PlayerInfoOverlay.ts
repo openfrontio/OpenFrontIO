@@ -158,13 +158,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private getRelationClass(relation: Relation): string {
     switch (relation) {
-      case Relation.Hostile:
+      case "Hostile":
         return "text-red-500";
-      case Relation.Distrustful:
+      case "Distrustful":
         return "text-red-300";
-      case Relation.Neutral:
+      case "Neutral":
         return "text-white";
-      case Relation.Friendly:
+      case "Friendly":
         return "text-green-500";
       default:
         return "text-white";
@@ -173,13 +173,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private getRelationName(relation: Relation): string {
     switch (relation) {
-      case Relation.Hostile:
+      case "Hostile":
         return translateText("relation.hostile");
-      case Relation.Distrustful:
+      case "Distrustful":
         return translateText("relation.distrustful");
-      case Relation.Neutral:
+      case "Neutral":
         return translateText("relation.neutral");
-      case Relation.Friendly:
+      case "Friendly":
         return translateText("relation.friendly");
       default:
         return translateText("relation.default");
@@ -262,7 +262,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     if (player.type() === PlayerType.Nation && myPlayer !== null && !isAllied) {
       const relation =
-        this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
+        this.playerProfile?.relations[myPlayer.smallID()] ?? "Neutral";
       const relationClass = this.getRelationClass(relation);
       const relationName = this.getRelationName(relation);
 

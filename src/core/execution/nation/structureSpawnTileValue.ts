@@ -1,4 +1,4 @@
-import { Game, Player, Relation, UnitType } from "../../game/Game";
+import { Game, getRelationValue, Player, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { closestTile, closestTwoTiles } from "../Util";
 
@@ -83,7 +83,9 @@ export function structureSpawnTileValue(
           }
           for (const neighbor of neighbors) {
             w +=
-              borderSpacing * (Relation.Friendly - player.relation(neighbor));
+              borderSpacing *
+              (getRelationValue("Friendly") -
+                getRelationValue(player.relation(neighbor)));
           }
         }
 

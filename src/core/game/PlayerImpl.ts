@@ -476,15 +476,15 @@ export class PlayerImpl implements Player {
 
   private relationFromValue(relationValue: number): Relation {
     if (relationValue < -50) {
-      return Relation.Hostile;
+      return "Hostile";
     }
     if (relationValue < 0) {
-      return Relation.Distrustful;
+      return "Distrustful";
     }
     if (relationValue < 50) {
-      return Relation.Neutral;
+      return "Neutral";
     }
-    return Relation.Friendly;
+    return "Friendly";
   }
 
   allRelationsSorted(): { player: Player; relation: Relation }[] {

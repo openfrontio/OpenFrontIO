@@ -296,12 +296,16 @@ export const nukeTypes = [
   "MIRV",
 ] as UnitType[];
 
-export enum Relation {
-  Hostile = 0,
-  Distrustful = 1,
-  Neutral = 2,
-  Friendly = 3,
-}
+export const RelationSchema = z.enum([
+  "Hostile",
+  "Distrustful",
+  "Neutral",
+  "Friendly",
+]);
+export type Relation = z.infer<typeof RelationSchema>;
+const relationOrder = RelationSchema.options as Relation[];
+export const getRelationValue = (r: Relation): number =>
+  relationOrder.indexOf(r);
 
 export class Nation {
   constructor(

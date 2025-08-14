@@ -1,4 +1,4 @@
-import { Game, Player, PlayerType, Relation } from "../../game/Game";
+import { Game, getRelationValue, Player, PlayerType } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
@@ -89,7 +89,10 @@ export class NationAllianceBehavior {
       return true;
     }
     // Reject if relation is bad
-    if (this.player.relation(otherPlayer) < Relation.Neutral) {
+    if (
+      getRelationValue(this.player.relation(otherPlayer)) <
+      getRelationValue("Neutral")
+    ) {
       return false;
     }
     // Maybe accept if relation is friendly
@@ -193,15 +196,15 @@ export class NationAllianceBehavior {
     switch (difficulty) {
       case "Easy":
       case "Medium":
-        return this.player.relation(otherPlayer) === Relation.Friendly;
+        return this.player.relation(otherPlayer) === "Friendly";
       case "Hard":
         return (
-          this.player.relation(otherPlayer) === Relation.Friendly &&
+          this.player.relation(otherPlayer) === "Friendly" &&
           this.random.nextInt(0, 100) >= 17
         );
       case "Impossible":
         return (
-          this.player.relation(otherPlayer) === Relation.Friendly &&
+          this.player.relation(otherPlayer) === "Friendly" &&
           this.random.nextInt(0, 100) >= 33
         );
       default:

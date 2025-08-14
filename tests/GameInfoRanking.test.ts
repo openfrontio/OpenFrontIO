@@ -2,7 +2,7 @@ import {
   Ranking,
   RankType,
 } from "../src/client/components/baseComponents/ranking/GameInfoRanking";
-import { GameMapSize, GameType } from "../src/core/game/Game";
+import { GameMapSize } from "../src/core/game/Game";
 import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
@@ -16,7 +16,7 @@ describe("Ranking class", () => {
     difficulty: "Medium",
     donateGold: false,
     donateTroops: false,
-    gameType: GameType.Public,
+    gameType: "Public",
     gameMode: "Free For All",
     gameMapSize: GameMapSize.Normal,
     disableNations: true,
