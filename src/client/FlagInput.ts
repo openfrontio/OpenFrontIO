@@ -41,10 +41,25 @@ export class FlagInput extends LitElement {
     );
   }
 
+  private updateFlag = (ev: Event) => {
+    const e = ev as CustomEvent<{ flag: string }>;
+    if (!e?.detail || typeof e.detail.flag !== "string") return "xx";
+    if (this.flag !== e.detail.flag) {
+      this.flag = e.detail.flag;
+      this.requestUpdate();
+    }
+  };
+
   connectedCallback() {
     super.connectedCallback();
     this.flag = this.getStoredFlag();
     this.dispatchFlagEvent();
+    window.addEventListener("flag-change", this.updateFlag as EventListener);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("flag-change", this.updateFlag as EventListener);
   }
 
   createRenderRoot() {
