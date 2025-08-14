@@ -832,42 +832,42 @@ export const MessageTypeSchema = z.enum([
 ]);
 export type MessageType = z.infer<typeof MessageTypeSchema>;
 
-// Message categories used for filtering events in the EventsDisplay
-export enum MessageCategory {
-  ATTACK = "ATTACK",
-  NUKE = "NUKE",
-  ALLIANCE = "ALLIANCE",
-  TRADE = "TRADE",
-  CHAT = "CHAT",
-}
+export const MessageCategorySchema = z.enum([
+  "ATTACK",
+  "NUKE",
+  "ALLIANCE",
+  "TRADE",
+  "CHAT",
+]);
+export type MessageCategory = z.infer<typeof MessageCategorySchema>;
 
 // Ensures that all message types are included in a category
 export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
-  ["ATTACK_FAILED"]: MessageCategory.ATTACK,
-  ["ATTACK_CANCELLED"]: MessageCategory.ATTACK,
-  ["ATTACK_REQUEST"]: MessageCategory.ATTACK,
-  ["CONQUERED_PLAYER"]: MessageCategory.ATTACK,
-  ["MIRV_INBOUND"]: MessageCategory.NUKE,
-  ["NUKE_INBOUND"]: MessageCategory.NUKE,
-  ["HYDROGEN_BOMB_INBOUND"]: MessageCategory.NUKE,
-  ["NAVAL_INVASION_INBOUND"]: MessageCategory.ATTACK,
-  ["SAM_MISS"]: MessageCategory.ATTACK,
-  ["SAM_HIT"]: MessageCategory.ATTACK,
-  ["CAPTURED_ENEMY_UNIT"]: MessageCategory.ATTACK,
-  ["UNIT_CAPTURED_BY_ENEMY"]: MessageCategory.ATTACK,
-  ["UNIT_DESTROYED"]: MessageCategory.ATTACK,
-  ["ALLIANCE_ACCEPTED"]: MessageCategory.ALLIANCE,
-  ["ALLIANCE_REJECTED"]: MessageCategory.ALLIANCE,
-  ["ALLIANCE_REQUEST"]: MessageCategory.ALLIANCE,
-  ["ALLIANCE_BROKEN"]: MessageCategory.ALLIANCE,
-  ["ALLIANCE_EXPIRED"]: MessageCategory.ALLIANCE,
-  ["RENEW_ALLIANCE"]: MessageCategory.ALLIANCE,
-  ["SENT_GOLD_TO_PLAYER"]: MessageCategory.TRADE,
-  ["RECEIVED_GOLD_FROM_PLAYER"]: MessageCategory.TRADE,
-  ["RECEIVED_GOLD_FROM_TRADE"]: MessageCategory.TRADE,
-  ["SENT_TROOPS_TO_PLAYER"]: MessageCategory.TRADE,
-  ["RECEIVED_TROOPS_FROM_PLAYER"]: MessageCategory.TRADE,
-  ["CHAT"]: MessageCategory.CHAT,
+  ["ATTACK_FAILED"]: "ATTACK",
+  ["ATTACK_CANCELLED"]: "ATTACK",
+  ["ATTACK_REQUEST"]: "ATTACK",
+  ["CONQUERED_PLAYER"]: "ATTACK",
+  ["MIRV_INBOUND"]: "NUKE",
+  ["NUKE_INBOUND"]: "NUKE",
+  ["HYDROGEN_BOMB_INBOUND"]: "NUKE",
+  ["NAVAL_INVASION_INBOUND"]: "ATTACK",
+  ["SAM_MISS"]: "ATTACK",
+  ["SAM_HIT"]: "ATTACK",
+  ["CAPTURED_ENEMY_UNIT"]: "ATTACK",
+  ["UNIT_CAPTURED_BY_ENEMY"]: "ATTACK",
+  ["UNIT_DESTROYED"]: "ATTACK",
+  ["ALLIANCE_ACCEPTED"]: "ALLIANCE",
+  ["ALLIANCE_REJECTED"]: "ALLIANCE",
+  ["ALLIANCE_REQUEST"]: "ALLIANCE",
+  ["ALLIANCE_BROKEN"]: "ALLIANCE",
+  ["ALLIANCE_EXPIRED"]: "ALLIANCE",
+  ["RENEW_ALLIANCE"]: "ALLIANCE",
+  ["SENT_GOLD_TO_PLAYER"]: "TRADE",
+  ["RECEIVED_GOLD_FROM_PLAYER"]: "TRADE",
+  ["RECEIVED_GOLD_FROM_TRADE"]: "TRADE",
+  ["SENT_TROOPS_TO_PLAYER"]: "TRADE",
+  ["RECEIVED_TROOPS_FROM_PLAYER"]: "TRADE",
+  ["CHAT"]: "CHAT",
 } as const;
 
 /**

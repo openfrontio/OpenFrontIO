@@ -92,11 +92,11 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private goldAmountAnimating: boolean = false;
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
-    [MessageCategory.ATTACK, false],
-    [MessageCategory.NUKE, false],
-    [MessageCategory.TRADE, false],
-    [MessageCategory.ALLIANCE, false],
-    [MessageCategory.CHAT, false],
+    ["ATTACK", false],
+    ["NUKE", false],
+    ["TRADE", false],
+    ["ALLIANCE", false],
+    ["CHAT", false],
   ]);
 
   @query(".events-container")
@@ -1020,20 +1020,11 @@ export class EventsDisplay extends LitElement implements Layer {
               <div class="w-full p-2 lg:p-3 bg-gray-800/70 rounded-t-lg">
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
-                    ${this.renderToggleButton(
-                      swordIcon,
-                      MessageCategory.ATTACK,
-                    )}
-                    ${this.renderToggleButton(nukeIcon, MessageCategory.NUKE)}
-                    ${this.renderToggleButton(
-                      donateGoldIcon,
-                      MessageCategory.TRADE,
-                    )}
-                    ${this.renderToggleButton(
-                      allianceIcon,
-                      MessageCategory.ALLIANCE,
-                    )}
-                    ${this.renderToggleButton(chatIcon, MessageCategory.CHAT)}
+                    ${this.renderToggleButton(swordIcon, "ATTACK")}
+                    ${this.renderToggleButton(nukeIcon, "NUKE")}
+                    ${this.renderToggleButton(donateGoldIcon, "TRADE")}
+                    ${this.renderToggleButton(allianceIcon, "ALLIANCE")}
+                    ${this.renderToggleButton(chatIcon, "CHAT")}
                   </div>
                   <div class="flex items-center gap-3">
                     ${this.latestGoldAmount !== null
