@@ -10,7 +10,7 @@ import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
-import { Fx, FxType } from "../fx/Fx";
+import { Fx } from "../fx/Fx";
 import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
@@ -204,7 +204,7 @@ export class FxLayer implements Layer {
           this.animatedSpriteLoader,
           x,
           y,
-          FxType.MiniExplosion,
+          "MiniExplosion",
         );
         this.allFx.push(explosion);
       }
@@ -220,7 +220,7 @@ export class FxLayer implements Layer {
           this.animatedSpriteLoader,
           x,
           y,
-          FxType.MiniExplosion,
+          "MiniExplosion",
         );
         this.allFx.push(explosion);
       }
@@ -235,12 +235,7 @@ export class FxLayer implements Layer {
       if (chanceFx === 0) {
         const x = this.game.x(rail.tile);
         const y = this.game.y(rail.tile);
-        const animation = new SpriteFx(
-          this.animatedSpriteLoader,
-          x,
-          y,
-          FxType.Dust,
-        );
+        const animation = new SpriteFx(this.animatedSpriteLoader, x, y, "Dust");
         this.allFx.push(animation);
       }
     }
@@ -278,7 +273,7 @@ export class FxLayer implements Layer {
         this.animatedSpriteLoader,
         x,
         y,
-        FxType.SinkingShip,
+        "SinkingShip",
         undefined,
         unit.owner(),
         this.theme,
@@ -295,7 +290,7 @@ export class FxLayer implements Layer {
         this.animatedSpriteLoader,
         x,
         y,
-        FxType.BuildingExplosion,
+        "BuildingExplosion",
       );
       this.allFx.push(explosion);
     }
@@ -337,7 +332,7 @@ export class FxLayer implements Layer {
       this.animatedSpriteLoader,
       x,
       y,
-      FxType.SAMExplosion,
+      "SAMExplosion",
     );
     this.allFx.push(explosion);
     const shockwave = new ShockwaveFx(x, y, 800, 40);

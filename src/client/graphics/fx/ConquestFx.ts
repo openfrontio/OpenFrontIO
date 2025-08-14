@@ -2,7 +2,7 @@ import { ConquestUpdate } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { Fx, FxType } from "./Fx";
+import { Fx } from "./Fx";
 import { FadeFx, SpriteFx } from "./SpriteFx";
 import { TextFx } from "./TextFx";
 
@@ -25,7 +25,7 @@ export function conquestFxFactory(
     animatedSpriteLoader,
     x,
     y,
-    FxType.Conquest,
+    "Conquest",
     2500,
   );
   const fadeAnimation = new FadeFx(swordAnimation, 0.1, 0.6);
