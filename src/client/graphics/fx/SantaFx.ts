@@ -1,7 +1,7 @@
 import { Theme } from "../../../core/configuration/Config";
 import { PlayerView } from "../../../core/game/GameView";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { Fx, FxType } from "./Fx";
+import { Fx } from "./Fx";
 import { SpriteFx } from "./SpriteFx";
 
 export class SantaFx implements Fx {
@@ -23,7 +23,7 @@ export class SantaFx implements Fx {
       animatedSpriteLoader,
       startX,
       startY,
-      FxType.Santa,
+      "Santa",
       duration,
       owner,
       theme,

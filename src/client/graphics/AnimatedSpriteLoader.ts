@@ -32,7 +32,7 @@ type AnimatedSpriteConfig = {
 };
 
 const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
-  [FxType.MiniFire]: {
+  ["MiniFire"]: {
     url: miniFire,
     frameWidth: 7,
     frameCount: 6,
@@ -41,7 +41,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 3,
     originY: 11,
   },
-  [FxType.MiniSmoke]: {
+  ["MiniSmoke"]: {
     url: miniSmoke,
     frameWidth: 11,
     frameCount: 4,
@@ -50,7 +50,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 2,
     originY: 10,
   },
-  [FxType.MiniBigSmoke]: {
+  ["MiniBigSmoke"]: {
     url: miniBigSmoke,
     frameWidth: 24,
     frameCount: 5,
@@ -59,7 +59,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 9,
     originY: 14,
   },
-  [FxType.MiniSmokeAndFire]: {
+  ["MiniSmokeAndFire"]: {
     url: miniSmokeAndFire,
     frameWidth: 24,
     frameCount: 5,
@@ -68,7 +68,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 9,
     originY: 14,
   },
-  [FxType.MiniExplosion]: {
+  ["MiniExplosion"]: {
     url: miniExplosion,
     frameWidth: 13,
     frameCount: 4,
@@ -77,7 +77,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 6,
     originY: 6,
   },
-  [FxType.Dust]: {
+  ["Dust"]: {
     url: dust,
     frameWidth: 9,
     frameCount: 3,
@@ -86,7 +86,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 4,
     originY: 5,
   },
-  [FxType.UnitExplosion]: {
+  ["UnitExplosion"]: {
     url: unitExplosion,
     frameWidth: 19,
     frameCount: 4,
@@ -95,7 +95,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 9,
     originY: 9,
   },
-  [FxType.BuildingExplosion]: {
+  ["BuildingExplosion"]: {
     url: buildingExplosion,
     frameWidth: 17,
     frameCount: 10,
@@ -104,7 +104,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 8,
     originY: 8,
   },
-  [FxType.SinkingShip]: {
+  ["SinkingShip"]: {
     url: sinkingShip,
     frameWidth: 16,
     frameCount: 14,
@@ -113,7 +113,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 7,
     originY: 7,
   },
-  [FxType.Nuke]: {
+  ["Nuke"]: {
     url: nuke,
     frameWidth: 60,
     frameCount: 9,
@@ -122,7 +122,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 30,
     originY: 30,
   },
-  [FxType.SAMExplosion]: {
+  ["SAMExplosion"]: {
     url: SAMExplosion,
     frameWidth: 48,
     frameCount: 9,
@@ -131,7 +131,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 23,
     originY: 19,
   },
-  [FxType.Conquest]: {
+  ["Conquest"]: {
     url: conquestSword,
     frameWidth: 21,
     frameCount: 10,
@@ -140,7 +140,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 10,
     originY: 16,
   },
-  [FxType.Santa]: {
+  ["Santa"]: {
     url: santa,
     frameWidth: 34,
     frameCount: 8,
@@ -149,7 +149,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 16,
     originY: 15,
   },
-  [FxType.Snowman]: {
+  ["Snowman"]: {
     url: snowman,
     frameWidth: 16,
     frameCount: 19,
@@ -158,7 +158,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 8,
     originY: 12,
   },
-  [FxType.HappyElf]: {
+  ["HappyElf"]: {
     url: happyElf,
     frameWidth: 7,
     frameCount: 5,
@@ -167,7 +167,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 3,
     originY: 7,
   },
-  [FxType.SadElf]: {
+  ["SadElf"]: {
     url: sadElf,
     frameWidth: 14,
     frameCount: 10,
@@ -176,7 +176,7 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 6,
     originY: 10,
   },
-  [FxType.Sparks]: {
+  ["Sparks"]: {
     url: sparks,
     frameWidth: 13,
     frameCount: 13,

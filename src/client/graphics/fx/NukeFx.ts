@@ -79,7 +79,7 @@ export function nukeFxFactory(
 ): Fx[] {
   const nukeFx: Fx[] = [];
   // Explosion animation
-  nukeFx.push(new SpriteFx(animatedSpriteLoader, x, y, FxType.Nuke));
+  nukeFx.push(new SpriteFx(animatedSpriteLoader, x, y, "Nuke"));
   // Shockwave animation
   nukeFx.push(new ShockwaveFx(x, y, 1500, radius * 1.5));
   // Ruins and desolation sprites
@@ -88,10 +88,10 @@ export function nukeFxFactory(
     radiusFactor: number;
     density: number;
   }> = [
-    { type: FxType.HappyElf, radiusFactor: 1.0, density: 1 / 25 },
-    { type: FxType.SadElf, radiusFactor: 1.0, density: 1 / 28 },
-    { type: FxType.MiniBigSmoke, radiusFactor: 0.9, density: 1 / 70 },
-    { type: FxType.Snowman, radiusFactor: 0.9, density: 1 / 70 },
+    { type: "HappyElf", radiusFactor: 1.0, density: 1 / 25 },
+    { type: "SadElf", radiusFactor: 1.0, density: 1 / 28 },
+    { type: "MiniBigSmoke", radiusFactor: 0.9, density: 1 / 70 },
+    { type: "Snowman", radiusFactor: 0.9, density: 1 / 70 },
   ];
 
   for (const { type, radiusFactor, density } of debrisPlan) {
