@@ -2,7 +2,7 @@ export type UIState = {
   attackRatio: number;
   nukePreview?: {
     active: boolean;
-    nukeType: string; // "Atom Bomb" | "Hydrogen Bomb" | "MIRV"
+    nukeType: string;
   };
-  nukeAnchorScreen?: { x: number; y: number }; // ← new
+  nukeAnchor?: { x: number; y: number };
 };

@@ -150,7 +150,7 @@ describe("RadialMenuElements", () => {
       uiState: {
         attackRatio: 1,
         nukePreview: undefined,
-        nukeAnchorScreen: undefined,
+        nukeAnchor: undefined,
       },
       closeMenu: jest.fn(),
     };

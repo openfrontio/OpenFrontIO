@@ -74,7 +74,6 @@ export class MainRadialMenu extends LitElement implements Layer {
   init() {
     this.radialMenu.init();
     this.eventBus.on(ContextMenuEvent, (event) => {
-      this.uiState.nukeAnchorScreen = { x: event.x, y: event.y };
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
@@ -86,6 +85,7 @@ export class MainRadialMenu extends LitElement implements Layer {
         return;
       }
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
+      this.uiState.nukeAnchor = { x: worldCoords.x, y: worldCoords.y };
       this.game
         .myPlayer()!
         .actions(this.clickedTile)

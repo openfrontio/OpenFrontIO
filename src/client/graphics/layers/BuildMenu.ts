@@ -153,8 +153,9 @@ export class BuildMenu extends LitElement implements Layer {
       if (!this.game.isValidCoord(clickedCell.x, clickedCell.y)) {
         return;
       }
+
       const tile = this.game.ref(clickedCell.x, clickedCell.y);
-      this.uiState.nukeAnchorScreen = { x: e.x, y: e.y };
+      this.uiState.nukeAnchor = { x: clickedCell.x, y: clickedCell.y };
       this.showMenu(tile);
     });
     this.eventBus.on(CloseViewEvent, () => this.hideMenu());
