@@ -34,6 +34,7 @@ import {
 import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import type { UIState } from "../UIState";
 
 export type BuildItemDisplay = {
   unitType: UnitType;
@@ -129,6 +130,7 @@ export class BuildMenu extends LitElement implements Layer {
   public playerActions: PlayerActions | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
+  public uiState!: UIState;
 
   init() {
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
@@ -151,6 +153,7 @@ export class BuildMenu extends LitElement implements Layer {
         return;
       }
       const tile = this.game.ref(clickedCell.x, clickedCell.y);
+      this.uiState.nukeAnchorScreen = { x: e.x, y: e.y };
       this.showMenu(tile);
     });
     this.eventBus.on(CloseViewEvent, () => this.hideMenu());
@@ -184,6 +187,13 @@ export class BuildMenu extends LitElement implements Layer {
       max-width: 95vw;
       max-height: 95vh;
       overflow-y: auto;
+      transition:
+        opacity 120ms ease,
+        background-color 120ms ease;
+    }
+    .build-menu.dim {
+      opacity: 0.55;
+      background-color: rgba(30, 30, 30, 0.75);
     }
     .build-description {
       font-size: 0.6rem;
@@ -354,7 +364,37 @@ export class BuildMenu extends LitElement implements Layer {
   `;
 
   @state()
+  private _dimForNuke = false;
   private _hidden = true;
+
+  private isNukeType(t: UnitType) {
+    return (
+      t === UnitType.AtomBomb ||
+      t === UnitType.HydrogenBomb ||
+      t === UnitType.MIRV
+    );
+  }
+
+  private onNukeHoverEnter = (unitType: UnitType) => {
+    if (!this.uiState) return;
+    if (!this.isNukeType(unitType)) return;
+
+    this._dimForNuke = true;
+    this.requestUpdate();
+
+    this.uiState.nukePreview = {
+      active: true,
+      nukeType: unitType,
+    };
+  };
+
+  private onNukeHoverLeave = () => {
+    if (this.uiState?.nukePreview?.active) {
+      this.uiState.nukePreview = undefined;
+    }
+    this._dimForNuke = false;
+    this.requestUpdate();
+  };
 
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerActions === null) {
@@ -403,7 +443,9 @@ export class BuildMenu extends LitElement implements Layer {
   render() {
     return html`
       <div
-        class="build-menu ${this._hidden ? "hidden" : ""}"
+        class="build-menu ${this._hidden ? "hidden" : ""} ${this._dimForNuke
+          ? "dim"
+          : ""}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         ${this.filteredBuildTable.map(
@@ -422,6 +464,11 @@ export class BuildMenu extends LitElement implements Layer {
                 return html`
                   <button
                     class="build-button"
+                    @pointerenter=${() =>
+                      this.isNukeType(item.unitType) &&
+                      this.onNukeHoverEnter(item.unitType)}
+                    @pointerleave=${() =>
+                      this.isNukeType(item.unitType) && this.onNukeHoverLeave()}
                     @click=${() =>
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
@@ -471,12 +518,15 @@ export class BuildMenu extends LitElement implements Layer {
 
   hideMenu() {
     this._hidden = true;
+    this._dimForNuke = false;
+    if (this.uiState) this.uiState.nukePreview = undefined;
     this.requestUpdate();
   }
 
   showMenu(clickedTile: TileRef) {
     this.clickedTile = clickedTile;
     this._hidden = false;
+    this._dimForNuke = false;
     this.refresh();
   }
 
