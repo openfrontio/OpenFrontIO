@@ -23,7 +23,7 @@ export class NukePreview implements Layer {
 
   renderLayer(ctx: CanvasRenderingContext2D): void {
     const p = this.ui.nukePreview;
-    const anchor = this.ui.nukeAnchorScreen;
+    const anchor = this.ui.nukeAnchor;
     if (!p?.active || p.nukeType === "MIRV" || !anchor) return;
 
     const { inner, outer } = this.game
@@ -34,8 +34,11 @@ export class NukePreview implements Layer {
     const rOuter = outer * s;
 
     const rect = this.transform.boundingRect();
-    const cx = anchor.x - rect.left;
-    const cy = anchor.y - rect.top;
+    const tl = this.transform.worldToScreenCoordinates(
+      new Cell(anchor.x, anchor.y),
+    );
+    const cx = tl.x - rect.left + this.transform.scale * 0.5;
+    const cy = tl.y - rect.top + this.transform.scale * 0.5;
 
     // freeze a deterministic seed per (type, anchor) so the band doesn't flicker
     const sig = `${p.nukeType}|${anchor.x}|${anchor.y}`;
@@ -64,12 +67,6 @@ export class NukePreview implements Layer {
     ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
     ctx.fill();
 
-    //  Accurate probabilistic band (≈ rand.chance(2))
-    const centerCell = this.transform.screenToWorldCoordinates(
-      anchor.x,
-      anchor.y,
-    );
-
     const h32 = (x: number) => {
       x ^= x >>> 16;
       x = Math.imul(x, 0x7feb352d);
@@ -89,9 +86,9 @@ export class NukePreview implements Layer {
     ctx.fillStyle = "rgba(220, 20, 60, 0.14)";
 
     for (let dy = -outer; dy <= outer; dy += tileStep) {
-      const y = centerCell.y + dy;
+      const y = anchor.y + dy;
       for (let dx = -outer; dx <= outer; dx += tileStep) {
-        const x = centerCell.x + dx;
+        const x = anchor.x + dx;
         const d2 = dx * dx + dy * dy;
         if (d2 > outer2) continue;
         if (d2 <= inner2 || rand01(x, y) < 0.5) {
