@@ -338,13 +338,14 @@ export class Cell {
   }
 }
 
-export enum TerrainType {
-  Plains,
-  Highland,
-  Mountain,
-  Lake,
-  Ocean,
-}
+export const TerrainTypeSchema = z.enum([
+  "Plains",
+  "Highland",
+  "Mountain",
+  "Lake",
+  "Ocean",
+]);
+export type TerrainType = z.infer<typeof TerrainTypeSchema>;
 
 export enum PlayerType {
   Bot = "BOT",

@@ -11,7 +11,6 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
-  TerrainType,
   TerraNullius,
   Tick,
   Trios,
@@ -645,15 +644,15 @@ export class DefaultConfig implements Config {
     let speed = 0;
     const type = gm.terrainType(tileToConquer);
     switch (type) {
-      case TerrainType.Plains:
+      case "Plains":
         mag = 80;
         speed = 16.5;
         break;
-      case TerrainType.Highland:
+      case "Highland":
         mag = 100;
         speed = 20;
         break;
-      case TerrainType.Mountain:
+      case "Mountain":
         mag = 120;
         speed = 25;
         break;

@@ -1,5 +1,4 @@
 import { Colord, colord } from "colord";
-import { TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PastelTheme } from "./PastelTheme";
 
@@ -24,8 +23,8 @@ export class PastelThemeDark extends PastelTheme {
       return this.darkShore;
     }
     switch (gm.terrainType(tile)) {
-      case TerrainType.Ocean:
-      case TerrainType.Lake: {
+      case "Ocean":
+      case "Lake": {
         const w = this.darkWater.rgba;
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.darkShorelineWater;
@@ -39,19 +38,19 @@ export class PastelThemeDark extends PastelTheme {
         }
         return this.darkWater;
       }
-      case TerrainType.Plains:
+      case "Plains":
         return colord({
           r: 140,
           g: 170 - 2 * mag,
           b: 88,
         });
-      case TerrainType.Highland:
+      case "Highland":
         return colord({
           r: 150 + 2 * mag,
           g: 133 + 2 * mag,
           b: 88 + 2 * mag,
         });
-      case TerrainType.Mountain:
+      case "Mountain":
         return colord({
           r: 180 + mag / 2,
           g: 180 + mag / 2,

@@ -7,7 +7,6 @@ import {
   Player,
   PlayerID,
   PlayerType,
-  TerrainType,
   TerraNullius,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
@@ -322,13 +321,13 @@ export class AttackExecution implements Execution {
 
       let mag = 0;
       switch (this.mg.terrainType(neighbor)) {
-        case TerrainType.Plains:
+        case "Plains":
           mag = 1;
           break;
-        case TerrainType.Highland:
+        case "Highland":
           mag = 1.5;
           break;
-        case TerrainType.Mountain:
+        case "Mountain":
           mag = 2;
           break;
       }
