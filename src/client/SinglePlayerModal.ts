@@ -49,7 +49,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private useRandomMap: boolean = false;
-  @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private gameMode: GameMode = "Free For All";
   @state() private teamCount: TeamCountConfig = 2;
 
   @state() private disabledUnits: UnitType[] = [];
@@ -165,20 +165,20 @@ export class SinglePlayerModal extends LitElement {
             <div class="option-title">${translateText("host_modal.mode")}</div>
             <div class="option-cards">
               <div
-                class="option-card ${this.gameMode === GameMode.FFA
+                class="option-card ${this.gameMode === "Free For All"
                   ? "selected"
                   : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+                @click=${() => this.handleGameModeSelection("Free For All")}
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.ffa")}
                 </div>
               </div>
               <div
-                class="option-card ${this.gameMode === GameMode.Team
+                class="option-card ${this.gameMode === "Team"
                   ? "selected"
                   : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+                @click=${() => this.handleGameModeSelection("Team")}
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.teams")}
@@ -187,7 +187,7 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
-          ${this.gameMode === GameMode.FFA
+          ${this.gameMode === "Free For All"
             ? ""
             : html`
                 <!-- Team Count Selection -->
@@ -255,8 +255,7 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               ${!(
-                this.gameMode === GameMode.Team &&
-                this.teamCount === HumansVsNations
+                this.gameMode === "Team" && this.teamCount === HumansVsNations
               )
                 ? html`
                     <label
@@ -590,8 +589,7 @@ export class SinglePlayerModal extends LitElement {
               disabledUnits: this.disabledUnits
                 .map((u) => UnitTypeSchema.options.find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
-              ...(this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations
+              ...(this.gameMode === "Team" && this.teamCount === HumansVsNations
                 ? {
                     disableNations: false,
                   }

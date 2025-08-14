@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { GameMode, Team } from "../../../core/game/Game";
+import { Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -44,7 +44,7 @@ export class SpawnTimer extends LitElement implements Layer {
     this.ratios = [];
     this.colors = [];
 
-    if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+    if (this.game.config().gameConfig().gameMode !== "Team") {
       this.requestUpdate();
       return;
     }
@@ -87,7 +87,7 @@ export class SpawnTimer extends LitElement implements Layer {
 
     if (
       !this.game.inSpawnPhase() &&
-      this.game.config().gameConfig().gameMode !== GameMode.Team
+      this.game.config().gameConfig().gameMode !== "Team"
     ) {
       return html``;
     }

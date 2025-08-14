@@ -12,7 +12,7 @@ import {
   Duos,
   GameMapSize,
   GameMapTypeSchema,
-  GameMode,
+  GameModeSchema,
   GameType,
   HumansVsNations,
   Quads,
@@ -162,7 +162,7 @@ export const GameConfigSchema = z.object({
   donateGold: z.boolean(), // Configures donations to humans only
   donateTroops: z.boolean(), // Configures donations to humans only
   gameType: z.enum(GameType),
-  gameMode: z.enum(GameMode),
+  gameMode: GameModeSchema,
   gameMapSize: z.enum(GameMapSize),
   disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),

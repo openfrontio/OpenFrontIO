@@ -1,5 +1,4 @@
 import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution";
-import { GameMode } from "../../../src/core/game/Game";
 import { setup } from "../../util/Setup";
 
 describe("WinCheckExecution", () => {
@@ -9,7 +8,7 @@ describe("WinCheckExecution", () => {
   beforeEach(async () => {
     mg = await setup("big_plains", {
       infiniteGold: true,
-      gameMode: GameMode.FFA,
+      gameMode: "Free For All",
       maxTimerValue: 5,
       instantBuild: true,
     });
@@ -28,7 +27,7 @@ describe("WinCheckExecution", () => {
     mg.config = jest.fn(() => ({
       gameConfig: jest.fn(() => ({
         maxTimerValue: 5,
-        gameMode: GameMode.Team,
+        gameMode: "Team",
       })),
       percentageTilesOwnedToWin: jest.fn(() => 50),
     }));

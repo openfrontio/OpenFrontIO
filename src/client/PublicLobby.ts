@@ -125,7 +125,7 @@ export class PublicLobby extends LitElement {
     const timeDisplay = renderDuration(timeRemaining);
 
     const teamCount =
-      lobby.gameConfig.gameMode === GameMode.Team
+      lobby.gameConfig.gameMode === "Team"
         ? (lobby.gameConfig.playerTeams ?? 0)
         : null;
 
@@ -240,7 +240,7 @@ export class PublicLobby extends LitElement {
     teamCount: number | string | null,
     teamTotal: number | undefined,
   ): string {
-    if (gameMode !== GameMode.Team) return translateText("game_mode.ffa");
+    if (gameMode !== "Team") return translateText("game_mode.ffa");
     if (teamCount === HumansVsNations)
       return translateText("public_lobby.teams_hvn");
     const totalTeams =
@@ -254,7 +254,7 @@ export class PublicLobby extends LitElement {
     teamTotal: number | undefined,
     teamSize: number | undefined,
   ): string | null {
-    if (gameMode !== GameMode.Team) return null;
+    if (gameMode !== "Team") return null;
 
     if (typeof teamCount === "string" && teamCount !== HumansVsNations) {
       const teamKey = `public_lobby.teams_${teamCount}`;

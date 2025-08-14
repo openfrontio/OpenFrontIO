@@ -1,7 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerGame } from "../../../../core/ApiSchemas";
-import { GameMode } from "../../../../core/game/Game";
 import { GameInfoModal } from "../../../GameInfoModal";
 import { translateText } from "../../../Utils";
 
@@ -93,7 +92,7 @@ export class GameList extends LitElement {
                     </div>
                     <div class="subtle">
                       ${translateText("game_list.mode")}:
-                      ${game.mode === GameMode.FFA
+                      ${game.mode === "Free For All"
                         ? translateText("game_list.mode_ffa")
                         : html`${translateText("game_list.mode_team")}`}
                     </div>
@@ -137,7 +136,7 @@ export class GameList extends LitElement {
                     <span class="title" style="font-size:0.75rem;"
                       >${translateText("game_list.mode")}:</span
                     >
-                    ${game.mode === GameMode.FFA
+                    ${game.mode === "Free For All"
                       ? translateText("game_list.mode_ffa")
                       : translateText("game_list.mode_team")}
                   </div>

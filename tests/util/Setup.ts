@@ -3,7 +3,6 @@ import path from "path";
 import {
   Game,
   GameMapSize,
-  GameMode,
   GameType,
   PlayerInfo,
   PlayerType,
@@ -56,7 +55,7 @@ export async function setup(
   const gameConfig: GameConfig = {
     gameMap: "Asia",
     gameMapSize: GameMapSize.Normal,
-    gameMode: GameMode.FFA,
+    gameMode: "Free For All",
     gameType: GameType.Singleplayer,
     difficulty: "Medium",
     disableNations: false,

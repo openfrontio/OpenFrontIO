@@ -3,13 +3,7 @@ import { MarkDisconnectedExecution } from "../src/core/execution/MarkDisconnecte
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import {
-  Game,
-  GameMode,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { GameID } from "../src/core/Schemas";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
@@ -195,7 +189,7 @@ describe("Disconnected", () => {
         {
           infiniteGold: true,
           instantBuild: true,
-          gameMode: GameMode.Team,
+          gameMode: "Team",
           playerTeams: 2, // ignore player2 "kicked" console warn
         },
         [player1Info, player2Info],

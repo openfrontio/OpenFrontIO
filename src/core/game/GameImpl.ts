@@ -13,7 +13,6 @@ import {
   EmojiMessage,
   Execution,
   Game,
-  GameMode,
   GameUpdates,
   HumansVsNations,
   MessageType,
@@ -98,7 +97,7 @@ export class GameImpl implements Game {
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
 
-    if (_config.gameConfig().gameMode === GameMode.Team) {
+    if (_config.gameConfig().gameMode === "Team") {
       this.populateTeams();
     }
     this.addPlayers();
@@ -147,7 +146,7 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    if (this.config().gameConfig().gameMode === GameMode.FFA) {
+    if (this.config().gameConfig().gameMode === "Free For All") {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
@@ -459,7 +458,7 @@ export class GameImpl implements Game {
   }
 
   private maybeAssignTeam(player: PlayerInfo): Team | null {
-    if (this._config.gameConfig().gameMode !== GameMode.Team) {
+    if (this._config.gameConfig().gameMode !== "Team") {
       return null;
     }
     if (player.playerType === PlayerType.Bot) {
@@ -707,7 +706,7 @@ export class GameImpl implements Game {
   }
 
   teams(): Team[] {
-    if (this._config.gameConfig().gameMode !== GameMode.Team) {
+    if (this._config.gameConfig().gameMode !== "Team") {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];

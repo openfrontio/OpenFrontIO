@@ -18,7 +18,7 @@ import "./PlayerStatsTable";
 export class PlayerStatsTreeView extends LitElement {
   @property({ type: Object }) statsTree?: PlayerStatsTree;
   @state() selectedType: GameType = GameType.Public;
-  @state() selectedMode: GameMode = GameMode.FFA;
+  @state() selectedMode: GameMode = "Free For All";
   @state() selectedDifficulty: Difficulty = "Medium";
 
   private get availableTypes(): GameType[] {
@@ -40,7 +40,7 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private labelForMode(m: GameMode) {
-    return m === GameMode.FFA
+    return m === "Free For All"
       ? translateText("player_stats_tree.mode_ffa")
       : translateText("player_stats_tree.mode_team");
   }

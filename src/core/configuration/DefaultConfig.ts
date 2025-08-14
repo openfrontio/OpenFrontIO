@@ -193,7 +193,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
-    let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
+    let p = Math.min(mode === "Team" ? Math.ceil(base * 1.5) : base, l);
     if (numPlayerTeams === undefined) return p;
     switch (numPlayerTeams) {
       case Duos:
@@ -611,7 +611,7 @@ export class DefaultConfig implements Config {
   }
 
   percentageTilesOwnedToWin(): number {
-    if (this._gameConfig.gameMode === GameMode.Team) {
+    if (this._gameConfig.gameMode === "Team") {
       return 95;
     }
     return 80;

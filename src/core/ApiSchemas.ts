@@ -4,7 +4,7 @@ import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
 import {
   DifficultySchema,
   GameMapTypeSchema,
-  GameMode,
+  GameModeSchema,
   GameType,
 } from "./game/Game";
 
@@ -71,7 +71,7 @@ export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 export const PlayerStatsTreeSchema = z.partialRecord(
   z.enum(GameType),
   z.partialRecord(
-    z.enum(GameMode),
+    GameModeSchema,
     z.partialRecord(DifficultySchema, PlayerStatsLeafSchema),
   ),
 );
@@ -80,7 +80,7 @@ export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 export const PlayerGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
-  mode: z.enum(GameMode),
+  mode: GameModeSchema,
   type: z.enum(GameType),
   map: GameMapTypeSchema,
   difficulty: DifficultySchema,

@@ -1,7 +1,7 @@
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { ServerConfig } from "../core/configuration/Config";
-import { GameMapSize, GameMode, GameType } from "../core/game/Game";
+import { GameMapSize, GameType } from "../core/game/Game";
 import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
@@ -65,7 +65,7 @@ export class GameManager {
         maxTimerValue: undefined,
         instantBuild: false,
         randomSpawn: false,
-        gameMode: GameMode.FFA,
+        gameMode: "Free For All",
         bots: 400,
         disabledUnits: [],
         ...gameConfig,

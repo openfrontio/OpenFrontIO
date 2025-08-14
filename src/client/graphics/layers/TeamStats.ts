@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, Team } from "../../../core/game/Game";
+import { Team } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderNumber, renderTroops, translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -38,7 +38,7 @@ export class TeamStats extends LitElement implements Layer {
   init() {}
 
   tick() {
-    if (this.game.config().gameConfig().gameMode !== GameMode.Team) return;
+    if (this.game.config().gameConfig().gameMode !== "Team") return;
 
     if (!this._shownOnInit && !this.game.inSpawnPhase()) {
       this._shownOnInit = true;

@@ -2,7 +2,7 @@ import {
   Ranking,
   RankType,
 } from "../src/client/components/baseComponents/ranking/GameInfoRanking";
-import { GameMapSize, GameMode, GameType } from "../src/core/game/Game";
+import { GameMapSize, GameType } from "../src/core/game/Game";
 import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
@@ -17,7 +17,7 @@ describe("Ranking class", () => {
     donateGold: false,
     donateTroops: false,
     gameType: GameType.Public,
-    gameMode: GameMode.FFA,
+    gameMode: "Free For All",
     gameMapSize: GameMapSize.Normal,
     disableNations: true,
     bots: 0,

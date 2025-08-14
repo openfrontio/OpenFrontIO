@@ -165,12 +165,10 @@ export enum GameType {
 export const isGameType = (value: unknown): value is GameType =>
   isEnumValue(GameType, value);
 
-export enum GameMode {
-  FFA = "Free For All",
-  Team = "Team",
-}
+export const GameModeSchema = z.enum(["Free For All", "Team"]);
+export type GameMode = z.infer<typeof GameModeSchema>;
 export const isGameMode = (value: unknown): value is GameMode =>
-  isEnumValue(GameMode, value);
+  GameModeSchema.safeParse(value).success;
 
 export enum GameMapSize {
   Compact = "Compact",

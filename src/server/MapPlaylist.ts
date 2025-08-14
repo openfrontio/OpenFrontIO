@@ -81,13 +81,12 @@ export class MapPlaylist {
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
-    const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount() : undefined;
+    const playerTeams = mode === "Team" ? this.getTeamCount() : undefined;
 
     // Create the default public game config (from your GameManager)
     return {
-      donateGold: mode === GameMode.Team,
-      donateTroops: mode === GameMode.Team,
+      donateGold: mode === "Team",
+      donateTroops: mode === "Team",
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
@@ -98,7 +97,7 @@ export class MapPlaylist {
       maxTimerValue: undefined,
       instantBuild: false,
       randomSpawn: false,
-      disableNations: mode === GameMode.Team && playerTeams !== HumansVsNations,
+      disableNations: mode === "Team" && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
       bots: 400,
@@ -141,15 +140,15 @@ export class MapPlaylist {
 
     this.mapsPlaylist = [];
     for (let i = 0; i < maps.length; i++) {
-      if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
+      if (!this.addNextMap(this.mapsPlaylist, ffa1, "Free For All")) {
         return false;
       }
       if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team1, GameMode.Team)) {
+        if (!this.addNextMap(this.mapsPlaylist, team1, "Team")) {
           return false;
         }
       }
-      if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
+      if (!this.addNextMap(this.mapsPlaylist, ffa2, "Free For All")) {
         return false;
       }
     }

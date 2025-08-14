@@ -41,7 +41,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedMap: GameMapType = "World";
   @state() private selectedDifficulty: Difficulty = "Medium";
   @state() private disableNations = false;
-  @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private gameMode: GameMode = "Free For All";
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -260,16 +260,16 @@ export class HostLobbyModal extends LitElement {
             <div class="option-title">${translateText("host_modal.mode")}</div>
             <div class="option-cards">
               <div
-                class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+                class="option-card ${this.gameMode === "Free For All" ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection("Free For All")}
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.ffa")}
                 </div>
               </div>
               <div
-                class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+                class="option-card ${this.gameMode === "Team" ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection("Team")}
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.teams")}
@@ -279,7 +279,7 @@ export class HostLobbyModal extends LitElement {
           </div>
 
           ${
-            this.gameMode === GameMode.FFA
+            this.gameMode === "Free For All"
               ? ""
               : html`
                   <!-- Team Count Selection -->
@@ -352,7 +352,7 @@ export class HostLobbyModal extends LitElement {
 
                 ${
                   !(
-                    this.gameMode === GameMode.Team &&
+                    this.gameMode === "Team" &&
                     this.teamCount === HumansVsNations
                   )
                     ? html`
@@ -775,8 +775,7 @@ export class HostLobbyModal extends LitElement {
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
-          ...(this.gameMode === GameMode.Team &&
-          this.teamCount === HumansVsNations
+          ...(this.gameMode === "Team" && this.teamCount === HumansVsNations
             ? {
                 disableNations: false,
               }
