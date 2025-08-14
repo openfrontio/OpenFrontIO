@@ -392,8 +392,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: this.costWrapper(UnitType.Warship, (numUnits: number) =>
-            Math.min(1_000_000, (numUnits + 1) * 250_000),
+          cost: this.costWrapper(
+            (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 250_000),
+            UnitType.Warship,
           ),
           territoryBound: false,
           maxHealth: 1000,
@@ -411,8 +412,11 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Port:
         return {
-          cost: this.costWrapper(UnitType.Port, (numUnits: number) =>
-            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UnitType.Port,
+            UnitType.Factory,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -421,17 +425,17 @@ export class DefaultConfig implements Config {
         };
       case UnitType.AtomBomb:
         return {
-          cost: this.costWrapper(UnitType.AtomBomb, () => 750_000),
+          cost: this.costWrapper(() => 750_000, UnitType.AtomBomb),
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: this.costWrapper(UnitType.HydrogenBomb, () => 5_000_000),
+          cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
-          cost: this.costWrapper(UnitType.MIRV, () => 35_000_000),
+          cost: this.costWrapper(() => 35_000_000, UnitType.MIRV),
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -446,23 +450,26 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: this.costWrapper(UnitType.MissileSilo, () => 1_000_000),
+          cost: this.costWrapper(() => 1_000_000, UnitType.MissileSilo),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
       case UnitType.DefensePost:
         return {
-          cost: this.costWrapper(UnitType.DefensePost, (numUnits: number) =>
-            Math.min(250_000, (numUnits + 1) * 50_000),
+          cost: this.costWrapper(
+            (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
+            UnitType.DefensePost,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.SAMLauncher:
         return {
-          cost: this.costWrapper(UnitType.SAMLauncher, (numUnits: number) =>
-            Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+            UnitType.SAMLauncher,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
@@ -470,8 +477,10 @@ export class DefaultConfig implements Config {
         };
       case UnitType.City:
         return {
-          cost: this.costWrapper(UnitType.City, (numUnits: number) =>
-            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UnitType.City,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -480,8 +489,11 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Factory:
         return {
-          cost: this.costWrapper(UnitType.Factory, (numUnits: number) =>
-            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UnitType.Factory,
+            UnitType.Port,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -506,14 +518,18 @@ export class DefaultConfig implements Config {
   }
 
   private costWrapper(
-    type: UnitType,
     costFn: (units: number) => number,
+    ...types: UnitType[]
   ): (p: Player) => bigint {
     return (p: Player) => {
       if (p.type() === PlayerType.Human && this.infiniteGold()) {
         return 0n;
       }
-      const numUnits = Math.min(p.unitsOwned(type), p.unitsConstructed(type));
+      const numUnits = types.reduce(
+        (acc, type) =>
+          acc + Math.min(p.unitsOwned(type), p.unitsConstructed(type)),
+        0,
+      );
       return BigInt(costFn(numUnits));
     };
   }
