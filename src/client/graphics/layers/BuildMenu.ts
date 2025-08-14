@@ -465,14 +465,15 @@ export class BuildMenu extends LitElement implements Layer {
                 return html`
                   <button
                     class="build-button"
+                    ?disabled=${!enabled}
                     @pointerenter=${() =>
                       this.isNukeType(item.unitType) &&
+                      enabled &&
                       this.onNukeHoverEnter(item.unitType)}
                     @pointerleave=${() =>
                       this.isNukeType(item.unitType) && this.onNukeHoverLeave()}
                     @click=${() =>
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
-                    ?disabled=${!enabled}
                     title=${!enabled
                       ? translateText("build_menu.not_enough_money")
                       : ""}
