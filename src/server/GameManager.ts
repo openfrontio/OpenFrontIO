@@ -1,7 +1,7 @@
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { ServerConfig } from "../core/configuration/Config";
-import { GameMapSize, GameType } from "../core/game/Game";
+import { GameMapSize } from "../core/game/Game";
 import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
@@ -56,7 +56,7 @@ export class GameManager {
         donateGold: false,
         donateTroops: false,
         gameMap: "World",
-        gameType: GameType.Private,
+        gameType: "Private",
         gameMapSize: GameMapSize.Normal,
         difficulty: "Medium",
         disableNations: false,

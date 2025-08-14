@@ -13,7 +13,7 @@ import {
   GameMapSize,
   GameMapTypeSchema,
   GameModeSchema,
-  GameType,
+  GameTypeSchema,
   HumansVsNations,
   Quads,
   Trios,
@@ -161,7 +161,7 @@ export const GameConfigSchema = z.object({
   difficulty: DifficultySchema,
   donateGold: z.boolean(), // Configures donations to humans only
   donateTroops: z.boolean(), // Configures donations to humans only
-  gameType: z.enum(GameType),
+  gameType: GameTypeSchema,
   gameMode: GameModeSchema,
   gameMapSize: z.enum(GameMapSize),
   disableNations: z.boolean(),

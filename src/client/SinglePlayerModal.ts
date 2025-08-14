@@ -10,7 +10,6 @@ import {
   GameMapType,
   GameMapTypeSchema,
   GameMode,
-  GameType,
   HumansVsNations,
   Quads,
   Trios,
@@ -574,7 +573,7 @@ export class SinglePlayerModal extends LitElement {
               gameMapSize: this.compactMap
                 ? GameMapSize.Compact
                 : GameMapSize.Normal,
-              gameType: GameType.Singleplayer,
+              gameType: "Singleplayer",
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,

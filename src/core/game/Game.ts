@@ -157,13 +157,10 @@ export const mapCategories: Record<string, GameMapType[]> = {
   ],
 };
 
-export enum GameType {
-  Singleplayer = "Singleplayer",
-  Public = "Public",
-  Private = "Private",
-}
+export const GameTypeSchema = z.enum(["Singleplayer", "Public", "Private"]);
+export type GameType = z.infer<typeof GameTypeSchema>;
 export const isGameType = (value: unknown): value is GameType =>
-  isEnumValue(GameType, value);
+  GameTypeSchema.safeParse(value).success;
 
 export const GameModeSchema = z.enum(["Free For All", "Team"]);
 export type GameMode = z.infer<typeof GameModeSchema>;
@@ -207,10 +204,8 @@ export const UnitTypeSchema = z.enum([
 ]);
 export type UnitType = z.infer<typeof UnitTypeSchema>;
 
-export enum TrainType {
-  Engine = "Engine",
-  Carriage = "Carriage",
-}
+export const TrainTypeSchema = z.enum(["Engine", "Carriage"]);
+export type TrainType = z.infer<typeof TrainTypeSchema>;
 
 const _structureTypes: ReadonlySet<UnitType> = new Set([
   "City",

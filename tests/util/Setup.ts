@@ -3,7 +3,6 @@ import path from "path";
 import {
   Game,
   GameMapSize,
-  GameType,
   PlayerInfo,
   PlayerType,
 } from "../../src/core/game/Game";
@@ -56,7 +55,7 @@ export async function setup(
     gameMap: "Asia",
     gameMapSize: GameMapSize.Normal,
     gameMode: "Free For All",
-    gameType: GameType.Singleplayer,
+    gameType: "Singleplayer",
     difficulty: "Medium",
     disableNations: false,
     donateGold: false,

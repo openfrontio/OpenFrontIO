@@ -2,7 +2,6 @@ import { z } from "zod";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
-  GameType,
   Gold,
   PlayerID,
   Tick,
@@ -194,7 +193,7 @@ export class Transport {
     // For multiplayer games, GameConfig is not known until game starts.
     this.isLocal =
       lobbyConfig.gameRecord !== undefined ||
-      lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
+      lobbyConfig.gameStartInfo?.config.gameType === "Singleplayer";
 
     this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),

@@ -1,4 +1,4 @@
-import { Execution, Game, Player, TrainType, Unit } from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { RailNetwork } from "../game/RailNetwork";
 import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
@@ -100,19 +100,19 @@ export class TrainExecution implements Execution {
   private createTrainUnits(tile: TileRef): Unit {
     const train = this.player.buildUnit("Train", tile, {
       targetUnit: this.destination.unit,
-      trainType: TrainType.Engine,
+      trainType: "Engine",
     });
     // Tail is also an engine, just for cosmetics
     this.cars.push(
       this.player.buildUnit("Train", tile, {
         targetUnit: this.destination.unit,
-        trainType: TrainType.Engine,
+        trainType: "Engine",
       }),
     );
     for (let i = 0; i < this.numCars; i++) {
       this.cars.push(
         this.player.buildUnit("Train", tile, {
-          trainType: TrainType.Carriage,
+          trainType: "Carriage",
           loaded: this.hasCargo,
         }),
       );
