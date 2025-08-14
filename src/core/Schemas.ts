@@ -189,7 +189,7 @@ export const ID = z
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = SafeString;
-const countryCodes = countries.map((c) => c.code);
+const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 export const FlagSchema = z
   .string()
   .max(128)
