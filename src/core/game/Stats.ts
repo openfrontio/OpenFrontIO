@@ -6,6 +6,28 @@ export type Stats = {
   getPlayerStats(player: Player): PlayerStats | null;
   stats(): AllPlayersStats;
 
+  // Player broadcasts an emoji to all players
+  actionBroadcastEmoji(player: Player): void;
+
+  // Player sends an emoji to another player
+  actionSendEmoji(player: Player, target: Player): void;
+
+  // Player sends gold to another player
+  actionSendGold(player: Player, target: Player, gold: number | bigint): void;
+
+  // Player sends a quick chat to another player
+  actionSendQuickChat(player: Player, target: Player): void;
+
+  // Player targets another player
+  actionSendTarget(player: Player, target: Player): void;
+
+  // Player sends troops to another player
+  actionSendTroops(
+    player: Player,
+    target: Player,
+    troops: number | bigint,
+  ): void;
+
   // Player attacks target
   attack(
     player: Player,
@@ -72,6 +94,13 @@ export type Stats = {
 
   // Player's SAM intercepts a bomb from attacker
   bombIntercept(player: Player, type: NukeType, count: number | bigint): void;
+
+  // Player conquers a bot, nation, or player
+  conquer(
+    player: Player,
+    target: Player,
+    method?: "elimination" | "encirclement",
+  ): void;
 
   // Player earns gold from conquering tiles or trade ships from captured
   goldWar(player: Player, captured: Player, gold: number | bigint): void;

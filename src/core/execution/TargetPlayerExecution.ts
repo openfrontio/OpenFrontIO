@@ -2,6 +2,7 @@ import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class TargetPlayerExecution implements Execution {
   private target: Player;
+  private mg: Game;
 
   private active = true;
 
@@ -11,6 +12,8 @@ export class TargetPlayerExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    this.mg = mg;
+
     if (!mg.hasPlayer(this.targetID)) {
       console.warn(`TargetPlayerExecution: target ${this.targetID} not found`);
       this.active = false;
@@ -23,6 +26,7 @@ export class TargetPlayerExecution implements Execution {
   tick(ticks: number): void {
     if (this.requestor.canTarget(this.target)) {
       this.requestor.target(this.target);
+      this.mg.stats().actionSendTarget(this.requestor, this.target);
       this.target.updateRelation(this.requestor, -40);
     }
     this.active = false;

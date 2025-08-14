@@ -5,6 +5,8 @@ export class DonateGoldExecution implements Execution {
 
   private active = true;
 
+  private mg: Game;
+
   constructor(
     private sender: Player,
     private recipientID: PlayerID,
@@ -20,6 +22,8 @@ export class DonateGoldExecution implements Execution {
 
     this.recipient = mg.player(this.recipientID);
     this.gold ??= this.sender.gold() / 3n;
+
+    this.mg = mg;
   }
 
   tick(ticks: number): void {
@@ -28,6 +32,8 @@ export class DonateGoldExecution implements Execution {
       this.sender.canDonateGold(this.recipient) &&
       this.sender.donateGold(this.recipient, this.gold)
     ) {
+      // stats for donated gold
+      this.mg.stats().actionSendGold(this.sender, this.recipient, this.gold);
       this.recipient.updateRelation(this.sender, 50);
     } else {
       console.warn(

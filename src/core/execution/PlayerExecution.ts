@@ -200,6 +200,9 @@ export class PlayerExecution implements Execution {
 
     if (this.player.numTilesOwned() === tiles.size) {
       this.mg.conquerPlayer(capturing, this.player);
+
+      // Record stats for a conquered player by encirclement
+      this.mg.stats().conquer(capturing, this.player, "encirclement");
     }
 
     for (const tile of tiles) {

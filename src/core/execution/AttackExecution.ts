@@ -353,6 +353,9 @@ export class AttackExecution implements Execution {
 
     this.mg.conquerPlayer(this._owner, this.target);
 
+    // Record stats for a conquered player by elimination
+    this.mg.stats().conquer(this._owner, this.target, "elimination");
+
     for (let i = 0; i < 10; i++) {
       for (const tile of this.target.tiles()) {
         const borders = this.mg

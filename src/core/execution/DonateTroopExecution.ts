@@ -5,6 +5,8 @@ export class DonateTroopsExecution implements Execution {
 
   private active = true;
 
+  private mg: Game;
+
   constructor(
     private sender: Player,
     private recipientID: PlayerID,
@@ -23,6 +25,8 @@ export class DonateTroopsExecution implements Execution {
     const maxDonation =
       mg.config().maxTroops(this.recipient) - this.recipient.troops();
     this.troops = Math.min(this.troops, maxDonation);
+
+    this.mg = mg;
   }
 
   tick(ticks: number): void {
@@ -31,6 +35,10 @@ export class DonateTroopsExecution implements Execution {
       this.sender.canDonateTroops(this.recipient) &&
       this.sender.donateTroops(this.recipient, this.troops)
     ) {
+      // stats for donated troops (uses backend # and not UI)
+      this.mg
+        .stats()
+        .actionSendTroops(this.sender, this.recipient, this.troops);
       this.recipient.updateRelation(this.sender, 50);
     } else {
       console.warn(

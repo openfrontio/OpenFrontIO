@@ -13,6 +13,8 @@ export class EmojiExecution implements Execution {
 
   private active = true;
 
+  private mg: Game;
+
   constructor(
     private requestor: Player,
     private recipientID: PlayerID | typeof AllPlayers,
@@ -30,6 +32,8 @@ export class EmojiExecution implements Execution {
       this.recipientID === AllPlayers
         ? AllPlayers
         : mg.player(this.recipientID);
+
+    this.mg = mg;
   }
 
   tick(ticks: number): void {
@@ -40,6 +44,15 @@ export class EmojiExecution implements Execution {
       );
     } else if (this.requestor.canSendEmoji(this.recipient)) {
       this.requestor.sendEmoji(this.recipient, emojiString);
+
+      if (this.recipient === AllPlayers) {
+        // track a broadcast
+        this.mg.stats().actionBroadcastEmoji(this.requestor);
+      } else {
+        // track a DM
+        this.mg.stats().actionSendEmoji(this.requestor, this.recipient);
+      }
+
       if (
         emojiString === "🖕" &&
         this.recipient !== AllPlayers &&

@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { UnitType } from "./game/Game";
 
+export const ActionSchema = z.union([
+  z.literal("emoji"),
+  z.literal("gold"),
+  z.literal("quickchat"),
+  z.literal("target"),
+  z.literal("troops"),
+]);
+export type Action = z.infer<typeof ActionSchema>;
+
 export const BombUnitSchema = z.union([
   z.literal("abomb"),
   z.literal("hbomb"),
@@ -59,6 +68,14 @@ export const unitTypeToOtherUnit = {
   [UnitType.Factory]: "fact",
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
+export const ConqueredPlayerTypeSchema = z.enum(["bot", "nation", "human"]);
+export type ConqueredPlayerType = z.infer<typeof ConqueredPlayerTypeSchema>;
+
+// Targeted actions
+export const ACTION_INDEX_SENT = 0; // Targeted actions sent
+export const ACTION_INDEX_RECV = 1; // Targeted actions received
+export const ACTION_INDEX_BROADCAST = 2; // Emojis broadcast
+
 // Attacks
 export const ATTACK_INDEX_SENT = 0; // Outgoing attack troops
 export const ATTACK_INDEX_RECV = 1; // Incmoing attack troops
@@ -74,6 +91,10 @@ export const BOAT_INDEX_DESTROY = 3; // Boats destroyed
 export const BOMB_INDEX_LAUNCH = 0; // Bombs launched
 export const BOMB_INDEX_LAND = 1; // Bombs landed
 export const BOMB_INDEX_INTERCEPT = 2; // Bombs intercepted
+
+// Conquers
+export const CONQUER_INDEX_ELIMINATION = 0; // Elimination by attacking
+export const CONQUER_INDEX_ENCIRCLEMENT = 1; // Encirclement capture
 
 // Gold
 export const GOLD_INDEX_WORK = 0; // Gold earned by workers
@@ -99,10 +120,14 @@ export type AtLeastOneNumber = z.infer<typeof AtLeastOneNumberSchema>;
 
 export const PlayerStatsSchema = z
   .object({
+    actions: z.partialRecord(ActionSchema, AtLeastOneNumberSchema).optional(),
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
     boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
+    conquered: z
+      .partialRecord(ConqueredPlayerTypeSchema, AtLeastOneNumberSchema)
+      .optional(),
     gold: AtLeastOneNumberSchema.optional(),
     units: z.partialRecord(OtherUnitSchema, AtLeastOneNumberSchema).optional(),
   })
