@@ -484,7 +484,8 @@
   {
     "code": "Confederate States",
     "continent": "North America",
-    "name": "Confederate States"
+    "name": "Confederate States",
+    "restricted": true
   },
   {
     "code": "1_Connacht",
@@ -702,7 +703,8 @@
   {
     "code": "Fascist Spain",
     "continent": "Europe",
-    "name": "Fascist Spain"
+    "name": "Fascist Spain",
+    "restricted": true
   },
   {
     "code": "fm",
@@ -805,7 +807,8 @@
   {
     "code": "German Empire",
     "continent": "Europe",
-    "name": "German Empire"
+    "name": "German Empire",
+    "restricted": true
   },
   {
     "code": "de",

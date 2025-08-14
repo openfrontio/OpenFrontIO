@@ -29,9 +29,7 @@ export class FlagInputModal extends LitElement {
           class="flex flex-wrap justify-evenly gap-[1rem] overflow-y-auto overflow-x-hidden h-[90%]"
         >
           ${Countries.filter(
-            (country) =>
-              country.name.toLowerCase().includes(this.search.toLowerCase()) ||
-              country.code.toLowerCase().includes(this.search.toLowerCase()),
+            (country) => !country.restricted && this.includedInSearch(country),
           ).map(
             (country) => html`
               <button
@@ -62,6 +60,13 @@ export class FlagInputModal extends LitElement {
         </div>
       </o-modal>
     `;
+  }
+
+  private includedInSearch(country: { name: string; code: string }): boolean {
+    return (
+      country.name.toLowerCase().includes(this.search.toLowerCase()) ||
+      country.code.toLowerCase().includes(this.search.toLowerCase())
+    );
   }
 
   private handleSearch(event: Event) {
