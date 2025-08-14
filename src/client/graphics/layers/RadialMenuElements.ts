@@ -418,7 +418,9 @@ function createMenuElements(
         }
       },
       onHoverLeave: (p: MenuElementParams) => {
-        if (p.uiState.nukePreview?.active) {
+        if (!isNukeType(item.unitType)) return;
+        const current = p.uiState.nukePreview;
+        if (current?.active && current.nukeType === item.unitType) {
           p.uiState.nukePreview = undefined;
         }
       },
