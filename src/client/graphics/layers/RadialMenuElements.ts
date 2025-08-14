@@ -59,7 +59,7 @@ export type MenuElement = {
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
   onHoverEnter?: (p: MenuElementParams) => void;
   onHoverLeave?: (p: MenuElementParams) => void;
-}
+};
 
 export type TooltipKey = {
   key: string;

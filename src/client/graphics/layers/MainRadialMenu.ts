@@ -181,5 +181,8 @@ export class MainRadialMenu extends LitElement implements Layer {
     if (this.playerPanel.isVisible) {
       this.playerPanel.hide();
     }
+
+    this.playerActionHandler.stopNukePreview();
+    this.uiState.nukeAnchor = undefined;
   }
 }

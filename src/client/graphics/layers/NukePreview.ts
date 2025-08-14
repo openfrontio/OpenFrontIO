@@ -10,10 +10,10 @@ export class NukePreview implements Layer {
     private game: GameView,
     private transform: TransformHandler,
     private ui: UIState,
-    private _npSig: string = "",
-    private _npSeed: number = 0,
+    private _npSig = "",
+    private _npSeed = 0,
     private _mirvTargets: Array<{ x: number; y: number; w: number }> = [],
-    private _mirvSig: string = "",
+    private _mirvSig = "",
   ) {}
 
   init() {}
@@ -21,6 +21,16 @@ export class NukePreview implements Layer {
   shouldTransform(): boolean {
     return false;
   }
+
+  // deterministic hash
+  private h32 = (x: number) => {
+    x ^= x >>> 16;
+    x = Math.imul(x, 0x7feb352d);
+    x ^= x >>> 15;
+    x = Math.imul(x, 0x846ca68b);
+    x ^= x >>> 16;
+    return x >>> 0;
+  };
 
   renderLayer(ctx: CanvasRenderingContext2D): void {
     const p = this.ui.nukePreview;
@@ -75,16 +85,9 @@ export class NukePreview implements Layer {
     ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
     ctx.fill();
 
-    const h32 = (x: number) => {
-      x ^= x >>> 16;
-      x = Math.imul(x, 0x7feb352d);
-      x ^= x >>> 15;
-      x = Math.imul(x, 0x846ca68b);
-      x ^= x >>> 16;
-      return x >>> 0;
-    };
+
     const rand01 = (x: number, y: number) =>
-      (h32(h32(x) ^ h32(y) ^ seed) & 0xffff) / 0x10000;
+      (this.h32(this.h32(x) ^ this.h32(y) ^ seed) & 0xffff) / 0x10000;
 
     // probabilistic band
     const outer2 = outer * outer,
@@ -175,16 +178,6 @@ export class NukePreview implements Layer {
     // Owner gate: preview only on tiles with the same owner as the anchor (player or TerraNullius)
     const anchorOwner = this.game.owner(this.game.ref(ax, ay));
 
-    // deterministic hash
-    const h32 = (x: number) => {
-      x ^= x >>> 16;
-      x = Math.imul(x, 0x7feb352d);
-      x ^= x >>> 15;
-      x = Math.imul(x, 0x846ca68b);
-      x ^= x >>> 16;
-      return x >>> 0;
-    };
-
     // Recompute targets only when signature changes
     const sig = `MIRV|${ax}|${ay}|${anchorOwner.isPlayer() ? (anchorOwner as any).id() : "TN"}`;
     if (this._mirvSig !== sig) {
@@ -205,8 +198,8 @@ export class NukePreview implements Layer {
 
         // Uniform sample in circle via polar
         // Use a deterministic PRNG from seed + attempts
-        const r01 = (h32(seed ^ attempts) & 0xffff) / 0x10000;
-        const t01 = (h32(seed ^ (attempts * 2654435761)) & 0xffff) / 0x10000;
+        const r01 = (this.h32(seed ^ attempts) & 0xffff) / 0x10000;
+        const t01 = (this.h32(seed ^ (attempts * 2654435761)) & 0xffff) / 0x10000;
 
         const r = Math.sqrt(r01) * MIRV_RANGE;
         const theta = t01 * Math.PI * 2;
@@ -235,7 +228,7 @@ export class NukePreview implements Layer {
         }
         if (tooClose) continue;
 
-        const w = h32((tx & 0xffff) ^ ((ty & 0xffff) << 16) ^ seed);
+        const w = this.h32((tx & 0xffff) ^ ((ty & 0xffff) << 16) ^ seed);
         this._mirvTargets.push({ x: tx, y: ty, w });
       }
     }

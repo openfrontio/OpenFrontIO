@@ -440,7 +440,9 @@ export class RadialMenu implements Layer {
         d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
       );
 
-      d.data.onHoverLeave?.(this.params!);
+      if(this.params) {
+        d.data.onHoverLeave?.(this.params);
+      }
     };
 
     const onClick = (d: d3.PieArcDatum<MenuElement>, event: Event) => {
@@ -453,7 +455,9 @@ export class RadialMenu implements Layer {
         return;
 
       if (d.data.isNuke) this.setMenuDim(false);
-      d.data.onHoverLeave?.(this.params!);
+      if (this.params) {
+        d.data.onHoverLeave?.(this.params);
+      }
 
       if (
         this.currentLevel > 0 &&

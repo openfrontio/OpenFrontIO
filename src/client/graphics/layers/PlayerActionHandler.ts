@@ -32,7 +32,9 @@ export class PlayerActionHandler {
   }
 
   startNukePreview(t: UnitType) {
-    this.uiState.nukePreview = { active: true, nukeType: t };
+    if (t === UnitType.AtomBomb || t === UnitType.HydrogenBomb || t === UnitType.MIRV) {
+      this.uiState.nukePreview = { active: true, nukeType: t };
+    }
   }
 
   stopNukePreview() {
