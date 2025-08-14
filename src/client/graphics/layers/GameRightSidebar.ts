@@ -7,7 +7,6 @@ import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhi
 import replaySolidIcon from "../../../../resources/images/ReplaySolidIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { PauseGameEvent } from "../../Transport";
@@ -44,7 +43,7 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   init() {
     this._isSinglePlayer =
-      this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
+      this.game?.config()?.gameConfig()?.gameType === "Singleplayer" ||
       this.game.config().isReplay();
     this._isVisible = true;
     this.game.inSpawnPhase();

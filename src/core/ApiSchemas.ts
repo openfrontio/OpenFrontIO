@@ -5,7 +5,7 @@ import {
   DifficultySchema,
   GameMapTypeSchema,
   GameModeSchema,
-  GameType,
+  GameTypeSchema,
 } from "./game/Game";
 
 export const RefreshResponseSchema = z.object({
@@ -69,7 +69,7 @@ export const PlayerStatsLeafSchema = z.object({
 export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 
 export const PlayerStatsTreeSchema = z.partialRecord(
-  z.enum(GameType),
+  GameTypeSchema,
   z.partialRecord(
     GameModeSchema,
     z.partialRecord(DifficultySchema, PlayerStatsLeafSchema),
@@ -81,7 +81,7 @@ export const PlayerGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
   mode: GameModeSchema,
-  type: z.enum(GameType),
+  type: GameTypeSchema,
   map: GameMapTypeSchema,
   difficulty: DifficultySchema,
   clientId: z.string().optional(),

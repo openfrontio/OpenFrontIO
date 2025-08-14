@@ -4,7 +4,6 @@ import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
@@ -616,7 +615,7 @@ class Client {
     const config = await getServerConfigFromClient();
     if (
       config.env() === GameEnv.Dev ||
-      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
+      lobby.gameStartInfo?.config.gameType === "Singleplayer"
     ) {
       return null;
     }

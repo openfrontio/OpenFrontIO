@@ -10,7 +10,7 @@ import trainEngineSprite from "../../../resources/sprites/trainEngine.png";
 import transportShipSprite from "../../../resources/sprites/transportship.png";
 import warshipSprite from "../../../resources/sprites/warship.png";
 import { Theme } from "../../core/configuration/Config";
-import { TrainType, UnitType } from "../../core/game/Game";
+import { UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
@@ -80,7 +80,7 @@ export const loadAllSprites = async (): Promise<void> => {
  * The train sprites rely on the train attributes and not only on its type
  */
 function trainTypeToSpriteType(unit: UnitView): TrainTypeSprite {
-  return unit.trainType() === TrainType.Engine
+  return unit.trainType() === "Engine"
     ? TrainTypeSprite.Engine
     : unit.isLoaded()
       ? TrainTypeSprite.LoadedCarriage
