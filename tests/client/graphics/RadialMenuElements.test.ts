@@ -148,6 +148,11 @@ describe("RadialMenuElements", () => {
       playerPanel: {} as any,
       chatIntegration: {} as any,
       eventBus: {} as any,
+      uiState: {
+        attackRatio: 1,
+        nukePreview: undefined,
+        nukeAnchorScreen: undefined,
+      },
       closeMenu: jest.fn(),
     };
   });

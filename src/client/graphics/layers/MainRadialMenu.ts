@@ -74,6 +74,7 @@ export class MainRadialMenu extends LitElement implements Layer {
   init() {
     this.radialMenu.init();
     this.eventBus.on(ContextMenuEvent, (event) => {
+      this.uiState.nukeAnchorScreen = { x: event.x, y: event.y };
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
@@ -129,6 +130,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       chatIntegration: this.chatIntegration,
       closeMenu: () => this.closeMenu(),
       eventBus: this.eventBus,
+      uiState: this.uiState,
     };
 
     this.radialMenu.setParams(params);

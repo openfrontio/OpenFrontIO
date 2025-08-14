@@ -375,6 +375,12 @@ export class RadialMenu implements Layer {
     });
   }
 
+  private setMenuDim(dim: boolean) {
+    this.menuElement
+      .style("opacity", dim ? "0.1" : "1")
+      .style("transition", "opacity 120ms ease"); // smooth like the build menu)
+  }
+
   private setupEventHandlers(
     arcs: d3.Selection<
       SVGGElement,
@@ -399,6 +405,9 @@ export class RadialMenu implements Layer {
         return;
       }
 
+      if (d.data.isNuke) this.setMenuDim(true);
+      d.data.onHoverEnter?.(this.params as MenuElementParams);
+
       path.attr("filter", "url(#glow)");
       path.attr("stroke-width", "3");
     };
@@ -411,6 +420,7 @@ export class RadialMenu implements Layer {
       }
 
       this.hideTooltip();
+      if (d.data.isNuke) this.setMenuDim(false);
 
       if (
         disabled ||
@@ -429,6 +439,8 @@ export class RadialMenu implements Layer {
         "fill",
         d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
       );
+
+      d.data.onHoverLeave?.(this.params!);
     };
 
     const onClick = (d: d3.PieArcDatum<MenuElement>, event: Event) => {
@@ -439,6 +451,9 @@ export class RadialMenu implements Layer {
         this.navigationInProgress
       )
         return;
+
+      if (d.data.isNuke) this.setMenuDim(false);
+      d.data.onHoverLeave?.(this.params!);
 
       if (
         this.currentLevel > 0 &&
@@ -770,6 +785,8 @@ export class RadialMenu implements Layer {
     if (!this.isVisible) {
       return;
     }
+
+    this.setMenuDim(false);
 
     // Force transition state to false to ensure menu hides
     this.isTransitioning = false;
