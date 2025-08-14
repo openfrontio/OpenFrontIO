@@ -41,6 +41,7 @@ export type Intent =
   | MoveWarshipIntent
   | MarkDisconnectedIntent
   | UpgradeStructureIntent
+  | DeleteUnitIntent
   | KickPlayerIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
@@ -70,6 +71,7 @@ export type MarkDisconnectedIntent = z.infer<
 export type AllianceExtensionIntent = z.infer<
   typeof AllianceExtensionIntentSchema
 >;
+export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
@@ -342,6 +344,11 @@ export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
   tile: z.number(),
 });
 
+export const DeleteUnitIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("delete_unit"),
+  unitId: z.number(),
+});
+
 export const QuickChatIntentSchema = BaseIntentSchema.extend({
   type: z.literal("quick_chat"),
   recipient: ID,
@@ -379,6 +386,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
   AllianceExtensionIntentSchema,
+  DeleteUnitIntentSchema,
   KickPlayerIntentSchema,
 ]);
 

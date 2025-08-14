@@ -95,6 +95,8 @@ export class PlayerImpl implements Player {
 
   private relations = new Map<Player, number>();
 
+  private lastDeleteUnitTick: Tick = -1;
+
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
@@ -630,6 +632,17 @@ export class PlayerImpl implements Player {
       gold,
     );
     return true;
+  }
+
+  canDeleteUnit(): boolean {
+    return (
+      this.mg.ticks() - this.lastDeleteUnitTick >=
+      this.mg.config().deleteUnitCooldown()
+    );
+  }
+
+  recordDeleteUnit(): void {
+    this.lastDeleteUnitTick = this.mg.ticks();
   }
 
   hasEmbargoAgainst(other: Player): boolean {

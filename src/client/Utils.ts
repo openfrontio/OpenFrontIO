@@ -1,3 +1,4 @@
+import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
@@ -78,18 +79,20 @@ export function generateCryptoRandomUUID(): string {
   );
 }
 
-// Re-export translateText from LangSelector
 export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
 ): string => {
+  const self = translateText as any;
+  self.formatterCache ??= new Map();
+  self.lastLang ??= null;
+
   const langSelector = document.querySelector("lang-selector") as LangSelector;
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
   }
 
-  // Wait for translations to be loaded
   if (
     !langSelector.translations ||
     Object.keys(langSelector.translations).length === 0
@@ -97,7 +100,40 @@ export const translateText = (
     return key;
   }
 
-  return langSelector.translateText(key, params);
+  if (self.lastLang !== langSelector.currentLang) {
+    self.formatterCache.clear();
+    self.lastLang = langSelector.currentLang;
+  }
+
+  let message = langSelector.translations[key];
+
+  if (!message && langSelector.defaultTranslations) {
+    const defaultTranslations = langSelector.defaultTranslations;
+    if (defaultTranslations && defaultTranslations[key]) {
+      message = defaultTranslations[key];
+    }
+  }
+
+  if (!message) return key;
+
+  try {
+    const locale =
+      !langSelector.translations[key] && langSelector.currentLang !== "en"
+        ? "en"
+        : langSelector.currentLang;
+    const cacheKey = `${key}:${locale}:${message}`;
+    let formatter = self.formatterCache.get(cacheKey);
+
+    if (!formatter) {
+      formatter = new IntlMessageFormat(message, locale);
+      self.formatterCache.set(cacheKey, formatter);
+    }
+
+    return formatter.format(params) as string;
+  } catch (e) {
+    console.warn("ICU format error", e);
+    return message;
+  }
 };
 
 /**
