@@ -1,0 +1,2 @@
+# Set addAssignees to 'author' to set the PR creator as the assignee. https://github.com/kentaro-m/auto-assign-action
+addAssignees: author

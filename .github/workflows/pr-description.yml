@@ -15,6 +15,14 @@ on:
 permissions: {}
 
 jobs:
+  auto-assign:
+    name: Auto-assign author of a PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event.action == 'opened'
+    steps:
+      - uses: kentaro-m/auto-assign-action@v2.0.0
+
   validate-description:
     name: Validate Description
     runs-on: ubuntu-latest
