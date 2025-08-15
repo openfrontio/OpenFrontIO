@@ -329,7 +329,9 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   trainSpawnRate(numPlayerFactories: number): number {
-    return 200 * numPlayerFactories ** 0.7;
+    // hyperbolic decay, midpoint at 5 factories
+    // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
+    return (numPlayerFactories + 5) * 500;
   }
   trainGold(isFriendly: boolean): Gold {
     return isFriendly ? 100_000n : 50_000n;
@@ -348,7 +350,8 @@ export class DefaultConfig implements Config {
   tradeShipGold(dist: number, numPorts: number): Gold {
     const baseGold = Math.floor(50_000 + 100 * dist);
     const numPortBonus = numPorts - 1;
-    const bonus = 1 + (2 * numPortBonus) / (numPortBonus + 5);
+    // 3x bonus max.
+    const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
     return BigInt(Math.floor(baseGold * bonus));
   }
 
@@ -484,7 +487,7 @@ export class DefaultConfig implements Config {
         return {
           cost: this.costWrapper(
             (numUnits: number) =>
-              Math.min(2_000_000, Math.pow(2, numUnits) * 125_000),
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Factory,
             UnitType.Port,
           ),
