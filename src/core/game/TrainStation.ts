@@ -25,8 +25,7 @@ class CityStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const isFriendly = stationOwner.isFriendly(trainOwner);
-    const goldBonus = mg.config().trainGold(isFriendly);
+    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
       stationOwner.addGold(goldBonus, station.tile());
@@ -44,13 +43,13 @@ class PortStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const isFriendly = stationOwner.isFriendly(trainOwner);
-    const goldBonus = mg.config().trainGold(isFriendly);
+    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
 
-    if (isFriendly) {
+    trainOwner.addGold(goldBonus, station.tile());
+    // Share revenue with the station owner if it's not the current player
+    if (trainOwner !== stationOwner) {
       stationOwner.addGold(goldBonus, station.tile());
     }
-    trainOwner.addGold(goldBonus, station.tile());
   }
 }
 
@@ -232,4 +231,14 @@ export class Cluster {
   clear() {
     this.stations.clear();
   }
+}
+
+function rel(player: Player, other: Player): "self" | "friendly" | "other" {
+  if (player === other) {
+    return "self";
+  }
+  if (player.isFriendly(other)) {
+    return "friendly";
+  }
+  return "other";
 }

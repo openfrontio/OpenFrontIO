@@ -130,7 +130,7 @@ export interface Config {
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(numTradeShips: number, numPlayerPorts: number): number;
-  trainGold(isFriendly: boolean): Gold;
+  trainGold(rel: "self" | "friendly" | "other"): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
