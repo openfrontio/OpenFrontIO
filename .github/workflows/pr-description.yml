@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     if: github.event.action == 'opened'
+    permissions:
+      pull-requests: write
     steps:
       - uses: kentaro-m/auto-assign-action@v2.0.0
 
