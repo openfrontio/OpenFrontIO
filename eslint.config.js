@@ -6,6 +6,7 @@ import stylisticTs from "@stylistic/eslint-plugin";
 import tseslint from "typescript-eslint";
 import { fileURLToPath } from "node:url";
 import { includeIgnoreFile } from "@eslint/compat";
+import eslintPluginLocal from "./eslint-plugin-local/plugin.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +27,8 @@ export default [
         projectService: {
           allowDefaultProject: [
             "__mocks__/fileMock.js",
+            "eslint-plugin-local/plugin.js",
+            "eslint-plugin-local/rules/no-z-array.js",
             "eslint.config.js",
             "jest.config.ts",
             "postcss.config.js",
@@ -128,6 +131,14 @@ export default [
     ],
     rules: {
       "sort-keys": "off",
+    },
+  },
+  {
+    plugins: {
+      local: eslintPluginLocal,
+    },
+    rules: {
+      "local/no-z-array": "error",
     },
   },
 ];

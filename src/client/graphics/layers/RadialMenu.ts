@@ -57,6 +57,9 @@ export class RadialMenu implements Layer {
   private lastHideTime = 0;
   private reopenCooldownMs = 300;
 
+  private anchorX = 0;
+  private anchorY = 0;
+
   private menuGroups: Map<
     number,
     d3.Selection<SVGGElement, unknown, null, undefined>
@@ -146,6 +149,7 @@ export class RadialMenu implements Layer {
       .style("position", "absolute")
       .style("top", "50%")
       .style("left", "50%")
+      .style("transition", `top ${this.config.menuTransitionDuration}ms ease, left ${this.config.menuTransitionDuration}ms ease`)
       .style("transform", "translate(-50%, -50%)")
       .style("pointer-events", "all")
       .on("click", (event) => this.hideRadialMenu());
@@ -576,6 +580,7 @@ export class RadialMenu implements Layer {
     this.currentMenuItems = children;
     this.currentLevel++;
 
+    this.clampAndSetMenuPositionForLevel(this.currentLevel);
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
     this.updateMenuGroupVisibility();
     this.animatePreviousMenu();
@@ -655,6 +660,7 @@ export class RadialMenu implements Layer {
     this.isTransitioning = true;
 
     this.updateMenuLevels();
+    this.clampAndSetMenuPositionForLevel(this.currentLevel);
     this.clearSelectedItemHoverState();
     this.updateMenuVisibility("backward");
     this.animateMenuTransitions();
@@ -751,19 +757,17 @@ export class RadialMenu implements Layer {
     this.resetMenu();
     this.isTransitioning = false;
     this.selectedItemId = null;
+    this.anchorX = x;
+    this.anchorY = y;
 
     this.menuElement.style("display", "block");
-
-    this.menuElement
-      .select("svg")
-      .style("top", `${y}px`)
-      .style("left", `${x}px`)
-      .style("transform", `translate(-50%, -50%)`);
+    this.clampAndSetMenuPositionForLevel(this.currentLevel);
 
     this.isVisible = true;
 
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
     this.onCenterButtonHover(true);
+    window.addEventListener("resize", this.handleResize);
   }
 
   public hideRadialMenu() {
@@ -787,6 +791,7 @@ export class RadialMenu implements Layer {
     this.menuIcons.clear();
 
     this.lastHideTime = Date.now();
+    window.removeEventListener("resize", this.handleResize);
   }
 
   private handleCenterButtonClick() {
@@ -1038,4 +1043,26 @@ export class RadialMenu implements Layer {
       this.tooltipElement.style.display = "none";
     }
   }
+
+  // Ensure the menu's SVG center stays within viewport given the current level's outer radius
+  private clampAndSetMenuPositionForLevel(level: number) {
+    const outerRadius = this.getOuterRadiusForLevel(level);
+    const margin = Math.max(outerRadius, this.config.centerButtonSize) + 10;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // If the menu cannot fully fit on an axis, pin it to the viewport center on that axis.
+    const clampedX = 2 * margin > vw ? vw / 2 : Math.min(Math.max(this.anchorX, margin), vw - margin);
+    const clampedY = 2 * margin > vh ? vh / 2 : Math.min(Math.max(this.anchorY, margin), vh - margin);
+
+    const svgSel = this.menuElement.select("svg");
+    svgSel
+      .style("top", `${clampedY}px`)
+      .style("left", `${clampedX}px`);
+  }
+
+  private handleResize = () => {
+    if (this.isVisible) this.clampAndSetMenuPositionForLevel(this.currentLevel);
+  };
 }
