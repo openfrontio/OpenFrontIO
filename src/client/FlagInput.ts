@@ -1,6 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../core/CustomFlag";
+import { FlagSchema } from "../core/Schemas";
 const flagKey: string = "flag";
 
 @customElement("flag-input")
@@ -43,7 +44,7 @@ export class FlagInput extends LitElement {
 
   private updateFlag = (ev: Event) => {
     const e = ev as CustomEvent<{ flag: string }>;
-    if (!e?.detail || typeof e.detail.flag !== "string") return;
+    if (!FlagSchema.safeParse(e.detail.flag).success) return;
     if (this.flag !== e.detail.flag) {
       this.flag = e.detail.flag;
     }
