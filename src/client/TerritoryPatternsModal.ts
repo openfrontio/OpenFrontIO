@@ -44,9 +44,10 @@ export class TerritoryPatternsModal extends LitElement {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
     this.updateComplete.then(() => {
-      this.updatePreview();
+      this.open().then(() => {
+        this.updatePreview();
+      });
     });
-    this.open();
   }
 
   disconnectedCallback() {
@@ -231,11 +232,21 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  public open() {
+  public async open() {
     this.isActive = true;
-    this.modalEl?.open();
-    window.addEventListener("keydown", this.handleKeyDown);
     this.requestUpdate();
+
+    // Wait for the DOM to be updated and the o-modal element to be available
+    await this.updateComplete;
+
+    // Now modalEl should be available
+    if (this.modalEl) {
+      this.modalEl.open();
+    } else {
+      console.warn("modalEl is still null after updateComplete");
+    }
+
+    window.addEventListener("keydown", this.handleKeyDown);
   }
 
   public close() {
