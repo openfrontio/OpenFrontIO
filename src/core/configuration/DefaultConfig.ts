@@ -329,10 +329,10 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   trainSpawnRate(numPlayerFactories: number): number {
-    return 200 * numPlayerFactories ** 0.5;
+    return 200 * numPlayerFactories ** 0.7;
   }
   trainGold(isFriendly: boolean): Gold {
-    return isFriendly ? 250_000n : 50_000n;
+    return isFriendly ? 100_000n : 50_000n;
   }
 
   trainStationMinRange(): number {
@@ -347,16 +347,9 @@ export class DefaultConfig implements Config {
 
   tradeShipGold(dist: number, numPorts: number): Gold {
     const baseGold = Math.floor(50_000 + 100 * dist);
-    const basePortBonus = 0.5;
-    const diminishingFactor = 0.8;
-    let totalMultiplier = 1;
-    for (let i = 1; i < numPorts; i++) {
-      totalMultiplier += Math.max(
-        0.05,
-        basePortBonus * Math.pow(diminishingFactor, i - 1),
-      );
-    }
-    return BigInt(Math.floor(baseGold * totalMultiplier));
+    const numPortBonus = numPorts - 1;
+    const bonus = 1 + (2 * numPortBonus) / (numPortBonus + 5);
+    return BigInt(Math.floor(baseGold * bonus));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
@@ -491,7 +484,7 @@ export class DefaultConfig implements Config {
         return {
           cost: this.costWrapper(
             (numUnits: number) =>
-              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+              Math.min(2_000_000, Math.pow(2, numUnits) * 125_000),
             UnitType.Factory,
             UnitType.Port,
           ),
