@@ -333,8 +333,15 @@ export class DefaultConfig implements Config {
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
     return (numPlayerFactories + 5) * 50;
   }
-  trainGold(isFriendly: boolean): Gold {
-    return isFriendly ? 50_000n : 10_000n;
+  trainGold(rel: "self" | "friendly" | "other"): Gold {
+    switch (rel) {
+      case "friendly":
+        return 50_000n;
+      case "other":
+        return 10_000n;
+      case "self":
+        return 5_000n;
+    }
   }
 
   trainStationMinRange(): number {
@@ -363,7 +370,7 @@ export class DefaultConfig implements Config {
         this.tradeShipPortMultiplier(numPlayerPorts),
     );
 
-    return Math.floor(10 / combined);
+    return Math.floor(20 / combined);
   }
 
   private tradeShipBaseSpawn(numTradeShips: number): number {
