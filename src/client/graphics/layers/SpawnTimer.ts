@@ -16,8 +16,11 @@ export class SpawnTimer implements Layer {
 
   tick() {
     if (this.game.inSpawnPhase()) {
-      this.ratios[0] =
-        this.game.ticks() / this.game.config().numSpawnPhaseTurns();
+      // During spawn phase, only one segment filling full width
+      this.ratios = [
+        this.game.ticks() / this.game.config().numSpawnPhaseTurns(),
+      ];
+      this.colors = ["rgba(0, 128, 255, 0.7)"];
       return;
     }
 
@@ -25,21 +28,6 @@ export class SpawnTimer implements Layer {
     this.colors = [];
 
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
-      const player = this.game.myPlayer();
-      if (player === null) return;
-      const max = this.game.config().maxPopulation(player);
-      const troops = player.troops();
-      const workers = player.workers();
-      const total = player.totalPopulation();
-      const attacking = total - troops - workers;
-
-      this.colors = [
-        "rgba(0, 128, 255, 0.7)",
-        "orange",
-        "red",
-        "rgba(0, 0, 0, 0.5)",
-      ];
-      this.ratios = [workers / max, troops / max, attacking / max];
       return;
     }
 
@@ -48,18 +36,17 @@ export class SpawnTimer implements Layer {
       const team = player.team();
       if (team === null) throw new Error("Team is null");
       const tiles = teamTiles.get(team) ?? 0;
-      const sum = tiles + player.numTilesOwned();
-      teamTiles.set(team, sum);
+      teamTiles.set(team, tiles + player.numTilesOwned());
     }
 
     const theme = this.game.config().theme();
     const total = sumIterator(teamTiles.values());
     if (total === 0) return;
+
     for (const [team, count] of teamTiles) {
       const ratio = count / total;
-      const color = theme.teamColor(team).toRgbString();
       this.ratios.push(ratio);
-      this.colors.push(color);
+      this.colors.push(theme.teamColor(team).toRgbString());
     }
   }
 
@@ -68,12 +55,17 @@ export class SpawnTimer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (this.ratios === null) return;
-    if (this.ratios.length === 0) return;
-    if (this.colors.length === 0) return;
+    if (this.ratios.length === 0 || this.colors.length === 0) return;
 
     const barHeight = 10;
     const barWidth = this.transformHandler.width();
+
+    if (
+      !this.game.inSpawnPhase() &&
+      this.game.config().gameConfig().gameMode !== GameMode.Team
+    ) {
+      return;
+    }
 
     let x = 0;
     let filledRatio = 0;
@@ -91,8 +83,6 @@ export class SpawnTimer implements Layer {
 }
 
 function sumIterator(values: MapIterator<number>) {
-  // To use reduce, we'd need to allocate an array:
-  // return Array.from(values).reduce((sum, v) => sum + v, 0);
   let total = 0;
   for (const value of values) {
     total += value;

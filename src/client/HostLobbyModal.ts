@@ -3,22 +3,24 @@ import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { consolex } from "../core/Consolex";
 import {
   Difficulty,
   Duos,
   GameMapType,
   GameMode,
+  Quads,
+  Trios,
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { GameConfig, GameInfo } from "../core/Schemas";
+import { GameConfig, GameInfo, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
+import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -30,7 +32,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: number | typeof Duos = 2;
+  @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -39,7 +41,7 @@ export class HostLobbyModal extends LitElement {
   @state() private copySuccess = false;
   @state() private players: string[] = [];
   @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [];
+  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
@@ -196,7 +198,7 @@ export class HostLobbyModal extends LitElement {
                       ${translateText("host_modal.team_count")}
                     </div>
                     <div class="option-cards">
-                      ${[Duos, 2, 3, 4, 5, 6, 7].map(
+                      ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
                         (o) => html`
                           <div
                             class="option-card ${this.teamCount === o
@@ -204,7 +206,13 @@ export class HostLobbyModal extends LitElement {
                               : ""}"
                             @click=${() => this.handleTeamCountSelection(o)}
                           >
-                            <div class="option-card-title">${o}</div>
+                            <div class="option-card-title">
+                              ${typeof o === "string"
+                                ? translateText(`public_lobby.teams_${o}`)
+                                : translateText("public_lobby.teams", {
+                                    num: o,
+                                  })}
+                            </div>
                           </div>
                         `,
                       )}
@@ -314,59 +322,10 @@ export class HostLobbyModal extends LitElement {
                 <div
                   style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
                 >
-                  ${[
-                    [UnitType.City, "unit_type.city"],
-                    [UnitType.DefensePost, "unit_type.defense_post"],
-                    [UnitType.Port, "unit_type.port"],
-                    [UnitType.Warship, "unit_type.warship"],
-                    [UnitType.MissileSilo, "unit_type.missile_silo"],
-                    [UnitType.SAMLauncher, "unit_type.sam_launcher"],
-                    [UnitType.AtomBomb, "unit_type.atom_bomb"],
-                    [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
-                    [UnitType.MIRV, "unit_type.mirv"],
-                  ].map(
-                    ([unitType, translationKey]: [UnitType, string]) => html`
-                      <label
-                        class="option-card ${this.disabledUnits.includes(
-                          unitType,
-                        )
-                          ? ""
-                          : "selected"}"
-                        style="width: 140px;"
-                      >
-                        <div class="checkbox-icon"></div>
-                        <input
-                          type="checkbox"
-                          @change=${(e: Event) => {
-                            const checked = (e.target as HTMLInputElement)
-                              .checked;
-                            const parsedUnitType =
-                              UnitType[unitType as keyof typeof UnitType];
-                            if (parsedUnitType) {
-                              if (checked) {
-                                this.disabledUnits = [
-                                  ...this.disabledUnits,
-                                  parsedUnitType,
-                                ];
-                              } else {
-                                this.disabledUnits = this.disabledUnits.filter(
-                                  (u) => u !== parsedUnitType,
-                                );
-                              }
-                              this.putGameConfig();
-                            }
-                          }}
-                          .checked=${this.disabledUnits.includes(unitType)}
-                        />
-                        <div
-                          class="option-card-title"
-                          style="text-align: center;"
-                        >
-                          ${translateText(translationKey)}
-                        </div>
-                      </label>
-                    `,
-                  )}
+                   ${renderUnitTypeOptions({
+                     disabledUnits: this.disabledUnits,
+                     toggleUnit: this.toggleUnit.bind(this),
+                   })}
                   </div>
                 </div>
               </div>
@@ -505,7 +464,7 @@ export class HostLobbyModal extends LitElement {
 
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
-    consolex.log(`updating disable npcs to ${this.disableNPCs}`);
+    console.log(`updating disable npcs to ${this.disableNPCs}`);
     this.putGameConfig();
   }
 
@@ -514,8 +473,8 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private async handleTeamCountSelection(value: number | typeof Duos) {
-    this.teamCount = value === Duos ? Duos : Number(value);
+  private async handleTeamCountSelection(value: TeamCountConfig) {
+    this.teamCount = value;
     this.putGameConfig();
   }
 
@@ -545,6 +504,15 @@ export class HostLobbyModal extends LitElement {
     return response;
   }
 
+  private toggleUnit(unit: UnitType, checked: boolean): void {
+    console.log(`Toggling unit type: ${unit} to ${checked}`);
+    this.disabledUnits = checked
+      ? [...this.disabledUnits, unit]
+      : this.disabledUnits.filter((u) => u !== unit);
+
+    this.putGameConfig();
+  }
+
   private getRandomMap(): GameMapType {
     const maps = Object.values(GameMapType);
     const randIdx = Math.floor(Math.random() * maps.length);
@@ -557,7 +525,7 @@ export class HostLobbyModal extends LitElement {
     }
 
     await this.putGameConfig();
-    consolex.log(
+    console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
@@ -578,14 +546,14 @@ export class HostLobbyModal extends LitElement {
     try {
       //TODO: Convert id to url and copy
       await navigator.clipboard.writeText(
-        `${location.origin}/join/${this.lobbyId}`,
+        `${location.origin}#join=${this.lobbyId}`,
       );
       this.copySuccess = true;
       setTimeout(() => {
         this.copySuccess = false;
       }, 2000);
     } catch (err) {
-      consolex.error(`Failed to copy text: ${err}`);
+      console.error(`Failed to copy text: ${err}`);
     }
   }
 
@@ -625,11 +593,11 @@ async function createLobby(): Promise<GameInfo> {
     }
 
     const data = await response.json();
-    consolex.log("Success:", data);
+    console.log("Success:", data);
 
     return data as GameInfo;
   } catch (error) {
-    consolex.error("Error creating lobby:", error);
+    console.error("Error creating lobby:", error);
     throw error; // Re-throw the error so the caller can handle it
   }
 }

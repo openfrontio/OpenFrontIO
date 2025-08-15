@@ -1,3 +1,4 @@
+import { execSync } from "child_process";
 import CopyPlugin from "copy-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
@@ -7,6 +8,9 @@ import webpack from "webpack";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const gitCommit =
+  process.env.GIT_COMMIT ?? execSync("git rev-parse HEAD").toString().trim();
 
 export default async (env, argv) => {
   const isProduction = argv.mode === "production";
@@ -30,6 +34,10 @@ export default async (env, argv) => {
         },
         {
           test: /\.txt$/,
+          type: "asset/source",
+        },
+        {
+          test: /\.md$/,
           type: "asset/resource", // Changed from raw-loader
           generator: {
             filename: "text/[name].[contenthash][ext]", // Added content hash
@@ -79,7 +87,7 @@ export default async (env, argv) => {
           },
         },
         {
-          test: /\.(woff|woff2|eot|ttf|otf)$/,
+          test: /\.(woff|woff2|eot|ttf|otf|xml)$/,
           type: "asset/resource", // Changed from file-loader
           generator: {
             filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
@@ -116,9 +124,11 @@ export default async (env, argv) => {
         "process.env.WEBSOCKET_URL": JSON.stringify(
           isProduction ? "" : "localhost:3000",
         ),
-      }),
-      new webpack.DefinePlugin({
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
+        "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
+        "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
+          process.env.STRIPE_PUBLISHABLE_KEY,
+        ),
       }),
       new CopyPlugin({
         patterns: [

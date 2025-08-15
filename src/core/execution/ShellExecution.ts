@@ -23,9 +23,7 @@ export class ShellExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.shell === undefined) {
-      this.shell = this._owner.buildUnit(UnitType.Shell, this.spawn, {});
-    }
+    this.shell ??= this._owner.buildUnit(UnitType.Shell, this.spawn, {});
     if (!this.shell.isActive()) {
       this.active = false;
       return;
@@ -52,6 +50,7 @@ export class ShellExecution implements Execution {
       if (result === true) {
         this.active = false;
         this.target.modifyHealth(-this.effectOnTarget(), this._owner);
+        this.shell.setReachedTarget();
         this.shell.delete(false);
         return;
       } else {

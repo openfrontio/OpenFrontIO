@@ -47,7 +47,8 @@ export class UsernameInput extends LitElement {
       />
       ${this.validationError
         ? html`<div
-            class="mt-2 px-3 py-1 text-lg border rounded bg-white text-red-600 border-red-600 dark:bg-gray-700 dark:text-red-300 dark:border-red-300"
+            id="username-validation-error"
+            class="absolute z-10 w-full mt-2 px-3 py-1 text-lg border rounded bg-white text-red-600 border-red-600 dark:bg-gray-700 dark:text-red-300 dark:border-red-300"
           >
             ${this.validationError}
           </div>`

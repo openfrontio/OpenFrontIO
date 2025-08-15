@@ -54,7 +54,7 @@ export class OModal extends LitElement {
       color: #fff;
       padding: 1.4rem;
       max-height: 60dvh;
-      overflow-y: scroll;
+      overflow-y: auto;
       backdrop-filter: blur(8px);
     }
   `;
@@ -79,7 +79,7 @@ export class OModal extends LitElement {
                   ${`${this.translationKey}` === ""
                     ? `${this.title}`
                     : `${translateText(this.translationKey)}`}
-                  <div class="c-modal__close" @click=${this.close}>X</div>
+                  <div class="c-modal__close" @click=${this.close}>✕</div>
                 </header>
                 <section class="c-modal__content">
                   <slot></slot>

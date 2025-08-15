@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { getAltKey, getModifierKey, translateText } from "../client/Utils";
 import "./components/Difficulties";
 import "./components/Maps";
 
@@ -41,7 +41,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">Shift</span>
+                    <span class="key">⇧ Shift</span>
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -54,7 +54,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">Ctrl</span>
+                    <span class="key">${getModifierKey()}</span>
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -67,7 +67,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">Alt</span>
+                    <span class="key">${getAltKey()}</span>
                     <span class="plus">+</span>
                     <div class="mouse-shell alt-left-click">
                       <div class="mouse-left-corner"></div>
@@ -99,7 +99,7 @@ export class HelpModal extends LitElement {
               <tr>
                 <td>
                   <div class="scroll-combo-horizontal">
-                    <span class="key">Shift</span>
+                    <span class="key">⇧ Shift</span>
                     <span class="plus">+</span>
                     <div class="mouse-with-arrows">
                       <div class="mouse-shell">
@@ -116,7 +116,8 @@ export class HelpModal extends LitElement {
               </tr>
               <tr>
                 <td>
-                  <span class="key">ALT</span> + <span class="key">R</span>
+                  <span class="key">${getAltKey()}</span> +
+                  <span class="key">R</span>
                 </td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>
@@ -139,6 +140,7 @@ export class HelpModal extends LitElement {
               alt="Leaderboard"
               title="Leaderboard"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -158,6 +160,7 @@ export class HelpModal extends LitElement {
               alt="Control panel"
               title="Control panel"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -188,12 +191,14 @@ export class HelpModal extends LitElement {
                 alt="Event panel"
                 title="Event panel"
                 class="default-image"
+                loading="lazy"
               />
               <img
                 src="/images/helpModal/eventsPanelAttack.webp"
                 alt="Event panel"
                 title="Event panel"
                 class="default-image"
+                loading="lazy"
               />
             </div>
           </div>
@@ -225,6 +230,7 @@ export class HelpModal extends LitElement {
               alt="Options"
               title="Options"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -252,6 +258,7 @@ export class HelpModal extends LitElement {
               alt="Player info overlay"
               title="Player info overlay"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -274,12 +281,14 @@ export class HelpModal extends LitElement {
               alt="Radial menu"
               title="Radial menu"
               class="default-image"
+              loading="lazy"
             />
             <img
               src="/images/helpModal/radialMenuAlly.webp"
               alt="Radial menu ally"
               title="Radial menu ally"
               class="default-image"
+              loading="lazy"
             />
           </div>
           <div>
@@ -294,6 +303,7 @@ export class HelpModal extends LitElement {
                   src="/images/InfoIcon.svg"
                   class="inline-block icon"
                   style="fill: white; background: transparent;"
+                  loading="lazy"
                 />
                 <span>${translateText("help_modal.radial_info")}</span>
               </li>
@@ -330,6 +340,7 @@ export class HelpModal extends LitElement {
                 alt="Enemy info panel"
                 title="Enemy info panel"
                 class="info-panel-img"
+                loading="lazy"
               />
             </div>
             <div class="pt-4">
@@ -373,6 +384,7 @@ export class HelpModal extends LitElement {
                 alt="Ally info panel"
                 title="Ally info panel"
                 class="info-panel-img"
+                loading="lazy"
               />
             </div>
             <div class="pt-4">
@@ -473,7 +485,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_crown")}
               </div>
@@ -482,6 +494,7 @@ export class HelpModal extends LitElement {
                 alt="Number 1 player"
                 title="Number 1 player"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
 
@@ -489,7 +502,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_traitor")}
               </div>
@@ -498,6 +511,7 @@ export class HelpModal extends LitElement {
                 alt="Traitor"
                 title="Traitor"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
 
@@ -505,7 +519,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_ally")}
               </div>
@@ -514,6 +528,7 @@ export class HelpModal extends LitElement {
                 alt="Ally"
                 title="Ally"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
           </div>
@@ -523,7 +538,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_embargo")}
               </div>
@@ -532,6 +547,7 @@ export class HelpModal extends LitElement {
                 alt="Stopped trading"
                 title="Stopped trading"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
 
@@ -539,7 +555,7 @@ export class HelpModal extends LitElement {
               class="flex flex-col items-center w-full md:w-1/3 mb-2 md:mb-0"
             >
               <div
-                class="text-gray-300 h-8 md:h-10 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
+                class="text-gray-300 flex flex-col justify-start min-h-[3rem] w-full px-2 mb-1"
               >
                 ${translateText("help_modal.icon_request")}
               </div>
@@ -548,6 +564,7 @@ export class HelpModal extends LitElement {
                 alt="Alliance Request"
                 title="Alliance Request"
                 class="player-icon-img w-full"
+                loading="lazy"
               />
             </div>
           </div>

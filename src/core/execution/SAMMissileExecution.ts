@@ -31,13 +31,11 @@ export class SAMMissileExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.SAMMissile === undefined) {
-      this.SAMMissile = this._owner.buildUnit(
-        UnitType.SAMMissile,
-        this.spawn,
-        {},
-      );
-    }
+    this.SAMMissile ??= this._owner.buildUnit(
+      UnitType.SAMMissile,
+      this.spawn,
+      {},
+    );
     if (!this.SAMMissile.isActive()) {
       this.active = false;
       return;
@@ -62,22 +60,17 @@ export class SAMMissileExecution implements Execution {
       if (result === true) {
         this.mg.displayMessage(
           `Missile intercepted ${this.target.type()}`,
-          MessageType.SUCCESS,
+          MessageType.SAM_HIT,
           this._owner.id(),
         );
         this.active = false;
-        this.target.setInterceptedBySam();
         this.target.delete(true, this._owner);
         this.SAMMissile.delete(false);
 
         // Record stats
         this.mg
           .stats()
-          .bombIntercept(
-            this._owner,
-            this.target.owner(),
-            this.target.type() as NukeType,
-          );
+          .bombIntercept(this._owner, this.target.type() as NukeType, 1);
         return;
       } else {
         this.SAMMissile.move(result);

@@ -34,10 +34,34 @@ export class UnitGrid {
   // Remove a unit from the grid
   removeUnit(unit: Unit | UnitView) {
     const tile = unit.tile();
+    this.removeUnitByTile(unit, tile);
+  }
+
+  removeUnitByTile(unit: Unit | UnitView, tile: TileRef) {
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
     if (this.isValidCell(gridX, gridY)) {
       this.grid[gridY][gridX].delete(unit);
+    }
+  }
+
+  /**
+   * Move an unit to its new cell if it changed
+   */
+  updateUnitCell(unit: Unit | UnitView) {
+    const newTile = unit.tile();
+    const oldTile = unit.lastTile();
+    const [gridX, gridY] = this.getGridCoords(
+      this.gm.x(oldTile),
+      this.gm.y(oldTile),
+    );
+    const [newGridX, newGridY] = this.getGridCoords(
+      this.gm.x(newTile),
+      this.gm.y(newTile),
+    );
+    if (gridX !== newGridX || gridY !== newGridY) {
+      this.removeUnitByTile(unit, oldTile);
+      this.addUnit(unit);
     }
   }
 
@@ -96,6 +120,10 @@ export class UnitGrid {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
+    predicate?: (value: {
+      unit: Unit | UnitView;
+      distSquared: number;
+    }) => boolean,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
@@ -107,12 +135,13 @@ export class UnitGrid {
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
         for (const unit of this.grid[cy][cx]) {
-          if (typeSet.has(unit.type()) && unit.isActive()) {
-            const distSquared = this.squaredDistanceFromTile(unit, tile);
-            if (distSquared <= rangeSquared) {
-              nearby.push({ unit, distSquared });
-            }
-          }
+          if (!typeSet.has(unit.type())) continue;
+          if (!unit.isActive()) continue;
+          const distSquared = this.squaredDistanceFromTile(unit, tile);
+          if (distSquared > rangeSquared) continue;
+          const value = { unit, distSquared };
+          if (predicate !== undefined && !predicate(value)) continue;
+          nearby.push(value);
         }
       }
     }

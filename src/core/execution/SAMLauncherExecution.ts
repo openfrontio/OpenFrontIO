@@ -1,10 +1,8 @@
-import { consolex } from "../Consolex";
 import {
   Execution,
   Game,
   MessageType,
   Player,
-  PlayerID,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -13,11 +11,9 @@ import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
 export class SAMLauncherExecution implements Execution {
-  private player: Player;
   private mg: Game;
   private active: boolean = true;
 
-  private searchRangeRadius = 80;
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
   private MIRVWarheadSearchRadius = 400;
@@ -26,7 +22,7 @@ export class SAMLauncherExecution implements Execution {
   private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
-    private ownerId: PlayerID,
+    private player: Player,
     private tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
@@ -37,25 +33,19 @@ export class SAMLauncherExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`SAMLauncherExecution: owner ${this.ownerId} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.ownerId);
   }
 
   private getSingleTarget(): Unit | null {
     if (this.sam === null) return null;
-    const nukes = this.mg
-      .nearbyUnits(this.sam.tile(), this.searchRangeRadius, [
-        UnitType.AtomBomb,
-        UnitType.HydrogenBomb,
-      ])
-      .filter(
-        ({ unit }) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
-      );
+    const nukes = this.mg.nearbyUnits(
+      this.sam.tile(),
+      this.mg.config().defaultSamRange(),
+      [UnitType.AtomBomb, UnitType.HydrogenBomb],
+      ({ unit }) =>
+        unit.owner() !== this.player &&
+        !this.player.isFriendly(unit.owner()) &&
+        unit.isTargetable(),
+    );
 
     return (
       nukes.sort((a, b) => {
@@ -102,13 +92,11 @@ export class SAMLauncherExecution implements Execution {
       }
       const spawnTile = this.player.canBuild(UnitType.SAMLauncher, this.tile);
       if (spawnTile === false) {
-        consolex.warn("cannot build SAM Launcher");
+        console.warn("cannot build SAM Launcher");
         this.active = false;
         return;
       }
-      this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {
-        cooldownDuration: this.mg.config().SAMCooldown(),
-      });
+      this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {});
     }
     if (!this.sam.isActive()) {
       this.active = false;
@@ -119,22 +107,15 @@ export class SAMLauncherExecution implements Execution {
       this.player = this.sam.owner();
     }
 
-    if (this.pseudoRandom === undefined) {
-      this.pseudoRandom = new PseudoRandom(this.sam.id());
-    }
+    this.pseudoRandom ??= new PseudoRandom(this.sam.id());
 
-    const mirvWarheadTargets = this.mg
-      .nearbyUnits(
-        this.sam.tile(),
-        this.MIRVWarheadSearchRadius,
-        UnitType.MIRVWarhead,
-      )
-      .map(({ unit }) => unit)
-      .filter(
-        (unit) =>
-          unit.owner() !== this.player && !this.player.isFriendly(unit.owner()),
-      )
-      .filter((unit) => {
+    const mirvWarheadTargets = this.mg.nearbyUnits(
+      this.sam.tile(),
+      this.MIRVWarheadSearchRadius,
+      UnitType.MIRVWarhead,
+      ({ unit }) => {
+        if (unit.owner() === this.player) return false;
+        if (this.player.isFriendly(unit.owner())) return false;
         const dst = unit.targetTile();
         return (
           this.sam !== null &&
@@ -142,16 +123,12 @@ export class SAMLauncherExecution implements Execution {
           this.mg.manhattanDist(dst, this.sam.tile()) <
             this.MIRVWarheadProtectionRadius
         );
-      });
+      },
+    );
 
     let target: Unit | null = null;
     if (mirvWarheadTargets.length === 0) {
       target = this.getSingleTarget();
-    }
-
-    if (this.sam.ticksLeftInCooldown() === 0) {
-      // Touch SAM to update sprite to show not in cooldown.
-      this.sam.touch();
     }
 
     const isSingleTarget = target && !target.targetedBySAM();
@@ -168,36 +145,57 @@ export class SAMLauncherExecution implements Execution {
       if (!hit) {
         this.mg.displayMessage(
           `Missile failed to intercept ${type}`,
-          MessageType.ERROR,
+          MessageType.SAM_MISS,
           this.sam.owner().id(),
         );
-      } else {
-        if (mirvWarheadTargets.length > 0) {
-          // Message
-          this.mg.displayMessage(
-            `${mirvWarheadTargets.length} MIRV warheads intercepted`,
-            MessageType.SUCCESS,
-            this.sam.owner().id(),
-          );
+      } else if (mirvWarheadTargets.length > 0) {
+        const samOwner = this.sam.owner();
+
+        // Message
+        this.mg.displayMessage(
+          `${mirvWarheadTargets.length} MIRV warheads intercepted`,
+          MessageType.SAM_HIT,
+          samOwner.id(),
+        );
+
+        mirvWarheadTargets.forEach(({ unit: u }) => {
           // Delete warheads
-          mirvWarheadTargets.forEach((u) => {
-            u.setInterceptedBySam();
-            u.delete();
-          });
-        } else if (target !== null) {
-          target.setTargetedBySAM(true);
-          this.mg.addExecution(
-            new SAMMissileExecution(
-              this.sam.tile(),
-              this.sam.owner(),
-              this.sam,
-              target,
-            ),
+          u.delete();
+        });
+
+        // Record stats
+        this.mg
+          .stats()
+          .bombIntercept(
+            samOwner,
+            UnitType.MIRVWarhead,
+            mirvWarheadTargets.length,
           );
-        } else {
-          throw new Error("target is null");
-        }
+      } else if (target !== null) {
+        target.setTargetedBySAM(true);
+        this.mg.addExecution(
+          new SAMMissileExecution(
+            this.sam.tile(),
+            this.sam.owner(),
+            this.sam,
+            target,
+          ),
+        );
+      } else {
+        throw new Error("target is null");
       }
+    }
+
+    const frontTime = this.sam.missileTimerQueue()[0];
+    if (frontTime === undefined) {
+      return;
+    }
+
+    const cooldown =
+      this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
+
+    if (cooldown <= 0) {
+      this.sam.reloadMissile();
     }
   }
 
