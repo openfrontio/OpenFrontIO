@@ -42,11 +42,10 @@ class PortStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const level = BigInt(station.unit.level());
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
     const isFriendly = stationOwner.isFriendly(trainOwner);
-    const goldBonus = mg.config().trainGold(isFriendly) * level;
+    const goldBonus = mg.config().trainGold(isFriendly);
 
     if (isFriendly) {
       stationOwner.addGold(goldBonus, station.tile());

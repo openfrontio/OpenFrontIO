@@ -331,7 +331,7 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 5 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 5) * 500;
+    return (numPlayerFactories + 5) * 50;
   }
   trainGold(isFriendly: boolean): Gold {
     return isFriendly ? 100_000n : 50_000n;
@@ -348,9 +348,9 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(50_000 + 100 * dist);
+    const baseGold = Math.floor(25_000 + 50 * dist);
     const numPortBonus = numPorts - 1;
-    // 3x bonus max.
+    // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
     return BigInt(Math.floor(baseGold * bonus));
   }
