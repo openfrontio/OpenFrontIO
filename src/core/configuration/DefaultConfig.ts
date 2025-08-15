@@ -334,7 +334,7 @@ export class DefaultConfig implements Config {
     return (numPlayerFactories + 5) * 50;
   }
   trainGold(isFriendly: boolean): Gold {
-    return isFriendly ? 100_000n : 50_000n;
+    return isFriendly ? 50_000n : 10_000n;
   }
 
   trainStationMinRange(): number {
@@ -348,7 +348,7 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(25_000 + 50 * dist);
+    const baseGold = Math.floor(15_000 + 30 * dist);
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
