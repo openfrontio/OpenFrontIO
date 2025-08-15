@@ -234,16 +234,6 @@
     "green": "Green",
     "bot": "Bot"
   },
-  "team_colors": {
-    "red": "Red",
-    "blue": "Blue",
-    "teal": "Teal",
-    "purple": "Purple",
-    "yellow": "Yellow",
-    "orange": "Orange",
-    "green": "Green",
-    "bot": "Bot"
-  },
   "game_starting_modal": {
     "title": "Game is Starting...",
     "desc": "Preparing for the lobby to start. Please wait."
