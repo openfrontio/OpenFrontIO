@@ -41,6 +41,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   MarsRevised: 3,
   Mena: 6,
   NorthAmerica: 5,
+  NorthernHemisphere: 5,
   Pangaea: 5,
   Pluto: 6,
   SouthAmerica: 5,
