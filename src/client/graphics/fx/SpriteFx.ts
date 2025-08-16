@@ -4,11 +4,7 @@ import { AnimatedSprite } from "../AnimatedSprite";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
 
-function fadeInOut(
-  t: number,
-  fadeIn: number = 0.3,
-  fadeOut: number = 0.7,
-): number {
+function fadeInOut(t: number, fadeIn = 0.3, fadeOut = 0.7): number {
   if (t < fadeIn) {
     const f = t / fadeIn; // Map to [0, 1]
     return f * f;
@@ -45,15 +41,16 @@ export class FadeFx implements Fx {
 export class SpriteFx implements Fx {
   protected animatedSprite: AnimatedSprite | null;
   protected elapsedTime = 0;
-  protected duration = 1000;
+  protected duration: number;
+  protected waitToTheEnd = false;
   constructor(
     animatedSpriteLoader: AnimatedSpriteLoader,
     protected x: number,
     protected y: number,
     fxType: FxType,
     duration?: number,
-    private owner?: PlayerView,
-    private theme?: Theme,
+    owner?: PlayerView,
+    theme?: Theme,
   ) {
     this.animatedSprite = animatedSpriteLoader.createAnimatedSprite(
       fxType,
@@ -63,6 +60,7 @@ export class SpriteFx implements Fx {
     if (!this.animatedSprite) {
       console.error("Could not load animated sprite", fxType);
     } else {
+      this.waitToTheEnd = duration ? true : false;
       this.duration = duration ?? this.animatedSprite.lifeTime() ?? 1000;
     }
   }
@@ -73,7 +71,7 @@ export class SpriteFx implements Fx {
     this.elapsedTime += frameTime;
     if (this.elapsedTime >= this.duration) return false;
 
-    if (!this.animatedSprite.isActive()) return false;
+    if (!this.animatedSprite.isActive() && !this.waitToTheEnd) return false;
 
     const t = this.elapsedTime / this.duration;
     this.animatedSprite.update(frameTime);

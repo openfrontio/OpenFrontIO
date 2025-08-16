@@ -55,8 +55,8 @@ async function setupTunnels() {
 
   if (!(await cloudflare.configAlreadyExists())) {
     await cloudflare.createTunnel({
-      subdomain: config.subdomain(),
       domain: config.domain(),
+      subdomain: config.subdomain(),
       subdomainToService: domainToService,
     } as TunnelConfig);
   } else {

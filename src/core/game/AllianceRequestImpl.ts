@@ -31,10 +31,10 @@ export class AllianceRequestImpl implements AllianceRequest {
 
   toUpdate(): AllianceRequestUpdate {
     return {
-      type: GameUpdateType.AllianceRequest,
-      requestorID: this.requestor_.smallID(),
-      recipientID: this.recipient_.smallID(),
       createdAt: this.tickCreated,
+      recipientID: this.recipient_.smallID(),
+      requestorID: this.requestor_.smallID(),
+      type: GameUpdateType.AllianceRequest,
     };
   }
 }

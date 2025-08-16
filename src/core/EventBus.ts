@@ -1,8 +1,9 @@
 export type GameEvent = object;
 
-export interface EventConstructor<T extends GameEvent = GameEvent> {
-  new (...args: any[]): T;
-}
+export type EventConstructor<T extends GameEvent = GameEvent> = new (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...args: any[]
+) => T;
 
 export class EventBus {
   private listeners: Map<EventConstructor, Array<(event: GameEvent) => void>> =

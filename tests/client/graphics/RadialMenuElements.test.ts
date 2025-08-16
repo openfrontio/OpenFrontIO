@@ -79,13 +79,6 @@ jest.mock("dompurify", () => ({
   },
 }));
 
-jest.mock("twemoji", () => ({
-  __esModule: true,
-  default: {
-    parse: jest.fn((str: string) => str),
-  },
-}));
-
 describe("RadialMenuElements", () => {
   let mockParams: MenuElementParams;
   let mockPlayer: PlayerView;
@@ -136,7 +129,8 @@ describe("RadialMenuElements", () => {
       interaction: {
         canSendAllianceRequest: true,
         canBreakAlliance: false,
-        canDonate: true,
+        canDonateTroops: true,
+        canDonateGold: true,
       },
     };
 

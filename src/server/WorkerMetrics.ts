@@ -18,27 +18,27 @@ export function initWorkerMetrics(gameManager: GameManager): void {
   const resource = getOtelResource();
 
   // Configure auth headers
-  const headers = {};
+  const headers: Record<string, string> = {};
   if (config.otelEnabled()) {
     headers["Authorization"] = config.otelAuthHeader();
   }
 
   // Create metrics exporter
   const metricExporter = new OTLPMetricExporter({
-    url: `${config.otelEndpoint()}/v1/metrics`,
     headers,
+    url: `${config.otelEndpoint()}/v1/metrics`,
   });
 
   // Configure the metric reader
   const metricReader = new PeriodicExportingMetricReader({
-    exporter: metricExporter,
     exportIntervalMillis: 15000, // Export metrics every 15 seconds
+    exporter: metricExporter,
   });
 
   // Create a meter provider
   const meterProvider = new MeterProvider({
-    resource,
     readers: [metricReader],
+    resource,
   });
 
   // Get meter for creating metrics

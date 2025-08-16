@@ -32,9 +32,9 @@ export class ChatModal extends LitElement {
 
   private players: PlayerView[] = [];
 
-  private playerSearchQuery: string = "";
+  private playerSearchQuery = "";
   private previewText: string | null = null;
-  private requiresPlayerSelection: boolean = false;
+  private requiresPlayerSelection = false;
   private selectedCategory: string | null = null;
   private selectedPhraseText: string | null = null;
   private selectedPhraseTemplate: string | null = null;
@@ -173,8 +173,9 @@ export class ChatModal extends LitElement {
     `;
   }
 
-  initEventBus() {
-    this.eventBus.on(CloseViewEvent, (e) => {
+  initEventBus(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    eventBus.on(CloseViewEvent, (e) => {
       if (!this.hidden) {
         this.close();
       }

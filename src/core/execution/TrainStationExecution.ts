@@ -5,12 +5,12 @@ import { TrainExecution } from "./TrainExecution";
 
 export class TrainStationExecution implements Execution {
   private mg: Game;
-  private active: boolean = true;
+  private active = true;
   private random: PseudoRandom;
   private station: TrainStation | null = null;
-  private numCars: number = 5;
-  private lastSpawnTick: number = 0;
-  private ticksCooldown: number = 10; // Minimum cooldown between two trains
+  private numCars = 5;
+  private lastSpawnTick = 0;
+  private ticksCooldown = 10; // Minimum cooldown between two trains
   constructor(
     private unit: Unit,
     private spawnTrains?: boolean, // If set, the station will spawn trains
@@ -50,7 +50,7 @@ export class TrainStationExecution implements Execution {
 
   private shouldSpawnTrain(clusterSize: number): boolean {
     const spawnRate = this.mg.config().trainSpawnRate(clusterSize);
-    for (let i = 0; i < this.unit!.level(); i++) {
+    for (let i = 0; i < this.unit.level(); i++) {
       if (this.random.chance(spawnRate)) {
         return true;
       }

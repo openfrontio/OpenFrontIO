@@ -26,7 +26,7 @@ export enum GameEnv {
   Prod,
 }
 
-export interface ServerConfig {
+export type ServerConfig = {
   turnIntervalMs(): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(
@@ -62,14 +62,14 @@ export interface ServerConfig {
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
-}
+};
 
-export interface NukeMagnitude {
+export type NukeMagnitude = {
   inner: number;
   outer: number;
-}
+};
 
-export interface Config {
+export type Config = {
   samHittingChance(): number;
   samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
@@ -82,16 +82,17 @@ export interface Config {
   isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
+  donateGold(): boolean;
   infiniteTroops(): boolean;
+  donateTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;
-  populationIncreaseRate(player: Player | PlayerView): number;
+  troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
-  troopAdjustmentRate(player: Player): number;
   attackTilesPerTick(
     attckTroops: number,
     attacker: Player,
@@ -114,8 +115,8 @@ export interface Config {
   // When computing likelihood of trading for any given port, the X closest port
   // are twice more likely to be selected. X is determined below.
   proximityBonusPortsNb(totalPorts: number): number;
-  maxPopulation(player: Player | PlayerView): number;
-  cityPopulationIncrease(): number;
+  maxTroops(player: Player | PlayerView): number;
+  cityTroopIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
   shellLifetime(): number;
   boatMaxNumber(): number;
@@ -127,6 +128,7 @@ export interface Config {
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number, numPorts: number): Gold;
@@ -157,19 +159,20 @@ export interface Config {
   nukeAllianceBreakThreshold(): number;
   defaultNukeSpeed(): number;
   defaultNukeTargetableRange(): number;
+  defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
   nukeDeathFactor(
     nukeType: NukeType,
     humans: number,
     tilesOwned: number,
-    maxPop: number,
+    maxTroops: number,
   ): number;
   structureMinDist(): number;
   isReplay(): boolean;
   allianceExtensionPromptOffset(): number;
-}
+};
 
-export interface Theme {
+export type Theme = {
   teamColor(team: Team): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
@@ -187,4 +190,4 @@ export interface Theme {
   allyColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
-}
+};

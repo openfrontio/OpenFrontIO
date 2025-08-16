@@ -10,8 +10,8 @@ import {
 import { TileRef } from "../../src/core/game/GameMap";
 
 export class TestConfig extends DefaultConfig {
-  private _proximityBonusPortsNb: number = 0;
-  private _defaultNukeSpeed: number = 4;
+  private _proximityBonusPortsNb = 0;
+  private _defaultNukeSpeed = 4;
 
   samHittingChance(): number {
     return 1;

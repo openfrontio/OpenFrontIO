@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
-import { terrainMapFileLoader } from "../../core/game/TerrainMapFileLoader";
+import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
 
 // Add map descriptions
@@ -18,6 +18,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Pangaea: "Pangaea",
   Asia: "Asia",
   Mars: "Mars",
+  MarsRevised: "Mars Revised",
   SouthAmerica: "South America",
   Britannia: "Britannia",
   GatewayToTheAtlantic: "Gateway to the Atlantic",
@@ -32,13 +33,15 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Halkidiki: "Halkidiki",
   StraitOfGibraltar: "Strait of Gibraltar",
   Italia: "Italia",
+  Yenisei: "Yenisei",
+  Pluto: "Pluto",
 };
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
   @property({ type: Boolean }) selected = false;
-  @property({ type: String }) translation: string = "";
+  @property({ type: String }) translation = "";
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;

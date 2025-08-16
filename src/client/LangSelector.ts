@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
@@ -34,14 +36,16 @@ import zh_CN from "../../resources/lang/zh-CN.json";
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
-  @state() private defaultTranslations: Record<string, string> | undefined;
-  @state() private currentLang: string = "en";
+  @state() public defaultTranslations: Record<string, string> | undefined;
+  @state() public currentLang = "en";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   @state() private languageList: any[] = [];
-  @state() private showModal: boolean = false;
-  @state() private debugMode: boolean = false;
+  @state() private showModal = false;
+  @state() private debugMode = false;
 
-  private dKeyPressed: boolean = false;
+  private debugKeyPressed = false;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private languageMap: Record<string, any> = {
     ar,
     bg,
@@ -85,10 +89,10 @@ export class LangSelector extends LitElement {
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "t") this.dKeyPressed = true;
+      if (e.key.toLowerCase() === "t") this.debugKeyPressed = true;
     });
     window.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() === "t") this.dKeyPressed = false;
+      if (e.key.toLowerCase() === "t") this.debugKeyPressed = false;
     });
   }
 
@@ -123,6 +127,7 @@ export class LangSelector extends LitElement {
 
   private loadLanguage(lang: string): Record<string, string> {
     const language = this.languageMap[lang] ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const flat = flattenTranslations(language);
     return flat;
   }
@@ -130,6 +135,7 @@ export class LangSelector extends LitElement {
   private async loadLanguageList() {
     try {
       const data = this.languageMap;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let list: any[] = [];
 
       const browserLang = new Intl.Locale(navigator.language).language;
@@ -146,8 +152,9 @@ export class LangSelector extends LitElement {
         });
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let debugLang: any = null;
-      if (this.dKeyPressed) {
+      if (this.debugKeyPressed) {
         debugLang = {
           code: "debug",
           native: "Debug",
@@ -177,10 +184,12 @@ export class LangSelector extends LitElement {
 
       list.sort((a, b) => a.en.localeCompare(b.en));
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const finalList: any[] = [];
       if (currentLangEntry) finalList.push(currentLangEntry);
       if (englishEntry) finalList.push(englishEntry);
       if (browserLangEntry) finalList.push(browserLangEntry);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       finalList.push(...list);
       if (debugLang) finalList.push(debugLang);
 
@@ -236,7 +245,9 @@ export class LangSelector extends LitElement {
 
     components.forEach((tag) => {
       document.querySelectorAll(tag).forEach((el) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof (el as any).requestUpdate === "function") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (el as any).requestUpdate();
         }
       });
@@ -266,7 +277,7 @@ export class LangSelector extends LitElement {
   }
 
   private openModal() {
-    this.debugMode = this.dKeyPressed;
+    this.debugMode = this.debugKeyPressed;
     this.showModal = true;
     this.loadLanguageList();
   }
@@ -276,23 +287,23 @@ export class LangSelector extends LitElement {
       this.languageList.find((l) => l.code === this.currentLang) ??
       (this.currentLang === "debug"
         ? {
-            code: "debug",
-            native: "Debug",
-            en: "Debug",
-            svg: "xx",
-          }
+          code: "debug",
+          native: "Debug",
+          en: "Debug",
+          svg: "xx",
+        }
         : {
-            native: "English",
-            en: "English",
-            svg: "uk_us_flag",
-          });
+          native: "English",
+          en: "English",
+          svg: "uk_us_flag",
+        });
 
     return html`
       <div class="container__row">
         <button
           id="lang-selector"
           @click=${this.openModal}
-          class="text-center appearance-none w-full bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300 flex items-center gap-2 justify-center"
+          class="text-center appearance-none w-full bg-blue-100 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-gray-600 text-blue-900 dark:text-gray-100 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300 flex items-center gap-2 justify-center"
         >
           <img
             id="lang-flag"
@@ -309,6 +320,7 @@ export class LangSelector extends LitElement {
         .languageList=${this.languageList}
         .currentLang=${this.currentLang}
         @language-selected=${(e: CustomEvent) =>
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           this.changeLanguage(e.detail.lang)}
         @close-modal=${() => (this.showModal = false)}
       ></language-modal>
@@ -317,6 +329,7 @@ export class LangSelector extends LitElement {
 }
 
 function flattenTranslations(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   obj: Record<string, any>,
   parentKey = "",
   result: Record<string, string> = {},
@@ -328,6 +341,7 @@ function flattenTranslations(
     if (typeof value === "string") {
       result[fullKey] = value;
     } else if (value && typeof value === "object" && !Array.isArray(value)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       flattenTranslations(value, fullKey, result);
     } else {
       console.warn("Unknown type", typeof value, value);

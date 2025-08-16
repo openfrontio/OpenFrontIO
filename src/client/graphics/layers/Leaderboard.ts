@@ -7,7 +7,7 @@ import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
-interface Entry {
+type Entry = {
   name: string;
   position: number;
   score: string;
@@ -15,7 +15,7 @@ interface Entry {
   troops: string;
   isMyPlayer: boolean;
   player: PlayerView;
-}
+};
 
 export class GoToPlayerEvent implements GameEvent {
   constructor(public player: PlayerView) {}
@@ -269,9 +269,6 @@ export class Leaderboard extends LitElement implements Layer {
 
 function formatPercentage(value: number): string {
   const perc = value * 100;
-  if (perc > 99.5) return "100%";
-  if (perc < 0.01) return "0%";
-  if (perc < 0.1) return perc.toPrecision(1) + "%";
   if (Number.isNaN(perc)) return "0%";
-  return perc.toPrecision(2) + "%";
+  return perc.toFixed(1) + "%";
 }

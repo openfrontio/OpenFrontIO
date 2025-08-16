@@ -1,6 +1,7 @@
+import { z } from "zod";
 import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { GameMapLoader } from "./GameMapLoader";
 
 export type TerrainMapData = {
   manifest: MapManifest;
@@ -10,28 +11,32 @@ export type TerrainMapData = {
 
 const loadedMaps = new Map<GameMapType, TerrainMapData>();
 
-export interface MapMetadata {
-  width: number;
-  height: number;
-  num_land_tiles: number;
-}
+export const MapMetadataSchema = z.object({
+  height: z.number(),
+  num_land_tiles: z.number(),
+  width: z.number(),
+});
+export type MapMetadata = z.infer<typeof MapMetadataSchema>;
 
-export interface MapManifest {
-  name: string;
-  map: MapMetadata;
-  mini_map: MapMetadata;
-  nations: Nation[];
-}
+export const NationSchema = z.object({
+  coordinates: z.tuple([z.number(), z.number()]),
+  flag: z.string(),
+  name: z.string(),
+  strength: z.number(),
+});
+export type Nation = z.infer<typeof NationSchema>;
 
-export interface Nation {
-  coordinates: [number, number];
-  flag: string;
-  name: string;
-  strength: number;
-}
+export const MapManifestSchema = z.object({
+  map: MapMetadataSchema,
+  mini_map: MapMetadataSchema,
+  name: z.string(),
+  nations: NationSchema.array(),
+});
+export type MapManifest = z.infer<typeof MapManifestSchema>;
 
 export async function loadTerrainMap(
   map: GameMapType,
+  terrainMapFileLoader: GameMapLoader,
 ): Promise<TerrainMapData> {
   const cached = loadedMaps.get(map);
   if (cached !== undefined) return cached;
@@ -47,8 +52,8 @@ export async function loadTerrainMap(
     await mapFiles.miniMapBin(),
   );
   const result = {
-    manifest: await mapFiles.manifest(),
     gameMap: gameMap,
+    manifest: await mapFiles.manifest(),
     miniGameMap: miniGameMap,
   };
   loadedMaps.set(map, result);
@@ -57,7 +62,7 @@ export async function loadTerrainMap(
 
 export async function genTerrainFromBin(
   mapData: MapMetadata,
-  data: string,
+  data: Uint8Array,
 ): Promise<GameMap> {
   if (data.length !== mapData.width * mapData.height) {
     throw new Error(
@@ -65,19 +70,10 @@ export async function genTerrainFromBin(
     );
   }
 
-  // Store raw data in Uint8Array
-  const rawData = new Uint8Array(mapData.width * mapData.height);
-
-  // Copy data starting after the header
-  for (let i = 0; i < mapData.width * mapData.height; i++) {
-    const packedByte = data.charCodeAt(i);
-    rawData[i] = packedByte;
-  }
-
   return new GameMapImpl(
     mapData.width,
     mapData.height,
-    rawData,
+    data,
     mapData.num_land_tiles,
   );
 }

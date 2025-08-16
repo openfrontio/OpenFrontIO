@@ -13,12 +13,12 @@ export class MultiTabModal extends LitElement implements Layer {
 
   private detector: MultiTabDetector;
 
-  @property({ type: Number }) duration: number = 5000;
-  @state() private countdown: number = 5;
-  @state() private isVisible: boolean = false;
-  @state() private fakeIp: string = "";
-  @state() private deviceFingerprint: string = "";
-  @state() private reported: boolean = true;
+  @property({ type: Number }) duration = 5000;
+  @state() private countdown = 5;
+  @state() private isVisible = false;
+  @state() private fakeIp = "";
+  @state() private deviceFingerprint = "";
+  @state() private reported = true;
 
   private intervalId?: number;
 

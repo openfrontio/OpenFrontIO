@@ -35,13 +35,13 @@ import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-export interface BuildItemDisplay {
+export type BuildItemDisplay = {
   unitType: UnitType;
   icon: string;
   description?: string;
   key?: string;
   countable?: boolean;
-}
+};
 
 export const buildTable: BuildItemDisplay[][] = [
   [
@@ -404,7 +404,7 @@ export class BuildMenu extends LitElement implements Layer {
     return html`
       <div
         class="build-menu ${this._hidden ? "hidden" : ""}"
-        @contextmenu=${(e) => e.preventDefault()}
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         ${this.filteredBuildTable.map(
           (row) => html`

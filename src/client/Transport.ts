@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
@@ -133,16 +133,16 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendDeleteUnitIntentEvent implements GameEvent {
+  constructor(public readonly unitId: number) {}
+}
+
 export class CancelAttackIntentEvent implements GameEvent {
   constructor(public readonly attackID: string) {}
 }
 
 export class CancelBoatIntentEvent implements GameEvent {
   constructor(public readonly unitID: number) {}
-}
-
-export class SendSetTargetTroopRatioEvent implements GameEvent {
-  constructor(public readonly ratio: number) {}
 }
 
 export class SendWinnerEvent implements GameEvent {
@@ -163,6 +163,10 @@ export class MoveWarshipIntentEvent implements GameEvent {
     public readonly unitId: number,
     public readonly tile: number,
   ) {}
+}
+
+export class SendKickPlayerIntentEvent implements GameEvent {
+  constructor(public readonly target: string) {}
 }
 
 export class Transport {
@@ -223,9 +227,6 @@ export class Transport {
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
-    this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
-      this.onSendSetTargetTroopRatioEvent(e),
-    );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
@@ -241,6 +242,14 @@ export class Transport {
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
+
+    this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
+      this.onSendDeleteUnitIntent(e),
+    );
+
+    this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
+      this.onSendKickPlayerIntent(e),
+    );
   }
 
   private startPing() {
@@ -319,6 +328,7 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const parsed = JSON.parse(event.data);
         const result = ServerMessageSchema.safeParse(parsed);
         if (!result.success) {
@@ -374,7 +384,7 @@ export class Transport {
     } satisfies ClientJoinMessage);
   }
 
-  leaveGame(saveFullGame: boolean = false) {
+  leaveGame(saveFullGame = false) {
     if (this.isLocal) {
       this.localServer.endGame(saveFullGame);
       return;
@@ -525,14 +535,6 @@ export class Transport {
     });
   }
 
-  private onSendSetTargetTroopRatioEvent(event: SendSetTargetTroopRatioEvent) {
-    this.sendIntent({
-      type: "troop_ratio",
-      clientID: this.lobbyConfig.clientID,
-      ratio: event.ratio,
-    });
-  }
-
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
     this.sendIntent({
       type: "build_unit",
@@ -608,6 +610,22 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
       tile: event.tile,
+    });
+  }
+
+  private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
+    this.sendIntent({
+      type: "delete_unit",
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
+    });
+  }
+
+  private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
+    this.sendIntent({
+      type: "kick_player",
+      clientID: this.lobbyConfig.clientID,
+      target: event.target,
     });
   }
 

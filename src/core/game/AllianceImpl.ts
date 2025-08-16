@@ -1,8 +1,8 @@
 import { Game, MutableAlliance, Player, Tick } from "./Game";
 
 export class AllianceImpl implements MutableAlliance {
-  private extensionRequestedRequestor_: boolean = false;
-  private extensionRequestedRecipient_: boolean = false;
+  private extensionRequestedRequestor_ = false;
+  private extensionRequestedRecipient_ = false;
 
   private expiresAt_: Tick;
 
@@ -47,9 +47,18 @@ export class AllianceImpl implements MutableAlliance {
     }
   }
 
-  canExtend(): boolean {
+  bothAgreedToExtend(): boolean {
     return (
       this.extensionRequestedRequestor_ && this.extensionRequestedRecipient_
+    );
+  }
+
+  onlyOneAgreedToExtend(): boolean {
+    // Requestor / Recipient of the original alliance request, not of the extension request
+    // False if: no expiration or neither requested extension yet (both false), or both agreed to extend (both true)
+    // True if: one requested extension, other didn't yet or actively ignored (one true, one false)
+    return (
+      this.extensionRequestedRequestor_ !== this.extensionRequestedRecipient_
     );
   }
 
