@@ -159,7 +159,6 @@ export class InputHandler {
       groundAttack: "KeyG",
       modifierKey: "ControlLeft",
       altKey: "AltLeft",
-      ...(JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}") ?? {}),
     };
 
     // Mac users might have different keybinds
@@ -167,6 +166,8 @@ export class InputHandler {
     if (isMac) {
       this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
     }
+
+    Object.assign(this.keybinds, JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}") ?? {});
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
