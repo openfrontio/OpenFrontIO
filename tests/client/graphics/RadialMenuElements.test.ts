@@ -148,6 +148,11 @@ describe("RadialMenuElements", () => {
       playerPanel: {} as any,
       chatIntegration: {} as any,
       eventBus: {} as any,
+      uiState: {
+        attackRatio: 1,
+        nukePreview: undefined,
+        nukeAnchor: undefined,
+      },
       closeMenu: jest.fn(),
     };
   });
@@ -505,6 +510,72 @@ describe("RadialMenuElements", () => {
       expect(translateText).toHaveBeenCalledWith(
         "unit_type.hydrogen_bomb_desc",
       );
+    });
+  });
+
+  describe("Nuke hover preview", () => {
+    it("sets and clears nukePreview on hover for Atom Bomb", () => {
+      const enemyPlayer = {
+        id: () => 2,
+        isPlayer: jest.fn(() => true),
+      } as unknown as PlayerView;
+      mockParams.selected = enemyPlayer;
+
+      const subMenu = attackMenuElement.subMenu!(mockParams);
+      const atom = subMenu.find((i) => i.id === "attack_Atom Bomb");
+
+      expect(atom).toBeDefined();
+      expect(atom!.isNuke).toBe(true);
+
+      atom!.onHoverEnter?.(mockParams);
+      expect(mockParams.uiState.nukePreview).toEqual({
+        active: true,
+        nukeType: UnitType.AtomBomb,
+      });
+
+      atom!.onHoverLeave?.(mockParams);
+      expect(mockParams.uiState.nukePreview).toBeUndefined();
+    });
+
+    it("does not set nukePreview for non-nuke (Warship)", () => {
+      const enemyPlayer = {
+        id: () => 2,
+        isPlayer: jest.fn(() => true),
+      } as unknown as PlayerView;
+      mockParams.selected = enemyPlayer;
+
+      const subMenu = attackMenuElement.subMenu!(mockParams);
+      const warship = subMenu.find((i) => i.id === "attack_Warship");
+
+      expect(warship).toBeDefined();
+      expect(warship!.isNuke).toBeFalsy();
+
+      mockParams.uiState.nukePreview = undefined;
+      warship!.onHoverEnter?.(mockParams);
+      expect(mockParams.uiState.nukePreview).toBeUndefined();
+    });
+
+    it("marks MIRV as a nuke and sets correct type on hover", () => {
+      const enemyPlayer = {
+        id: () => 2,
+        isPlayer: jest.fn(() => true),
+      } as unknown as PlayerView;
+      mockParams.selected = enemyPlayer;
+
+      const subMenu = attackMenuElement.subMenu!(mockParams);
+      const mirv = subMenu.find((i) => i.id === "attack_MIRV");
+
+      expect(mirv).toBeDefined();
+      expect(mirv!.isNuke).toBe(true);
+
+      mirv!.onHoverEnter?.(mockParams);
+      expect(mockParams.uiState.nukePreview).toEqual({
+        active: true,
+        nukeType: UnitType.MIRV,
+      });
+
+      mirv!.onHoverLeave?.(mockParams);
+      expect(mockParams.uiState.nukePreview).toBeUndefined();
     });
   });
 });

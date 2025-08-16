@@ -1,5 +1,5 @@
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions, PlayerID } from "../../../core/game/Game";
+import { PlayerActions, PlayerID, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
 import {
@@ -29,6 +29,16 @@ export class PlayerActionHandler {
     tile: TileRef,
   ): Promise<PlayerActions> {
     return await player.actions(tile);
+  }
+
+  startNukePreview(t: UnitType) {
+    if (t === UnitType.AtomBomb || t === UnitType.HydrogenBomb || t === UnitType.MIRV) {
+      this.uiState.nukePreview = { active: true, nukeType: t };
+    }
+  }
+
+  stopNukePreview() {
+    this.uiState.nukePreview = undefined;
   }
 
   handleAttack(player: PlayerView, targetId: string | null) {

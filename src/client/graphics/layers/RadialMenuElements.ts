@@ -24,6 +24,7 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
+import { UIState } from "../UIState";
 
 export type MenuElementParams = {
   myPlayer: PlayerView;
@@ -37,6 +38,7 @@ export type MenuElementParams = {
   playerPanel: PlayerPanel;
   chatIntegration: ChatIntegration;
   eventBus: EventBus;
+  uiState: UIState;
   closeMenu: () => void;
 };
 
@@ -50,10 +52,13 @@ export type MenuElement = {
   fontSize?: string;
   tooltipItems?: TooltipItem[];
   tooltipKeys?: TooltipKey[];
+  isNuke?: boolean;
 
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+  onHoverEnter?: (p: MenuElementParams) => void;
+  onHoverLeave?: (p: MenuElementParams) => void;
 };
 
 export type TooltipKey = {
@@ -339,6 +344,14 @@ const ATTACK_UNIT_TYPES: UnitType[] = [
   UnitType.Warship,
 ];
 
+function isNukeType(t: UnitType) {
+  return (
+    t === UnitType.AtomBomb ||
+    t === UnitType.HydrogenBomb ||
+    t === UnitType.MIRV
+  );
+}
+
 function createMenuElements(
   params: MenuElementParams,
   filterType: "attack" | "build",
@@ -370,6 +383,7 @@ function createMenuElements(
           : COLORS.building
         : undefined,
       icon: item.icon,
+      isNuke: isNukeType(item.unitType),
       tooltipItems: [
         { text: translateText(item.key ?? ""), className: "title" },
         {
@@ -397,6 +411,18 @@ function createMenuElements(
           params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
         }
         params.closeMenu();
+      },
+      onHoverEnter: (p: MenuElementParams) => {
+        if (isNukeType(item.unitType)) {
+          p.uiState.nukePreview = { active: true, nukeType: item.unitType };
+        }
+      },
+      onHoverLeave: (p: MenuElementParams) => {
+        if (!isNukeType(item.unitType)) return;
+        const current = p.uiState.nukePreview;
+        if (current?.active && current.nukeType === item.unitType) {
+          p.uiState.nukePreview = undefined;
+        }
       },
     }));
 }

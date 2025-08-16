@@ -85,6 +85,7 @@ export class MainRadialMenu extends LitElement implements Layer {
         return;
       }
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
+      this.uiState.nukeAnchor = { x: worldCoords.x, y: worldCoords.y };
       this.game
         .myPlayer()!
         .actions(this.clickedTile)
@@ -129,6 +130,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       chatIntegration: this.chatIntegration,
       closeMenu: () => this.closeMenu(),
       eventBus: this.eventBus,
+      uiState: this.uiState,
     };
 
     this.radialMenu.setParams(params);
@@ -179,5 +181,8 @@ export class MainRadialMenu extends LitElement implements Layer {
     if (this.playerPanel.isVisible) {
       this.playerPanel.hide();
     }
+
+    this.playerActionHandler.stopNukePreview();
+    this.uiState.nukeAnchor = undefined;
   }
 }
