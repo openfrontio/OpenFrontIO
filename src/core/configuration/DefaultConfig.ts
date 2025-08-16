@@ -331,16 +331,16 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 5 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 30;
+    return (numPlayerFactories + 7) * 25;
   }
   trainGold(rel: "self" | "friendly" | "other"): Gold {
     switch (rel) {
       case "friendly":
-        return 50_000n;
+        return 100_000n;
       case "other":
-        return 10_000n;
+        return 25_000n;
       case "self":
-        return 5_000n;
+        return 10_000n;
     }
   }
 
@@ -348,10 +348,10 @@ export class DefaultConfig implements Config {
     return 15;
   }
   trainStationMaxRange(): number {
-    return 80;
+    return 100;
   }
   railroadMaxSize(): number {
-    return 100;
+    return 120;
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
@@ -370,7 +370,7 @@ export class DefaultConfig implements Config {
         this.tradeShipPortMultiplier(numPlayerPorts),
     );
 
-    return Math.floor(15 / combined);
+    return Math.floor(12 / combined);
   }
 
   private tradeShipBaseSpawn(numTradeShips: number): number {
