@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import cluster from "cluster";
 import express from "express";
 import rateLimit from "express-rate-limit";
