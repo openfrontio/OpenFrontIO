@@ -329,9 +329,9 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   trainSpawnRate(numPlayerFactories: number): number {
-    // hyperbolic decay, midpoint at 5 factories
+    // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 15;
+    return (numPlayerFactories + 10) * 20;
   }
   trainGold(rel: "self" | "friendly" | "other"): Gold {
     switch (rel) {
@@ -355,7 +355,7 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(25_000 + 50 * dist);
+    const baseGold = Math.floor(50_000 + 50 * dist);
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
