@@ -1,6 +1,8 @@
 // This file contains schemas for api.openfront.io
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
+import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
+import { Difficulty, GameMapType, GameMode, GameType } from "./game/Game";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -49,6 +51,52 @@ export const UserMeResponseSchema = z.object({
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
+
+export const PlayerStatsLeafSchema = z.object({
+  wins: BigIntStringSchema,
+  losses: BigIntStringSchema,
+  total: BigIntStringSchema,
+  stats: PlayerStatsSchema,
+});
+export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
+
+export const PlayerStatsTreeSchema = z.partialRecord(
+  z.enum(GameType),
+  z.partialRecord(
+    z.enum(GameMode),
+    z.partialRecord(
+      z.enum(Difficulty),
+      PlayerStatsLeafSchema,
+    ),
+  ),
+);
+export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
+
+export const PlayerIdResponseSchema = z.object({
+  createdAt: z.iso.datetime(),
+  user: z
+    .object({
+      id: z.string(),
+      avatar: z.string().nullable(),
+      username: z.string(),
+      global_name: z.string().nullable(),
+      discriminator: z.string(),
+    })
+    .optional(),
+  games: z
+    .object({
+      gameId: z.string(),
+      start: z.iso.datetime(),
+      mode: z.enum(GameMode),
+      type: z.enum(GameType),
+      map: z.enum(GameMapType),
+      difficulty: z.enum(Difficulty),
+      clientId: z.string().optional(),
+    })
+    .array(),
+  stats: PlayerStatsTreeSchema,
+});
+export type PlayerIdResponse = z.infer<typeof PlayerIdResponseSchema>;
 
 export const StripeCreateCheckoutSessionResponseSchema = z.object({
   id: z.string(),

@@ -22,7 +22,7 @@ export function getApiBase() {
     : `https://api.${domainname}`;
 }
 
-function getToken(): string | null {
+export function getToken(): string | null {
   // Check window hash
   const { hash } = window.location;
   if (hash.startsWith("#")) {
