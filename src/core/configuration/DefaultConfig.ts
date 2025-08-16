@@ -336,7 +336,7 @@ export class DefaultConfig implements Config {
   trainGold(rel: "self" | "friendly" | "other"): Gold {
     switch (rel) {
       case "friendly":
-        return 100_000n;
+        return 50_000n;
       case "other":
         return 25_000n;
       case "self":
@@ -374,15 +374,15 @@ export class DefaultConfig implements Config {
   }
 
   private tradeShipBaseSpawn(numTradeShips: number): number {
-    const decayRate = Math.log(2) / 30;
+    const decayRate = Math.LN2 / 30;
     return 1 - sigmoid(numTradeShips, decayRate, 100);
   }
 
   private tradeShipPortMultiplier(numPlayerPorts: number): number {
-    // Higher number => faster expected number of trade ships levels off
-    // This decays gradually to prevent the scenario where more ports => fewer trade ships
-    // Expected number of trade ships is proportional to numPlayerPorts * tradeShipPortMultiplier
-    const decayRate = 0.1;
+    // Hyperbolic decay function with midpoint at 10 ports
+    // Expected trade ship spawn rate is proportional to numPlayerPorts * multiplier
+    // Gradual decay prevents scenario where more ports => fewer ships
+    const decayRate = 1 / 10;
     return 1 / (1 + decayRate * numPlayerPorts);
   }
 
