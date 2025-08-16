@@ -84,7 +84,7 @@ export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
 ): string => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
   const self = translateText as any;
   self.formatterCache ??= new Map();
   self.lastLang ??= null;
@@ -124,6 +124,7 @@ export const translateText = (
         ? "en"
         : langSelector.currentLang;
     const cacheKey = `${key}:${locale}:${message}`;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     let formatter = self.formatterCache.get(cacheKey);
 
     if (!formatter) {

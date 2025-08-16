@@ -88,7 +88,7 @@ export default [
       "indent": "off", // @stylistic/ts/indent
       "sort-keys": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
-      // "@typescript-eslint/no-unsafe-assignment": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1781
+      "@typescript-eslint/no-unsafe-assignment": "error",
       // "@typescript-eslint/no-unsafe-member-access": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1783
       // "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1784
       "@typescript-eslint/no-unused-vars": "off",
@@ -134,6 +134,7 @@ export default [
       // Disabled rules for tests, configs
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
       "sort-keys": "off",
     },
   },

@@ -92,9 +92,9 @@ export class GameMapImpl implements GameMap {
     this.state = new Uint16Array(width * height);
     // Precompute the LUTs
     let ref = 0;
-    this.refToX = new Array(width * height);
-    this.refToY = new Array(width * height);
-    this.yToRef = new Array(height);
+    this.refToX = new Array<number>(width * height);
+    this.refToY = new Array<number>(width * height);
+    this.yToRef = new Array<TileRef>(height);
     for (let y = 0; y < height; y++) {
       this.yToRef[y] = ref;
       for (let x = 0; x < width; x++) {
