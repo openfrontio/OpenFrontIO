@@ -1,0 +1,101 @@
+{
+  "name": "Pluto",
+  "nations": [
+    {
+      "coordinates": [396, 364],
+      "name": "United States Colony",
+      "strength": 3,
+      "flag": "us"
+    },
+    {
+      "coordinates": [285, 970],
+      "name": "Russian Colony",
+      "strength": 3,
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1700, 400],
+      "name": "European Space Agency",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [1190, 1210],
+      "name": "United Kingdom Colony",
+      "strength": 2,
+      "flag": "gb"
+    },
+    {
+      "coordinates": [1700, 1000],
+      "name": "Chinese Colony",
+      "strength": 3,
+      "flag": "cn"
+    },
+    {
+      "coordinates": [1200, 185],
+      "name": "Japanese Colony",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [830, 1000],
+      "name": "Indian Colony",
+      "strength": 1,
+      "flag": "in"
+    },
+    {
+      "coordinates": [75, 300],
+      "name": "African Space Agency",
+      "strength": 2,
+      "flag": ""
+    },
+    {
+      "coordinates": [750, 560],
+      "name": "Australian Colony",
+      "strength": 1,
+      "flag": "au"
+    },
+    {
+      "coordinates": [1075, 325],
+      "name": "North Korean Colony",
+      "strength": 1,
+      "flag": ""
+    },
+    {
+      "coordinates": [1920, 100],
+      "name": "United Nations Base",
+      "strength": 1,
+      "flag": ""
+    },
+    {
+      "coordinates": [25, 1245],
+      "name": "Polish Colony",
+      "strength": 1,
+      "flag": "pl"
+    },
+    {
+      "coordinates": [1170, 1080],
+      "name": "Irish Colony",
+      "strength": 1,
+      "flag": "ie"
+    },
+    {
+      "coordinates": [1466, 1233],
+      "name": "Chilean Colony",
+      "strength": 1,
+      "flag": "cl"
+    },
+    {
+      "coordinates": [560, 20],
+      "name": "South African Colony",
+      "strength": 1,
+      "flag": "za"
+    },
+    {
+      "coordinates": [2088, 1008],
+      "name": "Free Pluto State",
+      "strength": 3,
+      "flag": ""
+    }
+  ]
+}
