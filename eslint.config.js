@@ -2,7 +2,7 @@ import eslintConfigPrettier from "eslint-config-prettier/flat";
 import globals from "globals";
 import path from "node:path";
 import pluginJs from "@eslint/js";
-import stylisticTs from "@stylistic/eslint-plugin";
+import stylistic from "@stylistic/eslint-plugin";
 import tseslint from "typescript-eslint";
 import { fileURLToPath } from "node:url";
 import { includeIgnoreFile } from "@eslint/compat";
@@ -49,15 +49,15 @@ export default [
   },
   {
     plugins: {
-      "@stylistic/ts": stylisticTs,
+      "@stylistic": stylistic,
     },
     rules: {
       // Enable rules
-      // '@stylistic/ts/quotes': ['error', 'single'], TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1788
-      "@stylistic/ts/indent": ["error", 2],
-      "@stylistic/ts/semi": "error",
-      "@stylistic/ts/space-infix-ops": "error",
-      "@stylistic/ts/type-annotation-spacing": [
+      // '@stylistic/quotes': ['error', 'single'], TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1788
+      "@stylistic/indent": ["error", 2],
+      "@stylistic/semi": "error",
+      "@stylistic/space-infix-ops": "error",
+      "@stylistic/type-annotation-spacing": [
         "error",
         {
           after: true,
@@ -69,6 +69,7 @@ export default [
           },
         },
       ],
+      "@stylistic/eol-last": "error",
       "@typescript-eslint/consistent-type-definitions": [
         "error",
         "type",
@@ -85,7 +86,7 @@ export default [
       "@typescript-eslint/prefer-literal-enum-member": "error",
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       "eqeqeq": "error",
-      "indent": "off", // @stylistic/ts/indent
+      "indent": "off", // @stylistic/indent
       "sort-keys": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
