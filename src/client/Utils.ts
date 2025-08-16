@@ -57,6 +57,7 @@ export function generateCryptoRandomUUID(): string {
 
   // Fallback using crypto.getRandomValues
   if (crypto !== undefined && "getRandomValues" in crypto) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
@@ -83,6 +84,7 @@ export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
 ): string => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const self = translateText as any;
   self.formatterCache ??= new Map();
   self.lastLang ??= null;

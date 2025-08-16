@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
@@ -96,7 +96,7 @@ export class EventsDisplay extends LitElement implements Layer {
   ]);
 
   private renderButton(options: {
-    content: any; // Can be string, TemplateResult, or other renderable content
+    content: string | TemplateResult;
     onClick?: () => void;
     className?: string;
     disabled?: boolean;

@@ -309,6 +309,7 @@ export async function startWorker() {
     );
 
     ws.on("error", (error: Error) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }

@@ -121,6 +121,7 @@ export async function startMaster() {
 
   // Handle worker crashes
   cluster.on("exit", (worker, code, signal) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const workerId = (worker as any).process?.env?.WORKER_ID;
     if (!workerId) {
       log.error(`worker crashed could not find id`);

@@ -56,6 +56,7 @@ declare global {
       spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
       destroyUnits: (adType: string) => void;
       settings?: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         slots?: any;
       };
       spaNewPage: (url: string) => void;

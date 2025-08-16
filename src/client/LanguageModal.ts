@@ -5,6 +5,7 @@ import { translateText } from "../client/Utils";
 @customElement("language-modal")
 export class LanguageModal extends LitElement {
   @property({ type: Boolean }) visible = false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   @property({ type: Array }) languageList: any[] = [];
   @property({ type: String }) currentLang = "en";
 
