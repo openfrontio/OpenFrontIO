@@ -128,7 +128,7 @@ export default [
     files: [
       "**/*.config.{js,ts,jsx,tsx}",
       "**/*.test.{js,ts,jsx,tsx}",
-      "tests/*.{js,ts,jsx,tsx}",
+      "tests/**/*.{js,ts,jsx,tsx}",
     ],
     rules: {
       // Disabled rules for tests, configs

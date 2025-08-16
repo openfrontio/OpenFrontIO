@@ -30,7 +30,7 @@ new Benchmark.Suite()
       game.ref(511, 536),
     );
   })
-  .on("cycle", (event: { target: unknown; }) => {
+  .on("cycle", (event: any) => {
     console.log(String(event.target));
   })
   .run({ async: true });
