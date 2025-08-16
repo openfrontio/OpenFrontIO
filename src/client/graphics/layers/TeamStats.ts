@@ -32,7 +32,7 @@ export class TeamStats extends LitElement implements Layer {
   createRenderRoot() {
     return this; // use light DOM for Tailwind
   }
-  
+
   init() {}
 
   tick() {
