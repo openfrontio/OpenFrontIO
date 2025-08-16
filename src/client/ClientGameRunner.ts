@@ -11,7 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameType, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -89,8 +89,12 @@ export function joinLobby(
       onPrestart();
     }
     if (message.type === "start") {
-      // Trigger prestart for singleplayer games
-      onPrestart();
+      // Only trigger prestart for multiplayer games, not for singleplayer
+      if (
+        lobbyConfig.gameStartInfo?.config.gameType !== GameType.Singleplayer
+      ) {
+        onPrestart();
+      }
       console.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
