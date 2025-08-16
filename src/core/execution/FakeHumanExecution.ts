@@ -426,7 +426,7 @@ export class FakeHumanExecution implements Execution {
       this.maybeSpawnStructure(UnitType.City, 24) ||
       this.maybeSpawnWarship() ||
       this.maybeSpawnStructure(UnitType.Factory, 5) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, 5)
+      this.maybeSpawnStructure(UnitType.MissileSilo, 5) ||
       this.maybeSpawnStructure(UnitType.SAMLauncher, 2)
     );
   }
