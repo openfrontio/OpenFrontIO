@@ -29,8 +29,8 @@ import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
 
-const DEFENSE_DEBUFF_MIDPOINT = 70000;
-const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 20000;
+const DEFENSE_DEBUFF_MIDPOINT = 150_000;
+const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
 
 const JwksSchema = z.object({
   keys: z
@@ -663,21 +663,32 @@ export class DefaultConfig implements Config {
           DEFENSE_DEBUFF_MIDPOINT,
         );
 
-      const speedDebuff = 0.25 + 0.75 * defenseSig;
-      const defenseDebuff = 0.5 + 0.5 * defenseSig;
+      const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
+      const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
+
+      let largeAttackBonus = 1;
+      if (attacker.numTilesOwned() > 100_000) {
+        largeAttackBonus = Math.sqrt(100_000 / attacker.numTilesOwned()) ** 0.7;
+      }
+      let largeAttackerSpeedBonus = 1;
+      if (attacker.numTilesOwned() > 100_000) {
+        largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
+      }
 
       return {
         attackerTroopLoss:
           within(defender.troops() / attackTroops, 0.6, 2) *
           mag *
-          defenseDebuff *
+          0.8 *
+          largeDefenderAttackDebuff *
+          largeAttackBonus *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
-        // Lower is faster
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
-          speedDebuff *
+          largeDefenderSpeedDebuff *
+          largeAttackerSpeedBonus *
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
