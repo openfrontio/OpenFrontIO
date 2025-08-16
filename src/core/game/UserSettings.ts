@@ -111,11 +111,11 @@ export class UserSettings {
     }
   }
 
-  getSelectedPattern(): string | undefined {
+  getSelectedPatternName(): string | undefined {
     return localStorage.getItem(PATTERN_KEY) ?? undefined;
   }
 
-  setSelectedPattern(base64: string | undefined): void {
+  setSelectedPatternName(base64: string | undefined): void {
     if (base64 === undefined) {
       localStorage.removeItem(PATTERN_KEY);
     } else {
