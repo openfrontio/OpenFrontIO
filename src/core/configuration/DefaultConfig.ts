@@ -336,7 +336,7 @@ export class DefaultConfig implements Config {
   trainGold(rel: "self" | "friendly" | "other"): Gold {
     switch (rel) {
       case "friendly":
-        return 100_000n;
+        return 50_000n;
       case "other":
         return 25_000n;
       case "self":
