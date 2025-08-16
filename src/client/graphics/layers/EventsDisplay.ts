@@ -96,7 +96,7 @@ export class EventsDisplay extends LitElement implements Layer {
   ]);
 
   private renderButton(options: {
-    content: string | TemplateResult;
+    content: string | TemplateResult | DirectiveResult<typeof UnsafeHTMLDirective>;
     onClick?: () => void;
     className?: string;
     disabled?: boolean;
