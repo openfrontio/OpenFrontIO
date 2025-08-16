@@ -43,7 +43,6 @@ export default [
   {
     rules: {
       // Disable rules that would fail. The failures should be fixed, and the entries here removed.
-      "@typescript-eslint/no-explicit-any": "off", // https://github.com/openfrontio/OpenFrontIO/issues/1789
       "@typescript-eslint/no-unused-expressions": "off", // https://github.com/openfrontio/OpenFrontIO/issues/1790
       "no-case-declarations": "off", // https://github.com/openfrontio/OpenFrontIO/issues/1791
     },
@@ -88,7 +87,7 @@ export default [
       "eqeqeq": "error",
       "indent": "off", // @stylistic/ts/indent
       "sort-keys": "error",
-      // "@typescript-eslint/no-unsafe-argument": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1780
+      "@typescript-eslint/no-unsafe-argument": "error",
       // "@typescript-eslint/no-unsafe-assignment": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1781
       // "@typescript-eslint/no-unsafe-member-access": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1783
       // "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1784
@@ -108,6 +107,7 @@ export default [
       "max-lines-per-function": ["error", { max: 561 }],
       "no-loss-of-precision": "error",
       "no-multi-spaces": "error",
+      "no-trailing-spaces": "error",
       "object-curly-newline": ["error", { multiline: true, consistent: true }],
       "object-curly-spacing": ["error", "always"],
       "object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
@@ -133,6 +133,7 @@ export default [
     rules: {
       // Disabled rules for tests, configs
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
       "sort-keys": "off",
     },
   },

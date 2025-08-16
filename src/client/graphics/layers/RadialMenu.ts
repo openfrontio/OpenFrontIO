@@ -491,15 +491,15 @@ export class RadialMenu implements Layer {
         onMouseOut(d, path);
       });
 
-      path.on("mousemove", function (event) {
-        handleMouseMove(event as MouseEvent);
+      path.on("mousemove", function (event: MouseEvent) {
+        handleMouseMove(event);
       });
 
-      path.on("click", function (event) {
+      path.on("click", function (event: Event) {
         onClick(d, event);
       });
 
-      path.on("touchstart", function (event) {
+      path.on("touchstart", function (event: Event) {
         event.preventDefault();
         event.stopPropagation();
         onClick(d, event);

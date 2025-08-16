@@ -125,6 +125,7 @@ export class LangSelector extends LitElement {
 
   private loadLanguage(lang: string): Record<string, string> {
     const language = this.languageMap[lang] ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const flat = flattenTranslations(language);
     return flat;
   }
@@ -186,6 +187,7 @@ export class LangSelector extends LitElement {
       if (currentLangEntry) finalList.push(currentLangEntry);
       if (englishEntry) finalList.push(englishEntry);
       if (browserLangEntry) finalList.push(browserLangEntry);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       finalList.push(...list);
       if (debugLang) finalList.push(debugLang);
 
@@ -316,6 +318,7 @@ export class LangSelector extends LitElement {
         .languageList=${this.languageList}
         .currentLang=${this.currentLang}
         @language-selected=${(e: CustomEvent) =>
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           this.changeLanguage(e.detail.lang)}
         @close-modal=${() => (this.showModal = false)}
       ></language-modal>
@@ -336,6 +339,7 @@ function flattenTranslations(
     if (typeof value === "string") {
       result[fullKey] = value;
     } else if (value && typeof value === "object" && !Array.isArray(value)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       flattenTranslations(value, fullKey, result);
     } else {
       console.warn("Unknown type", typeof value, value);

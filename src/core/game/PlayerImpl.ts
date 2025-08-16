@@ -1178,7 +1178,7 @@ export class PlayerImpl implements Player {
     const weightedPorts: Unit[] = [];
 
     for (const [i, otherPort] of ports.entries()) {
-      const expanded = new Array(otherPort.level()).fill(otherPort);
+      const expanded = new Array<Unit>(otherPort.level()).fill(otherPort);
       weightedPorts.push(...expanded);
       if (i < this.mg.config().proximityBonusPortsNb(ports.length)) {
         weightedPorts.push(...expanded);
