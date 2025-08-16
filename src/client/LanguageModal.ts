@@ -106,7 +106,9 @@ export class LanguageModal extends LitElement {
               return html`
                 <button
                   class="${buttonClasses}"
-                  @click=${() => this.selectLanguage(lang.code)}
+                  @click=${() =>
+                  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    this.selectLanguage(lang.code)}
                 >
                   <img
                     src="/flags/${lang.svg}.svg"
