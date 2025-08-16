@@ -331,7 +331,7 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 5 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 5) * 50;
+    return (numPlayerFactories + 10) * 30;
   }
   trainGold(rel: "self" | "friendly" | "other"): Gold {
     switch (rel) {
@@ -370,7 +370,7 @@ export class DefaultConfig implements Config {
         this.tradeShipPortMultiplier(numPlayerPorts),
     );
 
-    return Math.floor(20 / combined);
+    return Math.floor(15 / combined);
   }
 
   private tradeShipBaseSpawn(numTradeShips: number): number {
