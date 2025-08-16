@@ -89,7 +89,7 @@ export default [
       "sort-keys": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
-      // "@typescript-eslint/no-unsafe-member-access": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1783
+      "@typescript-eslint/no-unsafe-member-access": "error",
       // "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1784
       "@typescript-eslint/no-unused-vars": "off",
       "@typescript-eslint/prefer-for-of": "error",
@@ -129,12 +129,14 @@ export default [
       "**/*.config.{js,ts,jsx,tsx}",
       "**/*.test.{js,ts,jsx,tsx}",
       "tests/**/*.{js,ts,jsx,tsx}",
+      "eslint-plugin-local/**/*.{js,ts,jsx,tsx}",
     ],
     rules: {
       // Disabled rules for tests, configs
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
       "sort-keys": "off",
     },
   },

@@ -131,7 +131,7 @@ export class RadialMenu implements Layer {
         this.hideRadialMenu();
         this.eventBus.emit(new CloseRadialMenuEvent());
       })
-      .on("contextmenu", (e) => {
+      .on("contextmenu", (e: Event) => {
         e.preventDefault();
         this.hideRadialMenu();
         this.eventBus.emit(new CloseRadialMenuEvent());
@@ -178,7 +178,7 @@ export class RadialMenu implements Layer {
       .attr("r", this.config.centerButtonSize)
       .attr("fill", "transparent")
       .style("cursor", "pointer")
-      .on("click", (event) => {
+      .on("click", (event: Event) => {
         event.stopPropagation();
         this.handleCenterButtonClick();
       })

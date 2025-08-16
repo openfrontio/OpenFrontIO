@@ -256,9 +256,11 @@ export class Cloudflare {
     );
 
     cloudflared.stdout?.on("data", (data) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       log.info(data.toString().trim());
     });
     cloudflared.stderr?.on("data", (data) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       log.error(data.toString().trim());
     });
 
