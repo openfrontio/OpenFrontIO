@@ -77,7 +77,7 @@ export async function postJoinMessageHandler(
               target: clientMsg.intent.target,
             });
 
-            gs.kickClient(clientMsg.intent.target);
+            gs.kickClient(clientMsg.intent.target, "kick_lobby_creator");
             return;
           }
 

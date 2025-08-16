@@ -465,6 +465,7 @@ export const ServerDesyncSchema = z.object({
 
 export const ServerErrorSchema = z.object({
   error: z.string(),
+  kickReason: z.enum(["kick_admin", "kick_multi_tab", "kick_lobby_creator"]).optional(),
   message: z.string().optional(),
   type: z.literal("error"),
 });
