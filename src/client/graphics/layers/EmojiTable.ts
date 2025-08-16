@@ -64,16 +64,17 @@ export class EmojiTable extends LitElement {
 
     return html`
       <div
-        class="bg-slate-800 max-w-[95vw] max-h-[95vh] pt-[15px] pb-[15px] fixed flex flex-col -translate-x-1/2 -translate-y-1/2 
-                items-center rounded-[10px] z-[9999] top-[50%] left-[50%] justify-center"
+        class="bg-slate-800 max-w-[95vw] max-h-[95vh] pt-[15px] pb-[15px] fixed
+          flex flex-col -translate-x-1/2 -translate-y-1/2 items-center
+          rounded-[10px] z-[9999] top-[50%] left-[50%] justify-center"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @wheel=${(e: WheelEvent) => e.stopPropagation()}
       >
         <!-- Close button -->
         <button
-          class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
-                  bg-red-500 hover:bg-red-900 text-white rounded-full
-                  text-sm font-bold transition-colors"
+          class="absolute -top-2 -right-2 w-6 h-6 flex items-center
+            justify-center bg-red-500 hover:bg-red-900 text-white rounded-full
+            text-sm font-bold transition-colors"
           @click=${this.hideTable}
         >
           ✕
@@ -88,10 +89,14 @@ export class EmojiTable extends LitElement {
                 ${row.map(
                   (emoji) => html`
                     <button
-                      class="flex transition-transform duration-300 ease justify-center items-center cursor-pointer
-                              border border-solid border-slate-500 rounded-[12px] bg-slate-700 hover:bg-slate-600 active:bg-slate-500 
-                              md:m-[8px] md:text-[60px] md:w-[80px] md:h-[80px] hover:scale-[1.1] active:scale-[0.95]
-                              sm:w-[60px] sm:h-[60px] sm:text-[32px] sm:m-[5px] text-[28px] w-[50px] h-[50px] m-[3px]"
+                      class="flex transition-transform duration-300 ease
+                        justify-center items-center cursor-pointer border
+                        border-solid border-slate-500 rounded-[12px]
+                        bg-slate-700 hover:bg-slate-600 active:bg-slate-500
+                        md:m-[8px] md:text-[60px] md:w-[80px] md:h-[80px]
+                        hover:scale-[1.1] active:scale-[0.95] sm:w-[60px]
+                        sm:h-[60px] sm:text-[32px] sm:m-[5px] text-[28px]
+                        w-[50px] h-[50px] m-[3px]"
                       @click=${() => this.onEmojiClicked(emoji)}
                     >
                       ${emoji}

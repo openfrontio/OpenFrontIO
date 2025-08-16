@@ -188,7 +188,8 @@ export class SettingsModal extends LitElement implements Layer {
 
           <div class="p-4 space-y-3">
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onTerrainButtonClick}"
             >
               <img src=${treeIcon} alt="treeIcon" width="20" height="20" />
@@ -210,7 +211,8 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onToggleEmojisButtonClick}"
             >
               <img src=${emojiIcon} alt="emojiIcon" width="20" height="20" />
@@ -232,7 +234,8 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onToggleDarkModeButtonClick}"
             >
               <img
@@ -259,7 +262,8 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onToggleSpecialEffectsButtonClick}"
             >
               <img
@@ -286,7 +290,8 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onToggleStructureSpritesButtonClick}"
             >
               <img
@@ -313,7 +318,8 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onToggleRandomNameModeButtonClick}"
             >
               <img src=${ninjaIcon} alt="ninjaIcon" width="20" height="20" />
@@ -335,7 +341,8 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onToggleLeftClickOpensMenu}"
             >
               <img src=${mouseIcon} alt="mouseIcon" width="20" height="20" />
@@ -357,7 +364,8 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
               @click="${this.onTogglePerformanceOverlayButtonClick}"
             >
               <img
@@ -387,7 +395,8 @@ export class SettingsModal extends LitElement implements Layer {
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <button
-                class="flex gap-3 items-center w-full text-left p-3 hover:bg-red-600/20 rounded text-red-400 transition-colors"
+                class="flex gap-3 items-center w-full text-left p-3
+                hover:bg-red-600/20 rounded text-red-400 transition-colors"
                 @click="${this.onExitButtonClick}"
               >
                 <img src=${exitIcon} alt="exitIcon" width="20" height="20" />

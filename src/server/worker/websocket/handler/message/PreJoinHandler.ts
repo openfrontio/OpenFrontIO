@@ -121,7 +121,9 @@ async function handleJoinMessage(
     const expectedWorkerId = config.workerIndex(clientMsg.gameID);
     if (expectedWorkerId !== workerId) {
       log.warn(
-        `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
+        `Worker mismatch: Game ${clientMsg.gameID
+        } should be on worker ${expectedWorkerId
+        }, but this is worker ${workerId}`,
       );
       return;
     }
