@@ -37,12 +37,14 @@ export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
   @state() public defaultTranslations: Record<string, string> | undefined;
   @state() public currentLang = "en";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   @state() private languageList: any[] = [];
   @state() private showModal = false;
   @state() private debugMode = false;
 
   private debugKeyPressed = false;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private languageMap: Record<string, any> = {
     ar,
     bg,
@@ -132,6 +134,7 @@ export class LangSelector extends LitElement {
   private async loadLanguageList() {
     try {
       const data = this.languageMap;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let list: any[] = [];
 
       const browserLang = new Intl.Locale(navigator.language).language;
@@ -148,6 +151,7 @@ export class LangSelector extends LitElement {
         });
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let debugLang: any = null;
       if (this.debugKeyPressed) {
         debugLang = {
@@ -179,6 +183,7 @@ export class LangSelector extends LitElement {
 
       list.sort((a, b) => a.en.localeCompare(b.en));
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const finalList: any[] = [];
       if (currentLangEntry) finalList.push(currentLangEntry);
       if (englishEntry) finalList.push(englishEntry);
@@ -238,7 +243,9 @@ export class LangSelector extends LitElement {
 
     components.forEach((tag) => {
       document.querySelectorAll(tag).forEach((el) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (typeof (el as any).requestUpdate === "function") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (el as any).requestUpdate();
         }
       });
@@ -319,6 +326,7 @@ export class LangSelector extends LitElement {
 }
 
 function flattenTranslations(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   obj: Record<string, any>,
   parentKey = "",
   result: Record<string, string> = {},

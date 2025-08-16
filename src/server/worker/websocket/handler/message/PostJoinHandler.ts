@@ -102,7 +102,7 @@ export async function postJoinMessageHandler(
         break;
       }
       default: {
-        log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
+        log.warn(`Unknown message type: ${clientMsg.type}`, {
           clientID: client.clientID,
         });
         break;

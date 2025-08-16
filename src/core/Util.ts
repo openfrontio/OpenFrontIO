@@ -285,6 +285,7 @@ export const flattenedEmojiTable: string[] = emojiTable.flat();
 /**
  * JSON.stringify replacer function that converts bigint values to strings.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function replacer(_key: string, value: any): any {
   return typeof value === "bigint" ? value.toString() : value;
 }

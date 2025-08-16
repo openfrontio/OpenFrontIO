@@ -75,6 +75,7 @@ export default [
         "type",
       ],
       "@typescript-eslint/no-duplicate-enum-values": "error",
+      "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-inferrable-types": "error",
       "@typescript-eslint/no-mixed-enums": "error",
       "@typescript-eslint/no-require-imports": "error",
@@ -127,9 +128,20 @@ export default [
     files: [
       "**/*.config.{js,ts,jsx,tsx}",
       "**/*.test.{js,ts,jsx,tsx}",
+      "tests/**/*.{js,ts,jsx,tsx}",
+    ],
+    rules: {
+      // Disabled rules for tests, configs
+      "@typescript-eslint/no-explicit-any": "off",
+      "sort-keys": "off",
+    },
+  },
+  {
+    files: [
       "src/client/**/*.{js,ts,jsx,tsx}",
     ],
     rules: {
+      // Disabled rules for frontend
       "sort-keys": "off",
     },
   },

@@ -269,7 +269,7 @@ export class RadialMenu implements Layer {
       menuGroup.style("opacity", 0).style("transform", "scale(0.5)");
     }
 
-    this.menuGroups.set(level, menuGroup as any);
+    this.menuGroups.set(level, menuGroup);
 
     const offset = -Math.PI / items.length;
 
@@ -310,7 +310,7 @@ export class RadialMenu implements Layer {
       SVGGElement,
       unknown
     >,
-    arc: d3.Arc<any, d3.PieArcDatum<MenuElement>>,
+    arc: d3.Arc<unknown, d3.PieArcDatum<MenuElement>>,
     level: number,
   ) {
     arcs
@@ -351,7 +351,7 @@ export class RadialMenu implements Layer {
     arcs.each((d) => {
       const pathId = d.data.id;
       const path = d3.select(`path[data-id="${pathId}"]`);
-      this.menuPaths.set(pathId, path as any);
+      this.menuPaths.set(pathId, path as never);
 
       if (
         pathId === this.selectedItemId &&
@@ -391,7 +391,9 @@ export class RadialMenu implements Layer {
     >,
     level: number,
   ) {
-    const onHover = (d: d3.PieArcDatum<MenuElement>, path: any) => {
+    const onHover = (d: d3.PieArcDatum<MenuElement>, path: d3.Selection<
+      d3.BaseType, unknown, HTMLElement, unknown
+    >) => {
       const disabled = this.params === null || d.data.disabled(this.params);
       if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
         this.showTooltip(d.data.tooltipItems);
@@ -410,7 +412,9 @@ export class RadialMenu implements Layer {
       path.attr("stroke-width", "3");
     };
 
-    const onMouseOut = (d: d3.PieArcDatum<MenuElement>, path: any) => {
+    const onMouseOut = (d: d3.PieArcDatum<MenuElement>, path: d3.Selection<
+      d3.BaseType, unknown, HTMLElement, unknown
+    >) => {
       const disabled = this.params === null || d.data.disabled(this.params);
       if (this.submenuHoverTimeout !== null) {
         window.clearTimeout(this.submenuHoverTimeout);
@@ -521,7 +525,7 @@ export class RadialMenu implements Layer {
       SVGGElement,
       unknown
     >,
-    arc: d3.Arc<any, d3.PieArcDatum<MenuElement>>,
+    arc: d3.Arc<unknown, d3.PieArcDatum<MenuElement>>,
   ) {
     arcs
       .append("g")
@@ -556,7 +560,7 @@ export class RadialMenu implements Layer {
             .attr("opacity", disabled ? 0.5 : 1);
         }
 
-        this.menuIcons.set(contentId, content as any);
+        this.menuIcons.set(contentId, content as never);
       });
   }
 
@@ -738,8 +742,8 @@ export class RadialMenu implements Layer {
       });
   }
 
-  private animateExistingMenu(
-    previousMenu: d3.Selection<any, unknown, null, undefined>,
+  private animateExistingMenu<T extends d3.BaseType>(
+    previousMenu: d3.Selection<T, unknown, null, undefined>,
   ) {
     previousMenu
       .transition()

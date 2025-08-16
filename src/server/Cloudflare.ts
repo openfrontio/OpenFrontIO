@@ -64,6 +64,7 @@ export class Cloudflare {
   private async makeRequest<T>(
     url: string,
     method = "GET",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data?: any,
   ): Promise<T> {
     const response = await fetch(url, {

@@ -13,7 +13,7 @@ import {
   WorkerMessage,
 } from "./WorkerMessages";
 
-const ctx: Worker = self as any;
+const ctx: Worker = self as unknown as Worker;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 
