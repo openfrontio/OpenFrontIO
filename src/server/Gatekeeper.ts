@@ -66,6 +66,7 @@ async function getGatekeeper(): Promise<Gatekeeper> {
 
       // Use dynamic import for ES modules
       // Using a type assertion to avoid TypeScript errors for optional modules
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const module = await import(
         "./gatekeeper/RealGatekeeper.js" as string
       ).catch(() => import("./gatekeeper/RealGatekeeper.js" as string));
