@@ -422,11 +422,11 @@ export class FakeHumanExecution implements Execution {
     const player = this.player;
     if (player === null) return;
     return (
-      this.maybeSpawnStructure(UnitType.Port, 1) ||
-      this.maybeSpawnStructure(UnitType.City, 2) ||
+      this.maybeSpawnStructure(UnitType.Port, 12) ||
+      this.maybeSpawnStructure(UnitType.City, 24) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, 1) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, 1)
+      this.maybeSpawnStructure(UnitType.Factory, 5) ||
+      this.maybeSpawnStructure(UnitType.MissileSilo, 5)
     );
   }
 
