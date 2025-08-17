@@ -165,7 +165,8 @@ export class TerritoryPatternsModal extends LitElement {
         ${pattern.product !== null
           ? html`
               <button
-                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
+                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600
+                text-white text-xs font-medium rounded transition-colors"
                 @click=${(e: Event) => {
                   e.stopPropagation();
                   handlePurchase(pattern.product!.priceId);

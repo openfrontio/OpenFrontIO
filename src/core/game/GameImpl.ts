@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";

@@ -121,7 +121,8 @@ export class MultiTabModal extends LitElement implements Layer {
         class="fixed inset-0 z-50 overflow-auto bg-red-500/20 flex items-center justify-center"
       >
         <div
-          class="relative p-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full m-4 transition-all transform"
+          class="relative p-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl
+          max-w-md w-full m-4 transition-all transform"
         >
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-2xl font-bold text-red-600 dark:text-red-400">

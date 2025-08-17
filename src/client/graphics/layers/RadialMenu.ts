@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
@@ -149,7 +150,9 @@ export class RadialMenu implements Layer {
       .style("position", "absolute")
       .style("top", "50%")
       .style("left", "50%")
-      .style("transition", `top ${this.config.menuTransitionDuration}ms ease, left ${this.config.menuTransitionDuration}ms ease`)
+      .style("transition", `top ${
+        this.config.menuTransitionDuration}ms ease, left ${
+        this.config.menuTransitionDuration}ms ease`)
       .style("transform", "translate(-50%, -50%)")
       .style("pointer-events", "all")
       .on("click", (event) => this.hideRadialMenu());
