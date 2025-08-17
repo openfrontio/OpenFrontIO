@@ -453,7 +453,13 @@
     "team": "Team",
     "owned": "Owned",
     "gold": "Gold",
-    "troops": "Troops"
+    "troops": "Troops",
+    "launchers": "Launchers",
+    "sams": "SAMs",
+    "warships": "Warships",
+    "cities": "Cities",
+    "show_control": "Show Control",
+    "show_units": "Show Units"
   },
   "player_info_overlay": {
     "type": "Type",

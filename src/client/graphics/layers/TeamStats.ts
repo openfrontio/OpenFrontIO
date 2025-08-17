@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, Team } from "../../../core/game/Game";
+import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderNumber, translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -11,6 +11,10 @@ type TeamEntry = {
   totalScoreStr: string;
   totalGold: string;
   totalTroops: string;
+  totalSAMs: string;
+  totalLaunchers: string;
+  totalWarShips: string;
+  totalCities: string;
   totalScoreSort: number;
   players: PlayerView[];
 };
@@ -23,6 +27,7 @@ export class TeamStats extends LitElement implements Layer {
   @property({ type: Boolean }) visible = false;
   teams: TeamEntry[] = [];
   private _shownOnInit = false;
+  private showUnits = false;
 
   createRenderRoot() {
     return this; // use light DOM for Tailwind
@@ -61,12 +66,20 @@ export class TeamStats extends LitElement implements Layer {
         let totalGold = 0n;
         let totalTroops = 0;
         let totalScoreSort = 0;
+        let totalSAMs = 0;
+        let totalLaunchers = 0;
+        let totalWarShips = 0;
+        let totalCities = 0;
 
         for (const p of teamPlayers) {
           if (p.isAlive()) {
             totalTroops += p.troops();
             totalGold += p.gold();
             totalScoreSort += p.numTilesOwned();
+            totalLaunchers += p.totalUnitLevels(UnitType.MissileSilo);
+            totalSAMs += p.totalUnitLevels(UnitType.SAMLauncher);
+            totalWarShips += p.totalUnitLevels(UnitType.Warship);
+            totalCities += p.totalUnitLevels(UnitType.City);
           }
         }
 
@@ -79,6 +92,11 @@ export class TeamStats extends LitElement implements Layer {
           totalGold: renderNumber(totalGold),
           totalTroops: renderNumber(totalTroops / 10),
           players: teamPlayers,
+
+          totalLaunchers: renderNumber(totalLaunchers),
+          totalSAMs: renderNumber(totalSAMs),
+          totalWarShips: renderNumber(totalWarShips),
+          totalCities: renderNumber(totalCities),
         };
       })
       .sort((a, b) => b.totalScoreSort - a.totalScoreSort);
@@ -93,73 +111,104 @@ export class TeamStats extends LitElement implements Layer {
   }
 
   render() {
-    if (!this.visible) {
-      return html``;
-    }
+    if (!this.visible) return html``;
+
     return html`
       <div
-        class="max-h-[30vh] overflow-y-auto grid bg-slate-800/70 w-full text-white text-xs md:text-sm ${this
-          .visible
-          ? ""
-          : "hidden"}"
+        class="max-h-[30vh] overflow-y-auto grid bg-slate-800/70 w-full text-white text-xs md:text-sm"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
           class="grid w-full"
-          style="grid-template-columns: 1fr 1fr 1fr 1fr;"
+          style="grid-template-columns: repeat(${this.showUnits ? 5 : 4}, 1fr);"
         >
-          <!-- Header row -->
+          <!-- Header -->
           <div class="contents font-bold bg-slate-700/50">
-            <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
-            >
+            <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
               ${translateText("leaderboard.team")}
             </div>
-            <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
-            >
-              ${translateText("leaderboard.owned")}
-            </div>
-            <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
-            >
-              ${translateText("leaderboard.gold")}
-            </div>
-            <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
-            >
-              ${translateText("leaderboard.troops")}
-            </div>
+            ${this.showUnits
+              ? html`
+                  <div class="py-1.5 text-center border-b border-slate-500">
+                    ${translateText("leaderboard.launchers")}
+                  </div>
+                  <div class="py-1.5 text-center border-b border-slate-500">
+                    ${translateText("leaderboard.sams")}
+                  </div>
+                  <div class="py-1.5 text-center border-b border-slate-500">
+                    ${translateText("leaderboard.warships")}
+                  </div>
+                  <div class="py-1.5 text-center border-b border-slate-500">
+                    ${translateText("leaderboard.cities")}
+                  </div>
+                `
+              : html`
+                  <div class="py-1.5 text-center border-b border-slate-500">
+                    ${translateText("leaderboard.owned")}
+                  </div>
+                  <div class="py-1.5 text-center border-b border-slate-500">
+                    ${translateText("leaderboard.gold")}
+                  </div>
+                  <div class="py-1.5 text-center border-b border-slate-500">
+                    ${translateText("leaderboard.troops")}
+                  </div>
+                `}
           </div>
-          ${this.teams.map(
-            (team) => html`
-              <div
-                class="contents hover:bg-slate-600/60 text-center cursor-pointer"
-              >
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
-                  ${team.teamName}
-                </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
-                  ${team.totalScoreStr}
-                </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
-                  ${team.totalGold}
-                </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
-                  ${team.totalTroops}
-                </div>
-              </div>
-            `,
+
+          <!-- Data rows -->
+          ${this.teams.map((team) =>
+            this.showUnits
+              ? html`
+                  <div
+                    class="contents hover:bg-slate-600/60 text-center cursor-pointer"
+                  >
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.teamName}
+                    </div>
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.totalLaunchers}
+                    </div>
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.totalSAMs}
+                    </div>
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.totalWarShips}
+                    </div>
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.totalCities}
+                    </div>
+                  </div>
+                `
+              : html`
+                  <div
+                    class="contents hover:bg-slate-600/60 text-center cursor-pointer"
+                  >
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.teamName}
+                    </div>
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.totalScoreStr}
+                    </div>
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.totalGold}
+                    </div>
+                    <div class="py-1.5 border-b border-slate-500">
+                      ${team.totalTroops}
+                    </div>
+                  </div>
+                `,
           )}
         </div>
+        <button
+          class="team-stats-button"
+          aria-pressed=${String(this.showUnits)}
+          @click=${() => {
+            this.showUnits = !this.showUnits;
+            this.requestUpdate();
+          }}
+        >
+          ${this.showUnits ? translateText("leaderboard.show_control") : translateText("leaderboard.show_units")}
+        </button>
       </div>
     `;
   }
