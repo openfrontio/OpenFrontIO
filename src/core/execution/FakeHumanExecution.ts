@@ -433,6 +433,20 @@ export class FakeHumanExecution implements Execution {
 
   private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {
     if (this.player === null) throw new Error("not initialized");
+
+    const structureCount = (
+      this.player.units(UnitType.Port).length +
+      this.player.units(UnitType.City).length +
+      this.player.units(UnitType.Factory).length
+      this.player.units(UnitType.MissileSilo).length +
+      this.player.units(UnitType.SAMLauncher).length +
+    );
+    const tileCount = this.player.tiles().length;
+
+    if (structureCount * 100 >= tileCount) {
+      return false;
+    }
+
     if (this.player.unitsOwned(type) >= maxNum) {
       return false;
     }
