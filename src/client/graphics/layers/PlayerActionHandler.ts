@@ -97,8 +97,8 @@ export class PlayerActionHandler {
     this.eventBus.emit(new SendEmojiIntentEvent(targetPlayer, emojiIndex));
   }
 
-  handleQuickChat(recipient: PlayerView, chatKey: string, params: any = {}) {
-    this.eventBus.emit(new SendQuickChatEvent(recipient, chatKey, params));
+  handleQuickChat(recipient: PlayerView, chatKey: string, target?: PlayerID) {
+    this.eventBus.emit(new SendQuickChatEvent(recipient, chatKey, target));
   }
 
   handleDeleteUnit(unitId: number) {

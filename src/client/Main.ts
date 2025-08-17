@@ -43,6 +43,7 @@ import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     PageOS: {
       session: {
@@ -55,6 +56,7 @@ declare global {
       spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
       destroyUnits: (adType: string) => void;
       settings?: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         slots?: any;
       };
       spaNewPage: (url: string) => void;
@@ -62,13 +64,14 @@ declare global {
   }
 
   // Extend the global interfaces to include your custom events
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
-    "kick-player": CustomEvent;
+    "kick-player": CustomEvent<KickPlayerEvent>;
   }
 }
 
-export interface JoinLobbyEvent {
+export type JoinLobbyEvent = {
   clientID: string;
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
@@ -76,7 +79,11 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
-}
+};
+
+export type KickPlayerEvent = {
+  target: string;
+};
 
 class Client {
   private gameStop: (() => void) | null = null;
@@ -548,7 +555,7 @@ class Client {
     this.publicLobby.leaveLobby();
   }
 
-  private handleKickPlayer(event: CustomEvent) {
+  private handleKickPlayer(event: CustomEvent<KickPlayerEvent>) {
     const { target } = event.detail;
 
     // Forward to eventBus if available

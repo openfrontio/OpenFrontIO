@@ -57,6 +57,7 @@ export function generateCryptoRandomUUID(): string {
 
   // Fallback using crypto.getRandomValues
   if (crypto !== undefined && "getRandomValues" in crypto) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
@@ -83,8 +84,11 @@ export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
 ): string => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
   const self = translateText as any;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   self.formatterCache ??= new Map();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   self.lastLang ??= null;
 
   const langSelector = document.querySelector("lang-selector") as LangSelector;
@@ -100,8 +104,11 @@ export const translateText = (
     return key;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if (self.lastLang !== langSelector.currentLang) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     self.formatterCache.clear();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     self.lastLang = langSelector.currentLang;
   }
 
@@ -122,13 +129,16 @@ export const translateText = (
         ? "en"
         : langSelector.currentLang;
     const cacheKey = `${key}:${locale}:${message}`;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     let formatter = self.formatterCache.get(cacheKey);
 
     if (!formatter) {
       formatter = new IntlMessageFormat(message, locale);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       self.formatterCache.set(cacheKey, formatter);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     return formatter.format(params) as string;
   } catch (e) {
     console.warn("ICU format error", e);
@@ -192,7 +202,7 @@ export function getMessageTypeClasses(type: MessageType): string {
 }
 
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
+  const isMac = navigator.userAgent.includes("Mac");
   if (isMac) {
     return "⌘"; // Command key
   } else {
@@ -201,7 +211,7 @@ export function getModifierKey(): string {
 }
 
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
+  const isMac = navigator.userAgent.includes("Mac");
   if (isMac) {
     return "⌥"; // Option key
   } else {

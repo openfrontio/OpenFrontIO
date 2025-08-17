@@ -65,6 +65,11 @@ export class GameServer {
 
   private websockets: Set<WebSocket> = new Set();
 
+  winnerVotes: Map<
+    string,
+    { winner: ClientSendWinnerMessage; ips: Set<string> }
+  > = new Map();
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
@@ -93,8 +98,14 @@ export class GameServer {
     if (gameConfig.infiniteGold !== undefined) {
       this.gameConfig.infiniteGold = gameConfig.infiniteGold;
     }
+    if (gameConfig.donateGold !== undefined) {
+      this.gameConfig.donateGold = gameConfig.donateGold;
+    }
     if (gameConfig.infiniteTroops !== undefined) {
       this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
+    }
+    if (gameConfig.donateTroops !== undefined) {
+      this.gameConfig.donateTroops = gameConfig.donateTroops;
     }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
@@ -185,6 +196,7 @@ export class GameServer {
       }
 
       client.lastPing = existing.lastPing;
+      client.reportedWinner = existing.reportedWinner;
 
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
@@ -214,6 +226,7 @@ export class GameServer {
       );
     });
     client.ws.on("error", (error: Error) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }

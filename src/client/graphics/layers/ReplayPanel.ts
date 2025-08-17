@@ -12,8 +12,8 @@ import { Layer } from "./Layer";
 
 export class ShowReplayPanelEvent {
   constructor(
-    public visible: boolean = true,
-    public isSingleplayer: boolean = false,
+    public visible = true,
+    public isSingleplayer = false,
   ) {}
 }
 
@@ -23,7 +23,7 @@ export class ReplayPanel extends LitElement implements Layer {
   public eventBus: EventBus | undefined;
 
   @property({ type: Boolean })
-  visible: boolean = false;
+  visible = false;
 
   @state()
   private _replaySpeedMultiplier: number = defaultReplaySpeedMultiplier;

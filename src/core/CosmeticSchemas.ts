@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { RequiredPatternSchema } from "./Schemas";
 
 export const ProductSchema = z.object({
@@ -25,7 +25,7 @@ export const CosmeticsSchema = z.object({
         z.string(),
         z.object({
           name: z.string(),
-          flares: z.array(z.string()).optional(),
+          flares: z.string().array().optional(),
         }),
       ),
       color: z.record(
@@ -33,7 +33,7 @@ export const CosmeticsSchema = z.object({
         z.object({
           color: z.string(),
           name: z.string(),
-          flares: z.array(z.string()).optional(),
+          flares: z.string().array().optional(),
         }),
       ),
     })

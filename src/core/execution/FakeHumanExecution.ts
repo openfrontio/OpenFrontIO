@@ -297,7 +297,7 @@ export class FakeHumanExecution implements Execution {
       UnitType.SAMLauncher,
     );
     const structureTiles = structures.map((u) => u.tile());
-    const randomTiles: (TileRef | null)[] = new Array(10);
+    const randomTiles: (TileRef | null)[] = new Array<TileRef | null>(10).fill(null);
     for (let i = 0; i < randomTiles.length; i++) {
       randomTiles[i] = this.randTerritoryTile(other);
     }
@@ -455,8 +455,8 @@ export class FakeHumanExecution implements Execution {
     const tiles =
       type === UnitType.Port
         ? Array.from(this.player.borderTiles()).filter((t) =>
-            this.mg.isOceanShore(t),
-          )
+          this.mg.isOceanShore(t),
+        )
         : Array.from(this.player.tiles());
     if (tiles.length === 0) return null;
     return this.random.randElement(tiles);

@@ -20,7 +20,7 @@ import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
   private construction: Unit | null = null;
-  private active: boolean = true;
+  private active = true;
   private mg: Game;
 
   private ticksUntilComplete: Tick;

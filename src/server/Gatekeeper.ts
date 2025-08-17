@@ -12,7 +12,7 @@ export enum LimiterType {
   WebSocket = "websocket",
 }
 
-export interface Gatekeeper {
+export type Gatekeeper = {
   // The wrapper for request handlers with optional rate limiting
   httpHandler: (
     limiterType: LimiterType,
@@ -24,7 +24,7 @@ export interface Gatekeeper {
     req: http.IncomingMessage | string,
     fn: (message: string) => Promise<void>,
   ) => (message: string) => Promise<void>;
-}
+};
 
 let gk: Gatekeeper | null = null;
 
@@ -66,10 +66,12 @@ async function getGatekeeper(): Promise<Gatekeeper> {
 
       // Use dynamic import for ES modules
       // Using a type assertion to avoid TypeScript errors for optional modules
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const module = await import(
         "./gatekeeper/RealGatekeeper.js" as string
       ).catch(() => import("./gatekeeper/RealGatekeeper.js" as string));
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (!module || !module.RealGatekeeper) {
         console.log(
           "RealGatekeeper class not found in module, using NoOpGatekeeper",
@@ -78,6 +80,7 @@ async function getGatekeeper(): Promise<Gatekeeper> {
       }
 
       console.log("Successfully loaded real gatekeeper");
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       return new module.RealGatekeeper();
     } catch (error) {
       console.log("Failed to load real gatekeeper:", error);

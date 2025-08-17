@@ -4,11 +4,7 @@ import { AnimatedSprite } from "../AnimatedSprite";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
 
-function fadeInOut(
-  t: number,
-  fadeIn: number = 0.3,
-  fadeOut: number = 0.7,
-): number {
+function fadeInOut(t: number, fadeIn = 0.3, fadeOut = 0.7): number {
   if (t < fadeIn) {
     const f = t / fadeIn; // Map to [0, 1]
     return f * f;

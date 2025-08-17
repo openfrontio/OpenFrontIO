@@ -80,7 +80,7 @@ export class AlertFrame extends LitElement implements Layer {
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
-        this.onBrokeAllianceUpdate(update as BrokeAllianceUpdate);
+        this.onBrokeAllianceUpdate(update);
       });
   }
 

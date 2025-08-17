@@ -26,91 +26,91 @@ export type WorkerMessageType =
   | "transport_ship_spawn_result";
 
 // Base interface for all messages
-interface BaseWorkerMessage {
+type BaseWorkerMessage = {
   type: WorkerMessageType;
   id?: string;
-}
+};
 
-export interface HeartbeatMessage extends BaseWorkerMessage {
+export type HeartbeatMessage = {
   type: "heartbeat";
-}
+} & BaseWorkerMessage;
 
 // Messages from main thread to worker
-export interface InitMessage extends BaseWorkerMessage {
+export type InitMessage = {
   type: "init";
   gameStartInfo: GameStartInfo;
   clientID: ClientID;
-}
+} & BaseWorkerMessage;
 
-export interface TurnMessage extends BaseWorkerMessage {
+export type TurnMessage = {
   type: "turn";
   turn: Turn;
-}
+} & BaseWorkerMessage;
 
 // Messages from worker to main thread
-export interface InitializedMessage extends BaseWorkerMessage {
+export type InitializedMessage = {
   type: "initialized";
-}
+} & BaseWorkerMessage;
 
-export interface GameUpdateMessage extends BaseWorkerMessage {
+export type GameUpdateMessage = {
   type: "game_update";
   gameUpdate: GameUpdateViewData;
-}
+} & BaseWorkerMessage;
 
-export interface PlayerActionsMessage extends BaseWorkerMessage {
+export type PlayerActionsMessage = {
   type: "player_actions";
   playerID: PlayerID;
   x: number;
   y: number;
-}
+} & BaseWorkerMessage;
 
-export interface PlayerActionsResultMessage extends BaseWorkerMessage {
+export type PlayerActionsResultMessage = {
   type: "player_actions_result";
   result: PlayerActions;
-}
+} & BaseWorkerMessage;
 
-export interface PlayerProfileMessage extends BaseWorkerMessage {
+export type PlayerProfileMessage = {
   type: "player_profile";
   playerID: number;
-}
+} & BaseWorkerMessage;
 
-export interface PlayerProfileResultMessage extends BaseWorkerMessage {
+export type PlayerProfileResultMessage = {
   type: "player_profile_result";
   result: PlayerProfile;
-}
+} & BaseWorkerMessage;
 
-export interface PlayerBorderTilesMessage extends BaseWorkerMessage {
+export type PlayerBorderTilesMessage = {
   type: "player_border_tiles";
   playerID: PlayerID;
-}
+} & BaseWorkerMessage;
 
-export interface PlayerBorderTilesResultMessage extends BaseWorkerMessage {
+export type PlayerBorderTilesResultMessage = {
   type: "player_border_tiles_result";
   result: PlayerBorderTiles;
-}
+} & BaseWorkerMessage;
 
-export interface AttackAveragePositionMessage extends BaseWorkerMessage {
+export type AttackAveragePositionMessage = {
   type: "attack_average_position";
   playerID: number;
   attackID: string;
-}
+} & BaseWorkerMessage;
 
-export interface AttackAveragePositionResultMessage extends BaseWorkerMessage {
+export type AttackAveragePositionResultMessage = {
   type: "attack_average_position_result";
   x: number | null;
   y: number | null;
-}
+} & BaseWorkerMessage;
 
-export interface TransportShipSpawnMessage extends BaseWorkerMessage {
+export type TransportShipSpawnMessage = {
   type: "transport_ship_spawn";
   playerID: PlayerID;
   targetTile: TileRef;
-}
+} & BaseWorkerMessage;
 
-export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
+export type TransportShipSpawnResultMessage = {
   type: "transport_ship_spawn_result";
   result: TileRef | false;
-}
+} & BaseWorkerMessage;
 
 // Union types for type safety
 export type MainThreadMessage =

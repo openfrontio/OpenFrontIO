@@ -1,12 +1,17 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { GameInfo, GameRecord } from "../core/Schemas";
+import { GameInfo, GameInfoSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import {
+  WorkerApiArchivedGameLobbySchema,
+  WorkerApiGameIdExistsSchema,
+} from "../core/WorkerSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -14,7 +19,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     close: () => void;
   };
   @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
-  @state() private message: string = "";
+  @state() private message = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
 
@@ -105,7 +110,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     return this; // light DOM
   }
 
-  public open(id: string = "") {
+  public open(id = "") {
     this.modalEl?.open();
     if (id) {
       this.setLobbyId(id);
@@ -198,7 +203,8 @@ export class JoinPrivateLobbyModal extends LitElement {
       headers: { "Content-Type": "application/json" },
     });
 
-    const gameInfo = await response.json();
+    const json = await response.json();
+    const gameInfo = WorkerApiGameIdExistsSchema.parse(json);
 
     if (gameInfo.exists) {
       this.message = translateText("private_lobby.joined_waiting");
@@ -231,7 +237,8 @@ export class JoinPrivateLobbyModal extends LitElement {
       headers: { "Content-Type": "application/json" },
     });
 
-    const archiveData = await archiveResponse.json();
+    const json = await archiveResponse.json();
+    const archiveData = WorkerApiArchivedGameLobbySchema.parse(json);
 
     if (
       archiveData.success === false &&
@@ -247,13 +254,11 @@ export class JoinPrivateLobbyModal extends LitElement {
     }
 
     if (archiveData.exists) {
-      const gameRecord = archiveData.gameRecord as GameRecord;
-
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobbyId,
-            gameRecord: gameRecord,
+            gameRecord: archiveData.gameRecord,
             clientID: generateID(),
           } as JoinLobbyEvent,
           bubbles: true,
@@ -281,6 +286,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       },
     )
       .then((response) => response.json())
+      .then(GameInfoSchema.parse)
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
       })

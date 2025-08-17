@@ -18,7 +18,7 @@ export class ControlPanel extends LitElement implements Layer {
   public uiState: UIState;
 
   @state()
-  private attackRatio: number = 0.2;
+  private attackRatio = 0.2;
 
   @state()
   private _maxTroops: number;
@@ -35,7 +35,7 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private _gold: Gold;
 
-  private _troopRateIsIncreasing: boolean = true;
+  private _troopRateIsIncreasing = true;
 
   private _lastTroopIncreaseRate: number;
 

@@ -147,9 +147,7 @@ describe("AutoUpgrade Feature", () => {
       const event = new AutoUpgradeEvent(100, 200);
       const eventString = JSON.stringify(event);
       const parsedEvent = JSON.parse(eventString);
-
-      expect(parsedEvent.x).toBe(100);
-      expect(parsedEvent.y).toBe(200);
+      expect(parsedEvent).toStrictEqual({ x: 100, y: 200 });
     });
   });
 });

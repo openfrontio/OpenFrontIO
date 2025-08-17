@@ -128,7 +128,7 @@ class SAMTargetingSystem {
 
 export class SAMLauncherExecution implements Execution {
   private mg: Game;
-  private active: boolean = true;
+  private active = true;
 
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)

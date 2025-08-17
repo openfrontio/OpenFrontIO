@@ -4,12 +4,12 @@ import { AStar, PathFindResultType } from "./AStar";
 /**
  * Implement this interface with your graph to find paths with A*
  */
-export interface GraphAdapter<NodeType> {
+export type GraphAdapter<NodeType> = {
   neighbors(node: NodeType): NodeType[];
   cost(node: NodeType): number;
   position(node: NodeType): { x: number; y: number };
   isTraversable(from: NodeType, to: NodeType): boolean;
-}
+};
 
 export class SerialAStar<NodeType> implements AStar<NodeType> {
   private fwdOpenSet: FastPriorityQueue<{
@@ -37,7 +37,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     private iterations: number,
     private maxTries: number,
     private graph: GraphAdapter<NodeType>,
-    private directionChangePenalty: number = 0,
+    private directionChangePenalty = 0,
   ) {
     this.fwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);
     this.bwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);

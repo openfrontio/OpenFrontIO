@@ -1,15 +1,15 @@
 import { Fx } from "./Fx";
 
 export class TextFx implements Fx {
-  private lifeTime: number = 0;
+  private lifeTime = 0;
 
   constructor(
     private text: string,
     private x: number,
     private y: number,
     private duration: number,
-    private riseDistance: number = 30,
-    private font: string = "11px sans-serif",
+    private riseDistance = 30,
+    private font = "11px sans-serif",
     private color: { r: number; g: number; b: number } = {
       r: 255,
       g: 255,

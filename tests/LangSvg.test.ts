@@ -21,7 +21,14 @@ describe("Lang SVG Field and File Existence Check", () => {
       try {
         const filePath = path.join(langDir, file);
         const jsonData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-        const langSvg = jsonData.lang?.svg;
+        const langSvg =
+          jsonData &&
+          typeof jsonData === "object" &&
+          "lang" in jsonData &&
+          jsonData.lang &&
+          typeof jsonData.lang === "object" &&
+          "svg" in jsonData.lang &&
+          jsonData.lang.svg;
         if (typeof langSvg !== "string" || langSvg.length === 0) {
           errors.push(
             `[${file}]: lang.svg is missing or not a non-empty string`,

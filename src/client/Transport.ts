@@ -328,6 +328,7 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const parsed = JSON.parse(event.data);
         const result = ServerMessageSchema.safeParse(parsed);
         if (!result.success) {
@@ -383,7 +384,7 @@ export class Transport {
     } satisfies ClientJoinMessage);
   }
 
-  leaveGame(saveFullGame: boolean = false) {
+  leaveGame(saveFullGame = false) {
     if (this.isLocal) {
       this.localServer.endGame(saveFullGame);
       return;

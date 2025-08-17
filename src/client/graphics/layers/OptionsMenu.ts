@@ -48,23 +48,23 @@ export class OptionsMenu extends LitElement implements Layer {
   private userSettings: UserSettings = new UserSettings();
 
   @state()
-  private showPauseButton: boolean = true;
+  private showPauseButton = true;
 
   @state()
-  private isPaused: boolean = false;
+  private isPaused = false;
 
   @state()
-  private timer: number = 0;
+  private timer = 0;
 
   @state()
-  private showSettings: boolean = false;
+  private showSettings = false;
 
   private isVisible = false;
 
   private hasWinner = false;
 
   @state()
-  private alternateView: boolean = false;
+  private alternateView = false;
 
   private onTerrainButtonClick() {
     this.alternateView = !this.alternateView;

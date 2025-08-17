@@ -1,16 +1,14 @@
 import { Cosmetics } from "./CosmeticSchemas";
 
 const ANIMATION_DURATIONS: Record<string, number> = {
-  rainbow: 4000,
-  /* eslint-disable sort-keys */
   "bright-rainbow": 4000,
   "copper-glow": 3000,
-  "silver-glow": 3000,
   "gold-glow": 3000,
-  neon: 3000,
-  lava: 6000,
-  /* eslint-enable sort-keys */
-  water: 6200,
+  "lava": 6000,
+  "neon": 3000,
+  "rainbow": 4000,
+  "silver-glow": 3000,
+  "water": 6200,
 };
 
 // TODO: Pass in cosmetics as a parameter when

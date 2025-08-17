@@ -28,7 +28,7 @@ export class NukeExecution implements Execution {
     private player: Player,
     private dst: TileRef,
     private src?: TileRef | null,
-    private speed: number = -1,
+    private speed = -1,
     private waitTicks = 0,
   ) {}
 

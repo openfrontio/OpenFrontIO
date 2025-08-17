@@ -40,7 +40,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private tile: TileRef | null = null;
 
   @state()
-  public isVisible: boolean = false;
+  public isVisible = false;
 
   @state()
   private allianceExpiryText: string | null = null;
@@ -224,15 +224,15 @@ export class PlayerPanel extends LitElement implements Layer {
     const myPlayer = this.g.myPlayer();
     if (myPlayer === null) return;
     if (this.tile === null) return;
-    let other = this.g.owner(this.tile);
+    const other = this.g.owner(this.tile);
     if (!other.isPlayer()) {
       this.hide();
       console.warn("Tile is not owned by a player");
       return;
     }
-    other = other as PlayerView;
 
-    const canDonate = this.actions?.interaction?.canDonate;
+    const canDonateGold = this.actions?.interaction?.canDonateGold;
+    const canDonateTroops = this.actions?.interaction?.canDonateTroops;
     const canSendAllianceRequest =
       this.actions?.interaction?.canSendAllianceRequest;
     const canSendEmoji =
@@ -351,9 +351,9 @@ export class PlayerPanel extends LitElement implements Layer {
                 >
                   ${other.allies().length > 0
                     ? other
-                        .allies()
-                        .map((p) => p.name())
-                        .join(", ")
+                      .allies()
+                      .map((p) => p.name())
+                      .join(", ")
                     : translateText("player_panel.none")}
                 </div>
               </div>
@@ -421,7 +421,7 @@ export class PlayerPanel extends LitElement implements Layer {
                       <img src=${allianceIcon} alt="Alliance" class="w-6 h-6" />
                     </button>`
                   : ""}
-                ${canDonate
+                ${canDonateTroops
                   ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleDonateTroopClick(e, myPlayer, other)}
@@ -436,7 +436,7 @@ export class PlayerPanel extends LitElement implements Layer {
                       />
                     </button>`
                   : ""}
-                ${canDonate
+                ${canDonateGold
                   ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleDonateGoldClick(e, myPlayer, other)}

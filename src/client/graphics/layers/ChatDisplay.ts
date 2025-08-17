@@ -12,22 +12,22 @@ import { GameView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { Layer } from "./Layer";
 
-interface ChatEvent {
+type ChatEvent = {
   description: string;
   unsafeDescription?: boolean;
   createdAt: number;
   highlight?: boolean;
-}
+};
 
 @customElement("chat-display")
 export class ChatDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
 
-  private active: boolean = false;
+  private active = false;
 
-  @state() private _hidden: boolean = false;
-  @state() private newEvents: number = 0;
+  @state() private _hidden = false;
+  @state() private newEvents = 0;
   @state() private chatEvents: ChatEvent[] = [];
 
   private toggleHidden() {
