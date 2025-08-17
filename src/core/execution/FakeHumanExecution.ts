@@ -441,7 +441,7 @@ export class FakeHumanExecution implements Execution {
       this.player.units(UnitType.MissileSilo).length +
       this.player.units(UnitType.SAMLauncher).length
     );
-    const tileCount = this.player.tiles().length;
+    const tileCount = Array.from(this.player.tiles()).length;
 
     if (structureCount * 100 >= tileCount) {
       return false;
