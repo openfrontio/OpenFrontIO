@@ -95,13 +95,16 @@ export class LanguageModal extends LitElement {
 
               if (isDebug) {
                 buttonClasses +=
-                  " animate-pulse font-bold text-white border-2 border-dashed border-cyan-400 shadow-lg shadow-cyan-400/25 bg-gradient-to-r from-red-600 via-yellow-600 via-green-600 via-blue-600 to-purple-600";
+                  " animate-pulse font-bold text-white border-2 border-dashed border-cyan-400 shadow-lg" +
+                  " shadow-cyan-400/25 bg-gradient-to-r from-red-600 via-yellow-600 via-green-600 via-blue-600" +
+                  " to-purple-600";
               } else if (isActive) {
                 buttonClasses +=
                   " bg-gray-400 dark:bg-gray-500 border-gray-300 dark:border-gray-400 text-black dark:text-white";
               } else {
                 buttonClasses +=
-                  " bg-gray-600 dark:bg-gray-700 border-gray-500 dark:border-gray-600 text-white dark:text-gray-100 hover:bg-gray-500 dark:hover:bg-gray-600";
+                  " bg-gray-600 dark:bg-gray-700 border-gray-500 dark:border-gray-600 text-white dark:text-gray-100" +
+                  " hover:bg-gray-500 dark:hover:bg-gray-600";
               }
 
               return html`

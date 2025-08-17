@@ -103,8 +103,8 @@ export default [
       "func-call-spacing": ["error", "never"],
       "function-call-argument-newline": ["error", "consistent"],
       "max-depth": ["error", { max: 5 }],
-      // "max-len": ["error", { code: 120 }], // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1785
-      "max-lines": ["error", { max: 1065, skipBlankLines: true, skipComments: true }],
+      "max-len": ["error", { code: 120 }],
+      "max-lines": ["error", { max: 676, skipBlankLines: true, skipComments: true }],
       "max-lines-per-function": ["error", { max: 561 }],
       "no-loss-of-precision": "error",
       "no-multi-spaces": "error",
@@ -138,6 +138,7 @@ export default [
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
+      "max-len": "off",
       "sort-keys": "off",
     },
   },

@@ -136,7 +136,9 @@ export class GutterAdModal extends LitElement implements Layer {
     return html`
       <!-- Left Gutter Ad -->
       <div
-        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center justify-center"
+        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2
+        w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center
+        justify-center"
         style="margin-left: ${this.margin};"
       >
         <div
@@ -147,7 +149,9 @@ export class GutterAdModal extends LitElement implements Layer {
 
       <!-- Right Gutter Ad -->
       <div
-        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center justify-center"
+        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2
+        w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center
+        justify-center"
         style="margin-right: ${this.margin};"
       >
         <div

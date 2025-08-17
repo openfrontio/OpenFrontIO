@@ -109,9 +109,10 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     return html`
       <aside
-        class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-tl-lg rounded-bl-lg transition-transform duration-300 ease-out transform ${
-          this._isVisible ? "translate-x-0" : "translate-x-full"
-        }`}
+        class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2
+          bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-tl-lg rounded-bl-lg
+          transition-transform duration-300 ease-out transform
+          ${this._isVisible ? "translate-x-0" : "translate-x-full"}`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
@@ -139,7 +140,9 @@ export class GameRightSidebar extends LitElement implements Layer {
         <!-- Timer display below buttons -->
         <div class="flex justify-center items-center mt-2">
           <div
-            class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center justify-center text-white px-1"
+            class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5
+            text-xs md:text-sm lg:text-base flex items-center justify-center
+            text-white px-1"
           >
             ${this.secondsToHms(this.timer)}
           </div>

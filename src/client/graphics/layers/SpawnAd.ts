@@ -117,7 +117,8 @@ export class SpawnAd extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed bottom-0 left-0 w-full min-h-[100px] bg-gray-900 border border-gray-600 flex items-center justify-center z-50"
+        class="fixed bottom-0 left-0 w-full min-h-[100px] bg-gray-900 border
+        border-gray-600 flex items-center justify-center z-50"
       >
         <div
           id="${AD_CONTAINER_ID}"

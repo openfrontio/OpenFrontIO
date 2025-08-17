@@ -117,7 +117,10 @@ export class LocalServer {
       }
       if (archivedHash !== clientMsg.hash) {
         console.error(
-          `desync detected on turn ${clientMsg.turnNumber}, client hash: ${clientMsg.hash}, server hash: ${archivedHash}`,
+          `desync detected on turn ${
+            clientMsg.turnNumber}, client hash: ${
+            clientMsg.hash}, server hash: ${
+            archivedHash}`,
         );
         this.clientMessage({
           type: "desync",

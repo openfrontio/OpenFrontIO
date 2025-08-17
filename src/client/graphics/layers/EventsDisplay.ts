@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
@@ -918,7 +919,8 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 " +
+                  "lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
               })}
             </div>
           `
@@ -1015,7 +1017,9 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="rounded-b-none md:rounded-b-md bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
+                class="rounded-b-none md:rounded-b-md bg-gray-800/70
+                  max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full
+                  h-full"
               >
                 <div>
                   <table
@@ -1059,7 +1063,10 @@ export class EventsDisplay extends LitElement implements Layer {
                                       ${event.buttons.map(
                                         (btn) => html`
                                           <button
-                                            class="inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300
+                                            class="inline-block px-3 py-1
+                                              text-white rounded text-md
+                                              md:text-sm cursor-pointer
+                                              transition-colors duration-300
                             ${btn.className.includes("btn-info")
                               ? "bg-blue-500 hover:bg-blue-600"
                               : btn.className.includes(
