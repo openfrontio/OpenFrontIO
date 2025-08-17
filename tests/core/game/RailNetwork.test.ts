@@ -42,7 +42,7 @@ describe("StationManagerImpl", () => {
     const station = createMockStation(1);
     manager.addStation(station);
     manager.removeStation(station);
-    expect(manager.findStation(station.unit)).toBe(null);
+    expect(manager.findStation(station.unit)).toBeNull();
   });
 });
 

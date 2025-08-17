@@ -129,7 +129,7 @@ export class InputHandler {
 
   private alternateView = false;
 
-  private moveInterval: NodeJS.Timeout | null = null;
+  private moveInterval: ReturnType<typeof setTimeout> | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
 

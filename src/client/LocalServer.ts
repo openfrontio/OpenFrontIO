@@ -35,7 +35,7 @@ export class LocalServer {
   private turnsExecuted = 0;
   private turnStartTime = 0;
 
-  private turnCheckInterval: NodeJS.Timeout;
+  private turnCheckInterval: ReturnType<typeof setTimeout>;
 
   constructor(
     private lobbyConfig: LobbyConfig,

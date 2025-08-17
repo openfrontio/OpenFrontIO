@@ -23,7 +23,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private hasJoined = false;
   @state() private players: string[] = [];
 
-  private playersInterval: NodeJS.Timeout | null = null;
+  private playersInterval: ReturnType<typeof setTimeout> | null = null;
 
   connectedCallback() {
     super.connectedCallback();

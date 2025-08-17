@@ -91,7 +91,7 @@ describe("MissileSilo", () => {
   });
 
   test("missilesilo should have increased level after upgrade", async () => {
-    expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(1);
+    expect(attacker.units(UnitType.MissileSilo)[0].level()).toBe(1);
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
       attacker,
@@ -100,6 +100,6 @@ describe("MissileSilo", () => {
     game.addExecution(upgradeStructureExecution);
     executeTicks(game, 2);
 
-    expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(2);
+    expect(attacker.units(UnitType.MissileSilo)[0].level()).toBe(2);
   });
 });

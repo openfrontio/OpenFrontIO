@@ -96,7 +96,7 @@ describe("PlayerImpl", () => {
 
     const ports = player.tradingPorts(playerPort);
 
-    expect(ports.length).toBe(3);
+    expect(ports).toHaveLength(3);
   });
 
   test("Can't send alliance requests when dead", () => {

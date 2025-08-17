@@ -55,7 +55,7 @@ export class HostLobbyModal extends LitElement {
   @state() private lobbyCreatorClientID = "";
   @state() private lobbyIdVisible = true;
 
-  private playersInterval: NodeJS.Timeout | null = null;
+  private playersInterval: ReturnType<typeof setTimeout> | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();

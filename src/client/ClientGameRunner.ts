@@ -193,7 +193,7 @@ export class ClientGameRunner {
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime = 0;
-  private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private connectionCheckInterval: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private lobby: LobbyConfig,

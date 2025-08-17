@@ -20,7 +20,7 @@ export class TransformHandler {
   private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;
-  private intervalID: NodeJS.Timeout | null = null;
+  private intervalID: ReturnType<typeof setTimeout> | null = null;
   private changed = false;
 
   constructor(
