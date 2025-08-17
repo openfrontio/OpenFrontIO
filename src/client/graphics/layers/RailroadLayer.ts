@@ -155,6 +155,10 @@ export class RailroadLayer implements Layer {
     const color = recipient
       ? this.theme.railroadColor(recipient)
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });
+    // If rail tile is over non-ocean water (rivers/lakes), paint a bridge underlay first
+    if (this.game.isWater(railRoad.tile) && !this.game.isOcean(railRoad.tile)) {
+      this.paintBridgeUnderlay(railRoad);
+    }
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(x, y, railRoad.railType);
   }
@@ -164,5 +168,47 @@ export class RailroadLayer implements Layer {
     for (const [dx, dy, w, h] of railRects) {
       this.context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
     }
+  }
+
+  private paintBridgeUnderlay(railRoad: RailTile) {
+    const ctx = this.context;
+    const x = this.game.x(railRoad.tile);
+    const y = this.game.y(railRoad.tile);
+    const direction = railRoad.railType;
+    const deck = "rgba(220,220,220,0.95)"; // light deck
+    const support = "rgba(120,120,120,0.9)"; // darker support dots
+
+    ctx.save();
+    switch (direction) {
+      case RailType.HORIZONTAL: {
+        // Deck spans the whole tile horizontally (3px long, 1px thick)
+        ctx.fillStyle = deck;
+        ctx.fillRect(x * 2 - 1, y * 2, 3, 1);
+        // Small support dots at both ends
+        ctx.fillStyle = support;
+        ctx.fillRect(x * 2 - 1, y * 2, 1, 1);
+        ctx.fillRect(x * 2 + 1, y * 2, 1, 1);
+        break;
+      }
+      case RailType.VERTICAL: {
+        // Deck spans the whole tile vertically (1px wide, 3px tall)
+        ctx.fillStyle = deck;
+        ctx.fillRect(x * 2, y * 2 - 1, 1, 3);
+        // Small support dots at both ends
+        ctx.fillStyle = support;
+        ctx.fillRect(x * 2, y * 2 - 1, 1, 1);
+        ctx.fillRect(x * 2, y * 2 + 1, 1, 1);
+        break;
+      }
+      default: {
+        // Corners: compact 2x2 deck with a center dot
+        ctx.fillStyle = deck;
+        ctx.fillRect(x * 2 - 1, y * 2 - 1, 2, 2);
+        ctx.fillStyle = support;
+        ctx.fillRect(x * 2, y * 2, 1, 1);
+        break;
+      }
+    }
+    ctx.restore();
   }
 }

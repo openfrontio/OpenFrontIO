@@ -7,14 +7,23 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
   constructor(
     private gameMap: GameMap,
     private waterPath: boolean,
+    private allowLandToWaterStep = false,
+    private nonOceanWaterPenalty = 0,
   ) {}
+  private enclosedOceanCache = new Map<TileRef, boolean>();
 
   neighbors(node: TileRef): TileRef[] {
     return this.gameMap.neighbors(node);
   }
 
   cost(node: TileRef): number {
-    return this.gameMap.cost(node);
+    let base = this.gameMap.cost(node);
+    if (!this.waterPath && this.allowLandToWaterStep) {
+      if (this.gameMap.isWater(node) && !this.gameMap.isOcean(node)) {
+        base += this.nonOceanWaterPenalty;
+      }
+    }
+    return base;
   }
 
   position(node: TileRef): { x: number; y: number } {
@@ -22,8 +31,87 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
   }
 
   isTraversable(from: TileRef, to: TileRef): boolean {
-    const isWater = this.gameMap.isWater(to);
-    return this.waterPath ? isWater : !isWater;
+    const toIsWater = this.gameMap.isWater(to);
+    if (this.waterPath) {
+      // Water-only traversal (for ships)
+      return toIsWater;
+    }
+    // Land traversal (for rails/land units) with river/lake crossing.
+    // If enabled, allow traversal over any non-ocean water (rivers/lakes).
+    if (!toIsWater) return true;
+    if (!this.allowLandToWaterStep) return false;
+    if (!this.gameMap.isOcean(to)) return true; // rivers/lakes
+    // ocean tile: allow if enclosed or it's a narrow crossing (like a river mouth/strait)
+    return this.isEnclosedOcean(to) || this.isNarrowOceanCrossing(to, 4);
+  }
+
+  private isEnclosedOcean(start: TileRef): boolean {
+    // Cache lookup
+    const cached = this.enclosedOceanCache.get(start);
+    if (cached !== undefined) return cached;
+
+    // BFS over ocean tiles; if any touches the map edge, it's not enclosed
+    const q: TileRef[] = [];
+    const seen = new Set<TileRef>();
+    q.push(start);
+    seen.add(start);
+
+    let enclosed = true;
+    while (q.length > 0) {
+      const cur = q.pop()!;
+      if (this.gameMap.isOnEdgeOfMap(cur)) {
+        enclosed = false;
+        break;
+      }
+      for (const n of this.gameMap.neighbors(cur)) {
+        if (!seen.has(n) && this.gameMap.isOcean(n)) {
+          seen.add(n);
+          q.push(n);
+        }
+      }
+    }
+
+    // Cache result for all visited tiles
+    for (const t of seen) this.enclosedOceanCache.set(t, enclosed);
+    return enclosed;
+  }
+
+  private isNarrowOceanCrossing(center: TileRef, maxWidth: number): boolean {
+    const cx = this.gameMap.x(center);
+    const cy = this.gameMap.y(center);
+
+    // Helper to measure continuous ocean run until hitting land; returns distance to land or Infinity
+    const distanceToLand = (dx: number, dy: number): number => {
+      let dist = 0;
+      // Walk outward until a non-ocean tile is hit or bounds end
+      while (true) {
+        dist++;
+        const nx = cx + dx * dist;
+        const ny = cy + dy * dist;
+        if (!this.gameMap.isValidCoord(nx, ny)) return Number.POSITIVE_INFINITY;
+        const ref = this.gameMap.ref(nx, ny);
+        if (!this.gameMap.isOcean(ref)) {
+          return this.gameMap.isLand(ref) ? dist : Number.POSITIVE_INFINITY;
+        }
+        // keep going over ocean
+        if (dist > maxWidth) return Number.POSITIVE_INFINITY;
+      }
+    };
+
+    // Compute width horizontally and vertically; allow if either is <= maxWidth
+    const west = distanceToLand(-1, 0);
+    const east = distanceToLand(1, 0);
+    if (Number.isFinite(west) && Number.isFinite(east)) {
+      const width = (west) + (east) + 1;
+      if (width <= maxWidth) return true;
+    }
+    const north = distanceToLand(0, -1);
+    const south = distanceToLand(0, 1);
+    if (Number.isFinite(north) && Number.isFinite(south)) {
+      const width = (north) + (south) + 1;
+      if (width <= maxWidth) return true;
+    }
+    return false;
   }
 }
 export class MiniAStar implements AStar<TileRef> {
@@ -38,6 +126,8 @@ export class MiniAStar implements AStar<TileRef> {
     maxTries: number,
     waterPath = true,
     directionChangePenalty = 0,
+    allowLandToWaterStep = false,
+    nonOceanWaterPenalty = 0,
   ) {
     const srcArray: TileRef[] = Array.isArray(src) ? src : [src];
     const miniSrc = srcArray.map((srcPoint) =>
@@ -57,7 +147,12 @@ export class MiniAStar implements AStar<TileRef> {
       miniDst,
       iterations,
       maxTries,
-      new GameMapAdapter(miniMap, waterPath),
+      new GameMapAdapter(
+        miniMap,
+        waterPath,
+        allowLandToWaterStep,
+        nonOceanWaterPenalty,
+      ),
       directionChangePenalty,
     );
   }

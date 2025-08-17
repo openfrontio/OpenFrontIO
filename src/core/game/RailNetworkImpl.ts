@@ -61,6 +61,8 @@ class RailPathFinderServiceImpl implements RailPathFinderService {
       20,
       false,
       3,
+      /* allowLandToWaterStep */ true,
+      /* nonOceanWaterPenalty */ 1,
     );
     return astar.compute() === PathFindResultType.Completed
       ? astar.reconstructPath()
@@ -156,10 +158,25 @@ export class RailNetworkImpl implements RailNetwork {
       const connectionAvailable =
         distanceToStation > this.maxConnectionDistance ||
         distanceToStation === -1;
-      if (
-        connectionAvailable &&
-        neighbor.distSquared > this.game.config().trainStationMinRange() ** 2
-      ) {
+      const isBelowMinRange =
+        neighbor.distSquared <= this.game.config().trainStationMinRange() ** 2;
+      let allowShortBridge = false;
+      if (connectionAvailable && isBelowMinRange) {
+        // Special-case: allow short connections that cross water (bridge)
+        const tentativePath = this.pathService.findTilePath(
+          station.tile(),
+          neighborStation.tile(),
+        );
+        if (tentativePath.length > 0) {
+          for (const t of tentativePath) {
+            if (this.game.isWater(t)) {
+              allowShortBridge = true;
+              break;
+            }
+          }
+        }
+      }
+      if (connectionAvailable && (!isBelowMinRange || allowShortBridge)) {
         if (this.connect(station, neighborStation)) {
           neighborCluster.addStation(station);
           editedClusters.add(neighborCluster);
