@@ -185,7 +185,9 @@ export class NameLayer implements Layer {
       screenPosOld.x - window.innerWidth / 2,
       screenPosOld.y - window.innerHeight / 2,
     );
-    this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+    this.container.style.transform =
+      `translate(${screenPos.x}px, ${screenPos.y}px) ` +
+      `scale(${this.transformHandler.scale})`;
 
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
@@ -609,7 +611,8 @@ export class NameLayer implements Layer {
     // Position element with scale
     if (render.location && render.location !== oldLocation) {
       const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
+      render.element.style.transform =
+        `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
     }
   }
 

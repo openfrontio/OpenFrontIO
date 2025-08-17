@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { renderNumber, renderTroops } from "../../client/Utils";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
