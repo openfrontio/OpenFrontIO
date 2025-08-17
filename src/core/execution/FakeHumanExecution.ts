@@ -437,9 +437,9 @@ export class FakeHumanExecution implements Execution {
     const structureCount = (
       this.player.units(UnitType.Port).length +
       this.player.units(UnitType.City).length +
-      this.player.units(UnitType.Factory).length
+      this.player.units(UnitType.Factory).length +
       this.player.units(UnitType.MissileSilo).length +
-      this.player.units(UnitType.SAMLauncher).length +
+      this.player.units(UnitType.SAMLauncher).length
     );
     const tileCount = this.player.tiles().length;
 
