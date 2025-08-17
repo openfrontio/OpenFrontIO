@@ -140,7 +140,6 @@ export default [
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
       "max-len": "off",
-      "no-undef": "off",
       "sort-keys": "off",
     },
   },
