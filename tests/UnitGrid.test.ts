@@ -90,7 +90,7 @@ describe("Unit Grid range tests", () => {
           range,
           units, // remove readonly
         );
-        expect(result.length).toBe(expectedResult);
+        expect(result).toHaveLength(expectedResult);
       },
     );
 

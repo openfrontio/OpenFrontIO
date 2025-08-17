@@ -230,7 +230,7 @@ describe("SAM", () => {
 
   test("SAM should have increased level after upgrade", async () => {
     defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(1);
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toBe(1);
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
       defender,
@@ -239,6 +239,6 @@ describe("SAM", () => {
     game.addExecution(upgradeStructureExecution);
     executeTicks(game, 2);
 
-    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(2);
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toBe(2);
   });
 });

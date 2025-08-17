@@ -3,6 +3,7 @@ import globals from "globals";
 import path from "node:path";
 import pluginJs from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
+import jest from "eslint-plugin-jest";
 import tseslint from "typescript-eslint";
 import { fileURLToPath } from "node:url";
 import { includeIgnoreFile } from "@eslint/compat";
@@ -112,7 +113,7 @@ export default [
       "object-curly-newline": ["error", { multiline: true, consistent: true }],
       "object-curly-spacing": ["error", "always"],
       "object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
-      // "no-undef": "error", // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1786
+      "no-undef": "error",
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
       "quote-props": ["error", "consistent-as-needed"],
       // 'sort-imports': 'error', // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1787
@@ -141,6 +142,19 @@ export default [
       "max-len": "off",
       "sort-keys": "off",
     },
+  },
+  {
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+    files: [
+      "**/*.test.{js,ts,jsx,tsx}",
+      "tests/**/*.{js,ts,jsx,tsx}",
+    ],
+    plugins: ["jest"],
+    ...jest.configs['flat/style'],
   },
   {
     files: [
