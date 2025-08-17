@@ -71,6 +71,8 @@ describe("RailNetworkImpl", () => {
         trainStationMinRange: () => 10,
         railroadMaxSize: () => 100,
       }),
+      // Needed by RailNetworkImpl when allowing short bridges over water
+      isWater: jest.fn(() => true),
     };
 
     network = new RailNetworkImpl(game, stationManager, pathService);
