@@ -201,12 +201,13 @@ export class TeamStats extends LitElement implements Layer {
         </div>
         <button
           class="team-stats-button"
+          aria-pressed=${String(this.showUnits)}
           @click=${() => {
             this.showUnits = !this.showUnits;
             this.requestUpdate();
           }}
         >
-          ${this.showUnits ? "Show Control" : "Show Buildings"}
+          ${this.showUnits ? translateText("leaderboard.show_control") : translateText("leaderboard.show_units")}
         </button>
       </div>
     `;
