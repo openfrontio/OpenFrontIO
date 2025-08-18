@@ -461,7 +461,8 @@ export class FakeHumanExecution implements Execution {
     const valueFunction = this.structureSpawnTileValue(type);
     let bestTile: TileRef | null = null;
     let bestValue = 0;
-    for (const t of tiles) {
+    const sampledTiles = this.tileGenerator(tiles);
+    for (const t of sampledTiles) {
       const v = valueFunction(t);
       if (v >= bestValue && bestTile !== null) continue;
       if (!this.player.canBuild(type, t)) continue;
@@ -471,6 +472,22 @@ export class FakeHumanExecution implements Execution {
     }
     return bestTile;
   }
+
+  private * tileGenerator(tiles: TileRef[], sampleSize = 1000): Generator<TileRef> {
+    if (tiles.length <= sampleSize) {
+      // Return all tiles
+      yield* tiles;
+    } else {
+      // Sample `sampleSize` tiles
+      const seen = new Set<TileRef>();
+      while (seen.size < sampleSize) {
+        const t = this.random.randElement(tiles);
+        if (seen.has(t)) continue;
+        seen.add(t);
+        yield t;
+      }
+    }
+  };
 
   private structureSpawnTileValue(type: UnitType): (tile: TileRef) => number {
     if (this.player === null) throw new Error("not initialized");
