@@ -5,7 +5,9 @@ import { GameView } from "../../../core/game/GameView";
 import { ReplaySpeedChangeEvent } from "../../InputHandler";
 import {
   defaultReplaySpeedMultiplier,
+  ReplaySpeedLabels,
   ReplaySpeedMultiplier,
+  ReplaySpeedMultiplierSchema,
   ReplaySpeedValues,
 } from "../../utilities/ReplaySpeedMultiplier";
 import { translateText } from "../../Utils";
@@ -76,12 +78,11 @@ export class ReplayPanel extends LitElement implements Layer {
             : translateText("replay_panel.game_speed")}
         </label>
         <div class="grid grid-cols-2 gap-1">
-          ${this.renderSpeedButton("slow", "×0.5")}
-          ${this.renderSpeedButton("normal", "×1")}
-          ${this.renderSpeedButton("fast", "×2")}
-          ${this.renderSpeedButton(
-            "fastest",
-            translateText("replay_panel.fastest_game_speed"),
+          ${ReplaySpeedMultiplierSchema.options.map(([option]) =>
+            this.renderSpeedButton(
+              option as ReplaySpeedMultiplier,
+              ReplaySpeedLabels[option],
+            ),
           )}
         </div>
       </div>
