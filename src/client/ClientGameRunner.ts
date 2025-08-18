@@ -1,30 +1,3 @@
-import { translateText } from "../client/Utils";
-import { EventBus } from "../core/EventBus";
-import {
-  ClientID,
-  GameID,
-  GameRecord,
-  GameStartInfo,
-  PlayerRecord,
-  ServerMessage,
-} from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
-import { ServerConfig } from "../core/configuration/Config";
-import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
-import { GameMapLoader } from "../core/game/GameMapLoader";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-  HashUpdate,
-  WinUpdate,
-} from "../core/game/GameUpdates";
-import { GameView, PlayerView } from "../core/game/GameView";
-import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
-import { UserSettings } from "../core/game/UserSettings";
-import { WorkerClient } from "../core/worker/WorkerClient";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -33,9 +6,24 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
 } from "./InputHandler";
-import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentID } from "./Main";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import {
+  ClientID,
+  GameID,
+  GameRecord,
+  GameStartInfo,
+  PlayerRecord,
+  ServerMessage,
+} from "../core/Schemas";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  HashUpdate,
+  WinUpdate,
+} from "../core/game/GameUpdates";
+import { GameRenderer, createRenderer } from "./graphics/GameRenderer";
+import { GameView, PlayerView } from "../core/game/GameView";
+import { PlayerActions, UnitType } from "../core/game/Game";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -44,8 +32,20 @@ import {
   SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
+import { TerrainMapData, loadTerrainMap } from "../core/game/TerrainMapLoader";
+import { endGame, startGame, startTime } from "./LocalPersistantStats";
+import { EventBus } from "../core/EventBus";
+import { GameMapLoader } from "../core/game/GameMapLoader";
+import { ServerConfig } from "../core/configuration/Config";
+import { TileRef } from "../core/game/GameMap";
+import { UserSettings } from "../core/game/UserSettings";
+import { WorkerClient } from "../core/worker/WorkerClient";
 import { createCanvas } from "./Utils";
-import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import { createGameRecord } from "../core/Util";
+import { getConfig } from "../core/configuration/ConfigLoader";
+import { getPersistentID } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { translateText } from "../client/Utils";
 
 export type LobbyConfig = {
   serverConfig: ServerConfig;
@@ -193,7 +193,7 @@ export class ClientGameRunner {
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime = 0;
-  private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private connectionCheckInterval: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private lobby: LobbyConfig,
@@ -563,7 +563,7 @@ export class ClientGameRunner {
       (bu) => bu.type === UnitType.TransportShip,
     );
     if (bu === undefined) {
-      console.warn(`no transport ship buildable units`);
+      console.warn("no transport ship buildable units");
       return false;
     }
     return (

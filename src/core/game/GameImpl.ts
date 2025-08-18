@@ -1,9 +1,5 @@
-import { renderNumber } from "../../client/Utils";
-import { Config } from "../configuration/Config";
+/* eslint-disable max-lines */
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
-import { simpleHash } from "../Util";
-import { AllianceImpl } from "./AllianceImpl";
-import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {
   Alliance,
   AllianceRequest,
@@ -24,8 +20,8 @@ import {
   PlayerType,
   Quads,
   Team,
-  TerrainType,
   TerraNullius,
+  TerrainType,
   Trios,
   Unit,
   UnitInfo,
@@ -33,14 +29,19 @@ import {
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { AllianceImpl } from "./AllianceImpl";
+import { AllianceRequestImpl } from "./AllianceRequestImpl";
+import { Config } from "../configuration/Config";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
-import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
-import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { assignTeams } from "./TeamAssignment";
+import { createRailNetwork } from "./RailNetworkImpl";
+import { renderNumber } from "../../client/Utils";
+import { simpleHash } from "../Util";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -247,7 +248,7 @@ export class GameImpl implements Game {
       .incomingAllianceRequests()
       .find((ar) => ar.requestor() === recipient);
     if (correspondingReq !== undefined) {
-      console.log(`got corresponding alliance requests, accepting`);
+      console.log("got corresponding alliance requests, accepting");
       correspondingReq.accept();
       return null;
     }
@@ -287,9 +288,9 @@ export class GameImpl implements Game {
 
     // Automatically remove embargoes only if they were automatically created
     if (requestor.hasEmbargoAgainst(recipient))
-      requestor.endTemporaryEmbargo(recipient.id());
+      requestor.endTemporaryEmbargo(recipient);
     if (recipient.hasEmbargoAgainst(requestor))
-      recipient.endTemporaryEmbargo(requestor.id());
+      recipient.endTemporaryEmbargo(requestor);
 
     this.addUpdate({
       accepted: true,
@@ -501,7 +502,7 @@ export class GameImpl implements Game {
 
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
-      throw Error(`cannot conquer water`);
+      throw Error("cannot conquer water");
     }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
@@ -522,7 +523,7 @@ export class GameImpl implements Game {
 
   relinquish(tile: TileRef) {
     if (!this.hasOwner(tile)) {
-      throw new Error(`Cannot relinquish tile because it is unowned`);
+      throw new Error("Cannot relinquish tile because it is unowned");
     }
     if (this.isWater(tile)) {
       throw new Error("Cannot relinquish water");

@@ -1,9 +1,6 @@
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { LitElement, TemplateResult, html } from "lit";
-import { ref } from "lit-html/directives/ref.js";
-import { customElement, property, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
-import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
   PlayerType,
@@ -11,13 +8,16 @@ import {
   Unit,
   UnitType,
 } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
+import { customElement, property, state } from "lit/decorators.js";
 import { renderNumber, renderTroops } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
+import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
+import { TileRef } from "../../../core/game/GameMap";
+import { TransformHandler } from "../TransformHandler";
+import { ref } from "lit-html/directives/ref.js";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { translateText } from "../../../client/Utils";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -356,7 +356,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg
+          transition-all duration-300  text-white text-lg md:text-base
+          ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

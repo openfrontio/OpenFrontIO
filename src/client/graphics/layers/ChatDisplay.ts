@@ -1,16 +1,16 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { EventBus } from "../../../core/EventBus";
-import { MessageType } from "../../../core/game/Game";
 import {
   DisplayMessageUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
+import { LitElement, html } from "lit";
+import { UnsafeHTMLDirective, unsafeHTML } from "lit/directives/unsafe-html.js";
+import { customElement, state } from "lit/decorators.js";
+import { DirectiveResult } from "lit/directive.js";
+import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
-import { onlyImages } from "../../../core/Util";
 import { Layer } from "./Layer";
+import { MessageType } from "../../../core/game/Game";
+import { onlyImages } from "../../../core/Util";
 
 type ChatEvent = {
   description: string;
@@ -125,9 +125,10 @@ export class ChatDisplay extends LitElement implements Layer {
     }
     return html`
       <div
-        class="${this._hidden
-          ? "w-fit px-[10px] py-[5px]"
-          : ""} rounded-md bg-black bg-opacity-60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw] lg:w-full lg:w-auto"
+        class="${this._hidden ? "w-fit px-[10px] py-[5px]" : ""} rounded-md
+        bg-black bg-opacity-60 relative max-h-[30vh] flex flex-col-reverse
+        overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw]
+        lg:w-full lg:w-auto"
         style="pointer-events: auto"
       >
         <div>

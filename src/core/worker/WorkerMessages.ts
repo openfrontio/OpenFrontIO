@@ -1,12 +1,12 @@
+import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import {
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
-import { ClientID, GameStartInfo, Turn } from "../Schemas";
+import { TileRef } from "../game/GameMap";
 
 export type WorkerMessageType =
   | "heartbeat"

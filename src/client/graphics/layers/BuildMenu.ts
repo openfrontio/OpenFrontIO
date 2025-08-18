@@ -1,39 +1,39 @@
-import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
-import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
-import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
-import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
-import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
-import { translateText } from "../../../client/Utils";
-import { EventBus } from "../../../core/EventBus";
+import {
+  BuildUnitIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 import {
   BuildableUnit,
   Gold,
   PlayerActions,
   UnitType,
 } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView } from "../../../core/game/GameView";
 import {
   CloseViewEvent,
   MouseDownEvent,
   ShowBuildMenuEvent,
   ShowEmojiMenuEvent,
 } from "../../InputHandler";
-import {
-  BuildUnitIntentEvent,
-  SendUpgradeStructureIntentEvent,
-} from "../../Transport";
-import { renderNumber } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { EventBus } from "../../../core/EventBus";
+import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
+import { TileRef } from "../../../core/game/GameMap";
+import { TransformHandler } from "../TransformHandler";
+import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
+import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
+import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
+import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
+import portIcon from "../../../../resources/images/PortIcon.svg";
+import { renderNumber } from "../../Utils";
+import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
+import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import { translateText } from "../../../client/Utils";
+import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 
 export type BuildItemDisplay = {
   unitType: UnitType;

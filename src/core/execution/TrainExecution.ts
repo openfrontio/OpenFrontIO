@@ -6,9 +6,9 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { OrientedRailroad, getOrientedRailroad } from "../game/Railroad";
 import { RailNetwork } from "../game/RailNetwork";
-import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
+import { TileRef } from "../game/GameMap";
 import { TrainStation } from "../game/TrainStation";
 
 export class TrainExecution implements Execution {
@@ -58,7 +58,7 @@ export class TrainExecution implements Execution {
 
     const spawn = this.player.canBuild(UnitType.Train, this.stations[0].tile());
     if (spawn === false) {
-      console.warn(`cannot build train`);
+      console.warn("cannot build train");
       this.active = false;
       return;
     }

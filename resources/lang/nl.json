@@ -21,7 +21,9 @@
     "instructions": "Instructies",
     "how_to_play": "Hoe spelen?",
     "advertise": "Adverteren",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Privacybeleid",
+    "terms_of_service": "Servicevoorwaarden"
   },
   "news": {
     "full_changelog": "Bekijk het volledige changelog",
@@ -448,6 +450,7 @@
     "gold": "Goud",
     "ports": "Havens",
     "cities": "Steden",
+    "factories": "Fabrieken",
     "missile_launchers": "Raketsilo's",
     "sams": "SAM-lanceerders",
     "warships": "Oorlogsschepen",
@@ -573,6 +576,9 @@
       "grogu_head": "Grogu-hoofd",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Advertentie laden..."
   },
   "auth": {
     "login_required": "Login is vereist voor toegang tot deze website.",

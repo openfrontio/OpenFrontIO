@@ -1,5 +1,3 @@
-import { Colord } from "colord";
-import { JWK } from "jose";
 import {
   Difficulty,
   Game,
@@ -14,11 +12,13 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { GameMap, TileRef } from "../game/GameMap";
+import { Colord } from "colord";
+import { JWK } from "jose";
+import { NukeType } from "../StatsSchemas";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
-import { NukeType } from "../StatsSchemas";
 
 export enum GameEnv {
   Dev,
@@ -133,7 +133,7 @@ export type Config = {
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
-  trainGold(): Gold;
+  trainGold(isFriendly: boolean): Gold;
   trainSpawnRate(numberOfStations: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
@@ -188,6 +188,7 @@ export type Theme = {
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;
+  neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
 };

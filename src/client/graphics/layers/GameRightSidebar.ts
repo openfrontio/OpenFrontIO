@@ -1,20 +1,20 @@
-import { html, LitElement } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { EventBus } from "../../../core/EventBus";
+import { GameType } from "../../../core/game/Game";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView } from "../../../core/game/GameView";
+import { Layer } from "./Layer";
+import { PauseGameEvent } from "../../Transport";
+import { ShowReplayPanelEvent } from "./ReplayPanel";
+import { ShowSettingsModalEvent } from "./SettingsModal";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
 import playIcon from "../../../../resources/images/PlayIconWhite.svg";
 import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhite.svg";
 import replaySolidIcon from "../../../../resources/images/ReplaySolidIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
-import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
-import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
-import { Layer } from "./Layer";
-import { ShowReplayPanelEvent } from "./ReplayPanel";
-import { ShowSettingsModalEvent } from "./SettingsModal";
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
@@ -109,9 +109,10 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     return html`
       <aside
-        class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-tl-lg rounded-bl-lg transition-transform duration-300 ease-out transform ${
-          this._isVisible ? "translate-x-0" : "translate-x-full"
-        }`}
+        class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2
+          bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-tl-lg rounded-bl-lg
+          transition-transform duration-300 ease-out transform
+          ${this._isVisible ? "translate-x-0" : "translate-x-full"}`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
@@ -139,7 +140,9 @@ export class GameRightSidebar extends LitElement implements Layer {
         <!-- Timer display below buttons -->
         <div class="flex justify-center items-center mt-2">
           <div
-            class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center justify-center text-white px-1"
+            class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5
+            text-xs md:text-sm lg:text-base flex items-center justify-center
+            text-white px-1"
           >
             ${this.secondsToHms(this.timer)}
           </div>

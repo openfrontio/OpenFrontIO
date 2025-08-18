@@ -21,7 +21,9 @@
     "instructions": "Instructions",
     "how_to_play": "Comment jouer ?",
     "advertise": "Faire de la publicité",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Politique de confidentialité",
+    "terms_of_service": "Conditions d'utilisation"
   },
   "news": {
     "full_changelog": "Voir le journal des modifications complet",
@@ -448,6 +450,7 @@
     "gold": "Or",
     "ports": "Ports",
     "cities": "Villes",
+    "factories": "Usines",
     "missile_launchers": "Lance-missiles",
     "sams": "SAMs",
     "warships": "Navires de guerre",
@@ -573,6 +576,9 @@
       "grogu_head": "Tête de Grogu",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Chargement de l'annonce..."
   },
   "auth": {
     "login_required": "La connexion est nécessaire pour accéder à ce site Web.",

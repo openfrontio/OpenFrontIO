@@ -1,12 +1,12 @@
-import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
 import {
   BrokeAllianceUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { Layer } from "./Layer";
+import { UserSettings } from "../../../core/game/UserSettings";
 
 // Parameters for the alert animation
 const ALERT_SPEED = 1.6;

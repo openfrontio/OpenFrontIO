@@ -83,7 +83,7 @@ describe("assignTeams", () => {
     expect(result.get(players[1])).toEqual(ColoredTeams.Red);
     expect(result.get(players[2])).toEqual(ColoredTeams.Red);
 
-    expect(result.get(players[3])).toEqual("kicked");
+    expect(result.get(players[3])).toBe("kicked");
 
     expect(result.get(players[4])).toEqual(ColoredTeams.Blue);
     expect(result.get(players[5])).toEqual(ColoredTeams.Blue);
@@ -151,7 +151,7 @@ describe("assignTeams", () => {
 
     expect(result.get(players[0])).toEqual(ColoredTeams.Red);
     expect(result.get(players[1])).toEqual(ColoredTeams.Red);
-    expect(result.get(players[2])).toEqual("kicked");
+    expect(result.get(players[2])).toBe("kicked");
     expect(result.get(players[3])).toEqual(ColoredTeams.Blue);
     expect(result.get(players[4])).toEqual(ColoredTeams.Blue);
     expect(result.get(players[5])).toEqual(ColoredTeams.Yellow);

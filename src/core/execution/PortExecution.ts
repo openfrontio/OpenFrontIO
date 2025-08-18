@@ -1,6 +1,6 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
 

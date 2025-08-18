@@ -1,5 +1,5 @@
-import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
+import { GameMapType } from "./Game";
 import { MapManifest } from "./TerrainMapLoader";
 
 export type BinModule = {

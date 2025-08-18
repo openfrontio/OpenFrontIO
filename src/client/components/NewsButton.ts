@@ -1,9 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import megaphone from "../../../resources/images/Megaphone.svg";
-import version from "../../../resources/version.txt";
 import { NewsModal } from "../NewsModal";
+import megaphone from "../../../resources/images/Megaphone.svg";
 import { translateText } from "../Utils";
+import version from "../../../resources/version.txt";
 
 @customElement("news-button")
 export class NewsButton extends LitElement {
@@ -44,7 +44,8 @@ export class NewsButton extends LitElement {
           : ""}"
       >
         <button
-          class="border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
+          class="border p-[4px] rounded-lg flex cursor-pointer border-black/30
+          dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
           @click=${this.handleClick}
         >
           <img

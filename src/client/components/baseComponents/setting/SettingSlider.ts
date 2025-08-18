@@ -28,17 +28,6 @@ export class SettingSlider extends LitElement {
     );
   }
 
-  private handleSliderChange(e: Event) {
-    const detail = (e as CustomEvent)?.detail;
-    if (!detail || detail.value === undefined) {
-      console.warn("Invalid slider change event", e);
-      return;
-    }
-
-    const value = detail.value;
-    console.log("Slider changed to", value);
-  }
-
   private updateSliderStyle(slider: HTMLInputElement) {
     const percent = ((this.value - this.min) / (this.max - this.min)) * 100;
     slider.style.background = `linear-gradient(to right, #2196f3 ${percent}%, #444 ${percent}%)`;

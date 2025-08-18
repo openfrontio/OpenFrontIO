@@ -1,6 +1,6 @@
-import { GameView } from "../../../core/game/GameView";
-import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "./Fx";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
+import { GameView } from "../../../core/game/GameView";
 import { SpriteFx } from "./SpriteFx";
 import { Timeline } from "./Timeline";
 

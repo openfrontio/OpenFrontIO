@@ -1,7 +1,3 @@
-import ipAnonymize from "ip-anonymize";
-import { Logger } from "winston";
-import WebSocket from "ws";
-import { z } from "zod";
 import {
   ClientID,
   ClientSendWinnerMessage,
@@ -18,13 +14,18 @@ import {
   ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
-import { archive } from "./Archive";
 import { Client } from "./Client";
+import { GameType } from "../core/game/Game";
+import { Logger } from "winston";
+import WebSocket from "ws";
+import { archive } from "./Archive";
+import { createGameRecord } from "../core/Util";
 import { gatekeeper } from "./Gatekeeper";
+import ipAnonymize from "ip-anonymize";
 import { postJoinMessageHandler } from "./worker/websocket/handler/message/PostJoinHandler";
+import { z } from "zod";
+
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -126,7 +127,7 @@ export class GameServer {
   public addClient(client: Client, lastTurn: number) {
     this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
-      this.log.warn(`cannot add client, already kicked`, {
+      this.log.warn("cannot add client, already kicked", {
         clientID: client.clientID,
       });
       return;
@@ -226,6 +227,7 @@ export class GameServer {
       );
     });
     client.ws.on("error", (error: Error) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
@@ -375,7 +377,7 @@ export class GameServer {
       }
     });
     if (!this._hasPrestarted && !this._hasStarted) {
-      this.log.info(`game not started, not archiving game`);
+      this.log.info("game not started, not archiving game");
       return;
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
@@ -504,7 +506,7 @@ export class GameServer {
 
   public kickClient(clientID: ClientID): void {
     if (this.kickedClients.has(clientID)) {
-      this.log.warn(`cannot kick client, already kicked`, {
+      this.log.warn("cannot kick client, already kicked", {
         clientID,
       });
       return;
@@ -527,7 +529,7 @@ export class GameServer {
       );
       this.kickedClients.add(clientID);
     } else {
-      this.log.warn(`cannot kick client, not found in game`, {
+      this.log.warn("cannot kick client, not found in game", {
         clientID,
       });
     }

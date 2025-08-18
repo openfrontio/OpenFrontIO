@@ -1,15 +1,15 @@
-import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { PlayerID } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
 import {
   GameUpdateType,
-  RailroadUpdate,
   RailTile,
   RailType,
+  RailroadUpdate,
 } from "../../../core/game/GameUpdates";
+import { Colord } from "colord";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
+import { PlayerID } from "../../../core/game/Game";
+import { Theme } from "../../../core/configuration/Config";
+import { TileRef } from "../../../core/game/GameMap";
 import { getRailroadRects } from "./RailroadSprites";
 
 type RailRef = {

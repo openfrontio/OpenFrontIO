@@ -5,11 +5,11 @@ import {
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
-import { generateID } from "../Util";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { TileRef } from "../game/GameMap";
 import { WorkerMessage } from "./WorkerMessages";
+import { generateID } from "../Util";
 
 export class WorkerClient {
   private worker: Worker;

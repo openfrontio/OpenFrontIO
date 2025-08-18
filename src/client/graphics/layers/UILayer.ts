@@ -1,14 +1,14 @@
+import { GameView, UnitView } from "../../../core/game/GameView";
 import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
-import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
-import { UnitSelectionEvent } from "../../InputHandler";
-import { ProgressBar } from "../ProgressBar";
-import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { ProgressBar } from "../ProgressBar";
+import { Theme } from "../../../core/configuration/Config";
+import { TransformHandler } from "../TransformHandler";
+import { UnitSelectionEvent } from "../../InputHandler";
+import { UnitType } from "../../../core/game/Game";
+import { UserSettings } from "../../../core/game/UserSettings";
 
 const COLOR_PROGRESSION = [
   "rgb(232, 25, 25)",

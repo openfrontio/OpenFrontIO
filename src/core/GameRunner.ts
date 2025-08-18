@@ -1,7 +1,3 @@
-import { placeName } from "../client/graphics/NameBoxCalculator";
-import { getConfig } from "./configuration/ConfigLoader";
-import { Executor } from "./execution/ExecutionManager";
-import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   Attack,
@@ -18,19 +14,23 @@ import {
   PlayerProfile,
   PlayerType,
 } from "./game/Game";
-import { createGame } from "./game/GameImpl";
-import { TileRef } from "./game/GameMap";
-import { GameMapLoader } from "./game/GameMapLoader";
+import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
-import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
-import { PseudoRandom } from "./PseudoRandom";
-import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { sanitize, simpleHash } from "./Util";
+import { Executor } from "./execution/ExecutionManager";
+import { GameMapLoader } from "./game/GameMapLoader";
+import { PseudoRandom } from "./PseudoRandom";
+import { TileRef } from "./game/GameMap";
+import { WinCheckExecution } from "./execution/WinCheckExecution";
+import { createGame } from "./game/GameImpl";
 import { fixProfaneUsername } from "./validations/username";
+import { getConfig } from "./configuration/ConfigLoader";
+import { loadTerrainMap } from "./game/TerrainMapLoader";
+import { placeName } from "../client/graphics/NameBoxCalculator";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
@@ -39,7 +39,7 @@ export async function createGameRunner(
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
-  const gameMap = await loadGameMap(gameStart.config.gameMap, mapLoader);
+  const gameMap = await loadTerrainMap(gameStart.config.gameMap, mapLoader);
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map(
