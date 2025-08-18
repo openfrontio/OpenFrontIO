@@ -461,7 +461,7 @@ export class FakeHumanExecution implements Execution {
     const valueFunction = this.structureSpawnTileValue(type);
     let bestTile: TileRef | null = null;
     let bestValue = 0;
-    const sampledTiles = this.tileGenerator(tiles);
+    const sampledTiles = this.arraySampler(tiles);
     for (const t of sampledTiles) {
       const v = valueFunction(t);
       if (v >= bestValue && bestTile !== null) continue;
@@ -473,17 +473,16 @@ export class FakeHumanExecution implements Execution {
     return bestTile;
   }
 
-  private * tileGenerator(tiles: TileRef[], sampleSize = 1000): Generator<TileRef> {
-    if (tiles.length <= sampleSize) {
-      // Return all tiles
-      yield* tiles;
+  private * arraySampler<T>(a: T[], sampleSize = 50): Generator<T> {
+    if (a.length <= sampleSize) {
+      // Return all elements
+      yield* a;
     } else {
-      // Sample `sampleSize` tiles
-      const seen = new Set<TileRef>();
-      while (seen.size < sampleSize) {
-        const t = this.random.randElement(tiles);
-        if (seen.has(t)) continue;
-        seen.add(t);
+      // Sample `sampleSize` elements
+      const remaining = new Set<T>(a);
+      while (sampleSize--) {
+        const t = this.random.randFromSet(remaining);
+        remaining.delete(t);
         yield t;
       }
     }
