@@ -486,7 +486,7 @@ export class FakeHumanExecution implements Execution {
         yield t;
       }
     }
-  };
+  }
 
   private structureSpawnTileValue(type: UnitType): (tile: TileRef) => number {
     if (this.player === null) throw new Error("not initialized");
