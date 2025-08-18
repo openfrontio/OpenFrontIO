@@ -494,7 +494,8 @@ export class FakeHumanExecution implements Execution {
     const mg = this.mg;
     const otherUnits = this.player.units(type);
     // Prefer spacing structures out of atom bomb range
-    const maxDistanceBuff = this.mg.config().nukeMagnitudes(UnitType.AtomBomb).outer * 2;
+    const borderSpacing = this.mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+    const structureSpacing = borderSpacing * 2;
     switch (type) {
       case UnitType.Port:
         return (tile) => {
@@ -506,7 +507,7 @@ export class FakeHumanExecution implements Execution {
           const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
           if (closestOther !== null) {
             const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, maxDistanceBuff);
+            w += Math.min(d, structureSpacing);
           }
 
           return w;
@@ -521,7 +522,7 @@ export class FakeHumanExecution implements Execution {
           const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
           if (closestBorder !== null) {
             const d = mg.manhattanDist(closestBorder.x, tile);
-            w += Math.min(d, maxDistanceBuff);
+            w += Math.min(d, borderSpacing);
           }
 
           // Prefer to be far away from other structures of the same type
@@ -530,7 +531,7 @@ export class FakeHumanExecution implements Execution {
           const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
           if (closestOther !== null) {
             const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, maxDistanceBuff);
+            w += Math.min(d, structureSpacing);
           }
 
           // TODO: Cities and factories should consider train range limits
