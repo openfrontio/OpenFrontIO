@@ -59,7 +59,7 @@ export class PrivilegeRefresher {
         result.data,
         base64url.decode,
       );
-      this.log.info(`Privilege checker loaded successfully`);
+      this.log.info("Privilege checker loaded successfully");
     } catch (error) {
       this.log.error(`Failed to fetch cosmetics from ${this.endpoint}:`, error);
       throw error;

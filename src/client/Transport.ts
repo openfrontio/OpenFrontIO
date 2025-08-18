@@ -541,7 +541,7 @@ export class Transport {
 
   private onPauseGameEvent(event: PauseGameEvent) {
     if (!this.isLocal) {
-      console.log(`cannot pause multiplayer games`);
+      console.log("cannot pause multiplayer games");
       return;
     }
     if (event.paused) {

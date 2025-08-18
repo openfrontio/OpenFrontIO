@@ -38,7 +38,7 @@ export class TradeShipExecution implements Execution {
         this.srcPort.tile(),
       );
       if (spawn === false) {
-        console.warn(`cannot build trade ship`);
+        console.warn("cannot build trade ship");
         this.active = false;
         return;
       }

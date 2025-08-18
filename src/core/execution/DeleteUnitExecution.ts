@@ -50,13 +50,13 @@ export class DeleteUnitExecution implements Execution {
     }
 
     if (mg.inSpawnPhase()) {
-      console.warn(`SECURITY: cannot delete units during spawn phase`);
+      console.warn("SECURITY: cannot delete units during spawn phase");
       this.active = false;
       return;
     }
 
     if (!this.player.canDeleteUnit()) {
-      console.warn(`SECURITY: delete unit cooldown not expired`);
+      console.warn("SECURITY: delete unit cooldown not expired");
       this.active = false;
       return;
     }
@@ -65,7 +65,7 @@ export class DeleteUnitExecution implements Execution {
     this.player.recordDeleteUnit();
 
     this.mg.displayMessage(
-      `events_display.unit_voluntarily_deleted`,
+      "events_display.unit_voluntarily_deleted",
       MessageType.UNIT_DESTROYED,
       this.player.id(),
     );
