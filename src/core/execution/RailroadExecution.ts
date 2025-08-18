@@ -21,7 +21,7 @@ export class RailroadExecution implements Execution {
   /* eslint-disable sort-keys */
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    const tiles = this.railRoad.tiles;
+    const { tiles } = this.railRoad;
     // Inverse direction computation for the first tile
     this.railTiles.push({
       tile: tiles[0],

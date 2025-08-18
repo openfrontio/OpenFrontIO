@@ -27,8 +27,8 @@ export class BezenhamLine {
     if (this.p1.x === this.p2.x && this.p1.y === this.p2.y) {
       return true;
     }
-    const x = this.p1.x;
-    const y = this.p1.y;
+    const { x } = this.p1;
+    const { y } = this.p1;
     const err2 = 2 * this.error;
 
     if (err2 > -this.dy) {

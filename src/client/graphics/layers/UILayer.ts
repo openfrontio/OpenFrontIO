@@ -263,7 +263,7 @@ export class UILayer implements Layer {
    * Draw health bar for a unit
    */
   public drawHealthBar(unit: UnitView) {
-    const maxHealth = this.game.unitInfo(unit.type()).maxHealth;
+    const { maxHealth } = this.game.unitInfo(unit.type());
     if (maxHealth === undefined || this.context === null) {
       return;
     }

@@ -90,7 +90,7 @@ export async function startMaster() {
   cluster.on("message", (worker, message) => {
     if (message.type === "WORKER_READY") {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const workerId = message.workerId;
+      const { workerId } = message;
       readyWorkers.add(workerId);
       log.info(
         `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,

@@ -41,7 +41,7 @@ export class PseudoRandom {
 
   // Selects a random element from a set.
   randFromSet<T>(set: Set<T>): T {
-    const size = set.size;
+    const { size } = set;
     if (size === 0) {
       throw new Error("set must not be empty");
     }

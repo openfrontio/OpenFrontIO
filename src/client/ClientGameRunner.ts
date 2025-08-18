@@ -288,7 +288,7 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
-    const worker = this.worker;
+    const { worker } = this;
     const keepWorkerAlive = () => {
       if (this.isActive) {
         worker.sendHeartbeat();

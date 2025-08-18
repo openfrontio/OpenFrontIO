@@ -613,7 +613,7 @@ function hasAllowedFlare(
   const allowed = config.allowedFlares();
   if (allowed === undefined) return true;
   if (userMeResponse === false) return false;
-  const flares = userMeResponse.player.flares;
+  const { flares } = userMeResponse.player;
   if (flares === undefined) return false;
   return allowed.length === 0 || allowed.some((f) => flares.includes(f));
 }

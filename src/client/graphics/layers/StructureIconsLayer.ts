@@ -532,7 +532,7 @@ export class StructureIconsLayer implements Layer {
     const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
 
     const { type, stage } = options;
-    const scale = this.transformHandler.scale;
+    const { scale } = this.transformHandler;
     const spritesEnabled = this.game
       .config()
       .userSettings()
@@ -612,7 +612,7 @@ export class StructureIconsLayer implements Layer {
     const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
     screenPos.x = Math.round(screenPos.x);
 
-    const scale = this.transformHandler.scale;
+    const { scale } = this.transformHandler;
     screenPos.y = Math.round(
       scale >= ZOOM_THRESHOLD &&
         this.game.config().userSettings()?.structureSprites()

@@ -89,7 +89,7 @@ export async function startWorker() {
   app.post(
     "/api/create_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const id = req.params.id;
+      const { id } = req.params;
       const creatorClientID = (() => {
         if (typeof req.query.creatorClientID !== "string") return undefined;
 

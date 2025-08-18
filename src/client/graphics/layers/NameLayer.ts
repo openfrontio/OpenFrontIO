@@ -233,7 +233,7 @@ export class NameLayer implements Layer {
     };
 
     if (player.cosmetics.flag) {
-      const flag = player.cosmetics.flag;
+      const { flag } = player.cosmetics;
       if (flag !== undefined && flag !== null && flag.startsWith("!")) {
         const flagWrapper = document.createElement("div");
         applyFlagStyles(flagWrapper);
