@@ -6,6 +6,7 @@ import { ReplaySpeedChangeEvent } from "../../InputHandler";
 import {
   defaultReplaySpeedMultiplier,
   ReplaySpeedMultiplier,
+  ReplaySpeedValues,
 } from "../../utilities/ReplaySpeedMultiplier";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -52,7 +53,7 @@ export class ReplayPanel extends LitElement implements Layer {
   }
 
   onReplaySpeedChange(value: ReplaySpeedMultiplier) {
-    this._replaySpeedMultiplier = value;
+    this._replaySpeedMultiplier = ReplaySpeedValues[value];
     this.eventBus?.emit(new ReplaySpeedChangeEvent(value));
   }
 
@@ -75,11 +76,11 @@ export class ReplayPanel extends LitElement implements Layer {
             : translateText("replay_panel.game_speed")}
         </label>
         <div class="grid grid-cols-2 gap-1">
-          ${this.renderSpeedButton(ReplaySpeedMultiplier.slow, "×0.5")}
-          ${this.renderSpeedButton(ReplaySpeedMultiplier.normal, "×1")}
-          ${this.renderSpeedButton(ReplaySpeedMultiplier.fast, "×2")}
+          ${this.renderSpeedButton("slow", "×0.5")}
+          ${this.renderSpeedButton("normal", "×1")}
+          ${this.renderSpeedButton("fast", "×2")}
           ${this.renderSpeedButton(
-            ReplaySpeedMultiplier.fastest,
+            "fastest",
             translateText("replay_panel.fastest_game_speed"),
           )}
         </div>
@@ -88,7 +89,7 @@ export class ReplayPanel extends LitElement implements Layer {
   }
 
   private renderSpeedButton(value: ReplaySpeedMultiplier, label: string) {
-    const isActive = this._replaySpeedMultiplier === value;
+    const isActive = this._replaySpeedMultiplier === ReplaySpeedValues[value];
     return html`
       <button
         class="text-white font-bold py-0 rounded border transition ${isActive
