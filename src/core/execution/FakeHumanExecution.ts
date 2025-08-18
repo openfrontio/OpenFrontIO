@@ -419,23 +419,22 @@ export class FakeHumanExecution implements Execution {
   }
 
   private handleUnits() {
-    const player = this.player;
-    if (player === null) return;
     return (
-      this.maybeSpawnStructure(UnitType.Port, 1) ||
-      this.maybeSpawnStructure(UnitType.City, 2) ||
+      this.maybeSpawnStructure(UnitType.City) ||
+      this.maybeSpawnStructure(UnitType.Port) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, 1) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, 1)
+      this.maybeSpawnStructure(UnitType.Factory) ||
+      this.maybeSpawnStructure(UnitType.MissileSilo)
     );
   }
 
-  private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {
+  private maybeSpawnStructure(type: UnitType): boolean {
     if (this.player === null) throw new Error("not initialized");
-    if (this.player.unitsOwned(type) >= maxNum) {
-      return false;
-    }
-    if (this.player.gold() < this.cost(type)) {
+    const owned = this.player.unitsOwned(type);
+    const perceivedCostMultiplier = Math.min(owned + 1, 5);
+    const realCost = this.cost(type);
+    const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
+    if (this.player.gold() < perceivedCost) {
       return false;
     }
     const tile = this.structureSpawnTile(type);
