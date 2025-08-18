@@ -165,7 +165,7 @@ export class PlayerImpl implements Player {
           retreating: a.retreating(),
         } satisfies AttackUpdate;
       }),
-      outgoingAllianceRequests: outgoingAllianceRequests,
+      outgoingAllianceRequests,
       alliances: this.alliances().map(
         (a) =>
           ({
@@ -706,7 +706,7 @@ export class PlayerImpl implements Player {
 
     this.embargoes.set(other.id(), {
       createdAt: this.mg.ticks(),
-      isTemporary: isTemporary,
+      isTemporary,
       target: other,
     });
   }
@@ -887,7 +887,7 @@ export class PlayerImpl implements Player {
         canBuild: this.mg.inSpawnPhase()
           ? false
           : this.canBuild(u, tile, validTiles),
-        canUpgrade: canUpgrade,
+        canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
         type: u,
       } as BuildableUnit;

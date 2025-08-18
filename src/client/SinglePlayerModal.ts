@@ -430,10 +430,10 @@ export class SinglePlayerModal extends LitElement {
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
-          clientID: clientID,
-          gameID: gameID,
+          clientID,
+          gameID,
           gameStartInfo: {
-            gameID: gameID,
+            gameID,
             players: [
               {
                 clientID,

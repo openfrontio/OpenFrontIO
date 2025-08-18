@@ -115,7 +115,7 @@ export class Leaderboard extends LitElement implements Layer {
         gold: renderNumber(player.gold()),
         troops: renderNumber(troops),
         isMyPlayer: player === myPlayer,
-        player: player,
+        player,
       };
     });
 

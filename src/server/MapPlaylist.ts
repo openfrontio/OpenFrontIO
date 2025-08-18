@@ -158,7 +158,7 @@ export class MapPlaylist {
         continue;
       }
       nextEls.splice(i, 1);
-      playlist.push({ map: next, mode: mode });
+      playlist.push({ map: next, mode });
       return true;
     }
     return false;

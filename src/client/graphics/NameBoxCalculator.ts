@@ -151,8 +151,8 @@ export function largestRectangleInHistogram(widths: number[]): Rectangle {
         largestRect = {
           x: stack.length === 0 ? 0 : stack[stack.length - 1] + 1,
           y: 0,
-          width: width,
-          height: height,
+          width,
+          height,
         };
       }
     }

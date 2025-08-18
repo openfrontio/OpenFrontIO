@@ -168,7 +168,7 @@ export class GameRunner {
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
       playerNameViewData: this.playerViewData,
       tick: this.game.ticks(),
-      updates: updates,
+      updates,
     });
     this.isExecuting = false;
   }

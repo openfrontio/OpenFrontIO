@@ -562,7 +562,7 @@ export class GameServer {
     this.clientsDisconnectedStatus.set(clientID, isDisconnected);
     this.addIntent({
       clientID,
-      isDisconnected: isDisconnected,
+      isDisconnected,
       type: "mark_disconnected",
     });
   }

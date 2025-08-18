@@ -266,7 +266,7 @@ export async function startWorker() {
 
       return res.status(200).json({
         exists: true,
-        gameRecord: gameRecord,
+        gameRecord,
         success: true,
       });
     }),
@@ -340,7 +340,7 @@ export async function startWorker() {
     if (process.send) {
       process.send({
         type: "WORKER_READY",
-        workerId: workerId,
+        workerId,
       });
       log.info("signaled ready state to master");
     }

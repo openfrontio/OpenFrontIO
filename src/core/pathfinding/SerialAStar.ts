@@ -148,7 +148,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
           totalG +
           this.heuristic(neighbor, isForward ? this.dst : this.closestSource);
         // eslint-disable-next-line sort-keys
-        openSet.add({ tile: neighbor, fScore: fScore });
+        openSet.add({ tile: neighbor, fScore });
       }
     }
   }

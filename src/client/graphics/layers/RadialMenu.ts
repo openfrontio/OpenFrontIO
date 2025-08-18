@@ -328,7 +328,7 @@ export class RadialMenu implements Layer {
           return color;
         }
 
-        return d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color;
+        return d3.color(color)?.copy({ opacity })?.toString() ?? color;
       })
       .attr("stroke", "#ffffff")
       .attr("stroke-width", "2")
@@ -438,7 +438,7 @@ export class RadialMenu implements Layer {
       const opacity = disabled ? 0.5 : 0.7;
       path.attr(
         "fill",
-        d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
+        d3.color(color)?.copy({ opacity })?.toString() ?? color,
       );
     };
 
@@ -983,7 +983,7 @@ export class RadialMenu implements Layer {
         // Update path appearance
         path.attr(
           "fill",
-          d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
+          d3.color(color)?.copy({ opacity })?.toString() ?? color,
         );
         path.style("opacity", disabled ? 0.5 : 1);
         path.style("cursor", disabled ? "not-allowed" : "pointer");
