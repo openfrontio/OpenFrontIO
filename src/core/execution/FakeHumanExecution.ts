@@ -14,17 +14,17 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { euclDistFN, manhattanDistFN, TileRef } from "../game/GameMap";
-import { PseudoRandom } from "../PseudoRandom";
-import { GameID } from "../Schemas";
+import { TileRef, euclDistFN, manhattanDistFN } from "../game/GameMap";
 import { calculateBoundingBox, flattenedEmojiTable, simpleHash } from "../Util";
+import { BotBehavior } from "./utils/BotBehavior";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { GameID } from "../Schemas";
 import { NukeExecution } from "./NukeExecution";
+import { PseudoRandom } from "../PseudoRandom";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { closestTwoTiles } from "./Util";
-import { BotBehavior } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private active = true;
@@ -100,12 +100,12 @@ export class FakeHumanExecution implements Execution {
         player.relation(other) <= Relation.Hostile &&
         !player.hasEmbargoAgainst(other)
       ) {
-        player.addEmbargo(other.id(), false);
+        player.addEmbargo(other, false);
       } else if (
         player.relation(other) >= Relation.Neutral &&
         player.hasEmbargoAgainst(other)
       ) {
-        player.stopEmbargo(other.id());
+        player.stopEmbargo(other);
       }
     });
   }
@@ -297,7 +297,7 @@ export class FakeHumanExecution implements Execution {
       UnitType.SAMLauncher,
     );
     const structureTiles = structures.map((u) => u.tile());
-    const randomTiles: (TileRef | null)[] = new Array(10);
+    const randomTiles: (TileRef | null)[] = new Array<TileRef | null>(10).fill(null);
     for (let i = 0; i < randomTiles.length; i++) {
       randomTiles[i] = this.randTerritoryTile(other);
     }
@@ -419,23 +419,22 @@ export class FakeHumanExecution implements Execution {
   }
 
   private handleUnits() {
-    const player = this.player;
-    if (player === null) return;
     return (
-      this.maybeSpawnStructure(UnitType.Port, 1) ||
-      this.maybeSpawnStructure(UnitType.City, 2) ||
+      this.maybeSpawnStructure(UnitType.City) ||
+      this.maybeSpawnStructure(UnitType.Port) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, 1) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, 1)
+      this.maybeSpawnStructure(UnitType.Factory) ||
+      this.maybeSpawnStructure(UnitType.MissileSilo)
     );
   }
 
-  private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {
+  private maybeSpawnStructure(type: UnitType): boolean {
     if (this.player === null) throw new Error("not initialized");
-    if (this.player.unitsOwned(type) >= maxNum) {
-      return false;
-    }
-    if (this.player.gold() < this.cost(type)) {
+    const owned = this.player.unitsOwned(type);
+    const perceivedCostMultiplier = Math.min(owned + 1, 5);
+    const realCost = this.cost(type);
+    const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
+    if (this.player.gold() < perceivedCost) {
       return false;
     }
     const tile = this.structureSpawnTile(type);

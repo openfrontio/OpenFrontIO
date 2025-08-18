@@ -1,13 +1,13 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { z } from "zod";
-import { translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
-import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import { LitElement, html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
+import { UserSettings } from "../core/game/UserSettings";
+import { translateText } from "../client/Utils";
+import { z } from "zod";
 
 const KeybindSchema = z.record(z.string(), z.string());
 
@@ -177,16 +177,6 @@ export class UserSettingModal extends LitElement {
     if (typeof value === "number") {
       const ratio = value / 100;
       localStorage.setItem("settings.attackRatio", ratio.toString());
-    } else {
-      console.warn("Slider event missing detail.value", e);
-    }
-  }
-
-  private sliderTroopRatio(e: CustomEvent<{ value: number }>) {
-    const value = e.detail?.value;
-    if (typeof value === "number") {
-      const ratio = value / 100;
-      localStorage.setItem("settings.troopRatio", ratio.toString());
     } else {
       console.warn("Slider event missing detail.value", e);
     }
@@ -389,7 +379,7 @@ export class UserSettingModal extends LitElement {
               max="100"
               value="40"
               easter="true"
-              @change=${(e: CustomEvent) => {
+              @change=${(e: CustomEvent<{ value: unknown }>) => {
                 const value = e.detail?.value;
                 if (value !== undefined) {
                   console.log("Changed:", value);
@@ -408,7 +398,7 @@ export class UserSettingModal extends LitElement {
               min="0"
               max="1000"
               easter="true"
-              @change=${(e: CustomEvent) => {
+              @change=${(e: CustomEvent<{ value: unknown }>) => {
                 const value = e.detail?.value;
                 if (value !== undefined) {
                   console.log("Changed:", value);

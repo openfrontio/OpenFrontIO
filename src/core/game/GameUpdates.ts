@@ -45,6 +45,7 @@ export enum GameUpdateType {
   BonusEvent,
   RailroadEvent,
   ConquestEvent,
+  EmbargoEvent,
 }
 
 export type GameUpdate =
@@ -65,7 +66,8 @@ export type GameUpdate =
   | AllianceExtensionUpdate
   | BonusEventUpdate
   | RailroadUpdate
-  | ConquestUpdate;
+  | ConquestUpdate
+  | EmbargoUpdate;
 
 export type BonusEventUpdate = {
   type: GameUpdateType.BonusEvent;
@@ -254,4 +256,11 @@ export type UnitIncomingUpdate = {
   message: string;
   messageType: MessageType;
   playerID: number;
+};
+
+export type EmbargoUpdate = {
+  type: GameUpdateType.EmbargoEvent;
+  event: "start" | "stop";
+  playerID: number;
+  embargoedID: number;
 };

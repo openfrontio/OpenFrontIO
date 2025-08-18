@@ -1,12 +1,12 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { v4 as uuidv4 } from "uuid";
-import { translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   MAX_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
+import { customElement, property, state } from "lit/decorators.js";
+import { UserSettings } from "../core/game/UserSettings";
+import { translateText } from "../client/Utils";
+import { v4 as uuidv4 } from "uuid";
 
 const usernameKey = "username";
 
@@ -43,12 +43,17 @@ export class UsernameInput extends LitElement {
         @change=${this.handleChange}
         placeholder="${translateText("username.enter_username")}"
         maxlength="${MAX_USERNAME_LENGTH}"
-        class="w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm text-2xl text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
+        class="w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm
+        text-2xl text-center focus:outline-none focus:ring-2
+        focus:ring-blue-500 focus:border-blue-500 dark:border-gray-300/60
+        dark:bg-gray-700 dark:text-white"
       />
       ${this.validationError
         ? html`<div
             id="username-validation-error"
-            class="absolute z-10 w-full mt-2 px-3 py-1 text-lg border rounded bg-white text-red-600 border-red-600 dark:bg-gray-700 dark:text-red-300 dark:border-red-300"
+            class="absolute z-10 w-full mt-2 px-3 py-1 text-lg border rounded
+            bg-white text-red-600 border-red-600 dark:bg-gray-700
+            dark:text-red-300 dark:border-red-300"
           >
             ${this.validationError}
           </div>`

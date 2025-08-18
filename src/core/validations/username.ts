@@ -7,8 +7,8 @@ import {
   resolveLeetSpeakTransformer,
   skipNonAlphabeticTransformer,
 } from "obscenity";
-import { translateText } from "../../client/Utils";
 import { simpleHash } from "../Util";
+import { translateText } from "../../client/Utils";
 
 const matcher = new RegExpMatcher({
   ...englishDataset.build(),

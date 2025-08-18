@@ -1,7 +1,3 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -9,8 +5,12 @@ import {
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
-import { setup } from "../../util/Setup";
 import { constructionExecution, executeTicks } from "../../util/utils";
+import { NukeExecution } from "../../../src/core/execution/NukeExecution";
+import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
+import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
+import { setup } from "../../util/Setup";
 
 let game: Game;
 let attacker: Player;
@@ -230,7 +230,7 @@ describe("SAM", () => {
 
   test("SAM should have increased level after upgrade", async () => {
     defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(1);
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toBe(1);
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
       defender,
@@ -239,6 +239,6 @@ describe("SAM", () => {
     game.addExecution(upgradeStructureExecution);
     executeTicks(game, 2);
 
-    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(2);
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toBe(2);
   });
 });

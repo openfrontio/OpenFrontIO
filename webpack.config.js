@@ -1,9 +1,9 @@
-import { execSync } from "child_process";
 import CopyPlugin from "copy-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
-import path from "path";
+import { execSync } from "child_process";
 import { fileURLToPath } from "url";
+import path from "path";
 import webpack from "webpack";
 
 const __filename = fileURLToPath(import.meta.url);

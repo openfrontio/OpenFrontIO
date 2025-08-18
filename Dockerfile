@@ -50,7 +50,8 @@ RUN npm ci
 
 # Final image
 FROM base
-
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT="$GIT_COMMIT"
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \

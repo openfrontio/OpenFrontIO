@@ -15,7 +15,7 @@ export class UpgradeStructureExecution implements Execution {
       .find((unit) => unit.id() === this.unitId);
 
     if (this.structure === undefined) {
-      console.warn(`structure is undefined`);
+      console.warn("structure is undefined");
       return;
     }
 

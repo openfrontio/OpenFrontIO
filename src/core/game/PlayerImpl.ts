@@ -1,20 +1,8 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
-import { PseudoRandom } from "../PseudoRandom";
-import { ClientID } from "../Schemas";
+/* eslint-disable max-lines */
 import {
-  assertNever,
-  distSortUnit,
-  minInt,
-  simpleHash,
-  toInt,
-  within,
-} from "../Util";
-import { sanitizeUsername } from "../validations/username";
-import { AttackImpl } from "./AttackImpl";
-import {
+  AllPlayers,
   Alliance,
   AllianceRequest,
-  AllPlayers,
   Attack,
   BuildableUnit,
   Cell,
@@ -39,19 +27,32 @@ import {
   UnitParams,
   UnitType,
 } from "./Game";
-import { GameImpl } from "./GameImpl";
-import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
+import { TileRef, andFN, manhattanDistFN } from "./GameMap";
+import {
+  assertNever,
+  distSortUnit,
+  minInt,
+  simpleHash,
+  toInt,
+  within,
+} from "../Util";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
 } from "./TransportShipUtils";
+import { renderNumber, renderTroops } from "../../client/Utils";
+import { AttackImpl } from "./AttackImpl";
+import { ClientID } from "../Schemas";
+import { GameImpl } from "./GameImpl";
+import { PseudoRandom } from "../PseudoRandom";
 import { UnitImpl } from "./UnitImpl";
+import { sanitizeUsername } from "../validations/username";
 
 type Target = {
   tick: Tick;
@@ -329,7 +330,7 @@ export class PlayerImpl implements Player {
   }
   relinquish(tile: TileRef) {
     if (this.mg.owner(tile) !== this) {
-      throw new Error(`Cannot relinquish tile not owned by this player`);
+      throw new Error("Cannot relinquish tile not owned by this player");
     }
     this.mg.relinquish(tile);
   }
@@ -438,7 +439,7 @@ export class PlayerImpl implements Player {
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {
     if (this.isAlliedWith(recipient)) {
-      throw new Error(`cannot create alliance request, already allies`);
+      throw new Error("cannot create alliance request, already allies");
     }
     return this.mg.createAllianceRequest(this, recipient satisfies Player);
   }
@@ -688,27 +689,40 @@ export class PlayerImpl implements Player {
     return !embargo && other.id() !== this.id();
   }
 
-  addEmbargo(other: PlayerID, isTemporary: boolean): void {
-    const embargo = this.embargoes.get(other);
+  getEmbargoes(): Embargo[] {
+    return [...this.embargoes.values()];
+  }
+
+  addEmbargo(other: Player, isTemporary: boolean): void {
+    const embargo = this.embargoes.get(other.id());
     if (embargo !== undefined && !embargo.isTemporary) return;
 
-    this.embargoes.set(other, {
+    this.mg.addUpdate({
+      embargoedID: other.smallID(),
+      event: "start",
+      playerID: this.smallID(),
+      type: GameUpdateType.EmbargoEvent,
+    });
+
+    this.embargoes.set(other.id(), {
       createdAt: this.mg.ticks(),
       isTemporary: isTemporary,
       target: other,
     });
   }
 
-  getEmbargoes(): Embargo[] {
-    return [...this.embargoes.values()];
+  stopEmbargo(other: Player): void {
+    this.embargoes.delete(other.id());
+    this.mg.addUpdate({
+      embargoedID: other.smallID(),
+      event: "stop",
+      playerID: this.smallID(),
+      type: GameUpdateType.EmbargoEvent,
+    });
   }
 
-  stopEmbargo(other: PlayerID): void {
-    this.embargoes.delete(other);
-  }
-
-  endTemporaryEmbargo(other: PlayerID): void {
-    const embargo = this.embargoes.get(other);
+  endTemporaryEmbargo(other: Player): void {
+    const embargo = this.embargoes.get(other.id());
     if (embargo !== undefined && !embargo.isTemporary) return;
 
     this.stopEmbargo(other);
@@ -1178,7 +1192,7 @@ export class PlayerImpl implements Player {
     const weightedPorts: Unit[] = [];
 
     for (const [i, otherPort] of ports.entries()) {
-      const expanded = new Array(otherPort.level()).fill(otherPort);
+      const expanded = new Array<Unit>(otherPort.level()).fill(otherPort);
       weightedPorts.push(...expanded);
       if (i < this.mg.config().proximityBonusPortsNb(ports.length)) {
         weightedPorts.push(...expanded);

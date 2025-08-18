@@ -1,14 +1,14 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
-import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
-import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
-import { UIState } from "../UIState";
+import { AttackRatioEvent } from "../../InputHandler";
+import { ClientID } from "../../../core/Schemas";
+import { EventBus } from "../../../core/EventBus";
+import { GameView } from "../../../core/game/GameView";
+import { Gold } from "../../../core/game/Game";
 import { Layer } from "./Layer";
+import { UIState } from "../UIState";
+import { translateText } from "../../../client/Utils";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
@@ -162,7 +162,8 @@ export class ControlPanel extends LitElement implements Layer {
       </style>
       <div
         class="${this._isVisible
-          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
+          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 " +
+            "pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >

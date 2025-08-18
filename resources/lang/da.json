@@ -21,7 +21,9 @@
     "instructions": "Instruktioner",
     "how_to_play": "Sådan spiller du",
     "advertise": "Annoncér",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Privatlivspolitik",
+    "terms_of_service": "Servicevilkår"
   },
   "news": {
     "full_changelog": "Vis hele ændringsloggen",
@@ -47,7 +49,7 @@
     "ui_leaderboard_desc": "Viser de bedste spillere i spillet med deres navne, procentdel af ejet land, guld og tropper. Ved at vælge 'Vis alle' vises alle spillere i spillet. Hvis du ikke ønsker at se ranglisten, klik på 'Skjul'.",
     "ui_control": "Betjeningspanel",
     "ui_control_desc": "Kontrolpanelet indeholder følgende elementer:",
-    "ui_pop": "Befolk — Antal enheder, maksimal befolkning og tilvækst.",
+    "ui_pop": "Befolkning — Antal enheder, maksimal befolkning og tilvækst.",
     "ui_gold": "Guld — Din beholdning og hvor hurtigt du tjener det.",
     "ui_troops_workers": "Tropper og arbejdere — Antallet af tildelte tropper og arbejdere. Tropper bruges til at angribe eller forsvare mod angreb. Arbejdere bruges til at generere guld. Du kan justere antallet af tropper og arbejdere med skyderen.",
     "ui_attack_ratio": "Angrebsforhold — Antallet af tropper, der bruges, når du angriber. Du kan justere angrebsforholdet med skyderen. Hvis du har flere angribende tropper end forsvarende, vil du tabe færre tropper under angrebet, mens færre angribende tropper øger skaden på dine tropper. Effekten gælder kun op til forholdet 2:1.",
@@ -448,6 +450,7 @@
     "gold": "Guld",
     "ports": "Havne",
     "cities": "Byer",
+    "factories": "Fabrikker",
     "missile_launchers": "Missilramper",
     "sams": "SAMs",
     "warships": "Krigsskibe",
@@ -573,6 +576,9 @@
       "grogu_head": "Grogu Hoved",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Indlæser reklame..."
   },
   "auth": {
     "login_required": "Login er påkrævet for at få adgang til denne hjemmeside.",

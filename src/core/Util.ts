@@ -1,7 +1,8 @@
-import DOMPurify from "dompurify";
-import { customAlphabet } from "nanoid";
+import {
+  BOT_NAME_PREFIXES,
+  BOT_NAME_SUFFIXES,
+} from "./execution/utils/BotNames";
 import { Cell, Unit } from "./game/Game";
-import { GameMap, TileRef } from "./game/GameMap";
 import {
   GameConfig,
   GameID,
@@ -10,12 +11,10 @@ import {
   Turn,
   Winner,
 } from "./Schemas";
-
+import { GameMap, TileRef } from "./game/GameMap";
+import DOMPurify from "dompurify";
 import { ServerConfig } from "./configuration/Config";
-import {
-  BOT_NAME_PREFIXES,
-  BOT_NAME_SUFFIXES,
-} from "./execution/utils/BotNames";
+import { customAlphabet } from "nanoid";
 
 export function manhattanDistWrapped(
   c1: Cell,
@@ -285,6 +284,7 @@ export const flattenedEmojiTable: string[] = emojiTable.flat();
 /**
  * JSON.stringify replacer function that converts bigint values to strings.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function replacer(_key: string, value: any): any {
   return typeof value === "bigint" ? value.toString() : value;
 }

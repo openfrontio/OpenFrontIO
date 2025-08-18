@@ -21,7 +21,9 @@
     "instructions": "Navodila",
     "how_to_play": "Kako igrati",
     "advertise": "Oglaševanje",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Politika zasebnosti",
+    "terms_of_service": "Pogoji storitve"
   },
   "news": {
     "full_changelog": "Poglej celotni seznam sprememb",
@@ -448,6 +450,7 @@
     "gold": "Zlato",
     "ports": "Luka",
     "cities": "Mesta",
+    "factories": "Tovarne",
     "missile_launchers": "Raketni silosi",
     "sams": "SAM",
     "warships": "Bojna ladja",
@@ -573,6 +576,9 @@
       "grogu_head": "Groguva glava",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Nalaganje oglasa..."
   },
   "auth": {
     "login_required": "Za dostop do te spletne strani je potrebna prijava.",

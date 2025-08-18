@@ -1,7 +1,7 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import randomMap from "../../resources/images/RandomMap.webp";
-import { translateText } from "../client/Utils";
+import "./components/Difficulties";
+import "./components/Maps";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
 import {
   Difficulty,
   Duos,
@@ -13,18 +13,18 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/Util";
-import "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
-import "./components/Difficulties";
+import { LitElement, html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
 import { DifficultyDescription } from "./components/Difficulties";
-import "./components/Maps";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
+import { TeamCountConfig } from "../core/Schemas";
+import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
+import { generateID } from "../core/Util";
+import randomMap from "../../resources/images/RandomMap.webp";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -206,7 +206,7 @@ export class SinglePlayerModal extends LitElement {
                           <div class="option-card-title">
                             ${typeof o === "string"
                               ? translateText(`public_lobby.teams_${o}`)
-                              : translateText(`public_lobby.teams`, { num: o })}
+                              : translateText("public_lobby.teams", { num: o })}
                           </div>
                         </div>
                       `,
@@ -410,7 +410,8 @@ export class SinglePlayerModal extends LitElement {
     }
 
     console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]
+      }${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     const clientID = generateID();
     const gameID = generateID();

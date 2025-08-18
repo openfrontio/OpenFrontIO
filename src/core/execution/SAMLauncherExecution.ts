@@ -1,15 +1,15 @@
 import {
   Execution,
   Game,
-  isUnit,
   MessageType,
   Player,
   Unit,
   UnitType,
+  isUnit,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
+import { TileRef } from "../game/GameMap";
 
 type Target = {
   unit: Unit;
@@ -25,7 +25,6 @@ class SAMTargetingSystem {
 
   constructor(
     private mg: Game,
-    private player: Player,
     private sam: Unit,
   ) {}
 
@@ -82,8 +81,8 @@ class SAMTargetingSystem {
       ({ unit }) => {
         return (
           isUnit(unit) &&
-          unit.owner() !== this.player &&
-          !this.player.isFriendly(unit.owner())
+          unit.owner() !== this.sam.owner() &&
+          !this.sam.owner().isFriendly(unit.owner())
         );
       },
     );
@@ -180,11 +179,7 @@ export class SAMLauncherExecution implements Execution {
       }
       this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {});
     }
-    this.targetingSystem ??= new SAMTargetingSystem(
-      this.mg,
-      this.player,
-      this.sam,
-    );
+    this.targetingSystem ??= new SAMTargetingSystem(this.mg, this.sam);
 
     if (this.sam.isInCooldown()) {
       const frontTime = this.sam.missileTimerQueue()[0];

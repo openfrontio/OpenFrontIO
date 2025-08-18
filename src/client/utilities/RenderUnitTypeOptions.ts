@@ -1,5 +1,5 @@
 // renderUnitTypeOptions.ts
-import { html, TemplateResult } from "lit";
+import { TemplateResult, html } from "lit";
 import { UnitType } from "../../core/game/Game";
 import { translateText } from "../Utils";
 

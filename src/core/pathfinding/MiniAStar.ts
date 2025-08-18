@@ -1,7 +1,7 @@
-import { Cell } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
+import { GameMap, TileRef } from "../game/GameMap";
 import { GraphAdapter, SerialAStar } from "./SerialAStar";
+import { Cell } from "../game/Game";
 
 export class GameMapAdapter implements GraphAdapter<TileRef> {
   constructor(

@@ -1,14 +1,14 @@
-import { base64url } from "jose";
-import type { TemplateResult } from "lit";
-import { html, LitElement, render } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { Pattern } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
-import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
 import "./components/Maps";
+import { LitElement, html, render } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
 import { handlePurchase, patterns } from "./Cosmetics";
+import { Pattern } from "../core/CosmeticSchemas";
+import { PatternDecoder } from "../core/PatternDecoder";
+import type { TemplateResult } from "lit";
+import { UserMeResponse } from "../core/ApiSchemas";
+import { UserSettings } from "../core/game/UserSettings";
+import { base64url } from "jose";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -165,7 +165,8 @@ export class TerritoryPatternsModal extends LitElement {
         ${pattern.product !== null
           ? html`
               <button
-                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
+                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600
+                text-white text-xs font-medium rounded transition-colors"
                 @click=${(e: Event) => {
                   e.stopPropagation();
                   handlePurchase(pattern.product!.priceId);

@@ -1,5 +1,3 @@
-import { z } from "zod";
-import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
   GameType,
@@ -9,8 +7,6 @@ import {
   Tick,
   UnitType,
 } from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
-import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
   ClientHashMessage,
@@ -24,9 +20,13 @@ import {
   ServerMessageSchema,
   Winner,
 } from "../core/Schemas";
-import { replacer } from "../core/Util";
+import { EventBus, GameEvent } from "../core/EventBus";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
+import { PlayerView } from "../core/game/GameView";
+import { TileRef } from "../core/game/GameMap";
+import { replacer } from "../core/Util";
+import { z } from "zod";
 
 export class PauseGameEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
@@ -328,6 +328,7 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const parsed = JSON.parse(event.data);
         const result = ServerMessageSchema.safeParse(parsed);
         if (!result.success) {
@@ -545,7 +546,7 @@ export class Transport {
 
   private onPauseGameEvent(event: PauseGameEvent) {
     if (!this.isLocal) {
-      console.log(`cannot pause multiplayer games`);
+      console.log("cannot pause multiplayer games");
       return;
     }
     if (event.paused) {

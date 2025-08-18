@@ -1,7 +1,4 @@
-import { EventBus } from "../../../core/EventBus";
 import { PlayerActions, PlayerID } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { PlayerView } from "../../../core/game/GameView";
 import {
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -16,6 +13,9 @@ import {
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
+import { EventBus } from "../../../core/EventBus";
+import { PlayerView } from "../../../core/game/GameView";
+import { TileRef } from "../../../core/game/GameMap";
 import { UIState } from "../UIState";
 
 export class PlayerActionHandler {
@@ -97,8 +97,8 @@ export class PlayerActionHandler {
     this.eventBus.emit(new SendEmojiIntentEvent(targetPlayer, emojiIndex));
   }
 
-  handleQuickChat(recipient: PlayerView, chatKey: string, params: any = {}) {
-    this.eventBus.emit(new SendQuickChatEvent(recipient, chatKey, params));
+  handleQuickChat(recipient: PlayerView, chatKey: string, target?: PlayerID) {
+    this.eventBus.emit(new SendQuickChatEvent(recipient, chatKey, target));
   }
 
   handleDeleteUnit(unitId: number) {

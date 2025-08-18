@@ -1,7 +1,7 @@
-import { GameView } from "../../../core/game/GameView";
-import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { Fx, FxType } from "./Fx";
 import { FadeFx, SpriteFx } from "./SpriteFx";
+import { Fx, FxType } from "./Fx";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
+import { GameView } from "../../../core/game/GameView";
 
 /**
  * Shockwave effect: draw a growing 1px white circle

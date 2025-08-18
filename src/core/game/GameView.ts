@@ -1,9 +1,11 @@
-import { base64url } from "jose";
-import { Config } from "../configuration/Config";
-import { PatternDecoder } from "../PatternDecoder";
-import { ClientID, GameID, Player } from "../Schemas";
-import { createRandomName } from "../Util";
-import { WorkerClient } from "../worker/WorkerClient";
+import {
+  AllianceView,
+  AttackUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  PlayerUpdate,
+  UnitUpdate,
+} from "./GameUpdates";
 import {
   Cell,
   EmojiMessage,
@@ -16,26 +18,24 @@ import {
   PlayerProfile,
   PlayerType,
   Team,
-  TerrainType,
   TerraNullius,
+  TerrainType,
   Tick,
   TrainType,
   UnitInfo,
   UnitType,
 } from "./Game";
+import { ClientID, GameID, Player } from "../Schemas";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
-import {
-  AllianceView,
-  AttackUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-  PlayerUpdate,
-  UnitUpdate,
-} from "./GameUpdates";
-import { TerrainMapData } from "./TerrainMapLoader";
-import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { Config } from "../configuration/Config";
+import { PatternDecoder } from "../PatternDecoder";
+import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { TerrainMapData } from "./TerrainMapLoader";
 import { UserSettings } from "./UserSettings";
+import { WorkerClient } from "../worker/WorkerClient";
+import { base64url } from "jose";
+import { createRandomName } from "../Util";
 
 const userSettings: UserSettings = new UserSettings();
 
@@ -324,6 +324,10 @@ export class PlayerView {
 
   hasEmbargoAgainst(other: PlayerView): boolean {
     return this.data.embargoes.has(other.id());
+  }
+
+  hasEmbargo(other: PlayerView): boolean {
+    return this.hasEmbargoAgainst(other) || other.hasEmbargoAgainst(this);
   }
 
   profile(): Promise<PlayerProfile> {

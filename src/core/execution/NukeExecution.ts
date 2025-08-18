@@ -1,18 +1,18 @@
 import {
   Execution,
   Game,
-  isStructureType,
   MessageType,
   Player,
   TerraNullius,
   TrajectoryTile,
   Unit,
   UnitType,
+  isStructureType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { NukeType } from "../StatsSchemas";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
-import { NukeType } from "../StatsSchemas";
+import { TileRef } from "../game/GameMap";
 
 const SPRITE_RADIUS = 16;
 
@@ -97,7 +97,7 @@ export class NukeExecution implements Execution {
     if (this.nuke === null) {
       const spawn = this.src ?? this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {
-        console.warn(`cannot build Nuke`);
+        console.warn("cannot build Nuke");
         this.active = false;
         return;
       }
@@ -151,7 +151,7 @@ export class NukeExecution implements Execution {
 
     // make the nuke unactive if it was intercepted
     if (!this.nuke.isActive()) {
-      console.log(`Nuke destroyed before reaching target`);
+      console.log("Nuke destroyed before reaching target");
       this.active = false;
       return;
     }

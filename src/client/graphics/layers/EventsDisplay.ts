@@ -1,20 +1,12 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
-import { EventBus } from "../../../core/EventBus";
+/* eslint-disable max-lines */
 import {
   AllPlayers,
-  getMessageCategory,
   MessageCategory,
   MessageType,
   PlayerType,
   Tick,
   UnitType,
+  getMessageCategory,
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
@@ -35,18 +27,25 @@ import {
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
-import { Layer } from "./Layer";
-
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { onlyImages } from "../../../core/Util";
-import { renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./Leaderboard";
-
+import { LitElement, TemplateResult, html } from "lit";
+import { UnsafeHTMLDirective, unsafeHTML } from "lit/directives/unsafe-html.js";
+import { customElement, state } from "lit/decorators.js";
 import { getMessageTypeClasses, translateText } from "../../Utils";
+import { renderNumber, renderTroops } from "../../Utils";
+import { DirectiveResult } from "lit/directive.js";
+import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
+import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import { onlyImages } from "../../../core/Util";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
 type GameEvent = {
   description: string;
@@ -96,7 +95,7 @@ export class EventsDisplay extends LitElement implements Layer {
   ]);
 
   private renderButton(options: {
-    content: any; // Can be string, TemplateResult, or other renderable content
+    content: string | TemplateResult | DirectiveResult<typeof UnsafeHTMLDirective>;
     onClick?: () => void;
     className?: string;
     disabled?: boolean;
@@ -918,7 +917,8 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 " +
+                  "lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
               })}
             </div>
           `
@@ -1015,7 +1015,9 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="rounded-b-none md:rounded-b-md bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
+                class="rounded-b-none md:rounded-b-md bg-gray-800/70
+                  max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full
+                  h-full"
               >
                 <div>
                   <table
@@ -1059,7 +1061,10 @@ export class EventsDisplay extends LitElement implements Layer {
                                       ${event.buttons.map(
                                         (btn) => html`
                                           <button
-                                            class="inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300
+                                            class="inline-block px-3 py-1
+                                              text-white rounded text-md
+                                              md:text-sm cursor-pointer
+                                              transition-colors duration-300
                             ${btn.className.includes("btn-info")
                               ? "bg-blue-500 hover:bg-blue-600"
                               : btn.className.includes(

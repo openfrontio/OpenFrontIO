@@ -1,25 +1,24 @@
-import { colord, Colord } from "colord";
-import { EventBus } from "../../../core/EventBus";
-import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, UnitView } from "../../../core/game/GameView";
-import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
   MouseUpEvent,
   UnitSelectionEvent,
 } from "../../InputHandler";
-import { MoveWarshipIntentEvent } from "../../Transport";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
-
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { Colord, colord } from "colord";
+import { GameView, UnitView } from "../../../core/game/GameView";
 import {
   getColoredSprite,
   isSpriteReady,
   loadAllSprites,
 } from "../SpriteLoader";
+import { BezenhamLine } from "../../../core/utilities/Line";
+import { EventBus } from "../../../core/EventBus";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { Layer } from "./Layer";
+import { MoveWarshipIntentEvent } from "../../Transport";
+import { Theme } from "../../../core/configuration/Config";
+import { TileRef } from "../../../core/game/GameMap";
+import { TransformHandler } from "../TransformHandler";
+import { UnitType } from "../../../core/game/Game";
 
 enum Relationship {
   Self,

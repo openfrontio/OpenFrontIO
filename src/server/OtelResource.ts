@@ -1,9 +1,9 @@
-import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 
 const config = getServerConfigFromServer();
 

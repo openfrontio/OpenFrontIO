@@ -1,4 +1,3 @@
-import { renderTroops } from "../../client/Utils";
 import {
   Attack,
   Execution,
@@ -7,12 +6,13 @@ import {
   Player,
   PlayerID,
   PlayerType,
-  TerrainType,
   TerraNullius,
+  TerrainType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { PseudoRandom } from "../PseudoRandom";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
+import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
+import { renderTroops } from "../../client/Utils";
 
 const malusForRetreat = 25;
 export class AttackExecution implements Execution {
@@ -75,7 +75,7 @@ export class AttackExecution implements Execution {
         this._owner.type() !== PlayerType.Bot
       ) {
         // Don't let bots embargo since they can't trade anyway.
-        targetPlayer.addEmbargo(this._owner.id(), true);
+        targetPlayer.addEmbargo(this._owner, true);
         this.rejectIncomingAllianceRequests(targetPlayer);
       }
     }

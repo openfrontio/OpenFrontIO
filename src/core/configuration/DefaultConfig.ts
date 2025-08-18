@@ -1,5 +1,5 @@
-import { JWK } from "jose";
-import { z } from "zod";
+/* eslint-disable max-lines */
+import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import {
   Difficulty,
   Duos,
@@ -12,22 +12,23 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
-  TerrainType,
   TerraNullius,
+  TerrainType,
   Tick,
   Trios,
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
-import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
-import { NukeType } from "../StatsSchemas";
 import { assertNever, simpleHash, within } from "../Util";
-import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
+import { JWK } from "jose";
+import { NukeType } from "../StatsSchemas";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
+import { PlayerView } from "../game/GameView";
+import { TileRef } from "../game/GameMap";
+import { UserSettings } from "../game/UserSettings";
+import { z } from "zod";
 
 const JwksSchema = z.object({
   keys: z
@@ -333,11 +334,12 @@ export class DefaultConfig implements Config {
     return this._gameConfig.donateTroops;
   }
   trainSpawnRate(numberOfStations: number): number {
-    return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
+    return Math.min(1400, Math.round(40 * Math.pow(numberOfStations, 0.5)));
   }
-  trainGold(): Gold {
-    return BigInt(4_000);
+  trainGold(isFriendly: boolean): Gold {
+    return isFriendly ? 100_000n : 25_000n;
   }
+
   trainStationMinRange(): number {
     return 15;
   }
