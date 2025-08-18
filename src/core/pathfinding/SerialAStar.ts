@@ -1,5 +1,5 @@
-import FastPriorityQueue from "fastpriorityqueue";
 import { AStar, PathFindResultType } from "./AStar";
+import FastPriorityQueue from "fastpriorityqueue";
 
 /**
  * Implement this interface with your graph to find paths with A*

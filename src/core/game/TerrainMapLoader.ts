@@ -1,7 +1,7 @@
-import { z } from "zod";
-import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { GameMapLoader } from "./GameMapLoader";
+import { GameMapType } from "./Game";
+import { z } from "zod";
 
 export type TerrainMapData = {
   manifest: MapManifest;

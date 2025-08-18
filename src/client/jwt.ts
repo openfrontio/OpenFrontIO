@@ -1,5 +1,3 @@
-import { decodeJwt } from "jose";
-import { z } from "zod";
 import {
   RefreshResponseSchema,
   TokenPayload,
@@ -7,7 +5,9 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
+import { decodeJwt } from "jose";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { z } from "zod";
 
 function getAudience() {
   const { hostname } = new URL(window.location.href);

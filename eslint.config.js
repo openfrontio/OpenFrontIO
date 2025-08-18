@@ -1,13 +1,13 @@
 import eslintConfigPrettier from "eslint-config-prettier/flat";
+import eslintPluginLocal from "./eslint-plugin-local/plugin.js";
+import { fileURLToPath } from "node:url";
 import globals from "globals";
+import { includeIgnoreFile } from "@eslint/compat";
+import jest from "eslint-plugin-jest";
 import path from "node:path";
 import pluginJs from "@eslint/js";
 import stylistic from "@stylistic/eslint-plugin";
-import jest from "eslint-plugin-jest";
 import tseslint from "typescript-eslint";
-import { fileURLToPath } from "node:url";
-import { includeIgnoreFile } from "@eslint/compat";
-import eslintPluginLocal from "./eslint-plugin-local/plugin.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -116,7 +116,7 @@ export default [
       "no-undef": "error",
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
       "quote-props": ["error", "consistent-as-needed"],
-      // 'sort-imports': 'error', // TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1787
+      'sort-imports': 'error',
       "space-before-blocks": ["error", "always"],
       "space-before-function-paren": ["error", {
         anonymous: "always",

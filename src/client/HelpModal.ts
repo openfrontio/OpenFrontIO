@@ -1,8 +1,8 @@
+import "./components/Difficulties";
+import "./components/Maps";
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
 import { getAltKey, getModifierKey, translateText } from "../client/Utils";
-import "./components/Difficulties";
-import "./components/Maps";
 
 @customElement("help-modal")
 export class HelpModal extends LitElement {

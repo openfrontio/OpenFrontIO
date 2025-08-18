@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import "./LanguageModal";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import "./LanguageModal";
 
 import ar from "../../resources/lang/ar.json";
 import bg from "../../resources/lang/bg.json";

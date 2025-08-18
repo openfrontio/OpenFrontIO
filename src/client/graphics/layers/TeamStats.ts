@@ -1,9 +1,9 @@
-import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { LitElement, html } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { renderNumber, translateText } from "../../Utils";
+import { EventBus } from "../../../core/EventBus";
 import { Layer } from "./Layer";
 
 type TeamEntry = {

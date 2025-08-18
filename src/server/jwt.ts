@@ -1,13 +1,13 @@
-import { jwtVerify } from "jose";
-import { z } from "zod";
 import {
   TokenPayload,
   TokenPayloadSchema,
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
-import { ServerConfig } from "../core/configuration/Config";
 import { PersistentIdSchema } from "../core/Schemas";
+import { ServerConfig } from "../core/configuration/Config";
+import { jwtVerify } from "jose";
+import { z } from "zod";
 
 type TokenVerificationResult =
   | {

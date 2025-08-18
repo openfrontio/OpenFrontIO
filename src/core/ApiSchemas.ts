@@ -1,6 +1,6 @@
 // This file contains schemas for api.openfront.io
-import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
+import { z } from "zod";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),

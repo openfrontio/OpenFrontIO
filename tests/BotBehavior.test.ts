@@ -1,5 +1,3 @@
-import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
-import { BotBehavior } from "../src/core/execution/utils/BotBehavior";
 import {
   AllianceRequest,
   Game,
@@ -9,6 +7,8 @@ import {
   Relation,
   Tick,
 } from "../src/core/game/Game";
+import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
+import { BotBehavior } from "../src/core/execution/utils/BotBehavior";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 

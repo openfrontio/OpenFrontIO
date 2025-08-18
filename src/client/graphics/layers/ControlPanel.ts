@@ -1,14 +1,14 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
-import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
-import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
-import { UIState } from "../UIState";
+import { AttackRatioEvent } from "../../InputHandler";
+import { ClientID } from "../../../core/Schemas";
+import { EventBus } from "../../../core/EventBus";
+import { GameView } from "../../../core/game/GameView";
+import { Gold } from "../../../core/game/Game";
 import { Layer } from "./Layer";
+import { UIState } from "../UIState";
+import { translateText } from "../../../client/Utils";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {

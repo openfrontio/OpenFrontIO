@@ -1,6 +1,10 @@
-import { html, LitElement } from "lit";
+import { AlternateViewEvent, RedrawGraphicsEvent } from "../../InputHandler";
+import { LitElement, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import structureIcon from "../../../../resources/images/CityIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
+import { PauseGameEvent } from "../../Transport";
+import { UserSettings } from "../../../core/game/UserSettings";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -8,13 +12,9 @@ import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
-import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
-import { EventBus } from "../../../core/EventBus";
-import { UserSettings } from "../../../core/game/UserSettings";
-import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameEvent } from "../../Transport";
+import structureIcon from "../../../../resources/images/CityIconWhite.svg";
 import { translateText } from "../../Utils";
-import { Layer } from "./Layer";
+import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
 
 export class ShowSettingsModalEvent {
   constructor(
@@ -126,7 +126,7 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
-    this.eventBus.emit(new RefreshGraphicsEvent());
+    this.eventBus.emit(new RedrawGraphicsEvent());
     this.requestUpdate();
   }
 

@@ -1,16 +1,16 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { EventBus } from "../../../core/EventBus";
-import { MessageType } from "../../../core/game/Game";
 import {
   DisplayMessageUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
+import { LitElement, html } from "lit";
+import { UnsafeHTMLDirective, unsafeHTML } from "lit/directives/unsafe-html.js";
+import { customElement, state } from "lit/decorators.js";
+import { DirectiveResult } from "lit/directive.js";
+import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
-import { onlyImages } from "../../../core/Util";
 import { Layer } from "./Layer";
+import { MessageType } from "../../../core/game/Game";
+import { onlyImages } from "../../../core/Util";
 
 type ChatEvent = {
   description: string;

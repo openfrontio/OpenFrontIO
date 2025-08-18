@@ -1,5 +1,3 @@
-import { Logger } from "winston";
-import { z } from "zod";
 import {
   ClientMessageSchema,
   ClientSendWinnerMessage,
@@ -7,6 +5,8 @@ import {
 } from "../../../../../core/Schemas";
 import { Client } from "../../../../Client";
 import { GameServer } from "../../../../GameServer";
+import { Logger } from "winston";
+import { z } from "zod";
 
 export async function postJoinMessageHandler(
   gs: GameServer,

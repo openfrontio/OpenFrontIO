@@ -1,10 +1,5 @@
 /* eslint-disable max-lines */
-import { renderNumber } from "../../client/Utils";
-import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
-import { simpleHash } from "../Util";
-import { AllianceImpl } from "./AllianceImpl";
-import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {
   Alliance,
   AllianceRequest,
@@ -25,8 +20,8 @@ import {
   PlayerType,
   Quads,
   Team,
-  TerrainType,
   TerraNullius,
+  TerrainType,
   Trios,
   Unit,
   UnitInfo,
@@ -34,14 +29,19 @@ import {
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { AllianceImpl } from "./AllianceImpl";
+import { AllianceRequestImpl } from "./AllianceRequestImpl";
+import { Config } from "../configuration/Config";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
-import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
-import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { assignTeams } from "./TeamAssignment";
+import { createRailNetwork } from "./RailNetworkImpl";
+import { renderNumber } from "../../client/Utils";
+import { simpleHash } from "../Util";
 
 export function createGame(
   humans: PlayerInfo[],

@@ -1,9 +1,9 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
 import { GameView } from "../../../core/game/GameView";
-import { getGamesPlayed } from "../../Utils";
 import { Layer } from "./Layer";
+import { getGamesPlayed } from "../../Utils";
+import { translateText } from "../../../client/Utils";
 
 const AD_TYPE = "bottom_rail";
 const AD_CONTAINER_ID = "bottom-rail-ad-container";

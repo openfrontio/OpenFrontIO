@@ -1,4 +1,3 @@
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
@@ -9,8 +8,9 @@ import {
   Quads,
   Trios,
 } from "../core/game/Game";
-import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
+import { PseudoRandom } from "../core/PseudoRandom";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { logger } from "./Logger";
 
 const log = logger.child({});

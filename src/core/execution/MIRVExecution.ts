@@ -7,11 +7,11 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { NukeExecution } from "./NukeExecution";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
 import { simpleHash } from "../Util";
-import { NukeExecution } from "./NukeExecution";
 
 export class MirvExecution implements Execution {
   private active = true;
