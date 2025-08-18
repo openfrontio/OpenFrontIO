@@ -113,6 +113,7 @@ export default [
       "object-curly-newline": ["error", { multiline: true, consistent: true }],
       "object-curly-spacing": ["error", "always"],
       "object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
+      "no-multiple-empty-lines": ["warn", { max: 1, maxEOF: 0 }],
       "no-undef": "error",
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
       "quote-props": ["error", "consistent-as-needed"],
