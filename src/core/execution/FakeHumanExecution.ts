@@ -518,14 +518,17 @@ export class FakeHumanExecution implements Execution {
         return (tile) => {
           let w = 0;
 
-          // Prefer to be far away from the closest border tile
+          // Prefer higher elevations
+          w += mg.magnitude(tile);
+
+          // Prefer to be away from the border
           const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
           if (closestBorder !== null) {
             const d = mg.manhattanDist(closestBorder.x, tile);
             w += Math.min(d, borderSpacing);
           }
 
-          // Prefer to be far away from other structures of the same type
+          // Prefer to be away from other structures of the same type
           const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
           otherTiles.delete(tile);
           const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
