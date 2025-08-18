@@ -464,7 +464,7 @@ export class FakeHumanExecution implements Execution {
     const sampledTiles = this.arraySampler(tiles);
     for (const t of sampledTiles) {
       const v = valueFunction(t);
-      if (v >= bestValue && bestTile !== null) continue;
+      if (v <= bestValue && bestTile !== null) continue;
       if (!this.player.canBuild(type, t)) continue;
       // Found a better tile
       bestTile = t;
