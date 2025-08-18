@@ -1,5 +1,6 @@
 import {
   AllianceRequest,
+  Difficulty,
   Game,
   Player,
   PlayerType,
@@ -65,9 +66,46 @@ export class BotBehavior {
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
-  private setNewEnemy(newEnemy: Player | null) {
+  private setNewEnemy(newEnemy: Player | null, force = false) {
+    if (newEnemy !== null && !force && !this.shouldAttack(newEnemy)) return;
     this.enemy = newEnemy;
     this.enemyUpdated = this.game.ticks();
+  }
+
+  private shouldAttack(other: Player): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    if (this.player.isOnSameTeam(other)) {
+      return false;
+    }
+    if (this.player.isFriendly(other)) {
+      if (this.shouldDiscourageAttack(other)) {
+        return this.random.chance(200);
+      }
+      return this.random.chance(50);
+    } else {
+      if (this.shouldDiscourageAttack(other)) {
+        return this.random.chance(4);
+      }
+      return true;
+    }
+  }
+
+  private shouldDiscourageAttack(other: Player) {
+    if (other.isTraitor()) {
+      return false;
+    }
+    const difficulty = this.game.config().gameConfig().difficulty;
+    if (
+      difficulty === Difficulty.Hard ||
+      difficulty === Difficulty.Impossible
+    ) {
+      return false;
+    }
+    if (other.type() !== PlayerType.Human) {
+      return false;
+    }
+    // Only discourage attacks on Humans who are not traitors on easy or medium difficulty.
+    return true;
   }
 
   private clearEnemy() {
@@ -98,7 +136,7 @@ export class BotBehavior {
       largestAttacker = attack.attacker();
     }
     if (largestAttacker !== undefined) {
-      this.setNewEnemy(largestAttacker);
+      this.setNewEnemy(largestAttacker, true);
     }
   }
 
@@ -134,7 +172,8 @@ export class BotBehavior {
     }
   }
 
-  selectEnemy(): Player | null {
+  /** Nation enemy selection logic */
+  selectEnemy(enemies: Player[]): Player | null {
     if (this.enemy === null) {
       // Save up troops until we reach the trigger ratio
       if (!this.hasSufficientTroops()) return null;
@@ -165,11 +204,13 @@ export class BotBehavior {
 
       // Retaliate against incoming attacks
       if (this.enemy === null) {
+        // Only after clearing bots
         this.checkIncomingAttacks();
       }
 
       // Select the most hated player
-      if (this.enemy === null) {
+      if (this.enemy === null && this.random.chance(2)) {
+        // 50% chance
         const mostHated = this.player.allRelationsSorted()[0];
         if (
           mostHated !== undefined &&
@@ -178,12 +219,23 @@ export class BotBehavior {
           this.setNewEnemy(mostHated.player);
         }
       }
+
+      // Select the weakest player
+      if (this.enemy === null && enemies.length > 0) {
+        this.setNewEnemy(enemies[0]);
+      }
+
+      // Select a random player
+      if (this.enemy === null) {
+        this.setNewEnemy(this.random.randElement(enemies));
+      }
     }
 
     // Sanity check, don't attack our allies or teammates
     return this.enemySanityCheck();
   }
 
+  /** Bot enemy selection logic */
   selectRandomEnemy(): Player | TerraNullius | null {
     if (this.enemy === null) {
       // Save up troops until we reach the trigger ratio
