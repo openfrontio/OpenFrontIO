@@ -127,7 +127,7 @@ export class GameServer {
   public addClient(client: Client, lastTurn: number) {
     this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
-      this.log.warn(`cannot add client, already kicked`, {
+      this.log.warn("cannot add client, already kicked", {
         clientID: client.clientID,
       });
       return;
@@ -377,7 +377,7 @@ export class GameServer {
       }
     });
     if (!this._hasPrestarted && !this._hasStarted) {
-      this.log.info(`game not started, not archiving game`);
+      this.log.info("game not started, not archiving game");
       return;
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
@@ -506,7 +506,7 @@ export class GameServer {
 
   public kickClient(clientID: ClientID): void {
     if (this.kickedClients.has(clientID)) {
-      this.log.warn(`cannot kick client, already kicked`, {
+      this.log.warn("cannot kick client, already kicked", {
         clientID,
       });
       return;
@@ -529,7 +529,7 @@ export class GameServer {
       );
       this.kickedClients.add(clientID);
     } else {
-      this.log.warn(`cannot kick client, not found in game`, {
+      this.log.warn("cannot kick client, not found in game", {
         clientID,
       });
     }

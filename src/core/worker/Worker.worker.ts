@@ -15,7 +15,7 @@ import version from "../../../resources/version.txt";
 
 const ctx: Worker = self as unknown as Worker;
 let gameRunner: Promise<GameRunner> | null = null;
-const mapLoader = new FetchGameMapLoader(`/maps`, version);
+const mapLoader = new FetchGameMapLoader("/maps", version);
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate

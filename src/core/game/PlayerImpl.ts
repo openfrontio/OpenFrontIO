@@ -330,7 +330,7 @@ export class PlayerImpl implements Player {
   }
   relinquish(tile: TileRef) {
     if (this.mg.owner(tile) !== this) {
-      throw new Error(`Cannot relinquish tile not owned by this player`);
+      throw new Error("Cannot relinquish tile not owned by this player");
     }
     this.mg.relinquish(tile);
   }
@@ -439,7 +439,7 @@ export class PlayerImpl implements Player {
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {
     if (this.isAlliedWith(recipient)) {
-      throw new Error(`cannot create alliance request, already allies`);
+      throw new Error("cannot create alliance request, already allies");
     }
     return this.mg.createAllianceRequest(this, recipient satisfies Player);
   }

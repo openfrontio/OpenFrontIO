@@ -54,7 +54,7 @@ export default [
     },
     rules: {
       // Enable rules
-      // '@stylistic/quotes': ['error', 'single'], TODO: Enable this rule, https://github.com/openfrontio/OpenFrontIO/issues/1788
+      "@stylistic/quotes": ["error", "double", { avoidEscape: true }],
       "@stylistic/indent": ["error", 2],
       "@stylistic/semi": "error",
       "@stylistic/space-infix-ops": "error",
@@ -116,7 +116,7 @@ export default [
       "no-undef": "error",
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
       "quote-props": ["error", "consistent-as-needed"],
-      'sort-imports': 'error',
+      "sort-imports": "error",
       "space-before-blocks": ["error", "always"],
       "space-before-function-paren": ["error", {
         anonymous: "always",
@@ -154,7 +154,7 @@ export default [
       "tests/**/*.{js,ts,jsx,tsx}",
     ],
     plugins: ["jest"],
-    ...jest.configs['flat/style'],
+    ...jest.configs["flat/style"],
   },
   {
     files: [

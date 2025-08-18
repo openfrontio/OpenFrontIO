@@ -206,7 +206,7 @@ export class SinglePlayerModal extends LitElement {
                           <div class="option-card-title">
                             ${typeof o === "string"
                               ? translateText(`public_lobby.teams_${o}`)
-                              : translateText(`public_lobby.teams`, { num: o })}
+                              : translateText("public_lobby.teams", { num: o })}
                           </div>
                         </div>
                       `,

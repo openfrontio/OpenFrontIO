@@ -30,7 +30,7 @@ const log = logger.child({ comp: `w_${workerId}` });
 
 // Worker setup
 export async function startWorker() {
-  log.info(`Worker starting...`);
+  log.info("Worker starting...");
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -98,7 +98,7 @@ export async function startWorker() {
       })();
 
       if (!id) {
-        log.warn(`cannot create game, id not found`);
+        log.warn("cannot create game, id not found");
         return res.status(400).json({ error: "Game ID is required" });
       }
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
@@ -342,7 +342,7 @@ export async function startWorker() {
         type: "WORKER_READY",
         workerId: workerId,
       });
-      log.info(`signaled ready state to master`);
+      log.info("signaled ready state to master");
     }
   });
 
@@ -354,10 +354,10 @@ export async function startWorker() {
 
   // Process-level error handlers
   process.on("uncaughtException", (err) => {
-    log.error(`uncaught exception:`, err);
+    log.error("uncaught exception:", err);
   });
 
   process.on("unhandledRejection", (reason, promise) => {
-    log.error(`unhandled rejection at:`, promise, "reason:", reason);
+    log.error("unhandled rejection at:", promise, "reason:", reason);
   });
 }

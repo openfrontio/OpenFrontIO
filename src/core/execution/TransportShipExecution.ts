@@ -108,7 +108,7 @@ export class TransportShipExecution implements Execution {
       this.dst,
     );
     if (closestTileSrc === false) {
-      console.warn(`can't build transport ship`);
+      console.warn("can't build transport ship");
       this.active = false;
       return;
     }
@@ -214,7 +214,7 @@ export class TransportShipExecution implements Execution {
         break;
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
-        console.warn(`path not found to dst`);
+        console.warn("path not found to dst");
         this.attacker.addTroops(this.boat.troops());
         this.boat.delete(false);
         this.active = false;

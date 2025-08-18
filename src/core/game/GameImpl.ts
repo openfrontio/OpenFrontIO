@@ -248,7 +248,7 @@ export class GameImpl implements Game {
       .incomingAllianceRequests()
       .find((ar) => ar.requestor() === recipient);
     if (correspondingReq !== undefined) {
-      console.log(`got corresponding alliance requests, accepting`);
+      console.log("got corresponding alliance requests, accepting");
       correspondingReq.accept();
       return null;
     }
@@ -502,7 +502,7 @@ export class GameImpl implements Game {
 
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
-      throw Error(`cannot conquer water`);
+      throw Error("cannot conquer water");
     }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
@@ -523,7 +523,7 @@ export class GameImpl implements Game {
 
   relinquish(tile: TileRef) {
     if (!this.hasOwner(tile)) {
-      throw new Error(`Cannot relinquish tile because it is unowned`);
+      throw new Error("Cannot relinquish tile because it is unowned");
     }
     if (this.isWater(tile)) {
       throw new Error("Cannot relinquish water");

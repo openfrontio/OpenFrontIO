@@ -83,7 +83,7 @@ export class FlagInput extends LitElement {
       renderPlayerFlag(this.flag, preview);
     } else {
       const img = document.createElement("img");
-      img.src = this.flag ? `/flags/${this.flag}.svg` : `/flags/xx.svg`;
+      img.src = this.flag ? `/flags/${this.flag}.svg` : "/flags/xx.svg";
       img.style.width = "100%";
       img.style.height = "100%";
       img.style.objectFit = "contain";

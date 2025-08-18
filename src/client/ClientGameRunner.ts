@@ -563,7 +563,7 @@ export class ClientGameRunner {
       (bu) => bu.type === UnitType.TransportShip,
     );
     if (bu === undefined) {
-      console.warn(`no transport ship buildable units`);
+      console.warn("no transport ship buildable units");
       return false;
     }
     return (

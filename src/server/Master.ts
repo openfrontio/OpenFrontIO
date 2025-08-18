@@ -123,7 +123,7 @@ export async function startMaster() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     const workerId = (worker as any).process?.env?.WORKER_ID;
     if (!workerId) {
-      log.error(`worker crashed could not find id`);
+      log.error("worker crashed could not find id");
       return;
     }
 
