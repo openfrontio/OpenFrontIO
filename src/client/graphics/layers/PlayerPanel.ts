@@ -1,19 +1,7 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import { translateText } from "../../../client/Utils";
-import { EventBus } from "../../../core/EventBus";
 import { AllPlayers, PlayerActions } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { flattenedEmojiTable } from "../../../core/Util";
 import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { LitElement, html } from "lit";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -23,11 +11,23 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
+import { customElement, state } from "lit/decorators.js";
 import { renderNumber, renderTroops } from "../../Utils";
-import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
+import { EventBus } from "../../../core/EventBus";
 import { Layer } from "./Layer";
+import { TileRef } from "../../../core/game/GameMap";
+import { UIState } from "../UIState";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
+import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
+import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import { flattenedEmojiTable } from "../../../core/Util";
+import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
+import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import { translateText } from "../../../client/Utils";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {

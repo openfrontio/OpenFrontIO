@@ -1,17 +1,17 @@
+import { TrainType, UnitType } from "../../core/game/Game";
 import { Colord } from "colord";
+import { Theme } from "../../core/configuration/Config";
+import { UnitView } from "../../core/game/GameView";
 import atomBombSprite from "../../../resources/sprites/atombomb.png";
 import hydrogenBombSprite from "../../../resources/sprites/hydrogenbomb.png";
 import mirvSprite from "../../../resources/sprites/mirv2.png";
 import samMissileSprite from "../../../resources/sprites/samMissile.png";
 import tradeShipSprite from "../../../resources/sprites/tradeship.png";
 import trainCarriageSprite from "../../../resources/sprites/trainCarriage.png";
-import trainLoadedCarriageSprite from "../../../resources/sprites/trainCarriageLoaded.png";
 import trainEngineSprite from "../../../resources/sprites/trainEngine.png";
+import trainLoadedCarriageSprite from "../../../resources/sprites/trainCarriageLoaded.png";
 import transportShipSprite from "../../../resources/sprites/transportship.png";
 import warshipSprite from "../../../resources/sprites/warship.png";
-import { Theme } from "../../core/configuration/Config";
-import { TrainType, UnitType } from "../../core/game/Game";
-import { UnitView } from "../../core/game/GameView";
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
 const TrainTypeSprite = {

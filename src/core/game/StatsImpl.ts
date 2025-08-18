@@ -1,4 +1,3 @@
-import { AllPlayersStats } from "../Schemas";
 import {
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_RECV,
@@ -7,10 +6,10 @@ import {
   BOAT_INDEX_CAPTURE,
   BOAT_INDEX_DESTROY,
   BOAT_INDEX_SENT,
-  BoatUnit,
   BOMB_INDEX_INTERCEPT,
   BOMB_INDEX_LAND,
   BOMB_INDEX_LAUNCH,
+  BoatUnit,
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_WAR,
@@ -27,6 +26,7 @@ import {
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
+import { AllPlayersStats } from "../Schemas";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;

@@ -1,21 +1,21 @@
-import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
-import { euclDistFN, TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
-import { PseudoRandom } from "../../../core/PseudoRandom";
 import {
   AlternateViewEvent,
   DragEvent,
   MouseOverEvent,
-  RefreshGraphicsEvent,
+  RedrawGraphicsEvent,
 } from "../../InputHandler";
-import { TransformHandler } from "../TransformHandler";
+import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { TileRef, euclDistFN } from "../../../core/game/GameMap";
+import { Colord } from "colord";
+import { EventBus } from "../../../core/EventBus";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { Layer } from "./Layer";
+import { PriorityQueue } from "@datastructures-js/priority-queue";
+import { PseudoRandom } from "../../../core/PseudoRandom";
+import { Theme } from "../../../core/configuration/Config";
+import { TransformHandler } from "../TransformHandler";
+import { UserSettings } from "../../../core/game/UserSettings";
 
 export class TerritoryLayer implements Layer {
   private userSettings: UserSettings;
@@ -77,7 +77,7 @@ export class TerritoryLayer implements Layer {
     const prev = this.cachedTerritoryPatternsEnabled;
     this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
     if (prev !== undefined && prev !== this.cachedTerritoryPatternsEnabled) {
-      this.eventBus.emit(new RefreshGraphicsEvent());
+      this.eventBus.emit(new RedrawGraphicsEvent());
     }
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();

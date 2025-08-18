@@ -1,46 +1,42 @@
-import version from "../../resources/version.txt";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { EventBus } from "../core/EventBus";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
-import { ServerConfig } from "../core/configuration/Config";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
-import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
+import "./GoogleAdElement";
+import "./LangSelector";
+import "./PublicLobby";
+import "./UsernameInput";
+import "./components/NewsButton";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
+import "./styles.css";
+import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
+import { generateCryptoRandomUUID, incrementGamesPlayed, translateText } from "./Utils";
+import { DarkModeButton } from "./DarkModeButton";
+import { EventBus } from "../core/EventBus";
 import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
-import "./GoogleAdElement";
+import { GameType } from "../core/game/Game";
 import { HelpModal } from "./HelpModal";
-import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import { HostLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { NewsButton } from "./components/NewsButton";
 import { NewsModal } from "./NewsModal";
-import "./PublicLobby";
+import { OButton } from "./components/baseComponents/Button";
 import { PublicLobby } from "./PublicLobby";
+import { SendKickPlayerIntentEvent } from "./Transport";
+import { ServerConfig } from "../core/configuration/Config";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
-import { SendKickPlayerIntentEvent } from "./Transport";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { UserSettingModal } from "./UserSettingModal";
-import "./UsernameInput";
+import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
-import {
-  generateCryptoRandomUUID,
-  incrementGamesPlayed,
-  translateText,
-} from "./Utils";
-import "./components/NewsButton";
-import { NewsButton } from "./components/NewsButton";
-import "./components/baseComponents/Button";
-import { OButton } from "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
-import "./styles.css";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { joinLobby } from "./ClientGameRunner";
+import version from "../../resources/version.txt";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -360,8 +356,8 @@ class Client {
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
-    ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
+    ) as HostLobbyModal;
+    hostModal instanceof HostLobbyModal;
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {

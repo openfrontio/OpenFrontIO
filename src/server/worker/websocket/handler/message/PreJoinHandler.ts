@@ -1,17 +1,17 @@
-import http from "http";
-import ipAnonymize from "ip-anonymize";
-import { WebSocket } from "ws";
-import { z } from "zod";
-import { getServerConfigFromServer } from "../../../../../core/configuration/ConfigLoader";
 import {
   ClientMessageSchema,
   ServerErrorMessage,
 } from "../../../../../core/Schemas";
+import { getUserMe, verifyClientToken } from "../../../../jwt";
 import { Client } from "../../../../Client";
 import { GameManager } from "../../../../GameManager";
-import { getUserMe, verifyClientToken } from "../../../../jwt";
-import { logger } from "../../../../Logger";
 import { PrivilegeRefresher } from "../../../../PrivilegeRefresher";
+import { WebSocket } from "ws";
+import { getServerConfigFromServer } from "../../../../../core/configuration/ConfigLoader";
+import http from "http";
+import ipAnonymize from "ip-anonymize";
+import { logger } from "../../../../Logger";
+import { z } from "zod";
 
 const config = getServerConfigFromServer();
 

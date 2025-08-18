@@ -1,10 +1,10 @@
-import { z } from "zod";
+import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import {
   StripeCreateCheckoutSessionResponseSchema,
   UserMeResponse,
 } from "../core/ApiSchemas";
-import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
+import { z } from "zod";
 
 export async function patterns(
   userMe: UserMeResponse | null,

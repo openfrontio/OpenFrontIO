@@ -1,19 +1,19 @@
-import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
-import conquestSword from "../../../resources/sprites/conquestSword.png";
-import dust from "../../../resources/sprites/dust.png";
-import miniExplosion from "../../../resources/sprites/miniExplosion.png";
-import miniFire from "../../../resources/sprites/minifire.png";
-import nuke from "../../../resources/sprites/nukeExplosion.png";
-import SAMExplosion from "../../../resources/sprites/samExplosion.png";
-import sinkingShip from "../../../resources/sprites/sinkingShip.png";
-import miniSmoke from "../../../resources/sprites/smoke.png";
-import miniSmokeAndFire from "../../../resources/sprites/smokeAndFire.png";
-import unitExplosion from "../../../resources/sprites/unitExplosion.png";
-import { Theme } from "../../core/configuration/Config";
-import { PlayerView } from "../../core/game/GameView";
 import { AnimatedSprite } from "./AnimatedSprite";
 import { FxType } from "./fx/Fx";
+import { PlayerView } from "../../core/game/GameView";
+import SAMExplosion from "../../../resources/sprites/samExplosion.png";
+import { Theme } from "../../core/configuration/Config";
 import { colorizeCanvas } from "./SpriteLoader";
+import conquestSword from "../../../resources/sprites/conquestSword.png";
+import dust from "../../../resources/sprites/dust.png";
+import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
+import miniExplosion from "../../../resources/sprites/miniExplosion.png";
+import miniFire from "../../../resources/sprites/minifire.png";
+import miniSmoke from "../../../resources/sprites/smoke.png";
+import miniSmokeAndFire from "../../../resources/sprites/smokeAndFire.png";
+import nuke from "../../../resources/sprites/nukeExplosion.png";
+import sinkingShip from "../../../resources/sprites/sinkingShip.png";
+import unitExplosion from "../../../resources/sprites/unitExplosion.png";
 
 type AnimatedSpriteConfig = {
   url: string;

@@ -1,12 +1,12 @@
+import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { AllPlayers } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { emojiTable, flattenedEmojiTable } from "../../../core/Util";
-import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
+import { AllPlayers } from "../../../core/game/Game";
+import { EventBus } from "../../../core/EventBus";
 import { SendEmojiIntentEvent } from "../../Transport";
+import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { TransformHandler } from "../TransformHandler";
 
 @customElement("emoji-table")

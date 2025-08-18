@@ -1,8 +1,8 @@
-import { colord, Colord } from "colord";
 import {
   ColorAllocator,
   selectDistinctColorIndex,
 } from "../src/core/configuration/ColorAllocator";
+import { Colord, colord } from "colord";
 import {
   blue,
   botColor,

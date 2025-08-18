@@ -1,7 +1,4 @@
-import { EventBus } from "../../../core/EventBus";
 import { PlayerActions, PlayerID } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { PlayerView } from "../../../core/game/GameView";
 import {
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -16,6 +13,9 @@ import {
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
+import { EventBus } from "../../../core/EventBus";
+import { PlayerView } from "../../../core/game/GameView";
+import { TileRef } from "../../../core/game/GameMap";
 import { UIState } from "../UIState";
 
 export class PlayerActionHandler {

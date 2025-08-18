@@ -1,20 +1,20 @@
-import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
-import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
+import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { EventBus } from "../../../core/EventBus";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { Layer } from "./Layer";
+import { OutlineFilter } from "pixi-filters";
+import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
+import { Theme } from "../../../core/configuration/Config";
+import { ToggleStructureEvent } from "../../InputHandler";
+import { TransformHandler } from "../TransformHandler";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
+import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
 import cityIcon from "../../../../resources/images/CityIcon.png";
 import factoryIcon from "../../../../resources/images/FactoryUnit.png";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
-import { Theme } from "../../../core/configuration/Config";
-import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ToggleStructureEvent } from "../../InputHandler";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
 
 type ShapeType = "triangle" | "square" | "pentagon" | "octagon" | "circle";
 

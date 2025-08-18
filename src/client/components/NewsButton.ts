@@ -1,9 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import megaphone from "../../../resources/images/Megaphone.svg";
-import version from "../../../resources/version.txt";
 import { NewsModal } from "../NewsModal";
+import megaphone from "../../../resources/images/Megaphone.svg";
 import { translateText } from "../Utils";
+import version from "../../../resources/version.txt";
 
 @customElement("news-button")
 export class NewsButton extends LitElement {

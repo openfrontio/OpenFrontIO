@@ -1,10 +1,10 @@
 import { Colord, colord } from "colord";
-import { PseudoRandom } from "../PseudoRandom";
-import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
-import { ColorAllocator } from "./ColorAllocator";
+import { PlayerType, Team, TerrainType } from "../game/Game";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
+import { ColorAllocator } from "./ColorAllocator";
+import { PlayerView } from "../game/GameView";
+import { PseudoRandom } from "../PseudoRandom";
 import { Theme } from "./Config";
 
 type ColorCache = Map<string, Colord>;

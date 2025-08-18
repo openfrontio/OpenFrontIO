@@ -1,14 +1,14 @@
-import { Colord } from "colord";
-import { html, LitElement } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { Colord } from "colord";
+import { GameMode } from "../../../core/game/Game";
+import { GameView } from "../../../core/game/GameView";
+import { Layer } from "./Layer";
 import leaderboardRegularIcon from "../../../../resources/images/LeaderboardIconRegularWhite.svg";
 import leaderboardSolidIcon from "../../../../resources/images/LeaderboardIconSolidWhite.svg";
 import teamRegularIcon from "../../../../resources/images/TeamIconRegularWhite.svg";
 import teamSolidIcon from "../../../../resources/images/TeamIconSolidWhite.svg";
-import { GameMode } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
-import { Layer } from "./Layer";
 
 @customElement("game-left-sidebar")
 export class GameLeftSidebar extends LitElement implements Layer {

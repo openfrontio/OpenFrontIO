@@ -1,4 +1,3 @@
-import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
@@ -10,10 +9,11 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameImpl } from "./GameImpl";
-import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
+import { simpleHash, toInt, withinInt } from "../Util";
+import { GameImpl } from "./GameImpl";
 import { PlayerImpl } from "./PlayerImpl";
+import { TileRef } from "./GameMap";
 
 export class UnitImpl implements Unit {
   private _active = true;

@@ -1,17 +1,17 @@
-import { html, LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
-import portIcon from "../../../../resources/images/AnchorIcon.png";
+import { LitElement, html } from "lit";
+import { EventBus } from "../../../core/EventBus";
+import { GameView } from "../../../core/game/GameView";
+import { Layer } from "./Layer";
+import { ToggleStructureEvent } from "../../InputHandler";
+import { UnitType } from "../../../core/game/Game";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import { customElement } from "lit/decorators.js";
+import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
-import { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
-import { ToggleStructureEvent } from "../../InputHandler";
+import portIcon from "../../../../resources/images/AnchorIcon.png";
 import { renderNumber } from "../../Utils";
-import { Layer } from "./Layer";
+import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {

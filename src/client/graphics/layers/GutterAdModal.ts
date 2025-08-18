@@ -1,8 +1,8 @@
+import { EventBus, GameEvent } from "../../../core/EventBus";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus, GameEvent } from "../../../core/EventBus";
-import { getGamesPlayed } from "../../Utils";
 import { Layer } from "./Layer";
+import { getGamesPlayed } from "../../Utils";
 
 export class GutterAdModalEvent implements GameEvent {
   constructor(public readonly isVisible: boolean) {}

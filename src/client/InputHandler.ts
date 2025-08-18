@@ -1,8 +1,8 @@
 import { EventBus, GameEvent } from "../core/EventBus";
+import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
-import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
   constructor(
@@ -70,7 +70,7 @@ export class AlternateViewEvent implements GameEvent {
 
 export class CloseViewEvent implements GameEvent {}
 
-export class RefreshGraphicsEvent implements GameEvent {}
+export class RedrawGraphicsEvent implements GameEvent {}
 
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
@@ -302,7 +302,7 @@ export class InputHandler {
 
       if (e.key.toLowerCase() === "r" && e.altKey && !e.ctrlKey) {
         e.preventDefault();
-        this.eventBus.emit(new RefreshGraphicsEvent());
+        this.eventBus.emit(new RedrawGraphicsEvent());
       }
 
       if (e.code === this.keybinds.boatAttack) {

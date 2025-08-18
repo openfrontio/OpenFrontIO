@@ -1,21 +1,12 @@
 /* eslint-disable max-lines */
-import { html, LitElement, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
-import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
-  getMessageCategory,
   MessageCategory,
   MessageType,
   PlayerType,
   Tick,
   UnitType,
+  getMessageCategory,
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
@@ -36,18 +27,25 @@ import {
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
-import { Layer } from "./Layer";
-
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { onlyImages } from "../../../core/Util";
-import { renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./Leaderboard";
-
+import { LitElement, TemplateResult, html } from "lit";
+import { UnsafeHTMLDirective, unsafeHTML } from "lit/directives/unsafe-html.js";
+import { customElement, state } from "lit/decorators.js";
 import { getMessageTypeClasses, translateText } from "../../Utils";
+import { renderNumber, renderTroops } from "../../Utils";
+import { DirectiveResult } from "lit/directive.js";
+import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
+import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import { onlyImages } from "../../../core/Util";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
 type GameEvent = {
   description: string;

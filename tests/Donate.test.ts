@@ -1,7 +1,7 @@
+import { PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
 import { DonateTroopsExecution } from "../src/core/execution/DonateTroopExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 
 describe("Donate troops to an ally", () => {

@@ -1,5 +1,5 @@
-import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
 import { Game, Player, Unit } from "../../../src/core/game/Game";
+import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
 import { setup } from "../../util/Setup";
 
 describe("TradeShipExecution", () => {

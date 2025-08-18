@@ -1,7 +1,3 @@
-import version from "../../../resources/version.txt";
-import { createGameRunner, GameRunner } from "../GameRunner";
-import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -12,6 +8,10 @@ import {
   TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "./WorkerMessages";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { GameRunner, createGameRunner } from "../GameRunner";
+import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
+import version from "../../../resources/version.txt";
 
 const ctx: Worker = self as unknown as Worker;
 let gameRunner: Promise<GameRunner> | null = null;

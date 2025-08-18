@@ -14,17 +14,17 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { euclDistFN, manhattanDistFN, TileRef } from "../game/GameMap";
-import { PseudoRandom } from "../PseudoRandom";
-import { GameID } from "../Schemas";
+import { TileRef, euclDistFN, manhattanDistFN } from "../game/GameMap";
 import { calculateBoundingBox, flattenedEmojiTable, simpleHash } from "../Util";
+import { BotBehavior } from "./utils/BotBehavior";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { GameID } from "../Schemas";
 import { NukeExecution } from "./NukeExecution";
+import { PseudoRandom } from "../PseudoRandom";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { closestTwoTiles } from "./Util";
-import { BotBehavior } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private active = true;

@@ -1,20 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { ApiEnvResponse, ApiPublicLobbiesResponse } from "../core/ExpressSchemas";
+import { GameInfo, ID } from "../core/Schemas";
+import { LimiterType, gatekeeper } from "./Gatekeeper";
+import { MapPlaylist } from "./MapPlaylist";
 import cluster from "cluster";
 import express from "express";
-import rateLimit from "express-rate-limit";
-import http from "http";
-import path from "path";
 import { fileURLToPath } from "url";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import {
-  ApiEnvResponse,
-  ApiPublicLobbiesResponse,
-} from "../core/ExpressSchemas";
-import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import http from "http";
 import { logger } from "./Logger";
-import { MapPlaylist } from "./MapPlaylist";
+import path from "path";
+import rateLimit from "express-rate-limit";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();

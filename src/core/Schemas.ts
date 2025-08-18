@@ -1,7 +1,3 @@
-import { base64url } from "jose";
-import { z } from "zod";
-import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
-import countries from "../client/data/countries.json" with { type: "json" };
 import {
   AllPlayers,
   Difficulty,
@@ -16,7 +12,11 @@ import {
 } from "./game/Game";
 import { PatternDecoder } from "./PatternDecoder";
 import { PlayerStatsSchema } from "./StatsSchemas";
+import { base64url } from "jose";
+import countries from "../client/data/countries.json" with { type: "json" };
 import { flattenedEmojiTable } from "./Util";
+import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
+import { z } from "zod";
 
 export type GameID = string;
 export type ClientID = string;

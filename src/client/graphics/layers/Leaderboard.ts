@@ -1,11 +1,11 @@
-import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { renderNumber } from "../../Utils";
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { Layer } from "./Layer";
+import { renderNumber } from "../../Utils";
+import { repeat } from "lit/directives/repeat.js";
+import { translateText } from "../../../client/Utils";
 
 type Entry = {
   name: string;

@@ -1,27 +1,27 @@
-import express, { NextFunction, Request, Response } from "express";
-import rateLimit from "express-rate-limit";
-import http from "http";
-import ipAnonymize from "ip-anonymize";
-import path from "path";
-import { fileURLToPath } from "url";
-import { WebSocket, WebSocketServer } from "ws";
-import { z } from "zod";
-import { GameEnv } from "../core/configuration/Config";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
-import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
 import {
   CreateGameInputSchema,
   GameInputSchema,
   WorkerApiGameIdExists,
 } from "../core/WorkerSchemas";
+import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
+import { LimiterType, gatekeeper } from "./Gatekeeper";
+import { WebSocket, WebSocketServer } from "ws";
 import { archive, readGameRecord } from "./Archive";
+import express, { NextFunction, Request, Response } from "express";
+import { GameEnv } from "../core/configuration/Config";
 import { GameManager } from "./GameManager";
-import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { logger } from "./Logger";
+import { GameType } from "../core/game/Game";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
-import { preJoinMessageHandler } from "./worker/websocket/handler/message/PreJoinHandler";
+import { fileURLToPath } from "url";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import http from "http";
 import { initWorkerMetrics } from "./WorkerMetrics";
+import ipAnonymize from "ip-anonymize";
+import { logger } from "./Logger";
+import path from "path";
+import { preJoinMessageHandler } from "./worker/websocket/handler/message/PreJoinHandler";
+import rateLimit from "express-rate-limit";
+import { z } from "zod";
 
 const config = getServerConfigFromServer();
 

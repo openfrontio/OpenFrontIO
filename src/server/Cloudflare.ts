@@ -1,8 +1,8 @@
-import { spawn } from "child_process";
 import { promises as fs } from "fs";
+import { logger } from "./Logger";
+import { spawn } from "child_process";
 import yaml from "js-yaml";
 import { z } from "zod";
-import { logger } from "./Logger";
 
 const log = logger.child({
   module: "cloudflare",

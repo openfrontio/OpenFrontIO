@@ -1,13 +1,13 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { z } from "zod";
-import { translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
-import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import { LitElement, html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
+import { UserSettings } from "../core/game/UserSettings";
+import { translateText } from "../client/Utils";
+import { z } from "zod";
 
 const KeybindSchema = z.record(z.string(), z.string());
 

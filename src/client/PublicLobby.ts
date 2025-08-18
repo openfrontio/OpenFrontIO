@@ -1,12 +1,12 @@
+import { GameID, GameInfo } from "../core/Schemas";
+import { GameMapType, GameMode } from "../core/game/Game";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
 import { ApiPublicLobbiesResponseSchema } from "../core/ExpressSchemas";
-import { GameMapType, GameMode } from "../core/game/Game";
-import { GameID, GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
+import { generateID } from "../core/Util";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { translateText } from "../client/Utils";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
