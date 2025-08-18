@@ -698,10 +698,10 @@ export class PlayerImpl implements Player {
     if (embargo !== undefined && !embargo.isTemporary) return;
 
     this.mg.addUpdate({
-      type: GameUpdateType.EmbargoEvent,
+      embargoedID: other.smallID(),
       event: "start",
       playerID: this.smallID(),
-      embargoedID: other.smallID(),
+      type: GameUpdateType.EmbargoEvent,
     });
 
     this.embargoes.set(other.id(), {
@@ -714,10 +714,10 @@ export class PlayerImpl implements Player {
   stopEmbargo(other: Player): void {
     this.embargoes.delete(other.id());
     this.mg.addUpdate({
-      type: GameUpdateType.EmbargoEvent,
+      embargoedID: other.smallID(),
       event: "stop",
       playerID: this.smallID(),
-      embargoedID: other.smallID(),
+      type: GameUpdateType.EmbargoEvent,
     });
   }
 
