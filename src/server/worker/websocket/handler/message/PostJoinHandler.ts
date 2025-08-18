@@ -155,7 +155,7 @@ function handleWinner(
     `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
     {
       gameID: gs.id,
-      winnerKey: winnerKey,
+      winnerKey,
     },
   );
   gs.archiveGame();

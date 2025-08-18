@@ -189,7 +189,7 @@ export class Cloudflare {
         ...Array.from(subdomainToService.entries()).map(
           ([subdomain, service]) => ({
             hostname: `${subdomain}.${domain}`,
-            service: service,
+            service,
           }),
         ),
         {

@@ -628,7 +628,7 @@ export class Transport {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       const msg = {
         type: "intent",
-        intent: intent,
+        intent,
       } satisfies ClientIntentMessage;
       this.sendMsg(msg);
     } else {

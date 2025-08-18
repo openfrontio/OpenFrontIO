@@ -184,8 +184,8 @@ export class WorkerClient {
         id: messageId,
         playerID,
         type: "player_actions",
-        x: x,
-        y: y,
+        x,
+        y,
       });
     });
   }

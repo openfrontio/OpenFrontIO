@@ -358,7 +358,7 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     this.addEvent({
-      description: description,
+      description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
@@ -534,8 +534,8 @@ export class EventsDisplay extends LitElement implements Layer {
       this.addEvent({
         description: translateText("events_display.betrayal_description", {
           name: betrayed.name(),
-          malusPercent: malusPercent,
-          durationText: durationText,
+          malusPercent,
+          durationText,
         }),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
@@ -685,7 +685,7 @@ export class EventsDisplay extends LitElement implements Layer {
       unsafeDescription: false,
       highlight: true,
       createdAt: this.game.ticks(),
-      unitView: unitView,
+      unitView,
     });
   }
 

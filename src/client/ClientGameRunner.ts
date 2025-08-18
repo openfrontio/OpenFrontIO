@@ -477,7 +477,7 @@ export class ClientGameRunner {
             upgradeUnits.push({
               unitId: bu.canUpgrade,
               unitType: bu.type,
-              distance: distance,
+              distance,
             });
           }
         }
