@@ -53,7 +53,7 @@ jobs:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
       SUBDOMAIN: ${{ github.event_name == 'push' && github.ref_name || inputs.target_subdomain || 'main' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: 📝 Update job summary
         env:
           FQDN: ${{ env.SUBDOMAIN && format('{0}.{1}', env.SUBDOMAIN, env.DOMAIN) || env.DOMAIN || 'openfront.dev' }}
