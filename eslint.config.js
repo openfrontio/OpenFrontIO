@@ -86,6 +86,7 @@ export default [
       "@typescript-eslint/prefer-includes": "error",
       "@typescript-eslint/prefer-literal-enum-member": "error",
       "@typescript-eslint/prefer-nullish-coalescing": "error",
+      "@typescript-eslint/prefer-readonly": "error",
       "eqeqeq": "error",
       "indent": "off", // @stylistic/indent
       "sort-keys": "error",

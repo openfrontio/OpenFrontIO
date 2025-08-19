@@ -13,7 +13,7 @@ export class PortExecution implements Execution {
 
   constructor(
     private player: Player,
-    private tile: TileRef,
+    private readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {

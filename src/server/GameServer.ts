@@ -33,18 +33,18 @@ export enum GamePhase {
 }
 
 export class GameServer {
-  private sentDesyncMessageClients = new Set<ClientID>();
+  private readonly sentDesyncMessageClients = new Set<ClientID>();
 
-  private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
+  private readonly maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
-  private disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
+  private readonly disconnectedTimeout = 1 * 30 * 1000; // 30 seconds
 
-  private turns: Turn[] = [];
+  private readonly turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
   lobbyCreatorID: string | undefined;
-  private allClients: Map<ClientID, Client> = new Map();
-  private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
+  private readonly allClients: Map<ClientID, Client> = new Map();
+  private readonly clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
 
@@ -57,14 +57,14 @@ export class GameServer {
   // Note: This can be undefined if accessed before the game starts.
   private gameStartInfo!: GameStartInfo;
 
-  private log: Logger;
+  private readonly log: Logger;
 
   private _hasPrestarted = false;
 
   kickedClients: Set<ClientID> = new Set();
   outOfSyncClients: Set<ClientID> = new Set();
 
-  private websockets: Set<WebSocket> = new Set();
+  private readonly websockets: Set<WebSocket> = new Set();
 
   winnerVotes: Map<
     string,
@@ -75,7 +75,7 @@ export class GameServer {
     public readonly id: string,
     readonly log_: Logger,
     public readonly createdAt: number,
-    private config: ServerConfig,
+    private readonly config: ServerConfig,
     public gameConfig: GameConfig,
     lobbyCreatorID?: string,
   ) {

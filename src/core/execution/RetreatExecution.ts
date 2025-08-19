@@ -8,8 +8,8 @@ export class RetreatExecution implements Execution {
   private startTick: number;
   private mg: Game;
   constructor(
-    private player: Player,
-    private attackID: string,
+    private readonly player: Player,
+    private readonly attackID: string,
   ) {}
 
   init(mg: Game, ticks: number): void {

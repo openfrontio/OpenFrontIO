@@ -43,7 +43,7 @@ export class FlagInput extends LitElement {
     );
   }
 
-  private updateFlag = (ev: Event) => {
+  private readonly updateFlag = (ev: Event) => {
     const e = ev as CustomEvent<{ flag: string }>;
     if (!FlagSchema.safeParse(e.detail.flag).success) return;
     if (this.flag !== e.detail.flag) {

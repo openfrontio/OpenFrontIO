@@ -13,11 +13,11 @@ export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
   @state() public isLobbyHighlighted = false;
   @state() private isButtonDebounced = false;
-  @state() private mapImages: Map<GameID, string> = new Map();
+  @state() private readonly mapImages: Map<GameID, string> = new Map();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
-  private debounceDelay = 750;
-  private lobbyIDToStart = new Map<GameID, number>();
+  private readonly debounceDelay = 750;
+  private readonly lobbyIDToStart = new Map<GameID, number>();
 
   createRenderRoot() {
     return this;

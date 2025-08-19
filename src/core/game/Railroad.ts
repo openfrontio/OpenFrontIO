@@ -43,10 +43,10 @@ export function getOrientedRailroad(
  * Wrap a railroad with a direction so it always starts at tiles[0]
  */
 export class OrientedRailroad {
-  private tiles: TileRef[] = [];
+  private readonly tiles: TileRef[] = [];
   constructor(
-    private railroad: Railroad,
-    private forward: boolean,
+    private readonly railroad: Railroad,
+    private readonly forward: boolean,
   ) {
     this.tiles = this.forward
       ? this.railroad.tiles

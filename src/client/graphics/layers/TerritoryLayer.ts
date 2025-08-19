@@ -18,7 +18,7 @@ import { TransformHandler } from "../TransformHandler";
 import { UserSettings } from "../../../core/game/UserSettings";
 
 export class TerritoryLayer implements Layer {
-  private userSettings: UserSettings;
+  private readonly userSettings: UserSettings;
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private imageData: ImageData;
@@ -26,14 +26,14 @@ export class TerritoryLayer implements Layer {
 
   private cachedTerritoryPatternsEnabled: boolean | undefined;
 
-  private tileToRenderQueue: PriorityQueue<{
+  private readonly tileToRenderQueue: PriorityQueue<{
     tile: TileRef;
     lastUpdate: number;
   }> = new PriorityQueue((a, b) => {
     return a.lastUpdate - b.lastUpdate;
   });
-  private random = new PseudoRandom(123);
-  private theme: Theme;
+  private readonly random = new PseudoRandom(123);
+  private readonly theme: Theme;
 
   // Used for spawn highlighting
   private highlightCanvas: HTMLCanvasElement;
@@ -42,19 +42,19 @@ export class TerritoryLayer implements Layer {
   private highlightedTerritory: PlayerView | null = null;
 
   private alternativeView = false;
-  private lastDragTime = 0;
-  private nodrawDragDuration = 200;
+  private readonly lastDragTime = 0;
+  private readonly nodrawDragDuration = 200;
   private lastMousePosition: { x: number; y: number } | null = null;
 
-  private refreshRate = 10; //refresh every 10ms
+  private readonly refreshRate = 10; //refresh every 10ms
   private lastRefresh = 0;
 
   private lastFocusedPlayer: PlayerView | null = null;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly transformHandler: TransformHandler,
     userSettings: UserSettings,
   ) {
     this.userSettings = userSettings;

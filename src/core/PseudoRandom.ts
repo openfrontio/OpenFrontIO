@@ -1,7 +1,7 @@
 import seedrandom from "seedrandom";
 
 export class PseudoRandom {
-  private rng: seedrandom.PRNG;
+  private readonly rng: seedrandom.PRNG;
 
   private static readonly POW36_8 = Math.pow(36, 8); // Pre-compute 36^8
 

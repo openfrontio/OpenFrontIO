@@ -75,26 +75,26 @@ export class PlayerImpl implements Player {
 
   markedTraitorTick = -1;
 
-  private embargoes = new Map<PlayerID, Embargo>();
+  private readonly embargoes = new Map<PlayerID, Embargo>();
 
   public _borderTiles: Set<TileRef> = new Set();
 
   public _units: Unit[] = [];
   public _tiles: Set<TileRef> = new Set();
 
-  private _name: string;
-  private _displayName: string;
+  private readonly _name: string;
+  private readonly _displayName: string;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
-  private _expiredAlliances: Alliance[] = [];
+  private readonly _expiredAlliances: Alliance[] = [];
 
-  private targets_: Target[] = [];
+  private readonly targets_: Target[] = [];
 
-  private outgoingEmojis_: EmojiMessage[] = [];
+  private readonly outgoingEmojis_: EmojiMessage[] = [];
 
-  private sentDonations: Donation[] = [];
+  private readonly sentDonations: Donation[] = [];
 
-  private relations = new Map<Player, number>();
+  private readonly relations = new Map<Player, number>();
 
   private lastDeleteUnitTick: Tick = -1;
 
@@ -106,8 +106,8 @@ export class PlayerImpl implements Player {
   private _isDisconnected = false;
 
   constructor(
-    private mg: GameImpl,
-    private _smallID: number,
+    private readonly mg: GameImpl,
+    private readonly _smallID: number,
     private readonly playerInfo: PlayerInfo,
     startTroops: number,
     private readonly _team: Team | null,

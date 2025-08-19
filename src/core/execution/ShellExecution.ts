@@ -12,10 +12,10 @@ export class ShellExecution implements Execution {
   private random: PseudoRandom;
 
   constructor(
-    private spawn: TileRef,
-    private _owner: Player,
-    private ownerUnit: Unit,
-    private target: Unit,
+    private readonly spawn: TileRef,
+    private readonly _owner: Player,
+    private readonly ownerUnit: Unit,
+    private readonly target: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {

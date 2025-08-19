@@ -28,7 +28,7 @@ import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -37,9 +37,9 @@ export class SinglePlayerModal extends LitElement {
   @state() private disableNPCs = false;
   @state() private bots = 400;
   @state() private infiniteGold = false;
-  @state() private donateGold = false;
+  @state() private readonly donateGold = false;
   @state() private infiniteTroops = false;
-  @state() private donateTroops = false;
+  @state() private readonly donateTroops = false;
   @state() private instantBuild = false;
   @state() private useRandomMap = false;
   @state() private gameMode: GameMode = GameMode.FFA;
@@ -47,7 +47,7 @@ export class SinglePlayerModal extends LitElement {
 
   @state() private disabledUnits: UnitType[] = [];
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   connectedCallback() {
     super.connectedCallback();
@@ -59,7 +59,7 @@ export class SinglePlayerModal extends LitElement {
     super.disconnectedCallback();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();

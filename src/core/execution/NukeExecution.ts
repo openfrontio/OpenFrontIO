@@ -24,9 +24,9 @@ export class NukeExecution implements Execution {
   private pathFinder: ParabolaPathFinder;
 
   constructor(
-    private nukeType: NukeType,
-    private player: Player,
-    private dst: TileRef,
+    private readonly nukeType: NukeType,
+    private readonly player: Player,
+    private readonly dst: TileRef,
     private src?: TileRef | null,
     private speed = -1,
     private waitTicks = 0,

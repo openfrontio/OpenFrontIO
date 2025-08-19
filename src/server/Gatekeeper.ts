@@ -94,7 +94,7 @@ async function getGatekeeper(): Promise<Gatekeeper> {
 }
 
 export class GatekeeperWrapper implements Gatekeeper {
-  constructor(private getGK: () => Promise<Gatekeeper>) {}
+  constructor(private readonly getGK: () => Promise<Gatekeeper>) {}
 
   httpHandler(
     limiterType: LimiterType,

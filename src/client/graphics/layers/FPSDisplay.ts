@@ -33,8 +33,8 @@ export class FPSDisplay extends LitElement implements Layer {
 
   private frameCount = 0;
   private lastTime = 0;
-  private frameTimes: number[] = [];
-  private fpsHistory: number[] = [];
+  private readonly frameTimes: number[] = [];
+  private readonly fpsHistory: number[] = [];
   private lastSecondTime = 0;
   private framesThisSecond = 0;
   private dragStart: { x: number; y: number } = { x: 0, y: 0 };
@@ -118,7 +118,7 @@ export class FPSDisplay extends LitElement implements Layer {
     this.userSettings.togglePerformanceOverlay();
   }
 
-  private handleMouseDown = (e: MouseEvent) => {
+  private readonly handleMouseDown = (e: MouseEvent) => {
     // Don't start dragging if clicking on close button
     if ((e.target as HTMLElement).classList.contains("close-button")) {
       return;
@@ -135,7 +135,7 @@ export class FPSDisplay extends LitElement implements Layer {
     e.preventDefault();
   };
 
-  private handleMouseMove = (e: MouseEvent) => {
+  private readonly handleMouseMove = (e: MouseEvent) => {
     if (!this.isDragging) return;
 
     const newX = e.clientX - this.dragStart.x;
@@ -153,7 +153,7 @@ export class FPSDisplay extends LitElement implements Layer {
     this.requestUpdate();
   };
 
-  private handleMouseUp = () => {
+  private readonly handleMouseUp = () => {
     this.isDragging = false;
     document.removeEventListener("mousemove", this.handleMouseMove);
     document.removeEventListener("mouseup", this.handleMouseUp);

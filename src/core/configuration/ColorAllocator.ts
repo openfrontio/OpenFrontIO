@@ -20,9 +20,9 @@ extend([labPlugin]);
 
 export class ColorAllocator {
   private availableColors: Colord[];
-  private fallbackColors: Colord[];
-  private assigned = new Map<string, Colord>();
-  private teamPlayerColors = new Map<string, Colord>();
+  private readonly fallbackColors: Colord[];
+  private readonly assigned = new Map<string, Colord>();
+  private readonly teamPlayerColors = new Map<string, Colord>();
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];

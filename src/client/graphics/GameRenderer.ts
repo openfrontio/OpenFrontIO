@@ -283,16 +283,16 @@ export function createRenderer(
 }
 
 export class GameRenderer {
-  private context: CanvasRenderingContext2D;
+  private readonly context: CanvasRenderingContext2D;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private canvas: HTMLCanvasElement,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly canvas: HTMLCanvasElement,
     public transformHandler: TransformHandler,
     public uiState: UIState,
-    private layers: Layer[],
-    private fpsDisplay: FPSDisplay,
+    private readonly layers: Layer[],
+    private readonly fpsDisplay: FPSDisplay,
   ) {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");

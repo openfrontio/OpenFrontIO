@@ -8,7 +8,7 @@ type TimedTask = {
  * Basic timeline to chain actions
  */
 export class Timeline {
-  private tasks: TimedTask[] = [];
+  private readonly tasks: TimedTask[] = [];
   private timeElapsed = 0;
 
   add(delay: number, action: () => void): Timeline {

@@ -7,11 +7,11 @@ import { TileRef } from "../game/GameMap";
 import { simpleHash } from "../Util";
 
 export class BotSpawner {
-  private random: PseudoRandom;
-  private bots: SpawnExecution[] = [];
+  private readonly random: PseudoRandom;
+  private readonly bots: SpawnExecution[] = [];
 
   constructor(
-    private gs: Game,
+    private readonly gs: Game,
     gameID: GameID,
   ) {
     this.random = new PseudoRandom(simpleHash(gameID));

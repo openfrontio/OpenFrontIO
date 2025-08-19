@@ -14,9 +14,9 @@ export class EmojiExecution implements Execution {
   private active = true;
 
   constructor(
-    private requestor: Player,
-    private recipientID: PlayerID | typeof AllPlayers,
-    private emoji: number,
+    private readonly requestor: Player,
+    private readonly recipientID: PlayerID | typeof AllPlayers,
+    private readonly emoji: number,
   ) {}
 
   init(mg: Game, ticks: number): void {

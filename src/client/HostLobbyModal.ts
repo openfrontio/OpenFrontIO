@@ -32,7 +32,7 @@ import { translateText } from "../client/Utils";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -58,7 +58,7 @@ export class HostLobbyModal extends LitElement {
   private playersInterval: ReturnType<typeof setTimeout> | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   connectedCallback() {
     super.connectedCallback();
@@ -70,7 +70,7 @@ export class HostLobbyModal extends LitElement {
     super.disconnectedCallback();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();

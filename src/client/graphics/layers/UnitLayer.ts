@@ -32,15 +32,15 @@ export class UnitLayer implements Layer {
   private transportShipTrailCanvas: HTMLCanvasElement;
   private unitTrailContext: CanvasRenderingContext2D;
 
-  private unitToTrail = new Map<UnitView, TileRef[]>();
+  private readonly unitToTrail = new Map<UnitView, TileRef[]>();
 
-  private theme: Theme;
+  private readonly theme: Theme;
 
   private alternateView = false;
 
-  private oldShellTile = new Map<UnitView, TileRef>();
+  private readonly oldShellTile = new Map<UnitView, TileRef>();
 
-  private transformHandler: TransformHandler;
+  private readonly transformHandler: TransformHandler;
 
   // Selected unit property as suggested in the review comment
   private selectedUnit: UnitView | null = null;
@@ -49,8 +49,8 @@ export class UnitLayer implements Layer {
   private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
     transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();

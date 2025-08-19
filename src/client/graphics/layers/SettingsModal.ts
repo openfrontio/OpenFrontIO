@@ -36,7 +36,7 @@ export class SettingsModal extends LitElement implements Layer {
   private alternateView = false;
 
   @query(".modal-overlay")
-  private modalOverlay!: HTMLElement;
+  private readonly modalOverlay!: HTMLElement;
 
   @property({ type: Boolean })
   shouldPause = false;
@@ -69,7 +69,7 @@ export class SettingsModal extends LitElement implements Layer {
     super.disconnectedCallback();
   }
 
-  private handleOutsideClick = (event: MouseEvent) => {
+  private readonly handleOutsideClick = (event: MouseEvent) => {
     if (
       this.isVisible &&
       this.modalOverlay &&
@@ -79,7 +79,7 @@ export class SettingsModal extends LitElement implements Layer {
     }
   };
 
-  private handleKeyDown = (event: KeyboardEvent) => {
+  private readonly handleKeyDown = (event: KeyboardEvent) => {
     if (this.isVisible && event.key === "Escape") {
       this.closeModal();
     }

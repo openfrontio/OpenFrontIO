@@ -5,9 +5,9 @@ export class AllianceRequestReplyExecution implements Execution {
   private requestor: Player | null = null;
 
   constructor(
-    private requestorID: PlayerID,
-    private recipient: Player,
-    private accept: boolean,
+    private readonly requestorID: PlayerID,
+    private readonly recipient: Player,
+    private readonly accept: boolean,
   ) {}
 
   init(mg: Game, ticks: number): void {

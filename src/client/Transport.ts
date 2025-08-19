@@ -174,7 +174,7 @@ export class Transport {
 
   private localServer: LocalServer;
 
-  private buffer: string[] = [];
+  private readonly buffer: string[] = [];
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
@@ -182,8 +182,8 @@ export class Transport {
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
   constructor(
-    private lobbyConfig: LobbyConfig,
-    private eventBus: EventBus,
+    private readonly lobbyConfig: LobbyConfig,
+    private readonly eventBus: EventBus,
   ) {
     // If gameRecord is not null, we are replaying an archived game.
     // For multiplayer games, GameConfig is not known until game starts.

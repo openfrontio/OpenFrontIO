@@ -128,9 +128,9 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
 };
 
 export class AnimatedSpriteLoader {
-  private animatedSpriteImageMap: Map<FxType, HTMLCanvasElement> = new Map();
+  private readonly animatedSpriteImageMap: Map<FxType, HTMLCanvasElement> = new Map();
   // Do not color the same sprite twice
-  private coloredAnimatedSpriteCache: Map<string, HTMLCanvasElement> =
+  private readonly coloredAnimatedSpriteCache: Map<string, HTMLCanvasElement> =
     new Map();
 
   public async loadAllAnimatedSpriteImages(): Promise<void> {

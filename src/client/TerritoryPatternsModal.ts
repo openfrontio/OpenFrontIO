@@ -13,7 +13,7 @@ import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -36,7 +36,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   public resizeObserver: ResizeObserver;
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   private isActive = false;
 
@@ -71,7 +71,7 @@ export class TerritoryPatternsModal extends LitElement {
     this.requestUpdate();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();

@@ -15,7 +15,7 @@ const ALERT_COUNT = 2;
 @customElement("alert-frame")
 export class AlertFrame extends LitElement implements Layer {
   public game: GameView;
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   @state()
   private isActive = false;

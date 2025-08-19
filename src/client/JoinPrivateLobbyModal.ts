@@ -14,11 +14,11 @@ import { translateText } from "../client/Utils";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
-  @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
+  @query("#lobbyIdInput") private readonly lobbyIdInput!: HTMLInputElement;
   @state() private message = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
@@ -35,7 +35,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     super.disconnectedCallback();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();
