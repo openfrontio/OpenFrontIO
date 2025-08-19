@@ -21,6 +21,7 @@ const config = getServerConfigFromServer();
 // Note: The Partial should eventually be removed for better type safety.
 const frequency: Partial<Record<GameMapName, number>> = {
   Africa: 7,
+  ArabianPeninsula: 5,
   Asia: 6,
   Australia: 4,
   Baikal: 5,

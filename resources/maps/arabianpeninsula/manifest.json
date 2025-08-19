@@ -1,0 +1,171 @@
+{
+  "map": {
+    "height": 2282,
+    "num_land_tiles": 5704608,
+    "width": 2500
+  },
+  "mini_map": {
+    "height": 1141,
+    "num_land_tiles": 1426135,
+    "width": 1250
+  },
+  "name": "Arabian Peninsula",
+  "nations": [
+    {
+      "coordinates": [312,828],
+      "flag": "sa",
+      "name": "Tabuk Province",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [515,706],
+      "flag": "sa",
+      "name": "Al-Jouf Province",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [1025,1644],
+      "flag": "sa",
+      "name": "Asir Province",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [936,1570],
+      "flag": "sa",
+      "name": "Al-Baha",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [1069,612],
+      "flag": "sa",
+      "name": "Northern Borders",
+      "strength": 1
+    },
+    {
+      "coordinates": [897,920],
+      "flag": "sa",
+      "name": "Ha'il Province",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [625,1221],
+      "flag": "sa",
+      "name": "Medina Province",
+      "strength": 1
+    },
+    {
+      "coordinates": [768,1396],
+      "flag": "sa",
+      "name": "Mecca Province",
+      "strength": 1
+    },
+    {
+      "coordinates": [968,1794],
+      "flag": "sa",
+      "name": "Jazan",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [1360,1344],
+      "flag": "sa",
+      "name": "Riyadh Province",
+      "strength": 1.5
+    },
+    {
+      "coordinates": [1710,1244],
+      "flag": "sa",
+      "name": "Eastern Province",
+      "strength": 1.5
+    },
+    {
+      "coordinates": [1341,1635],
+      "flag": "sa",
+      "name": "Najran Province",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [1114,1124],
+      "flag": "sa",
+      "name": "Al-Qassim Province",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [2060,379],
+      "flag": "ir",
+      "name": "Islamic Republic of Iran",
+      "strength": 2
+    },
+    {
+      "coordinates": [1473,386],
+      "flag": "iq",
+      "name": "Iraq",
+      "strength": 1
+    },
+    {
+      "coordinates": [1324,522],
+      "flag": "kw",
+      "name": "Kuwait",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [1418,956],
+      "flag": "qa",
+      "name": "Qatar",
+      "strength": 1
+    },
+    {
+      "coordinates": [1337,923],
+      "flag": "bh",
+      "name": "Bahrain",
+      "strength": 0.5
+    },
+    {
+      "coordinates": [32,460],
+      "flag": "il",
+      "name": "Israel",
+      "strength": 1
+    },
+    {
+      "coordinates": [32,1221],
+      "flag": "eg",
+      "name": "Egypt",
+      "strength": 2
+    },
+    {
+      "coordinates": [107,1772],
+      "flag": "sd",
+      "name": "Sudan",
+      "strength": 1
+    },
+    {
+      "coordinates": [292,544],
+      "flag": "jo",
+      "name": "Hashemite Kingdom of Jordan",
+      "strength": 1.5
+    },
+    {
+      "coordinates": [343,127],
+      "flag": "sy",
+      "name": "Syria",
+      "strength": 1.5
+    },
+    {
+      "coordinates": [1839,1066],
+      "flag": "ae",
+      "name": "United Arab Emirates",
+      "strength": 1
+    },
+    {
+      "coordinates": [2170,1309],
+      "flag": "om",
+      "name": "Oman",
+      "strength": 1.5
+    },
+    {
+      "coordinates": [1337,1953],
+      "flag": "ye",
+      "name": "Yemen",
+      "strength": 0.5
+    }
+  ]
+}
