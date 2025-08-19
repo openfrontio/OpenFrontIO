@@ -94,7 +94,7 @@ export class BotBehavior {
     if (other.isTraitor()) {
       return false;
     }
-    const difficulty = this.game.config().gameConfig().difficulty;
+    const { difficulty } = this.game.config().gameConfig();
     if (
       difficulty === Difficulty.Hard ||
       difficulty === Difficulty.Impossible
