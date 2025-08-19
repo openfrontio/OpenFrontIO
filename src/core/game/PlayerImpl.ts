@@ -846,7 +846,7 @@ export class PlayerImpl implements Player {
     if (existing.length === 0) {
       return false;
     }
-    const unit = existing[0].unit;
+    const { unit } = existing[0];
     if (!this.canUpgradeUnit(unit.type())) {
       return false;
     }

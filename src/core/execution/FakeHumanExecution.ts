@@ -67,7 +67,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private updateRelationsFromEmbargos() {
-    const player = this.player;
+    const { player } = this;
     if (player === null) return;
     const others = this.mg.players().filter((p) => p.id() !== player.id());
 
@@ -90,7 +90,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private handleEmbargoesToHostileNations() {
-    const player = this.player;
+    const { player } = this;
     if (player === null) return;
     const others = this.mg.players().filter((p) => p.id() !== player.id());
 
@@ -214,6 +214,42 @@ export class FakeHumanExecution implements Execution {
     } else {
       this.maybeSendBoatAttack(enemy);
     }
+  }
+
+  private shouldAttack(other: Player): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    if (this.player.isOnSameTeam(other)) {
+      return false;
+    }
+    if (this.player.isFriendly(other)) {
+      if (this.shouldDiscourageAttack(other)) {
+        return this.random.chance(200);
+      }
+      return this.random.chance(50);
+    } else {
+      if (this.shouldDiscourageAttack(other)) {
+        return this.random.chance(4);
+      }
+      return true;
+    }
+  }
+
+  private shouldDiscourageAttack(other: Player) {
+    if (other.isTraitor()) {
+      return false;
+    }
+    const { difficulty } = this.mg.config().gameConfig();
+    if (
+      difficulty === Difficulty.Hard ||
+      difficulty === Difficulty.Impossible
+    ) {
+      return false;
+    }
+    if (other.type() !== PlayerType.Human) {
+      return false;
+    }
+    // Only discourage attacks on Humans who are not traitors on easy or medium difficulty.
+    return true;
   }
 
   private maybeSendEmoji(enemy: Player) {
@@ -445,7 +481,7 @@ export class FakeHumanExecution implements Execution {
   private structureSpawnTileValue(type: UnitType): (tile: TileRef) => number {
     if (this.player === null) throw new Error("not initialized");
     const borderTiles = this.player.borderTiles();
-    const mg = this.mg;
+    const { mg } = this;
     const otherUnits = this.player.units(type);
     // Prefer spacing structures out of atom bomb range
     const borderSpacing = this.mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;

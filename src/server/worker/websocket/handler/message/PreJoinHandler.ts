@@ -169,8 +169,7 @@ async function handleJoinMessage(
           success: false,
         };
       }
-      roles = result.player.roles;
-      flares = result.player.flares;
+      ({ roles, flares } = result.player);
 
       if (allowedFlares !== undefined) {
         // Login is required

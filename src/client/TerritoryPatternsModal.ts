@@ -389,7 +389,7 @@ export function generatePreviewDataUrl(
 
   // Create an image
   const imageData = ctx.createImageData(width, height);
-  const data = imageData.data;
+  const { data } = imageData;
   let i = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {

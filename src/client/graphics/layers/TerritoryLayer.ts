@@ -393,7 +393,7 @@ export class TerritoryLayer implements Layer {
         break;
       }
 
-      const tile = entry.tile;
+      const { tile } = entry;
       this.paintTerritory(tile);
       for (const neighbor of this.game.neighbors(tile)) {
         this.paintTerritory(neighbor, true);
@@ -455,7 +455,7 @@ export class TerritoryLayer implements Layer {
       }
     } else {
       // Interior tiles
-      const pattern = owner.cosmetics.pattern;
+      const { pattern } = owner.cosmetics;
       const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
 
       // Alternative view only shows borders.

@@ -118,6 +118,10 @@ export default [
       "object-shorthand": ["error", "always"],
       "no-undef": "error",
       "no-unused-vars": "off", // @typescript-eslint/no-unused-vars
+      "prefer-destructuring": ["error", {
+        array: false,
+        object: true,
+      }],
       "quote-props": ["error", "consistent-as-needed"],
       "sort-imports": "error",
       "space-before-blocks": ["error", "always"],

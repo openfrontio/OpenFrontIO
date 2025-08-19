@@ -27,7 +27,7 @@ export class PortExecution implements Execution {
       throw new Error("Not initialized");
     }
     if (this.port === null) {
-      const tile = this.tile;
+      const { tile } = this;
       const spawn = this.player.canBuild(UnitType.Port, tile);
       if (spawn === false) {
         console.warn(

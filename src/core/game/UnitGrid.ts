@@ -94,7 +94,7 @@ export class UnitGrid {
   private getCellsInRange(tile: TileRef, range: number) {
     const x = this.gm.x(tile);
     const y = this.gm.y(tile);
-    const cellSize = this.cellSize;
+    const { cellSize } = this;
     const [gridX, gridY] = this.getGridCoords(x, y);
     const startGridX = Math.max(
       0,
