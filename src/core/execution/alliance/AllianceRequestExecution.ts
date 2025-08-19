@@ -12,8 +12,8 @@ export class AllianceRequestExecution implements Execution {
   private mg: Game;
 
   constructor(
-    private requestor: Player,
-    private recipientID: PlayerID,
+    private readonly requestor: Player,
+    private readonly recipientID: PlayerID,
   ) {}
 
   init(mg: Game, ticks: number): void {

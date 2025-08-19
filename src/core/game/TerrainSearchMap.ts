@@ -5,9 +5,9 @@ export enum SearchMapTileType {
 }
 
 export class TerrainSearchMap {
-  private width: number;
-  private height: number;
-  private mapData: Uint8Array;
+  private readonly width: number;
+  private readonly height: number;
+  private readonly mapData: Uint8Array;
 
   constructor(buffer: SharedArrayBuffer) {
     this.mapData = new Uint8Array(buffer);

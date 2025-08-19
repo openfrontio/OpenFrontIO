@@ -21,7 +21,7 @@ export class LocalServer {
   // All turns from the game record on replay.
   private replayTurns: Turn[] = [];
 
-  private turns: Turn[] = [];
+  private readonly turns: Turn[] = [];
 
   private intents: Intent[] = [];
   private startedAt: number;
@@ -38,11 +38,11 @@ export class LocalServer {
   private turnCheckInterval: ReturnType<typeof setTimeout>;
 
   constructor(
-    private lobbyConfig: LobbyConfig,
-    private clientConnect: () => void,
-    private clientMessage: (message: ServerMessage) => void,
-    private isReplay: boolean,
-    private eventBus: EventBus,
+    private readonly lobbyConfig: LobbyConfig,
+    private readonly clientConnect: () => void,
+    private readonly clientMessage: (message: ServerMessage) => void,
+    private readonly isReplay: boolean,
+    private readonly eventBus: EventBus,
   ) {}
 
   start() {

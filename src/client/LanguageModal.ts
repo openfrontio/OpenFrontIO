@@ -14,7 +14,7 @@ export class LanguageModal extends LitElement {
     return this; // Use Light DOM for TailwindCSS classes
   }
 
-  private close = () => {
+  private readonly close = () => {
     this.dispatchEvent(
       new CustomEvent("close-modal", {
         bubbles: true,
@@ -44,14 +44,14 @@ export class LanguageModal extends LitElement {
     document.body.style.overflow = "auto";
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();
     }
   };
 
-  private selectLanguage = (lang: string) => {
+  private readonly selectLanguage = (lang: string) => {
     this.dispatchEvent(
       new CustomEvent("language-selected", {
         detail: { lang },

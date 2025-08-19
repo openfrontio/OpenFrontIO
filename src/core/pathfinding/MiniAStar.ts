@@ -6,8 +6,8 @@ import { Cell } from "../game/Game";
 export class GameMapAdapter implements GraphAdapter<TileRef> {
   private readonly waterPenalty = 3;
   constructor(
-    private gameMap: GameMap,
-    private waterPath: boolean,
+    private readonly gameMap: GameMap,
+    private readonly waterPath: boolean,
   ) {}
 
   neighbors(node: TileRef): TileRef[] {
@@ -39,13 +39,13 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
   }
 }
 export class MiniAStar implements AStar<TileRef> {
-  private aStar: AStar<TileRef>;
+  private readonly aStar: AStar<TileRef>;
 
   constructor(
-    private gameMap: GameMap,
-    private miniMap: GameMap,
-    private src: TileRef | TileRef[],
-    private dst: TileRef,
+    private readonly gameMap: GameMap,
+    private readonly miniMap: GameMap,
+    private readonly src: TileRef | TileRef[],
+    private readonly dst: TileRef,
     iterations: number,
     maxTries: number,
     waterPath = true,

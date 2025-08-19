@@ -5,7 +5,7 @@ import { translateText } from "./Utils";
 
 @customElement("flag-input-modal")
 export class FlagInputModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -114,7 +114,7 @@ export class FlagInputModal extends LitElement {
     super.disconnectedCallback();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();

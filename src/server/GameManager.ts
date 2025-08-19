@@ -9,8 +9,8 @@ export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
 
   constructor(
-    private config: ServerConfig,
-    private log: Logger,
+    private readonly config: ServerConfig,
+    private readonly log: Logger,
   ) {
     setInterval(() => this.tick(), 1000);
   }

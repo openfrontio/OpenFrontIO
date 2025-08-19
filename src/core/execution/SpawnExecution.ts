@@ -9,7 +9,7 @@ export class SpawnExecution implements Execution {
   private mg: Game;
 
   constructor(
-    private playerInfo: PlayerInfo,
+    private readonly playerInfo: PlayerInfo,
     public readonly tile: TileRef,
   ) {}
 

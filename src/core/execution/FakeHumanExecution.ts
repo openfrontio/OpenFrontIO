@@ -28,25 +28,25 @@ import { closestTwoTiles } from "./Util";
 
 export class FakeHumanExecution implements Execution {
   private active = true;
-  private random: PseudoRandom;
+  private readonly random: PseudoRandom;
   private behavior: BotBehavior | null = null;
   private mg: Game;
   private player: Player | null = null;
 
-  private attackRate: number;
-  private attackTick: number;
-  private triggerRatio: number;
-  private reserveRatio: number;
-  private expandRatio: number;
+  private readonly attackRate: number;
+  private readonly attackTick: number;
+  private readonly triggerRatio: number;
+  private readonly reserveRatio: number;
+  private readonly expandRatio: number;
 
-  private lastEmojiSent = new Map<Player, Tick>();
-  private lastNukeSent: [Tick, TileRef][] = [];
-  private embargoMalusApplied = new Set<PlayerID>();
-  private heckleEmoji: number[];
+  private readonly lastEmojiSent = new Map<Player, Tick>();
+  private readonly lastNukeSent: [Tick, TileRef][] = [];
+  private readonly embargoMalusApplied = new Set<PlayerID>();
+  private readonly heckleEmoji: number[];
 
   constructor(
     gameID: GameID,
-    private nation: Nation,
+    private readonly nation: Nation,
   ) {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),

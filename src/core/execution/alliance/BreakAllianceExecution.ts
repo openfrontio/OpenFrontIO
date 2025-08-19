@@ -6,8 +6,8 @@ export class BreakAllianceExecution implements Execution {
   private mg: Game | null = null;
 
   constructor(
-    private requestor: Player,
-    private recipientID: PlayerID,
+    private readonly requestor: Player,
+    private readonly recipientID: PlayerID,
   ) {}
 
   init(mg: Game, ticks: number): void {

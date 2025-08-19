@@ -13,7 +13,7 @@ const KeybindSchema = z.record(z.string(), z.string());
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   @state() private settingsMode: "basic" | "keybinds" = "basic";
   @state() private keybinds: Record<string, string> = {};
@@ -35,7 +35,7 @@ export class UserSettingModal extends LitElement {
     }
   }
 
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
     isModalOpen: boolean;
@@ -51,7 +51,7 @@ export class UserSettingModal extends LitElement {
     document.body.style.overflow = "auto";
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
 
     if (e.code === "Escape") {

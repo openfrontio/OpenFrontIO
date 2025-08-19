@@ -2,8 +2,8 @@ type Point = { x: number; y: number };
 
 export class BezenhamLine {
   constructor(
-    private p1: Point,
-    private p2: Point,
+    private readonly p1: Point,
+    private readonly p2: Point,
   ) {
     this.dx = Math.abs(p2.x - p1.x);
     this.dy = Math.abs(p2.y - p1.y);
@@ -12,10 +12,10 @@ export class BezenhamLine {
     this.error = this.dx - this.dy;
   }
 
-  private dx: number;
-  private dy: number;
-  private sx: number;
-  private sy: number;
+  private readonly dx: number;
+  private readonly dy: number;
+  private readonly sx: number;
+  private readonly sy: number;
   private error: number;
 
   size() {
@@ -45,10 +45,10 @@ export class BezenhamLine {
 
 export class CubicBezierCurve {
   constructor(
-    private p0: Point,
-    private p1: Point,
-    private p2: Point,
-    private p3: Point,
+    private readonly p0: Point,
+    private readonly p1: Point,
+    private readonly p2: Point,
+    private readonly p3: Point,
   ) {}
   getPointAt(t: number): Point {
     const T = 1 - t;

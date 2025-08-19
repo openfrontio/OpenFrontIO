@@ -11,15 +11,15 @@ import { base64url } from "jose";
 // WARNING: This fails open if cosmetics.json is not available.
 export class PrivilegeRefresher {
   private privilegeChecker: PrivilegeChecker | null = null;
-  private failOpenPrivilegeChecker: PrivilegeChecker =
+  private readonly failOpenPrivilegeChecker: PrivilegeChecker =
     new FailOpenPrivilegeChecker();
 
-  private log: Logger;
+  private readonly log: Logger;
 
   constructor(
-    private endpoint: string,
+    private readonly endpoint: string,
     parentLog: Logger,
-    private refreshInterval: number = 1000 * 60 * 3,
+    private readonly refreshInterval: number = 1000 * 60 * 3,
   ) {
     this.log = parentLog.child({ comp: "privilege-refresher" });
   }

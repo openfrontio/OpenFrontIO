@@ -6,11 +6,11 @@ import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 
 export class ChatIntegration {
-  private ctModal: ChatModal;
+  private readonly ctModal: ChatModal;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
   ) {
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
 

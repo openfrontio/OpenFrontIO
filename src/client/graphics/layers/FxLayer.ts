@@ -22,14 +22,14 @@ export class FxLayer implements Layer {
   private context: CanvasRenderingContext2D;
 
   private lastRefresh = 0;
-  private refreshRate = 10;
-  private theme: Theme;
-  private animatedSpriteLoader: AnimatedSpriteLoader =
+  private readonly refreshRate = 10;
+  private readonly theme: Theme;
+  private readonly animatedSpriteLoader: AnimatedSpriteLoader =
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
 
-  constructor(private game: GameView) {
+  constructor(private readonly game: GameView) {
     this.theme = this.game.config().theme();
   }
 

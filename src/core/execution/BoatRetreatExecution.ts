@@ -3,8 +3,8 @@ import { Execution, Game, Player, UnitType } from "../game/Game";
 export class BoatRetreatExecution implements Execution {
   private active = true;
   constructor(
-    private player: Player,
-    private unitID: number,
+    private readonly player: Player,
+    private readonly unitID: number,
   ) {}
 
   init(mg: Game, ticks: number): void {}

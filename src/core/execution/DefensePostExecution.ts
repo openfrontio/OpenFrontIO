@@ -10,11 +10,11 @@ export class DefensePostExecution implements Execution {
   private target: Unit | null = null;
   private lastShellAttack = 0;
 
-  private alreadySentShell = new Set<Unit>();
+  private readonly alreadySentShell = new Set<Unit>();
 
   constructor(
     private player: Player,
-    private tile: TileRef,
+    private readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {

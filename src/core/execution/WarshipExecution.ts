@@ -19,10 +19,10 @@ export class WarshipExecution implements Execution {
   private mg: Game;
   private pathfinder: PathFinder;
   private lastShellAttack = 0;
-  private alreadySentShell = new Set<Unit>();
+  private readonly alreadySentShell = new Set<Unit>();
 
   constructor(
-    private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
+    private readonly input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {

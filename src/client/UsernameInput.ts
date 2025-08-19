@@ -15,7 +15,7 @@ export class UsernameInput extends LitElement {
   @state() private username = "";
   @property({ type: String }) validationError = "";
   private _isValid = true;
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   // Remove static styles since we're using Tailwind
 

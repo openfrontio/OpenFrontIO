@@ -12,16 +12,16 @@ import { WorkerMessage } from "./WorkerMessages";
 import { generateID } from "../Util";
 
 export class WorkerClient {
-  private worker: Worker;
+  private readonly worker: Worker;
   private isInitialized = false;
-  private messageHandlers: Map<string, (message: WorkerMessage) => void>;
+  private readonly messageHandlers: Map<string, (message: WorkerMessage) => void>;
   private gameUpdateCallback?: (
     update: GameUpdateViewData | ErrorUpdate,
   ) => void;
 
   constructor(
-    private gameStartInfo: GameStartInfo,
-    private clientID: ClientID,
+    private readonly gameStartInfo: GameStartInfo,
+    private readonly clientID: ClientID,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
     this.messageHandlers = new Map();

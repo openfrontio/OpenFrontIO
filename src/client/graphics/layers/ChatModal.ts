@@ -19,7 +19,7 @@ export const quickChatPhrases: QuickChatPhrases = quickChatData;
 
 @customElement("chat-modal")
 export class ChatModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };

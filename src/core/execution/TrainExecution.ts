@@ -15,21 +15,21 @@ export class TrainExecution implements Execution {
   private active = true;
   private mg: Game | null = null;
   private train: Unit | null = null;
-  private cars: Unit[] = [];
+  private readonly cars: Unit[] = [];
   private hasCargo = false;
   private currentTile = 0;
-  private spacing = 2;
-  private usedTiles: TileRef[] = []; // used for cars behind
+  private readonly spacing = 2;
+  private readonly usedTiles: TileRef[] = []; // used for cars behind
   private stations: TrainStation[] = [];
   private currentRailroad: OrientedRailroad | null = null;
-  private speed = 2;
+  private readonly speed = 2;
 
   constructor(
-    private railNetwork: RailNetwork,
-    private player: Player,
-    private source: TrainStation,
-    private destination: TrainStation,
-    private numCars: number,
+    private readonly railNetwork: RailNetwork,
+    private readonly player: Player,
+    private readonly source: TrainStation,
+    private readonly destination: TrainStation,
+    private readonly numCars: number,
   ) {}
 
   public owner(): Player {

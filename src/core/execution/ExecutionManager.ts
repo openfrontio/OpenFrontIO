@@ -28,12 +28,12 @@ import { simpleHash } from "../Util";
 
 export class Executor {
   // private random = new PseudoRandom(999)
-  private random: PseudoRandom;
+  private readonly random: PseudoRandom;
 
   constructor(
-    private mg: Game,
-    private gameID: GameID,
-    private clientID: ClientID,
+    private readonly mg: Game,
+    private readonly gameID: GameID,
+    private readonly clientID: ClientID,
   ) {
     // Add one to avoid id collisions with bots.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);

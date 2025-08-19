@@ -17,7 +17,7 @@ import { Layer } from "./Layer";
 export class UnitDisplay extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-  private _selectedStructure: UnitType | null = null;
+  private readonly _selectedStructure: UnitType | null = null;
   private _cities = 0;
   private _factories = 0;
   private _missileSilo = 0;

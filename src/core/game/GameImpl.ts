@@ -65,8 +65,8 @@ export class GameImpl implements Game {
   _playersBySmallID: Player[] = [];
 
   private execs: Execution[] = [];
-  private _width: number;
-  private _height: number;
+  private readonly _width: number;
+  private readonly _height: number;
   _terraNullius: TerraNulliusImpl;
 
   allianceRequests: AllianceRequestImpl[] = [];
@@ -76,22 +76,22 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
-  private unitGrid: UnitGrid;
+  private readonly unitGrid: UnitGrid;
 
   private playerTeams: Team[];
-  private botTeam: Team = ColoredTeams.Bot;
-  private _railNetwork: RailNetwork = createRailNetwork(this);
+  private readonly botTeam: Team = ColoredTeams.Bot;
+  private readonly _railNetwork: RailNetwork = createRailNetwork(this);
 
   // Used to assign unique IDs to each new alliance
   private nextAllianceID = 0;
 
   constructor(
-    private _humans: PlayerInfo[],
-    private _nations: Nation[],
-    private _map: GameMap,
-    private miniGameMap: GameMap,
-    private _config: Config,
-    private _stats: Stats,
+    private readonly _humans: PlayerInfo[],
+    private readonly _nations: Nation[],
+    private readonly _map: GameMap,
+    private readonly miniGameMap: GameMap,
+    private readonly _config: Config,
+    private readonly _stats: Stats,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();

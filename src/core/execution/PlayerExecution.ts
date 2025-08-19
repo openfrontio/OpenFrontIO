@@ -12,7 +12,7 @@ export class PlayerExecution implements Execution {
   private mg: Game;
   private active = true;
 
-  constructor(private player: Player) {}
+  constructor(private readonly player: Player) {}
 
   activeDuringSpawnPhase(): boolean {
     return false;

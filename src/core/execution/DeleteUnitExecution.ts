@@ -5,8 +5,8 @@ export class DeleteUnitExecution implements Execution {
   private mg: Game;
 
   constructor(
-    private player: Player,
-    private unitId: number,
+    private readonly player: Player,
+    private readonly unitId: number,
   ) {}
 
   activeDuringSpawnPhase(): boolean {

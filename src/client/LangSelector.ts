@@ -47,7 +47,7 @@ export class LangSelector extends LitElement {
   private debugKeyPressed = false;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private languageMap: Record<string, any> = {
+  private readonly languageMap: Record<string, any> = {
     ar,
     bg,
     bn,

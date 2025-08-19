@@ -18,7 +18,7 @@ export class TransportShipExecution implements Execution {
   private lastMove: number;
 
   // TODO: make this configurable
-  private ticksPerMove = 1;
+  private readonly ticksPerMove = 1;
 
   private active = true;
 
@@ -34,9 +34,9 @@ export class TransportShipExecution implements Execution {
   private pathFinder: PathFinder;
 
   constructor(
-    private attacker: Player,
-    private targetID: PlayerID | null,
-    private ref: TileRef,
+    private readonly attacker: Player,
+    private readonly targetID: PlayerID | null,
+    private readonly ref: TileRef,
     private startTroops: number,
     private src: TileRef | null,
   ) {}
