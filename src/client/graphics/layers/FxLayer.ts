@@ -71,11 +71,11 @@ export class FxLayer implements Layer {
       // Only display text fx for the current player
       return;
     }
-    const tile = bonus.tile;
+    const { tile } = bonus;
     const x = this.game.x(tile);
     let y = this.game.y(tile);
-    const gold = bonus.gold;
-    const troops = bonus.troops;
+    const { gold } = bonus;
+    const { troops } = bonus;
 
     if (gold > 0) {
       const shortened = renderNumber(gold, 0);
@@ -149,7 +149,7 @@ export class FxLayer implements Layer {
   }
 
   onRailroadEvent(railroad: RailroadUpdate) {
-    const railTiles = railroad.railTiles;
+    const { railTiles } = railroad;
     for (const rail of railTiles) {
       // No need for pseudorandom, this is fx
       const chanceFx = Math.floor(Math.random() * 3);

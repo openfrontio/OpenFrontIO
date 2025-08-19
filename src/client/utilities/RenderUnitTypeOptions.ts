@@ -36,7 +36,7 @@ export function renderUnitTypeOptions({
           type="checkbox"
           .checked=${disabledUnits.includes(type)}
           @change=${(e: Event) => {
-            const checked = (e.target as HTMLInputElement).checked;
+            const { checked } = (e.target as HTMLInputElement);
             toggleUnit(type, checked);
           }}
         />

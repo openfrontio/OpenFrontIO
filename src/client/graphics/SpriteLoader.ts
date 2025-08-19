@@ -124,7 +124,7 @@ export const colorizeCanvas = (
   ctx.drawImage(source, 0, 0);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
+  const { data } = imageData;
 
   const colorARgb = colorA.toRgb();
   const colorBRgb = colorB.toRgb();

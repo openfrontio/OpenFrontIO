@@ -75,7 +75,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     if (this.completed) return PathFindResultType.Completed;
 
     this.maxTries -= 1;
-    let iterations = this.iterations;
+    let { iterations } = this;
 
     while (!this.fwdOpenSet.isEmpty() && !this.bwdOpenSet.isEmpty()) {
       iterations--;

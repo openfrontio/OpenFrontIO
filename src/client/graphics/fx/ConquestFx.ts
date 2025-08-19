@@ -18,8 +18,8 @@ export function conquestFxFactory(
 ): Fx[] {
   const conquestFx: Fx[] = [];
   const conquered = game.player(conquest.conqueredId);
-  const x = conquered.nameLocation().x;
-  const y = conquered.nameLocation().y;
+  const { x } = conquered.nameLocation();
+  const { y } = conquered.nameLocation();
 
   const swordAnimation = new SpriteFx(
     animatedSpriteLoader,

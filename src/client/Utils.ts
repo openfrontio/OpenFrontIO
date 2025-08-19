@@ -115,7 +115,7 @@ export const translateText = (
   let message = langSelector.translations[key];
 
   if (!message && langSelector.defaultTranslations) {
-    const defaultTranslations = langSelector.defaultTranslations;
+    const { defaultTranslations } = langSelector;
     if (defaultTranslations && defaultTranslations[key]) {
       message = defaultTranslations[key];
     }

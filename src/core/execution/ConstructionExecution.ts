@@ -99,7 +99,7 @@ export class ConstructionExecution implements Execution {
   }
 
   private completeConstruction() {
-    const player = this.player;
+    const { player } = this;
     switch (this.constructionType) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:

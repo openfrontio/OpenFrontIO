@@ -85,8 +85,8 @@ export function createGrid(
     .fill(null as unknown as boolean[])
     .map(() => Array<boolean>(height).fill(false));
 
-  for (let x = scaledBoundingBox.min.x; x <= scaledBoundingBox.max.x; x++) {
-    for (let y = scaledBoundingBox.min.y; y <= scaledBoundingBox.max.y; y++) {
+  for (let { x } = scaledBoundingBox.min; x <= scaledBoundingBox.max.x; x++) {
+    for (let { y } = scaledBoundingBox.min; y <= scaledBoundingBox.max.y; y++) {
       const cell = new Cell(x * scalingFactor, y * scalingFactor);
       if (game.isOnMap(cell)) {
         const tile = game.ref(cell.x, cell.y);
