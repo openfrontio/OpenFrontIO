@@ -98,7 +98,8 @@ export class FakeHumanExecution implements Execution {
       /* When player is hostile starts embargo. Do not stop until neutral again */
       if (
         player.relation(other) <= Relation.Hostile &&
-        !player.hasEmbargoAgainst(other)
+        !player.hasEmbargoAgainst(other) &&
+        !player.isOnSameTeam(other)
       ) {
         player.addEmbargo(other, false);
       } else if (
