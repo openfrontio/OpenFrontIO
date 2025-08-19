@@ -83,7 +83,7 @@ export type KickPlayerEvent = {
 
 class Client {
   private gameStop: (() => void) | null = null;
-  private eventBus: EventBus = new EventBus();
+  private readonly eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -91,7 +91,7 @@ class Client {
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   constructor() {}
 

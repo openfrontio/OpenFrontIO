@@ -19,11 +19,11 @@ export class SAMMissileExecution implements Execution {
   private speed = 0;
 
   constructor(
-    private spawn: TileRef,
-    private _owner: Player,
-    private ownerUnit: Unit,
-    private target: Unit,
-    private targetTile: TileRef,
+    private readonly spawn: TileRef,
+    private readonly _owner: Player,
+    private readonly ownerUnit: Unit,
+    private readonly target: Unit,
+    private readonly targetTile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {

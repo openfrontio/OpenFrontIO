@@ -18,15 +18,15 @@ export class BotBehavior {
   private enemy: Player | null = null;
   private enemyUpdated: Tick;
 
-  private assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
+  private readonly assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
 
   constructor(
-    private random: PseudoRandom,
-    private game: Game,
-    private player: Player,
-    private triggerRatio: number,
-    private reserveRatio: number,
-    private expandRatio: number,
+    private readonly random: PseudoRandom,
+    private readonly game: Game,
+    private readonly player: Player,
+    private readonly triggerRatio: number,
+    private readonly reserveRatio: number,
+    private readonly expandRatio: number,
   ) {}
 
   handleAllianceRequests() {

@@ -12,32 +12,32 @@ export type GraphAdapter<NodeType> = {
 };
 
 export class SerialAStar<NodeType> implements AStar<NodeType> {
-  private fwdOpenSet: FastPriorityQueue<{
+  private readonly fwdOpenSet: FastPriorityQueue<{
     tile: NodeType;
     fScore: number;
   }>;
-  private bwdOpenSet: FastPriorityQueue<{
+  private readonly bwdOpenSet: FastPriorityQueue<{
     tile: NodeType;
     fScore: number;
   }>;
 
-  private fwdCameFrom = new Map<NodeType, NodeType>();
-  private bwdCameFrom = new Map<NodeType, NodeType>();
-  private fwdGScore = new Map<NodeType, number>();
-  private bwdGScore = new Map<NodeType, number>();
+  private readonly fwdCameFrom = new Map<NodeType, NodeType>();
+  private readonly bwdCameFrom = new Map<NodeType, NodeType>();
+  private readonly fwdGScore = new Map<NodeType, number>();
+  private readonly bwdGScore = new Map<NodeType, number>();
 
   private meetingPoint: NodeType | null = null;
   public completed = false;
-  private sources: NodeType[];
-  private closestSource: NodeType;
+  private readonly sources: NodeType[];
+  private readonly closestSource: NodeType;
 
   constructor(
     src: NodeType | NodeType[],
-    private dst: NodeType,
-    private iterations: number,
+    private readonly dst: NodeType,
+    private readonly iterations: number,
     private maxTries: number,
-    private graph: GraphAdapter<NodeType>,
-    private directionChangePenalty = 0,
+    private readonly graph: GraphAdapter<NodeType>,
+    private readonly directionChangePenalty = 0,
   ) {
     this.fwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);
     this.bwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);

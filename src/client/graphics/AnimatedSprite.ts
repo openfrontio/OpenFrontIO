@@ -1,15 +1,15 @@
 export class AnimatedSprite {
-  private frameHeight: number;
+  private readonly frameHeight: number;
   private currentFrame = 0;
   private elapsedTime = 0;
   private active = true;
 
   constructor(
-    private image: CanvasImageSource,
-    private frameWidth: number,
-    private frameCount: number,
-    private frameDuration: number, // in milliseconds
-    private looping = false,
+    private readonly image: CanvasImageSource,
+    private readonly frameWidth: number,
+    private readonly frameCount: number,
+    private readonly frameDuration: number, // in milliseconds
+    private readonly looping = false,
     private originX: number,
     private originY: number,
   ) {

@@ -209,13 +209,13 @@ export abstract class DefaultServerConfig implements ServerConfig {
 }
 
 export class DefaultConfig implements Config {
-  private pastelTheme: PastelTheme = new PastelTheme();
-  private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
+  private readonly pastelTheme: PastelTheme = new PastelTheme();
+  private readonly pastelThemeDark: PastelThemeDark = new PastelThemeDark();
   constructor(
-    private _serverConfig: ServerConfig,
-    private _gameConfig: GameConfig,
-    private _userSettings: UserSettings | null,
-    private _isReplay: boolean,
+    private readonly _serverConfig: ServerConfig,
+    private readonly _gameConfig: GameConfig,
+    private readonly _userSettings: UserSettings | null,
+    private readonly _isReplay: boolean,
   ) {}
 
   stripePublishableKey(): string {

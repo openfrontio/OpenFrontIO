@@ -24,21 +24,21 @@ import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
-  private radialMenu: RadialMenu;
+  private readonly radialMenu: RadialMenu;
 
-  private playerActionHandler: PlayerActionHandler;
-  private chatIntegration: ChatIntegration;
+  private readonly playerActionHandler: PlayerActionHandler;
+  private readonly chatIntegration: ChatIntegration;
 
   private clickedTile: TileRef | null = null;
 
   constructor(
-    private eventBus: EventBus,
-    private game: GameView,
-    private transformHandler: TransformHandler,
-    private emojiTable: EmojiTable,
-    private buildMenu: BuildMenu,
-    private uiState: UIState,
-    private playerPanel: PlayerPanel,
+    private readonly eventBus: EventBus,
+    private readonly game: GameView,
+    private readonly transformHandler: TransformHandler,
+    private readonly emojiTable: EmojiTable,
+    private readonly buildMenu: BuildMenu,
+    private readonly uiState: UIState,
+    private readonly playerPanel: PlayerPanel,
   ) {
     super();
 

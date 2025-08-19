@@ -8,10 +8,10 @@ export type UnitPredicate = (value: {
 }) => boolean;
 
 export class UnitGrid {
-  private grid: Map<UnitType, Set<Unit | UnitView>>[][];
+  private readonly grid: Map<UnitType, Set<Unit | UnitView>>[][];
   private readonly cellSize = 100;
 
-  constructor(private gm: GameMap) {
+  constructor(private readonly gm: GameMap) {
     this.grid = Array(Math.ceil(gm.height() / this.cellSize))
       .fill(null)
       .map(() =>

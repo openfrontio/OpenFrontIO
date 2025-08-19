@@ -20,8 +20,8 @@ import { UIState } from "../UIState";
 
 export class PlayerActionHandler {
   constructor(
-    private eventBus: EventBus,
-    private uiState: UIState,
+    private readonly eventBus: EventBus,
+    private readonly uiState: UIState,
   ) {}
 
   async getPlayerActions(

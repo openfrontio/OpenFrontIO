@@ -11,7 +11,7 @@ type NationMapModule = {
 };
 
 export class BinaryLoaderGameMapLoader implements GameMapLoader {
-  private maps: Map<GameMapType, MapData>;
+  private readonly maps: Map<GameMapType, MapData>;
 
   constructor() {
     this.maps = new Map<GameMapType, MapData>();

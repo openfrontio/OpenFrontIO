@@ -6,8 +6,8 @@ export class EmbargoExecution implements Execution {
   private target: Player;
 
   constructor(
-    private player: Player,
-    private targetID: PlayerID,
+    private readonly player: Player,
+    private readonly targetID: PlayerID,
     private readonly action: "start" | "stop",
   ) {}
 

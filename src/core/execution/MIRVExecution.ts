@@ -20,8 +20,8 @@ export class MirvExecution implements Execution {
 
   private nuke: Unit | null = null;
 
-  private mirvRange = 1500;
-  private warheadCount = 350;
+  private readonly mirvRange = 1500;
+  private readonly warheadCount = 350;
 
   private random: PseudoRandom;
 
@@ -34,8 +34,8 @@ export class MirvExecution implements Execution {
   private speed = -1;
 
   constructor(
-    private player: Player,
-    private dst: TileRef,
+    private readonly player: Player,
+    private readonly dst: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {

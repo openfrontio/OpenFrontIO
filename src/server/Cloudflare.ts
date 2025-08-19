@@ -49,13 +49,13 @@ const CloudflareTunnelConfigSchema = z.object({
 });
 
 export class Cloudflare {
-  private baseUrl = "https://api.cloudflare.com/client/v4";
+  private readonly baseUrl = "https://api.cloudflare.com/client/v4";
 
   constructor(
-    private accountId: string,
-    private apiToken: string,
-    private configPath: string,
-    private credsPath: string,
+    private readonly accountId: string,
+    private readonly apiToken: string,
+    private readonly configPath: string,
+    private readonly credsPath: string,
   ) {
     log.info(`Using config: ${this.configPath}`);
     log.info(`Using credentials: ${this.credsPath}`);

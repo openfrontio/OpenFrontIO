@@ -285,7 +285,7 @@ export class Nation {
 export class Cell {
   public index: number;
 
-  private strRepr: string;
+  private readonly strRepr: string;
 
   constructor(
     public readonly x: number,

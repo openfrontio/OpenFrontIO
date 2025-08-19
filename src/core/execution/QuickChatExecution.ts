@@ -7,10 +7,10 @@ export class QuickChatExecution implements Execution {
   private active = true;
 
   constructor(
-    private sender: Player,
-    private recipientID: PlayerID,
-    private quickChatKey: string,
-    private target: PlayerID | undefined,
+    private readonly sender: Player,
+    private readonly recipientID: PlayerID,
+    private readonly quickChatKey: string,
+    private readonly target: PlayerID | undefined,
   ) {}
 
   init(mg: Game, ticks: number): void {

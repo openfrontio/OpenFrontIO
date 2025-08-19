@@ -21,8 +21,8 @@ export class TradeShipExecution implements Execution {
   private tilesTraveled = 0;
 
   constructor(
-    private origOwner: Player,
-    private srcPort: Unit,
+    private readonly origOwner: Player,
+    private readonly srcPort: Unit,
     private _dstPort: Unit,
   ) {}
 

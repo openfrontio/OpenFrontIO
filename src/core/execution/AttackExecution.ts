@@ -19,9 +19,9 @@ export class AttackExecution implements Execution {
   private breakAlliance = false;
   private wasAlliedAtInit = false; // Store alliance state at initialization
   private active = true;
-  private toConquer = new FlatBinaryHeap();
+  private readonly toConquer = new FlatBinaryHeap();
 
-  private random = new PseudoRandom(123);
+  private readonly random = new PseudoRandom(123);
 
   private target: Player | TerraNullius;
 
@@ -31,10 +31,10 @@ export class AttackExecution implements Execution {
 
   constructor(
     private startTroops: number | null = null,
-    private _owner: Player,
-    private _targetID: PlayerID | null,
-    private sourceTile: TileRef | null = null,
-    private removeTroops = true,
+    private readonly _owner: Player,
+    private readonly _targetID: PlayerID | null,
+    private readonly sourceTile: TileRef | null = null,
+    private readonly removeTroops = true,
   ) {}
 
   public targetID(): PlayerID | null {

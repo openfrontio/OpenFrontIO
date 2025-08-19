@@ -10,8 +10,8 @@ export class TerrainLayer implements Layer {
   private theme: Theme;
 
   constructor(
-    private game: GameView,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly transformHandler: TransformHandler,
   ) {}
   shouldTransform(): boolean {
     return true;

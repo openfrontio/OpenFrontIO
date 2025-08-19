@@ -6,8 +6,8 @@ export class TargetPlayerExecution implements Execution {
   private active = true;
 
   constructor(
-    private requestor: Player,
-    private targetID: PlayerID,
+    private readonly requestor: Player,
+    private readonly targetID: PlayerID,
   ) {}
 
   init(mg: Game, ticks: number): void {

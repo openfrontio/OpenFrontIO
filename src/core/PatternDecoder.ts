@@ -1,5 +1,5 @@
 export class PatternDecoder {
-  private bytes: Uint8Array;
+  private readonly bytes: Uint8Array;
 
   readonly height: number;
   readonly width: number;

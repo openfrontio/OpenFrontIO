@@ -29,8 +29,8 @@ export class ConstructionExecution implements Execution {
 
   constructor(
     private player: Player,
-    private constructionType: UnitType,
-    private tile: TileRef,
+    private readonly constructionType: UnitType,
+    private readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {

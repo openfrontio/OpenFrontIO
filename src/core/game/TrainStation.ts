@@ -37,7 +37,7 @@ class CityStopHandler implements TrainStopHandler {
 }
 
 class PortStopHandler implements TrainStopHandler {
-  constructor(private random: PseudoRandom) {}
+  constructor(private readonly random: PseudoRandom) {}
   onStop(
     mg: Game,
     station: TrainStation,
@@ -88,10 +88,10 @@ export class TrainStation {
   private readonly stopHandlers: Partial<Record<UnitType, TrainStopHandler>> =
     {};
   private cluster: Cluster | null;
-  private railroads: Set<Railroad> = new Set();
+  private readonly railroads: Set<Railroad> = new Set();
 
   constructor(
-    private mg: Game,
+    private readonly mg: Game,
     public unit: Unit,
   ) {
     this.stopHandlers = createTrainStopHandlers(new PseudoRandom(mg.ticks()));
@@ -173,7 +173,7 @@ export class TrainStation {
  * Make the trainstation usable with A*
  */
 export class TrainStationMapAdapter implements GraphAdapter<TrainStation> {
-  constructor(private game: Game) {}
+  constructor(private readonly game: Game) {}
 
   neighbors(node: TrainStation): TrainStation[] {
     return node.neighbors();

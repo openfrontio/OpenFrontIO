@@ -2,11 +2,11 @@ import { Execution, Game, Player, Unit } from "../game/Game";
 
 export class UpgradeStructureExecution implements Execution {
   private structure: Unit | undefined;
-  private cost: bigint;
+  private readonly cost: bigint;
 
   constructor(
-    private player: Player,
-    private unitId: number,
+    private readonly player: Player,
+    private readonly unitId: number,
   ) {}
 
   init(mg: Game, ticks: number): void {

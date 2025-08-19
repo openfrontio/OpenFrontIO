@@ -27,14 +27,14 @@ const PROGRESSBAR_HEIGHT = 3; // Height of a bar
 export class UILayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D | null;
-  private theme: Theme | null = null;
-  private userSettings: UserSettings = new UserSettings();
+  private readonly theme: Theme | null = null;
+  private readonly userSettings: UserSettings = new UserSettings();
   private selectionAnimTime = 0;
-  private allProgressBars: Map<
+  private readonly allProgressBars: Map<
     number,
     { unit: UnitView; progressBar: ProgressBar }
   > = new Map();
-  private allHealthBars: Map<number, ProgressBar> = new Map();
+  private readonly allHealthBars: Map<number, ProgressBar> = new Map();
   // Keep track of currently selected unit
   private selectedUnit: UnitView | null = null;
 
@@ -49,9 +49,9 @@ export class UILayer implements Layer {
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
   }

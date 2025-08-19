@@ -45,7 +45,7 @@ const secondsToHms = (d: number): string => {
 export class OptionsMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   @state()
   private showPauseButton = true;

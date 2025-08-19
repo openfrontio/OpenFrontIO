@@ -24,9 +24,9 @@ export class TransformHandler {
   private changed = false;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private canvas: HTMLCanvasElement,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly canvas: HTMLCanvasElement,
   ) {
     this._boundingRect = this.canvas.getBoundingClientRect();
     this.eventBus.on(ZoomEvent, (e) => this.onZoom(e));

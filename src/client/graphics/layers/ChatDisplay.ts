@@ -24,7 +24,7 @@ export class ChatDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
 
-  private active = false;
+  private readonly active = false;
 
   @state() private _hidden = false;
   @state() private newEvents = 0;
