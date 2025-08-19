@@ -40,16 +40,6 @@ export class TerritoryPatternsModal extends LitElement {
     super();
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-    this.updateComplete.then(() => {
-      this.open().then(() => {
-        this.updatePreview();
-      });
-    });
-  }
-
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
@@ -61,7 +51,7 @@ export class TerritoryPatternsModal extends LitElement {
     if (storedPatternName) {
       this.selectedPattern = this.patterns.get(storedPatternName);
     }
-    this.requestUpdate();
+    this.refresh();
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -234,18 +224,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   public async open() {
     this.isActive = true;
-    this.requestUpdate();
-
-    // Wait for the DOM to be updated and the o-modal element to be available
-    await this.updateComplete;
-
-    // Now modalEl should be available
-    if (this.modalEl) {
-      this.modalEl.open();
-    } else {
-      console.warn("modalEl is still null after updateComplete");
-    }
-
+    await this.refresh();
     window.addEventListener("keydown", this.handleKeyDown);
   }
 
@@ -258,7 +237,7 @@ export class TerritoryPatternsModal extends LitElement {
   private selectPattern(pattern: Pattern | undefined) {
     this.userSettings.setSelectedPatternName(pattern?.name);
     this.selectedPattern = pattern;
-    this.updatePreview();
+    this.refresh();
     this.close();
   }
 
@@ -314,14 +293,26 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  public updatePreview() {
-    if (this.previewButton === null) return;
+  public async refresh() {
     const preview = this.renderPatternPreview(
       this.selectedPattern?.pattern,
       48,
       48,
     );
+    this.requestUpdate();
+
+    // Wait for the DOM to be updated and the o-modal element to be available
+    await this.updateComplete;
+
+    // Now modalEl should be available
+    if (this.modalEl) {
+      this.modalEl.open();
+    } else {
+      console.warn("modalEl is still null after updateComplete");
+    }
+    if (this.previewButton === null) return;
     render(preview, this.previewButton);
+    this.requestUpdate();
   }
 
   private handleMouseEnter(pattern: Pattern, event: MouseEvent) {
