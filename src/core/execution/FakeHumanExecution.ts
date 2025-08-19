@@ -248,7 +248,7 @@ export class FakeHumanExecution implements Execution {
     if (other.isTraitor()) {
       return false;
     }
-    const difficulty = this.mg.config().gameConfig().difficulty;
+    const { difficulty } = this.mg.config().gameConfig();
     if (
       difficulty === Difficulty.Hard ||
       difficulty === Difficulty.Impossible
