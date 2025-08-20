@@ -5,23 +5,23 @@ import {
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
-import { generateID } from "../Util";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { TileRef } from "../game/GameMap";
 import { WorkerMessage } from "./WorkerMessages";
+import { generateID } from "../Util";
 
 export class WorkerClient {
-  private worker: Worker;
+  private readonly worker: Worker;
   private isInitialized = false;
-  private messageHandlers: Map<string, (message: WorkerMessage) => void>;
+  private readonly messageHandlers: Map<string, (message: WorkerMessage) => void>;
   private gameUpdateCallback?: (
     update: GameUpdateViewData | ErrorUpdate,
   ) => void;
 
   constructor(
-    private gameStartInfo: GameStartInfo,
-    private clientID: ClientID,
+    private readonly gameStartInfo: GameStartInfo,
+    private readonly clientID: ClientID,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
     this.messageHandlers = new Map();
@@ -184,8 +184,8 @@ export class WorkerClient {
         id: messageId,
         playerID,
         type: "player_actions",
-        x: x,
-        y: y,
+        x,
+        y,
       });
     });
   }

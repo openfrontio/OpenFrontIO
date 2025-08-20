@@ -8,17 +8,17 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { targetTransportTile } from "../game/TransportShipUtils";
+import { AttackExecution } from "./AttackExecution";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
-import { AttackExecution } from "./AttackExecution";
+import { TileRef } from "../game/GameMap";
+import { targetTransportTile } from "../game/TransportShipUtils";
 
 export class TransportShipExecution implements Execution {
   private lastMove: number;
 
   // TODO: make this configurable
-  private ticksPerMove = 1;
+  private readonly ticksPerMove = 1;
 
   private active = true;
 
@@ -34,9 +34,9 @@ export class TransportShipExecution implements Execution {
   private pathFinder: PathFinder;
 
   constructor(
-    private attacker: Player,
-    private targetID: PlayerID | null,
-    private ref: TileRef,
+    private readonly attacker: Player,
+    private readonly targetID: PlayerID | null,
+    private readonly ref: TileRef,
     private startTroops: number,
     private src: TileRef | null,
   ) {}
@@ -108,7 +108,7 @@ export class TransportShipExecution implements Execution {
       this.dst,
     );
     if (closestTileSrc === false) {
-      console.warn(`can't build transport ship`);
+      console.warn("can't build transport ship");
       this.active = false;
       return;
     }
@@ -214,7 +214,7 @@ export class TransportShipExecution implements Execution {
         break;
       case PathFindResultType.PathNotFound:
         // TODO: add to poisoned port list
-        console.warn(`path not found to dst`);
+        console.warn("path not found to dst");
         this.attacker.addTroops(this.boat.troops());
         this.boat.delete(false);
         this.active = false;

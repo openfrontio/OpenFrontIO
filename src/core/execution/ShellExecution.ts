@@ -1,7 +1,7 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
 
 export class ShellExecution implements Execution {
   private active = true;
@@ -12,10 +12,10 @@ export class ShellExecution implements Execution {
   private random: PseudoRandom;
 
   constructor(
-    private spawn: TileRef,
-    private _owner: Player,
-    private ownerUnit: Unit,
-    private target: Unit,
+    private readonly spawn: TileRef,
+    private readonly _owner: Player,
+    private readonly ownerUnit: Unit,
+    private readonly target: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {

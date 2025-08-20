@@ -13,11 +13,11 @@ export type PrivilegeChecker = {
 };
 
 export class PrivilegeCheckerImpl implements PrivilegeChecker {
-  private b64ToPattern: Record<string, Pattern> = {};
+  private readonly b64ToPattern: Record<string, Pattern> = {};
 
   constructor(
-    private cosmetics: Cosmetics,
-    private b64urlDecode: (base64: string) => Uint8Array,
+    private readonly cosmetics: Cosmetics,
+    private readonly b64urlDecode: (base64: string) => Uint8Array,
   ) {
     for (const name in this.cosmetics.patterns) {
       const pattern = this.cosmetics.patterns[name];

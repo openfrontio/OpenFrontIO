@@ -1,7 +1,7 @@
-import { GameView } from "../../../core/game/GameView";
-import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { Fx, FxType } from "./Fx";
 import { FadeFx, SpriteFx } from "./SpriteFx";
+import { Fx, FxType } from "./Fx";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
+import { GameView } from "../../../core/game/GameView";
 
 /**
  * Shockwave effect: draw a growing 1px white circle
@@ -9,10 +9,10 @@ import { FadeFx, SpriteFx } from "./SpriteFx";
 export class ShockwaveFx implements Fx {
   private lifeTime = 0;
   constructor(
-    private x: number,
-    private y: number,
-    private duration: number,
-    private maxRadius: number,
+    private readonly x: number,
+    private readonly y: number,
+    private readonly duration: number,
+    private readonly maxRadius: number,
   ) {}
 
   renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {

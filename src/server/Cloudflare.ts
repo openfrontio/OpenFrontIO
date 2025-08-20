@@ -1,8 +1,8 @@
-import { spawn } from "child_process";
 import { promises as fs } from "fs";
+import { logger } from "./Logger";
+import { spawn } from "child_process";
 import yaml from "js-yaml";
 import { z } from "zod";
-import { logger } from "./Logger";
 
 const log = logger.child({
   module: "cloudflare",
@@ -49,13 +49,13 @@ const CloudflareTunnelConfigSchema = z.object({
 });
 
 export class Cloudflare {
-  private baseUrl = "https://api.cloudflare.com/client/v4";
+  private readonly baseUrl = "https://api.cloudflare.com/client/v4";
 
   constructor(
-    private accountId: string,
-    private apiToken: string,
-    private configPath: string,
-    private credsPath: string,
+    private readonly accountId: string,
+    private readonly apiToken: string,
+    private readonly configPath: string,
+    private readonly credsPath: string,
   ) {
     log.info(`Using config: ${this.configPath}`);
     log.info(`Using credentials: ${this.credsPath}`);
@@ -64,6 +64,7 @@ export class Cloudflare {
   private async makeRequest<T>(
     url: string,
     method = "GET",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data?: any,
   ): Promise<T> {
     const response = await fetch(url, {
@@ -188,7 +189,7 @@ export class Cloudflare {
         ...Array.from(subdomainToService.entries()).map(
           ([subdomain, service]) => ({
             hostname: `${subdomain}.${domain}`,
-            service: service,
+            service,
           }),
         ),
         {
@@ -255,9 +256,11 @@ export class Cloudflare {
     );
 
     cloudflared.stdout?.on("data", (data) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       log.info(data.toString().trim());
     });
     cloudflared.stderr?.on("data", (data) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       log.error(data.toString().trim());
     });
 

@@ -1,8 +1,8 @@
-import { Theme } from "../../../core/configuration/Config";
-import { PlayerView } from "../../../core/game/GameView";
+import { Fx, FxType } from "./Fx";
 import { AnimatedSprite } from "../AnimatedSprite";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { Fx, FxType } from "./Fx";
+import { PlayerView } from "../../../core/game/GameView";
+import { Theme } from "../../../core/configuration/Config";
 
 function fadeInOut(t: number, fadeIn = 0.3, fadeOut = 0.7): number {
   if (t < fadeIn) {
@@ -20,9 +20,9 @@ function fadeInOut(t: number, fadeIn = 0.3, fadeOut = 0.7): number {
  */
 export class FadeFx implements Fx {
   constructor(
-    private fxToFade: SpriteFx,
-    private fadeIn: number,
-    private fadeOut: number,
+    private readonly fxToFade: SpriteFx,
+    private readonly fadeIn: number,
+    private readonly fadeOut: number,
   ) {}
 
   renderTick(duration: number, ctx: CanvasRenderingContext2D): boolean {

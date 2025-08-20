@@ -1,14 +1,14 @@
-import { Game } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
-import { PseudoRandom } from "../PseudoRandom";
-import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { AStar, AStarResult, PathFindResultType } from "./AStar";
+import { GameMap, TileRef } from "../game/GameMap";
+import { DistanceBasedBezierCurve } from "../utilities/Line";
+import { Game } from "../game/Game";
 import { MiniAStar } from "./MiniAStar";
+import { PseudoRandom } from "../PseudoRandom";
 
 const parabolaMinHeight = 50;
 
 export class ParabolaPathFinder {
-  constructor(private mg: GameMap) {}
+  constructor(private readonly mg: GameMap) {}
   private curve: DistanceBasedBezierCurve | undefined;
 
   computeControlPoints(
@@ -68,8 +68,8 @@ export class ParabolaPathFinder {
 
 export class AirPathFinder {
   constructor(
-    private mg: GameMap,
-    private random: PseudoRandom,
+    private readonly mg: GameMap,
+    private readonly random: PseudoRandom,
   ) {}
 
   nextTile(tile: TileRef, dst: TileRef): TileRef | true {
@@ -110,8 +110,8 @@ export class PathFinder {
   private computeFinished = true;
 
   private constructor(
-    private game: Game,
-    private newAStar: (curr: TileRef, dst: TileRef) => AStar<TileRef>,
+    private readonly game: Game,
+    private readonly newAStar: (curr: TileRef, dst: TileRef) => AStar<TileRef>,
   ) {}
 
   public static Mini(

@@ -1,8 +1,8 @@
+import { AnalyticsRecord, GameID, GameRecord } from "../core/Schemas";
 import { S3 } from "@aws-sdk/client-s3";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { AnalyticsRecord, GameID, GameRecord } from "../core/Schemas";
-import { replacer } from "../core/Util";
 import { logger } from "./Logger";
+import { replacer } from "../core/Util";
 
 const config = getServerConfigFromServer();
 
@@ -48,9 +48,9 @@ export async function archive(gameRecord: GameRecord) {
 
     const { message, stack, name } = error;
     log.error(`${gameRecord.info.gameID}: Final archive error: ${error}`, {
-      message: message,
-      stack: stack,
-      name: name,
+      message,
+      stack,
+      name,
       ...(error && typeof error === "object" ? error : {}),
     });
   }
@@ -90,9 +90,9 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
 
     const { message, stack, name } = error;
     log.error(`${info.gameID}: Error writing game analytics to R2: ${error}`, {
-      message: message,
-      stack: stack,
-      name: name,
+      message,
+      stack,
+      name,
       ...(error && typeof error === "object" ? error : {}),
     });
     throw error;
@@ -147,9 +147,9 @@ export async function readGameRecord(
     const { message, stack, name } = error;
     // Log the error for monitoring purposes
     log.error(`${gameId}: Error reading game record from R2: ${error}`, {
-      message: message,
-      stack: stack,
-      name: name,
+      message,
+      stack,
+      name,
       ...(error && typeof error === "object" ? error : {}),
     });
 
@@ -178,9 +178,9 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
       return false;
     }
     log.error(`${gameId}: Error checking archive existence: ${error}`, {
-      message: message,
-      stack: stack,
-      name: name,
+      message,
+      stack,
+      name,
       ...(error && typeof error === "object" ? error : {}),
     });
     return false;

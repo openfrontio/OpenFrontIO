@@ -1,4 +1,3 @@
-import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
@@ -10,10 +9,11 @@ import {
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameImpl } from "./GameImpl";
-import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
+import { simpleHash, toInt, withinInt } from "../Util";
+import { GameImpl } from "./GameImpl";
 import { PlayerImpl } from "./PlayerImpl";
+import { TileRef } from "./GameMap";
 
 export class UnitImpl implements Unit {
   private _active = true;
@@ -29,22 +29,22 @@ export class UnitImpl implements Unit {
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
   // Number of missiles in cooldown, if empty all missiles are ready.
-  private _missileTimerQueue: number[] = [];
+  private readonly _missileTimerQueue: number[] = [];
   private _hasTrainStation = false;
   private _patrolTile: TileRef | undefined;
   private _level = 1;
   private _targetable = true;
   private _loaded: boolean | undefined;
-  private _trainType: TrainType | undefined;
+  private readonly _trainType: TrainType | undefined;
   // Nuke only
   private _trajectoryIndex = 0;
-  private _trajectory: TrajectoryTile[];
+  private readonly _trajectory: TrajectoryTile[];
 
   constructor(
-    private _type: UnitType,
-    private mg: GameImpl,
+    private readonly _type: UnitType,
+    private readonly mg: GameImpl,
     private _tile: TileRef,
-    private _id: number,
+    private readonly _id: number,
     public _owner: PlayerImpl,
     params: AllUnitParams = {},
   ) {

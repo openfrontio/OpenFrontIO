@@ -1,14 +1,14 @@
-import { Colord } from "colord";
-import { html, LitElement } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { Colord } from "colord";
+import { GameMode } from "../../../core/game/Game";
+import { GameView } from "../../../core/game/GameView";
+import { Layer } from "./Layer";
 import leaderboardRegularIcon from "../../../../resources/images/LeaderboardIconRegularWhite.svg";
 import leaderboardSolidIcon from "../../../../resources/images/LeaderboardIconSolidWhite.svg";
 import teamRegularIcon from "../../../../resources/images/TeamIconRegularWhite.svg";
 import teamSolidIcon from "../../../../resources/images/TeamIconSolidWhite.svg";
-import { GameMode } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
-import { Layer } from "./Layer";
 
 @customElement("game-left-sidebar")
 export class GameLeftSidebar extends LitElement implements Layer {
@@ -87,9 +87,11 @@ export class GameLeftSidebar extends LitElement implements Layer {
   render() {
     return html`
       <aside
-        class=${`fixed top-[20px] left-0 z-[1000] flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-tr-lg rounded-br-lg transition-transform duration-300 ease-out transform ${
-          this.isVisible ? "translate-x-0" : "-translate-x-full"
-        }`}
+        class=${`fixed top-[20px] left-0 z-[1000] flex flex-col
+          max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40
+          backdrop-blur-sm shadow-xs rounded-tr-lg rounded-br-lg
+          transition-transform duration-300 ease-out transform
+          ${this.isVisible ? "translate-x-0" : "-translate-x-full"}`}
       >
         ${this.isPlayerTeamLabelVisible
           ? html`

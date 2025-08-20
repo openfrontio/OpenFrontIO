@@ -1,34 +1,35 @@
-import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
   ConquestUpdate,
   GameUpdateType,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../../core/game/GameView";
-import { renderNumber } from "../../Utils";
-import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
-import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
+import { GameView, UnitView } from "../../../core/game/GameView";
+import { ShockwaveFx, nukeFxFactory } from "../fx/NukeFx";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
+import { Layer } from "./Layer";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TextFx } from "../fx/TextFx";
+import { Theme } from "../../../core/configuration/Config";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
-import { Layer } from "./Layer";
+import { UnitType } from "../../../core/game/Game";
+import { conquestFxFactory } from "../fx/ConquestFx";
+import { renderNumber } from "../../Utils";
+
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
 
   private lastRefresh = 0;
-  private refreshRate = 10;
-  private theme: Theme;
-  private animatedSpriteLoader: AnimatedSpriteLoader =
+  private readonly refreshRate = 10;
+  private readonly theme: Theme;
+  private readonly animatedSpriteLoader: AnimatedSpriteLoader =
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
 
-  constructor(private game: GameView) {
+  constructor(private readonly game: GameView) {
     this.theme = this.game.config().theme();
   }
 
@@ -70,11 +71,11 @@ export class FxLayer implements Layer {
       // Only display text fx for the current player
       return;
     }
-    const tile = bonus.tile;
+    const { tile } = bonus;
     const x = this.game.x(tile);
     let y = this.game.y(tile);
-    const gold = bonus.gold;
-    const troops = bonus.troops;
+    const { gold } = bonus;
+    const { troops } = bonus;
 
     if (gold > 0) {
       const shortened = renderNumber(gold, 0);
@@ -148,7 +149,7 @@ export class FxLayer implements Layer {
   }
 
   onRailroadEvent(railroad: RailroadUpdate) {
-    const railTiles = railroad.railTiles;
+    const { railTiles } = railroad;
     for (const rail of railTiles) {
       // No need for pseudorandom, this is fx
       const chanceFx = Math.floor(Math.random() * 3);

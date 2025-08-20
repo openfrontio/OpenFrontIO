@@ -1,4 +1,3 @@
-import { renderNumber } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -7,10 +6,11 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
+import { TileRef } from "../game/GameMap";
 import { distSortUnit } from "../Util";
+import { renderNumber } from "../../client/Utils";
 
 export class TradeShipExecution implements Execution {
   private active = true;
@@ -21,8 +21,8 @@ export class TradeShipExecution implements Execution {
   private tilesTraveled = 0;
 
   constructor(
-    private origOwner: Player,
-    private srcPort: Unit,
+    private readonly origOwner: Player,
+    private readonly srcPort: Unit,
     private _dstPort: Unit,
   ) {}
 
@@ -38,7 +38,7 @@ export class TradeShipExecution implements Execution {
         this.srcPort.tile(),
       );
       if (spawn === false) {
-        console.warn(`cannot build trade ship`);
+        console.warn("cannot build trade ship");
         this.active = false;
         return;
       }

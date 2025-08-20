@@ -1,15 +1,15 @@
 import {
   Execution,
   Game,
-  isUnit,
   MessageType,
   Player,
   Unit,
   UnitType,
+  isUnit,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
+import { TileRef } from "../game/GameMap";
 
 type Target = {
   unit: Unit;
@@ -21,12 +21,11 @@ type Target = {
  */
 class SAMTargetingSystem {
   // Store unreachable nukes so the SAM won't compute an interception point for them every frame
-  private nukesToIgnore: Set<number> = new Set();
+  private readonly nukesToIgnore: Set<number> = new Set();
 
   constructor(
-    private mg: Game,
-    private player: Player,
-    private sam: Unit,
+    private readonly mg: Game,
+    private readonly sam: Unit,
   ) {}
 
   updateUnreachableNukes(nearbyUnits: { unit: Unit; distSquared: number }[]) {
@@ -82,8 +81,8 @@ class SAMTargetingSystem {
       ({ unit }) => {
         return (
           isUnit(unit) &&
-          unit.owner() !== this.player &&
-          !this.player.isFriendly(unit.owner())
+          unit.owner() !== this.sam.owner() &&
+          !this.sam.owner().isFriendly(unit.owner())
         );
       },
     );
@@ -132,15 +131,15 @@ export class SAMLauncherExecution implements Execution {
 
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
-  private MIRVWarheadSearchRadius = 400;
-  private MIRVWarheadProtectionRadius = 50;
+  private readonly MIRVWarheadSearchRadius = 400;
+  private readonly MIRVWarheadProtectionRadius = 50;
   private targetingSystem: SAMTargetingSystem;
 
   private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
     private player: Player,
-    private tile: TileRef | null,
+    private readonly tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
     if (sam !== null) {
@@ -180,11 +179,7 @@ export class SAMLauncherExecution implements Execution {
       }
       this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {});
     }
-    this.targetingSystem ??= new SAMTargetingSystem(
-      this.mg,
-      this.player,
-      this.sam,
-    );
+    this.targetingSystem ??= new SAMTargetingSystem(this.mg, this.sam);
 
     if (this.sam.isInCooldown()) {
       const frontTime = this.sam.missileTimerQueue()[0];

@@ -74,7 +74,7 @@ export class SettingKeybind extends LitElement {
     if (!this.listening) return;
     e.preventDefault();
 
-    const code = e.code;
+    const { code } = e;
 
     this.value = code;
 

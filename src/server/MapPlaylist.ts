@@ -1,4 +1,3 @@
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
@@ -9,8 +8,9 @@ import {
   Quads,
   Trios,
 } from "../core/game/Game";
-import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
+import { PseudoRandom } from "../core/PseudoRandom";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { logger } from "./Logger";
 
 const log = logger.child({});
@@ -158,7 +158,7 @@ export class MapPlaylist {
         continue;
       }
       nextEls.splice(i, 1);
-      playlist.push({ map: next, mode: mode });
+      playlist.push({ map: next, mode });
       return true;
     }
     return false;

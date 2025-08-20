@@ -1,8 +1,8 @@
 import { EventBus, GameEvent } from "../core/EventBus";
+import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
-import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
   constructor(
@@ -70,7 +70,7 @@ export class AlternateViewEvent implements GameEvent {
 
 export class CloseViewEvent implements GameEvent {}
 
-export class RefreshGraphicsEvent implements GameEvent {}
+export class RedrawGraphicsEvent implements GameEvent {}
 
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
@@ -121,7 +121,7 @@ export class InputHandler {
   private lastPointerDownX = 0;
   private lastPointerDownY = 0;
 
-  private pointers: Map<number, PointerEvent> = new Map();
+  private readonly pointers: Map<number, PointerEvent> = new Map();
 
   private lastPinchDistance = 0;
 
@@ -129,18 +129,18 @@ export class InputHandler {
 
   private alternateView = false;
 
-  private moveInterval: NodeJS.Timeout | null = null;
-  private activeKeys = new Set<string>();
+  private moveInterval: ReturnType<typeof setTimeout> | null = null;
+  private readonly activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   constructor(
-    private canvas: HTMLCanvasElement,
-    private eventBus: EventBus,
+    private readonly canvas: HTMLCanvasElement,
+    private readonly eventBus: EventBus,
   ) {}
 
   initialize() {
@@ -302,7 +302,7 @@ export class InputHandler {
 
       if (e.key.toLowerCase() === "r" && e.altKey && !e.ctrlKey) {
         e.preventDefault();
-        this.eventBus.emit(new RefreshGraphicsEvent());
+        this.eventBus.emit(new RedrawGraphicsEvent());
       }
 
       if (e.code === this.keybinds.boatAttack) {

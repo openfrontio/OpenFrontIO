@@ -6,8 +6,8 @@ export class DonateTroopsExecution implements Execution {
   private active = true;
 
   constructor(
-    private sender: Player,
-    private recipientID: PlayerID,
+    private readonly sender: Player,
+    private readonly recipientID: PlayerID,
     private troops: number | null,
   ) {}
 

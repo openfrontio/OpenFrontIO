@@ -1,19 +1,19 @@
 import { Execution, Game, Unit } from "../game/Game";
-import { TrainStation } from "../game/TrainStation";
 import { PseudoRandom } from "../PseudoRandom";
 import { TrainExecution } from "./TrainExecution";
+import { TrainStation } from "../game/TrainStation";
 
 export class TrainStationExecution implements Execution {
   private mg: Game;
   private active = true;
   private random: PseudoRandom;
   private station: TrainStation | null = null;
-  private numCars = 5;
+  private readonly numCars = 5;
   private lastSpawnTick = 0;
-  private ticksCooldown = 10; // Minimum cooldown between two trains
+  private readonly ticksCooldown = 10; // Minimum cooldown between two trains
   constructor(
-    private unit: Unit,
-    private spawnTrains?: boolean, // If set, the station will spawn trains
+    private readonly unit: Unit,
+    private readonly spawnTrains?: boolean, // If set, the station will spawn trains
   ) {
     this.unit.setTrainStation(true);
   }

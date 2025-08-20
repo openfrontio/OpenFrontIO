@@ -1,10 +1,10 @@
-import { z } from "zod";
+import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import {
   StripeCreateCheckoutSessionResponseSchema,
   UserMeResponse,
 } from "../core/ApiSchemas";
-import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
+import { z } from "zod";
 
 export async function patterns(
   userMe: UserMeResponse | null,
@@ -44,7 +44,7 @@ export async function handlePurchase(priceId: string) {
         "authorization": getAuthHeader(),
       },
       body: JSON.stringify({
-        priceId: priceId,
+        priceId,
         successUrl: `${window.location.origin}#purchase-completed=true`,
         cancelUrl: `${window.location.origin}#purchase-completed=false`,
       }),

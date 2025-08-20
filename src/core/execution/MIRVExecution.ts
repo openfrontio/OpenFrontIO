@@ -7,11 +7,11 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { NukeExecution } from "./NukeExecution";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
 import { simpleHash } from "../Util";
-import { NukeExecution } from "./NukeExecution";
 
 export class MirvExecution implements Execution {
   private active = true;
@@ -20,8 +20,8 @@ export class MirvExecution implements Execution {
 
   private nuke: Unit | null = null;
 
-  private mirvRange = 1500;
-  private warheadCount = 350;
+  private readonly mirvRange = 1500;
+  private readonly warheadCount = 350;
 
   private random: PseudoRandom;
 
@@ -34,8 +34,8 @@ export class MirvExecution implements Execution {
   private speed = -1;
 
   constructor(
-    private player: Player,
-    private dst: TileRef,
+    private readonly player: Player,
+    private readonly dst: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -64,7 +64,7 @@ export class MirvExecution implements Execution {
     if (this.nuke === null) {
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {
-        console.warn(`cannot build MIRV`);
+        console.warn("cannot build MIRV");
         this.active = false;
         return;
       }
@@ -169,7 +169,7 @@ export class MirvExecution implements Execution {
 
   private proximityCheck(tile: TileRef, taken: TileRef[]): boolean {
     for (const t of taken) {
-      if (this.mg.manhattanDist(tile, t) < 25) {
+      if (this.mg.manhattanDist(tile, t) < 55) {
         return true;
       }
     }

@@ -1,12 +1,12 @@
+import "./components/Difficulties";
+import "./components/Maps";
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
 import { getAltKey, getModifierKey, translateText } from "../client/Utils";
-import "./components/Difficulties";
-import "./components/Maps";
 
 @customElement("help-modal")
 export class HelpModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -25,7 +25,7 @@ export class HelpModal extends LitElement {
     super.disconnectedCallback();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();

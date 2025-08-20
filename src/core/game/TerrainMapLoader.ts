@@ -1,7 +1,7 @@
-import { z } from "zod";
-import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { GameMapLoader } from "./GameMapLoader";
+import { GameMapType } from "./Game";
+import { z } from "zod";
 
 export type TerrainMapData = {
   manifest: MapManifest;
@@ -52,9 +52,9 @@ export async function loadTerrainMap(
     await mapFiles.miniMapBin(),
   );
   const result = {
-    gameMap: gameMap,
+    gameMap,
     manifest: await mapFiles.manifest(),
-    miniGameMap: miniGameMap,
+    miniGameMap,
   };
   loadedMaps.set(map, result);
   return result;
@@ -66,7 +66,8 @@ export async function genTerrainFromBin(
 ): Promise<GameMap> {
   if (data.length !== mapData.width * mapData.height) {
     throw new Error(
-      `Invalid data: buffer size ${data.length} incorrect for ${mapData.width}x${mapData.height} terrain plus 4 bytes for dimensions.`,
+      `Invalid data: buffer size ${data.length} incorrect for ${mapData.width}x${mapData.height
+      } terrain plus 4 bytes for dimensions.`,
     );
   }
 

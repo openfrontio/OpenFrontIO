@@ -1,19 +1,19 @@
-import { base64url } from "jose";
-import type { TemplateResult } from "lit";
-import { html, LitElement, render } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { Pattern } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
-import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
 import "./components/Maps";
+import { LitElement, html, render } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
 import { handlePurchase, patterns } from "./Cosmetics";
+import { Pattern } from "../core/CosmeticSchemas";
+import { PatternDecoder } from "../core/PatternDecoder";
+import type { TemplateResult } from "lit";
+import { UserMeResponse } from "../core/ApiSchemas";
+import { UserSettings } from "../core/game/UserSettings";
+import { base64url } from "jose";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -36,7 +36,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   public resizeObserver: ResizeObserver;
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   private isActive = false;
 
@@ -71,7 +71,7 @@ export class TerritoryPatternsModal extends LitElement {
     this.requestUpdate();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();
@@ -165,7 +165,8 @@ export class TerritoryPatternsModal extends LitElement {
         ${pattern.product !== null
           ? html`
               <button
-                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
+                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600
+                text-white text-xs font-medium rounded transition-colors"
                 @click=${(e: Event) => {
                   e.stopPropagation();
                   handlePurchase(pattern.product!.priceId);
@@ -388,7 +389,7 @@ export function generatePreviewDataUrl(
 
   // Create an image
   const imageData = ctx.createImageData(width, height);
-  const data = imageData.data;
+  const { data } = imageData;
   let i = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {

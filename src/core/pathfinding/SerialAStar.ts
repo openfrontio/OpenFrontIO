@@ -1,5 +1,5 @@
-import FastPriorityQueue from "fastpriorityqueue";
 import { AStar, PathFindResultType } from "./AStar";
+import FastPriorityQueue from "fastpriorityqueue";
 
 /**
  * Implement this interface with your graph to find paths with A*
@@ -12,32 +12,32 @@ export type GraphAdapter<NodeType> = {
 };
 
 export class SerialAStar<NodeType> implements AStar<NodeType> {
-  private fwdOpenSet: FastPriorityQueue<{
+  private readonly fwdOpenSet: FastPriorityQueue<{
     tile: NodeType;
     fScore: number;
   }>;
-  private bwdOpenSet: FastPriorityQueue<{
+  private readonly bwdOpenSet: FastPriorityQueue<{
     tile: NodeType;
     fScore: number;
   }>;
 
-  private fwdCameFrom = new Map<NodeType, NodeType>();
-  private bwdCameFrom = new Map<NodeType, NodeType>();
-  private fwdGScore = new Map<NodeType, number>();
-  private bwdGScore = new Map<NodeType, number>();
+  private readonly fwdCameFrom = new Map<NodeType, NodeType>();
+  private readonly bwdCameFrom = new Map<NodeType, NodeType>();
+  private readonly fwdGScore = new Map<NodeType, number>();
+  private readonly bwdGScore = new Map<NodeType, number>();
 
   private meetingPoint: NodeType | null = null;
   public completed = false;
-  private sources: NodeType[];
-  private closestSource: NodeType;
+  private readonly sources: NodeType[];
+  private readonly closestSource: NodeType;
 
   constructor(
     src: NodeType | NodeType[],
-    private dst: NodeType,
-    private iterations: number,
+    private readonly dst: NodeType,
+    private readonly iterations: number,
     private maxTries: number,
-    private graph: GraphAdapter<NodeType>,
-    private directionChangePenalty = 0,
+    private readonly graph: GraphAdapter<NodeType>,
+    private readonly directionChangePenalty = 0,
   ) {
     this.fwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);
     this.bwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);
@@ -75,7 +75,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     if (this.completed) return PathFindResultType.Completed;
 
     this.maxTries -= 1;
-    let iterations = this.iterations;
+    let { iterations } = this;
 
     while (!this.fwdOpenSet.isEmpty() && !this.bwdOpenSet.isEmpty()) {
       iterations--;
@@ -148,7 +148,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
           totalG +
           this.heuristic(neighbor, isForward ? this.dst : this.closestSource);
         // eslint-disable-next-line sort-keys
-        openSet.add({ tile: neighbor, fScore: fScore });
+        openSet.add({ tile: neighbor, fScore });
       }
     }
   }

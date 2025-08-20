@@ -1,13 +1,13 @@
 import { AllianceRequest, Player, Tick } from "./Game";
-import { GameImpl } from "./GameImpl";
 import { AllianceRequestUpdate, GameUpdateType } from "./GameUpdates";
+import { GameImpl } from "./GameImpl";
 
 export class AllianceRequestImpl implements AllianceRequest {
   constructor(
-    private requestor_: Player,
-    private recipient_: Player,
-    private tickCreated: number,
-    private game: GameImpl,
+    private readonly requestor_: Player,
+    private readonly recipient_: Player,
+    private readonly tickCreated: number,
+    private readonly game: GameImpl,
   ) {}
 
   requestor(): Player {

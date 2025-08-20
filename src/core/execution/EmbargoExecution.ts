@@ -3,9 +3,11 @@ import { Execution, Game, Player, PlayerID } from "../game/Game";
 export class EmbargoExecution implements Execution {
   private active = true;
 
+  private target: Player;
+
   constructor(
-    private player: Player,
-    private targetID: PlayerID,
+    private readonly player: Player,
+    private readonly targetID: PlayerID,
     private readonly action: "start" | "stop",
   ) {}
 
@@ -15,11 +17,12 @@ export class EmbargoExecution implements Execution {
       this.active = false;
       return;
     }
+    this.target = mg.player(this.targetID);
   }
 
   tick(_: number): void {
-    if (this.action === "start") this.player.addEmbargo(this.targetID, false);
-    else this.player.stopEmbargo(this.targetID);
+    if (this.action === "start") this.player.addEmbargo(this.target, false);
+    else this.player.stopEmbargo(this.target);
 
     this.active = false;
   }

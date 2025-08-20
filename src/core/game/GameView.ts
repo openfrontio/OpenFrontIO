@@ -1,9 +1,11 @@
-import { base64url } from "jose";
-import { Config } from "../configuration/Config";
-import { PatternDecoder } from "../PatternDecoder";
-import { ClientID, GameID, Player } from "../Schemas";
-import { createRandomName } from "../Util";
-import { WorkerClient } from "../worker/WorkerClient";
+import {
+  AllianceView,
+  AttackUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  PlayerUpdate,
+  UnitUpdate,
+} from "./GameUpdates";
 import {
   Cell,
   EmojiMessage,
@@ -16,26 +18,24 @@ import {
   PlayerProfile,
   PlayerType,
   Team,
-  TerrainType,
   TerraNullius,
+  TerrainType,
   Tick,
   TrainType,
   UnitInfo,
   UnitType,
 } from "./Game";
+import { ClientID, GameID, Player } from "../Schemas";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
-import {
-  AllianceView,
-  AttackUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-  PlayerUpdate,
-  UnitUpdate,
-} from "./GameUpdates";
-import { TerrainMapData } from "./TerrainMapLoader";
-import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { Config } from "../configuration/Config";
+import { PatternDecoder } from "../PatternDecoder";
+import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { TerrainMapData } from "./TerrainMapLoader";
 import { UserSettings } from "./UserSettings";
+import { WorkerClient } from "../worker/WorkerClient";
+import { base64url } from "jose";
+import { createRandomName } from "../Util";
 
 const userSettings: UserSettings = new UserSettings();
 
@@ -47,10 +47,10 @@ type PlayerCosmetics = {
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
-  private _createdAt: Tick;
+  private readonly _createdAt: Tick;
 
   constructor(
-    private gameView: GameView,
+    private readonly gameView: GameView,
     private data: UnitUpdate,
   ) {
     this.lastPos.push(data.pos);
@@ -179,10 +179,10 @@ export class UnitView {
 
 export class PlayerView {
   public anonymousName: string | null = null;
-  private decoder?: PatternDecoder;
+  private readonly decoder?: PatternDecoder;
 
   constructor(
-    private game: GameView,
+    private readonly game: GameView,
     public data: PlayerUpdate,
     public nameData: NameViewData,
     public cosmetics: PlayerCosmetics,
@@ -326,6 +326,10 @@ export class PlayerView {
     return this.data.embargoes.has(other.id());
   }
 
+  hasEmbargo(other: PlayerView): boolean {
+    return this.hasEmbargoAgainst(other) || other.hasEmbargoAgainst(this);
+  }
+
   profile(): Promise<PlayerProfile> {
     return this.game.worker.playerProfile(this.smallID());
   }
@@ -359,29 +363,29 @@ export class PlayerView {
 
 export class GameView implements GameMap {
   private lastUpdate: GameUpdateViewData | null;
-  private smallIDToID = new Map<number, PlayerID>();
-  private _players = new Map<PlayerID, PlayerView>();
-  private _units = new Map<number, UnitView>();
+  private readonly smallIDToID = new Map<number, PlayerID>();
+  private readonly _players = new Map<PlayerID, PlayerView>();
+  private readonly _units = new Map<number, UnitView>();
   private updatedTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
   private _focusedPlayer: PlayerView | null = null;
 
-  private unitGrid: UnitGrid;
+  private readonly unitGrid: UnitGrid;
 
-  private toDelete = new Set<number>();
+  private readonly toDelete = new Set<number>();
 
-  private _cosmetics: Map<string, PlayerCosmetics> = new Map();
+  private readonly _cosmetics: Map<string, PlayerCosmetics> = new Map();
 
-  private _map: GameMap;
+  private readonly _map: GameMap;
 
   constructor(
     public worker: WorkerClient,
-    private _config: Config,
-    private _mapData: TerrainMapData,
-    private _myClientID: ClientID,
-    private _gameID: GameID,
-    private _hunans: Player[],
+    private readonly _config: Config,
+    private readonly _mapData: TerrainMapData,
+    private readonly _myClientID: ClientID,
+    private readonly _gameID: GameID,
+    private readonly _hunans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;

@@ -1,16 +1,15 @@
-import { Config } from "../../../core/configuration/Config";
 import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { flattenedEmojiTable } from "../../../core/Util";
-import { renderNumber, translateText } from "../../Utils";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { renderNumber, translateText } from "../../Utils";
 import { ChatIntegration } from "./ChatIntegration";
+import { Config } from "../../../core/configuration/Config";
 import { EmojiTable } from "./EmojiTable";
+import { EventBus } from "../../../core/EventBus";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
+import { TileRef } from "../../../core/game/GameMap";
 import { TooltipItem } from "./RadialMenu";
-
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
 import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
@@ -18,12 +17,12 @@ import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
 import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import { flattenedEmojiTable } from "../../../core/Util";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
-import { EventBus } from "../../../core/EventBus";
 
 export type MenuElementParams = {
   myPlayer: PlayerView;

@@ -1,25 +1,24 @@
-import { colord, Colord } from "colord";
-import { EventBus } from "../../../core/EventBus";
-import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, UnitView } from "../../../core/game/GameView";
-import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
   MouseUpEvent,
   UnitSelectionEvent,
 } from "../../InputHandler";
-import { MoveWarshipIntentEvent } from "../../Transport";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
-
-import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { Colord, colord } from "colord";
+import { GameView, UnitView } from "../../../core/game/GameView";
 import {
   getColoredSprite,
   isSpriteReady,
   loadAllSprites,
 } from "../SpriteLoader";
+import { BezenhamLine } from "../../../core/utilities/Line";
+import { EventBus } from "../../../core/EventBus";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { Layer } from "./Layer";
+import { MoveWarshipIntentEvent } from "../../Transport";
+import { Theme } from "../../../core/configuration/Config";
+import { TileRef } from "../../../core/game/GameMap";
+import { TransformHandler } from "../TransformHandler";
+import { UnitType } from "../../../core/game/Game";
 
 enum Relationship {
   Self,
@@ -33,15 +32,15 @@ export class UnitLayer implements Layer {
   private transportShipTrailCanvas: HTMLCanvasElement;
   private unitTrailContext: CanvasRenderingContext2D;
 
-  private unitToTrail = new Map<UnitView, TileRef[]>();
+  private readonly unitToTrail = new Map<UnitView, TileRef[]>();
 
-  private theme: Theme;
+  private readonly theme: Theme;
 
   private alternateView = false;
 
-  private oldShellTile = new Map<UnitView, TileRef>();
+  private readonly oldShellTile = new Map<UnitView, TileRef>();
 
-  private transformHandler: TransformHandler;
+  private readonly transformHandler: TransformHandler;
 
   // Selected unit property as suggested in the review comment
   private selectedUnit: UnitView | null = null;
@@ -50,8 +49,8 @@ export class UnitLayer implements Layer {
   private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
     transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();

@@ -1,45 +1,44 @@
-import { LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { TransformHandler } from "../TransformHandler";
-import { UIState } from "../UIState";
-import { BuildMenu } from "./BuildMenu";
-import { ChatIntegration } from "./ChatIntegration";
-import { EmojiTable } from "./EmojiTable";
-import { Layer } from "./Layer";
-import { PlayerActionHandler } from "./PlayerActionHandler";
-import { PlayerPanel } from "./PlayerPanel";
-import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
 import {
-  centerButtonElement,
   COLORS,
   MenuElementParams,
+  centerButtonElement,
   rootMenuElement,
 } from "./RadialMenuElements";
-
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
+import { BuildMenu } from "./BuildMenu";
+import { ChatIntegration } from "./ChatIntegration";
 import { ContextMenuEvent } from "../../InputHandler";
+import { EmojiTable } from "./EmojiTable";
+import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
+import { LitElement } from "lit";
+import { PlayerActionHandler } from "./PlayerActionHandler";
+import { PlayerActions } from "../../../core/game/Game";
+import { PlayerPanel } from "./PlayerPanel";
+import { TileRef } from "../../../core/game/GameMap";
+import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
+import { customElement } from "lit/decorators.js";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
-  private radialMenu: RadialMenu;
+  private readonly radialMenu: RadialMenu;
 
-  private playerActionHandler: PlayerActionHandler;
-  private chatIntegration: ChatIntegration;
+  private readonly playerActionHandler: PlayerActionHandler;
+  private readonly chatIntegration: ChatIntegration;
 
   private clickedTile: TileRef | null = null;
 
   constructor(
-    private eventBus: EventBus,
-    private game: GameView,
-    private transformHandler: TransformHandler,
-    private emojiTable: EmojiTable,
-    private buildMenu: BuildMenu,
-    private uiState: UIState,
-    private playerPanel: PlayerPanel,
+    private readonly eventBus: EventBus,
+    private readonly game: GameView,
+    private readonly transformHandler: TransformHandler,
+    private readonly emojiTable: EmojiTable,
+    private readonly buildMenu: BuildMenu,
+    private readonly uiState: UIState,
+    private readonly playerPanel: PlayerPanel,
   ) {
     super();
 

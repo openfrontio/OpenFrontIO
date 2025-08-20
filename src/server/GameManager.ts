@@ -1,16 +1,16 @@
-import { Logger } from "winston";
-import { ServerConfig } from "../core/configuration/Config";
 import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
 import { GameConfig, GameID } from "../core/Schemas";
-import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
+import { Client } from "./Client";
+import { Logger } from "winston";
+import { ServerConfig } from "../core/configuration/Config";
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
 
   constructor(
-    private config: ServerConfig,
-    private log: Logger,
+    private readonly config: ServerConfig,
+    private readonly log: Logger,
   ) {
     setInterval(() => this.tick(), 1000);
   }

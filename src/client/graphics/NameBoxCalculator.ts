@@ -81,17 +81,19 @@ export function createGrid(
 
   const width = scaledBoundingBox.max.x - scaledBoundingBox.min.x + 1;
   const height = scaledBoundingBox.max.y - scaledBoundingBox.min.y + 1;
-  const grid: boolean[][] = Array(width)
-    .fill(null)
-    .map(() => Array(height).fill(false));
+  const grid: boolean[][] = Array<Array<boolean>>(width)
+    .fill(null as unknown as boolean[])
+    .map(() => Array<boolean>(height).fill(false));
 
-  for (let x = scaledBoundingBox.min.x; x <= scaledBoundingBox.max.x; x++) {
-    for (let y = scaledBoundingBox.min.y; y <= scaledBoundingBox.max.y; y++) {
+  for (let { x } = scaledBoundingBox.min; x <= scaledBoundingBox.max.x; x++) {
+    for (let { y } = scaledBoundingBox.min; y <= scaledBoundingBox.max.y; y++) {
       const cell = new Cell(x * scalingFactor, y * scalingFactor);
       if (game.isOnMap(cell)) {
         const tile = game.ref(cell.x, cell.y);
         grid[x - scaledBoundingBox.min.x][y - scaledBoundingBox.min.y] =
-          game.isLake(tile) || game.owner(tile) === player; // TODO: okay if lake
+          game.isLake(tile) ||
+          game.owner(tile) === player ||
+          game.hasFallout(tile);
       }
     }
   }
@@ -102,7 +104,7 @@ export function createGrid(
 export function findLargestInscribedRectangle(grid: boolean[][]): Rectangle {
   const rows = grid[0].length;
   const cols = grid.length;
-  const heights: number[] = new Array(cols).fill(0);
+  const heights: number[] = new Array<number>(cols).fill(0);
   let largestRect: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
 
   for (let row = 0; row < rows; row++) {
@@ -149,8 +151,8 @@ export function largestRectangleInHistogram(widths: number[]): Rectangle {
         largestRect = {
           x: stack.length === 0 ? 0 : stack[stack.length - 1] + 1,
           y: 0,
-          width: width,
-          height: height,
+          width,
+          height,
         };
       }
     }

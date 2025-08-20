@@ -1,7 +1,7 @@
-import { Theme } from "../../../core/configuration/Config";
 import { GameView } from "../../../core/game/GameView";
-import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { Theme } from "../../../core/configuration/Config";
+import { TransformHandler } from "../TransformHandler";
 
 export class TerrainLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -10,8 +10,8 @@ export class TerrainLayer implements Layer {
   private theme: Theme;
 
   constructor(
-    private game: GameView,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly transformHandler: TransformHandler,
   ) {}
   shouldTransform(): boolean {
     return true;

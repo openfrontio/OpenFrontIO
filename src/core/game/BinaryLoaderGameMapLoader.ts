@@ -1,5 +1,5 @@
-import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
+import { GameMapType } from "./Game";
 import { MapManifest } from "./TerrainMapLoader";
 
 export type BinModule = {
@@ -11,7 +11,7 @@ type NationMapModule = {
 };
 
 export class BinaryLoaderGameMapLoader implements GameMapLoader {
-  private maps: Map<GameMapType, MapData>;
+  private readonly maps: Map<GameMapType, MapData>;
 
   constructor() {
     this.maps = new Map<GameMapType, MapData>();

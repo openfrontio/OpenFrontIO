@@ -7,7 +7,6 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
@@ -16,6 +15,7 @@ import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
+import { TileRef } from "../game/GameMap";
 import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
@@ -29,8 +29,8 @@ export class ConstructionExecution implements Execution {
 
   constructor(
     private player: Player,
-    private constructionType: UnitType,
-    private tile: TileRef,
+    private readonly constructionType: UnitType,
+    private readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -99,7 +99,7 @@ export class ConstructionExecution implements Execution {
   }
 
   private completeConstruction() {
-    const player = this.player;
+    const { player } = this;
     switch (this.constructionType) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:

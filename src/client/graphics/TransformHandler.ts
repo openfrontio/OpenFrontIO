@@ -1,12 +1,12 @@
-import { EventBus } from "../../core/EventBus";
-import { Cell } from "../../core/game/Game";
-import { GameView } from "../../core/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./layers/Leaderboard";
+import { Cell } from "../../core/game/Game";
+import { EventBus } from "../../core/EventBus";
+import { GameView } from "../../core/game/GameView";
 
 export const GOTO_INTERVAL_MS = 16;
 export const CAMERA_MAX_SPEED = 15;
@@ -20,13 +20,13 @@ export class TransformHandler {
   private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;
-  private intervalID: NodeJS.Timeout | null = null;
+  private intervalID: ReturnType<typeof setTimeout> | null = null;
   private changed = false;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private canvas: HTMLCanvasElement,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly canvas: HTMLCanvasElement,
   ) {
     this._boundingRect = this.canvas.getBoundingClientRect();
     this.eventBus.on(ZoomEvent, (e) => this.onZoom(e));

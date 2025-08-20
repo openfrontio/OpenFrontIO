@@ -1,19 +1,18 @@
-import { colord, Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
+import { Cell, UnitType } from "../../../core/game/Game";
+import { Colord, colord } from "colord";
+import { GameView, UnitView } from "../../../core/game/GameView";
+import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { EventBus } from "../../../core/EventBus";
-import { TransformHandler } from "../TransformHandler";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { Layer } from "./Layer";
-
+import SAMMissileIcon from "../../../../resources/non-commercial/images/buildings/silo4.png";
+import { Theme } from "../../../core/configuration/Config";
+import { TransformHandler } from "../TransformHandler";
+import anchorIcon from "../../../../resources/non-commercial/images/buildings/port1.png";
 import cityIcon from "../../../../resources/non-commercial/images/buildings/cityAlt1.png";
 import factoryIcon from "../../../../resources/non-commercial/images/buildings/factoryAlt1.png";
-import shieldIcon from "../../../../resources/non-commercial/images/buildings/fortAlt3.png";
-import anchorIcon from "../../../../resources/non-commercial/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/non-commercial/images/buildings/silo1.png";
-import SAMMissileIcon from "../../../../resources/non-commercial/images/buildings/silo4.png";
-import { Cell, UnitType } from "../../../core/game/Game";
-import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../../core/game/GameView";
+import shieldIcon from "../../../../resources/non-commercial/images/buildings/fortAlt3.png";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 
@@ -32,10 +31,10 @@ type UnitRenderConfig = {
 export class StructureLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
-  private unitIcons: Map<string, HTMLImageElement> = new Map();
-  private theme: Theme;
-  private tempCanvas: HTMLCanvasElement;
-  private tempContext: CanvasRenderingContext2D;
+  private readonly unitIcons: Map<string, HTMLImageElement> = new Map();
+  private readonly theme: Theme;
+  private readonly tempCanvas: HTMLCanvasElement;
+  private readonly tempContext: CanvasRenderingContext2D;
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
@@ -72,9 +71,9 @@ export class StructureLayer implements Layer {
   };
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
     this.tempCanvas = document.createElement("canvas");

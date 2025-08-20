@@ -1,16 +1,16 @@
 import { Execution, Game } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { GameUpdateType, RailTile, RailType } from "../game/GameUpdates";
 import { Railroad } from "../game/Railroad";
+import { TileRef } from "../game/GameMap";
 
 export class RailroadExecution implements Execution {
   private mg: Game;
   private active = true;
   private headIndex = 0;
   private tailIndex = 0;
-  private increment = 3;
-  private railTiles: RailTile[] = [];
-  constructor(private railRoad: Railroad) {
+  private readonly increment = 3;
+  private readonly railTiles: RailTile[] = [];
+  constructor(private readonly railRoad: Railroad) {
     this.tailIndex = railRoad.tiles.length;
   }
 
@@ -21,7 +21,7 @@ export class RailroadExecution implements Execution {
   /* eslint-disable sort-keys */
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    const tiles = this.railRoad.tiles;
+    const { tiles } = this.railRoad;
     // Inverse direction computation for the first tile
     this.railTiles.push({
       tile: tiles[0],

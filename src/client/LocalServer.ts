@@ -1,5 +1,3 @@
-import { z } from "zod";
-import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
   ClientMessage,
@@ -12,16 +10,18 @@ import {
   Turn,
 } from "../core/Schemas";
 import { createGameRecord, decompressGameRecord, replacer } from "../core/Util";
+import { EventBus } from "../core/EventBus";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
-import { getPersistentID } from "./Main";
 import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
+import { getPersistentID } from "./Main";
+import { z } from "zod";
 
 export class LocalServer {
   // All turns from the game record on replay.
   private replayTurns: Turn[] = [];
 
-  private turns: Turn[] = [];
+  private readonly turns: Turn[] = [];
 
   private intents: Intent[] = [];
   private startedAt: number;
@@ -35,14 +35,14 @@ export class LocalServer {
   private turnsExecuted = 0;
   private turnStartTime = 0;
 
-  private turnCheckInterval: NodeJS.Timeout;
+  private turnCheckInterval: ReturnType<typeof setTimeout>;
 
   constructor(
-    private lobbyConfig: LobbyConfig,
-    private clientConnect: () => void,
-    private clientMessage: (message: ServerMessage) => void,
-    private isReplay: boolean,
-    private eventBus: EventBus,
+    private readonly lobbyConfig: LobbyConfig,
+    private readonly clientConnect: () => void,
+    private readonly clientMessage: (message: ServerMessage) => void,
+    private readonly isReplay: boolean,
+    private readonly eventBus: EventBus,
   ) {}
 
   start() {
@@ -117,7 +117,10 @@ export class LocalServer {
       }
       if (archivedHash !== clientMsg.hash) {
         console.error(
-          `desync detected on turn ${clientMsg.turnNumber}, client hash: ${clientMsg.hash}, server hash: ${archivedHash}`,
+          `desync detected on turn ${
+            clientMsg.turnNumber}, client hash: ${
+            clientMsg.hash}, server hash: ${
+            archivedHash}`,
         );
         this.clientMessage({
           type: "desync",

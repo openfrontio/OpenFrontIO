@@ -1,5 +1,5 @@
-import { PlayerID, Unit, UnitType } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
+import { PlayerID, Unit, UnitType } from "./Game";
 import { UnitView } from "./GameView";
 
 export type UnitPredicate = (value: {
@@ -8,10 +8,10 @@ export type UnitPredicate = (value: {
 }) => boolean;
 
 export class UnitGrid {
-  private grid: Map<UnitType, Set<Unit | UnitView>>[][];
+  private readonly grid: Map<UnitType, Set<Unit | UnitView>>[][];
   private readonly cellSize = 100;
 
-  constructor(private gm: GameMap) {
+  constructor(private readonly gm: GameMap) {
     this.grid = Array(Math.ceil(gm.height() / this.cellSize))
       .fill(null)
       .map(() =>
@@ -94,7 +94,7 @@ export class UnitGrid {
   private getCellsInRange(tile: TileRef, range: number) {
     const x = this.gm.x(tile);
     const y = this.gm.y(tile);
-    const cellSize = this.cellSize;
+    const { cellSize } = this;
     const [gridX, gridY] = this.getGridCoords(x, y);
     const startGridX = Math.max(
       0,
