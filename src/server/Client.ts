@@ -1,13 +1,14 @@
-import WebSocket from "ws";
-import { TokenPayload } from "../core/ApiSchemas";
+import { ClientID, Winner } from "../core/Schemas";
 import { Tick } from "../core/game/Game";
-import { ClientID } from "../core/Schemas";
+import { TokenPayload } from "../core/ApiSchemas";
+import WebSocket from "ws";
 
 export class Client {
   public lastPing: number = Date.now();
-  public isDisconnected: boolean = false;
 
   public hashes: Map<Tick, number> = new Map();
+
+  public reportedWinner: Winner | null = null;
 
   constructor(
     public readonly clientID: ClientID,

@@ -1,20 +1,17 @@
-import { EventBus } from "../../core/EventBus";
-import { GameView } from "../../core/game/GameView";
-import { UserSettings } from "../../core/game/UserSettings";
-import { GameStartingModal } from "../GameStartingModal";
-import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
-import { TransformHandler } from "./TransformHandler";
-import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
+import { EventBus } from "../../core/EventBus";
 import { EventsDisplay } from "./layers/EventsDisplay";
+import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
+import { GameStartingModal } from "../GameStartingModal";
+import { GameView } from "../../core/game/GameView";
 import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
@@ -25,6 +22,7 @@ import { NameLayer } from "./layers/NameLayer";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
+import { RedrawGraphicsEvent } from "../InputHandler";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnAd } from "./layers/SpawnAd";
@@ -34,9 +32,12 @@ import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
+import { TransformHandler } from "./TransformHandler";
 import { UILayer } from "./layers/UILayer";
+import { UIState } from "./UIState";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
+import { UserSettings } from "../../core/game/UserSettings";
 import { WinModal } from "./layers/WinModal";
 
 export function createRenderer(
@@ -60,10 +61,9 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     console.error("EmojiTable element not found in the DOM");
   }
-  emojiTable.eventBus = eventBus;
   emojiTable.transformHandler = transformHandler;
   emojiTable.game = game;
-  emojiTable.initEventBus();
+  emojiTable.initEventBus(eventBus);
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
@@ -173,7 +173,7 @@ export function createRenderer(
     console.error("player panel not found");
   }
   playerPanel.g = game;
-  playerPanel.eventBus = eventBus;
+  playerPanel.initEventBus(eventBus);
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
 
@@ -182,8 +182,7 @@ export function createRenderer(
     console.error("chat modal not found");
   }
   chatModal.g = game;
-  chatModal.eventBus = eventBus;
-  chatModal.initEventBus();
+  chatModal.initEventBus(eventBus);
 
   const multiTabModal = document.querySelector(
     "multi-tab-modal",
@@ -202,6 +201,13 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
+
+  const fpsDisplay = document.querySelector("fps-display") as FPSDisplay;
+  if (!(fpsDisplay instanceof FPSDisplay)) {
+    console.error("fps display not found");
+  }
+  fpsDisplay.eventBus = eventBus;
+  fpsDisplay.userSettings = userSettings;
 
   const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
   if (!(spawnAd instanceof SpawnAd)) {
@@ -232,7 +238,7 @@ export function createRenderer(
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new NameLayer(game, transformHandler),
+    new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,
     buildMenu,
@@ -240,7 +246,7 @@ export function createRenderer(
       eventBus,
       game,
       transformHandler,
-      emojiTable as EmojiTable,
+      emojiTable,
       buildMenu,
       uiState,
       playerPanel,
@@ -262,6 +268,7 @@ export function createRenderer(
     spawnAd,
     gutterAdModal,
     alertFrame,
+    fpsDisplay,
   ];
 
   return new GameRenderer(
@@ -271,19 +278,21 @@ export function createRenderer(
     transformHandler,
     uiState,
     layers,
+    fpsDisplay,
   );
 }
 
 export class GameRenderer {
-  private context: CanvasRenderingContext2D;
+  private readonly context: CanvasRenderingContext2D;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private canvas: HTMLCanvasElement,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly canvas: HTMLCanvasElement,
     public transformHandler: TransformHandler,
     public uiState: UIState,
-    private layers: Layer[],
+    private readonly layers: Layer[],
+    private readonly fpsDisplay: FPSDisplay,
   ) {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
@@ -291,14 +300,7 @@ export class GameRenderer {
   }
 
   initialize() {
-    this.eventBus.on(RedrawGraphicsEvent, (e) => {
-      this.layers.forEach((l) => {
-        if (l.redraw) {
-          l.redraw();
-        }
-      });
-    });
-
+    this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
 
     document.body.appendChild(this.canvas);
@@ -308,7 +310,14 @@ export class GameRenderer {
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
 
-    requestAnimationFrame(() => this.renderGame());
+    let rafId = requestAnimationFrame(() => this.renderGame());
+    this.canvas.addEventListener("contextlost", () => {
+      cancelAnimationFrame(rafId);
+    });
+    this.canvas.addEventListener("contextrestored", () => {
+      this.redraw();
+      rafId = requestAnimationFrame(() => this.renderGame());
+    });
   }
 
   resizeCanvas() {
@@ -316,6 +325,14 @@ export class GameRenderer {
     this.canvas.height = window.innerHeight;
     this.transformHandler.updateCanvasBoundingRect();
     //this.redraw()
+  }
+
+  redraw() {
+    this.layers.forEach((l) => {
+      if (l.redraw) {
+        l.redraw();
+      }
+    });
   }
 
   renderGame() {
@@ -357,8 +374,10 @@ export class GameRenderer {
     this.transformHandler.resetChanged();
 
     requestAnimationFrame(() => this.renderGame());
-
     const duration = performance.now() - start;
+
+    this.fpsDisplay.updateFPS(duration);
+
     if (duration > 50) {
       console.warn(
         `tick ${this.game.ticks()} took ${duration}ms to render frame`,

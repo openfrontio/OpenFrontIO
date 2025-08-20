@@ -1,16 +1,16 @@
-import { Logger } from "winston";
-import { ServerConfig } from "../core/configuration/Config";
 import { Difficulty, GameMapType, GameMode, GameType } from "../core/game/Game";
 import { GameConfig, GameID } from "../core/Schemas";
-import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
+import { Client } from "./Client";
+import { Logger } from "winston";
+import { ServerConfig } from "../core/configuration/Config";
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
 
   constructor(
-    private config: ServerConfig,
-    private log: Logger,
+    private readonly config: ServerConfig,
+    private readonly log: Logger,
   ) {
     setInterval(() => this.tick(), 1000);
   }
@@ -28,20 +28,33 @@ export class GameManager {
     return false;
   }
 
-  createGame(id: GameID, gameConfig: GameConfig | undefined) {
-    const game = new GameServer(id, this.log, Date.now(), this.config, {
-      gameMap: GameMapType.World,
-      gameType: GameType.Private,
-      difficulty: Difficulty.Medium,
-      disableNPCs: false,
-      infiniteGold: false,
-      infiniteTroops: false,
-      instantBuild: false,
-      gameMode: GameMode.FFA,
-      bots: 400,
-      disabledUnits: [],
-      ...gameConfig,
-    });
+  createGame(
+    id: GameID,
+    gameConfig: GameConfig | undefined,
+    creatorClientID?: string,
+  ) {
+    const game = new GameServer(
+      id,
+      this.log,
+      Date.now(),
+      this.config,
+      {
+        bots: 400,
+        difficulty: Difficulty.Medium,
+        disableNPCs: false,
+        disabledUnits: [],
+        donateGold: false,
+        donateTroops: false,
+        gameMap: GameMapType.World,
+        gameMode: GameMode.FFA,
+        gameType: GameType.Private,
+        infiniteGold: false,
+        infiniteTroops: false,
+        instantBuild: false,
+        ...gameConfig,
+      },
+      creatorClientID,
+    );
     this.games.set(id, game);
     return game;
   }

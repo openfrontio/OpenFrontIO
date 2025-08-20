@@ -1,7 +1,3 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -9,8 +5,12 @@ import {
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
-import { setup } from "../../util/Setup";
 import { constructionExecution, executeTicks } from "../../util/utils";
+import { NukeExecution } from "../../../src/core/execution/NukeExecution";
+import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
+import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
+import { setup } from "../../util/Setup";
 
 let game: Game;
 let attacker: Player;
@@ -81,10 +81,16 @@ describe("SAM", () => {
   test("one sam should take down one nuke", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
-    attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
-      targetTile: game.ref(2, 1),
-    });
 
+    // Sam will only target nukes it can destroy before it reaches its target
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
+      targetTile: game.ref(3, 1),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(2, 1), targetable: true },
+        { tile: game.ref(3, 1), targetable: true },
+      ],
+    });
     executeTicks(game, 3);
 
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
@@ -94,10 +100,20 @@ describe("SAM", () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
-      targetTile: game.ref(2, 1),
+      targetTile: game.ref(3, 1),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(2, 1), targetable: true },
+        { tile: game.ref(3, 1), targetable: true },
+      ],
     });
     attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
-      targetTile: game.ref(1, 2),
+      targetTile: game.ref(1, 3),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(1, 2), targetable: true },
+        { tile: game.ref(1, 3), targetable: true },
+      ],
     });
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
 
@@ -111,8 +127,13 @@ describe("SAM", () => {
 
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
     expect(sam.isInCooldown()).toBeFalsy();
-    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
-      targetTile: game.ref(1, 2),
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
+      targetTile: game.ref(1, 3),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(2, 1), targetable: true },
+        { tile: game.ref(3, 1), targetable: true },
+      ],
     });
 
     executeTicks(game, 3);
@@ -134,8 +155,13 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam1));
     const sam2 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 2), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam2));
-    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 2), {
-      targetTile: game.ref(2, 2),
+    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
+      targetTile: game.ref(1, 3),
+      trajectory: [
+        { tile: game.ref(1, 1), targetable: true },
+        { tile: game.ref(1, 2), targetable: true },
+        { tile: game.ref(1, 3), targetable: true },
+      ],
     });
 
     executeTicks(game, 3);
@@ -159,7 +185,7 @@ describe("SAM", () => {
     game.addExecution(nukeExecution);
     // Long distance nuke: compute the proper number of ticks
     const ticksToExecute = Math.ceil(
-      targetDistance / game.config().defaultNukeSpeed(),
+      targetDistance / game.config().defaultNukeSpeed() + 1,
     );
     executeTicks(game, ticksToExecute);
 
@@ -194,7 +220,7 @@ describe("SAM", () => {
     game.addExecution(nukeExecution);
     // Long distance nuke: compute the proper number of ticks
     const ticksToExecute = Math.ceil(
-      targetDistance / game.config().defaultNukeSpeed(),
+      targetDistance / game.config().defaultNukeSpeed() + 1,
     );
     executeTicks(game, ticksToExecute);
     expect(nukeExecution.isActive()).toBeFalsy();
@@ -204,7 +230,7 @@ describe("SAM", () => {
 
   test("SAM should have increased level after upgrade", async () => {
     defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(1);
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toBe(1);
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
       defender,
@@ -213,6 +239,6 @@ describe("SAM", () => {
     game.addExecution(upgradeStructureExecution);
     executeTicks(game, 2);
 
-    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(2);
+    expect(defender.units(UnitType.SAMLauncher)[0].level()).toBe(2);
   });
 });

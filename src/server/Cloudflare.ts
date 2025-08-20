@@ -1,54 +1,61 @@
-import { spawn } from "child_process";
 import { promises as fs } from "fs";
-import yaml from "js-yaml";
 import { logger } from "./Logger";
+import { spawn } from "child_process";
+import yaml from "js-yaml";
+import { z } from "zod";
 
 const log = logger.child({
   module: "cloudflare",
 });
 
-export interface TunnelConfig {
+export type TunnelConfig = {
   domain: string;
   subdomain: string;
   subdomainToService: Map<string, string>;
-}
+};
 
-interface TunnelResponse {
+type TunnelResponse = {
   result: {
     id: string;
     token: string;
   };
-}
+};
 
-interface ZoneResponse {
+type ZoneResponse = {
   result: Array<{
     id: string;
   }>;
-}
+};
 
-interface DNSRecordResponse {
+type DNSRecordResponse = {
   result: Array<{
     id: string;
   }>;
-}
+};
 
-interface CloudflaredConfig {
+type CloudflaredConfig = {
   tunnel: string;
   "credentials-file": string;
   ingress: Array<{
     hostname?: string;
     service: string;
   }>;
-}
+};
+
+const CloudflareTunnelConfigSchema = z.object({
+  a: z.string(),
+  s: z.string(),
+  t: z.string(),
+});
 
 export class Cloudflare {
-  private baseUrl = "https://api.cloudflare.com/client/v4";
+  private readonly baseUrl = "https://api.cloudflare.com/client/v4";
 
   constructor(
-    private accountId: string,
-    private apiToken: string,
-    private configPath: string,
-    private credsPath: string,
+    private readonly accountId: string,
+    private readonly apiToken: string,
+    private readonly configPath: string,
+    private readonly credsPath: string,
   ) {
     log.info(`Using config: ${this.configPath}`);
     log.info(`Using credentials: ${this.credsPath}`);
@@ -56,16 +63,17 @@ export class Cloudflare {
 
   private async makeRequest<T>(
     url: string,
-    method: string = "GET",
+    method = "GET",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data?: any,
   ): Promise<T> {
     const response = await fetch(url, {
-      method,
+      body: data ? JSON.stringify(data) : undefined,
       headers: {
-        Authorization: `Bearer ${this.apiToken}`,
+        "Authorization": `Bearer ${this.apiToken}`,
         "Content-Type": "application/json",
       },
-      body: data ? JSON.stringify(data) : undefined,
+      method,
     });
 
     if (!response.ok) {
@@ -157,14 +165,12 @@ export class Cloudflare {
     tunnelName: string,
   ): Promise<void> {
     log.info(`Creating local config for tunnel ${subdomain}.${domain}...`);
-    const tokenData = JSON.parse(
-      Buffer.from(tunnelToken, "base64").toString("utf8"),
+    const tokenData = CloudflareTunnelConfigSchema.parse(
+      JSON.parse(Buffer.from(tunnelToken, "base64").toString("utf8")),
     );
 
     const credentials = {
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       AccountTag: tokenData.a || this.accountId,
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       TunnelID: tokenData.t || tunnelId,
       TunnelName: tunnelName,
       TunnelSecret: tokenData.s,
@@ -178,19 +184,19 @@ export class Cloudflare {
     log.info(`Created credentials file at: ${this.credsPath}`);
 
     const tunnelConfig: CloudflaredConfig = {
-      tunnel: tunnelId,
       "credentials-file": this.credsPath,
-      ingress: [
+      "ingress": [
         ...Array.from(subdomainToService.entries()).map(
           ([subdomain, service]) => ({
             hostname: `${subdomain}.${domain}`,
-            service: service,
+            service,
           }),
         ),
         {
           service: "http_status:404",
         },
       ],
+      "tunnel": tunnelId,
     };
 
     // Write config file
@@ -210,11 +216,11 @@ export class Cloudflare {
 
     const recordId = existingRecords.result[0]?.id;
     const dnsData = {
-      type: "CNAME",
-      name: subdomain,
       content: `${tunnelId}.cfargotunnel.com`,
-      ttl: 1,
+      name: subdomain,
       proxied: true,
+      ttl: 1,
+      type: "CNAME",
     };
 
     if (recordId) {
@@ -240,19 +246,21 @@ export class Cloudflare {
       ["tunnel", "--config", this.configPath, "--loglevel", "error", "run"],
       {
         detached: true,
-        stdio: ["ignore", "pipe", "pipe"],
         env: {
           ...process.env,
           // Set this to bypass origin cert requirement for named tunnels
           TUNNEL_ORIGIN_CERT: "/dev/null",
         },
+        stdio: ["ignore", "pipe", "pipe"],
       },
     );
 
     cloudflared.stdout?.on("data", (data) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       log.info(data.toString().trim());
     });
     cloudflared.stderr?.on("data", (data) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       log.error(data.toString().trim());
     });
 

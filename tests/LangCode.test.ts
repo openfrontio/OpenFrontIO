@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { z } from "zod";
 
 describe("LangCode Filename Check", () => {
   const langDir = path.join(__dirname, "../resources/lang");
@@ -14,9 +15,17 @@ describe("LangCode Filename Check", () => {
       return;
     }
 
+    const schema = z.object({
+      lang: z.object({
+        lang_code: z.string(),
+      }),
+    });
+
     for (const file of files) {
       const filePath = path.join(langDir, file);
-      const jsonData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      const jsonData = schema.parse(
+        JSON.parse(fs.readFileSync(filePath, "utf-8")),
+      );
 
       const fileNameWithoutExt = path.basename(file, ".json");
       const langCode = jsonData.lang?.lang_code;

@@ -7,24 +7,25 @@ import {
   TerraNullius,
   Tick,
 } from "../../game/Game";
-import { PseudoRandom } from "../../PseudoRandom";
-import { flattenedEmojiTable } from "../../Util";
+import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
+import { PseudoRandom } from "../../PseudoRandom";
+import { flattenedEmojiTable } from "../../Util";
 
 export class BotBehavior {
   private enemy: Player | null = null;
   private enemyUpdated: Tick;
 
-  private assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
+  private readonly assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
 
   constructor(
-    private random: PseudoRandom,
-    private game: Game,
-    private player: Player,
-    private triggerRatio: number,
-    private reserveRatio: number,
-    private expandRatio: number,
+    private readonly random: PseudoRandom,
+    private readonly game: Game,
+    private readonly player: Player,
+    private readonly triggerRatio: number,
+    private readonly reserveRatio: number,
+    private readonly expandRatio: number,
   ) {}
 
   handleAllianceRequests() {
@@ -34,6 +35,28 @@ export class BotBehavior {
       } else {
         req.reject();
       }
+    }
+  }
+
+  handleAllianceExtensionRequests() {
+    for (const alliance of this.player.alliances()) {
+      // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
+      // Skip if no expiration yet/ ally didn't request extension yet/ bot already agreed to extend
+      if (!alliance.onlyOneAgreedToExtend()) continue;
+
+      // Nation is either Friendly or Neutral as an ally. Bot has no attitude
+      // If Friendly or Bot, always agree to extend. If Neutral, have random chance decide
+      const human = alliance.other(this.player);
+      if (
+        this.player.type() === PlayerType.FakeHuman &&
+        this.player.relation(human) === Relation.Neutral
+      ) {
+        if (!this.random.chance(1.5)) continue;
+      }
+
+      this.game.addExecution(
+        new AllianceExtensionExecution(this.player, human.id()),
+      );
     }
   }
 
@@ -59,8 +82,8 @@ export class BotBehavior {
   }
 
   private hasSufficientTroops(): boolean {
-    const maxPop = this.game.config().maxPopulation(this.player);
-    const ratio = this.player.population() / maxPop;
+    const maxTroops = this.game.config().maxTroops(this.player);
+    const ratio = this.player.troops() / maxTroops;
     return ratio >= this.triggerRatio;
   }
 
@@ -208,8 +231,7 @@ export class BotBehavior {
 
   sendAttack(target: Player | TerraNullius) {
     if (target.isPlayer() && this.player.isOnSameTeam(target)) return;
-    const maxPop = this.game.config().maxPopulation(this.player);
-    const maxTroops = maxPop * this.player.targetTroopRatio();
+    const maxTroops = this.game.config().maxTroops(this.player);
     const reserveRatio = target.isPlayer()
       ? this.reserveRatio
       : this.expandRatio;

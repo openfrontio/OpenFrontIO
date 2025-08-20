@@ -1,18 +1,19 @@
-import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
   MessageType,
   Player,
   Tick,
   TrainType,
+  TrajectoryTile,
   Unit,
   UnitInfo,
   UnitType,
 } from "./Game";
-import { GameImpl } from "./GameImpl";
-import { TileRef } from "./GameMap";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
+import { simpleHash, toInt, withinInt } from "../Util";
+import { GameImpl } from "./GameImpl";
 import { PlayerImpl } from "./PlayerImpl";
+import { TileRef } from "./GameMap";
 
 export class UnitImpl implements Unit {
   private _active = true;
@@ -20,7 +21,7 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
-  private _retreating: boolean = false;
+  private _retreating = false;
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
@@ -28,19 +29,22 @@ export class UnitImpl implements Unit {
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
   // Number of missiles in cooldown, if empty all missiles are ready.
-  private _missileTimerQueue: number[] = [];
-  private _hasTrainStation: boolean = false;
+  private readonly _missileTimerQueue: number[] = [];
+  private _hasTrainStation = false;
   private _patrolTile: TileRef | undefined;
-  private _level: number = 1;
-  private _targetable: boolean = true;
+  private _level = 1;
+  private _targetable = true;
   private _loaded: boolean | undefined;
-  private _trainType: TrainType | undefined;
+  private readonly _trainType: TrainType | undefined;
+  // Nuke only
+  private _trajectoryIndex = 0;
+  private readonly _trajectory: TrajectoryTile[];
 
   constructor(
-    private _type: UnitType,
-    private mg: GameImpl,
+    private readonly _type: UnitType,
+    private readonly mg: GameImpl,
     private _tile: TileRef,
-    private _id: number,
+    private readonly _id: number,
     public _owner: PlayerImpl,
     params: AllUnitParams = {},
   ) {
@@ -48,6 +52,7 @@ export class UnitImpl implements Unit {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._targetTile =
       "targetTile" in params ? (params.targetTile ?? undefined) : undefined;
+    this._trajectory = "trajectory" in params ? (params.trajectory ?? []) : [];
     this._troops = "troops" in params ? (params.troops ?? 0) : 0;
     this._lastSetSafeFromPirates =
       "lastSetSafeFromPirates" in params
@@ -109,6 +114,7 @@ export class UnitImpl implements Unit {
     return this._id;
   }
 
+  /* eslint-disable sort-keys */
   toUpdate(): UnitUpdate {
     return {
       type: GameUpdateType.Unit,
@@ -134,6 +140,7 @@ export class UnitImpl implements Unit {
       loaded: this._loaded,
     };
   }
+  /* eslint-enable sort-keys */
 
   type(): UnitType {
     return this._type;
@@ -321,6 +328,19 @@ export class UnitImpl implements Unit {
 
   targetTile(): TileRef | undefined {
     return this._targetTile;
+  }
+
+  setTrajectoryIndex(i: number): void {
+    const max = this._trajectory.length - 1;
+    this._trajectoryIndex = i < 0 ? 0 : i > max ? max : i;
+  }
+
+  trajectoryIndex(): number {
+    return this._trajectoryIndex;
+  }
+
+  trajectory(): TrajectoryTile[] {
+    return this._trajectory;
   }
 
   setTargetUnit(target: Unit | undefined): void {

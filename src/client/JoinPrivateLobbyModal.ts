@@ -1,24 +1,46 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
-import { GameInfo, GameRecord } from "../core/Schemas";
-import { generateID } from "../core/Util";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { JoinLobbyEvent } from "./Main";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { GameInfo, GameInfoSchema } from "../core/Schemas";
+import { LitElement, html } from "lit";
+import {
+  WorkerApiArchivedGameLobbySchema,
+  WorkerApiGameIdExistsSchema,
+} from "../core/WorkerSchemas";
+import { customElement, query, state } from "lit/decorators.js";
+import { JoinLobbyEvent } from "./Main";
+import { generateID } from "../core/Util";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { translateText } from "../client/Utils";
+
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
-  @query("#lobbyIdInput") private lobbyIdInput!: HTMLInputElement;
-  @state() private message: string = "";
+  @query("#lobbyIdInput") private readonly lobbyIdInput!: HTMLInputElement;
+  @state() private message = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
 
-  private playersInterval: NodeJS.Timeout | null = null;
+  private playersInterval: ReturnType<typeof setTimeout> | null = null;
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   render() {
     return html`
@@ -45,7 +67,13 @@ export class JoinPrivateLobbyModal extends LitElement {
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5 28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5 C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16 5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6 C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L 21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L 25 28 L 15 28 Z"
+                d="M 15 3 C 13.742188 3 12.847656 3.890625 12.40625 5 L 5 5 L 5
+                28 L 13 28 L 13 30 L 27 30 L 27 14 L 25 14 L 25 5 L 17.59375 5
+                C 17.152344 3.890625 16.257813 3 15 3 Z M 15 5 C 15.554688 5 16
+                5.445313 16 6 L 16 7 L 19 7 L 19 9 L 11 9 L 11 7 L 14 7 L 14 6
+                C 14 5.445313 14.445313 5 15 5 Z M 7 7 L 9 7 L 9 11 L 21 11 L
+                21 7 L 23 7 L 23 14 L 13 14 L 13 26 L 7 26 Z M 15 16 L 25 16 L
+                25 28 L 15 28 Z"
               ></path>
             </svg>
           </button>
@@ -88,7 +116,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     return this; // light DOM
   }
 
-  public open(id: string = "") {
+  public open(id = "") {
     this.modalEl?.open();
     if (id) {
       this.setLobbyId(id);
@@ -118,12 +146,23 @@ export class JoinPrivateLobbyModal extends LitElement {
     );
   }
 
-  private setLobbyId(id: string) {
-    if (id.startsWith("http")) {
-      this.lobbyIdInput.value = id.split("join/")[1];
+  private extractLobbyIdFromUrl(input: string): string {
+    if (input.startsWith("http")) {
+      if (input.includes("#join=")) {
+        const params = new URLSearchParams(input.split("#")[1]);
+        return params.get("join") ?? input;
+      } else if (input.includes("join/")) {
+        return input.split("join/")[1];
+      } else {
+        return input;
+      }
     } else {
-      this.lobbyIdInput.value = id;
+      return input;
     }
+  }
+
+  private setLobbyId(id: string) {
+    this.lobbyIdInput.value = this.extractLobbyIdFromUrl(id);
   }
 
   private handleChange(e: Event) {
@@ -134,15 +173,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async pasteFromClipboard() {
     try {
       const clipText = await navigator.clipboard.readText();
-
-      let lobbyId: string;
-      if (clipText.startsWith("http")) {
-        lobbyId = clipText.split("join/")[1];
-      } else {
-        lobbyId = clipText;
-      }
-
-      this.lobbyIdInput.value = lobbyId;
+      this.setLobbyId(clipText);
     } catch (err) {
       console.error("Failed to read clipboard contents: ", err);
     }
@@ -178,7 +209,8 @@ export class JoinPrivateLobbyModal extends LitElement {
       headers: { "Content-Type": "application/json" },
     });
 
-    const gameInfo = await response.json();
+    const json = await response.json();
+    const gameInfo = WorkerApiGameIdExistsSchema.parse(json);
 
     if (gameInfo.exists) {
       this.message = translateText("private_lobby.joined_waiting");
@@ -211,7 +243,8 @@ export class JoinPrivateLobbyModal extends LitElement {
       headers: { "Content-Type": "application/json" },
     });
 
-    const archiveData = await archiveResponse.json();
+    const json = await archiveResponse.json();
+    const archiveData = WorkerApiArchivedGameLobbySchema.parse(json);
 
     if (
       archiveData.success === false &&
@@ -227,13 +260,11 @@ export class JoinPrivateLobbyModal extends LitElement {
     }
 
     if (archiveData.exists) {
-      const gameRecord = archiveData.gameRecord as GameRecord;
-
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobbyId,
-            gameRecord: gameRecord,
+            gameRecord: archiveData.gameRecord,
             clientID: generateID(),
           } as JoinLobbyEvent,
           bubbles: true,
@@ -261,6 +292,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       },
     )
       .then((response) => response.json())
+      .then(GameInfoSchema.parse)
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
       })

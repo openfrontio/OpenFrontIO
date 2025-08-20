@@ -1,15 +1,15 @@
 import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
+import { TileRef } from "../game/GameMap";
 import { getSpawnTiles } from "./Util";
 
 export class SpawnExecution implements Execution {
-  active: boolean = true;
+  active = true;
   private mg: Game;
 
   constructor(
-    private playerInfo: PlayerInfo,
+    private readonly playerInfo: PlayerInfo,
     public readonly tile: TileRef,
   ) {}
 

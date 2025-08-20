@@ -1,16 +1,16 @@
 import { Execution, Game } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { GameUpdateType, RailTile, RailType } from "../game/GameUpdates";
 import { Railroad } from "../game/Railroad";
+import { TileRef } from "../game/GameMap";
 
 export class RailroadExecution implements Execution {
   private mg: Game;
-  private active: boolean = true;
-  private headIndex: number = 0;
-  private tailIndex: number = 0;
-  private increment: number = 3;
-  private railTiles: RailTile[] = [];
-  constructor(private railRoad: Railroad) {
+  private active = true;
+  private headIndex = 0;
+  private tailIndex = 0;
+  private readonly increment = 3;
+  private readonly railTiles: RailTile[] = [];
+  constructor(private readonly railRoad: Railroad) {
     this.tailIndex = railRoad.tiles.length;
   }
 
@@ -18,9 +18,10 @@ export class RailroadExecution implements Execution {
     return this.active;
   }
 
+  /* eslint-disable sort-keys */
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    const tiles = this.railRoad.tiles;
+    const { tiles } = this.railRoad;
     // Inverse direction computation for the first tile
     this.railTiles.push({
       tile: tiles[0],
@@ -42,12 +43,13 @@ export class RailroadExecution implements Execution {
       railType:
         tiles.length > 0
           ? this.computeExtremityDirection(
-              tiles[tiles.length - 1],
-              tiles[tiles.length - 2],
-            )
+            tiles[tiles.length - 1],
+            tiles[tiles.length - 2],
+          )
           : RailType.VERTICAL,
     });
   }
+  /* eslint-enable sort-keys */
 
   private computeExtremityDirection(tile: TileRef, next: TileRef): RailType {
     const x = this.mg.x(tile);
@@ -143,9 +145,9 @@ export class RailroadExecution implements Execution {
     }
     if (updatedRailTiles) {
       this.mg.addUpdate({
-        type: GameUpdateType.RailroadEvent,
         isActive: true,
         railTiles: updatedRailTiles,
+        type: GameUpdateType.RailroadEvent,
       });
     }
   }

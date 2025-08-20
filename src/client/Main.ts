@@ -1,46 +1,45 @@
-import favicon from "../../resources/images/Favicon.svg";
-import version from "../../resources/version.txt";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
-import { ServerConfig } from "../core/configuration/Config";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
-import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
-import { FlagInput } from "./FlagInput";
-import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
-import { HelpModal } from "./HelpModal";
-import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
+import "./PublicLobby";
+import "./UsernameInput";
+import "./components/NewsButton";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
+import "./styles.css";
+import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
+import { generateCryptoRandomUUID, incrementGamesPlayed, translateText } from "./Utils";
+import { DarkModeButton } from "./DarkModeButton";
+import { EventBus } from "../core/EventBus";
+import { FlagInput } from "./FlagInput";
+import { FlagInputModal } from "./FlagInputModal";
+import { GameStartingModal } from "./GameStartingModal";
+import { GameType } from "../core/game/Game";
+import { HelpModal } from "./HelpModal";
+import { HostLobbyModal } from "./HostLobbyModal";
+import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { NewsButton } from "./components/NewsButton";
 import { NewsModal } from "./NewsModal";
-import "./PublicLobby";
+import { OButton } from "./components/baseComponents/Button";
 import { PublicLobby } from "./PublicLobby";
+import { SendKickPlayerIntentEvent } from "./Transport";
+import { ServerConfig } from "../core/configuration/Config";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { UserSettingModal } from "./UserSettingModal";
-import "./UsernameInput";
+import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
-import {
-  generateCryptoRandomUUID,
-  incrementGamesPlayed,
-  translateText,
-} from "./Utils";
-import "./components/NewsButton";
-import { NewsButton } from "./components/NewsButton";
-import "./components/baseComponents/Button";
-import { OButton } from "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
-import "./styles.css";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { joinLobby } from "./ClientGameRunner";
+import version from "../../resources/version.txt";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     PageOS: {
       session: {
@@ -53,14 +52,22 @@ declare global {
       spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
       destroyUnits: (adType: string) => void;
       settings?: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         slots?: any;
       };
       spaNewPage: (url: string) => void;
     };
   }
+
+  // Extend the global interfaces to include your custom events
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+  interface DocumentEventMap {
+    "join-lobby": CustomEvent<JoinLobbyEvent>;
+    "kick-player": CustomEvent<KickPlayerEvent>;
+  }
 }
 
-export interface JoinLobbyEvent {
+export type JoinLobbyEvent = {
   clientID: string;
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
@@ -68,10 +75,15 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
-}
+};
+
+export type KickPlayerEvent = {
+  target: string;
+};
 
 class Client {
   private gameStop: (() => void) | null = null;
+  private readonly eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -79,7 +91,7 @@ class Client {
 
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   constructor() {}
 
@@ -155,14 +167,15 @@ class Client {
       }
     });
 
-    setFavicon();
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
+    document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
 
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
+
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
     singlePlayer.addEventListener("click", () => {
@@ -183,6 +196,16 @@ class Client {
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
       hlpModal.open();
+    });
+
+    const flagInputModal = document.querySelector(
+      "flag-input-modal",
+    ) as FlagInputModal;
+    flagInputModal instanceof FlagInputModal;
+    const flgInput = document.getElementById("flag-input_");
+    if (flgInput === null) throw new Error("Missing flag-input_");
+    flgInput.addEventListener("click", () => {
+      flagInputModal.open();
     });
 
     const territoryModal = document.querySelector(
@@ -333,8 +356,8 @@ class Client {
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
-    ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
+    ) as HostLobbyModal;
+    hostModal instanceof HostLobbyModal;
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
@@ -383,14 +406,18 @@ class Client {
     window.addEventListener("popstate", onHashUpdate);
     window.addEventListener("hashchange", onHashUpdate);
 
-    function updateSliderProgress(slider) {
+    function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
-        ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+        ((Number(slider.value) - Number(slider.min)) /
+          (Number(slider.max) - Number(slider.min))) *
+        100;
       slider.style.setProperty("--progress", `${percent}%`);
     }
 
     document
-      .querySelectorAll("#bots-count, #private-lobby-bots-count")
+      .querySelectorAll<HTMLInputElement>(
+        "#bots-count, #private-lobby-bots-count",
+      )
       .forEach((slider) => {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
@@ -399,8 +426,25 @@ class Client {
 
   private handleHash() {
     const { hash } = window.location;
+
+    const alertAndStrip = (message: string) => {
+      alert(message);
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    };
+
     if (hash.startsWith("#")) {
       const params = new URLSearchParams(hash.slice(1));
+      if (params.get("purchase-completed") === "true") {
+        alertAndStrip("purchase succeeded");
+        return;
+      } else if (params.get("purchase-completed") === "false") {
+        alertAndStrip("purchase failed");
+        return;
+      }
       const lobbyId = params.get("join");
       if (lobbyId && ID.safeParse(lobbyId).success) {
         this.joinModal.open(lobbyId);
@@ -419,6 +463,7 @@ class Client {
     const config = await getServerConfigFromClient();
 
     this.gameStop = joinLobby(
+      this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
@@ -450,6 +495,7 @@ class Client {
           "territory-patterns-modal",
           "language-modal",
           "news-modal",
+          "flag-input-modal",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
@@ -504,20 +550,21 @@ class Client {
     this.gameStop = null;
     this.publicLobby.leaveLobby();
   }
+
+  private handleKickPlayer(event: CustomEvent<KickPlayerEvent>) {
+    const { target } = event.detail;
+
+    // Forward to eventBus if available
+    if (this.eventBus) {
+      this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
 }
 
 // Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
-
-function setFavicon(): void {
-  const link = document.createElement("link");
-  link.type = "image/x-icon";
-  link.rel = "shortcut icon";
-  link.href = favicon;
-  document.head.appendChild(link);
-}
 
 // WARNING: DO NOT EXPOSE THIS ID
 function getPlayToken(): string {
@@ -566,7 +613,7 @@ function hasAllowedFlare(
   const allowed = config.allowedFlares();
   if (allowed === undefined) return true;
   if (userMeResponse === false) return false;
-  const flares = userMeResponse.player.flares;
+  const { flares } = userMeResponse.player;
   if (flares === undefined) return false;
   return allowed.length === 0 || allowed.some((f) => flares.includes(f));
 }

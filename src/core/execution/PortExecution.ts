@@ -1,6 +1,6 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
 
@@ -13,7 +13,7 @@ export class PortExecution implements Execution {
 
   constructor(
     private player: Player,
-    private tile: TileRef,
+    private readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -27,7 +27,7 @@ export class PortExecution implements Execution {
       throw new Error("Not initialized");
     }
     if (this.port === null) {
-      const tile = this.tile;
+      const { tile } = this;
       const spawn = this.player.canBuild(UnitType.Port, tile);
       if (spawn === false) {
         console.warn(
@@ -90,7 +90,7 @@ export class PortExecution implements Execution {
   createStation(): void {
     if (this.port !== null) {
       const nearbyFactory = this.mg.hasUnitNearby(
-        this.port.tile()!,
+        this.port.tile(),
         this.mg.config().trainStationMaxRange(),
         UnitType.Factory,
         this.player.id(),

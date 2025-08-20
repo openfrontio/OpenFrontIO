@@ -1,25 +1,27 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
 
 export class ShellExecution implements Execution {
   private active = true;
   private pathFinder: AirPathFinder;
   private shell: Unit | undefined;
   private mg: Game;
-  private destroyAtTick: number = -1;
+  private destroyAtTick = -1;
+  private random: PseudoRandom;
 
   constructor(
-    private spawn: TileRef,
-    private _owner: Player,
-    private ownerUnit: Unit,
-    private target: Unit,
+    private readonly spawn: TileRef,
+    private readonly _owner: Player,
+    private readonly ownerUnit: Unit,
+    private readonly target: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
     this.mg = mg;
+    this.random = new PseudoRandom(mg.ticks());
   }
 
   tick(ticks: number): void {
@@ -61,7 +63,16 @@ export class ShellExecution implements Execution {
 
   private effectOnTarget(): number {
     const { damage } = this.mg.config().unitInfo(UnitType.Shell);
-    return damage ?? 0;
+    const baseDamage = damage ?? 250;
+
+    const roll = this.random.nextInt(1, 6);
+    const damageMultiplier = (roll - 1) * 25 + 200;
+
+    return Math.round((baseDamage / 250) * damageMultiplier);
+  }
+
+  public getEffectOnTargetForTesting(): number {
+    return this.effectOnTarget();
   }
 
   isActive(): boolean {

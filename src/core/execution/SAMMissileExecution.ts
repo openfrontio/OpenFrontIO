@@ -6,28 +6,30 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
-import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
+import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
 
 export class SAMMissileExecution implements Execution {
   private active = true;
   private pathFinder: AirPathFinder;
   private SAMMissile: Unit | undefined;
   private mg: Game;
+  private speed = 0;
 
   constructor(
-    private spawn: TileRef,
-    private _owner: Player,
-    private ownerUnit: Unit,
-    private target: Unit,
-    private speed: number = 12,
+    private readonly spawn: TileRef,
+    private readonly _owner: Player,
+    private readonly ownerUnit: Unit,
+    private readonly target: Unit,
+    private readonly targetTile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
     this.mg = mg;
+    this.speed = this.mg.config().defaultSamMissileSpeed();
   }
 
   tick(ticks: number): void {
@@ -55,7 +57,7 @@ export class SAMMissileExecution implements Execution {
     for (let i = 0; i < this.speed; i++) {
       const result = this.pathFinder.nextTile(
         this.SAMMissile.tile(),
-        this.target.tile(),
+        this.targetTile,
       );
       if (result === true) {
         this.mg.displayMessage(

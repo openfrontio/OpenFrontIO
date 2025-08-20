@@ -1,9 +1,6 @@
-import { placeName } from "../client/graphics/NameBoxCalculator";
-import { getConfig } from "./configuration/ConfigLoader";
-import { Executor } from "./execution/ExecutionManager";
-import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
+  Attack,
   Cell,
   Game,
   GameUpdates,
@@ -17,26 +14,32 @@ import {
   PlayerProfile,
   PlayerType,
 } from "./game/Game";
-import { createGame } from "./game/GameImpl";
-import { TileRef } from "./game/GameMap";
+import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
-import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
-import { PseudoRandom } from "./PseudoRandom";
-import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { sanitize, simpleHash } from "./Util";
+import { Executor } from "./execution/ExecutionManager";
+import { GameMapLoader } from "./game/GameMapLoader";
+import { PseudoRandom } from "./PseudoRandom";
+import { TileRef } from "./game/GameMap";
+import { WinCheckExecution } from "./execution/WinCheckExecution";
+import { createGame } from "./game/GameImpl";
 import { fixProfaneUsername } from "./validations/username";
+import { getConfig } from "./configuration/ConfigLoader";
+import { loadTerrainMap } from "./game/TerrainMapLoader";
+import { placeName } from "../client/graphics/NameBoxCalculator";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
   clientID: ClientID,
-  callBack: (gu: GameUpdateViewData) => void,
+  mapLoader: GameMapLoader,
+  callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
-  const gameMap = await loadGameMap(gameStart.config.gameMap);
+  const gameMap = await loadTerrainMap(gameStart.config.gameMap, mapLoader);
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map(
@@ -54,13 +57,13 @@ export async function createGameRunner(
   const nations = gameStart.config.disableNPCs
     ? []
     : gameMap.manifest.nations.map(
-        (n) =>
-          new Nation(
-            new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
-          ),
-      );
+      (n) =>
+        new Nation(
+          new Cell(n.coordinates[0], n.coordinates[1]),
+          n.strength,
+          new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+        ),
+    );
 
   const game: Game = createGame(
     humans,
@@ -80,7 +83,7 @@ export async function createGameRunner(
 }
 
 export class GameRunner {
-  private turns: Turn[] = [];
+  private readonly turns: Turn[] = [];
   private currTurn = 0;
   private isExecuting = false;
 
@@ -88,8 +91,8 @@ export class GameRunner {
 
   constructor(
     public game: Game,
-    private execManager: Executor,
-    private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    private readonly execManager: Executor,
+    private readonly callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
   ) {}
 
   init() {
@@ -162,10 +165,10 @@ export class GameRunner {
     updates[GameUpdateType.Tile] = [];
 
     this.callBack({
-      tick: this.game.ticks(),
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
-      updates: updates,
       playerNameViewData: this.playerViewData,
+      tick: this.game.ticks(),
+      updates,
     });
     this.isExecuting = false;
   }
@@ -178,23 +181,24 @@ export class GameRunner {
     const player = this.game.player(playerID);
     const tile = this.game.ref(x, y);
     const actions = {
-      canAttack: player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
+      canAttack: player.canAttack(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 
     if (this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
       actions.interaction = {
-        sharedBorder: player.sharesBorderWith(other),
+        canBreakAlliance: player.isAlliedWith(other),
+        canDonateGold: player.canDonateGold(other),
+        canDonateTroops: player.canDonateTroops(other),
+        canEmbargo: !player.hasEmbargoAgainst(other),
+        canSendAllianceRequest: player.canSendAllianceRequest(other),
         canSendEmoji: player.canSendEmoji(other),
         canTarget: player.canTarget(other),
-        canSendAllianceRequest: player.canSendAllianceRequest(other),
-        canBreakAlliance: player.isAlliedWith(other),
-        canDonate: player.canDonate(other),
-        canEmbargo: !player.hasEmbargoAgainst(other),
+        sharedBorder: player.sharesBorderWith(other),
       };
-      const alliance = player.allianceWith(other as Player);
+      const alliance = player.allianceWith(other);
       if (alliance) {
         actions.interaction.allianceExpiresAt = alliance.expiresAt();
       }
@@ -229,7 +233,7 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const condition = (a) => a.id() === attackID;
+    const condition = (a: Attack) => a.id() === attackID;
     const attack =
       player.outgoingAttacks().find(condition) ??
       player.incomingAttacks().find(condition);

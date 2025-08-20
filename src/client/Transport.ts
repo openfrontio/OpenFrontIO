@@ -1,5 +1,3 @@
-import { z } from "zod/v4";
-import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
   GameType,
@@ -9,8 +7,6 @@ import {
   Tick,
   UnitType,
 } from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
-import { PlayerView } from "../core/game/GameView";
 import {
   AllPlayersStats,
   ClientHashMessage,
@@ -24,9 +20,13 @@ import {
   ServerMessageSchema,
   Winner,
 } from "../core/Schemas";
-import { replacer } from "../core/Util";
+import { EventBus, GameEvent } from "../core/EventBus";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
+import { PlayerView } from "../core/game/GameView";
+import { TileRef } from "../core/game/GameMap";
+import { replacer } from "../core/Util";
+import { z } from "zod";
 
 export class PauseGameEvent implements GameEvent {
   constructor(public readonly paused: boolean) {}
@@ -133,16 +133,16 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendDeleteUnitIntentEvent implements GameEvent {
+  constructor(public readonly unitId: number) {}
+}
+
 export class CancelAttackIntentEvent implements GameEvent {
   constructor(public readonly attackID: string) {}
 }
 
 export class CancelBoatIntentEvent implements GameEvent {
   constructor(public readonly unitID: number) {}
-}
-
-export class SendSetTargetTroopRatioEvent implements GameEvent {
-  constructor(public readonly ratio: number) {}
 }
 
 export class SendWinnerEvent implements GameEvent {
@@ -165,12 +165,16 @@ export class MoveWarshipIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendKickPlayerIntentEvent implements GameEvent {
+  constructor(public readonly target: string) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
   private localServer: LocalServer;
 
-  private buffer: string[] = [];
+  private readonly buffer: string[] = [];
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
@@ -178,8 +182,8 @@ export class Transport {
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
   constructor(
-    private lobbyConfig: LobbyConfig,
-    private eventBus: EventBus,
+    private readonly lobbyConfig: LobbyConfig,
+    private readonly eventBus: EventBus,
   ) {
     // If gameRecord is not null, we are replaying an archived game.
     // For multiplayer games, GameConfig is not known until game starts.
@@ -223,9 +227,6 @@ export class Transport {
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
-    this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
-      this.onSendSetTargetTroopRatioEvent(e),
-    );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
@@ -241,6 +242,14 @@ export class Transport {
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
+
+    this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
+      this.onSendDeleteUnitIntent(e),
+    );
+
+    this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
+      this.onSendKickPlayerIntent(e),
+    );
   }
 
   private startPing() {
@@ -319,6 +328,7 @@ export class Transport {
     };
     this.socket.onmessage = (event: MessageEvent) => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         const parsed = JSON.parse(event.data);
         const result = ServerMessageSchema.safeParse(parsed);
         if (!result.success) {
@@ -374,7 +384,7 @@ export class Transport {
     } satisfies ClientJoinMessage);
   }
 
-  leaveGame(saveFullGame: boolean = false) {
+  leaveGame(saveFullGame = false) {
     if (this.isLocal) {
       this.localServer.endGame(saveFullGame);
       return;
@@ -525,14 +535,6 @@ export class Transport {
     });
   }
 
-  private onSendSetTargetTroopRatioEvent(event: SendSetTargetTroopRatioEvent) {
-    this.sendIntent({
-      type: "troop_ratio",
-      clientID: this.lobbyConfig.clientID,
-      ratio: event.ratio,
-    });
-  }
-
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
     this.sendIntent({
       type: "build_unit",
@@ -544,7 +546,7 @@ export class Transport {
 
   private onPauseGameEvent(event: PauseGameEvent) {
     if (!this.isLocal) {
-      console.log(`cannot pause multiplayer games`);
+      console.log("cannot pause multiplayer games");
       return;
     }
     if (event.paused) {
@@ -611,11 +613,27 @@ export class Transport {
     });
   }
 
+  private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
+    this.sendIntent({
+      type: "delete_unit",
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
+    });
+  }
+
+  private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
+    this.sendIntent({
+      type: "kick_player",
+      clientID: this.lobbyConfig.clientID,
+      target: event.target,
+    });
+  }
+
   private sendIntent(intent: Intent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       const msg = {
         type: "intent",
-        intent: intent,
+        intent,
       } satisfies ClientIntentMessage;
       this.sendMsg(msg);
     } else {

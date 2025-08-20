@@ -1,17 +1,18 @@
 import {
   Execution,
   Game,
-  isStructureType,
   MessageType,
   Player,
   TerraNullius,
+  TrajectoryTile,
   Unit,
   UnitType,
+  isStructureType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { NukeType } from "../StatsSchemas";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
-import { NukeType } from "../StatsSchemas";
+import { TileRef } from "../game/GameMap";
 
 const SPRITE_RADIUS = 16;
 
@@ -20,22 +21,19 @@ export class NukeExecution implements Execution {
   private mg: Game;
   private nuke: Unit | null = null;
   private tilesToDestroyCache: Set<TileRef> | undefined;
-
-  private random: PseudoRandom;
   private pathFinder: ParabolaPathFinder;
 
   constructor(
-    private nukeType: NukeType,
-    private player: Player,
-    private dst: TileRef,
+    private readonly nukeType: NukeType,
+    private readonly player: Player,
+    private readonly dst: TileRef,
     private src?: TileRef | null,
-    private speed: number = -1,
+    private speed = -1,
     private waitTicks = 0,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.random = new PseudoRandom(ticks);
     if (this.speed === -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
@@ -99,7 +97,7 @@ export class NukeExecution implements Execution {
     if (this.nuke === null) {
       const spawn = this.src ?? this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {
-        console.warn(`cannot build Nuke`);
+        console.warn("cannot build Nuke");
         this.active = false;
         return;
       }
@@ -107,10 +105,12 @@ export class NukeExecution implements Execution {
       this.pathFinder.computeControlPoints(
         spawn,
         this.dst,
+        this.speed,
         this.nukeType !== UnitType.MIRVWarhead,
       );
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
+        trajectory: this.getTrajectory(this.dst),
       });
       this.maybeBreakAlliances(this.tilesToDestroy());
       if (this.mg.hasOwner(this.dst)) {
@@ -151,7 +151,7 @@ export class NukeExecution implements Execution {
 
     // make the nuke unactive if it was intercepted
     if (!this.nuke.isActive()) {
-      console.log(`Nuke destroyed before reaching target`);
+      console.log("Nuke destroyed before reaching target");
       this.active = false;
       return;
     }
@@ -169,6 +169,8 @@ export class NukeExecution implements Execution {
     } else {
       this.updateNukeTargetable();
       this.nuke.move(nextTile);
+      // Update index so SAM can interpolate future position
+      this.nuke.setTrajectoryIndex(this.pathFinder.currentIndex());
     }
   }
 
@@ -176,21 +178,44 @@ export class NukeExecution implements Execution {
     return this.nuke;
   }
 
+  private getTrajectory(target: TileRef): TrajectoryTile[] {
+    const trajectoryTiles: TrajectoryTile[] = [];
+    const targetRangeSquared =
+      this.mg.config().defaultNukeTargetableRange() ** 2;
+    const allTiles: TileRef[] = this.pathFinder.allTiles();
+    for (const tile of allTiles) {
+      const targetable = this.isTargetable(target, tile, targetRangeSquared);
+      trajectoryTiles.push({
+        targetable,
+        tile,
+      });
+    }
+
+    return trajectoryTiles;
+  }
+
+  private isTargetable(
+    targetTile: TileRef,
+    nukeTile: TileRef,
+    targetRangeSquared: number,
+  ): boolean {
+    return (
+      this.mg.euclideanDistSquared(nukeTile, targetTile) < targetRangeSquared ||
+      (this.src !== undefined &&
+        this.src !== null &&
+        this.mg.euclideanDistSquared(this.src, nukeTile) < targetRangeSquared)
+    );
+  }
+
   private updateNukeTargetable() {
     if (this.nuke === null || this.nuke.targetTile() === undefined) {
       return;
     }
     const targetRangeSquared =
-      this.mg.config().defaultNukeTargetableRange() *
-      this.mg.config().defaultNukeTargetableRange();
+      this.mg.config().defaultNukeTargetableRange() ** 2;
     const targetTile = this.nuke.targetTile();
     this.nuke.setTargetable(
-      this.mg.euclideanDistSquared(this.nuke.tile(), targetTile!) <
-        targetRangeSquared ||
-        (this.src !== undefined &&
-          this.src !== null &&
-          this.mg.euclideanDistSquared(this.src, this.nuke.tile()) <
-            targetRangeSquared),
+      this.isTargetable(targetTile!, this.nuke.tile(), targetRangeSquared),
     );
   }
 
@@ -203,8 +228,8 @@ export class NukeExecution implements Execution {
     const toDestroy = this.tilesToDestroy();
     this.maybeBreakAlliances(toDestroy);
 
-    const maxPop = this.target().isPlayer()
-      ? this.mg.config().maxPopulation(this.target() as Player)
+    const maxTroops = this.target().isPlayer()
+      ? this.mg.config().maxTroops(this.target() as Player)
       : 1;
 
     for (const tile of toDestroy) {
@@ -218,17 +243,7 @@ export class NukeExecution implements Execution {
               this.nukeType,
               owner.troops(),
               owner.numTilesOwned(),
-              maxPop,
-            ),
-        );
-        owner.removeWorkers(
-          this.mg
-            .config()
-            .nukeDeathFactor(
-              this.nukeType,
-              owner.workers(),
-              owner.numTilesOwned(),
-              maxPop,
+              maxTroops,
             ),
         );
         owner.outgoingAttacks().forEach((attack) => {
@@ -239,7 +254,7 @@ export class NukeExecution implements Execution {
                 this.nukeType,
                 attack.troops(),
                 owner.numTilesOwned(),
-                maxPop,
+                maxTroops,
               ) ?? 0;
           attack.setTroops(attack.troops() - deaths);
         });
@@ -251,7 +266,7 @@ export class NukeExecution implements Execution {
                 this.nukeType,
                 attack.troops(),
                 owner.numTilesOwned(),
-                maxPop,
+                maxTroops,
               ) ?? 0;
           attack.setTroops(attack.troops() - deaths);
         });

@@ -1,12 +1,12 @@
+import "./components/Difficulties";
+import "./components/Maps";
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
 import { getAltKey, getModifierKey, translateText } from "../client/Utils";
-import "./components/Difficulties";
-import "./components/Maps";
 
 @customElement("help-modal")
 export class HelpModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -14,6 +14,23 @@ export class HelpModal extends LitElement {
   createRenderRoot() {
     return this;
   }
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   render() {
     return html`
@@ -121,6 +138,14 @@ export class HelpModal extends LitElement {
                 </td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>
+              <tr>
+                <td>
+                  <div class="mouse-shell">
+                    <div class="mouse-wheel" id="highlighted-wheel"></div>
+                  </div>
+                </td>
+                <td>${translateText("help_modal.action_auto_upgrade")}</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -166,11 +191,7 @@ export class HelpModal extends LitElement {
           <div>
             <p class="mb-4">${translateText("help_modal.ui_control_desc")}</p>
             <ul>
-              <li class="mb-4">${translateText("help_modal.ui_pop")}</li>
               <li class="mb-4">${translateText("help_modal.ui_gold")}</li>
-              <li class="mb-4">
-                ${translateText("help_modal.ui_troops_workers")}
-              </li>
               <li class="mb-4">
                 ${translateText("help_modal.ui_attack_ratio")}
               </li>

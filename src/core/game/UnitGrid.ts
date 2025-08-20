@@ -1,18 +1,23 @@
-import { PlayerID, Unit, UnitType } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
+import { PlayerID, Unit, UnitType } from "./Game";
 import { UnitView } from "./GameView";
 
+export type UnitPredicate = (value: {
+  unit: Unit | UnitView;
+  distSquared: number;
+}) => boolean;
+
 export class UnitGrid {
-  private grid: Set<Unit | UnitView>[][];
+  private readonly grid: Map<UnitType, Set<Unit | UnitView>>[][];
   private readonly cellSize = 100;
 
-  constructor(private gm: GameMap) {
+  constructor(private readonly gm: GameMap) {
     this.grid = Array(Math.ceil(gm.height() / this.cellSize))
       .fill(null)
       .map(() =>
         Array(Math.ceil(gm.width() / this.cellSize))
           .fill(null)
-          .map(() => new Set<Unit | UnitView>()),
+          .map(() => new Map<UnitType, Set<Unit | UnitView>>()),
       );
   }
 
@@ -27,7 +32,15 @@ export class UnitGrid {
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
     if (this.isValidCell(gridX, gridY)) {
-      this.grid[gridY][gridX].add(unit);
+      const unitSet = this.grid[gridY][gridX].get(unit.type());
+      if (unitSet !== undefined) {
+        unitSet.add(unit);
+      } else {
+        this.grid[gridY][gridX].set(
+          unit.type(),
+          new Set<Unit | UnitView>([unit]),
+        );
+      }
     }
   }
 
@@ -41,7 +54,10 @@ export class UnitGrid {
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
     if (this.isValidCell(gridX, gridY)) {
-      this.grid[gridY][gridX].delete(unit);
+      const unitSet = this.grid[gridY][gridX].get(unit.type());
+      if (unitSet !== undefined) {
+        unitSet.delete(unit);
+      }
     }
   }
 
@@ -78,7 +94,7 @@ export class UnitGrid {
   private getCellsInRange(tile: TileRef, range: number) {
     const x = this.gm.x(tile);
     const y = this.gm.y(tile);
-    const cellSize = this.cellSize;
+    const { cellSize } = this;
     const [gridX, gridY] = this.getGridCoords(x, y);
     const startGridX = Math.max(
       0,
@@ -97,7 +113,7 @@ export class UnitGrid {
       gridY + Math.ceil((range - (cellSize - (y % cellSize))) / cellSize),
     );
 
-    return { startGridX, endGridX, startGridY, endGridY };
+    return { endGridX, endGridY, startGridX, startGridY };
   }
 
   private squaredDistanceFromTile(
@@ -119,11 +135,8 @@ export class UnitGrid {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
-    predicate?: (value: {
-      unit: Unit | UnitView;
-      distSquared: number;
-    }) => boolean,
+    types: readonly UnitType[] | UnitType,
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
@@ -131,17 +144,26 @@ export class UnitGrid {
       searchRange,
     );
     const rangeSquared = searchRange * searchRange;
-    const typeSet = Array.isArray(types) ? new Set(types) : new Set([types]);
+    const typeSet = new Set(
+      // Using typeof check instead of Array.isArray due to a typescript
+      // narrowing limitation. For more information, see the full issue
+      // discussion at https://github.com/mattpocock/ts-reset/issues/48
+      typeof types === "object" ? types : [types],
+    );
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
-        for (const unit of this.grid[cy][cx]) {
-          if (!typeSet.has(unit.type())) continue;
-          if (!unit.isActive()) continue;
-          const distSquared = this.squaredDistanceFromTile(unit, tile);
-          if (distSquared > rangeSquared) continue;
-          const value = { unit, distSquared };
-          if (predicate !== undefined && !predicate(value)) continue;
-          nearby.push(value);
+        for (const type of typeSet) {
+          const unitSet = this.grid[cy][cx].get(type);
+          if (unitSet === undefined) continue;
+          for (const unit of unitSet) {
+            if (!unit.isActive()) continue;
+            const distSquared = this.squaredDistanceFromTile(unit, tile);
+            if (distSquared > rangeSquared) continue;
+            // eslint-disable-next-line sort-keys
+            const value = { unit, distSquared };
+            if (predicate !== undefined && !predicate(value)) continue;
+            nearby.push(value);
+          }
         }
       }
     }
@@ -162,12 +184,10 @@ export class UnitGrid {
     const rangeSquared = searchRange * searchRange;
     for (let cy = startGridY; cy <= endGridY; cy++) {
       for (let cx = startGridX; cx <= endGridX; cx++) {
-        for (const unit of this.grid[cy][cx]) {
-          if (
-            unit.type() === type &&
-            unit.owner().id() === playerId &&
-            unit.isActive()
-          ) {
+        const unitSet = this.grid[cy][cx].get(type);
+        if (unitSet === undefined) continue;
+        for (const unit of unitSet) {
+          if (unit.owner().id() === playerId && unit.isActive()) {
             const distSquared = this.squaredDistanceFromTile(unit, tile);
             if (distSquared <= rangeSquared) {
               return true;

@@ -1,32 +1,35 @@
-import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
+  ConquestUpdate,
   GameUpdateType,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../../core/game/GameView";
-import { renderNumber } from "../../Utils";
-import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { Fx, FxType } from "../fx/Fx";
-import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
+import { GameView, UnitView } from "../../../core/game/GameView";
+import { ShockwaveFx, nukeFxFactory } from "../fx/NukeFx";
+import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
+import { Layer } from "./Layer";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TextFx } from "../fx/TextFx";
+import { Theme } from "../../../core/configuration/Config";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
-import { Layer } from "./Layer";
+import { UnitType } from "../../../core/game/Game";
+import { conquestFxFactory } from "../fx/ConquestFx";
+import { renderNumber } from "../../Utils";
+
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
 
-  private lastRefresh: number = 0;
-  private refreshRate: number = 10;
-  private theme: Theme;
-  private animatedSpriteLoader: AnimatedSpriteLoader =
+  private lastRefresh = 0;
+  private readonly refreshRate = 10;
+  private readonly theme: Theme;
+  private readonly animatedSpriteLoader: AnimatedSpriteLoader =
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
 
-  constructor(private game: GameView) {
+  constructor(private readonly game: GameView) {
     this.theme = this.game.config().theme();
   }
 
@@ -55,35 +58,35 @@ export class FxLayer implements Layer {
         if (update === undefined) return;
         this.onRailroadEvent(update);
       });
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.ConquestEvent]?.forEach((update) => {
+        if (update === undefined) return;
+        this.onConquestEvent(update);
+      });
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {
-    const tile = bonus.tile;
-    if (this.game.owner(tile) !== this.game.myPlayer()) {
+    if (this.game.player(bonus.player) !== this.game.myPlayer()) {
       // Only display text fx for the current player
       return;
     }
+    const { tile } = bonus;
     const x = this.game.x(tile);
     let y = this.game.y(tile);
-    const gold = bonus.gold;
-    const troops = bonus.troops;
-    const workers = bonus.workers;
+    const { gold } = bonus;
+    const { troops } = bonus;
 
     if (gold > 0) {
-      const shortened = renderNumber(gold);
+      const shortened = renderNumber(gold, 0);
       this.addTextFx(`+ ${shortened}`, x, y);
       y += 10; // increase y so the next popup starts bellow
     }
 
     if (troops > 0) {
-      const shortened = renderNumber(troops);
+      const shortened = renderNumber(troops, 0);
       this.addTextFx(`+ ${shortened} troops`, x, y);
       y += 10;
-    }
-
-    if (workers > 0) {
-      const shortened = renderNumber(workers);
-      this.addTextFx(`+ ${shortened} workers`, x, y);
     }
   }
 
@@ -146,7 +149,7 @@ export class FxLayer implements Layer {
   }
 
   onRailroadEvent(railroad: RailroadUpdate) {
-    const railTiles = railroad.railTiles;
+    const { railTiles } = railroad;
     for (const rail of railTiles) {
       // No need for pseudorandom, this is fx
       const chanceFx = Math.floor(Math.random() * 3);
@@ -162,6 +165,21 @@ export class FxLayer implements Layer {
         this.allFx.push(animation);
       }
     }
+  }
+
+  onConquestEvent(conquest: ConquestUpdate) {
+    // Only display fx for the current player
+    const conqueror = this.game.player(conquest.conquerorId);
+    if (conqueror !== this.game.myPlayer()) {
+      return;
+    }
+
+    const conquestFx = conquestFxFactory(
+      this.animatedSpriteLoader,
+      conquest,
+      this.game,
+    );
+    this.allFx = this.allFx.concat(conquestFx);
   }
 
   onWarshipEvent(unit: UnitView) {

@@ -1,20 +1,20 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { ShellExecution } from "./ShellExecution";
+import { TileRef } from "../game/GameMap";
 
 export class DefensePostExecution implements Execution {
   private mg: Game;
   private post: Unit | null = null;
-  private active: boolean = true;
+  private active = true;
 
   private target: Unit | null = null;
   private lastShellAttack = 0;
 
-  private alreadySentShell = new Set<Unit>();
+  private readonly alreadySentShell = new Set<Unit>();
 
   constructor(
     private player: Player,
-    private tile: TileRef,
+    private readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {

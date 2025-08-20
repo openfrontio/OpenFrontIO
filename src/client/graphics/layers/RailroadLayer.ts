@@ -1,15 +1,15 @@
-import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { PlayerID } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
 import {
   GameUpdateType,
-  RailroadUpdate,
   RailTile,
   RailType,
+  RailroadUpdate,
 } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { Colord } from "colord";
+import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
+import { PlayerID } from "../../../core/game/Game";
+import { Theme } from "../../../core/configuration/Config";
+import { TileRef } from "../../../core/game/GameMap";
 import { getRailroadRects } from "./RailroadSprites";
 
 type RailRef = {
@@ -21,13 +21,13 @@ type RailRef = {
 export class RailroadLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
-  private theme: Theme;
+  private readonly theme: Theme;
   // Save the number of railroads per tiles. Delete when it reaches 0
-  private existingRailroads = new Map<TileRef, RailRef>();
+  private readonly existingRailroads = new Map<TileRef, RailRef>();
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
 
-  constructor(private game: GameView) {
+  constructor(private readonly game: GameView) {
     this.theme = game.config().theme();
   }
 
@@ -151,7 +151,7 @@ export class RailroadLayer implements Layer {
     const x = this.game.x(railRoad.tile);
     const y = this.game.y(railRoad.tile);
     const owner = this.game.owner(railRoad.tile);
-    const recipient = owner.isPlayer() ? (owner as PlayerView) : null;
+    const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
       ? this.theme.railroadColor(recipient)
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });

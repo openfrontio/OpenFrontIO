@@ -1,15 +1,14 @@
-import { Execution, Game } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
-import { simpleHash } from "../Util";
+import { Execution, Game } from "../game/Game";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
-import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { BotSpawner } from "./BotSpawner";
+import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
+import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
@@ -18,22 +17,23 @@ import { FakeHumanExecution } from "./FakeHumanExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
+import { PseudoRandom } from "../PseudoRandom";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
-import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
+import { simpleHash } from "../Util";
 
 export class Executor {
   // private random = new PseudoRandom(999)
-  private random: PseudoRandom;
+  private readonly random: PseudoRandom;
 
   constructor(
-    private mg: Game,
-    private gameID: GameID,
-    private clientID: ClientID,
+    private readonly mg: Game,
+    private readonly gameID: GameID,
+    private readonly clientID: ClientID,
   ) {
     // Add one to avoid id collisions with bots.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
@@ -98,8 +98,6 @@ export class Executor {
         );
       case "donate_gold":
         return new DonateGoldExecution(player, intent.recipient, intent.gold);
-      case "troop_ratio":
-        return new SetTargetTroopRatioExecution(player, intent.ratio);
       case "embargo":
         return new EmbargoExecution(player, intent.targetID, intent.action);
       case "build_unit":
@@ -110,6 +108,8 @@ export class Executor {
 
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
+      case "delete_unit":
+        return new DeleteUnitExecution(player, intent.unitId);
       case "quick_chat":
         return new QuickChatExecution(
           player,

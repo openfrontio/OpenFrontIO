@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import {
   Difficulty,
   Game,
@@ -9,15 +7,18 @@ import {
   PlayerInfo,
   PlayerType,
 } from "../../src/core/game/Game";
-import { createGame } from "../../src/core/game/GameImpl";
 import {
+  MapManifestSchema,
   genTerrainFromBin,
-  MapManifest,
 } from "../../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
+import { UserSettings } from "../../src/core/game/UserSettings";
+import { createGame } from "../../src/core/game/GameImpl";
+import fs from "fs";
+import path from "path";
+import { z } from "zod";
 
 export async function setup(
   mapName: string,
@@ -44,29 +45,32 @@ export async function setup(
 
   const mapBinBuffer = fs.readFileSync(mapBinPath);
   const miniMapBinBuffer = fs.readFileSync(miniMapBinPath);
-  const manifest = JSON.parse(
-    fs.readFileSync(manifestPath, "utf8"),
-  ) satisfies MapManifest;
+  const str = fs.readFileSync(manifestPath, "utf8");
+  const raw = JSON.parse(str);
+  const parsed = MapManifestSchema.safeParse(raw);
+  if (!parsed.success) {
+    const error = z.prettifyError(parsed.error);
+    throw new Error(`Error parsing ${manifestPath}: ${error}`);
+  }
+  const manifest = parsed.data;
 
-  // Convert Buffer to string (binary encoding)
-  const mapBinString = mapBinBuffer.toString("binary");
-  const miniMapBinString = miniMapBinBuffer.toString("binary");
-
-  const gameMap = await genTerrainFromBin(manifest.map, mapBinString);
+  const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(
     manifest.mini_map,
-    miniMapBinString,
+    miniMapBinBuffer,
   );
 
   // Configure the game
   const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {
+    bots: 0,
+    difficulty: Difficulty.Medium,
+    disableNPCs: false,
+    donateGold: false,
+    donateTroops: false,
     gameMap: GameMapType.Asia,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
-    difficulty: Difficulty.Medium,
-    disableNPCs: false,
-    bots: 0,
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,

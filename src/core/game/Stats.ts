@@ -1,8 +1,8 @@
-import { AllPlayersStats } from "../Schemas";
 import { NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
+import { AllPlayersStats } from "../Schemas";
 
-export interface Stats {
+export type Stats = {
   getPlayerStats(player: Player): PlayerStats | null;
   stats(): AllPlayersStats;
 
@@ -93,4 +93,4 @@ export interface Stats {
 
   // Player loses a unit of type
   unitLose(player: Player, type: OtherUnitType): void;
-}
+};

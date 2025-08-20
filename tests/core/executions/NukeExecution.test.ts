@@ -1,4 +1,3 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import {
   Game,
   Player,
@@ -6,9 +5,10 @@ import {
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
-import { setup } from "../../util/Setup";
+import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";
+import { setup } from "../../util/Setup";
 
 let game: Game;
 let player: Player;

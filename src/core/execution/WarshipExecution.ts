@@ -1,17 +1,17 @@
 import {
   Execution,
   Game,
-  isUnit,
   OwnerComp,
   Unit,
   UnitParams,
   UnitType,
+  isUnit,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
+import { TileRef } from "../game/GameMap";
 
 export class WarshipExecution implements Execution {
   private random: PseudoRandom;
@@ -19,10 +19,10 @@ export class WarshipExecution implements Execution {
   private mg: Game;
   private pathfinder: PathFinder;
   private lastShellAttack = 0;
-  private alreadySentShell = new Set<Unit>();
+  private readonly alreadySentShell = new Set<Unit>();
 
   constructor(
-    private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
+    private readonly input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -79,7 +79,7 @@ export class WarshipExecution implements Execution {
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
     const ships = this.mg.nearbyUnits(
-      this.warship.tile()!,
+      this.warship.tile(),
       this.mg.config().warshipTargettingRange(),
       [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
     );
@@ -113,7 +113,7 @@ export class WarshipExecution implements Execution {
           continue;
         }
       }
-      potentialTargets.push({ unit: unit, distSquared });
+      potentialTargets.push({ distSquared, unit });
     }
 
     return potentialTargets.sort((a, b) => {
@@ -194,7 +194,7 @@ export class WarshipExecution implements Execution {
           this.warship.touch();
           break;
         case PathFindResultType.PathNotFound:
-          console.log(`path not found to target`);
+          console.log("path not found to target");
           break;
       }
     }
@@ -224,7 +224,7 @@ export class WarshipExecution implements Execution {
         this.warship.touch();
         return;
       case PathFindResultType.PathNotFound:
-        console.warn(`path not found to target tile`);
+        console.warn("path not found to target tile");
         this.warship.setTargetTile(undefined);
         break;
     }
@@ -238,11 +238,11 @@ export class WarshipExecution implements Execution {
     return false;
   }
 
-  randomTile(allowShoreline: boolean = false): TileRef | undefined {
+  randomTile(allowShoreline = false): TileRef | undefined {
     let warshipPatrolRange = this.mg.config().warshipPatrolRange();
-    const maxAttemptBeforeExpand: number = 500;
-    let attempts: number = 0;
-    let expandCount: number = 0;
+    const maxAttemptBeforeExpand = 500;
+    let attempts = 0;
+    let expandCount = 0;
     while (expandCount < 3) {
       const x =
         this.mg.x(this.warship.patrolTile()!) +

@@ -1,7 +1,7 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import randomMap from "../../resources/images/RandomMap.webp";
-import { translateText } from "../client/Utils";
+import "./components/Difficulties";
+import "./components/Maps";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
 import {
   Difficulty,
   Duos,
@@ -13,39 +13,58 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/Util";
-import "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
-import "./components/Difficulties";
+import { LitElement, html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
 import { DifficultyDescription } from "./components/Difficulties";
-import "./components/Maps";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
+import { TeamCountConfig } from "../core/Schemas";
+import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
+import { generateID } from "../core/Util";
+import randomMap from "../../resources/images/RandomMap.webp";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
-  @state() private disableNPCs: boolean = false;
-  @state() private bots: number = 400;
-  @state() private infiniteGold: boolean = false;
-  @state() private infiniteTroops: boolean = false;
-  @state() private instantBuild: boolean = false;
-  @state() private useRandomMap: boolean = false;
+  @state() private disableNPCs = false;
+  @state() private bots = 400;
+  @state() private infiniteGold = false;
+  @state() private readonly donateGold = false;
+  @state() private infiniteTroops = false;
+  @state() private readonly donateTroops = false;
+  @state() private instantBuild = false;
+  @state() private useRandomMap = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
-  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private disabledUnits: UnitType[] = [];
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   render() {
     return html`
@@ -67,7 +86,9 @@ export class SinglePlayerModal extends LitElement {
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
                         const mapKey = Object.keys(GameMapType).find(
-                          (key) => GameMapType[key] === mapValue,
+                          (key) =>
+                            GameMapType[key as keyof typeof GameMapType] ===
+                            mapValue,
                         );
                         return html`
                           <div
@@ -129,7 +150,7 @@ export class SinglePlayerModal extends LitElement {
                       ></difficulty-display>
                       <p class="option-card-title">
                         ${translateText(
-                          `difficulty.${DifficultyDescription[key]}`,
+                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
                         )}
                       </p>
                     </div>
@@ -185,7 +206,7 @@ export class SinglePlayerModal extends LitElement {
                           <div class="option-card-title">
                             ${typeof o === "string"
                               ? translateText(`public_lobby.teams_${o}`)
-                              : translateText(`public_lobby.teams`, { num: o })}
+                              : translateText("public_lobby.teams", { num: o })}
                           </div>
                         </div>
                       `,
@@ -389,7 +410,8 @@ export class SinglePlayerModal extends LitElement {
     }
 
     console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]
+      }${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     const clientID = generateID();
     const gameID = generateID();
@@ -408,10 +430,10 @@ export class SinglePlayerModal extends LitElement {
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
-          clientID: clientID,
-          gameID: gameID,
+          clientID,
+          gameID,
           gameStartInfo: {
-            gameID: gameID,
+            gameID,
             players: [
               {
                 clientID,
@@ -432,7 +454,9 @@ export class SinglePlayerModal extends LitElement {
               disableNPCs: this.disableNPCs,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
+              donateGold: this.donateGold,
               infiniteTroops: this.infiniteTroops,
+              donateTroops: this.donateTroops,
               instantBuild: this.instantBuild,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))

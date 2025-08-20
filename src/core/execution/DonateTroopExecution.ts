@@ -6,8 +6,8 @@ export class DonateTroopsExecution implements Execution {
   private active = true;
 
   constructor(
-    private sender: Player,
-    private recipientID: PlayerID,
+    private readonly sender: Player,
+    private readonly recipientID: PlayerID,
     private troops: number | null,
   ) {}
 
@@ -21,14 +21,14 @@ export class DonateTroopsExecution implements Execution {
     this.recipient = mg.player(this.recipientID);
     this.troops ??= mg.config().defaultDonationAmount(this.sender);
     const maxDonation =
-      mg.config().maxPopulation(this.recipient) - this.recipient.population();
+      mg.config().maxTroops(this.recipient) - this.recipient.troops();
     this.troops = Math.min(this.troops, maxDonation);
   }
 
   tick(ticks: number): void {
     if (this.troops === null) throw new Error("not initialized");
     if (
-      this.sender.canDonate(this.recipient) &&
+      this.sender.canDonateTroops(this.recipient) &&
       this.sender.donateTroops(this.recipient, this.troops)
     ) {
       this.recipient.updateRelation(this.sender, 50);

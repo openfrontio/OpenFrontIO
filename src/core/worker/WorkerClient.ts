@@ -5,23 +5,23 @@ import {
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
-import { generateID } from "../Util";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { TileRef } from "../game/GameMap";
 import { WorkerMessage } from "./WorkerMessages";
+import { generateID } from "../Util";
 
 export class WorkerClient {
-  private worker: Worker;
+  private readonly worker: Worker;
   private isInitialized = false;
-  private messageHandlers: Map<string, (message: WorkerMessage) => void>;
+  private readonly messageHandlers: Map<string, (message: WorkerMessage) => void>;
   private gameUpdateCallback?: (
     update: GameUpdateViewData | ErrorUpdate,
   ) => void;
 
   constructor(
-    private gameStartInfo: GameStartInfo,
-    private clientID: ClientID,
+    private readonly gameStartInfo: GameStartInfo,
+    private readonly clientID: ClientID,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
     this.messageHandlers = new Map();
@@ -66,10 +66,10 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "init",
-        id: messageId,
-        gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
+        gameStartInfo: this.gameStartInfo,
+        id: messageId,
+        type: "init",
       });
 
       // Add timeout for initialization
@@ -95,8 +95,8 @@ export class WorkerClient {
     }
 
     this.worker.postMessage({
-      type: "turn",
       turn,
+      type: "turn",
     });
   }
 
@@ -125,9 +125,9 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "player_profile",
         id: messageId,
-        playerID: playerID,
+        playerID,
+        type: "player_profile",
       });
     });
   }
@@ -151,9 +151,9 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "player_border_tiles",
         id: messageId,
-        playerID: playerID,
+        playerID,
+        type: "player_border_tiles",
       });
     });
   }
@@ -181,11 +181,11 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "player_actions",
         id: messageId,
-        playerID: playerID,
-        x: x,
-        y: y,
+        playerID,
+        type: "player_actions",
+        x,
+        y,
       });
     });
   }
@@ -217,10 +217,10 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "attack_average_position",
+        attackID,
         id: messageId,
-        playerID: playerID,
-        attackID: attackID,
+        playerID,
+        type: "attack_average_position",
       });
     });
   }
@@ -247,10 +247,10 @@ export class WorkerClient {
       });
 
       this.worker.postMessage({
-        type: "transport_ship_spawn",
         id: messageId,
-        playerID: playerID,
-        targetTile: targetTile,
+        playerID,
+        targetTile,
+        type: "transport_ship_spawn",
       });
     });
   }

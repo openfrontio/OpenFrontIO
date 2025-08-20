@@ -1,28 +1,32 @@
-import { MessageType } from "../core/game/Game";
+import IntlMessageFormat from "intl-messageformat";
 import { LangSelector } from "./LangSelector";
+import { MessageType } from "../core/game/Game";
 
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
 
-export function renderNumber(num: number | bigint): string {
+export function renderNumber(
+  num: number | bigint,
+  fixedPoints?: number,
+): string {
   num = Number(num);
   num = Math.max(num, 0);
 
   if (num >= 10_000_000) {
     const value = Math.floor(num / 100000) / 10;
-    return value.toFixed(1) + "M";
+    return value.toFixed(fixedPoints ?? 1) + "M";
   } else if (num >= 1_000_000) {
     const value = Math.floor(num / 10000) / 100;
-    return value.toFixed(2) + "M";
+    return value.toFixed(fixedPoints ?? 2) + "M";
   } else if (num >= 100000) {
     return Math.floor(num / 1000) + "K";
   } else if (num >= 10000) {
     const value = Math.floor(num / 100) / 10;
-    return value.toFixed(1) + "K";
+    return value.toFixed(fixedPoints ?? 1) + "K";
   } else if (num >= 1000) {
     const value = Math.floor(num / 10) / 100;
-    return value.toFixed(2) + "K";
+    return value.toFixed(fixedPoints ?? 2) + "K";
   } else {
     return Math.floor(num).toString();
   }
@@ -53,6 +57,7 @@ export function generateCryptoRandomUUID(): string {
 
   // Fallback using crypto.getRandomValues
   if (crypto !== undefined && "getRandomValues" in crypto) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
@@ -75,18 +80,23 @@ export function generateCryptoRandomUUID(): string {
   );
 }
 
-// Re-export translateText from LangSelector
 export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
 ): string => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+  const self = translateText as any;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  self.formatterCache ??= new Map();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  self.lastLang ??= null;
+
   const langSelector = document.querySelector("lang-selector") as LangSelector;
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
   }
 
-  // Wait for translations to be loaded
   if (
     !langSelector.translations ||
     Object.keys(langSelector.translations).length === 0
@@ -94,7 +104,46 @@ export const translateText = (
     return key;
   }
 
-  return langSelector.translateText(key, params);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+  if (self.lastLang !== langSelector.currentLang) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    self.formatterCache.clear();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    self.lastLang = langSelector.currentLang;
+  }
+
+  let message = langSelector.translations[key];
+
+  if (!message && langSelector.defaultTranslations) {
+    const { defaultTranslations } = langSelector;
+    if (defaultTranslations && defaultTranslations[key]) {
+      message = defaultTranslations[key];
+    }
+  }
+
+  if (!message) return key;
+
+  try {
+    const locale =
+      !langSelector.translations[key] && langSelector.currentLang !== "en"
+        ? "en"
+        : langSelector.currentLang;
+    const cacheKey = `${key}:${locale}:${message}`;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+    let formatter = self.formatterCache.get(cacheKey);
+
+    if (!formatter) {
+      formatter = new IntlMessageFormat(message, locale);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      self.formatterCache.set(cacheKey, formatter);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    return formatter.format(params) as string;
+  } catch (e) {
+    console.warn("ICU format error", e);
+    return message;
+  }
 };
 
 /**
@@ -153,7 +202,7 @@ export function getMessageTypeClasses(type: MessageType): string {
 }
 
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
+  const isMac = navigator.userAgent.includes("Mac");
   if (isMac) {
     return "⌘"; // Command key
   } else {
@@ -162,7 +211,7 @@ export function getModifierKey(): string {
 }
 
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
+  const isMac = navigator.userAgent.includes("Mac");
   if (isMac) {
     return "⌥"; // Option key
   } else {

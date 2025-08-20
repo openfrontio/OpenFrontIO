@@ -1,13 +1,11 @@
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { LitElement, html } from "lit";
 import { customElement, query } from "lit/decorators.js";
-
-import { PlayerType } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-
-import quickChatData from "../../../../resources/QuickChat.json";
-import { EventBus } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
+import { EventBus } from "../../../core/EventBus";
+import { PlayerType } from "../../../core/game/Game";
 import { SendQuickChatEvent } from "../../Transport";
+import quickChatData from "../../../../resources/QuickChat.json";
 import { translateText } from "../../Utils";
 
 export type QuickChatPhrase = {
@@ -21,7 +19,7 @@ export const quickChatPhrases: QuickChatPhrases = quickChatData;
 
 @customElement("chat-modal")
 export class ChatModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -32,9 +30,9 @@ export class ChatModal extends LitElement {
 
   private players: PlayerView[] = [];
 
-  private playerSearchQuery: string = "";
+  private playerSearchQuery = "";
   private previewText: string | null = null;
-  private requiresPlayerSelection: boolean = false;
+  private requiresPlayerSelection = false;
   private selectedCategory: string | null = null;
   private selectedPhraseText: string | null = null;
   private selectedPhraseTemplate: string | null = null;
@@ -173,8 +171,9 @@ export class ChatModal extends LitElement {
     `;
   }
 
-  initEventBus() {
-    this.eventBus.on(CloseViewEvent, (e) => {
+  initEventBus(eventBus: EventBus) {
+    this.eventBus = eventBus;
+    eventBus.on(CloseViewEvent, (e) => {
       if (!this.hidden) {
         this.close();
       }

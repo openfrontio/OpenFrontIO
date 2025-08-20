@@ -1,39 +1,42 @@
 import { Colord, colord } from "colord";
-import { PseudoRandom } from "../PseudoRandom";
-import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
-import { ColorAllocator } from "./ColorAllocator";
+import { PlayerType, Team, TerrainType } from "../game/Game";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
+import { ColorAllocator } from "./ColorAllocator";
+import { PlayerView } from "../game/GameView";
+import { PseudoRandom } from "../PseudoRandom";
 import { Theme } from "./Config";
 
 type ColorCache = Map<string, Colord>;
 
 export class PastelTheme implements Theme {
-  private borderColorCache: ColorCache = new Map<string, Colord>();
-  private rand = new PseudoRandom(123);
-  private humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
-  private botColorAllocator = new ColorAllocator(botColors, botColors);
-  private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
-  private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
+  private readonly borderColorCache: ColorCache = new Map<string, Colord>();
+  private readonly rand = new PseudoRandom(123);
+  private readonly humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private readonly botColorAllocator = new ColorAllocator(botColors, botColors);
+  private readonly teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private readonly nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
-  private background = colord({ r: 60, g: 60, b: 60 });
-  private shore = colord({ r: 204, g: 203, b: 158 });
-  private falloutColors = [
+  /* eslint-disable sort-keys */
+  private readonly background = colord({ r: 60, g: 60, b: 60 });
+  private readonly shore = colord({ r: 204, g: 203, b: 158 });
+  private readonly falloutColors = [
     colord({ r: 120, g: 255, b: 71 }), // Original color
     colord({ r: 130, g: 255, b: 85 }), // Slightly lighter
     colord({ r: 110, g: 245, b: 65 }), // Slightly darker
     colord({ r: 125, g: 255, b: 75 }), // Warmer tint
     colord({ r: 115, g: 250, b: 68 }), // Cooler tint
   ];
-  private water = colord({ r: 70, g: 132, b: 180 });
-  private shorelineWater = colord({ r: 100, g: 143, b: 255 });
+  private readonly water = colord({ r: 70, g: 132, b: 180 });
+  private readonly shorelineWater = colord({ r: 100, g: 143, b: 255 });
 
-  private _selfColor = colord({ r: 0, g: 255, b: 0 });
-  private _allyColor = colord({ r: 255, g: 255, b: 0 });
-  private _enemyColor = colord({ r: 255, g: 0, b: 0 });
+  private readonly _selfColor = colord({ r: 0, g: 255, b: 0 });
+  private readonly _allyColor = colord({ r: 255, g: 255, b: 0 });
+  private readonly _neutralColor = colord({ r: 128, g: 128, b: 128 });
+  private readonly _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
-  private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
+  private readonly _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
+  /* eslint-enable sort-keys */
 
   teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
@@ -42,7 +45,7 @@ export class PastelTheme implements Theme {
   territoryColor(player: PlayerView): Colord {
     const team = player.team();
     if (team !== null) {
-      return this.teamColor(team);
+      return this.teamColorAllocator.assignTeamPlayerColor(team, player.id());
     }
     if (player.type() === PlayerType.Human) {
       return this.humanColorAllocator.assignColor(player.id());
@@ -59,20 +62,24 @@ export class PastelTheme implements Theme {
 
   specialBuildingColor(player: PlayerView): Colord {
     const tc = this.territoryColor(player).rgba;
+    /* eslint-disable sort-keys */
     return colord({
       r: Math.max(tc.r - 50, 0),
       g: Math.max(tc.g - 50, 0),
       b: Math.max(tc.b - 50, 0),
     });
+    /* eslint-enable sort-keys */
   }
 
   railroadColor(player: PlayerView): Colord {
     const tc = this.territoryColor(player).rgba;
+    /* eslint-disable sort-keys */
     const color = colord({
       r: Math.max(tc.r - 10, 0),
       g: Math.max(tc.g - 10, 0),
       b: Math.max(tc.b - 10, 0),
     });
+    /* eslint-enable sort-keys */
     return color;
   }
 
@@ -81,16 +88,19 @@ export class PastelTheme implements Theme {
       return this.borderColorCache.get(player.id())!;
     }
     const tc = this.territoryColor(player).rgba;
+    /* eslint-disable sort-keys */
     const color = colord({
       r: Math.max(tc.r - 40, 0),
       g: Math.max(tc.g - 40, 0),
       b: Math.max(tc.b - 40, 0),
     });
+    /* eslint-enable sort-keys */
 
     this.borderColorCache.set(player.id(), color);
     return color;
   }
 
+  /* eslint-disable sort-keys */
   defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
     return {
       light: this.territoryColor(player).darken(0.2),
@@ -140,6 +150,7 @@ export class PastelTheme implements Theme {
         });
     }
   }
+  /* eslint-enable sort-keys */
 
   backgroundColor(): Colord {
     return this.background;
@@ -158,6 +169,9 @@ export class PastelTheme implements Theme {
   }
   allyColor(): Colord {
     return this._allyColor;
+  }
+  neutralColor(): Colord {
+    return this._neutralColor;
   }
   enemyColor(): Colord {
     return this._enemyColor;

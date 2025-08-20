@@ -1,14 +1,11 @@
 export class PatternDecoder {
-  private bytes: Uint8Array;
+  private readonly bytes: Uint8Array;
 
   readonly height: number;
   readonly width: number;
   readonly scale: number;
 
-  constructor(
-    base64: string,
-    base64urlDecode: (input: Uint8Array | string) => Uint8Array,
-  ) {
+  constructor(base64: string, base64urlDecode: (input: string) => Uint8Array) {
     this.bytes = base64urlDecode(base64);
 
     if (this.bytes.length < 3) {

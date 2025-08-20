@@ -1,15 +1,17 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { ApiEnvResponse, ApiPublicLobbiesResponse } from "../core/ExpressSchemas";
+import { GameInfo, ID } from "../core/Schemas";
+import { LimiterType, gatekeeper } from "./Gatekeeper";
+import { MapPlaylist } from "./MapPlaylist";
 import cluster from "cluster";
 import express from "express";
-import rateLimit from "express-rate-limit";
-import http from "http";
-import path from "path";
 import { fileURLToPath } from "url";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import http from "http";
 import { logger } from "./Logger";
-import { MapPlaylist } from "./MapPlaylist";
+import path from "path";
+import rateLimit from "express-rate-limit";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -54,12 +56,14 @@ app.use(express.json());
 app.set("trust proxy", 3);
 app.use(
   rateLimit({
-    windowMs: 1000, // 1 second
     max: 20, // 20 requests per IP per second
+    windowMs: 1000, // 1 second
   }),
 );
 
-let publicLobbiesJsonStr = "";
+let publicLobbiesJsonStr = JSON.stringify({
+  lobbies: [],
+} satisfies ApiPublicLobbiesResponse);
 
 const publicLobbyIDs: Set<string> = new Set();
 
@@ -85,7 +89,8 @@ export async function startMaster() {
 
   cluster.on("message", (worker, message) => {
     if (message.type === "WORKER_READY") {
-      const workerId = message.workerId;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { workerId } = message;
       readyWorkers.add(workerId);
       log.info(
         `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
@@ -115,9 +120,10 @@ export async function startMaster() {
 
   // Handle worker crashes
   cluster.on("exit", (worker, code, signal) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     const workerId = (worker as any).process?.env?.WORKER_ID;
     if (!workerId) {
-      log.error(`worker crashed could not find id`);
+      log.error("worker crashed could not find id");
       return;
     }
 
@@ -128,6 +134,7 @@ export async function startMaster() {
 
     // Restart the worker with the same ID
     const newWorker = cluster.fork({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       WORKER_ID: workerId,
     });
 
@@ -145,8 +152,8 @@ export async function startMaster() {
 app.get(
   "/api/env",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    const envConfig = {
-      game_env: process.env.GAME_ENV,
+    const envConfig: ApiEnvResponse = {
+      game_env: process.env.GAME_ENV ?? "",
     };
     if (!envConfig.game_env) return res.sendStatus(500);
     res.json(envConfig);
@@ -180,10 +187,10 @@ app.post(
       const response = await fetch(
         `http://localhost:${config.workerPort(gameID)}/api/kick_player/${gameID}/${clientID}`,
         {
-          method: "POST",
           headers: {
             [config.adminHeader()]: config.adminToken(),
           },
+          method: "POST",
         },
       );
 
@@ -232,10 +239,10 @@ async function fetchLobbies(): Promise<number> {
     .filter((result) => result !== null)
     .map((gi: GameInfo) => {
       return {
-        gameID: gi.gameID,
-        numClients: gi?.clients?.length ?? 0,
         gameConfig: gi.gameConfig,
+        gameID: gi.gameID,
         msUntilStart: (gi.msUntilStart ?? Date.now()) - Date.now(),
+        numClients: gi?.clients?.length ?? 0,
       } as GameInfo;
     });
 
@@ -266,7 +273,7 @@ async function fetchLobbies(): Promise<number> {
   // Update the JSON string
   publicLobbiesJsonStr = JSON.stringify({
     lobbies: lobbyInfos,
-  });
+  } satisfies ApiPublicLobbiesResponse);
 
   return publicLobbyIDs.size;
 }
@@ -283,12 +290,12 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     const response = await fetch(
       `http://localhost:${config.workerPort(gameID)}/api/create_game/${gameID}`,
       {
-        method: "POST",
+        body: JSON.stringify(playlist.gameConfig()),
         headers: {
           "Content-Type": "application/json",
           [config.adminHeader()]: config.adminToken(),
         },
-        body: JSON.stringify(playlist.gameConfig()),
+        method: "POST",
       },
     );
 

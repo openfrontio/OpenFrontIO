@@ -1,9 +1,9 @@
-import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 
 const config = getServerConfigFromServer();
 
@@ -18,6 +18,7 @@ export function getOtelResource() {
 export function getPromLabels() {
   return {
     "service.instance.id": process.env.HOSTNAME,
+    /* eslint-disable sort-keys */
     "openfront.environment": config.env(),
     "openfront.host": process.env.HOST,
     "openfront.domain": process.env.DOMAIN,
@@ -25,5 +26,6 @@ export function getPromLabels() {
     "openfront.component": process.env.WORKER_ID
       ? "Worker " + process.env.WORKER_ID
       : "Master",
+    /* eslint-enable sort-keys */
   };
 }

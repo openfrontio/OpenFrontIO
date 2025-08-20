@@ -1,11 +1,13 @@
-import { z } from "zod/v4";
+// This file contains schemas for api.openfront.io
 import { base64urlToUuid } from "./Base64";
+import { z } from "zod";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
 });
 export type RefreshResponse = z.infer<typeof RefreshResponseSchema>;
 
+/* eslint-disable sort-keys */
 export const TokenPayloadSchema = z.object({
   jti: z.string(),
   sub: z
@@ -47,3 +49,19 @@ export const UserMeResponseSchema = z.object({
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
+
+export const StripeCreateCheckoutSessionResponseSchema = z.object({
+  id: z.string(),
+  object: z.literal("checkout.session"),
+  url: z.string(),
+  payment_status: z.enum(["paid", "unpaid", "no_payment_required"]),
+  status: z.enum(["open", "complete", "expired"]),
+  client_reference_id: z.string().optional(),
+  customer: z.string().optional(),
+  payment_intent: z.string().optional(),
+  subscription: z.string().optional(),
+  metadata: z.partialRecord(z.string(), z.string()),
+});
+export type StripeCreateCheckoutSessionResponse = z.infer<
+  typeof StripeCreateCheckoutSessionResponseSchema
+>;

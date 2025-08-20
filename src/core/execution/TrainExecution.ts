@@ -6,31 +6,35 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { OrientedRailroad, getOrientedRailroad } from "../game/Railroad";
 import { RailNetwork } from "../game/RailNetwork";
-import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
+import { TileRef } from "../game/GameMap";
 import { TrainStation } from "../game/TrainStation";
 
 export class TrainExecution implements Execution {
   private active = true;
   private mg: Game | null = null;
   private train: Unit | null = null;
-  private cars: Unit[] = [];
-  private hasCargo: boolean = false;
-  private currentTile: number = 0;
-  private spacing = 2;
-  private usedTiles: TileRef[] = []; // used for cars behind
+  private readonly cars: Unit[] = [];
+  private hasCargo = false;
+  private currentTile = 0;
+  private readonly spacing = 2;
+  private readonly usedTiles: TileRef[] = []; // used for cars behind
   private stations: TrainStation[] = [];
   private currentRailroad: OrientedRailroad | null = null;
-  private speed: number = 2;
+  private readonly speed = 2;
 
   constructor(
-    private railNetwork: RailNetwork,
-    private player: Player,
-    private source: TrainStation,
-    private destination: TrainStation,
-    private numCars: number,
+    private readonly railNetwork: RailNetwork,
+    private readonly player: Player,
+    private readonly source: TrainStation,
+    private readonly destination: TrainStation,
+    private readonly numCars: number,
   ) {}
+
+  public owner(): Player {
+    return this.player;
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -54,7 +58,7 @@ export class TrainExecution implements Execution {
 
     const spawn = this.player.canBuild(UnitType.Train, this.stations[0].tile());
     if (spawn === false) {
-      console.warn(`cannot build train`);
+      console.warn("cannot build train");
       this.active = false;
       return;
     }
@@ -115,8 +119,8 @@ export class TrainExecution implements Execution {
     for (let i = 0; i < this.numCars; i++) {
       this.cars.push(
         this.player.buildUnit(UnitType.Train, tile, {
-          trainType: TrainType.Carriage,
           loaded: this.hasCargo,
+          trainType: TrainType.Carriage,
         }),
       );
     }

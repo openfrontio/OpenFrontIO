@@ -1,32 +1,32 @@
-import { EventBus } from "../../core/EventBus";
-import { Cell } from "../../core/game/Game";
-import { GameView } from "../../core/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./layers/Leaderboard";
+import { Cell } from "../../core/game/Game";
+import { EventBus } from "../../core/EventBus";
+import { GameView } from "../../core/game/GameView";
 
 export const GOTO_INTERVAL_MS = 16;
 export const CAMERA_MAX_SPEED = 15;
 export const CAMERA_SMOOTHING = 0.03;
 
 export class TransformHandler {
-  public scale: number = 1.8;
+  public scale = 1.8;
   private _boundingRect: DOMRect;
-  private offsetX: number = -350;
-  private offsetY: number = -200;
+  private offsetX = -350;
+  private offsetY = -200;
   private lastGoToCallTime: number | null = null;
 
   private target: Cell | null;
-  private intervalID: NodeJS.Timeout | null = null;
+  private intervalID: ReturnType<typeof setTimeout> | null = null;
   private changed = false;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private canvas: HTMLCanvasElement,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly canvas: HTMLCanvasElement,
   ) {
     this._boundingRect = this.canvas.getBoundingClientRect();
     this.eventBus.on(ZoomEvent, (e) => this.onZoom(e));
@@ -267,7 +267,7 @@ export class TransformHandler {
     this.target = null;
   }
 
-  override(x: number = 0, y: number = 0, s: number = 1) {
+  override(x = 0, y = 0, s = 1) {
     //hardset view position
     this.clearTarget();
     this.offsetX = x;
@@ -276,7 +276,7 @@ export class TransformHandler {
     this.changed = true;
   }
 
-  centerAll(fit: number = 1) {
+  centerAll(fit = 1) {
     //position entire map centered on the screen
 
     const vpWidth = this.boundingRect().width;

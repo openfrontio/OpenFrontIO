@@ -1,22 +1,23 @@
+import { GameID, GameInfo } from "../core/Schemas";
+import { GameMapType, GameMode } from "../core/game/Game";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
-import { GameMapType, GameMode } from "../core/game/Game";
-import { terrainMapFileLoader } from "../core/game/TerrainMapFileLoader";
-import { GameID, GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
+import { ApiPublicLobbiesResponseSchema } from "../core/ExpressSchemas";
 import { JoinLobbyEvent } from "./Main";
+import { generateID } from "../core/Util";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { translateText } from "../client/Utils";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
-  @state() public isLobbyHighlighted: boolean = false;
-  @state() private isButtonDebounced: boolean = false;
-  @state() private mapImages: Map<GameID, string> = new Map();
+  @state() public isLobbyHighlighted = false;
+  @state() private isButtonDebounced = false;
+  @state() private readonly mapImages: Map<GameID, string> = new Map();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
-  private debounceDelay: number = 750;
-  private lobbyIDToStart = new Map<GameID, number>();
+  private readonly debounceDelay = 750;
+  private readonly lobbyIDToStart = new Map<GameID, number>();
 
   createRenderRoot() {
     return this;
@@ -74,10 +75,11 @@ export class PublicLobby extends LitElement {
 
   async fetchLobbies(): Promise<GameInfo[]> {
     try {
-      const response = await fetch(`/api/public_lobbies`);
+      const response = await fetch("/api/public_lobbies");
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const json = await response.json();
+      const data = ApiPublicLobbiesResponseSchema.parse(json);
       return data.lobbies;
     } catch (error) {
       console.error("Error fetching lobbies:", error);
@@ -119,13 +121,14 @@ export class PublicLobby extends LitElement {
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
-          .isLobbyHighlighted
-          ? "bg-gradient-to-r from-green-600 to-green-500"
-          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
-          .isButtonDebounced
-          ? "opacity-70 cursor-not-allowed"
-          : ""}"
+        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${
+          this.isLobbyHighlighted
+            ? "bg-gradient-to-r from-green-600 to-green-500"
+            : "bg-gradient-to-r from-blue-600 to-blue-500"
+        } text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${
+          this.isButtonDebounced
+            ? "opacity-70 cursor-not-allowed"
+            : ""}"
       >
         ${mapImageSrc
           ? html`<img
@@ -154,8 +157,8 @@ export class PublicLobby extends LitElement {
                   ? typeof teamCount === "string"
                     ? translateText(`public_lobby.teams_${teamCount}`)
                     : translateText("public_lobby.teams", {
-                        num: teamCount ?? 0,
-                      })
+                      num: teamCount ?? 0,
+                    })
                   : translateText("game_mode.ffa")}</span
               >
               <span
