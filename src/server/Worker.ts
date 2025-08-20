@@ -422,9 +422,12 @@ export async function startWorker() {
                 pattern = result.pattern;
                 break;
               case "unknown":
-                // Api could be down, so allow player to join but disable pattern.
                 log.warn(`Pattern ${clientMsg.patternName} unknown`);
-                break;
+                ws.close(
+                  1002,
+                  "Could not look up pattern, backend may be offline",
+                );
+                return;
               case "forbidden":
                 log.warn(`Pattern ${clientMsg.patternName}: ${result.reason}`);
                 ws.close(
