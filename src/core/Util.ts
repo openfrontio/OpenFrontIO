@@ -288,3 +288,11 @@ export const flattenedEmojiTable: string[] = emojiTable.flat();
 export function replacer(_key: string, value: any): any {
   return typeof value === "bigint" ? value.toString() : value;
 }
+
+export function sigmoid(
+  value: number,
+  decayRate: number,
+  midpoint: number,
+): number {
+  return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
+}

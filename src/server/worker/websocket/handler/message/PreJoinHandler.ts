@@ -12,6 +12,7 @@ import http from "http";
 import ipAnonymize from "ip-anonymize";
 import { logger } from "../../../../Logger";
 import { z } from "zod";
+import { assertNever } from "../../../../../core/Util";
 
 const config = getServerConfigFromServer();
 
@@ -208,19 +209,35 @@ async function handleJoinMessage(
       }
     }
 
+    let pattern: string | undefined;
     // Check if the pattern is allowed
-    if (clientMsg.pattern !== undefined) {
-      const allowed = privilegeRefresher
+    if (clientMsg.patternName !== undefined) {
+      const result = privilegeRefresher
         .get()
-        .isPatternAllowed(clientMsg.pattern, flares);
-      if (allowed !== true) {
-        log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
-        return {
-          code: 1002,
-          error: `The pattern you have selected is ${allowed}.`,
-          reason: `Pattern ${allowed}`,
-          success: false,
-        };
+        .isPatternAllowed(clientMsg.patternName, flares);
+      switch (result.type) {
+        case "allowed": {
+          const { pattern: resultPattern } = result;
+          pattern = resultPattern;
+          break;
+        }
+        case "unknown":
+          // Api could be down, so allow player to join but disable pattern.
+          log.warn(`Pattern ${clientMsg.patternName} unknown`);
+          ws.close(
+            1002,
+            "Could not look up pattern, backend may be offline",
+          );
+          return;
+        case "forbidden":
+          log.warn(`Pattern ${clientMsg.patternName}: ${result.reason}`);
+          ws.close(
+            1002,
+            `Pattern ${clientMsg.patternName}: ${result.reason}`,
+          );
+          return;
+        default:
+          assertNever(result);
       }
     }
 

@@ -2,6 +2,17 @@ import "./components/Difficulties";
 import "./components/Maps";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { customElement, query, state } from "lit/decorators.js";
+import { DifficultyDescription } from "./components/Difficulties";
+import { FlagInput } from "./FlagInput";
+import { getCosmetics } from "./Cosmetics";
+import { JoinLobbyEvent } from "./Main";
+import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import { UsernameInput } from "./UsernameInput";
+import { generateID } from "../core/Util";
+import { TeamCountConfig } from "../core/Schemas";
+import { translateText } from "../client/Utils";
+import { UserSettings } from "../core/game/UserSettings";
 import {
   Difficulty,
   Duos,
@@ -13,18 +24,8 @@ import {
   UnitType,
   mapCategories,
 } from "../core/game/Game";
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { DifficultyDescription } from "./components/Difficulties";
-import { FlagInput } from "./FlagInput";
-import { JoinLobbyEvent } from "./Main";
-import { TeamCountConfig } from "../core/Schemas";
-import { UserSettings } from "../core/game/UserSettings";
-import { UsernameInput } from "./UsernameInput";
-import { generateID } from "../core/Util";
+import { html, LitElement } from "lit";
 import randomMap from "../../resources/images/RandomMap.webp";
-import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -403,7 +404,7 @@ export class SinglePlayerModal extends LitElement {
       : this.disabledUnits.filter((u) => u !== unit);
   }
 
-  private startGame() {
+  private async startGame() {
     // If random map is selected, choose a random map now
     if (this.useRandomMap) {
       this.selectedMap = this.getRandomMap();
@@ -427,6 +428,10 @@ export class SinglePlayerModal extends LitElement {
     if (!flagInput) {
       console.warn("Flag input element not found");
     }
+    const patternName = this.userSettings.getSelectedPatternName();
+    const pattern = patternName
+      ? (await getCosmetics())?.patterns[patternName]
+      : undefined;
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -442,7 +447,7 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
-                pattern: this.userSettings.getSelectedPattern(),
+                pattern: pattern?.pattern,
               },
             ],
             config: {
