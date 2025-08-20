@@ -70,7 +70,7 @@ export class PublicLobby extends LitElement {
 
   private async loadMapImage(gameID: GameID, gameMap: string) {
     try {
-      // Convert string to GameMapType enum value
+      // Convert string to GameMapType value
       const mapType = gameMap as GameMapType;
       const data = terrainMapFileLoader.getMapData(mapType);
       this.mapImages.set(gameID, await data.webpPath());
