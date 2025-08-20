@@ -17,7 +17,6 @@ import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
   ErrorUpdate,
-  GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
   WinUpdate,
@@ -310,7 +309,7 @@ export class ClientGameRunner {
         return;
       }
       this.transport.turnComplete();
-      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
+      gu.updates["Hash"].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
@@ -324,8 +323,8 @@ export class ClientGameRunner {
       // Reset tick delay for next measurement
       this.currentTickDelay = undefined;
 
-      if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
+      if (gu.updates["Win"].length > 0) {
+        this.saveGame(gu.updates["Win"][0]);
       }
     });
     const worker = this.worker;

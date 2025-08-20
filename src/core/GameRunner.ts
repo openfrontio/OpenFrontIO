@@ -20,11 +20,7 @@ import {
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-} from "./game/GameUpdates";
+import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
@@ -164,8 +160,8 @@ export class GameRunner {
     }
 
     // Many tiles are updated to pack it into an array
-    const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
-    updates[GameUpdateType.Tile] = [];
+    const packedTileUpdates = updates["Tile"].map((u) => u.update);
+    updates["Tile"] = [];
 
     this.callBack({
       tick: this.game.ticks(),

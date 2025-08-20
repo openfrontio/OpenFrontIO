@@ -8,7 +8,6 @@ import {
 } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { getUserMe } from "../../Api";
 import "../../components/PatternButton";
@@ -315,7 +314,7 @@ export class WinModal extends LitElement implements Layer {
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
-    const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
+    const winUpdates = updates !== null ? updates["Win"] : [];
     winUpdates.forEach((wu) => {
       if (wu.winner === undefined) {
         // ...

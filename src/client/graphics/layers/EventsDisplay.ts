@@ -24,7 +24,6 @@ import {
   DisplayChatMessageUpdate,
   DisplayMessageUpdate,
   EmojiUpdate,
-  GameUpdateType,
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
@@ -174,18 +173,15 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private updateMap = [
-    [GameUpdateType.DisplayEvent, this.onDisplayMessageEvent.bind(this)],
-    [GameUpdateType.DisplayChatEvent, this.onDisplayChatEvent.bind(this)],
-    [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
-    [
-      GameUpdateType.AllianceRequestReply,
-      this.onAllianceRequestReplyEvent.bind(this),
-    ],
-    [GameUpdateType.BrokeAlliance, this.onBrokeAllianceEvent.bind(this)],
-    [GameUpdateType.TargetPlayer, this.onTargetPlayerEvent.bind(this)],
-    [GameUpdateType.Emoji, this.onEmojiMessageEvent.bind(this)],
-    [GameUpdateType.UnitIncoming, this.onUnitIncomingEvent.bind(this)],
-    [GameUpdateType.AllianceExpired, this.onAllianceExpiredEvent.bind(this)],
+    ["DisplayEvent", this.onDisplayMessageEvent.bind(this)],
+    ["DisplayChatEvent", this.onDisplayChatEvent.bind(this)],
+    ["AllianceRequest", this.onAllianceRequestEvent.bind(this)],
+    ["AllianceRequestReply", this.onAllianceRequestReplyEvent.bind(this)],
+    ["BrokeAlliance", this.onBrokeAllianceEvent.bind(this)],
+    ["TargetPlayer", this.onTargetPlayerEvent.bind(this)],
+    ["Emoji", this.onEmojiMessageEvent.bind(this)],
+    ["UnitIncoming", this.onUnitIncomingEvent.bind(this)],
+    ["AllianceExpired", this.onAllianceExpiredEvent.bind(this)],
   ] as const;
 
   constructor() {

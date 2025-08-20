@@ -6,7 +6,6 @@ import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
 import playIcon from "../../../../resources/images/PlayIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
@@ -53,7 +52,7 @@ export class GameRightSidebar extends LitElement implements Layer {
     // Timer logic
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
-      this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
+      this.hasWinner = this.hasWinner || updates["Win"].length > 0;
     }
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== undefined) {

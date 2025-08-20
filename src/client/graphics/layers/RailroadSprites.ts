@@ -1,21 +1,21 @@
 import { RailType } from "../../../core/game/GameUpdates";
 
 const railTypeToFunctionMap: Record<RailType, () => number[][]> = {
-  [RailType.TOP_RIGHT]: topRightRailroadCornerRects,
-  [RailType.BOTTOM_LEFT]: bottomLeftRailroadCornerRects,
-  [RailType.TOP_LEFT]: topLeftRailroadCornerRects,
-  [RailType.BOTTOM_RIGHT]: bottomRightRailroadCornerRects,
-  [RailType.HORIZONTAL]: horizontalRailroadRects,
-  [RailType.VERTICAL]: verticalRailroadRects,
+  ["TOP_RIGHT"]: topRightRailroadCornerRects,
+  ["BOTTOM_LEFT"]: bottomLeftRailroadCornerRects,
+  ["TOP_LEFT"]: topLeftRailroadCornerRects,
+  ["BOTTOM_RIGHT"]: bottomRightRailroadCornerRects,
+  ["HORIZONTAL"]: horizontalRailroadRects,
+  ["VERTICAL"]: verticalRailroadRects,
 };
 
 const railTypeToBridgeFunctionMap: Record<RailType, () => number[][]> = {
-  [RailType.TOP_RIGHT]: topRightBridgeCornerRects,
-  [RailType.BOTTOM_LEFT]: bottomLeftBridgeCornerRects,
-  [RailType.TOP_LEFT]: topLeftBridgeCornerRects,
-  [RailType.BOTTOM_RIGHT]: bottomRightBridgeCornerRects,
-  [RailType.HORIZONTAL]: horizontalBridge,
-  [RailType.VERTICAL]: verticalBridge,
+  ["TOP_RIGHT"]: topRightBridgeCornerRects,
+  ["BOTTOM_LEFT"]: bottomLeftBridgeCornerRects,
+  ["TOP_LEFT"]: topLeftBridgeCornerRects,
+  ["BOTTOM_RIGHT"]: bottomRightBridgeCornerRects,
+  ["HORIZONTAL"]: horizontalBridge,
+  ["VERTICAL"]: verticalBridge,
 };
 
 export function getRailroadRects(type: RailType): number[][] {

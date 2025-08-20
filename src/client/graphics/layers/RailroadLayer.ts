@@ -4,7 +4,6 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import {
-  GameUpdateType,
   RailroadUpdate,
   RailTile,
   RailType,
@@ -48,8 +47,7 @@ export class RailroadLayer implements Layer {
 
   tick() {
     const updates = this.game.updatesSinceLastTick();
-    const railUpdates =
-      updates !== null ? updates[GameUpdateType.RailroadEvent] : [];
+    const railUpdates = updates !== null ? updates["RailroadEvent"] : [];
     for (const rail of railUpdates) {
       this.handleRailroadRendering(rail);
     }

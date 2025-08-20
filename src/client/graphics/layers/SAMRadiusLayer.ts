@@ -1,5 +1,4 @@
 import type { EventBus } from "../../../core/EventBus";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type {
   GameView,
   PlayerView,
@@ -65,7 +64,7 @@ export class SAMRadiusLayer implements Layer {
 
   tick() {
     // Check for updates to SAM launchers
-    const unitUpdates = this.game.updatesSinceLastTick()?.[GameUpdateType.Unit];
+    const unitUpdates = this.game.updatesSinceLastTick()?.["Unit"];
     if (unitUpdates) {
       for (const update of unitUpdates) {
         const unit = this.game.unit(update.id);

@@ -4,7 +4,6 @@ import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import { Cell, ColoredTeams, Team } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -81,7 +80,7 @@ export class TerritoryLayer implements Layer {
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
+    const unitUpdates = updates !== null ? updates["Unit"] : [];
     unitUpdates.forEach((update) => {
       if (update.unitType === "Defense Post") {
         // Only update borders if the defense post is not under construction
@@ -107,14 +106,14 @@ export class TerritoryLayer implements Layer {
     // Detect alliance mutations
     const myPlayer = this.game.myPlayer();
     if (myPlayer) {
-      updates?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
+      updates?.["BrokeAlliance"]?.forEach((update) => {
         const territory = this.game.playerBySmallID(update.betrayedID);
         if (territory && territory instanceof PlayerView) {
           this.redrawBorder(territory);
         }
       });
 
-      updates?.[GameUpdateType.AllianceRequestReply]?.forEach((update) => {
+      updates?.["AllianceRequestReply"]?.forEach((update) => {
         if (
           update.accepted &&
           (update.request.requestorID === myPlayer.smallID() ||
@@ -130,7 +129,7 @@ export class TerritoryLayer implements Layer {
           }
         }
       });
-      updates?.[GameUpdateType.EmbargoEvent]?.forEach((update) => {
+      updates?.["EmbargoEvent"]?.forEach((update) => {
         const player = this.game.playerBySmallID(update.playerID) as PlayerView;
         const embargoed = this.game.playerBySmallID(
           update.embargoedID,

@@ -1,6 +1,6 @@
 import { Execution, Game } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { GameUpdateType, RailTile, RailType } from "../game/GameUpdates";
+import { RailTile, RailType } from "../game/GameUpdates";
 import { Railroad } from "../game/Railroad";
 
 export class RailroadExecution implements Execution {
@@ -27,7 +27,7 @@ export class RailroadExecution implements Execution {
       railType:
         tiles.length > 0
           ? this.computeExtremityDirection(tiles[0], tiles[1])
-          : RailType.VERTICAL,
+          : "VERTICAL",
     });
     for (let i = 1; i < tiles.length - 1; i++) {
       const direction = this.computeDirection(
@@ -45,7 +45,7 @@ export class RailroadExecution implements Execution {
               tiles[tiles.length - 1],
               tiles[tiles.length - 2],
             )
-          : RailType.VERTICAL,
+          : "VERTICAL",
     });
   }
 
@@ -58,14 +58,14 @@ export class RailroadExecution implements Execution {
     const dx = nextX - x;
     const dy = nextY - y;
 
-    if (dx === 0 && dy === 0) return RailType.VERTICAL; // No movement
+    if (dx === 0 && dy === 0) return "VERTICAL"; // No movement
 
     if (dx === 0) {
-      return RailType.VERTICAL;
+      return "VERTICAL";
     } else if (dy === 0) {
-      return RailType.HORIZONTAL;
+      return "HORIZONTAL";
     }
-    return RailType.VERTICAL;
+    return "VERTICAL";
   }
 
   private computeDirection(
@@ -90,25 +90,25 @@ export class RailroadExecution implements Execution {
 
     // Straight line
     if (dx1 === dx2 && dy1 === dy2) {
-      if (dx1 !== 0) return RailType.HORIZONTAL;
-      if (dy1 !== 0) return RailType.VERTICAL;
+      if (dx1 !== 0) return "HORIZONTAL";
+      if (dy1 !== 0) return "VERTICAL";
     }
 
     // Turn (corner) cases
     if ((dx1 === 0 && dx2 !== 0) || (dx1 !== 0 && dx2 === 0)) {
       // Now figure out which type of corner
-      if (dx1 === 0 && dx2 === 1 && dy1 === -1) return RailType.BOTTOM_RIGHT;
-      if (dx1 === 0 && dx2 === -1 && dy1 === -1) return RailType.BOTTOM_LEFT;
-      if (dx1 === 0 && dx2 === 1 && dy1 === 1) return RailType.TOP_RIGHT;
-      if (dx1 === 0 && dx2 === -1 && dy1 === 1) return RailType.TOP_LEFT;
+      if (dx1 === 0 && dx2 === 1 && dy1 === -1) return "BOTTOM_RIGHT";
+      if (dx1 === 0 && dx2 === -1 && dy1 === -1) return "BOTTOM_LEFT";
+      if (dx1 === 0 && dx2 === 1 && dy1 === 1) return "TOP_RIGHT";
+      if (dx1 === 0 && dx2 === -1 && dy1 === 1) return "TOP_LEFT";
 
-      if (dx1 === 1 && dx2 === 0 && dy2 === -1) return RailType.TOP_LEFT;
-      if (dx1 === -1 && dx2 === 0 && dy2 === -1) return RailType.TOP_RIGHT;
-      if (dx1 === 1 && dx2 === 0 && dy2 === 1) return RailType.BOTTOM_LEFT;
-      if (dx1 === -1 && dx2 === 0 && dy2 === 1) return RailType.BOTTOM_RIGHT;
+      if (dx1 === 1 && dx2 === 0 && dy2 === -1) return "TOP_LEFT";
+      if (dx1 === -1 && dx2 === 0 && dy2 === -1) return "TOP_RIGHT";
+      if (dx1 === 1 && dx2 === 0 && dy2 === 1) return "BOTTOM_LEFT";
+      if (dx1 === -1 && dx2 === 0 && dy2 === 1) return "BOTTOM_RIGHT";
     }
     console.warn(`Invalid rail segment: ${dx1}:${dy1}, ${dx2}:${dy2}`);
-    return RailType.VERTICAL;
+    return "VERTICAL";
   }
 
   tick(ticks: number): void {
@@ -143,7 +143,7 @@ export class RailroadExecution implements Execution {
     }
     if (updatedRailTiles) {
       this.mg.addUpdate({
-        type: GameUpdateType.RailroadEvent,
+        type: "RailroadEvent",
         isActive: true,
         railTiles: updatedRailTiles,
       });

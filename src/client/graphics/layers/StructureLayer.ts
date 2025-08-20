@@ -12,7 +12,6 @@ import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
 const underConstructionColor = colord("rgb(150,150,150)");
@@ -110,7 +109,7 @@ export class StructureLayer implements Layer {
 
   tick() {
     const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
+    const unitUpdates = updates !== null ? updates["Unit"] : [];
     for (const u of unitUpdates) {
       const unit = this.game.unit(u.id);
       if (unit === undefined) continue;

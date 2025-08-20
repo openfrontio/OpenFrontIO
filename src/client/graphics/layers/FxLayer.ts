@@ -2,7 +2,6 @@ import { Theme } from "../../../core/configuration/Config";
 import {
   BonusEventUpdate,
   ConquestUpdate,
-  GameUpdateType,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
@@ -49,30 +48,24 @@ export class FxLayer implements Layer {
     this.spawnSantaIfNeeded();
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.["Unit"]?.map((unit) => this.game.unit(unit.id))
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
       });
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.BonusEvent]?.forEach((bonusEvent) => {
-        if (bonusEvent === undefined) return;
-        this.onBonusEvent(bonusEvent);
-      });
+    this.game.updatesSinceLastTick()?.["BonusEvent"]?.forEach((bonusEvent) => {
+      if (bonusEvent === undefined) return;
+      this.onBonusEvent(bonusEvent);
+    });
 
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.RailroadEvent]?.forEach((update) => {
-        if (update === undefined) return;
-        this.onRailroadEvent(update);
-      });
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.ConquestEvent]?.forEach((update) => {
-        if (update === undefined) return;
-        this.onConquestEvent(update);
-      });
+    this.game.updatesSinceLastTick()?.["RailroadEvent"]?.forEach((update) => {
+      if (update === undefined) return;
+      this.onRailroadEvent(update);
+    });
+    this.game.updatesSinceLastTick()?.["ConquestEvent"]?.forEach((update) => {
+      if (update === undefined) return;
+      this.onConquestEvent(update);
+    });
   }
 
   private spawnSantaIfNeeded() {

@@ -29,7 +29,6 @@ import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
-  GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
   UnitUpdate,
@@ -638,7 +637,7 @@ export class GameView implements GameMap {
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
-    gu.updates[GameUpdateType.Player].forEach((pu) => {
+    gu.updates["Player"].forEach((pu) => {
       this.smallIDToID.set(pu.smallID, pu.id);
       const player = this._players.get(pu.id);
       if (player !== undefined) {
@@ -666,7 +665,7 @@ export class GameView implements GameMap {
       unit._wasUpdated = false;
       unit.lastPos = unit.lastPos.slice(-1);
     }
-    gu.updates[GameUpdateType.Unit].forEach((update) => {
+    gu.updates["Unit"].forEach((update) => {
       let unit = this._units.get(update.id);
       if (unit !== undefined) {
         unit.update(update);
