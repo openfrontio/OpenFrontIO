@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import {
   EmojiMessage,
@@ -27,27 +28,28 @@ export interface ErrorUpdate {
   stack?: string;
 }
 
-export enum GameUpdateType {
-  Tile,
-  Unit,
-  Player,
-  DisplayEvent,
-  DisplayChatEvent,
-  AllianceRequest,
-  AllianceRequestReply,
-  BrokeAlliance,
-  AllianceExpired,
-  AllianceExtension,
-  TargetPlayer,
-  Emoji,
-  Win,
-  Hash,
-  UnitIncoming,
-  BonusEvent,
-  RailroadEvent,
-  ConquestEvent,
-  EmbargoEvent,
-}
+export const GameUpdateTypeSchema = z.enum([
+  "Tile",
+  "Unit",
+  "Player",
+  "DisplayEvent",
+  "DisplayChatEvent",
+  "AllianceRequest",
+  "AllianceRequestReply",
+  "BrokeAlliance",
+  "AllianceExpired",
+  "AllianceExtension",
+  "TargetPlayer",
+  "Emoji",
+  "Win",
+  "Hash",
+  "UnitIncoming",
+  "BonusEvent",
+  "RailroadEvent",
+  "ConquestEvent",
+  "EmbargoEvent",
+]);
+export type GameUpdateType = z.infer<typeof GameUpdateTypeSchema>;
 
 export type GameUpdate =
   | TileUpdateWrapper
@@ -71,21 +73,22 @@ export type GameUpdate =
   | EmbargoUpdate;
 
 export interface BonusEventUpdate {
-  type: GameUpdateType.BonusEvent;
+  type: "BonusEvent";
   player: PlayerID;
   tile: TileRef;
   gold: number;
   troops: number;
 }
 
-export enum RailType {
-  VERTICAL,
-  HORIZONTAL,
-  TOP_LEFT,
-  TOP_RIGHT,
-  BOTTOM_LEFT,
-  BOTTOM_RIGHT,
-}
+export const RailTypeSchema = z.enum([
+  "VERTICAL",
+  "HORIZONTAL",
+  "TOP_LEFT",
+  "TOP_RIGHT",
+  "BOTTOM_LEFT",
+  "BOTTOM_RIGHT",
+]);
+export type RailType = z.infer<typeof RailTypeSchema>;
 
 export interface RailTile {
   tile: TileRef;
@@ -93,25 +96,25 @@ export interface RailTile {
 }
 
 export interface RailroadUpdate {
-  type: GameUpdateType.RailroadEvent;
+  type: "RailroadEvent";
   isActive: boolean;
   railTiles: RailTile[];
 }
 
 export interface ConquestUpdate {
-  type: GameUpdateType.ConquestEvent;
+  type: "ConquestEvent";
   conquerorId: PlayerID;
   conqueredId: PlayerID;
   gold: Gold;
 }
 
 export interface TileUpdateWrapper {
-  type: GameUpdateType.Tile;
+  type: "Tile";
   update: TileUpdate;
 }
 
 export interface UnitUpdate {
-  type: GameUpdateType.Unit;
+  type: "Unit";
   unitType: UnitType;
   troops: number;
   id: number;
@@ -145,7 +148,7 @@ export interface AttackUpdate {
 }
 
 export interface PlayerUpdate {
-  type: GameUpdateType.Player;
+  type: "Player";
   nameViewData?: NameViewData;
   clientID: ClientID | null;
   name: string;
@@ -183,49 +186,49 @@ export interface AllianceView {
 }
 
 export interface AllianceRequestUpdate {
-  type: GameUpdateType.AllianceRequest;
+  type: "AllianceRequest";
   requestorID: number;
   recipientID: number;
   createdAt: Tick;
 }
 
 export interface AllianceRequestReplyUpdate {
-  type: GameUpdateType.AllianceRequestReply;
+  type: "AllianceRequestReply";
   request: AllianceRequestUpdate;
   accepted: boolean;
 }
 
 export interface BrokeAllianceUpdate {
-  type: GameUpdateType.BrokeAlliance;
+  type: "BrokeAlliance";
   traitorID: number;
   betrayedID: number;
 }
 
 export interface AllianceExpiredUpdate {
-  type: GameUpdateType.AllianceExpired;
+  type: "AllianceExpired";
   player1ID: number;
   player2ID: number;
 }
 
 export interface AllianceExtensionUpdate {
-  type: GameUpdateType.AllianceExtension;
+  type: "AllianceExtension";
   playerID: number;
   allianceID: number;
 }
 
 export interface TargetPlayerUpdate {
-  type: GameUpdateType.TargetPlayer;
+  type: "TargetPlayer";
   playerID: number;
   targetID: number;
 }
 
 export interface EmojiUpdate {
-  type: GameUpdateType.Emoji;
+  type: "Emoji";
   emoji: EmojiMessage;
 }
 
 export interface DisplayMessageUpdate {
-  type: GameUpdateType.DisplayEvent;
+  type: "DisplayEvent";
   message: string;
   messageType: MessageType;
   goldAmount?: bigint;
@@ -234,7 +237,7 @@ export interface DisplayMessageUpdate {
 }
 
 export type DisplayChatMessageUpdate = {
-  type: GameUpdateType.DisplayChatEvent;
+  type: "DisplayChatEvent";
   key: string;
   category: string;
   target: string | undefined;
@@ -244,19 +247,19 @@ export type DisplayChatMessageUpdate = {
 };
 
 export interface WinUpdate {
-  type: GameUpdateType.Win;
+  type: "Win";
   allPlayersStats: AllPlayersStats;
   winner: Winner;
 }
 
 export interface HashUpdate {
-  type: GameUpdateType.Hash;
+  type: "Hash";
   tick: Tick;
   hash: number;
 }
 
 export interface UnitIncomingUpdate {
-  type: GameUpdateType.UnitIncoming;
+  type: "UnitIncoming";
   unitID: number;
   message: string;
   messageType: MessageType;
@@ -264,7 +267,7 @@ export interface UnitIncomingUpdate {
 }
 
 export interface EmbargoUpdate {
-  type: GameUpdateType.EmbargoEvent;
+  type: "EmbargoEvent";
   event: "start" | "stop";
   playerID: number;
   embargoedID: number;

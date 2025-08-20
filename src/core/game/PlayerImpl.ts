@@ -39,12 +39,7 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import {
-  AllianceView,
-  AttackUpdate,
-  GameUpdateType,
-  PlayerUpdate,
-} from "./GameUpdates";
+import { AllianceView, AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -126,7 +121,7 @@ export class PlayerImpl implements Player {
     );
 
     return {
-      type: GameUpdateType.Player,
+      type: "Player",
       clientID: this.clientID(),
       name: this.name(),
       displayName: this.displayName(),
@@ -740,7 +735,7 @@ export class PlayerImpl implements Player {
     if (embargo !== undefined && !embargo.isTemporary) return;
 
     this.mg.addUpdate({
-      type: GameUpdateType.EmbargoEvent,
+      type: "EmbargoEvent",
       event: "start",
       playerID: this.smallID(),
       embargoedID: other.smallID(),
@@ -756,7 +751,7 @@ export class PlayerImpl implements Player {
   stopEmbargo(other: Player): void {
     this.embargoes.delete(other.id());
     this.mg.addUpdate({
-      type: GameUpdateType.EmbargoEvent,
+      type: "EmbargoEvent",
       event: "stop",
       playerID: this.smallID(),
       embargoedID: other.smallID(),
@@ -808,7 +803,7 @@ export class PlayerImpl implements Player {
     this._gold += toAdd;
     if (tile) {
       this.mg.addUpdate({
-        type: GameUpdateType.BonusEvent,
+        type: "BonusEvent",
         player: this.id(),
         tile,
         gold: Number(toAdd),

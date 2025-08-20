@@ -1,5 +1,4 @@
 import type { EventBus } from "../../../core/EventBus";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type { GameView, PlayerView } from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
@@ -70,7 +69,7 @@ export class SAMRadiusLayer implements Layer {
   tick() {
     // Check for updates to SAM launchers
     const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates?.[GameUpdateType.Unit];
+    const unitUpdates = updates?.["Unit"];
 
     if (unitUpdates) {
       let hasChanges = false;

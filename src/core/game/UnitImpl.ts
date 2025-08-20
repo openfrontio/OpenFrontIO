@@ -11,7 +11,7 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
-import { GameUpdateType, UnitUpdate } from "./GameUpdates";
+import { UnitUpdate } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {
@@ -118,7 +118,7 @@ export class UnitImpl implements Unit {
 
   toUpdate(): UnitUpdate {
     return {
-      type: GameUpdateType.Unit,
+      type: "Unit",
       unitType: this._type,
       id: this._id,
       troops: this._troops,

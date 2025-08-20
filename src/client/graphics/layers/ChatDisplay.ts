@@ -3,10 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { EventBus } from "../../../core/EventBus";
-import {
-  DisplayMessageUpdate,
-  GameUpdateType,
-} from "../../../core/game/GameUpdates";
+import { DisplayMessageUpdate } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
 import { Layer } from "./Layer";
@@ -76,7 +73,7 @@ export class ChatDisplay extends LitElement implements Layer {
     // this.active = true;
     const updates = this.game.updatesSinceLastTick();
     if (updates === null) return;
-    const messages = updates[GameUpdateType.DisplayEvent] as
+    const messages = updates["DisplayEvent"] as
       | DisplayMessageUpdate[]
       | undefined;
 

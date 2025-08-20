@@ -1,6 +1,6 @@
 import { Game } from "./Game";
 import { TileRef } from "./GameMap";
-import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
+import { RailTile } from "./GameUpdates";
 import { TrainStation } from "./TrainStation";
 
 export class Railroad {
@@ -13,10 +13,10 @@ export class Railroad {
   delete(game: Game) {
     const railTiles: RailTile[] = this.tiles.map((tile) => ({
       tile,
-      railType: RailType.VERTICAL,
+      railType: "VERTICAL",
     }));
     game.addUpdate({
-      type: GameUpdateType.RailroadEvent,
+      type: "RailroadEvent",
       isActive: false,
       railTiles,
     });
