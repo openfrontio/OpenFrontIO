@@ -7,7 +7,6 @@ import {
   COLORS,
   MenuElementParams,
   rootMenuElement,
-  Slot,
 } from "../../../src/client/graphics/layers/RadialMenuElements";
 import { UnitTypeSchema } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
@@ -154,7 +153,7 @@ describe("RadialMenuElements", () => {
 
   describe("attackMenuElement", () => {
     it("should have correct basic properties", () => {
-      expect(attackMenuElement.id).toBe(Slot.Attack);
+      expect(attackMenuElement.id).toBe("attack");
       expect(attackMenuElement.name).toBe("radial_attack");
       expect(attackMenuElement.icon).toBeDefined();
       expect(attackMenuElement.color).toBe(COLORS.attack);
@@ -225,7 +224,7 @@ describe("RadialMenuElements", () => {
 
   describe("buildMenuElement", () => {
     it("should have correct basic properties", () => {
-      expect(buildMenuElement.id).toBe(Slot.Build);
+      expect(buildMenuElement.id).toBe("build");
       expect(buildMenuElement.name).toBe("build");
       expect(buildMenuElement.icon).toBeDefined();
       expect(buildMenuElement.color).toBe(COLORS.build);
@@ -291,9 +290,9 @@ describe("RadialMenuElements", () => {
 
     it("should show build and delete menu on own territory", () => {
       const subMenu = rootMenuElement.subMenu!(mockParams);
-      const buildMenu = subMenu.find((item) => item.id === Slot.Build);
-      const attackMenu = subMenu.find((item) => item.id === Slot.Attack);
-      const deleteMenu = subMenu.find((item) => item.id === Slot.Delete);
+      const buildMenu = subMenu.find((item) => item.id === "build");
+      const attackMenu = subMenu.find((item) => item.id === "attack");
+      const deleteMenu = subMenu.find((item) => item.id === "delete");
 
       expect(buildMenu).toBeDefined();
       expect(attackMenu).toBeUndefined();
@@ -308,9 +307,9 @@ describe("RadialMenuElements", () => {
       mockGame.owner = jest.fn(() => enemyPlayer);
 
       const subMenu = rootMenuElement.subMenu!(mockParams);
-      const buildMenu = subMenu.find((item) => item.id === Slot.Build);
-      const attackMenu = subMenu.find((item) => item.id === Slot.Attack);
-      const boatMenu = subMenu.find((item) => item.id === Slot.Boat);
+      const buildMenu = subMenu.find((item) => item.id === "build");
+      const attackMenu = subMenu.find((item) => item.id === "attack");
+      const boatMenu = subMenu.find((item) => item.id === "boat");
 
       expect(attackMenu).toBeDefined();
       expect(buildMenu).toBeUndefined();
@@ -319,7 +318,7 @@ describe("RadialMenuElements", () => {
 
     it("should include info menu in both cases", () => {
       const subMenu = rootMenuElement.subMenu!(mockParams);
-      const infoMenu = subMenu.find((item) => item.id === Slot.Info);
+      const infoMenu = subMenu.find((item) => item.id === "info");
 
       expect(infoMenu).toBeDefined();
     });
