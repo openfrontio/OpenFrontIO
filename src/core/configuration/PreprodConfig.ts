@@ -3,7 +3,7 @@ import { DefaultServerConfig } from "./DefaultConfig";
 
 export const preprodConfig = new (class extends DefaultServerConfig {
   env(): GameEnv {
-    return GameEnv.Preprod;
+    return "Preprod";
   }
   numWorkers(): number {
     return 2;

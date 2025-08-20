@@ -1,5 +1,6 @@
 import { Colord } from "colord";
 import { JWK } from "jose";
+import { z } from "zod";
 import {
   Game,
   GameMapType,
@@ -19,11 +20,8 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 
-export enum GameEnv {
-  Dev,
-  Preprod,
-  Prod,
-}
+export const GameEnvSchema = z.enum(["Dev", "Preprod", "Prod"]);
+export type GameEnv = z.infer<typeof GameEnvSchema>;
 
 export interface ServerConfig {
   turnstileSiteKey(): string;
