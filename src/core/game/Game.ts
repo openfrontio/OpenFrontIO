@@ -349,6 +349,7 @@ export interface AllianceRequest {
   requestor(): Player;
   recipient(): Player;
   createdAt(): Tick;
+  status(): "pending" | "accepted" | "rejected";
 }
 
 export interface Alliance {

@@ -44,7 +44,6 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Halkidiki: 1,
   StraitOfGibraltar: 1,
   Italia: 1,
-  Yenisei: 1,
   Pluto: 1,
 };
 

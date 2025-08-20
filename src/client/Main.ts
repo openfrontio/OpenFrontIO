@@ -215,7 +215,7 @@ class Client {
     if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
     territoryModal.previewButton = patternButton;
-    territoryModal.updatePreview();
+    territoryModal.refresh();
     patternButton.addEventListener("click", () => {
       territoryModal.open();
     });
