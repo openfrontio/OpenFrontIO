@@ -61,9 +61,9 @@ describe("TrainStation", () => {
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(2000n, unit.tile());
+    expect(unit.owner().addGold).toHaveBeenCalledWith(1000n, unit.tile());
     expect(trainExecution.owner().addGold).toHaveBeenCalledWith(
-      2000n,
+      1000n,
       unit.tile(),
     );
   });
