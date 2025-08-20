@@ -61,6 +61,7 @@ export class FlagInput extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener("flag-change", this.updateFlag as EventListener);
+    window.addEventListener("flag-change", this.updateFlag as EventListener);
   }
 
   createRenderRoot() {

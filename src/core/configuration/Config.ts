@@ -121,6 +121,7 @@ export type Config = {
   shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
+  allianceRequestDuration(): Tick;
   allianceRequestCooldown(): Tick;
   temporaryEmbargoDuration(): Tick;
   targetDuration(): Tick;
@@ -132,9 +133,9 @@ export type Config = {
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number, numPorts: number): Gold;
-  tradeShipSpawnRate(numberOfPorts: number): number;
-  trainGold(isFriendly: boolean): Gold;
-  trainSpawnRate(numberOfStations: number): number;
+  tradeShipSpawnRate(numTradeShips: number, numPlayerPorts: number): number;
+  trainGold(rel: "self" | "friendly" | "other"): Gold;
+  trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
   railroadMaxSize(): number;

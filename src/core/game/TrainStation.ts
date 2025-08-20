@@ -23,13 +23,11 @@ class CityStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const level = BigInt(station.unit.level() + 1);
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const isFriendly = stationOwner.isFriendly(trainOwner);
-    const goldBonus = mg.config().trainGold(isFriendly) * level;
+    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
     // Share revenue with the station owner if it's not the current player
-    if (isFriendly) {
+    if (trainOwner !== stationOwner) {
       stationOwner.addGold(goldBonus, station.tile());
     }
     trainOwner.addGold(goldBonus, station.tile());
@@ -43,16 +41,15 @@ class PortStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const level = BigInt(station.unit.level() + 1);
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const isFriendly = stationOwner.isFriendly(trainOwner);
-    const goldBonus = mg.config().trainGold(isFriendly) * level;
+    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
 
-    if (isFriendly) {
+    trainOwner.addGold(goldBonus, station.tile());
+    // Share revenue with the station owner if it's not the current player
+    if (trainOwner !== stationOwner) {
       stationOwner.addGold(goldBonus, station.tile());
     }
-    trainOwner.addGold(goldBonus, station.tile());
   }
 }
 
@@ -61,17 +58,7 @@ class FactoryStopHandler implements TrainStopHandler {
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
-  ): void {
-    const stationOwner = station.unit.owner();
-    const trainOwner = trainExecution.owner();
-    const isFriendly = stationOwner.isFriendly(trainOwner);
-    const goldBonus = mg.config().trainGold(isFriendly);
-    // Share revenue with the station owner if it's not the current player
-    if (isFriendly) {
-      stationOwner.addGold(goldBonus, station.tile());
-    }
-    trainOwner.addGold(goldBonus, station.tile());
-  }
+  ): void {}
 }
 
 export function createTrainStopHandlers(
@@ -226,7 +213,11 @@ export class Cluster {
   availableForTrade(player: Player): Set<TrainStation> {
     const tradingStations = new Set<TrainStation>();
     for (const station of this.stations) {
-      if (station.tradeAvailable(player)) {
+      if (
+        (station.unit.type() === UnitType.City ||
+          station.unit.type() === UnitType.Port) &&
+        station.tradeAvailable(player)
+      ) {
         tradingStations.add(station);
       }
     }
@@ -240,4 +231,14 @@ export class Cluster {
   clear() {
     this.stations.clear();
   }
+}
+
+function rel(player: Player, other: Player): "self" | "friendly" | "other" {
+  if (player === other) {
+    return "self";
+  }
+  if (player.isFriendly(other)) {
+    return "friendly";
+  }
+  return "other";
 }
