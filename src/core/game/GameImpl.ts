@@ -968,7 +968,7 @@ export class GameImpl implements Game {
   }
 }
 
-// Or a more dynamic approach that will catch new enum values:
+// Or a more dynamic approach that will catch new schema values:
 const createGameUpdatesMap = (): GameUpdates => {
   const map = {} as GameUpdates;
   GameUpdateTypeSchema.options.forEach((type) => {
