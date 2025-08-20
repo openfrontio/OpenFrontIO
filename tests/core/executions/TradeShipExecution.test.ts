@@ -1,5 +1,6 @@
 import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
 import { Game, Player, Unit } from "../../../src/core/game/Game";
+import { PathFindResultTypeSchema } from "../../../src/core/pathfinding/AStar";
 import { setup } from "../../util/Setup";
 
 describe("TradeShipExecution", () => {
@@ -83,7 +84,10 @@ describe("TradeShipExecution", () => {
     tradeShipExecution = new TradeShipExecution(origOwner, srcPort, dstPort);
     tradeShipExecution.init(game, 0);
     tradeShipExecution["pathFinder"] = {
-      nextTile: jest.fn(() => ({ type: 0, node: 2001 })),
+      nextTile: jest.fn(() => ({
+        type: PathFindResultTypeSchema.enum.NextTile,
+        node: 2001,
+      })),
     } as any;
     tradeShipExecution["tradeShip"] = tradeShip;
   });
@@ -114,7 +118,10 @@ describe("TradeShipExecution", () => {
 
   it("should complete trade and award gold", () => {
     tradeShipExecution["pathFinder"] = {
-      nextTile: jest.fn(() => ({ type: 2, node: 2001 })),
+      nextTile: jest.fn(() => ({
+        type: PathFindResultTypeSchema.enum.Completed,
+        node: 2001,
+      })),
     } as any;
     tradeShipExecution.tick(1);
     expect(tradeShip.delete).toHaveBeenCalledWith(false);

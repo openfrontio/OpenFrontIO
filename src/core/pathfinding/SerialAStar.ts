@@ -70,7 +70,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
   }
 
   compute(): PathFindResultType {
-    if (this.completed) return PathFindResultType.Completed;
+    if (this.completed) return "Completed";
 
     this.maxTries -= 1;
     let iterations = this.iterations;
@@ -79,9 +79,9 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       iterations--;
       if (iterations <= 0) {
         if (this.maxTries <= 0) {
-          return PathFindResultType.PathNotFound;
+          return "PathNotFound";
         }
-        return PathFindResultType.Pending;
+        return "Pending";
       }
 
       // Process forward search
@@ -91,7 +91,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       if (this.bwdGScore.has(fwdCurrent)) {
         this.meetingPoint = fwdCurrent;
         this.completed = true;
-        return PathFindResultType.Completed;
+        return "Completed";
       }
       this.expandNode(fwdCurrent, true);
 
@@ -102,14 +102,12 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       if (this.fwdGScore.has(bwdCurrent)) {
         this.meetingPoint = bwdCurrent;
         this.completed = true;
-        return PathFindResultType.Completed;
+        return "Completed";
       }
       this.expandNode(bwdCurrent, false);
     }
 
-    return this.completed
-      ? PathFindResultType.Completed
-      : PathFindResultType.PathNotFound;
+    return this.completed ? "Completed" : "PathNotFound";
   }
 
   private expandNode(current: NodeType, isForward: boolean) {

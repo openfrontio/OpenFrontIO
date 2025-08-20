@@ -1,7 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { distSortUnit } from "../Util";
 
@@ -95,11 +94,11 @@ export class TradeShipExecution implements Execution {
     const result = this.pathFinder.nextTile(curTile, this._dstPort.tile());
 
     switch (result.type) {
-      case PathFindResultType.Pending:
+      case "Pending":
         // Fire unit event to rerender.
         this.tradeShip.move(curTile);
         break;
-      case PathFindResultType.NextTile:
+      case "NextTile":
         // Update safeFromPirates status
         if (this.mg.isWater(result.node) && this.mg.isShoreline(result.node)) {
           this.tradeShip.setSafeFromPirates();
@@ -107,10 +106,10 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.move(result.node);
         this.tilesTraveled++;
         break;
-      case PathFindResultType.Completed:
+      case "Completed":
         this.complete();
         break;
-      case PathFindResultType.PathNotFound:
+      case "PathNotFound":
         console.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
