@@ -1,28 +1,32 @@
+import { z } from "zod";
+
 export interface AStar<NodeType> {
   compute(): PathFindResultType;
   reconstructPath(): NodeType[];
 }
 
-export enum PathFindResultType {
-  NextTile,
-  Pending,
-  Completed,
-  PathNotFound,
-}
+export const PathFindResultTypeSchema = z.enum([
+  "NextTile",
+  "Pending",
+  "Completed",
+  "PathNotFound",
+]);
+export type PathFindResultType = z.infer<typeof PathFindResultTypeSchema>;
+
 export type AStarResult<NodeType> =
   | {
-      type: PathFindResultType.NextTile;
+      type: "NextTile";
       node: NodeType;
     }
   | {
-      type: PathFindResultType.Pending;
+      type: "Pending";
     }
   | {
-      type: PathFindResultType.Completed;
+      type: "Completed";
       node: NodeType;
     }
   | {
-      type: PathFindResultType.PathNotFound;
+      type: "PathNotFound";
     };
 
 export interface Point {

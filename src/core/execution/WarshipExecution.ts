@@ -7,7 +7,6 @@ import {
   UnitParams,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
@@ -165,18 +164,18 @@ export class WarshipExecution implements Execution {
         5,
       );
       switch (result.type) {
-        case PathFindResultType.Completed:
+        case "Completed":
           this.warship.owner().captureUnit(this.warship.targetUnit()!);
           this.warship.setTargetUnit(undefined);
           this.warship.move(this.warship.tile());
           return;
-        case PathFindResultType.NextTile:
+        case "NextTile":
           this.warship.move(result.node);
           break;
-        case PathFindResultType.Pending:
+        case "Pending":
           this.warship.touch();
           break;
-        case PathFindResultType.PathNotFound:
+        case "PathNotFound":
           console.log(`path not found to target`);
           break;
       }
@@ -196,17 +195,17 @@ export class WarshipExecution implements Execution {
       this.warship.targetTile()!,
     );
     switch (result.type) {
-      case PathFindResultType.Completed:
+      case "Completed":
         this.warship.setTargetTile(undefined);
         this.warship.move(result.node);
         break;
-      case PathFindResultType.NextTile:
+      case "NextTile":
         this.warship.move(result.node);
         break;
-      case PathFindResultType.Pending:
+      case "Pending":
         this.warship.touch();
         return;
-      case PathFindResultType.PathNotFound:
+      case "PathNotFound":
         console.warn(`path not found to target tile`);
         this.warship.setTargetTile(undefined);
         break;
