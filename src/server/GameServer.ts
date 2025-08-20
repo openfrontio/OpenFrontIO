@@ -2,7 +2,7 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { ServerConfig } from "../core/configuration/Config";
 import {
   ClientID,
   ClientMessageSchema,
@@ -186,7 +186,7 @@ export class GameServer {
       return;
     }
 
-    if (this.config.env() === GameEnv.Prod) {
+    if (this.config.env() === "Prod") {
       // Prevent multiple clients from using the same account in prod
       const conflicting = this.activeClients.find(
         (c) =>

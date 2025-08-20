@@ -6,7 +6,7 @@ export const prodConfig = new (class extends DefaultServerConfig {
     return 20;
   }
   env(): GameEnv {
-    return GameEnv.Prod;
+    return "Prod";
   }
   jwtAudience(): string {
     return "openfront.io";
