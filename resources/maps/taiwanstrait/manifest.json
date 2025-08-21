@@ -20,7 +20,7 @@
     {
       "coordinates": [1419, 1034],
       "flag": "cc",
-      "name": "Changyua County",
+      "name": "Changhua County",
       "strength": 2
     },
     {
@@ -45,12 +45,6 @@
       "coordinates": [926, 235],
       "flag": "fz",
       "name": "Fuzhou",
-      "strength": 2
-    },
-    {
-      "coordinates": [100, 457],
-      "flag": "dk",
-      "name": "Democratic People's Republic",
       "strength": 2
     },
     {
