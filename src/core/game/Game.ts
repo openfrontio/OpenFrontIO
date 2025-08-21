@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -79,6 +80,8 @@ export enum GameMapType {
   EastAsia = "East Asia",
   BetweenTwoSeas = "Between Two Seas",
   FaroeIslands = "Faroe Islands",
+  Korea = "Korea",
+  TaiwanStrait = "TaiwanStrait",
   DeglaciatedAntarctica = "Deglaciated Antarctica",
   FalklandIslands = "Falkland Islands",
   Baikal = "Baikal",
@@ -110,10 +113,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BetweenTwoSeas,
     GameMapType.Iceland,
     GameMapType.EastAsia,
+    GameMapType.TaiwanStrait,
     GameMapType.Mena,
     GameMapType.Australia,
     GameMapType.FaroeIslands,
     GameMapType.FalklandIslands,
+    GameMapType.Korea,
     GameMapType.Baikal,
     GameMapType.Halkidiki,
     GameMapType.StraitOfGibraltar,

@@ -1,0 +1,57 @@
+{
+  "map": {
+    "height": 1670,
+    "num_land_tiles": 1179770,
+    "width": 1800
+  },
+  "mini_map": {
+    "height": 835,
+    "num_land_tiles": 290434,
+    "width": 900
+  },
+  "name": "Korea",
+  "nations": [
+    {
+      "coordinates": [1137, 849],
+      "flag": "sl",
+      "name": "Seoul",
+      "strength": 2
+    },
+    {
+      "coordinates": [1427, 983],
+      "flag": "sk",
+      "name": "South Korea",
+      "strength": 2
+    },
+    {
+      "coordinates": [974, 437],
+      "flag": "py",
+      "name": "Pyongyang",
+      "strength": 2
+    },
+    {
+      "coordinates": [1123, 598],
+      "flag": "dk",
+      "name": "Democratic People's Republic of Korea",
+      "strength": 2
+    },
+    {
+      "coordinates": [548, 214],
+      "flag": "ch",
+      "name": "China",
+      "strength": 2
+    },
+    {
+      "coordinates": [111, 939],
+      "flag": "sp",
+      "name": "Shadong People's Republic",
+      "strength": 2
+    },
+    {
+      "coordinates": [1172, 1398],
+      "flag": "jp",
+      "name": "Japan",
+      "strength": 2
+    }
+  ]
+}

@@ -37,6 +37,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Halkidiki: 4,
   Iceland: 4,
   Italia: 6,
+  Korea: 6,
   Mars: 3,
   MarsRevised: 3,
   Mena: 6,
@@ -45,6 +46,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Pluto: 6,
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
+  TaiwanStrait: 4,
   World: 8,
   Yenisei: 6,
 };

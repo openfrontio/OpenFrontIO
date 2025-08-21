@@ -29,6 +29,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   FaroeIslands: "Faroe Islands",
   DeglaciatedAntarctica: "Deglaciated Antarctica",
   FalklandIslands: "Falkland Islands",
+  Korea: "Korea",
+  TaiwanStrait: "Taiwan Strait",
   Baikal: "Baikal",
   Halkidiki: "Halkidiki",
   StraitOfGibraltar: "Strait of Gibraltar",

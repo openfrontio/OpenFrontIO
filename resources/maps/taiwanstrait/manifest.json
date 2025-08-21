@@ -1,0 +1,63 @@
+{
+  "map": {
+    "height": 1984,
+    "num_land_tiles": 1396408,
+    "width": 1996
+  },
+  "mini_map": {
+    "height": 992,
+    "num_land_tiles": 344140,
+    "width": 998
+  },
+  "name": "Taiwan Strait",
+  "nations": [
+    {
+      "coordinates": [1797, 603],
+      "flag": "tp",
+      "name": "Taipei",
+      "strength": 2
+    },
+    {
+      "coordinates": [1419, 1034],
+      "flag": "cc",
+      "name": "Changyua County",
+      "strength": 2
+    },
+    {
+      "coordinates": [1697, 992],
+      "flag": "tp",
+      "name": "Taiwan",
+      "strength": 2
+    },
+    {
+      "coordinates": [314, 178],
+      "flag": "ch",
+      "name": "China",
+      "strength": 2
+    },
+    {
+      "coordinates": [388, 730],
+      "flag": "zu",
+      "name": "Zhangzhou",
+      "strength": 2
+    },
+    {
+      "coordinates": [926, 235],
+      "flag": "fz",
+      "name": "Fuzhou",
+      "strength": 2
+    },
+    {
+      "coordinates": [100, 457],
+      "flag": "dk",
+      "name": "Democratic People's Republic",
+      "strength": 2
+    },
+    {
+      "coordinates": [530, 262],
+      "flag": "Bj",
+      "name": "Beijing Peoples Assembly",
+      "strength": 2
+    }
+  ]
+}
