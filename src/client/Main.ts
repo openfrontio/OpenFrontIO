@@ -316,7 +316,10 @@ class Client {
         territoryModal.onUserMe(null);
         if (this.usernameInput) {
           this.usernameInput.disabled = true;
-          this.usernameInput.resetToAnonymous();
+          const current = this.usernameInput.getCurrentUsername();
+          if (!/^Anon\d{3}$/.test(current)) {
+            this.usernameInput.resetToAnonymous();
+          }
         }
       } else {
         // Authorized
