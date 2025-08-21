@@ -2,6 +2,10 @@ import {
   ClientMessageSchema,
   ServerErrorMessage,
 } from "../../../../../core/Schemas";
+import {
+  fixProfaneUsername,
+  validateUsername,
+} from "../../../../../core/validations/username";
 import { getUserMe, verifyClientToken } from "../../../../jwt";
 import { Client } from "../../../../Client";
 import { GameManager } from "../../../../GameManager";
@@ -69,15 +73,15 @@ async function handleJoinMessage(
     code: 1002;
     error: string;
     reason:
-        | "ClientJoinMessageSchema"
-        | "Flag invalid"
-        | "Flag restricted"
-        | "Forbidden"
-        | "Not found"
-        | "Pattern invalid"
-        | "Pattern restricted"
-        | "Pattern unlisted"
-        | "Unauthorized";
+    | "ClientJoinMessageSchema"
+    | "Flag invalid"
+    | "Flag restricted"
+    | "Forbidden"
+    | "Not found"
+    | "Pattern invalid"
+    | "Pattern restricted"
+    | "Pattern unlisted"
+    | "Unauthorized";
   }
   | {
     success: false;
@@ -221,6 +225,58 @@ async function handleJoinMessage(
           reason: `Pattern ${allowed}`,
           success: false,
         };
+      }
+    }
+
+    // Validate username based on authentication status
+    if (claims === null) {
+      // Anonymous user - validate and potentially fix anonymous username
+      const isValidAnonPattern = /^Anon\d{3}$/.test(clientMsg.username);
+      console.log("Hello", isValidAnonPattern);
+      if (!isValidAnonPattern) {
+        // Client sent invalid username for anonymous user, generate a proper one
+        const anonNumber = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+        const originalUsername = clientMsg.username;
+        clientMsg.username = `Anon${anonNumber}`;
+        log.warn("Fixed invalid username for unauthenticated user", {
+          generatedUsername: clientMsg.username,
+          ip: ipAnonymize(ip),
+          originalUsername,
+        });
+      } else {
+        // Client sent valid anonymous username, keep it as-is
+        log.info("Accepted valid anonymous username from unauthenticated user", {
+          ip: ipAnonymize(ip),
+          username: clientMsg.username,
+        });
+      }
+    } else {
+      // Authenticated user - validate custom username
+      const usernameValidation = validateUsername(clientMsg.username);
+      if (!usernameValidation.isValid) {
+        log.warn("Username validation failed for authenticated user", {
+          clientID: clientMsg.clientID,
+          error: usernameValidation.error,
+          ip: ipAnonymize(ip),
+          username: clientMsg.username,
+        });
+        return {
+          code: 1002,
+          error: usernameValidation.error ?? "Invalid username",
+          reason: "Forbidden",
+          success: false,
+        };
+      }
+      // Apply profanity filter
+      const originalUsername = clientMsg.username;
+      clientMsg.username = fixProfaneUsername(clientMsg.username);
+      if (originalUsername !== clientMsg.username) {
+        log.info("Applied profanity filter to username", {
+          clientID: clientMsg.clientID,
+          filteredUsername: clientMsg.username,
+          ip: ipAnonymize(ip),
+          originalUsername,
+        });
       }
     }
 

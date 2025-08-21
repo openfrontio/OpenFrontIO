@@ -13,6 +13,7 @@ const usernameKey = "username";
 @customElement("username-input")
 export class UsernameInput extends LitElement {
   @state() private username = "";
+  @property({ type: Boolean }) disabled = true; // controlled externally
   @property({ type: String }) validationError = "";
   private _isValid = true;
   private readonly userSettings: UserSettings = new UserSettings();
@@ -30,7 +31,9 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    // Initialize with stored username
     this.username = this.getStoredUsername();
+    // Dispatch username event on initialization
     this.dispatchUsernameEvent();
   }
 
@@ -39,6 +42,7 @@ export class UsernameInput extends LitElement {
       <input
         type="text"
         .value=${this.username}
+        ?disabled=${this.disabled}
         @input=${this.handleChange}
         @change=${this.handleChange}
         placeholder="${translateText("username.enter_username")}"
@@ -62,6 +66,8 @@ export class UsernameInput extends LitElement {
   }
 
   private handleChange(e: Event) {
+    if (this.disabled) return; // Ignore changes if disabled
+
     const input = e.target as HTMLInputElement;
     this.username = input.value.trim();
     const result = validateUsername(this.username);
@@ -114,5 +120,11 @@ export class UsernameInput extends LitElement {
 
   public isValid(): boolean {
     return this._isValid;
+  }
+
+  public resetToAnonymous(): void {
+    this.username = this.generateNewUsername();
+    this.dispatchUsernameEvent();
+    this.requestUpdate();
   }
 }
