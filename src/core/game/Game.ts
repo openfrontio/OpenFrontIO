@@ -672,7 +672,7 @@ export type Game = {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ): boolean;
   nearbyUnits(
     tile: TileRef,
