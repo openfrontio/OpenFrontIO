@@ -43,7 +43,7 @@
     },
     {
       "coordinates": [926, 235],
-      "flag": "fz",
+      "flag": "cn",
       "name": "Fuzhou",
       "strength": 2
     },
@@ -120,13 +120,13 @@
       "strength": 2
     },
     {
-      "coordinates": [1470, 1000],
+      "coordinates": [100, 500],
       "flag": "cn",
       "name": "Xiamen",
       "strength": 2
     },
     {
-      "coordinates": [1420, 920],
+      "coordinates": [1300, 900],
       "flag": "cn",
       "name": "Quanzhou",
       "strength": 2
