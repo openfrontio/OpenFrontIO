@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { GameMap, TileRef } from "./GameMap";
 import {
