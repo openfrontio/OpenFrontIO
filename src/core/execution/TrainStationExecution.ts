@@ -1,7 +1,7 @@
-import { Execution, Game, Unit } from "../game/Game";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { TrainStation } from "../game/TrainStation";
 import { PseudoRandom } from "../PseudoRandom";
 import { TrainExecution } from "./TrainExecution";
-import { TrainStation } from "../game/TrainStation";
 
 export class TrainStationExecution implements Execution {
   private mg: Game;
@@ -48,8 +48,10 @@ export class TrainStationExecution implements Execution {
     this.spawnTrain(this.station, ticks);
   }
 
-  private shouldSpawnTrain(clusterSize: number): boolean {
-    const spawnRate = this.mg.config().trainSpawnRate(clusterSize);
+  private shouldSpawnTrain(): boolean {
+    const spawnRate = this.mg
+      .config()
+      .trainSpawnRate(this.unit.owner().unitCount(UnitType.Factory));
     for (let i = 0; i < this.unit.level(); i++) {
       if (this.random.chance(spawnRate)) {
         return true;
@@ -73,7 +75,7 @@ export class TrainStationExecution implements Execution {
     if (availableForTrade.size === 0) {
       return;
     }
-    if (!this.shouldSpawnTrain(availableForTrade.size)) {
+    if (!this.shouldSpawnTrain()) {
       return;
     }
 

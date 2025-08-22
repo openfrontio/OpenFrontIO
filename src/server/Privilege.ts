@@ -1,11 +1,16 @@
-import { Cosmetics, Pattern } from "../core/CosmeticSchemas";
+import { Cosmetics } from "../core/CosmeticSchemas";
 import { PatternDecoder } from "../core/PatternDecoder";
+
+type PatternResult =
+  | { type: "allowed"; pattern: string }
+  | { type: "unknown" }
+  | { type: "forbidden"; reason: string };
 
 export type PrivilegeChecker = {
   isPatternAllowed(
     base64: string,
     flares: readonly string[] | undefined,
-  ): true | "restricted" | "unlisted" | "invalid";
+  ): PatternResult;
   isCustomFlagAllowed(
     flag: string,
     flares: readonly string[] | undefined,
@@ -13,49 +18,35 @@ export type PrivilegeChecker = {
 };
 
 export class PrivilegeCheckerImpl implements PrivilegeChecker {
-  private readonly b64ToPattern: Record<string, Pattern> = {};
 
   constructor(
     private readonly cosmetics: Cosmetics,
     private readonly b64urlDecode: (base64: string) => Uint8Array,
-  ) {
-    for (const name in this.cosmetics.patterns) {
-      const pattern = this.cosmetics.patterns[name];
-      this.b64ToPattern[pattern.pattern] = pattern;
-    }
-  }
+  ) {}
 
   isPatternAllowed(
-    base64: string,
+    name: string,
     flares: readonly string[] | undefined,
-  ): true | "restricted" | "unlisted" | "invalid" {
+  ): PatternResult {
     // Look for the pattern in the cosmetics.json config
-    const found = this.b64ToPattern[base64];
-    if (found === undefined) {
-      try {
-        // Ensure that the pattern will not throw for clients
-        new PatternDecoder(base64, this.b64urlDecode);
-      } catch (e) {
-        // Pattern is invalid
-        return "invalid";
-      }
-      // Pattern is unlisted
-      if (flares !== undefined && flares.includes("pattern:*")) {
-        // Player has the super-flare
-        return true;
-      }
-      return "unlisted";
+    const found = this.cosmetics.patterns[name];
+    if (!found) return { reason: "pattern not found", type: "forbidden" };
+
+    try {
+      new PatternDecoder(found.pattern, this.b64urlDecode);
+    } catch (e) {
+      return { reason: "invalid pattern", type: "forbidden" };
     }
 
     if (
-      flares !== undefined &&
-      (flares.includes(`pattern:${found.name}`) || flares.includes("pattern:*"))
+      flares?.includes(`pattern:${found.name}`) ||
+      flares?.includes("pattern:*")
     ) {
       // Player has a flare for this pattern
-      return true;
+      return { pattern: found.pattern, type: "allowed" };
+    } else {
+      return { reason: "no flares for pattern", type: "forbidden" };
     }
-
-    return "restricted";
   }
 
   isCustomFlagAllowed(
@@ -136,8 +127,8 @@ export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isPatternAllowed(
     name: string,
     flares: readonly string[] | undefined,
-  ): true | "restricted" | "unlisted" | "invalid" {
-    return true;
+  ): PatternResult {
+    return { type: "unknown" };
   }
 
   isCustomFlagAllowed(

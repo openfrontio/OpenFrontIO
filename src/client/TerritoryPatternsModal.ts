@@ -11,6 +11,8 @@ import { UserSettings } from "../core/game/UserSettings";
 import { base64url } from "jose";
 import { translateText } from "./Utils";
 
+const BUTTON_WIDTH = 150;
+
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends LitElement {
   @query("o-modal") private readonly modalEl!: HTMLElement & {
@@ -21,18 +23,15 @@ export class TerritoryPatternsModal extends LitElement {
   public previewButton: HTMLElement | null = null;
   public buttonWidth = 150;
 
-  @state() private selectedPattern: string | undefined;
+  @state() private selectedPattern: Pattern | undefined;
 
-  @state() private lockedPatterns: string[] = [];
-  @state() private lockedReasons: Record<string, string> = {};
   @state() private hoveredPattern: Pattern | null = null;
   @state() private hoverPosition = { x: 0, y: 0 };
 
   @state() private keySequence: string[] = [];
   @state() private showChocoPattern = false;
 
-  private patterns: Pattern[] = [];
-  private me: UserMeResponse | null = null;
+  private patterns: Map<string, Pattern> = new Map();
 
   public resizeObserver: ResizeObserver;
 
@@ -44,31 +43,22 @@ export class TerritoryPatternsModal extends LitElement {
     super();
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-    this.selectedPattern = this.userSettings.getSelectedPattern();
-    this.updateComplete.then(() => {
-      const containers = this.renderRoot.querySelectorAll(".preview-container");
-      if (this.resizeObserver) {
-        containers.forEach((container) =>
-          this.resizeObserver.observe(container),
-        );
-      }
-      this.updatePreview();
-    });
-    this.open();
-  }
-
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
   }
 
   async onUserMe(userMeResponse: UserMeResponse | null) {
+    if (userMeResponse === null) {
+      this.userSettings.setSelectedPatternName(undefined);
+      this.selectedPattern = undefined;
+    }
     this.patterns = await patterns(userMeResponse);
-    this.me = userMeResponse;
-    this.requestUpdate();
+    const storedPatternName = this.userSettings.getSelectedPatternName();
+    if (storedPatternName) {
+      this.selectedPattern = this.patterns.get(storedPatternName);
+    }
+    this.refresh();
   }
 
   private readonly handleKeyDown = (e: KeyboardEvent) => {
@@ -123,7 +113,7 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private renderPatternButton(pattern: Pattern): TemplateResult {
-    const isSelected = this.selectedPattern === pattern.pattern;
+    const isSelected = this.selectedPattern?.name === pattern.name;
 
     return html`
       <div style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);">
@@ -134,7 +124,7 @@ export class TerritoryPatternsModal extends LitElement {
             : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
           ${pattern.product !== null ? "opacity-50 cursor-not-allowed" : ""}"
           @click=${() =>
-            pattern.product === null && this.selectPattern(pattern.pattern)}
+            pattern.product === null && this.selectPattern(pattern)}
           @mouseenter=${(e: MouseEvent) => this.handleMouseEnter(pattern, e)}
           @mousemove=${(e: MouseEvent) => this.handleMouseMove(e)}
           @mouseleave=${() => this.handleMouseLeave()}
@@ -157,8 +147,8 @@ export class TerritoryPatternsModal extends LitElement {
           >
             ${this.renderPatternPreview(
               pattern.pattern,
-              this.buttonWidth,
-              this.buttonWidth,
+              BUTTON_WIDTH,
+              BUTTON_WIDTH,
             )}
           </div>
         </button>
@@ -183,8 +173,9 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const pattern of this.patterns) {
-      if (!this.showChocoPattern && pattern.name === "choco") continue;
+    for (const [_, pattern] of this.patterns) {
+      const { name } = pattern;
+      if (!this.showChocoPattern && name === "choco") continue;
 
       const result = this.renderPatternButton(pattern);
       buttons.push(result);
@@ -219,7 +210,7 @@ export class TerritoryPatternsModal extends LitElement {
               overflow: hidden;
             "
           >
-            ${this.renderBlankPreview(this.buttonWidth, this.buttonWidth)}
+            ${this.renderBlankPreview(BUTTON_WIDTH, BUTTON_WIDTH)}
           </div>
         </button>
         ${buttons}
@@ -240,24 +231,22 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  public open() {
-    this.modalEl?.open();
-    window.addEventListener("keydown", this.handleKeyDown);
+  public async open() {
     this.isActive = true;
-    this.requestUpdate();
+    await this.refresh();
+    window.addEventListener("keydown", this.handleKeyDown);
   }
 
   public close() {
+    this.isActive = false;
     this.modalEl?.close();
     window.removeEventListener("keydown", this.handleKeyDown);
-    this.resizeObserver?.disconnect();
-    this.isActive = false;
   }
 
-  private selectPattern(pattern: string | undefined) {
-    this.userSettings.setSelectedPattern(pattern);
+  private selectPattern(pattern: Pattern | undefined) {
+    this.userSettings.setSelectedPatternName(pattern?.name);
     this.selectedPattern = pattern;
-    this.updatePreview();
+    this.refresh();
     this.close();
   }
 
@@ -313,24 +302,26 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  public updatePreview() {
-    if (this.previewButton === null) return;
-    const preview = this.renderPatternPreview(this.selectedPattern, 48, 48);
-    render(preview, this.previewButton);
-  }
+  public async refresh() {
+    const preview = this.renderPatternPreview(
+      this.selectedPattern?.pattern,
+      48,
+      48,
+    );
+    this.requestUpdate();
 
-  private setLockedPatterns(lockedPatterns: string[], reason: string) {
-    this.lockedPatterns = [...this.lockedPatterns, ...lockedPatterns];
-    this.lockedReasons = {
-      ...this.lockedReasons,
-      ...lockedPatterns.reduce(
-        (acc, key) => {
-          acc[key] = reason;
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-    };
+    // Wait for the DOM to be updated and the o-modal element to be available
+    await this.updateComplete;
+
+    // Now modalEl should be available
+    if (this.modalEl) {
+      this.modalEl.open();
+    } else {
+      console.warn("modalEl is still null after updateComplete");
+    }
+    if (this.previewButton === null) return;
+    render(preview, this.previewButton);
+    this.requestUpdate();
   }
 
   private handleMouseEnter(pattern: Pattern, event: MouseEvent) {
@@ -361,13 +352,21 @@ export function generatePreviewDataUrl(
   height?: number,
 ): string {
   pattern ??= DEFAULT_PATTERN_B64;
+  const patternLookupKey = `${pattern}-${width}-${height}`;
 
-  if (patternCache.has(pattern)) {
-    return patternCache.get(pattern)!;
+  if (patternCache.has(patternLookupKey)) {
+    return patternCache.get(patternLookupKey)!;
   }
 
   // Calculate canvas size
-  const decoder = new PatternDecoder(pattern, base64url.decode);
+  let decoder: PatternDecoder;
+  try {
+    decoder = new PatternDecoder(pattern, base64url.decode);
+  } catch (e) {
+    console.error("Error decoding pattern", e);
+    return "";
+  }
+
   const scaledWidth = decoder.scaledWidth();
   const scaledHeight = decoder.scaledHeight();
 
@@ -404,6 +403,6 @@ export function generatePreviewDataUrl(
   // Create a data URL
   ctx.putImageData(imageData, 0, 0);
   const dataUrl = canvas.toDataURL("image/png");
-  patternCache.set(pattern, dataUrl);
+  patternCache.set(patternLookupKey, dataUrl);
   return dataUrl;
 }

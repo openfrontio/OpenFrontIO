@@ -1,3 +1,4 @@
+import { PatternSchema } from "./CosmeticSchemas";
 import {
   AllPlayers,
   Difficulty,
@@ -5,14 +6,11 @@ import {
   GameMapType,
   GameMode,
   GameType,
-  PlayerType,
   Quads,
   Trios,
   UnitType,
 } from "./game/Game";
-import { PatternDecoder } from "./PatternDecoder";
 import { PlayerStatsSchema } from "./StatsSchemas";
-import { base64url } from "jose";
 import countries from "../client/data/countries.json" with { type: "json" };
 import { flattenedEmojiTable } from "./Util";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
@@ -110,7 +108,6 @@ export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
-const PlayerTypeSchema = z.enum(PlayerType);
 
 export enum LogSeverity {
   Debug = "DEBUG",
@@ -213,29 +210,6 @@ export const FlagSchema = z
     },
     { message: "Invalid flag: must be a valid country code or start with !" },
   );
-export const RequiredPatternSchema = z
-  .string()
-  .max(1403)
-  .base64url()
-  .refine(
-    (val) => {
-      try {
-        new PatternDecoder(val, base64url.decode);
-        return true;
-      } catch (e) {
-        if (e instanceof Error) {
-          console.error(JSON.stringify(e.message, null, 2));
-        } else {
-          console.error(String(e));
-        }
-        return false;
-      }
-    },
-    {
-      message: "Invalid pattern",
-    },
-  );
-export const PatternSchema = RequiredPatternSchema.optional();
 
 export const QuickChatKeySchema = z.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>
@@ -263,10 +237,6 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
 });
 
 export const SpawnIntentSchema = BaseIntentSchema.extend({
-  flag: FlagSchema,
-  name: UsernameSchema,
-  pattern: PatternSchema,
-  playerType: PlayerTypeSchema,
   tile: z.number(),
   type: z.literal("spawn"),
 });
@@ -412,7 +382,7 @@ export const TurnSchema = z.object({
 export const PlayerSchema = z.object({
   clientID: ID,
   flag: FlagSchema,
-  pattern: PatternSchema,
+  pattern: PatternSchema.optional(),
   username: UsernameSchema,
 });
 
@@ -516,7 +486,8 @@ export const ClientJoinMessageSchema = z.object({
   flag: FlagSchema,
   gameID: ID,
   lastTurn: z.number(), // The last turn the client saw.
-  pattern: PatternSchema,
+  pattern: PatternSchema.optional(),
+  patternName: z.string().optional(),
   token: TokenSchema, // WARNING: PII
   type: z.literal("join"),
   username: UsernameSchema,

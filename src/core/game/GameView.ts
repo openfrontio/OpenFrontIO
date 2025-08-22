@@ -385,13 +385,13 @@ export class GameView implements GameMap {
     private readonly _mapData: TerrainMapData,
     private readonly _myClientID: ClientID,
     private readonly _gameID: GameID,
-    private readonly _hunans: Player[],
+    private readonly _humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
-      this._hunans.map((h) => [
+      this._humans.map((h) => [
         h.clientID,
         { flag: h.flag, pattern: h.pattern } satisfies PlayerCosmetics,
       ]),

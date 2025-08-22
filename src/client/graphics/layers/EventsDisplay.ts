@@ -65,6 +65,7 @@ type GameEvent = {
   duration?: Tick;
   focusID?: number;
   unitView?: UnitView;
+  shouldDelete?: (game: GameView) => boolean;
 };
 
 @customElement("events-display")
@@ -194,7 +195,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
     let remainingEvents = this.events.filter((event) => {
       const shouldKeep =
-        this.game.ticks() - event.createdAt < (event.duration ?? 600);
+        this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
+        !event.shouldDelete?.(this.game);
       if (!shouldKeep && event.onDelete) {
         event.onDelete();
       }
@@ -455,12 +457,12 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),
-      onDelete: () =>
-        this.eventBus.emit(
-          new SendAllianceReplyIntentEvent(requestor, recipient, false),
-        ),
       priority: 0,
-      duration: 150,
+      duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
+      shouldDelete: (game) => {
+        // Recipient sent a separate request, so they became allied without the recipient responding.
+        return requestor.isAlliedWith(recipient);
+      },
       focusID: update.requestorID,
     });
   }

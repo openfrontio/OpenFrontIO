@@ -20,15 +20,18 @@ import {
   UnitType,
 } from "../game/Game";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
-import { assertNever, simpleHash, within } from "../Util";
+import { assertNever, sigmoid, simpleHash, within } from "../Util";
 import { JWK } from "jose";
 import { NukeType } from "../StatsSchemas";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
-import { PlayerView } from "../game/GameView";
-import { TileRef } from "../game/GameMap";
 import { UserSettings } from "../game/UserSettings";
 import { z } from "zod";
+import { TileRef } from "../game/GameMap";
+import { PlayerView } from "../game/GameView";
+
+const DEFENSE_DEBUFF_MIDPOINT = 150_000;
+const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
 
 const JwksSchema = z.object({
   keys: z
@@ -333,46 +336,63 @@ export class DefaultConfig implements Config {
   donateTroops(): boolean {
     return this._gameConfig.donateTroops;
   }
-  trainSpawnRate(numberOfStations: number): number {
-    return Math.min(1400, Math.round(40 * Math.pow(numberOfStations, 0.5)));
+
+  trainSpawnRate(numPlayerFactories: number): number {
+    // hyperbolic decay, midpoint at 10 factories
+    // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
+    return (numPlayerFactories + 10) * 20;
   }
-  trainGold(isFriendly: boolean): Gold {
-    return isFriendly ? 100_000n : 25_000n;
+  trainGold(rel: "self" | "friendly" | "other"): Gold {
+    switch (rel) {
+      case "friendly":
+        return 50_000n;
+      case "other":
+        return 25_000n;
+      case "self":
+        return 10_000n;
+    }
   }
 
   trainStationMinRange(): number {
     return 15;
   }
   trainStationMaxRange(): number {
-    return 80;
+    return 100;
   }
   railroadMaxSize(): number {
-    return 100;
+    return 120;
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(50000 + 100 * dist);
-    const basePortBonus = 0.25;
-    const diminishingFactor = 0.9;
-
-    let totalMultiplier = 1;
-    for (let i = 0; i < numPorts; i++) {
-      totalMultiplier += basePortBonus * Math.pow(diminishingFactor, i);
-    }
-
-    return BigInt(Math.floor(baseGold * totalMultiplier));
+    const baseGold = Math.floor(50_000 + 50 * dist);
+    const numPortBonus = numPorts - 1;
+    // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
+    const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
+    return BigInt(Math.floor(baseGold * bonus));
   }
 
-  // Chance to spawn a trade ship in one second,
-  tradeShipSpawnRate(numTradeShips: number): number {
-    if (numTradeShips < 20) {
-      return 5;
-    }
-    if (numTradeShips <= 150) {
-      const additional = numTradeShips - 20;
-      return Math.floor(Math.pow(additional, 0.85) + 5);
-    }
-    return 1_000_000;
+  // Probability of trade ship spawn = 1 / tradeShipSpawnRate
+  tradeShipSpawnRate(numTradeShips: number, numPlayerPorts: number): number {
+    // Geometric mean of base spawn rate and port multiplier
+    const combined = Math.sqrt(
+      this.tradeShipBaseSpawn(numTradeShips) *
+        this.tradeShipPortMultiplier(numPlayerPorts),
+    );
+
+    return Math.floor(12 / combined);
+  }
+
+  private tradeShipBaseSpawn(numTradeShips: number): number {
+    const decayRate = Math.LN2 / 30;
+    return 1 - sigmoid(numTradeShips, decayRate, 100);
+  }
+
+  private tradeShipPortMultiplier(numPlayerPorts: number): number {
+    // Hyperbolic decay function with midpoint at 10 ports
+    // Expected trade ship spawn rate is proportional to numPlayerPorts * multiplier
+    // Gradual decay prevents scenario where more ports => fewer ships
+    const decayRate = 1 / 10;
+    return 1 / (1 + decayRate * numPlayerPorts);
   }
 
   /* eslint-disable sort-keys */
@@ -385,8 +405,9 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: this.costWrapper(UnitType.Warship, (numUnits: number) =>
-            Math.min(1_000_000, (numUnits + 1) * 250_000),
+          cost: this.costWrapper(
+            (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 250_000),
+            UnitType.Warship,
           ),
           territoryBound: false,
           maxHealth: 1000,
@@ -404,8 +425,11 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Port:
         return {
-          cost: this.costWrapper(UnitType.Port, (numUnits: number) =>
-            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UnitType.Port,
+            UnitType.Factory,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -414,17 +438,17 @@ export class DefaultConfig implements Config {
         };
       case UnitType.AtomBomb:
         return {
-          cost: this.costWrapper(UnitType.AtomBomb, () => 750_000),
+          cost: this.costWrapper(() => 750_000, UnitType.AtomBomb),
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: this.costWrapper(UnitType.HydrogenBomb, () => 5_000_000),
+          cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
-          cost: this.costWrapper(UnitType.MIRV, () => 35_000_000),
+          cost: this.costWrapper(() => 35_000_000, UnitType.MIRV),
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -439,23 +463,26 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: this.costWrapper(UnitType.MissileSilo, () => 1_000_000),
+          cost: this.costWrapper(() => 1_000_000, UnitType.MissileSilo),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
       case UnitType.DefensePost:
         return {
-          cost: this.costWrapper(UnitType.DefensePost, (numUnits: number) =>
-            Math.min(250_000, (numUnits + 1) * 50_000),
+          cost: this.costWrapper(
+            (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
+            UnitType.DefensePost,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.SAMLauncher:
         return {
-          cost: this.costWrapper(UnitType.SAMLauncher, (numUnits: number) =>
-            Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(3_000_000, (numUnits + 1) * 1_500_000),
+            UnitType.SAMLauncher,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
@@ -463,8 +490,10 @@ export class DefaultConfig implements Config {
         };
       case UnitType.City:
         return {
-          cost: this.costWrapper(UnitType.City, (numUnits: number) =>
-            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UnitType.City,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -473,8 +502,11 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Factory:
         return {
-          cost: this.costWrapper(UnitType.Factory, (numUnits: number) =>
-            Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+          cost: this.costWrapper(
+            (numUnits: number) =>
+              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UnitType.Factory,
+            UnitType.Port,
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
@@ -500,14 +532,18 @@ export class DefaultConfig implements Config {
   /* eslint-enable sort-keys */
 
   private costWrapper(
-    type: UnitType,
     costFn: (units: number) => number,
+    ...types: UnitType[]
   ): (p: Player) => bigint {
     return (p: Player) => {
       if (p.type() === PlayerType.Human && this.infiniteGold()) {
         return 0n;
       }
-      const numUnits = Math.min(p.unitsOwned(type), p.unitsConstructed(type));
+      const numUnits = types.reduce(
+        (acc, type) =>
+          acc + Math.min(p.unitsOwned(type), p.unitsConstructed(type)),
+        0,
+      );
       return BigInt(costFn(numUnits));
     };
   }
@@ -532,6 +568,9 @@ export class DefaultConfig implements Config {
   }
   targetCooldown(): Tick {
     return 15 * 10;
+  }
+  allianceRequestDuration(): Tick {
+    return 20 * 10;
   }
   allianceRequestCooldown(): Tick {
     return 30 * 10;
@@ -629,29 +668,41 @@ export class DefaultConfig implements Config {
       }
     }
 
-    let largeLossModifier = 1;
-    if (attacker.numTilesOwned() > 100_000) {
-      largeLossModifier = Math.sqrt(100_000 / attacker.numTilesOwned());
-    }
-    let largeSpeedMalus = 1;
-    if (attacker.numTilesOwned() > 75_000) {
-      // sqrt is only exponent 1/2 which doesn't slow enough huge players
-      largeSpeedMalus = (75_000 / attacker.numTilesOwned()) ** 0.6;
-    }
-
     if (defender.isPlayer()) {
+      const defenseSig =
+        1 -
+        sigmoid(
+          defender.numTilesOwned(),
+          DEFENSE_DEBUFF_DECAY_RATE,
+          DEFENSE_DEBUFF_MIDPOINT,
+        );
+
+      const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
+      const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
+
+      let largeAttackBonus = 1;
+      if (attacker.numTilesOwned() > 100_000) {
+        largeAttackBonus = Math.sqrt(100_000 / attacker.numTilesOwned()) ** 0.7;
+      }
+      let largeAttackerSpeedBonus = 1;
+      if (attacker.numTilesOwned() > 100_000) {
+        largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
+      }
+
       return {
         attackerTroopLoss:
           within(defender.troops() / attackTroops, 0.6, 2) *
           mag *
           0.8 *
-          largeLossModifier *
+          largeDefenderAttackDebuff *
+          largeAttackBonus *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
-          largeSpeedMalus *
+          largeDefenderSpeedDebuff *
+          largeAttackerSpeedBonus *
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
@@ -740,7 +791,7 @@ export class DefaultConfig implements Config {
             this.cityTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
-      return maxTroops / 2;
+      return maxTroops / 3;
     }
 
     if (player.type() === PlayerType.Human) {
@@ -792,6 +843,9 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
+    if (player.type() === PlayerType.Bot) {
+      return 50n;
+    }
     return 100n;
   }
 

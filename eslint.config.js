@@ -123,7 +123,6 @@ export default [
         object: true,
       }],
       "quote-props": ["error", "consistent-as-needed"],
-      "sort-imports": "error",
       "space-before-blocks": ["error", "always"],
       "space-before-function-paren": ["error", {
         anonymous: "always",

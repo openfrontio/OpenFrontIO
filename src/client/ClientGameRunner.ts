@@ -49,7 +49,7 @@ import { translateText } from "../client/Utils";
 
 export type LobbyConfig = {
   serverConfig: ServerConfig;
-  pattern: string | undefined;
+  patternName: string | undefined;
   flag: string;
   playerName: string;
   clientID: ClientID;
