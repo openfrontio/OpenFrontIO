@@ -245,9 +245,6 @@ export class PlayerPanel extends LitElement implements Layer {
     const canEmbargo = this.actions?.interaction?.canEmbargo;
 
     //flag icon in the playerPanel
-    const flagImg = document.createElement("img");
-    // Compute flag data for declarative rendering
-
     const flagCode = other.cosmetics.flag;
     const country = typeof flagCode === "string" ? Countries.find((c) => c.code === flagCode) : undefined;
     const flagName = country?.name;
