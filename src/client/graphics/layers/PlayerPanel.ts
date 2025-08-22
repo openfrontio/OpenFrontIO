@@ -245,32 +245,13 @@ export class PlayerPanel extends LitElement implements Layer {
     const canEmbargo = this.actions?.interaction?.canEmbargo;
 
     //flag icon in the playerPanel
-    const flagDiv = document.createElement("div");
     const flagImg = document.createElement("img");
-    const flagName = document.createElement("span");
-    let displayFlagInPanel = false;
+    // Compute flag data for declarative rendering
 
-    const getFlagName = async (countryCode: string): Promise<string | undefined> => {
-      type Country = {
-        code: string;
-        continent?: string;
-        name: string;
-      };
+    const flagCode = other.cosmetics.flag;
+    const country = typeof flagCode === "string" ? Countries.find((c) => c.code === flagCode) : undefined;
+    const flagName = country?.name;
 
-      const countryName: Country | undefined = Countries.find((c)=> c.code === countryCode);
-      return countryName?.name;
-    };
-
-    if(other.cosmetics.flag !== null && other.cosmetics.flag !== undefined) {
-      const flag = other?.cosmetics.flag;
-      displayFlagInPanel = true;
-      getFlagName(other.cosmetics.flag).then((name) => {flagName.textContent = name ?? "";});
-      flagImg.src = "/flags/" + flag + ".svg";
-      flagImg.width = 50;
-      flagImg.height = 50;
-
-      flagDiv.appendChild(flagImg);
-    }
     return html`
       <div
         class="fixed inset-0 flex items-center justify-center z-[1001] pointer-events-none overflow-auto"
@@ -305,18 +286,22 @@ export class PlayerPanel extends LitElement implements Layer {
                 </div>
               </div>
               <!-- Flag -->
-              <div">
-                <div class="text-white text-opacity-80 text-sm px-2 ${displayFlagInPanel ? "" : "hidden"}">
-                    ${translateText("player_panel.flag")}
-                </div>
-                <div
-                  class="px-4 h-8 lg:h-10 flex items-center justify-center gap-4
-                  bg-opacity-50 bg-gray-700 text-opacity-90 text-white
-                  rounded text-sm lg:text-xl w-full  ${displayFlagInPanel ? "" : "hidden"}">
-                  ${flagName} ${flagDiv}
-                </div>
-              </div>
-
+              ${country
+                ? html`
+                    <div>
+                      <div class="text-white text-opacity-80 text-sm px-2">
+                        ${translateText("player_panel.flag")}
+                      </div>
+                      <div
+                        class="px-4 h-8 lg:h-10 flex items-center justify-center gap-4
+                        bg-opacity-50 bg-gray-700 text-opacity-90 text-white
+                        rounded text-sm lg:text-xl w-full"
+                      >
+                        ${flagName} <img src="/flags/${flagCode}.svg" width=60 height=60>
+                      </div>
+                    </div>
+                  `
+                : ""}
               <!-- Resources section -->
               <div class="grid grid-cols-2 gap-2">
                 <div class="flex flex-col gap-1">
