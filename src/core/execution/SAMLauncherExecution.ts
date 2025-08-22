@@ -16,29 +16,35 @@ type Target = {
   tile: TileRef;
 };
 
+type InterceptionTile = {
+  tile: TileRef;
+  tick: number;
+};
+
 /**
  * Smart SAM targeting system preshoting nukes so its range is strictly enforced
  */
 class SAMTargetingSystem {
-  // Store unreachable nukes so the SAM won't compute an interception point for them every frame
-  private readonly nukesToIgnore: Set<number> = new Set();
+  // Interception tiles are computed a single time, but it may not be reachable yet.
+  // Store the result so it can be intercepted at the proper time, rather than recomputing each ticks
+  // Null interception tile means there are no interception tiles in range. Store it to
+  private readonly precomputedNukes: Map<number, InterceptionTile | null> = new Map();
+  private readonly missileSpeed = 0;
 
   constructor(
     private readonly mg: Game,
     private readonly sam: Unit,
-  ) {}
+  ) {
+    this.missileSpeed = this.mg.config().defaultSamMissileSpeed();
+  }
 
   updateUnreachableNukes(nearbyUnits: { unit: Unit; distSquared: number }[]) {
     const nearbyUnitSet = new Set(nearbyUnits.map((u) => u.unit.id()));
-    for (const nukeId of this.nukesToIgnore) {
+    for (const nukeId of this.precomputedNukes.keys()) {
       if (!nearbyUnitSet.has(nukeId)) {
-        this.nukesToIgnore.delete(nukeId);
+        this.precomputedNukes.delete(nukeId);
       }
     }
-  }
-
-  private storeUnreachableNukes(nukeId: number) {
-    this.nukesToIgnore.add(nukeId);
   }
 
   private isInRange(tile: TileRef) {
@@ -48,32 +54,31 @@ class SAMTargetingSystem {
   }
 
   private tickToReach(currentTile: TileRef, tile: TileRef): number {
-    const missileSpeed = this.mg.config().defaultSamMissileSpeed();
-    return Math.ceil(this.mg.manhattanDist(currentTile, tile) / missileSpeed);
+    return Math.ceil(this.mg.manhattanDist(currentTile, tile) / this.missileSpeed);
   }
 
-  private computeInterceptionTile(unit: Unit): TileRef | undefined {
+  private computeInterceptionTile(unit: Unit): InterceptionTile | undefined {
     const trajectory = unit.trajectory();
     const samTile = this.sam.tile();
     const currentIndex = unit.trajectoryIndex();
     const explosionTick: number = trajectory.length - currentIndex;
-    for (let i = unit.trajectoryIndex(); i < trajectory.length; i++) {
+    for (let i = currentIndex; i < trajectory.length; i++) {
       const trajectoryTile = trajectory[i];
       if (trajectoryTile.targetable && this.isInRange(trajectoryTile.tile)) {
         const nukeTickToReach = i - currentIndex;
         const samTickToReach = this.tickToReach(samTile, trajectoryTile.tile);
-        const reachableOnTime = Math.abs(nukeTickToReach - samTickToReach) <= 1;
-        if (reachableOnTime && samTickToReach < explosionTick) {
-          return trajectoryTile.tile;
+        const tickBeforeShooting = nukeTickToReach - samTickToReach;
+        if (samTickToReach < explosionTick && tickBeforeShooting >= 0) {
+          return { tick: tickBeforeShooting, tile: trajectoryTile.tile };
         }
       }
     }
     return undefined;
   }
 
-  public getSingleTarget(): Target | null {
+  public getSingleTarget(ticks: number): Target | null {
     // Look beyond the SAM range so it can preshot nukes
-    const detectionRange = this.mg.config().defaultSamRange() * 1.5;
+    const detectionRange = this.mg.config().defaultSamRange() * 2;
     const nukes = this.mg.nearbyUnits(
       this.sam.tile(),
       detectionRange,
@@ -92,16 +97,26 @@ class SAMTargetingSystem {
 
     const targets: Array<Target> = [];
     for (const nuke of nukes) {
-      if (this.nukesToIgnore.has(nuke.unit.id())) {
-        continue;
+      const nukeId = nuke.unit.id();
+      if (this.precomputedNukes.has(nukeId)) {
+        const precomputedTarget = this.precomputedNukes.get(nukeId);
+        if (precomputedTarget && precomputedTarget.tick === ticks) {
+          targets.push({ tile: precomputedTarget.tile, unit: nuke.unit });
+          this.precomputedNukes.delete(nukeId);
+        }
+        continue; // Either no interception tile, or not yet in range. Skip it.
       }
       const interceptionTile = this.computeInterceptionTile(nuke.unit);
       if (interceptionTile !== undefined) {
-        // eslint-disable-next-line sort-keys
-        targets.push({ unit: nuke.unit, tile: interceptionTile });
+        if (interceptionTile.tick <= 1) { // Shoot instantly
+          // eslint-disable-next-line sort-keys
+          targets.push({ unit: nuke.unit, tile: interceptionTile.tile });
+        } else { // Nuke will be reachable but not yet. Store the result.
+          this.precomputedNukes.set(nukeId, { tick: interceptionTile.tick + ticks, tile: interceptionTile.tile });
+        }
       } else {
         // Store unreachable nukes in order to prevent useless interception computation
-        this.storeUnreachableNukes(nuke.unit.id());
+        this.precomputedNukes.set(nukeId, null);
       }
     }
 
@@ -226,7 +241,10 @@ export class SAMLauncherExecution implements Execution {
 
     let target: Target | null = null;
     if (mirvWarheadTargets.length === 0) {
-      target = this.targetingSystem.getSingleTarget();
+      target = this.targetingSystem.getSingleTarget(ticks);
+      if (target !== null) {
+        console.log("Target acquired");
+      }
     }
 
     const isSingleTarget = target && !target.unit.targetedBySAM();
