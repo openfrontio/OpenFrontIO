@@ -1,3 +1,0 @@
-[submodule "src/server/gatekeeper"]
-	path = src/server/gatekeeper
-	url = https://github.com/openfrontio/gatekeeper.git
