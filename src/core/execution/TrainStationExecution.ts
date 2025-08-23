@@ -78,9 +78,10 @@ export class TrainStationExecution implements Execution {
     }
 
     // Pick a destination randomly.
-    // Could be improved to pick a lucrative trip
+    // Can use the selectBestDestination function for best destination.
     const destination: TrainStation =
       this.random.randFromSet(availableForTrade);
+
     if (destination !== station) {
       this.mg.addExecution(
         new TrainExecution(
@@ -93,6 +94,39 @@ export class TrainStationExecution implements Execution {
       );
       this.lastSpawnTick = currentTick;
     }
+  }
+
+  private selectBestDestination(source: TrainStation, available: Set<TrainStation>): TrainStation {
+    let bestStation: TrainStation | null = null;
+    let bestProfit = 0n;
+
+    for (const station of available) {
+      if (station === source) continue;
+
+      const profit = this.calculateProfit(source, station);
+      if (profit > bestProfit) {
+        bestProfit = profit;
+        bestStation = station;
+      }
+    }
+
+    return bestStation ?? this.random.randFromSet(available);
+  }
+
+  private calculateProfit(source: TrainStation, destination: TrainStation): bigint {
+    const sourceOwner = source.unit.owner();
+    const route = this.mg.railNetwork().findStationsPath(source, destination);
+
+    if (!route || route.length <= 1) return 0n;
+
+    let totalProfit = 0n;
+    for (const station of route) {
+      const stationOwner = station.unit.owner();
+      const isFriendly = sourceOwner.isFriendly(stationOwner);
+      totalProfit += this.mg.config().trainGold(isFriendly);
+    }
+
+    return totalProfit;
   }
 
   activeDuringSpawnPhase(): boolean {
