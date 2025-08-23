@@ -425,7 +425,8 @@ export class FakeHumanExecution implements Execution {
       this.maybeSpawnStructure(UnitType.Port) ||
       this.maybeSpawnWarship() ||
       this.maybeSpawnStructure(UnitType.Factory) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo)
+      this.maybeSpawnStructure(UnitType.MissileSilo) ||
+      this.maybeSpawnStructure(UnitType.SAMLauncher)
     );
   }
 
@@ -539,6 +540,50 @@ export class FakeHumanExecution implements Execution {
           }
 
           // TODO: Cities and factories should consider train range limits
+          return w;
+        };
+      case UnitType.SAMLauncher:
+        return (tile) => {
+          if (this.player === null) throw new Error("Not initialised.");
+          let w = 0;
+
+          // According to the inner radius of a hydrogen bomb around each structure:
+          // - Increase points for how much closer the tile is to the structure
+          // in relation to the perimeter.
+          // - Deecrease points for how much farther the tile is to the structure
+          // in relation to the perimeter.
+          // This pushes the nation to focus SAMs in a "goldilocks zone" that is neither
+          // too close nor too far from their structure clusters.
+          const hydrogen_spacing = this.mg.config().nukeMagnitudes(UnitType.HydrogenBomb).inner;
+          const tile_cell = mg.cell(tile);
+          const structure_cells = this.player.units().map((unit) => mg.cell(unit.tile()));
+
+          for (const cell of structure_cells) {
+            const distance_vector = [cell.x - tile_cell.x, cell.y - tile_cell.y];
+            const distance_magnitude = Math.sqrt(distance_vector[0] ** 2 + distance_vector[1] ** 2);
+            if (distance_magnitude > hydrogen_spacing) { w -= (distance_magnitude - hydrogen_spacing); }
+            else if (distance_magnitude < hydrogen_spacing) { w += (hydrogen_spacing - distance_magnitude); }
+          }
+
+          // Prefer higher elevations
+          w += mg.magnitude(tile);
+
+          // Prefer to be away from the border
+          const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
+          if (closestBorder !== null) {
+            const d = mg.manhattanDist(closestBorder.x, tile);
+            w += Math.min(d, borderSpacing);
+          }
+
+          // Prefer to be away from other structures of the same type
+          const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+          otherTiles.delete(tile);
+          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+          if (closestOther !== null) {
+            const d = mg.manhattanDist(closestOther.x, tile);
+            w += Math.min(d, structureSpacing);
+          }
+
           return w;
         };
       default:
