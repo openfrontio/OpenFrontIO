@@ -131,21 +131,22 @@ export class TradeShipExecution implements Execution {
   }
 
   private complete() {
+    if (this.tradeShip === undefined) throw new Error("Not initialized");
     this.active = false;
-    this.tradeShip!.delete(false);
+    this.tradeShip.delete(false);
     const gold = this.mg
       .config()
       .tradeShipGold(
         this.tilesTraveled,
-        this.tradeShip!.owner().unitCount(UnitType.Port),
+        this.tradeShip.owner().unitCount(UnitType.Port),
       );
 
     if (this.wasCaptured) {
-      this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
+      this.tradeShip.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
         MessageType.CAPTURED_ENEMY_UNIT,
-        this.tradeShip!.owner().id(),
+        this.tradeShip.owner().id(),
         gold,
       );
     } else {

@@ -168,6 +168,7 @@ export class TransportShipExecution implements Execution {
     this.lastMove = ticks;
 
     if (this.boat.retreating()) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       this.dst = this.src!; // src is guaranteed to be set at this point
     }
 

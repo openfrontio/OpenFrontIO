@@ -43,7 +43,10 @@ export class GameLeftSidebar extends LitElement implements Layer {
 
   tick() {
     if (!this.playerTeam && this.game.myPlayer()?.team()) {
-      this.playerTeam = this.game.myPlayer()!.team();
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer !== null) {
+        this.playerTeam = myPlayer.team();
+      }
       if (this.playerTeam) {
         this.playerColor = this.game
           .config()

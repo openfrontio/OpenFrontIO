@@ -189,8 +189,9 @@ export class ChatModal extends LitElement {
   }
 
   private selectPhrase(phrase: QuickChatPhrase) {
+    if (this.selectedCategory === null) return;
     this.selectedQuickChatKey = this.getFullQuickChatKey(
-      this.selectedCategory!,
+      this.selectedCategory,
       phrase.key,
     );
     this.selectedPhraseTemplate = translateText(

@@ -131,10 +131,11 @@ function handleWinner(
 
   // Add client vote
   const winnerKey = JSON.stringify(clientMsg.winner);
-  if (!gs.winnerVotes.has(winnerKey)) {
-    gs.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg });
+  let potentialWinner = gs.winnerVotes.get(winnerKey);
+  if (potentialWinner === undefined) {
+    potentialWinner = { ips: new Set(), winner: clientMsg };
+    gs.winnerVotes.set(winnerKey, potentialWinner);
   }
-  const potentialWinner = gs.winnerVotes.get(winnerKey)!;
   potentialWinner.ips.add(client.ip);
 
   const activeUniqueIPs = new Set(gs.activeClients.map((c) => c.ip));

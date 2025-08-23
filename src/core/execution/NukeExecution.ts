@@ -214,8 +214,9 @@ export class NukeExecution implements Execution {
     const targetRangeSquared =
       this.mg.config().defaultNukeTargetableRange() ** 2;
     const targetTile = this.nuke.targetTile();
+    if (targetTile === undefined) return;
     this.nuke.setTargetable(
-      this.isTargetable(targetTile!, this.nuke.tile(), targetRangeSquared),
+      this.isTargetable(targetTile, this.nuke.tile(), targetRangeSquared),
     );
   }
 

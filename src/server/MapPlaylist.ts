@@ -104,12 +104,14 @@ export class MapPlaylist {
       for (let i = 0; i < numAttempts; i++) {
         if (this.shuffleMapsPlaylist()) {
           log.info(`Generated map playlist in ${i} attempts`);
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           return this.mapsPlaylist.shift()!;
         }
       }
       log.error("Failed to generate a valid map playlist");
     }
     // Even if it failed, playlist will be partially populated.
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     return this.mapsPlaylist.shift()!;
   }
 

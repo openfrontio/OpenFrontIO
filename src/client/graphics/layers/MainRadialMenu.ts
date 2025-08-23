@@ -72,7 +72,7 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   init() {
     this.radialMenu.init();
-    this.eventBus.on(ContextMenuEvent, (event) => {
+    this.eventBus.on(ContextMenuEvent, async (event) => {
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
@@ -80,22 +80,19 @@ export class MainRadialMenu extends LitElement implements Layer {
       if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
         return;
       }
-      if (this.game.myPlayer() === null) {
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer === null) {
         return;
       }
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
-      this.game
-        .myPlayer()!
-        .actions(this.clickedTile)
-        .then((actions) => {
-          this.updatePlayerActions(
-            this.game.myPlayer()!,
-            actions,
-            this.clickedTile!,
-            event.x,
-            event.y,
-          );
-        });
+      const actions = await myPlayer.actions(this.clickedTile);
+      this.updatePlayerActions(
+        myPlayer,
+        actions,
+        this.clickedTile,
+        event.x,
+        event.y,
+      );
     });
   }
 
@@ -141,16 +138,14 @@ export class MainRadialMenu extends LitElement implements Layer {
   async tick() {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
     if (this.game.ticks() % 5 === 0) {
-      this.game
-        .myPlayer()!
-        .actions(this.clickedTile)
-        .then((actions) => {
-          this.updatePlayerActions(
-            this.game.myPlayer()!,
-            actions,
-            this.clickedTile!,
-          );
-        });
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer === null) return;
+      const actions = await myPlayer.actions(this.clickedTile);
+      this.updatePlayerActions(
+        myPlayer,
+        actions,
+        this.clickedTile,
+      );
     }
   }
 

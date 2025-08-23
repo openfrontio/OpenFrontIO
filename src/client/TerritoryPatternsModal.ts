@@ -169,7 +169,8 @@ export class TerritoryPatternsModal extends LitElement {
                 text-white text-xs font-medium rounded transition-colors"
                 @click=${(e: Event) => {
                   e.stopPropagation();
-                  handlePurchase(pattern.product!.priceId);
+                  if (!pattern.product) return;
+                  handlePurchase(pattern.product.priceId);
                 }}
               >
                 ${translateText("territory_patterns.purchase")}
@@ -362,9 +363,8 @@ export function generatePreviewDataUrl(
 ): string {
   pattern ??= DEFAULT_PATTERN_B64;
 
-  if (patternCache.has(pattern)) {
-    return patternCache.get(pattern)!;
-  }
+  const cached = patternCache.get(pattern);
+  if (cached !== undefined) return cached;
 
   // Calculate canvas size
   const decoder = new PatternDecoder(pattern, base64url.decode);

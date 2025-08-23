@@ -154,7 +154,9 @@ export class AnimatedSpriteLoader {
           const canvas = document.createElement("canvas");
           canvas.width = img.width;
           canvas.height = img.height;
-          canvas.getContext("2d")!.drawImage(img, 0, 0);
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("2D context not supported");
+          ctx.drawImage(img, 0, 0);
 
           this.animatedSpriteImageMap.set(typedFxType, canvas);
         } catch (err) {
@@ -192,10 +194,8 @@ export class AnimatedSpriteLoader {
     const borderColor = theme.borderColor(owner);
     const spawnHighlightColor = theme.spawnHighlightColor();
     const key = `${fxType}-${owner.id()}`;
-    let coloredCanvas: HTMLCanvasElement;
-    if (this.coloredAnimatedSpriteCache.has(key)) {
-      coloredCanvas = this.coloredAnimatedSpriteCache.get(key)!;
-    } else {
+    let coloredCanvas = this.coloredAnimatedSpriteCache.get(key);
+    if (coloredCanvas === undefined) {
       coloredCanvas = colorizeCanvas(
         baseImage,
         territoryColor,

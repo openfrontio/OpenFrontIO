@@ -221,6 +221,7 @@ export class RailNetworkImpl implements RailNetwork {
     ];
 
     while (queue.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const { station, distance } = queue.shift()!;
       if (visited.has(station)) continue;
       visited.add(station);
@@ -245,6 +246,7 @@ export class RailNetworkImpl implements RailNetwork {
     const queue = [start];
 
     while (queue.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const current = queue.shift()!;
       if (visited.has(current)) continue;
       visited.add(current);

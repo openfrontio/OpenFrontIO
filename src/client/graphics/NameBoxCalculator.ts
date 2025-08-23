@@ -143,6 +143,7 @@ export function largestRectangleInHistogram(widths: number[]): Rectangle {
     const h = i === widths.length ? 0 : widths[i];
 
     while (stack.length > 0 && h < widths[stack[stack.length - 1]]) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const height = widths[stack.pop()!];
       const width = stack.length === 0 ? i : i - stack[stack.length - 1] - 1;
 

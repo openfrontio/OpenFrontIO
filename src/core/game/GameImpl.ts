@@ -652,7 +652,8 @@ export class GameImpl implements Game {
         winner,
         ...this.players()
           .filter((p) => p.team() === winner && p.clientID() !== null)
-          .map((p) => p.clientID()!),
+          .map((p) => p.clientID())
+          .filter(Boolean),
       ];
     } else {
       const clientId = winner.clientID();

@@ -452,11 +452,7 @@ export class ClientGameRunner {
       return;
     }
 
-    this.findAndUpgradeNearestBuilding(tile);
-  }
-
-  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile).then((actions) => {
+    this.myPlayer.actions(tile).then((actions) => {
       const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
@@ -470,7 +466,7 @@ export class ClientGameRunner {
             .find((unit) => unit.id() === bu.canUpgrade);
           if (existingUnit) {
             const distance = this.gameView.manhattanDist(
-              clickedTile,
+              tile,
               existingUnit.tile(),
             );
 
