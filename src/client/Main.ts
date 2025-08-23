@@ -8,7 +8,7 @@ import "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import { generateCryptoRandomUUID, incrementGamesPlayed, translateText } from "./Utils";
 import { DarkModeButton } from "./DarkModeButton";
@@ -19,6 +19,7 @@ import { GameStartingModal } from "./GameStartingModal";
 import { GameType } from "../core/game/Game";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal } from "./HostLobbyModal";
+import { ID } from "../core/BaseSchemas";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
@@ -34,6 +35,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { UserSettingModal } from "./UserSettingModal";
 import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
+import { getClientID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { joinLobby } from "./ClientGameRunner";
 import version from "../../resources/version.txt";
@@ -474,7 +476,7 @@ class Client {
             : this.flagInput.getCurrentFlag(),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
-        clientID: lobby.clientID,
+        clientID: getClientID(lobby.gameID),
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
