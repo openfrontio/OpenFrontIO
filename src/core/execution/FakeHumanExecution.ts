@@ -556,7 +556,14 @@ export class FakeHumanExecution implements Execution {
           // too close nor too far from their structure clusters.
           const hydrogen_spacing = this.mg.config().nukeMagnitudes(UnitType.HydrogenBomb).inner;
           const tile_cell = mg.cell(tile);
-          const structure_cells = this.player.units().map((unit) => mg.cell(unit.tile()));
+          const structure_cells = this.player.units(
+            UnitType.City,
+            UnitType.Factory,
+            UnitType.MissileSilo,
+            UnitType.Port,
+            UnitType.DefensePost,
+            UnitType.SAMLauncher,
+          ).map((unit) => mg.cell(unit.tile()));
 
           for (const cell of structure_cells) {
             const distance_vector = [cell.x - tile_cell.x, cell.y - tile_cell.y];
