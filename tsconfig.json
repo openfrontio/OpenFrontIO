@@ -19,10 +19,9 @@
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
+    "strict": true,
     "strictNullChecks": true,
-    "useDefineForClassFields": false,
-    "strictPropertyInitialization": false,
-    "strict": true
+    "useDefineForClassFields": false
   },
   "include": [
     "src/**/*",

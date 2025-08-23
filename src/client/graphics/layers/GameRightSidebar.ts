@@ -18,8 +18,8 @@ import { translateText } from "../../Utils";
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
 
   @state()
   private _isSinglePlayer = false;
@@ -45,13 +45,13 @@ export class GameRightSidebar extends LitElement implements Layer {
   init() {
     this._isSinglePlayer =
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
-      this.game.config().isReplay();
+      (this.game?.config().isReplay() ?? false);
     this._isVisible = true;
-    this.game.inSpawnPhase();
     this.requestUpdate();
   }
 
   tick() {
+    if (!this.game) throw new Error("Not initialized");
     // Timer logic
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
@@ -76,18 +76,18 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   private toggleReplayPanel(): void {
     this._isReplayVisible = !this._isReplayVisible;
-    this.eventBus.emit(
+    this.eventBus?.emit(
       new ShowReplayPanelEvent(this._isReplayVisible, this._isSinglePlayer),
     );
   }
 
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
-    this.eventBus.emit(new PauseGameEvent(this.isPaused));
+    this.eventBus?.emit(new PauseGameEvent(this.isPaused));
   }
 
   private onExitButtonClick() {
-    const isAlive = this.game.myPlayer()?.isAlive();
+    const isAlive = this.game?.myPlayer()?.isAlive();
     if (isAlive) {
       const isConfirmed = confirm(
         translateText("help_modal.exit_confirmation"),
@@ -99,7 +99,7 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   private onSettingsButtonClick() {
-    this.eventBus.emit(
+    this.eventBus?.emit(
       new ShowSettingsModalEvent(true, this._isSinglePlayer, this.isPaused),
     );
   }

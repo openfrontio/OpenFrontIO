@@ -573,7 +573,7 @@ export class ClientGameRunner {
     if (!this.myPlayer) return;
 
     this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
-      if (this.myPlayer === null) throw new Error("not initialized");
+      if (this.myPlayer === null) throw new Error("Not initialized");
       this.eventBus.emit(
         new SendBoatAttackIntentEvent(
           this.gameView.owner(tile).id(),

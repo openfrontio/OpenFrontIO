@@ -14,10 +14,10 @@ import { ShellExecution } from "./ShellExecution";
 import { TileRef } from "../game/GameMap";
 
 export class WarshipExecution implements Execution {
-  private random: PseudoRandom;
-  private warship: Unit;
-  private mg: Game;
-  private pathfinder: PathFinder;
+  private random: PseudoRandom | undefined;
+  private warship: Unit | undefined;
+  private mg: Game | undefined;
+  private pathfinder: PathFinder | undefined;
   private lastShellAttack = 0;
   private readonly alreadySentShell = new Set<Unit>();
 
@@ -51,6 +51,7 @@ export class WarshipExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.warship === undefined) throw new Error("Not initialized");
     if (this.warship.health() <= 0) {
       this.warship.delete();
       return;
@@ -75,6 +76,8 @@ export class WarshipExecution implements Execution {
   }
 
   private findTargetUnit(): Unit | undefined {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
     const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
@@ -152,6 +155,8 @@ export class WarshipExecution implements Execution {
   }
 
   private shootTarget() {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
     const targetUnit = this.warship.targetUnit();
     if (targetUnit === undefined) return;
     const shellAttackRate = this.mg.config().warshipShellAttackRate();
@@ -178,6 +183,8 @@ export class WarshipExecution implements Execution {
   }
 
   private huntDownTradeShip() {
+    if (this.pathfinder === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
     const targetUnit = this.warship.targetUnit();
     if (targetUnit === undefined) return;
     for (let i = 0; i < 2; i++) {
@@ -207,6 +214,8 @@ export class WarshipExecution implements Execution {
   }
 
   private patrol() {
+    if (this.pathfinder === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
     let targetTile = this.warship.targetTile();
     if (targetTile === undefined) {
       targetTile = this.randomTile();
@@ -238,7 +247,7 @@ export class WarshipExecution implements Execution {
   }
 
   isActive(): boolean {
-    return this.warship?.isActive();
+    return this.warship?.isActive() ?? false;
   }
 
   activeDuringSpawnPhase(): boolean {
@@ -246,6 +255,9 @@ export class WarshipExecution implements Execution {
   }
 
   randomTile(allowShoreline = false): TileRef | undefined {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.random === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
     let warshipPatrolRange = this.mg.config().warshipPatrolRange();
     const maxAttemptBeforeExpand = 500;
     let attempts = 0;

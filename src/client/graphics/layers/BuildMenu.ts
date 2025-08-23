@@ -123,15 +123,18 @@ export const flattenedBuildTable = buildTable.flat();
 
 @customElement("build-menu")
 export class BuildMenu extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
-  private clickedTile: TileRef;
-  public playerActions: PlayerActions | null;
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
+  private clickedTile: TileRef | undefined;
+  public playerActions: PlayerActions | null = null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
-  public transformHandler: TransformHandler;
+  public transformHandler: TransformHandler | undefined;
 
   init() {
+    if (this.eventBus === undefined) throw new Error("Not initialized");
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
+      if (!this.game) return;
+      if (!this.transformHandler) return;
       if (!this.game.myPlayer()?.isAlive()) {
         return;
       }
@@ -386,7 +389,9 @@ export class BuildMenu extends LitElement implements Layer {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
+  public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile?: TileRef): void {
+    if (tile === undefined) throw new Error("Missing tile");
+    if (this.eventBus === undefined) throw new Error("Not initialized");
     if (buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
@@ -481,8 +486,9 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   private refresh() {
+    if (this.clickedTile === undefined) return;
     this.game
-      .myPlayer()
+      ?.myPlayer()
       ?.actions(this.clickedTile)
       .then((actions) => {
         this.playerActions = actions;

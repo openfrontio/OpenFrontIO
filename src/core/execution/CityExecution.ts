@@ -3,7 +3,7 @@ import { TileRef } from "../game/GameMap";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class CityExecution implements Execution {
-  private mg: Game;
+  private mg: Game | undefined;
   private city: Unit | null = null;
   private active = true;
 
@@ -47,6 +47,7 @@ export class CityExecution implements Execution {
 
   createStation(): void {
     if (this.city !== null) {
+      if (this.mg === undefined) throw new Error("Not initialized");
       const nearbyFactory = this.mg.hasUnitNearby(
         this.city.tile(),
         this.mg.config().trainStationMaxRange(),

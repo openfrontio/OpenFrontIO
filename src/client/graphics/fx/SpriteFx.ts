@@ -58,7 +58,7 @@ export class SpriteFx implements Fx {
       theme,
     );
     if (!this.animatedSprite) {
-      console.error("Could not load animated sprite", fxType);
+      throw new Error(`Could not load animated sprite ${fxType}`);
     } else {
       this.waitToTheEnd = duration ? true : false;
       this.duration = duration ?? this.animatedSprite.lifeTime() ?? 1000;
