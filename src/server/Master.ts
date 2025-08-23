@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { ApiEnvResponse, ApiPublicLobbiesResponse } from "../core/ExpressSchemas";
-import { GameInfo, ID } from "../core/Schemas";
 import { LimiterType, gatekeeper } from "./Gatekeeper";
+import { GameInfo } from "../core/Schemas";
+import { ID } from "../core/BaseSchemas";
 import { MapPlaylist } from "./MapPlaylist";
 import cluster from "cluster";
 import express from "express";

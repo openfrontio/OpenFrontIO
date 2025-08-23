@@ -37,7 +37,7 @@ export class BreakAllianceExecution implements Execution {
       this.requestor.breakAlliance(alliance);
       this.recipient.updateRelation(this.requestor, -200);
       for (const player of this.mg.players()) {
-        if (player !== this.requestor) {
+        if (player !== this.requestor && !player.isOnSameTeam(this.requestor)) {
           player.updateRelation(this.requestor, -40);
         }
       }

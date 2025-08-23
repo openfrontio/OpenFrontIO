@@ -4,8 +4,8 @@ import {
   GameID,
   GameRecord,
   GameRecordSchema,
-  ID,
 } from "../core/Schemas";
+import { ID } from "../core/BaseSchemas";
 import { replacer } from "../core/Util";
 import { z } from "zod";
 

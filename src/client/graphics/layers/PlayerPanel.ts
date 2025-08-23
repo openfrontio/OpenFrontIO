@@ -14,6 +14,7 @@ import {
 import { customElement, state } from "lit/decorators.js";
 import { renderNumber, renderTroops } from "../../Utils";
 import { ChatModal } from "./ChatModal";
+import Countries from "../../data/countries.json";
 import { EmojiTable } from "./EmojiTable";
 import { EventBus } from "../../../core/EventBus";
 import { Layer } from "./Layer";
@@ -243,6 +244,11 @@ export class PlayerPanel extends LitElement implements Layer {
     const canTarget = this.actions?.interaction?.canTarget;
     const canEmbargo = this.actions?.interaction?.canEmbargo;
 
+    //flag icon in the playerPanel
+    const flagCode = other.cosmetics.flag;
+    const country = typeof flagCode === "string" ? Countries.find((c) => c.code === flagCode) : undefined;
+    const flagName = country?.name;
+
     return html`
       <div
         class="fixed inset-0 flex items-center justify-center z-[1001] pointer-events-none overflow-auto"
@@ -276,7 +282,23 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${other?.name()}
                 </div>
               </div>
-
+              <!-- Flag -->
+              ${country
+                ? html`
+                    <div>
+                      <div class="text-white text-opacity-80 text-sm px-2">
+                        ${translateText("player_panel.flag")}
+                      </div>
+                      <div
+                        class="px-4 h-8 lg:h-10 flex items-center justify-center gap-4
+                        bg-opacity-50 bg-gray-700 text-opacity-90 text-white
+                        rounded text-sm lg:text-xl w-full"
+                      >
+                        ${flagName} <img src="/flags/${flagCode}.svg" width=60 height=60>
+                      </div>
+                    </div>
+                  `
+                : ""}
               <!-- Resources section -->
               <div class="grid grid-cols-2 gap-2">
                 <div class="flex flex-col gap-1">
