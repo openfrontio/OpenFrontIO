@@ -84,15 +84,22 @@ export class MainRadialMenu extends LitElement implements Layer {
       if (myPlayer === null) {
         return;
       }
-      this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
-      const actions = await myPlayer.actions(this.clickedTile);
-      this.updatePlayerActions(
-        myPlayer,
-        actions,
-        this.clickedTile,
-        event.x,
-        event.y,
-      );
+      const tile = this.game.ref(worldCoords.x, worldCoords.y);
+      this.clickedTile = tile;
+      try {
+        const actions = await myPlayer.actions(tile);
+        // Stale check: user might have clicked somewhere else already
+        if (this.clickedTile !== tile) return;
+        this.updatePlayerActions(
+          myPlayer,
+          actions,
+          tile,
+          event.x,
+          event.y,
+        );
+      } catch (err) {
+        console.error("Failed to fetch player actions:", err);
+      }
     });
   }
 
