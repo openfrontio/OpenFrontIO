@@ -5,7 +5,8 @@ import { TrainStationExecution } from "./TrainStationExecution";
 export class FactoryExecution implements Execution {
   private factory: Unit | null = null;
   private active = true;
-  private game: Game;
+  private game: Game | undefined;
+
   constructor(
     private player: Player,
     private readonly tile: TileRef,
@@ -46,6 +47,7 @@ export class FactoryExecution implements Execution {
 
   createStation(): void {
     if (this.factory !== null) {
+      if (this.game === undefined) throw new Error("Not initialized");
       const structures = this.game.nearbyUnits(
         this.factory.tile(),
         this.game.config().trainStationMaxRange(),

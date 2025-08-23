@@ -9,7 +9,7 @@ import {
 import { flattenedEmojiTable } from "../Util";
 
 export class EmojiExecution implements Execution {
-  private recipient: Player | typeof AllPlayers;
+  private recipient: Player | typeof AllPlayers | undefined;
 
   private active = true;
 
@@ -33,6 +33,7 @@ export class EmojiExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.recipient === undefined) throw new Error("Not initialized");
     const emojiString = flattenedEmojiTable[this.emoji];
     if (emojiString === undefined) {
       console.warn(

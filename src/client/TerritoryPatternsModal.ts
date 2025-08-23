@@ -34,7 +34,7 @@ export class TerritoryPatternsModal extends LitElement {
   private patterns: Pattern[] = [];
   private me: UserMeResponse | null = null;
 
-  public resizeObserver: ResizeObserver;
+  public resizeObserver: ResizeObserver | undefined;
 
   private readonly userSettings: UserSettings = new UserSettings();
 
@@ -52,7 +52,7 @@ export class TerritoryPatternsModal extends LitElement {
       const containers = this.renderRoot.querySelectorAll(".preview-container");
       if (this.resizeObserver) {
         containers.forEach((container) =>
-          this.resizeObserver.observe(container),
+          this.resizeObserver?.observe(container),
         );
       }
       this.updatePreview();

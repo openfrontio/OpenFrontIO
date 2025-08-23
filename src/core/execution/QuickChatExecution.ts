@@ -1,8 +1,8 @@
 import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class QuickChatExecution implements Execution {
-  private recipient: Player;
-  private mg: Game;
+  private recipient: Player | undefined;
+  private mg: Game | undefined;
 
   private active = true;
 
@@ -27,6 +27,8 @@ export class QuickChatExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.recipient === undefined) throw new Error("Not initialized");
     const message = this.getMessageFromKey(this.quickChatKey);
 
     this.mg.displayChat(

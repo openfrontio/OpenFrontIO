@@ -3,7 +3,7 @@ import { TileRef } from "../game/GameMap";
 
 export class MissileSiloExecution implements Execution {
   private active = true;
-  private mg: Game;
+  private mg: Game | undefined;
   private silo: Unit | null = null;
 
   constructor(
@@ -38,6 +38,7 @@ export class MissileSiloExecution implements Execution {
       return;
     }
 
+    if (this.mg === undefined) throw new Error("Not initialized");
     const cooldown =
       this.mg.config().SiloCooldown() - (this.mg.ticks() - frontTime);
 

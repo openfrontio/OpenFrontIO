@@ -41,7 +41,7 @@ type CenterButtonState = "default" | "back";
 type RequiredRadialMenuConfig = Required<RadialMenuConfig>;
 
 export class RadialMenu implements Layer {
-  private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
+  private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined> | undefined;
   private tooltipElement: HTMLDivElement | null = null;
   private isVisible = false;
 
@@ -253,6 +253,7 @@ export class RadialMenu implements Layer {
   }
 
   private renderMenuItems(items: MenuElement[], level: number) {
+    if (this.menuElement === undefined) throw new Error("Not initialized");
     const container = this.menuElement.select(".menu-container");
     container.selectAll(`.menu-level-${level}`).remove();
 
@@ -645,6 +646,7 @@ export class RadialMenu implements Layer {
   }
 
   private animatePreviousMenu() {
+    if (this.menuElement === undefined) throw new Error("Not initialized");
     const container = this.menuElement.select(".menu-container");
     const currentMenu = container.select(
       `.menu-level-${this.currentLevel - 1}`,
@@ -704,6 +706,7 @@ export class RadialMenu implements Layer {
   }
 
   private animateMenuTransitions() {
+    if (this.menuElement === undefined) throw new Error("Not initialized");
     const container = this.menuElement.select(".menu-container");
     const currentSubmenu = container.select(
       `.menu-level-${this.currentLevel + 1}`,
@@ -768,6 +771,7 @@ export class RadialMenu implements Layer {
     this.anchorX = x;
     this.anchorY = y;
 
+    if (this.menuElement === undefined) throw new Error("Not initialized");
     this.menuElement.style("display", "block");
     this.clampAndSetMenuPositionForLevel(this.currentLevel);
 
@@ -786,6 +790,7 @@ export class RadialMenu implements Layer {
     // Force transition state to false to ensure menu hides
     this.isTransitioning = false;
 
+    if (this.menuElement === undefined) throw new Error("Not initialized");
     this.menuElement.style("display", "none");
     this.isVisible = false;
     this.selectedItemId = null;
@@ -826,6 +831,7 @@ export class RadialMenu implements Layer {
   }
 
   public updateCenterButtonState(state: CenterButtonState) {
+    if (this.menuElement === undefined) throw new Error("Not initialized");
     this.centerButtonState = state;
     if (state === "back") {
       const backButtonSize = this.config.centerButtonSize * 0.8; // Make back button 20% smaller
@@ -904,6 +910,7 @@ export class RadialMenu implements Layer {
 
     const scale = isHovering ? 1.2 : 1;
 
+    if (this.menuElement === undefined) throw new Error("Not initialized");
     this.menuElement
       .select(".center-button-hitbox")
       .transition()
@@ -1068,6 +1075,7 @@ export class RadialMenu implements Layer {
     const clampedX = 2 * margin > vw ? vw / 2 : Math.min(Math.max(this.anchorX, margin), vw - margin);
     const clampedY = 2 * margin > vh ? vh / 2 : Math.min(Math.max(this.anchorY, margin), vh - margin);
 
+    if (this.menuElement === undefined) throw new Error("Not initialized");
     const svgSel = this.menuElement.select("svg");
     svgSel
       .style("top", `${clampedY}px`)

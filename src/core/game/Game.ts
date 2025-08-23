@@ -283,7 +283,7 @@ export class Nation {
 }
 
 export class Cell {
-  public index: number;
+  public index: number | undefined;
 
   private readonly strRepr: string;
 
