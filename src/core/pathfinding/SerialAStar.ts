@@ -177,19 +177,21 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     const fwdPath: NodeType[] = [this.meetingPoint];
     let current: NodeType = this.meetingPoint;
 
-    const f = this.fwdCameFrom.get(current);
+    let f = this.fwdCameFrom.get(current);
     while (f !== undefined) {
       current = f;
       fwdPath.unshift(current);
+      f = this.fwdCameFrom.get(current);
     }
 
     // Reconstruct path from meeting point to goal
     current = this.meetingPoint;
 
-    const b = this.bwdCameFrom.get(current);
+    let b = this.bwdCameFrom.get(current);
     while (b !== undefined) {
       current = b;
       fwdPath.push(current);
+      b = this.bwdCameFrom.get(current);
     }
 
     return fwdPath;
