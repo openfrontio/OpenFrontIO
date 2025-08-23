@@ -140,12 +140,19 @@ export class MainRadialMenu extends LitElement implements Layer {
     if (this.game.ticks() % 5 === 0) {
       const myPlayer = this.game.myPlayer();
       if (myPlayer === null) return;
-      const actions = await myPlayer.actions(this.clickedTile);
-      this.updatePlayerActions(
-        myPlayer,
-        actions,
-        this.clickedTile,
-      );
+      const tile = this.clickedTile;
+      if (tile === null) return;
+      try {
+        const actions = await myPlayer.actions(tile);
+        if (this.clickedTile !== tile) return; // stale
+        this.updatePlayerActions(
+          myPlayer,
+          actions,
+          tile,
+        );
+      } catch (err) {
+        console.error("Failed to refresh player actions:", err);
+      }
     }
   }
 
