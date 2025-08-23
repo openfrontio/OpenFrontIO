@@ -232,9 +232,9 @@ export class StructureIconsLayer implements Layer {
   private modifyVisibility(render: StructureRenderInfo) {
     const structureType =
       render.unit.type() === UnitType.Construction
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        ? render.unit.constructionType()!
+        ? render.unit.constructionType()
         : render.unit.type();
+    if (structureType === undefined) return;
     const structureInfos = this.structures.get(structureType);
 
     let focusStructure = false;
