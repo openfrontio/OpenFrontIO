@@ -424,15 +424,20 @@ export class FakeHumanExecution implements Execution {
       this.maybeSpawnStructure(UnitType.Port) ||
       this.maybeSpawnWarship() ||
       this.maybeSpawnStructure(UnitType.Factory) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo)
+      this.maybeSpawnStructure(UnitType.MissileSilo) ||
+      this.maybeSpawnStructure(UnitType.DefensePost)
     );
   }
 
   private maybeSpawnStructure(type: UnitType): boolean {
     if (this.player === null) throw new Error("not initialized");
     const owned = this.player.unitsOwned(type);
-    const perceivedCostMultiplier = Math.min(owned + 1, 5);
+    let perceivedCostMultiplier = Math.min(owned + 1, 5);
     const realCost = this.cost(type);
+    // If it's defence post, increment the multiplier to reflect the belief that building too many defence posts
+    // is detrimental to the nation's economy.
+    // NOTE: There's probably a better additive to choose.
+    if (type === UnitType.DefensePost) { perceivedCostMultiplier++; }
     const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
     if (this.player.gold() < perceivedCost) {
       return false;
@@ -464,6 +469,7 @@ export class FakeHumanExecution implements Execution {
     const sampledTiles = this.arraySampler(tiles);
     for (const t of sampledTiles) {
       const v = valueFunction(t);
+      if (v === -Infinity) return null;
       if (v <= bestValue && bestTile !== null) continue;
       if (!this.player.canBuild(type, t)) continue;
       // Found a better tile
@@ -496,19 +502,24 @@ export class FakeHumanExecution implements Execution {
     // Prefer spacing structures out of atom bomb range
     const borderSpacing = this.mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
     const structureSpacing = borderSpacing * 2;
+
+    // Prefer to be far away from other structures of the same type
+    function spaceStructures(tile: number, w: number) {
+      const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+      otherTiles.delete(tile);
+      const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+      if (closestOther !== null) {
+        const d = mg.manhattanDist(closestOther.x, tile);
+        w += Math.min(d, structureSpacing);
+      }
+      return w;
+    }
+
     switch (type) {
       case UnitType.Port:
         return (tile) => {
           let w = 0;
-
-          // Prefer to be far away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
-          otherTiles.delete(tile);
-          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-          if (closestOther !== null) {
-            const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, structureSpacing);
-          }
+          w = spaceStructures(tile, w);
 
           return w;
         };
@@ -528,16 +539,54 @@ export class FakeHumanExecution implements Execution {
             w += Math.min(d, borderSpacing);
           }
 
-          // Prefer to be away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
-          otherTiles.delete(tile);
-          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-          if (closestOther !== null) {
-            const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, structureSpacing);
-          }
-
+          w = spaceStructures(tile, w);
           // TODO: Cities and factories should consider train range limits
+          return w;
+        };
+      case UnitType.DefensePost:
+        return (tile) => {
+          if (this.player === null) throw new Error("not initialized");
+
+          let w = 0;
+
+          // Generate subset of randomly chosen border tiles, and then filter it so that only those on the border
+          // with an "enemy" remain. If none of the border tiles are next to an enemy, we can safely assume there's
+          // none, and abort the whole process.
+          const random_border_tiles: ReadonlySet<TileRef> = new Set(this.arraySampler(Array.from(borderTiles)));
+          const enemy_random_border_tiles: Set<TileRef> = new Set();
+          for (const tile of random_border_tiles) {
+            const owner = mg.owner(tile);
+            if (!owner.isPlayer() || owner.id() === null) continue;
+            if (mg.player(owner.id()).type() === PlayerType.Bot) continue;
+
+            const enemies = mg.neighbors(tile).filter((tile) => {
+              const owner_neighbour = mg.owner(tile);
+              if (owner_neighbour === this.player) return false;
+              const relation = this.player?.relation(<Player>mg.owner(tile));
+              return relation !== undefined && relation <= 0;
+            });
+            if (enemies.length !== 0) enemy_random_border_tiles.add(tile);
+          }
+          if (enemy_random_border_tiles.size === 0) return -Infinity;
+          // Now we check to see if the tile in question is within an atom bomb's distance of these sampled
+          // border tiles. If it isn't, we abort.
+          let within_threshold = false;
+          for (const border_tile of random_border_tiles) {
+            const border_cell = mg.cell(border_tile);
+            const certain_cell = mg.cell(tile);
+
+            const distance_vector = [border_cell.x - certain_cell.x, border_cell.y - certain_cell.y];
+            const distance_magnitude = Math.sqrt(distance_vector[0] ** 2 + distance_vector[1] ** 2);
+            within_threshold = distance_magnitude <= structureSpacing;
+          }
+          if (!within_threshold) return 0;
+
+          // Prefer to be as high as possible in elevation.
+          w += mg.magnitude(tile);
+
+          // Prefer to be away from other structures of the same type
+          w = spaceStructures(tile, w);
+
           return w;
         };
       default:
