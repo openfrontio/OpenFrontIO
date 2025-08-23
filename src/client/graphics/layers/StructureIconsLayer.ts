@@ -561,10 +561,10 @@ export class StructureIconsLayer implements Layer {
 
       const unitType =
         unit.type() === UnitType.Construction
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-          ? unit.constructionType()!
+          ? unit.constructionType()
           : unit.type();
-      const shape = STRUCTURE_SHAPES[unitType];
+      const shape =
+        unitType !== undefined ? STRUCTURE_SHAPES[unitType] : undefined;
       if (shape !== undefined) {
         text.position.y = Math.round(-ICON_SIZE[shape] / 2 - 2);
       }
