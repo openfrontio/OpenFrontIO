@@ -232,8 +232,9 @@ export class StructureIconsLayer implements Layer {
   private modifyVisibility(render: StructureRenderInfo) {
     const structureType =
       render.unit.type() === UnitType.Construction
-        ? render.unit.constructionType()!
+        ? render.unit.constructionType()
         : render.unit.type();
+    if (structureType === undefined) return;
     const structureInfos = this.structures.get(structureType);
 
     let focusStructure = false;
@@ -341,14 +342,14 @@ export class StructureIconsLayer implements Layer {
       );
       return PIXI.Texture.EMPTY;
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const structureType = isConstruction ? constructionType! : unit.type();
     const cacheKey = isConstruction
       ? `construction-${structureType}` + (renderIcon ? "-icon" : "")
       : `${this.theme.territoryColor(unit.owner()).toRgbString()}-${structureType}` +
         (renderIcon ? "-icon" : "");
-    if (this.textureCache.has(cacheKey)) {
-      return this.textureCache.get(cacheKey)!;
-    }
+    const cached = this.textureCache.get(cacheKey);
+    if (cached !== undefined) return cached;
 
     const shape = STRUCTURE_SHAPES[structureType];
     const texture = shape
@@ -379,7 +380,8 @@ export class StructureIconsLayer implements Layer {
     }
     structureCanvas.width = Math.ceil(iconSize);
     structureCanvas.height = Math.ceil(iconSize);
-    const context = structureCanvas.getContext("2d")!;
+    const context = structureCanvas.getContext("2d");
+    if (!context) throw new Error("2D context not supported");
 
     let borderColor: string;
     if (isConstruction) {
@@ -561,7 +563,8 @@ export class StructureIconsLayer implements Layer {
         unit.type() === UnitType.Construction
           ? unit.constructionType()
           : unit.type();
-      const shape = STRUCTURE_SHAPES[unitType!];
+      const shape =
+        unitType !== undefined ? STRUCTURE_SHAPES[unitType] : undefined;
       if (shape !== undefined) {
         text.position.y = Math.round(-ICON_SIZE[shape] / 2 - 2);
       }
@@ -598,7 +601,8 @@ export class StructureIconsLayer implements Layer {
     const imageCanvas = document.createElement("canvas");
     imageCanvas.width = image.width;
     imageCanvas.height = image.height;
-    const ctx = imageCanvas.getContext("2d")!;
+    const ctx = imageCanvas.getContext("2d");
+    if (!ctx) throw new Error("2D context not supported");
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
     ctx.globalCompositeOperation = "destination-in";

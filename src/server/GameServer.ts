@@ -767,8 +767,8 @@ export class GameServer {
 
     // Count occurrences of each hash
     for (const client of this.activeClients) {
-      if (client.hashes.has(turnNumber)) {
-        const clientHash = client.hashes.get(turnNumber)!;
+      const clientHash = client.hashes.get(turnNumber);
+      if (clientHash !== undefined) {
         counts.set(clientHash, (counts.get(clientHash) ?? 0) + 1);
       }
     }
@@ -788,8 +788,8 @@ export class GameServer {
     let outOfSyncClients: Client[] = [];
 
     for (const client of this.activeClients) {
-      if (client.hashes.has(turnNumber)) {
-        const clientHash = client.hashes.get(turnNumber)!;
+      const clientHash = client.hashes.get(turnNumber);
+      if (clientHash !== undefined) {
         if (clientHash !== mostCommonHash) {
           outOfSyncClients.push(client);
         }

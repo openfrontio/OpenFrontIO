@@ -552,6 +552,7 @@ export class RadialMenu implements Layer {
         } else {
           content
             .append("image")
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             .attr("xlink:href", d.data.icon!)
             .attr("width", this.config.iconSize)
             .attr("height", this.config.iconSize)
@@ -936,7 +937,11 @@ export class RadialMenu implements Layer {
     this.currentLevel = 0;
     this.menuStack = [];
 
-    this.currentMenuItems = this.rootMenu.subMenu!(this.params!);
+    if (this.rootMenu.subMenu === undefined || this.params === null) {
+      this.currentMenuItems = [];
+    } else {
+      this.currentMenuItems = this.rootMenu.subMenu(this.params);
+    }
 
     this.navigationInProgress = false;
 
