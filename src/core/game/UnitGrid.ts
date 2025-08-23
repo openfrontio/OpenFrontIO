@@ -164,7 +164,12 @@ export class UnitGrid {
     return nearby;
   }
 
-  private unitIsInRange(unit: Unit | UnitView, tile: TileRef, rangeSquared: number, playerId?: PlayerID): boolean {
+  private unitIsInRange(
+    unit: Unit | UnitView,
+    tile: TileRef,
+    rangeSquared: number,
+    playerId?: PlayerID,
+  ): boolean {
     if (!unit.isActive()) {
       return false;
     }
