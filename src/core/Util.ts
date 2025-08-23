@@ -1,8 +1,10 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
+import { ID } from "./BaseSchemas";
 import { Cell, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
+  ClientID,
   GameConfig,
   GameID,
   GameRecord,
@@ -252,6 +254,24 @@ export function generateID(): GameID {
     8,
   );
   return nanoid();
+}
+
+export function getClientID(gameID: GameID): ClientID {
+  const cachedGame = localStorage.getItem("game_id");
+  const cachedClient = localStorage.getItem("client_id");
+
+  if (
+    gameID === cachedGame &&
+    cachedClient &&
+    ID.safeParse(cachedClient).success
+  )
+    return cachedClient;
+
+  const clientId = generateID();
+  localStorage.setItem("game_id", gameID);
+  localStorage.setItem("client_id", clientId);
+
+  return clientId;
 }
 
 export function toInt(num: number): bigint {

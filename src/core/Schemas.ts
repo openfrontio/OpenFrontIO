@@ -1,6 +1,7 @@
 import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import countries from "../client/data/countries.json" with { type: "json" };
+import { ID } from "./BaseSchemas";
 import {
   ColorPaletteSchema,
   PatternDataSchema,
@@ -200,10 +201,6 @@ const EmojiSchema = z
   .number()
   .nonnegative()
   .max(flattenedEmojiTable.length - 1);
-export const ID = z
-  .string()
-  .regex(/^[a-zA-Z0-9]+$/)
-  .length(8);
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 

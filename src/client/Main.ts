@@ -1,7 +1,9 @@
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { ID } from "../core/BaseSchemas";
 import { EventBus } from "../core/EventBus";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GameRecord, GameStartInfo } from "../core/Schemas";
+import { getClientID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
@@ -501,7 +503,7 @@ class Client {
         },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
-        clientID: lobby.clientID,
+        clientID: getClientID(lobby.gameID),
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },

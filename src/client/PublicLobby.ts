@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
 import { GameMapType, GameMode } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
-import { generateID } from "../core/Util";
+import { getClientID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
@@ -211,7 +211,7 @@ export class PublicLobby extends LitElement {
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobby.gameID,
-            clientID: generateID(),
+            clientID: getClientID(lobby.gameID),
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
