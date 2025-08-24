@@ -111,6 +111,11 @@ export class UserSettings {
     }
   }
 
+  // For development only. Used for testing patterns, set in the console manually.
+  getDevOnlyPattern(): string | undefined {
+    return localStorage.getItem("dev-pattern") ?? undefined;
+  }
+
   getSelectedPatternName(): string | undefined {
     return localStorage.getItem(PATTERN_KEY) ?? undefined;
   }
