@@ -426,9 +426,12 @@ export class SinglePlayerModal extends LitElement {
       console.warn("Flag input element not found");
     }
     const patternName = this.userSettings.getSelectedPatternName();
-    const pattern = patternName
-      ? (await getCosmetics())?.patterns[patternName]
-      : undefined;
+    let pattern: string | undefined = undefined;
+    if (this.userSettings.getDevOnlyPattern()) {
+      pattern = this.userSettings.getDevOnlyPattern();
+    } else if (patternName) {
+      pattern = (await getCosmetics())?.patterns[patternName]?.pattern;
+    }
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -444,7 +447,7 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
-                pattern: pattern?.pattern,
+                pattern: pattern,
               },
             ],
             config: {
