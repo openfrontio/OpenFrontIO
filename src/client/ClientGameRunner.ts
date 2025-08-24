@@ -672,9 +672,9 @@ export class ClientGameRunner {
   }
 
   private onTurnProcessed() {
-    this.turnsProcessed++;
     const turnDebt = this.turnsSeen - this.turnsProcessed;
     const wasInDebt = this.isInTurnDebt;
+    this.turnsProcessed++;
 
     if (turnDebt >= this.turnDebtThreshold) {
       this.isInTurnDebt = true;
