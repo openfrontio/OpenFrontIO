@@ -31,9 +31,11 @@ import {
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
   Transport,
+  TurnDebtEvent,
 } from "./Transport";
 import { TerrainMapData, loadTerrainMap } from "../core/game/TerrainMapLoader";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
+import { CatchupMessage } from "./graphics/layers/CatchupMessage";
 import { EventBus } from "../core/EventBus";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import { ServerConfig } from "../core/configuration/Config";
@@ -44,8 +46,8 @@ import { createCanvas } from "./Utils";
 import { createGameRecord } from "../core/Util";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { getPersistentID } from "./Main";
+import { showErrorModal } from "./components/ErrorModal";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { translateText } from "../client/Utils";
 
 export type LobbyConfig = {
   serverConfig: ServerConfig;
@@ -187,7 +189,15 @@ export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
 
+  // Turn debt tracking
   private turnsSeen = 0;
+  private turnsProcessed = 0;
+  private readonly turnDebtThreshold = 20;
+  private readonly turnDebtExitThreshold = 5;
+  private isInTurnDebt = false;
+  private peakTurnDebt = 0;
+  private readonly catchupMessage: CatchupMessage = new CatchupMessage();
+
   private hasJoined = false;
 
   private lastMousePosition: { x: number; y: number } | null = null;
@@ -283,6 +293,7 @@ export class ClientGameRunner {
       });
       this.gameView.update(gu);
       this.renderer.tick();
+      this.onTurnProcessed();
 
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
@@ -374,10 +385,11 @@ export class ClientGameRunner {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
     }
+    this.catchupMessage.hide();
   }
 
   private inputEvent(event: MouseUpEvent) {
-    if (!this.isActive) {
+    if (!this.isActive || this.isInTurnDebt) {
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
@@ -428,7 +440,7 @@ export class ClientGameRunner {
   }
 
   private autoUpgradeEvent(event: AutoUpgradeEvent) {
-    if (!this.isActive) {
+    if (!this.isActive || this.isInTurnDebt) {
       return;
     }
 
@@ -499,7 +511,7 @@ export class ClientGameRunner {
 
   private doBoatAttackUnderCursor(): void {
     const tile = this.getTileUnderCursor();
-    if (tile === null) {
+    if (tile === null || this.isInTurnDebt) {
       return;
     }
 
@@ -518,7 +530,7 @@ export class ClientGameRunner {
 
   private doGroundAttackUnderCursor(): void {
     const tile = this.getTileUnderCursor();
-    if (tile === null) {
+    if (tile === null || this.isInTurnDebt) {
       return;
     }
 
@@ -574,7 +586,7 @@ export class ClientGameRunner {
   }
 
   private sendBoatAttackIntent(tile: TileRef) {
-    if (!this.myPlayer) return;
+    if (!this.myPlayer || this.isInTurnDebt) return;
 
     this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
       if (this.myPlayer === null) throw new Error("not initialized");
@@ -658,63 +670,27 @@ export class ClientGameRunner {
       this.transport.reconnect();
     }
   }
-}
 
-function showErrorModal(
-  error: string,
-  message: string | undefined,
-  gameID: GameID,
-  clientID: ClientID,
-  closable = false,
-  showDiscord = true,
-  heading = "error_modal.crashed",
-) {
-  if (document.querySelector("#error-modal")) {
-    return;
-  }
+  private onTurnProcessed() {
+    this.turnsProcessed++;
+    const turnDebt = this.turnsSeen - this.turnsProcessed;
+    const wasInDebt = this.isInTurnDebt;
 
-  const modal = document.createElement("div");
-  modal.id = "error-modal";
-
-  const content = [
-    showDiscord ? translateText("error_modal.paste_discord") : null,
-    translateText(heading),
-    `game id: ${gameID}`,
-    `client id: ${clientID}`,
-    `Error: ${error}`,
-    message ? `Message: ${message}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  // Create elements
-  const pre = document.createElement("pre");
-  pre.textContent = content;
-
-  const button = document.createElement("button");
-  button.textContent = translateText("error_modal.copy_clipboard");
-  button.className = "copy-btn";
-  button.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(content);
-      button.textContent = translateText("error_modal.copied");
-    } catch {
-      button.textContent = translateText("error_modal.failed_copy");
+    if (turnDebt >= this.turnDebtThreshold) {
+      this.isInTurnDebt = true;
+      this.peakTurnDebt = Math.max(turnDebt, this.peakTurnDebt);
+      const turnsLeft = turnDebt - this.turnDebtExitThreshold;
+      const totalTurnsToProcess = this.peakTurnDebt - this.turnDebtExitThreshold;
+      const progress = Math.round(((totalTurnsToProcess - turnsLeft) / totalTurnsToProcess) * 100);
+      this.catchupMessage.show(progress);
+    } else if (turnDebt <= this.turnDebtExitThreshold) {
+      this.peakTurnDebt = 0;
+      this.isInTurnDebt = false;
+      this.catchupMessage.hide();
     }
-  });
 
-  // Add to modal
-  modal.appendChild(pre);
-  modal.appendChild(button);
-  if (closable) {
-    const closeButton = document.createElement("button");
-    closeButton.textContent = "X";
-    closeButton.className = "close-btn";
-    closeButton.addEventListener("click", () => {
-      modal.remove();
-    });
-    modal.appendChild(closeButton);
+    if (wasInDebt !== this.isInTurnDebt) {
+      this.eventBus.emit(new TurnDebtEvent(this.isInTurnDebt));
+    }
   }
-
-  document.body.appendChild(modal);
 }

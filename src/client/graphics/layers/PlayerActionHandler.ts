@@ -12,6 +12,7 @@ import {
   SendQuickChatEvent,
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
+  TurnDebtEvent,
 } from "../../Transport";
 import { EventBus } from "../../../core/EventBus";
 import { PlayerView } from "../../../core/game/GameView";
@@ -19,10 +20,16 @@ import { TileRef } from "../../../core/game/GameMap";
 import { UIState } from "../UIState";
 
 export class PlayerActionHandler {
+  private isInTurnDebt = false;
+
   constructor(
     private readonly eventBus: EventBus,
     private readonly uiState: UIState,
-  ) {}
+  ) {
+    this.eventBus.on(TurnDebtEvent, (e) => {
+      this.isInTurnDebt = e.isInDebt;
+    });
+  }
 
   async getPlayerActions(
     player: PlayerView,
@@ -32,6 +39,7 @@ export class PlayerActionHandler {
   }
 
   handleAttack(player: PlayerView, targetId: string | null) {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(
       new SendAttackIntentEvent(
         targetId,
@@ -46,6 +54,7 @@ export class PlayerActionHandler {
     targetTile: TileRef,
     spawnTile: TileRef | null,
   ) {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         targetId,
@@ -64,32 +73,37 @@ export class PlayerActionHandler {
   }
 
   handleSpawn(tile: TileRef) {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(new SendSpawnIntentEvent(tile));
   }
 
   handleAllianceRequest(player: PlayerView, recipient: PlayerView) {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(new SendAllianceRequestIntentEvent(player, recipient));
   }
 
   handleBreakAlliance(player: PlayerView, recipient: PlayerView) {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(new SendBreakAllianceIntentEvent(player, recipient));
   }
 
   handleTargetPlayer(targetId: string | null) {
-    if (!targetId) return;
-
+    if (!targetId || this.isInTurnDebt) return;
     this.eventBus.emit(new SendTargetPlayerIntentEvent(targetId));
   }
 
   handleDonateGold(recipient: PlayerView) {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(new SendDonateGoldIntentEvent(recipient, null));
   }
 
   handleDonateTroops(recipient: PlayerView) {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(new SendDonateTroopsIntentEvent(recipient, null));
   }
 
   handleEmbargo(recipient: PlayerView, action: "start" | "stop") {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(new SendEmbargoIntentEvent(recipient, action));
   }
 
@@ -102,6 +116,7 @@ export class PlayerActionHandler {
   }
 
   handleDeleteUnit(unitId: number) {
+    if (this.isInTurnDebt) return;
     this.eventBus.emit(new SendDeleteUnitIntentEvent(unitId));
   }
 }

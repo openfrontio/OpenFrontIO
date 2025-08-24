@@ -169,6 +169,10 @@ export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
 
+export class TurnDebtEvent implements GameEvent {
+  constructor(public readonly isInDebt: boolean) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
