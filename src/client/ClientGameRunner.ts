@@ -674,7 +674,8 @@ export class ClientGameRunner {
     this.isInTurnDebt = this.isInTurnDebt || turnDebt >= this.turnDebtThreshold;
 
     if (this.isInTurnDebt) {
-      this.peakTurnDebt = Math.max(turnDebt, this.peakTurnDebt);
+      // +1 because peak was before this turn was processed
+      this.peakTurnDebt = Math.max(turnDebt + 1, this.peakTurnDebt);
       const turnsLeft = turnDebt - this.turnDebtExitThreshold;
       const totalTurnsToProcess = this.peakTurnDebt - this.turnDebtExitThreshold;
       const progress = Math.round(
