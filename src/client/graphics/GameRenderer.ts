@@ -200,6 +200,7 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
+  const samRadiusLayer = new SAMRadiusLayer(game, eventBus, transformHandler);
 
   const fpsDisplay = document.querySelector("fps-display") as FPSDisplay;
   if (!(fpsDisplay instanceof FPSDisplay)) {
@@ -235,11 +236,11 @@ export function createRenderer(
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game),
-    new SAMRadiusLayer(game, eventBus, transformHandler),
     structureLayer,
+    new StructureIconsLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
-    new UILayer(game, eventBus, transformHandler),
+    new UILayer(game, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,

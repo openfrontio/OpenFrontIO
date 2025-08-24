@@ -9,7 +9,7 @@
     {
       "files": "Dockerfile",
       "options": {
-        "plugins": []
+        "plugins": ["@trivago/prettier-plugin-sort-imports"]
       }
     }
   ],
