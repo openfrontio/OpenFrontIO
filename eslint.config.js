@@ -56,6 +56,7 @@ export default [
       // Enable rules
       "@stylistic/quotes": ["error", "double", { avoidEscape: true }],
       "@stylistic/indent": ["error", 2],
+      "@stylistic/object-curly-spacing": ["error", "always", { objectsInObjects: true }],
       "@stylistic/semi": "error",
       "@stylistic/space-infix-ops": "error",
       "@stylistic/type-annotation-spacing": [
@@ -114,7 +115,7 @@ export default [
       "no-multiple-empty-lines": ["error", { max: 1, maxEOF: 0 }],
       "no-trailing-spaces": "error",
       "object-curly-newline": ["error", { multiline: true, consistent: true }],
-      "object-curly-spacing": ["error", "always"],
+      "object-curly-spacing": "off", // @stylistic/object-curly-spacing
       "object-property-newline": ["error", { allowAllPropertiesOnSameLine: true }],
       "object-shorthand": ["error", "always"],
       "no-undef": "error",
