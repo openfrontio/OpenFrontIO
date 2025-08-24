@@ -19,8 +19,8 @@ type RailRef = {
 };
 
 export class RailroadLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
+  private canvas: HTMLCanvasElement | undefined;
+  private context: CanvasRenderingContext2D | undefined;
   private readonly theme: Theme;
   // Save the number of railroads per tiles. Delete when it reaches 0
   private readonly existingRailroads = new Map<TileRef, RailRef>();
@@ -90,6 +90,7 @@ export class RailroadLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
     this.updateRailColors();
     context.drawImage(
       this.canvas,
@@ -138,6 +139,7 @@ export class RailroadLayer implements Layer {
     if (!ref || ref.numOccurence <= 0) {
       this.existingRailroads.delete(railRoad.tile);
       this.railTileList = this.railTileList.filter((t) => t !== railRoad.tile);
+      if (this.context === undefined) throw new Error("Not initialized");
       this.context.clearRect(
         this.game.x(railRoad.tile) * 2 - 1,
         this.game.y(railRoad.tile) * 2 - 1,
@@ -155,11 +157,13 @@ export class RailroadLayer implements Layer {
     const color = recipient
       ? this.theme.railroadColor(recipient)
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });
+    if (this.context === undefined) throw new Error("Not initialized");
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(x, y, railRoad.railType);
   }
 
   private paintRailRects(x: number, y: number, direction: RailType) {
+    if (this.context === undefined) throw new Error("Not initialized");
     const railRects = getRailroadRects(direction);
     for (const [dx, dy, w, h] of railRects) {
       this.context.fillRect(x * 2 + dx, y * 2 + dy, w, h);

@@ -452,11 +452,7 @@ export class ClientGameRunner {
       return;
     }
 
-    this.findAndUpgradeNearestBuilding(tile);
-  }
-
-  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile).then((actions) => {
+    this.myPlayer.actions(tile).then((actions) => {
       const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
@@ -470,7 +466,7 @@ export class ClientGameRunner {
             .find((unit) => unit.id() === bu.canUpgrade);
           if (existingUnit) {
             const distance = this.gameView.manhattanDist(
-              clickedTile,
+              tile,
               existingUnit.tile(),
             );
 
@@ -577,7 +573,7 @@ export class ClientGameRunner {
     if (!this.myPlayer) return;
 
     this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
-      if (this.myPlayer === null) throw new Error("not initialized");
+      if (this.myPlayer === null) throw new Error("Not initialized");
       this.eventBus.emit(
         new SendBoatAttackIntentEvent(
           this.gameView.owner(tile).id(),

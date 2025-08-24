@@ -32,10 +32,11 @@ import { translateText } from "../../../client/Utils";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
-  public g: GameView;
-  public eventBus: EventBus;
-  public emojiTable: EmojiTable;
-  public uiState: UIState;
+  public g: GameView | undefined;
+  public eventBus: EventBus | undefined;
+  public emojiTable: EmojiTable | undefined;
+  public uiState: UIState = { attackRatio: 0 };
+  private ctModal: ChatModal | undefined;
 
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
@@ -69,7 +70,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendAllianceRequestIntentEvent(myPlayer, other));
+    this.eventBus?.emit(new SendAllianceRequestIntentEvent(myPlayer, other));
     this.hide();
   }
 
@@ -79,7 +80,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendBreakAllianceIntentEvent(myPlayer, other));
+    this.eventBus?.emit(new SendBreakAllianceIntentEvent(myPlayer, other));
     this.hide();
   }
 
@@ -89,7 +90,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(
+    this.eventBus?.emit(
       new SendDonateTroopsIntentEvent(
         other,
         myPlayer.troops() * this.uiState.attackRatio,
@@ -104,7 +105,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateGoldIntentEvent(other, null));
+    this.eventBus?.emit(new SendDonateGoldIntentEvent(other, null));
     this.hide();
   }
 
@@ -114,7 +115,7 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoIntentEvent(other, "start"));
+    this.eventBus?.emit(new SendEmbargoIntentEvent(other, "start"));
     this.hide();
   }
 
@@ -124,46 +125,44 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoIntentEvent(other, "stop"));
+    this.eventBus?.emit(new SendEmbargoIntentEvent(other, "stop"));
     this.hide();
   }
 
   private handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
     e.stopPropagation();
-    this.emojiTable.showTable((emoji: string) => {
+    this.emojiTable?.showTable((emoji: string) => {
       if (myPlayer === other) {
-        this.eventBus.emit(
+        this.eventBus?.emit(
           new SendEmojiIntentEvent(
             AllPlayers,
             flattenedEmojiTable.indexOf(emoji),
           ),
         );
       } else {
-        this.eventBus.emit(
+        this.eventBus?.emit(
           new SendEmojiIntentEvent(other, flattenedEmojiTable.indexOf(emoji)),
         );
       }
-      this.emojiTable.hideTable();
+      this.emojiTable?.hideTable();
       this.hide();
     });
   }
 
   private handleChat(e: Event, sender: PlayerView, other: PlayerView) {
-    this.ctModal.open(sender, other);
+    this.ctModal?.open(sender, other);
     this.hide();
   }
 
   private handleTargetClick(e: Event, other: PlayerView) {
     e.stopPropagation();
-    this.eventBus.emit(new SendTargetPlayerIntentEvent(other.id()));
+    this.eventBus?.emit(new SendTargetPlayerIntentEvent(other.id()));
     this.hide();
   }
 
   createRenderRoot() {
     return this;
   }
-
-  private ctModal: ChatModal;
 
   initEventBus(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -175,8 +174,8 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   init() {
-    this.eventBus.on(MouseUpEvent, () => this.hide());
-    this.eventBus.on(CloseViewEvent, (e) => {
+    this.eventBus?.on(MouseUpEvent, () => this.hide());
+    this.eventBus?.on(CloseViewEvent, (e) => {
       this.hide();
     });
 
@@ -184,28 +183,28 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   async tick() {
-    if (this.isVisible && this.tile) {
-      const myPlayer = this.g.myPlayer();
-      if (myPlayer !== null && myPlayer.isAlive()) {
-        this.actions = await myPlayer.actions(this.tile);
+    if (!this.g) return;
+    if (!this.isVisible) return;
+    if (!this.tile) return;
+    const myPlayer = this.g.myPlayer();
+    if (!myPlayer?.isAlive()) return;
+    this.actions = await myPlayer.actions(this.tile);
 
-        if (this.actions?.interaction?.allianceExpiresAt !== undefined) {
-          const expiresAt = this.actions.interaction.allianceExpiresAt;
-          const remainingTicks = expiresAt - this.g.ticks();
+    if (this.actions?.interaction?.allianceExpiresAt !== undefined) {
+      const expiresAt = this.actions.interaction.allianceExpiresAt;
+      const remainingTicks = expiresAt - this.g.ticks();
 
-          if (remainingTicks > 0) {
-            const remainingSeconds = Math.max(
-              0,
-              Math.floor(remainingTicks / 10),
-            ); // 10 ticks per second
-            this.allianceExpiryText = this.formatDuration(remainingSeconds);
-          }
-        } else {
-          this.allianceExpiryText = null;
-        }
-        this.requestUpdate();
+      if (remainingTicks > 0) {
+        const remainingSeconds = Math.max(
+          0,
+          Math.floor(remainingTicks / 10),
+        ); // 10 ticks per second
+        this.allianceExpiryText = this.formatDuration(remainingSeconds);
       }
+    } else {
+      this.allianceExpiryText = null;
     }
+    this.requestUpdate();
   }
 
   private formatDuration(totalSeconds: number): string {
@@ -222,6 +221,7 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!this.isVisible) {
       return html``;
     }
+    if (this.g === undefined) return;
     const myPlayer = this.g.myPlayer();
     if (myPlayer === null) return;
     if (this.tile === null) return;

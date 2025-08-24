@@ -39,11 +39,11 @@ export class ChatModal extends LitElement {
   private selectedQuickChatKey: string | null = null;
   private selectedPlayer: PlayerView | null = null;
 
-  private recipient: PlayerView;
-  private sender: PlayerView;
-  public eventBus: EventBus;
+  private recipient: PlayerView | undefined;
+  private sender: PlayerView | undefined;
+  public eventBus: EventBus | undefined;
 
-  public g: GameView;
+  public g: GameView | undefined;
 
   quickChatPhrases: Record<
     string,
@@ -189,8 +189,9 @@ export class ChatModal extends LitElement {
   }
 
   private selectPhrase(phrase: QuickChatPhrase) {
+    if (this.selectedCategory === null) return;
     this.selectedQuickChatKey = this.getFullQuickChatKey(
-      this.selectedCategory!,
+      this.selectedCategory,
       phrase.key,
     );
     this.selectedPhraseTemplate = translateText(
@@ -219,6 +220,7 @@ export class ChatModal extends LitElement {
   }
 
   private sendChatMessage() {
+    if (!this.eventBus) return;
     console.log("Sent message:", this.previewText);
     console.log("Sender:", this.sender);
     console.log("Recipient:", this.recipient);
@@ -269,6 +271,7 @@ export class ChatModal extends LitElement {
     if (sender && recipient) {
       console.log("Sent message:", recipient);
       console.log("Sent message:", sender);
+      if (!this.g) throw new Error("Not initialized");
       this.players = this.g
         .players()
         .filter((p) => p.isAlive() && p.data.playerType !== PlayerType.Bot);
@@ -303,6 +306,7 @@ export class ChatModal extends LitElement {
     recipient?: PlayerView,
   ) {
     if (sender && recipient) {
+      if (!this.g) throw new Error("Not initialized");
       this.players = this.g
         .players()
         .filter((p) => p.isAlive() && p.data.playerType !== PlayerType.Bot);

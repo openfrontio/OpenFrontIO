@@ -8,7 +8,6 @@ import { UnitView } from "../../../src/core/game/GameView";
 describe("UILayer", () => {
   let game: any;
   let eventBus: any;
-  let transformHandler: any;
 
   beforeEach(() => {
     game = {
@@ -29,19 +28,22 @@ describe("UILayer", () => {
       updatesSinceLastTick: () => undefined,
     };
     eventBus = { on: jest.fn() };
-    transformHandler = {};
   });
 
   it("should initialize and redraw canvas", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new UILayer(game, eventBus);
     ui.redraw();
-    expect(ui["canvas"].width).toBe(100);
-    expect(ui["canvas"].height).toBe(100);
+    // eslint-disable-next-line prefer-destructuring
+    const canvas = ui["canvas"];
+    expect(canvas).toBeDefined();
+    if (canvas === undefined) throw new Error();
+    expect(canvas.width).toBe(100);
+    expect(canvas.height).toBe(100);
     expect(ui["context"]).not.toBeNull();
   });
 
   it("should handle unit selection event", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
       type: () => "Warship",
@@ -56,7 +58,7 @@ describe("UILayer", () => {
   });
 
   it("should add and clear health bars", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
       id: () => 1,
@@ -85,7 +87,7 @@ describe("UILayer", () => {
   });
 
   it("should remove health bars for inactive units", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
       id: () => 1,
@@ -105,7 +107,7 @@ describe("UILayer", () => {
   });
 
   it("should add loading bar for unit", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
       id: () => 2,
@@ -117,7 +119,7 @@ describe("UILayer", () => {
   });
 
   it("should remove loading bar for inactive unit", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
       id: () => 2,
@@ -137,7 +139,7 @@ describe("UILayer", () => {
   });
 
   it("should remove loading bar for a finished progress bar", () => {
-    const ui = new UILayer(game, eventBus, transformHandler);
+    const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
       id: () => 2,
