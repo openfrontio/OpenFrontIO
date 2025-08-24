@@ -543,6 +543,19 @@ export class FakeHumanExecution implements Execution {
           return w;
         };
       case UnitType.SAMLauncher:
+        const structureTiles: TileRef[] = [];
+        for (const unit of this.player.units()) {
+          switch(unit.type()) {
+            case UnitType.City:
+            case UnitType.Factory:
+            case UnitType.MissileSilo:
+            case UnitType.Port:
+            case UnitType.DefensePost:
+            case UnitType.SAMLauncher:
+              structureTiles.push(unit.tile());
+
+          }
+        }
         return (tile) => {
           if (this.player === null) throw new Error("Not initialised.");
           let w = 0;
@@ -554,22 +567,13 @@ export class FakeHumanExecution implements Execution {
           // in relation to the perimeter.
           // This pushes the nation to focus SAMs in a "goldilocks zone" that is neither
           // too close nor too far from their structure clusters.
-          const hydrogen_spacing = this.mg.config().nukeMagnitudes(UnitType.HydrogenBomb).inner;
-          const tile_cell = mg.cell(tile);
-          const structure_cells = this.player.units(
-            UnitType.City,
-            UnitType.Factory,
-            UnitType.MissileSilo,
-            UnitType.Port,
-            UnitType.DefensePost,
-            UnitType.SAMLauncher,
-          ).map((unit) => mg.cell(unit.tile()));
+          const hydrogenSpacing = this.mg.config().nukeMagnitudes(UnitType.HydrogenBomb).inner;
 
-          for (const cell of structure_cells) {
-            const distance_vector = [cell.x - tile_cell.x, cell.y - tile_cell.y];
-            const distance_magnitude = Math.sqrt(distance_vector[0] ** 2 + distance_vector[1] ** 2);
-            if (distance_magnitude > hydrogen_spacing) { w -= (distance_magnitude - hydrogen_spacing); }
-            else if (distance_magnitude < hydrogen_spacing) { w += (hydrogen_spacing - distance_magnitude); }
+          for (const certainTile of structureTiles) {
+            const distanceVector = [mg.x(certainTile) - mg.x(tile), mg.y(certainTile) - mg.y(tile)];
+            const distanceMagnitude = (distanceVector[0] ** 2 + distanceVector[1] ** 2);
+            if (distanceMagnitude > hydrogenSpacing) { w -= (distanceMagnitude - hydrogenSpacing); }
+            else if (distanceMagnitude < hydrogenSpacing) { w += (hydrogenSpacing - distanceMagnitude); }
           }
 
           // Prefer higher elevations
@@ -580,15 +584,6 @@ export class FakeHumanExecution implements Execution {
           if (closestBorder !== null) {
             const d = mg.manhattanDist(closestBorder.x, tile);
             w += Math.min(d, borderSpacing);
-          }
-
-          // Prefer to be away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
-          otherTiles.delete(tile);
-          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-          if (closestOther !== null) {
-            const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, structureSpacing);
           }
 
           return w;
