@@ -1,7 +1,7 @@
-import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { Game, Player, PlayerType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
+import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
+import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 
 let game: Game;
 let player1: Player;
@@ -64,13 +64,13 @@ describe("AllianceRequestExecution", () => {
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
-    expect(player1.outgoingAllianceRequests().length).toBe(1);
+    expect(player1.outgoingAllianceRequests()).toHaveLength(1);
 
     for (let i = 0; i < 6; i++) {
       game.executeNextTick();
     }
 
-    expect(player1.outgoingAllianceRequests().length).toBe(0);
+    expect(player1.outgoingAllianceRequests()).toHaveLength(0);
     expect(player1.isAlliedWith(player2)).toBeFalsy();
     expect(player2.isAlliedWith(player1)).toBeFalsy();
   });

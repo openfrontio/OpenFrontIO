@@ -9,7 +9,7 @@ import {
 export class AllianceRequestExecution implements Execution {
   private req: AllianceRequest | null = null;
   private active = true;
-  private mg: Game;
+  private mg: Game | undefined;
 
   constructor(
     private readonly requestor: Player,
@@ -53,6 +53,7 @@ export class AllianceRequestExecution implements Execution {
       this.active = false;
       return;
     }
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (
       this.mg.ticks() - (this.req?.createdAt() ?? 0) >
       this.mg.config().allianceRequestDuration()
