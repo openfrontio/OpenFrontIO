@@ -665,7 +665,7 @@ export interface Game extends GameMap {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ): boolean;
   nearbyUnits(
     tile: TileRef,
