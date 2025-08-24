@@ -10,7 +10,7 @@ export class GutterAdModalEvent implements GameEvent {
 
 @customElement("gutter-ad-modal")
 export class GutterAdModal extends LitElement implements Layer {
-  public eventBus: EventBus;
+  public eventBus: EventBus | undefined;
 
   @state()
   private isVisible = false;
@@ -30,6 +30,7 @@ export class GutterAdModal extends LitElement implements Layer {
   }
 
   init() {
+    if (!this.eventBus) throw new Error("Not initialized");
     if (getGamesPlayed() > 1) {
       this.eventBus.on(GutterAdModalEvent, (event) => {
         if (event.isVisible) {

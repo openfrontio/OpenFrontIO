@@ -18,8 +18,8 @@ import { conquestFxFactory } from "../fx/ConquestFx";
 import { renderNumber } from "../../Utils";
 
 export class FxLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
+  private canvas: HTMLCanvasElement | undefined;
+  private context: CanvasRenderingContext2D | undefined;
 
   private lastRefresh = 0;
   private readonly refreshRate = 10;
@@ -265,6 +265,7 @@ export class FxLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
     const now = Date.now();
     if (this.game.config().userSettings()?.fxLayer()) {
       if (now > this.lastRefresh + this.refreshRate) {
@@ -283,6 +284,8 @@ export class FxLayer implements Layer {
   }
 
   renderAllFx(context: CanvasRenderingContext2D, delta: number) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
+    if (this.context === undefined) throw new Error("Not initialized");
     if (this.allFx.length > 0) {
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.renderContextFx(delta);
@@ -290,6 +293,7 @@ export class FxLayer implements Layer {
   }
 
   renderContextFx(duration: number) {
+    if (this.context === undefined) throw new Error("Not initialized");
     for (let i = this.allFx.length - 1; i >= 0; i--) {
       if (!this.allFx[i].renderTick(duration, this.context)) {
         this.allFx.splice(i, 1);

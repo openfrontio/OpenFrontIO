@@ -54,14 +54,14 @@ const ICON_SIZE = {
 const OFFSET_ZOOM_Y = 4; // offset for the y position of the level over the sprite
 
 export class StructureIconsLayer implements Layer {
-  private pixicanvas: HTMLCanvasElement;
-  private iconsStage: PIXI.Container;
-  private levelsStage: PIXI.Container;
-  private dotsStage: PIXI.Container;
+  private pixicanvas: HTMLCanvasElement | undefined;
+  private iconsStage: PIXI.Container | undefined;
+  private levelsStage: PIXI.Container | undefined;
+  private dotsStage: PIXI.Container | undefined;
   private shouldRedraw = true;
   private readonly textureCache: Map<string, PIXI.Texture> = new Map();
   private readonly theme: Theme;
-  private renderer: PIXI.Renderer;
+  private renderer: PIXI.Renderer | undefined;
   private renders: StructureRenderInfo[] = [];
   private readonly seenUnits: Set<UnitView> = new Set();
   private readonly structures: Map<
@@ -163,7 +163,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   resizeCanvas() {
-    if (this.renderer) {
+    if (this.renderer && this.pixicanvas) {
       this.pixicanvas.width = window.innerWidth;
       this.pixicanvas.height = window.innerHeight;
       this.renderer.resize(innerWidth, innerHeight, 1);
@@ -232,8 +232,9 @@ export class StructureIconsLayer implements Layer {
   private modifyVisibility(render: StructureRenderInfo) {
     const structureType =
       render.unit.type() === UnitType.Construction
-        ? render.unit.constructionType()!
+        ? render.unit.constructionType()
         : render.unit.type();
+    if (structureType === undefined) return;
     const structureInfos = this.structures.get(structureType);
 
     let focusStructure = false;
@@ -321,10 +322,13 @@ export class StructureIconsLayer implements Layer {
 
     if (this.transformHandler.hasChanged() || this.shouldRedraw) {
       if (this.transformHandler.scale > ZOOM_THRESHOLD && this.renderSprites) {
+        if (this.levelsStage === undefined) throw new Error("Not initialized");
         this.renderer.render(this.levelsStage);
       } else if (this.transformHandler.scale > DOTS_ZOOM_THRESHOLD) {
+        if (this.iconsStage === undefined) throw new Error("Not initialized");
         this.renderer.render(this.iconsStage);
       } else {
+        if (this.dotsStage === undefined) throw new Error("Not initialized");
         this.renderer.render(this.dotsStage);
       }
       this.shouldRedraw = false;
@@ -341,14 +345,14 @@ export class StructureIconsLayer implements Layer {
       );
       return PIXI.Texture.EMPTY;
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const structureType = isConstruction ? constructionType! : unit.type();
     const cacheKey = isConstruction
       ? `construction-${structureType}` + (renderIcon ? "-icon" : "")
       : `${this.theme.territoryColor(unit.owner()).toRgbString()}-${structureType}` +
         (renderIcon ? "-icon" : "");
-    if (this.textureCache.has(cacheKey)) {
-      return this.textureCache.get(cacheKey)!;
-    }
+    const cached = this.textureCache.get(cacheKey);
+    if (cached !== undefined) return cached;
 
     const shape = STRUCTURE_SHAPES[structureType];
     const texture = shape
@@ -379,7 +383,8 @@ export class StructureIconsLayer implements Layer {
     }
     structureCanvas.width = Math.ceil(iconSize);
     structureCanvas.height = Math.ceil(iconSize);
-    const context = structureCanvas.getContext("2d")!;
+    const context = structureCanvas.getContext("2d");
+    if (!context) throw new Error("2D context not supported");
 
     let borderColor: string;
     if (isConstruction) {
@@ -502,6 +507,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createLevelSprite(unit: UnitView): PIXI.Container {
+    if (this.levelsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
       type: "level",
       stage: this.levelsStage,
@@ -509,6 +515,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createDotSprite(unit: UnitView): PIXI.Container {
+    if (this.dotsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
       type: "dot",
       stage: this.dotsStage,
@@ -516,6 +523,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createIconSprite(unit: UnitView): PIXI.Container {
+    if (this.iconsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
       type: "icon",
       stage: this.iconsStage,
@@ -561,7 +569,8 @@ export class StructureIconsLayer implements Layer {
         unit.type() === UnitType.Construction
           ? unit.constructionType()
           : unit.type();
-      const shape = STRUCTURE_SHAPES[unitType!];
+      const shape =
+        unitType !== undefined ? STRUCTURE_SHAPES[unitType] : undefined;
       if (shape !== undefined) {
         text.position.y = Math.round(-ICON_SIZE[shape] / 2 - 2);
       }
@@ -598,7 +607,8 @@ export class StructureIconsLayer implements Layer {
     const imageCanvas = document.createElement("canvas");
     imageCanvas.width = image.width;
     imageCanvas.height = image.height;
-    const ctx = imageCanvas.getContext("2d")!;
+    const ctx = imageCanvas.getContext("2d");
+    if (!ctx) throw new Error("2D context not supported");
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
     ctx.globalCompositeOperation = "destination-in";
@@ -629,6 +639,7 @@ export class StructureIconsLayer implements Layer {
         ? ICON_SIZE[STRUCTURE_SHAPES[type]]
         : 28;
 
+    if (this.pixicanvas === undefined) throw new Error("Not initialized");
     const onScreen =
       screenPos.x + margin > 0 &&
       screenPos.x - margin < this.pixicanvas.width &&

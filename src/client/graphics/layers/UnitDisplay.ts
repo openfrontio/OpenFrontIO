@@ -15,8 +15,8 @@ import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLaunche
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
   private readonly _selectedStructure: UnitType | null = null;
   private _cities = 0;
   private _factories = 0;
@@ -31,6 +31,7 @@ export class UnitDisplay extends LitElement implements Layer {
   }
 
   init() {
+    if (this.game === undefined) throw new Error("Not initialized");
     const config = this.game.config();
     this.allDisabled =
       config.isUnitDisabled(UnitType.City) &&
@@ -60,6 +61,7 @@ export class UnitDisplay extends LitElement implements Layer {
     unitType: UnitType,
     altText: string,
   ) {
+    if (this.game === undefined) throw new Error("Not initialized");
     if (this.game.config().isUnitDisabled(unitType)) {
       return html``;
     }
@@ -71,9 +73,9 @@ export class UnitDisplay extends LitElement implements Layer {
           ? "#ffffff2e"
           : "none"}"
         @mouseenter="${() =>
-          this.eventBus.emit(new ToggleStructureEvent(unitType))}"
+          this.eventBus?.emit(new ToggleStructureEvent(unitType))}"
         @mouseleave="${() =>
-          this.eventBus.emit(new ToggleStructureEvent(null))}"
+          this.eventBus?.emit(new ToggleStructureEvent(null))}"
       >
         <img
           src=${icon}

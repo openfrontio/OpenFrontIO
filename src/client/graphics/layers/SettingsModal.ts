@@ -26,8 +26,8 @@ export class ShowSettingsModalEvent {
 
 @customElement("settings-modal")
 export class SettingsModal extends LitElement implements Layer {
-  public eventBus: EventBus;
-  public userSettings: UserSettings;
+  public eventBus: EventBus | undefined;
+  public userSettings: UserSettings | undefined;
 
   @state()
   private isVisible = false;
@@ -45,6 +45,7 @@ export class SettingsModal extends LitElement implements Layer {
   wasPausedWhenOpened = false;
 
   init() {
+    if (this.eventBus === undefined) throw new Error("Not initialized");
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;
@@ -100,48 +101,48 @@ export class SettingsModal extends LitElement implements Layer {
 
   private pauseGame(pause: boolean) {
     if (this.shouldPause && !this.wasPausedWhenOpened)
-      this.eventBus.emit(new PauseGameEvent(pause));
+      this.eventBus?.emit(new PauseGameEvent(pause));
   }
 
   private onTerrainButtonClick() {
     this.alternateView = !this.alternateView;
-    this.eventBus.emit(new AlternateViewEvent(this.alternateView));
+    this.eventBus?.emit(new AlternateViewEvent(this.alternateView));
     this.requestUpdate();
   }
 
   private onToggleEmojisButtonClick() {
-    this.userSettings.toggleEmojis();
+    this.userSettings?.toggleEmojis();
     this.requestUpdate();
   }
 
   private onToggleStructureSpritesButtonClick() {
-    this.userSettings.toggleStructureSprites();
+    this.userSettings?.toggleStructureSprites();
     this.requestUpdate();
   }
 
   private onToggleSpecialEffectsButtonClick() {
-    this.userSettings.toggleFxLayer();
+    this.userSettings?.toggleFxLayer();
     this.requestUpdate();
   }
 
   private onToggleDarkModeButtonClick() {
-    this.userSettings.toggleDarkMode();
-    this.eventBus.emit(new RedrawGraphicsEvent());
+    this.userSettings?.toggleDarkMode();
+    this.eventBus?.emit(new RedrawGraphicsEvent());
     this.requestUpdate();
   }
 
   private onToggleRandomNameModeButtonClick() {
-    this.userSettings.toggleRandomName();
+    this.userSettings?.toggleRandomName();
     this.requestUpdate();
   }
 
   private onToggleLeftClickOpensMenu() {
-    this.userSettings.toggleLeftClickOpenMenu();
+    this.userSettings?.toggleLeftClickOpenMenu();
     this.requestUpdate();
   }
 
   private onTogglePerformanceOverlayButtonClick() {
-    this.userSettings.togglePerformanceOverlay();
+    this.userSettings?.togglePerformanceOverlay();
     this.requestUpdate();
   }
 
@@ -221,13 +222,13 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.emojis_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.emojis()
+                  ${this.userSettings?.emojis()
                     ? translateText("user_setting.emojis_visible")
                     : translateText("user_setting.emojis_hidden")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.emojis()
+                ${this.userSettings?.emojis()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
@@ -249,13 +250,13 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.dark_mode_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.darkMode()
+                  ${this.userSettings?.darkMode()
                     ? translateText("user_setting.dark_mode_enabled")
                     : translateText("user_setting.light_mode_enabled")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.darkMode()
+                ${this.userSettings?.darkMode()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
@@ -277,13 +278,13 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.special_effects_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.fxLayer()
+                  ${this.userSettings?.fxLayer()
                     ? translateText("user_setting.special_effects_enabled")
                     : translateText("user_setting.special_effects_disabled")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.fxLayer()
+                ${this.userSettings?.fxLayer()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
@@ -305,13 +306,13 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.structure_sprites_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.structureSprites()
+                  ${this.userSettings?.structureSprites()
                     ? translateText("user_setting.structure_sprites_enabled")
                     : translateText("user_setting.structure_sprites_disabled")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.structureSprites()
+                ${this.userSettings?.structureSprites()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
@@ -328,13 +329,13 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.anonymous_names_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.anonymousNames()
+                  ${this.userSettings?.anonymousNames()
                     ? translateText("user_setting.anonymous_names_enabled")
                     : translateText("user_setting.real_names_shown")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.anonymousNames()
+                ${this.userSettings?.anonymousNames()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
@@ -351,13 +352,13 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.left_click_menu")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.leftClickOpensMenu()
+                  ${this.userSettings?.leftClickOpensMenu()
                     ? translateText("user_setting.left_click_opens_menu")
                     : translateText("user_setting.right_click_opens_menu")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.leftClickOpensMenu()
+                ${this.userSettings?.leftClickOpensMenu()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
@@ -379,7 +380,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.performance_overlay_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.performanceOverlay()
+                  ${this.userSettings?.performanceOverlay()
                     ? translateText("user_setting.performance_overlay_enabled")
                     : translateText(
                       "user_setting.performance_overlay_disabled",
@@ -387,7 +388,7 @@ export class SettingsModal extends LitElement implements Layer {
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings.performanceOverlay()
+                ${this.userSettings?.performanceOverlay()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

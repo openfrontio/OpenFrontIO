@@ -46,7 +46,8 @@ export class ReplayPanel extends LitElement implements Layer {
 
   tick() {
     if (!this.visible) return;
-    if (this.game!.ticks() % 10 === 0) {
+    if (!this.game) return;
+    if (this.game.ticks() % 10 === 0) {
       this.requestUpdate();
     }
   }

@@ -61,9 +61,7 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     console.error("EmojiTable element not found in the DOM");
   }
-  emojiTable.transformHandler = transformHandler;
-  emojiTable.game = game;
-  emojiTable.initEventBus(eventBus);
+  emojiTable.init(transformHandler, game, eventBus);
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
@@ -237,7 +235,7 @@ export function createRenderer(
     new StructureIconsLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
-    new UILayer(game, eventBus, transformHandler),
+    new UILayer(game, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,

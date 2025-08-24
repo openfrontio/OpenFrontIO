@@ -2,7 +2,7 @@ import { Execution, Game, MessageType, Player } from "../game/Game";
 
 export class DeleteUnitExecution implements Execution {
   private active = true;
-  private mg: Game;
+  private mg: Game | undefined;
 
   constructor(
     private readonly player: Player,

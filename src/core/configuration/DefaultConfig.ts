@@ -101,7 +101,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.CF_CREDS_PATH ?? "";
   }
 
-  private publicKey: JWK;
+  private publicKey: JWK | undefined;
   abstract jwtAudience(): string;
   jwtIssuer(): string {
     const audience = this.jwtAudience();

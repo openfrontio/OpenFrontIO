@@ -237,7 +237,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   ${ref((el) => {
                     if (el instanceof HTMLElement) {
                       requestAnimationFrame(() => {
-                        renderPlayerFlag(player.cosmetics.flag!, el);
+                        renderPlayerFlag(player.cosmetics.flag, el);
                       });
                     }
                   })}
