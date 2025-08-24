@@ -21,7 +21,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   private playerTeam: string | null = null;
 
   private playerColor: Colord = new Colord("#FFFFFF");
-  public game: GameView;
+  public game: GameView | undefined;
   private _shownOnInit = false;
 
   createRenderRoot() {
@@ -42,8 +42,12 @@ export class GameLeftSidebar extends LitElement implements Layer {
   }
 
   tick() {
+    if (!this.game) throw new Error("Not initialized");
     if (!this.playerTeam && this.game.myPlayer()?.team()) {
-      this.playerTeam = this.game.myPlayer()!.team();
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer !== null) {
+        this.playerTeam = myPlayer.team();
+      }
       if (this.playerTeam) {
         this.playerColor = this.game
           .config()

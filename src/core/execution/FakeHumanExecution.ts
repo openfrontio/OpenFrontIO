@@ -30,7 +30,7 @@ export class FakeHumanExecution implements Execution {
   private active = true;
   private readonly random: PseudoRandom;
   private behavior: BotBehavior | null = null;
-  private mg: Game;
+  private mg: Game | undefined;
   private player: Player | null = null;
 
   private readonly attackRate: number;
@@ -69,6 +69,7 @@ export class FakeHumanExecution implements Execution {
   private updateRelationsFromEmbargos() {
     const { player } = this;
     if (player === null) return;
+    if (this.mg === undefined) throw new Error("Not initialized");
     const others = this.mg.players().filter((p) => p.id() !== player.id());
 
     others.forEach((other: Player) => {
@@ -92,13 +93,15 @@ export class FakeHumanExecution implements Execution {
   private handleEmbargoesToHostileNations() {
     const { player } = this;
     if (player === null) return;
+    if (this.mg === undefined) throw new Error("Not initialized");
     const others = this.mg.players().filter((p) => p.id() !== player.id());
 
     others.forEach((other: Player) => {
       /* When player is hostile starts embargo. Do not stop until neutral again */
       if (
         player.relation(other) <= Relation.Hostile &&
-        !player.hasEmbargoAgainst(other)
+        !player.hasEmbargoAgainst(other) &&
+        !player.isOnSameTeam(other)
       ) {
         player.addEmbargo(other, false);
       } else if (
@@ -113,6 +116,7 @@ export class FakeHumanExecution implements Execution {
   tick(ticks: number) {
     if (ticks % this.attackRate !== this.attackTick) return;
 
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (this.mg.inSpawnPhase()) {
       const rl = this.randomLand();
       if (rl === null) {
@@ -163,13 +167,15 @@ export class FakeHumanExecution implements Execution {
 
   private maybeAttack() {
     if (this.player === null || this.behavior === null) {
-      throw new Error("not initialized");
+      throw new Error("Not initialized");
     }
+    const game = this.mg;
+    if (game === undefined) throw new Error("Not initialized");
     const enemyborder = Array.from(this.player.borderTiles())
-      .flatMap((t) => this.mg.neighbors(t))
+      .flatMap((t) => game.neighbors(t))
       .filter(
         (t) =>
-          this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
+          game.isLand(t) && game.ownerID(t) !== this.player?.smallID(),
       );
 
     if (enemyborder.length === 0) {
@@ -184,10 +190,10 @@ export class FakeHumanExecution implements Execution {
     }
 
     const borderPlayers = enemyborder.map((t) =>
-      this.mg.playerBySmallID(this.mg.ownerID(t)),
+      game.playerBySmallID(game.ownerID(t)),
     );
     if (borderPlayers.some((o) => !o.isPlayer())) {
-      this.behavior.sendAttack(this.mg.terraNullius());
+      this.behavior.sendAttack(game.terraNullius());
       return;
     }
 
@@ -217,7 +223,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private shouldAttack(other: Player): boolean {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     if (this.player.isOnSameTeam(other)) {
       return false;
     }
@@ -238,6 +244,7 @@ export class FakeHumanExecution implements Execution {
     if (other.isTraitor()) {
       return false;
     }
+    if (this.mg === undefined) throw new Error("Not initialized");
     const { difficulty } = this.mg.config().gameConfig();
     if (
       difficulty === Difficulty.Hard ||
@@ -253,9 +260,10 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendEmoji(enemy: Player) {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     if (enemy.type() !== PlayerType.Human) return;
     const lastSent = this.lastEmojiSent.get(enemy) ?? -300;
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (this.mg.ticks() - lastSent <= 300) return;
     this.lastEmojiSent.set(enemy, this.mg.ticks());
     this.mg.addExecution(
@@ -268,7 +276,8 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendNuke(other: Player) {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     const silos = this.player.units(UnitType.MissileSilo);
     if (
       silos.length === 0 ||
@@ -317,6 +326,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private removeOldNukeEvents() {
+    if (this.mg === undefined) throw new Error("Not initialized");
     const maxAge = 500;
     const tick = this.mg.ticks();
     while (
@@ -328,7 +338,8 @@ export class FakeHumanExecution implements Execution {
   }
 
   private sendNuke(tile: TileRef) {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(
@@ -337,10 +348,12 @@ export class FakeHumanExecution implements Execution {
   }
 
   private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    const game = this.mg;
     // Potential damage in a 25-tile radius
     const dist = euclDistFN(tile, 25, false);
     let tileValue = targets
-      .filter((unit) => dist(this.mg, unit.tile()))
+      .filter((unit) => dist(game, unit.tile()))
       .map((unit): number => {
         switch (unit.type()) {
           case UnitType.City:
@@ -363,7 +376,7 @@ export class FakeHumanExecution implements Execution {
       50_000 *
       targets.filter(
         (unit) =>
-          unit.type() === UnitType.SAMLauncher && dist50(this.mg, unit.tile()),
+          unit.type() === UnitType.SAMLauncher && dist50(game, unit.tile()),
       ).length;
 
     // Prefer tiles that are closer to a silo
@@ -377,7 +390,7 @@ export class FakeHumanExecution implements Execution {
 
     // Don't target near recent targets
     tileValue -= this.lastNukeSent
-      .filter(([_tick, tile]) => dist(this.mg, tile))
+      .filter(([_tick, tile]) => dist(game, tile))
       .map((_) => 1_000_000)
       .reduce((prev, cur) => prev + cur, 0);
 
@@ -385,14 +398,13 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSendBoatAttack(other: Player) {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     if (this.player.isOnSameTeam(other)) return;
     const closest = closestTwoTiles(
       this.mg,
-      Array.from(this.player.borderTiles()).filter((t) =>
-        this.mg.isOceanShore(t),
-      ),
-      Array.from(other.borderTiles()).filter((t) => this.mg.isOceanShore(t)),
+      Array.from(this.player.borderTiles()).filter((t) => this.mg?.isOceanShore(t)),
+      Array.from(other.borderTiles()).filter((t) => this.mg?.isOceanShore(t)),
     );
     if (closest === null) {
       return;
@@ -419,7 +431,8 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSpawnStructure(type: UnitType): boolean {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     const owned = this.player.unitsOwned(type);
     const perceivedCostMultiplier = Math.min(owned + 1, 5);
     const realCost = this.cost(type);
@@ -440,11 +453,11 @@ export class FakeHumanExecution implements Execution {
   }
 
   private structureSpawnTile(type: UnitType): TileRef | null {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     const tiles =
       type === UnitType.Port
         ? Array.from(this.player.borderTiles()).filter((t) =>
-          this.mg.isOceanShore(t),
+          this.mg?.isOceanShore(t),
         )
         : Array.from(this.player.tiles());
     if (tiles.length === 0) return null;
@@ -479,7 +492,8 @@ export class FakeHumanExecution implements Execution {
   }
 
   private structureSpawnTileValue(type: UnitType): (tile: TileRef) => number {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     const borderTiles = this.player.borderTiles();
     const { mg } = this;
     const otherUnits = this.player.units(type);
@@ -536,7 +550,8 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeSpawnWarship(): boolean {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     if (!this.random.chance(50)) {
       return false;
     }
@@ -566,6 +581,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private randTerritoryTile(p: Player): TileRef | null {
+    if (this.mg === undefined) throw new Error("Not initialized");
     const boundingBox = calculateBoundingBox(this.mg, p.borderTiles());
     for (let i = 0; i < 100; i++) {
       const randX = this.random.nextInt(boundingBox.min.x, boundingBox.max.x);
@@ -583,6 +599,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private warshipSpawnTile(portTile: TileRef): TileRef | null {
+    if (this.mg === undefined) throw new Error("Not initialized");
     const radius = 250;
     for (let attempts = 0; attempts < 50; attempts++) {
       const randX = this.random.nextInt(
@@ -607,14 +624,16 @@ export class FakeHumanExecution implements Execution {
   }
 
   private cost(type: UnitType): Gold {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     return this.mg.unitInfo(type).cost(this.player);
   }
 
   sendBoatRandomly() {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
-      this.mg.isOceanShore(t),
+      this.mg?.isOceanShore(t),
     );
     if (oceanShore.length === 0) {
       return;
@@ -640,6 +659,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   randomLand(): TileRef | null {
+    if (this.mg === undefined) throw new Error("Not initialized");
     const delta = 25;
     let tries = 0;
     while (tries < 50) {
@@ -665,7 +685,8 @@ export class FakeHumanExecution implements Execution {
   }
 
   private randomBoatTarget(tile: TileRef, dist: number): TileRef | null {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.player === null) throw new Error("Not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
     for (let i = 0; i < 500; i++) {

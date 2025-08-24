@@ -3,7 +3,7 @@ import {
   GameInputSchema,
   WorkerApiGameIdExists,
 } from "../core/WorkerSchemas";
-import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
+import { GameRecord, GameRecordSchema } from "../core/Schemas";
 import { LimiterType, gatekeeper } from "./Gatekeeper";
 import { WebSocket, WebSocketServer } from "ws";
 import { archive, readGameRecord } from "./Archive";
@@ -11,6 +11,7 @@ import express, { NextFunction, Request, Response } from "express";
 import { GameEnv } from "../core/configuration/Config";
 import { GameManager } from "./GameManager";
 import { GameType } from "../core/game/Game";
+import { ID } from "../core/BaseSchemas";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";

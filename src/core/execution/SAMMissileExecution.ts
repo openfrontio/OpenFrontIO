@@ -13,9 +13,9 @@ import { TileRef } from "../game/GameMap";
 
 export class SAMMissileExecution implements Execution {
   private active = true;
-  private pathFinder: AirPathFinder;
+  private pathFinder: AirPathFinder | undefined;
   private SAMMissile: Unit | undefined;
-  private mg: Game;
+  private mg: Game | undefined;
   private speed = 0;
 
   constructor(
@@ -33,6 +33,8 @@ export class SAMMissileExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.pathFinder === undefined) throw new Error("Not initialized");
     this.SAMMissile ??= this._owner.buildUnit(
       UnitType.SAMMissile,
       this.spawn,

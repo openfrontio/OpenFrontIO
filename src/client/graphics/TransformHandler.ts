@@ -19,7 +19,7 @@ export class TransformHandler {
   private offsetY = -200;
   private lastGoToCallTime: number | null = null;
 
-  private target: Cell | null;
+  private target: Cell | null = null;
   private intervalID: ReturnType<typeof setTimeout> | null = null;
   private changed = false;
 

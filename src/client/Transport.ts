@@ -172,12 +172,12 @@ export class SendKickPlayerIntentEvent implements GameEvent {
 export class Transport {
   private socket: WebSocket | null = null;
 
-  private localServer: LocalServer;
+  private localServer: LocalServer | undefined;
 
   private readonly buffer: string[] = [];
 
-  private onconnect: () => void;
-  private onmessage: (msg: ServerMessage) => void;
+  private onconnect: (() => void) | undefined;
+  private onmessage: ((msg: ServerMessage) => void) | undefined;
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
@@ -336,7 +336,7 @@ export class Transport {
           console.error("Error parsing server message", error);
           return;
         }
-        this.onmessage(result.data);
+        this.onmessage?.(result.data);
       } catch (e) {
         console.error("Error in onmessage handler:", e, event.data);
         return;
@@ -362,12 +362,14 @@ export class Transport {
   }
 
   public reconnect() {
+    if (this.onconnect === undefined) return;
+    if (this.onmessage === undefined) return;
     this.connect(this.onconnect, this.onmessage);
   }
 
   public turnComplete() {
     if (this.isLocal) {
-      this.localServer.turnComplete();
+      this.localServer?.turnComplete();
     }
   }
 
@@ -386,7 +388,7 @@ export class Transport {
 
   leaveGame(saveFullGame = false) {
     if (this.isLocal) {
-      this.localServer.endGame(saveFullGame);
+      this.localServer?.endGame(saveFullGame);
       return;
     }
     this.stopPing();
@@ -550,9 +552,9 @@ export class Transport {
       return;
     }
     if (event.paused) {
-      this.localServer.pause();
+      this.localServer?.pause();
     } else {
-      this.localServer.resume();
+      this.localServer?.resume();
     }
   }
 
@@ -582,7 +584,7 @@ export class Transport {
     } else {
       console.log(
         "WebSocket is not open. Current state:",
-        this.socket!.readyState,
+        this.socket?.readyState,
       );
       console.log("attempting reconnect");
     }
@@ -648,7 +650,7 @@ export class Transport {
   private sendMsg(msg: ClientMessage) {
     if (this.isLocal) {
       // Forward message to local server
-      this.localServer.onMessage(msg);
+      this.localServer?.onMessage(msg);
       return;
     } else if (this.socket === null) {
       // Socket missing, do nothing
@@ -660,7 +662,9 @@ export class Transport {
       console.warn("socket not ready, closing and trying later");
       this.socket.close();
       this.socket = null;
-      this.connectRemote(this.onconnect, this.onmessage);
+      if (this.onconnect && this.onmessage) {
+        this.connectRemote(this.onconnect, this.onmessage);
+      }
       this.buffer.push(str);
     } else {
       // Send the message directly

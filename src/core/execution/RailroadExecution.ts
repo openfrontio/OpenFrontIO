@@ -4,7 +4,7 @@ import { Railroad } from "../game/Railroad";
 import { TileRef } from "../game/GameMap";
 
 export class RailroadExecution implements Execution {
-  private mg: Game;
+  private mg: Game | undefined;
   private active = true;
   private headIndex = 0;
   private tailIndex = 0;
@@ -52,6 +52,7 @@ export class RailroadExecution implements Execution {
   /* eslint-enable sort-keys */
 
   private computeExtremityDirection(tile: TileRef, next: TileRef): RailType {
+    if (this.mg === undefined) throw new Error("Not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
     const nextX = this.mg.x(next);
@@ -75,9 +76,7 @@ export class RailroadExecution implements Execution {
     current: TileRef,
     next: TileRef,
   ): RailType {
-    if (this.mg === null) {
-      throw new Error("Not initialized");
-    }
+    if (this.mg === undefined) throw new Error("Not initialized");
     const x1 = this.mg.x(prev);
     const y1 = this.mg.y(prev);
     const x2 = this.mg.x(current);
@@ -114,9 +113,7 @@ export class RailroadExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.mg === null) {
-      throw new Error("Not initialized");
-    }
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (!this.activeSourceOrDestination()) {
       this.active = false;
       return;

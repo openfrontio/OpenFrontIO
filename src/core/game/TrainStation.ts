@@ -87,7 +87,7 @@ export function createTrainStopHandlers(
 export class TrainStation {
   private readonly stopHandlers: Partial<Record<UnitType, TrainStopHandler>> =
     {};
-  private cluster: Cluster | null;
+  private cluster: Cluster | null = null;
   private readonly railroads: Set<Railroad> = new Set();
 
   constructor(
