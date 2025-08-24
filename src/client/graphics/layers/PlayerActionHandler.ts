@@ -27,8 +27,12 @@ export class PlayerActionHandler {
     private readonly uiState: UIState,
   ) {
     this.eventBus.on(TurnDebtEvent, (e) => {
-      this.isInTurnDebt = e.isInDebt;
+      this.isInTurnDebt = e.isInTurnDebt;
     });
+  }
+
+  private actionsBlocked(): boolean {
+    return this.isInTurnDebt;
   }
 
   async getPlayerActions(
@@ -39,7 +43,7 @@ export class PlayerActionHandler {
   }
 
   handleAttack(player: PlayerView, targetId: string | null) {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(
       new SendAttackIntentEvent(
         targetId,
@@ -54,7 +58,7 @@ export class PlayerActionHandler {
     targetTile: TileRef,
     spawnTile: TileRef | null,
   ) {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         targetId,
@@ -73,37 +77,37 @@ export class PlayerActionHandler {
   }
 
   handleSpawn(tile: TileRef) {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(new SendSpawnIntentEvent(tile));
   }
 
   handleAllianceRequest(player: PlayerView, recipient: PlayerView) {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(new SendAllianceRequestIntentEvent(player, recipient));
   }
 
   handleBreakAlliance(player: PlayerView, recipient: PlayerView) {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(new SendBreakAllianceIntentEvent(player, recipient));
   }
 
   handleTargetPlayer(targetId: string | null) {
-    if (!targetId || this.isInTurnDebt) return;
+    if (!targetId || this.actionsBlocked()) return;
     this.eventBus.emit(new SendTargetPlayerIntentEvent(targetId));
   }
 
   handleDonateGold(recipient: PlayerView) {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(new SendDonateGoldIntentEvent(recipient, null));
   }
 
   handleDonateTroops(recipient: PlayerView) {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(new SendDonateTroopsIntentEvent(recipient, null));
   }
 
   handleEmbargo(recipient: PlayerView, action: "start" | "stop") {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(new SendEmbargoIntentEvent(recipient, action));
   }
 
@@ -116,7 +120,7 @@ export class PlayerActionHandler {
   }
 
   handleDeleteUnit(unitId: number) {
-    if (this.isInTurnDebt) return;
+    if (this.actionsBlocked()) return;
     this.eventBus.emit(new SendDeleteUnitIntentEvent(unitId));
   }
 }

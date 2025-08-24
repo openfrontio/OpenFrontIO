@@ -614,6 +614,6 @@
     "delete_unit_description": "Click to delete the nearest unit"
   },
   "catchup_overlay": {
-    "catchup_notice": "Please wait while the simulation catches up with the server..."
+    "catchup_notice": "Catching up to the server... {progress}%"
   }
 }

@@ -18,7 +18,8 @@ export class CatchupMessage {
   }
 
   show(progress: number): void {
-    this.element.textContent = `${translateText("catchup_overlay.catchup_notice")} ${progress}%`;
+    const p = Math.min(Math.max(progress, 0), 100);
+    this.element.textContent = `${translateText("catchup_overlay.catchup_notice", { progress: p })}`;
     this.element.style.display = "block";
   }
 

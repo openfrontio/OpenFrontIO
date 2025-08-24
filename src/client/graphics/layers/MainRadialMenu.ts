@@ -75,7 +75,7 @@ export class MainRadialMenu extends LitElement implements Layer {
   init() {
     this.radialMenu.init();
     this.eventBus.on(TurnDebtEvent, (e) => {
-      this.isInTurnDebt = e.isInDebt;
+      this.isInTurnDebt = e.isInTurnDebt;
       if (this.isInTurnDebt) {
         this.closeMenu();
       }

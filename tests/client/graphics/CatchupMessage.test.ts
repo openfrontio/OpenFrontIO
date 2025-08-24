@@ -36,15 +36,15 @@ describe("CatchupMessage", () => {
   test("shows message with progress", () => {
     catchupMessage.show(50);
     expect(element.style.display).toBe("block");
-    expect(element.textContent).toBe("translated_catchup_overlay.catchup_notice 50%");
-    expect(translateText).toHaveBeenCalledWith("catchup_overlay.catchup_notice");
+    expect(element.textContent).toBe("translated_catchup_overlay.catchup_notice");
+    expect(translateText).toHaveBeenCalledWith("catchup_overlay.catchup_notice", { progress: 50 });
   });
 
   test("progress is updated by subsequent calls to show", () => {
     catchupMessage.show(50);
-    expect(element.textContent).toBe("translated_catchup_overlay.catchup_notice 50%");
+    expect(element.textContent).toBe("translated_catchup_overlay.catchup_notice");
     catchupMessage.show(75);
-    expect(element.textContent).toBe("translated_catchup_overlay.catchup_notice 75%");
+    expect(element.textContent).toBe("translated_catchup_overlay.catchup_notice");
   });
 
   test("hides message", () => {

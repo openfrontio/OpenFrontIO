@@ -170,7 +170,7 @@ export class SendKickPlayerIntentEvent implements GameEvent {
 }
 
 export class TurnDebtEvent implements GameEvent {
-  constructor(public readonly isInDebt: boolean) {}
+  constructor(public readonly isInTurnDebt: boolean) {}
 }
 
 export class Transport {

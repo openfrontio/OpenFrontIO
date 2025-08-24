@@ -135,7 +135,7 @@ export class BuildMenu extends LitElement implements Layer {
   init() {
     if (this.eventBus === undefined) throw new Error("Not initialized");
     this.eventBus.on(TurnDebtEvent, (e) => {
-      this.isInTurnDebt = e.isInDebt;
+      this.isInTurnDebt = e.isInTurnDebt;
       if (this.isInTurnDebt) {
         this.hideMenu();
       }

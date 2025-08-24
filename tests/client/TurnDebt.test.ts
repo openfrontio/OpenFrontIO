@@ -22,7 +22,7 @@ jest.mock("../../src/client/Transport", () => ({
     reconnect: jest.fn(),
   })),
   TurnDebtEvent: class TurnDebtEvent {
-    constructor(public readonly isInDebt: boolean) {}
+    constructor(public readonly isInTurnDebt: boolean) {}
   },
 }));
 
@@ -104,7 +104,7 @@ describe("Turn Debt", () => {
 
     expect(clientGameRunner["isInTurnDebt"]).toBe(true);
     expect(emittedEvents).toHaveLength(1);
-    expect(emittedEvents[0].isInDebt).toBe(true);
+    expect(emittedEvents[0].isInTurnDebt).toBe(true);
   });
 
   test("exits turn debt when caught up", () => {
@@ -120,7 +120,7 @@ describe("Turn Debt", () => {
 
     expect(clientGameRunner["isInTurnDebt"]).toBe(false);
     expect(emittedEvents).toHaveLength(2);
-    expect(emittedEvents[1].isInDebt).toBe(false);
+    expect(emittedEvents[1].isInTurnDebt).toBe(false);
   });
 
   test("tracks peak turn debt", () => {

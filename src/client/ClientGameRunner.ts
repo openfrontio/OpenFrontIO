@@ -668,18 +668,22 @@ export class ClientGameRunner {
   }
 
   private onTurnProcessed() {
-    const turnDebt = this.turnsSeen - this.turnsProcessed;
     const wasInDebt = this.isInTurnDebt;
     this.turnsProcessed++;
+    const turnDebt = this.turnsSeen - this.turnsProcessed;
+    this.isInTurnDebt = this.isInTurnDebt || turnDebt >= this.turnDebtThreshold;
 
-    if (turnDebt >= this.turnDebtThreshold) {
-      this.isInTurnDebt = true;
+    if (this.isInTurnDebt) {
       this.peakTurnDebt = Math.max(turnDebt, this.peakTurnDebt);
       const turnsLeft = turnDebt - this.turnDebtExitThreshold;
       const totalTurnsToProcess = this.peakTurnDebt - this.turnDebtExitThreshold;
-      const progress = Math.round(((totalTurnsToProcess - turnsLeft) / totalTurnsToProcess) * 100);
+      const progress = Math.round(
+        ((totalTurnsToProcess - turnsLeft) / Math.max(totalTurnsToProcess, 1) * 100),
+      );
       this.catchupMessage.show(progress);
-    } else if (turnDebt <= this.turnDebtExitThreshold) {
+    }
+
+    if(turnDebt < this.turnDebtExitThreshold) {
       this.peakTurnDebt = 0;
       this.isInTurnDebt = false;
       this.catchupMessage.hide();
