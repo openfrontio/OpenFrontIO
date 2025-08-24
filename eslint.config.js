@@ -1,4 +1,3 @@
-import eslintConfigPrettier from "eslint-config-prettier/flat";
 import eslintPluginLocal from "./eslint-plugin-local/plugin.js";
 import { fileURLToPath } from "node:url";
 import globals from "globals";
@@ -21,7 +20,6 @@ export default [
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
-  eslintConfigPrettier,
   {
     languageOptions: {
       parserOptions: {
@@ -55,7 +53,6 @@ export default [
     rules: {
       // Enable rules
       "@stylistic/quotes": ["error", "double", { avoidEscape: true }],
-      "@stylistic/indent": ["error", 2],
       "@stylistic/semi": "error",
       "@stylistic/space-infix-ops": "error",
       "@stylistic/type-annotation-spacing": [
@@ -71,10 +68,7 @@ export default [
         },
       ],
       "@stylistic/eol-last": "error",
-      "@typescript-eslint/consistent-type-definitions": [
-        "error",
-        "type",
-      ],
+      "@typescript-eslint/consistent-type-definitions": ["error", "type"],
       "@typescript-eslint/no-duplicate-enum-values": "error",
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-inferrable-types": "error",
@@ -88,8 +82,7 @@ export default [
       "@typescript-eslint/prefer-literal-enum-member": "error",
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       "@typescript-eslint/prefer-readonly": "error",
-      "eqeqeq": "error",
-      "indent": "off", // @stylistic/indent
+      eqeqeq: "error",
       "sort-keys": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
@@ -124,7 +117,6 @@ export default [
         object: true,
       }],
       "quote-props": ["error", "consistent-as-needed"],
-      "sort-imports": "error",
       "space-before-blocks": ["error", "always"],
       "space-before-function-paren": ["error", {
         anonymous: "always",

@@ -11,7 +11,7 @@
     "test": "jest",
     "perf": "npx tsx tests/perf/*.ts",
     "test:coverage": "jest --coverage",
-    "format": "prettier --ignore-unknown --write .",
+    "format": "biome format --write .",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "prepare": "husky"
@@ -19,13 +19,14 @@
   "lint-staged": {
     "**/*": [
       "eslint --fix",
-      "prettier --ignore-unknown --write"
+      "biome check --fix"
     ]
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@babel/preset-typescript": "^7.24.7",
+    "@biomejs/biome": "^2.2.2",
     "@datastructures-js/priority-queue": "^6.3.3",
     "@eslint/compat": "^1.2.7",
     "@eslint/js": "^9.21.0",
@@ -61,7 +62,6 @@
     "css-loader": "^7.1.2",
     "d3": "^7.9.0",
     "eslint": "^9.21.0",
-    "eslint-config-prettier": "^10.1.1",
     "eslint-formatter-gha": "^1.5.2",
     "eslint-plugin-jest": "^29.0.1",
     "eslint-webpack-plugin": "^5.0.0",
@@ -81,9 +81,6 @@
     "pixi.js": "^8.11.0",
     "postcss": "^8.5.1",
     "postcss-loader": "^8.1.1",
-    "prettier": "^3.5.3",
-    "prettier-plugin-organize-imports": "^4.1.0",
-    "prettier-plugin-sh": "^0.17.4",
     "protobufjs": "^7.5.3",
     "raw-loader": "^4.0.2",
     "sinon": "^21.0.0",
