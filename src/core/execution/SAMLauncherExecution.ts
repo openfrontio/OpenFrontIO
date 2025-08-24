@@ -30,7 +30,7 @@ class SAMTargetingSystem {
   // Null interception tile means there are no interception tiles in range. Store it to
   private readonly precomputedNukes: Map<number, InterceptionTile | null> =
     new Map();
-  private readonly missileSpeed: number = 0;
+  private readonly missileSpeed: number;
 
   constructor(
     private readonly mg: Game,
