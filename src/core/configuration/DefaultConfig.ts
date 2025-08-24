@@ -533,6 +533,9 @@ export class DefaultConfig implements Config {
   targetCooldown(): Tick {
     return 15 * 10;
   }
+  allianceRequestDuration(): Tick {
+    return 20 * 10;
+  }
   allianceRequestCooldown(): Tick {
     return 30 * 10;
   }
