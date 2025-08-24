@@ -101,13 +101,24 @@ class SAMTargetingSystem {
     const targets: Array<Target> = [];
     for (const nuke of nukes) {
       const nukeId = nuke.unit.id();
-      if (this.precomputedNukes.has(nukeId)) {
-        const precomputedTarget = this.precomputedNukes.get(nukeId);
-        if (precomputedTarget && precomputedTarget.tick === ticks) {
-          targets.push({ tile: precomputedTarget.tile, unit: nuke.unit });
-          this.precomputedNukes.delete(nukeId);
+      const cached = this.precomputedNukes.get(nukeId);
+      if (cached !== undefined) {
+        if (cached === null) {
+          // Known unreachable, skip.
+          continue;
         }
-        continue; // Either no interception tile, or not yet in range. Skip it.
+        if (cached.tick === ticks) {
+          // Time to shoot!
+          targets.push({ tile: cached.tile, unit: nuke.unit });
+          this.precomputedNukes.delete(nukeId);
+          continue;
+        }
+        if (cached.tick > ticks) {
+          // Not due yet, skip for now.
+          continue;
+        }
+        // Missed the planned tick (e.g was on cooldown), recompute a new interception tile if possible
+        this.precomputedNukes.delete(nukeId);
       }
       const interceptionTile = this.computeInterceptionTile(nuke.unit);
       if (interceptionTile !== undefined) {
