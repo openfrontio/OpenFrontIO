@@ -1,10 +1,6 @@
-import { AlternateViewEvent, RedrawGraphicsEvent } from "../../InputHandler";
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { Layer } from "./Layer";
-import { PauseGameEvent } from "../../Transport";
-import { UserSettings } from "../../../core/game/UserSettings";
+import structureIcon from "../../../../resources/images/CityIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -12,9 +8,13 @@ import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
-import structureIcon from "../../../../resources/images/CityIconWhite.svg";
-import { translateText } from "../../Utils";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { AlternateViewEvent, RedrawGraphicsEvent } from "../../InputHandler";
+import { PauseGameEvent } from "../../Transport";
+import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
 
 export class ShowSettingsModalEvent {
   constructor(
@@ -199,15 +199,19 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.toggle_terrain")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.alternateView
-                    ? translateText("user_setting.terrain_enabled")
-                    : translateText("user_setting.terrain_disabled")}
+                  ${
+                    this.alternateView
+                      ? translateText("user_setting.terrain_enabled")
+                      : translateText("user_setting.terrain_disabled")
+                  }
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.alternateView
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.alternateView
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 
@@ -222,15 +226,19 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.emojis_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings?.emojis()
-                    ? translateText("user_setting.emojis_visible")
-                    : translateText("user_setting.emojis_hidden")}
+                  ${
+                    this.userSettings?.emojis()
+                      ? translateText("user_setting.emojis_visible")
+                      : translateText("user_setting.emojis_hidden")
+                  }
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings?.emojis()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.userSettings?.emojis()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 
@@ -250,15 +258,19 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.dark_mode_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings?.darkMode()
-                    ? translateText("user_setting.dark_mode_enabled")
-                    : translateText("user_setting.light_mode_enabled")}
+                  ${
+                    this.userSettings?.darkMode()
+                      ? translateText("user_setting.dark_mode_enabled")
+                      : translateText("user_setting.light_mode_enabled")
+                  }
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings?.darkMode()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.userSettings?.darkMode()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 
@@ -278,15 +290,19 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.special_effects_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings?.fxLayer()
-                    ? translateText("user_setting.special_effects_enabled")
-                    : translateText("user_setting.special_effects_disabled")}
+                  ${
+                    this.userSettings?.fxLayer()
+                      ? translateText("user_setting.special_effects_enabled")
+                      : translateText("user_setting.special_effects_disabled")
+                  }
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings?.fxLayer()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.userSettings?.fxLayer()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 
@@ -306,15 +322,19 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.structure_sprites_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings?.structureSprites()
-                    ? translateText("user_setting.structure_sprites_enabled")
-                    : translateText("user_setting.structure_sprites_disabled")}
+                  ${
+                    this.userSettings?.structureSprites()
+                      ? translateText("user_setting.structure_sprites_enabled")
+                      : translateText("user_setting.structure_sprites_disabled")
+                  }
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings?.structureSprites()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.userSettings?.structureSprites()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 
@@ -329,15 +349,19 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.anonymous_names_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings?.anonymousNames()
-                    ? translateText("user_setting.anonymous_names_enabled")
-                    : translateText("user_setting.real_names_shown")}
+                  ${
+                    this.userSettings?.anonymousNames()
+                      ? translateText("user_setting.anonymous_names_enabled")
+                      : translateText("user_setting.real_names_shown")
+                  }
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings?.anonymousNames()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.userSettings?.anonymousNames()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 
@@ -352,15 +376,19 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.left_click_menu")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings?.leftClickOpensMenu()
-                    ? translateText("user_setting.left_click_opens_menu")
-                    : translateText("user_setting.right_click_opens_menu")}
+                  ${
+                    this.userSettings?.leftClickOpensMenu()
+                      ? translateText("user_setting.left_click_opens_menu")
+                      : translateText("user_setting.right_click_opens_menu")
+                  }
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings?.leftClickOpensMenu()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.userSettings?.leftClickOpensMenu()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 
@@ -380,17 +408,23 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.performance_overlay_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings?.performanceOverlay()
-                    ? translateText("user_setting.performance_overlay_enabled")
-                    : translateText(
-                      "user_setting.performance_overlay_disabled",
-                    )}
+                  ${
+                    this.userSettings?.performanceOverlay()
+                      ? translateText(
+                          "user_setting.performance_overlay_enabled",
+                        )
+                      : translateText(
+                          "user_setting.performance_overlay_disabled",
+                        )
+                  }
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.userSettings?.performanceOverlay()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.userSettings?.performanceOverlay()
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 

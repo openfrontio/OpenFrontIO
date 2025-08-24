@@ -1,7 +1,7 @@
 import { Execution, Game, Unit } from "../game/Game";
+import { TrainStation } from "../game/TrainStation";
 import { PseudoRandom } from "../PseudoRandom";
 import { TrainExecution } from "./TrainExecution";
-import { TrainStation } from "../game/TrainStation";
 
 export class TrainStationExecution implements Execution {
   private mg: Game | undefined;

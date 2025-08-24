@@ -1,5 +1,5 @@
-import { TrainStation } from "./TrainStation";
 import { Unit } from "./Game";
+import { TrainStation } from "./TrainStation";
 
 export type RailNetwork = {
   connectStation(station: TrainStation): void;

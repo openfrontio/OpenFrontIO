@@ -1,12 +1,22 @@
 /* eslint-disable max-lines */
+
+import { html, LitElement, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { DirectiveResult } from "lit/directive.js";
+import { UnsafeHTMLDirective, unsafeHTML } from "lit/directives/unsafe-html.js";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
+import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
+  getMessageCategory,
   MessageCategory,
   MessageType,
   PlayerType,
   Tick,
   UnitType,
-  getMessageCategory,
 } from "../../../core/game/Game";
 import {
   AllianceExpiredUpdate,
@@ -21,31 +31,26 @@ import {
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { onlyImages } from "../../../core/Util";
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import {
+  getMessageTypeClasses,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../Utils";
+import { Layer } from "./Layer";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./Leaderboard";
-import { LitElement, TemplateResult, html } from "lit";
-import { UnsafeHTMLDirective, unsafeHTML } from "lit/directives/unsafe-html.js";
-import { customElement, state } from "lit/decorators.js";
-import { getMessageTypeClasses, translateText } from "../../Utils";
-import { renderNumber, renderTroops } from "../../Utils";
-import { DirectiveResult } from "lit/directive.js";
-import { EventBus } from "../../../core/EventBus";
-import { Layer } from "./Layer";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import { onlyImages } from "../../../core/Util";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
 type GameEvent = {
   description: string;
@@ -87,15 +92,19 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private latestGoldAmount: bigint | null = null;
   @state() private goldAmountAnimating = false;
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  @state() private readonly eventsFilters: Map<MessageCategory, boolean> = new Map([
-    [MessageCategory.ATTACK, false],
-    [MessageCategory.TRADE, false],
-    [MessageCategory.ALLIANCE, false],
-    [MessageCategory.CHAT, false],
-  ]);
+  @state() private readonly eventsFilters: Map<MessageCategory, boolean> =
+    new Map([
+      [MessageCategory.ATTACK, false],
+      [MessageCategory.TRADE, false],
+      [MessageCategory.ALLIANCE, false],
+      [MessageCategory.CHAT, false],
+    ]);
 
   private renderButton(options: {
-    content: string | TemplateResult | DirectiveResult<typeof UnsafeHTMLDirective>;
+    content:
+      | string
+      | TemplateResult
+      | DirectiveResult<typeof UnsafeHTMLDirective>;
     onClick?: () => void;
     className?: string;
     disabled?: boolean;
@@ -539,8 +548,8 @@ export class EventsDisplay extends LitElement implements Layer {
         traitorDuration === 1
           ? translateText("events_display.duration_second")
           : translateText("events_display.duration_seconds_plural", {
-            seconds: traitorDuration,
-          });
+              seconds: traitorDuration,
+            });
 
       this.addEvent({
         description: translateText("events_display.betrayal_description", {
@@ -738,41 +747,43 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private renderIncomingAttacks() {
     return html`
-      ${this.incomingAttacks.length > 0
-        ? html`
-            ${this.incomingAttacks.map(
-              (attack) => {
-                const attacker = this.game?.playerBySmallID(attack.attackerID);
-                return html`
+      ${
+        this.incomingAttacks.length > 0
+          ? html`
+            ${this.incomingAttacks.map((attack) => {
+              const attacker = this.game?.playerBySmallID(attack.attackerID);
+              return html`
                 ${this.renderButton({
                   content: html`
                     ${renderTroops(attack.troops)}
                     ${attacker?.isPlayer() ? attacker.name() : "unknown"}
-                    ${attack.retreating
-                      ? `(${translateText("events_display.retreating")}...)`
-                      : ""}
+                    ${
+                      attack.retreating
+                        ? `(${translateText("events_display.retreating")}...)`
+                        : ""
+                    }
                   `,
                   onClick: () => this.attackWarningOnClick(attack),
                   className: "text-left text-red-400",
                   translate: false,
                 })}
               `;
-              },
-            )}
+            })}
           `
-        : ""}
+          : ""
+      }
     `;
   }
 
   private renderOutgoingAttacks() {
     return html`
-      ${this.outgoingAttacks.length > 0
-        ? html`
+      ${
+        this.outgoingAttacks.length > 0
+          ? html`
             <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingAttacks.map(
-                (attack) => {
-                  const target = this.game?.playerBySmallID(attack.targetID);
-                  return html`
+              ${this.outgoingAttacks.map((attack) => {
+                const target = this.game?.playerBySmallID(attack.targetID);
+                return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
                       content: html`
@@ -783,32 +794,36 @@ export class EventsDisplay extends LitElement implements Layer {
                       className: "text-left text-blue-400",
                       translate: false,
                     })}
-                    ${!attack.retreating
-                      ? this.renderButton({
-                        content: "❌",
-                        onClick: () => this.emitCancelAttackIntent(attack.id),
-                        className: "text-left flex-shrink-0",
-                        disabled: attack.retreating,
-                      })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                    ${
+                      !attack.retreating
+                        ? this.renderButton({
+                            content: "❌",
+                            onClick: () =>
+                              this.emitCancelAttackIntent(attack.id),
+                            className: "text-left flex-shrink-0",
+                            disabled: attack.retreating,
+                          })
+                        : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
-                        >`}
+                        >`
+                    }
                   </div>
                 `;
-                },
-              )}
+              })}
             </div>
           `
-        : ""}
+          : ""
+      }
     `;
   }
 
   private renderOutgoingLandAttacks() {
     return html`
-      ${this.outgoingLandAttacks.length > 0
-        ? html`
+      ${
+        this.outgoingLandAttacks.length > 0
+          ? html`
             <div class="flex flex-wrap gap-y-1 gap-x-2">
               ${this.outgoingLandAttacks.map(
                 (landAttack) => html`
@@ -819,32 +834,36 @@ export class EventsDisplay extends LitElement implements Layer {
                       className: "text-left text-gray-400",
                       translate: false,
                     })}
-                    ${!landAttack.retreating
-                      ? this.renderButton({
-                        content: "❌",
-                        onClick: () =>
-                          this.emitCancelAttackIntent(landAttack.id),
-                        className: "text-left flex-shrink-0",
-                        disabled: landAttack.retreating,
-                      })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                    ${
+                      !landAttack.retreating
+                        ? this.renderButton({
+                            content: "❌",
+                            onClick: () =>
+                              this.emitCancelAttackIntent(landAttack.id),
+                            className: "text-left flex-shrink-0",
+                            disabled: landAttack.retreating,
+                          })
+                        : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
-                        >`}
+                        >`
+                    }
                   </div>
                 `,
               )}
             </div>
           `
-        : ""}
+          : ""
+      }
     `;
   }
 
   private renderBoats() {
     return html`
-      ${this.outgoingBoats.length > 0
-        ? html`
+      ${
+        this.outgoingBoats.length > 0
+          ? html`
             <div class="flex flex-wrap gap-y-1 gap-x-2">
               ${this.outgoingBoats.map(
                 (boat) => html`
@@ -856,24 +875,27 @@ export class EventsDisplay extends LitElement implements Layer {
                       className: "text-left text-blue-400",
                       translate: false,
                     })}
-                    ${!boat.retreating()
-                      ? this.renderButton({
-                        content: "❌",
-                        onClick: () => this.emitBoatCancelIntent(boat.id()),
-                        className: "text-left flex-shrink-0",
-                        disabled: boat.retreating(),
-                      })
-                      : html`<span class="flex-shrink-0 text-blue-400"
+                    ${
+                      !boat.retreating()
+                        ? this.renderButton({
+                            content: "❌",
+                            onClick: () => this.emitBoatCancelIntent(boat.id()),
+                            className: "text-left flex-shrink-0",
+                            disabled: boat.retreating(),
+                          })
+                        : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
                             "events_display.retreating",
                           )}...)</span
-                        >`}
+                        >`
+                    }
                   </div>
                 `,
               )}
             </div>
           `
-        : ""}
+          : ""
+      }
     `;
   }
 
@@ -921,16 +943,17 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${styles}
       <!-- Events Toggle (when hidden) -->
-      ${this._hidden
-        ? html`
+      ${
+        this._hidden
+          ? html`
             <div class="relative w-fit lg:bottom-2.5 lg:right-2.5 z-50">
               ${this.renderButton({
                 content: html`
                   Events
                   <span
-                    class="${this.newEvents
-                      ? ""
-                      : "hidden"} inline-block px-2 bg-red-500 rounded-xl text-sm"
+                    class="${
+                      this.newEvents ? "" : "hidden"
+                    } inline-block px-2 bg-red-500 rounded-xl text-sm"
                     >${this.newEvents}</span
                   >
                 `,
@@ -941,7 +964,7 @@ export class EventsDisplay extends LitElement implements Layer {
               })}
             </div>
           `
-        : html`
+          : html`
             <!-- Main Events Display -->
             <div
               class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
@@ -956,11 +979,11 @@ export class EventsDisplay extends LitElement implements Layer {
                       content: html`<img
                         src="${swordIcon}"
                         class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.ATTACK,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
+                        style="filter: ${
+                          this.eventsFilters.get(MessageCategory.ATTACK)
+                            ? "grayscale(1) opacity(0.5)"
+                            : "none"
+                        }"
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.ATTACK),
@@ -970,11 +993,11 @@ export class EventsDisplay extends LitElement implements Layer {
                       content: html`<img
                         src="${donateGoldIcon}"
                         class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.TRADE,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
+                        style="filter: ${
+                          this.eventsFilters.get(MessageCategory.TRADE)
+                            ? "grayscale(1) opacity(0.5)"
+                            : "none"
+                        }"
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.TRADE),
@@ -984,11 +1007,11 @@ export class EventsDisplay extends LitElement implements Layer {
                       content: html`<img
                         src="${allianceIcon}"
                         class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.ALLIANCE,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
+                        style="filter: ${
+                          this.eventsFilters.get(MessageCategory.ALLIANCE)
+                            ? "grayscale(1) opacity(0.5)"
+                            : "none"
+                        }"
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.ALLIANCE),
@@ -998,11 +1021,11 @@ export class EventsDisplay extends LitElement implements Layer {
                       content: html`<img
                         src="${chatIcon}"
                         class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.CHAT,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
+                        style="filter: ${
+                          this.eventsFilters.get(MessageCategory.CHAT)
+                            ? "grayscale(1) opacity(0.5)"
+                            : "none"
+                        }"
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.CHAT),
@@ -1010,18 +1033,23 @@ export class EventsDisplay extends LitElement implements Layer {
                     })}
                   </div>
                   <div class="flex items-center gap-3">
-                    ${this.latestGoldAmount !== null
-                      ? html`<span
-                          class="text-green-400 font-semibold transition-all duration-300 ${this
-                            .goldAmountAnimating
-                            ? "animate-pulse scale-110"
-                            : "scale-100"}"
-                          style="animation: ${this.goldAmountAnimating
-                            ? "goldBounce 0.6s ease-out"
-                            : "none"}"
+                    ${
+                      this.latestGoldAmount !== null
+                        ? html`<span
+                          class="text-green-400 font-semibold transition-all duration-300 ${
+                            this.goldAmountAnimating
+                              ? "animate-pulse scale-110"
+                              : "scale-100"
+                          }"
+                          style="animation: ${
+                            this.goldAmountAnimating
+                              ? "goldBounce 0.6s ease-out"
+                              : "none"
+                          }"
                           >+${renderNumber(this.latestGoldAmount)}</span
                         >`
-                      : ""}
+                        : ""
+                    }
                     ${this.renderButton({
                       content: translateText("leaderboard.hide"),
                       onClick: this.toggleHidden,
@@ -1052,30 +1080,36 @@ export class EventsDisplay extends LitElement implements Layer {
                                 event.type,
                               )}"
                             >
-                              ${event.focusID
-                                ? this.renderButton({
-                                  content: this.getEventDescription(event),
-                                  onClick: () => {
-                                    event.focusID &&
-                                        this.emitGoToPlayerEvent(event.focusID);
-                                  },
-                                  className: "text-left",
-                                })
-                                : event.unitView
+                              ${
+                                event.focusID
                                   ? this.renderButton({
-                                    content: this.getEventDescription(event),
-                                    onClick: () => {
-                                      event.unitView &&
-                                          this.emitGoToUnitEvent(
-                                            event.unitView,
+                                      content: this.getEventDescription(event),
+                                      onClick: () => {
+                                        event.focusID &&
+                                          this.emitGoToPlayerEvent(
+                                            event.focusID,
                                           );
-                                    },
-                                    className: "text-left",
-                                  })
-                                  : this.getEventDescription(event)}
+                                      },
+                                      className: "text-left",
+                                    })
+                                  : event.unitView
+                                    ? this.renderButton({
+                                        content:
+                                          this.getEventDescription(event),
+                                        onClick: () => {
+                                          event.unitView &&
+                                            this.emitGoToUnitEvent(
+                                              event.unitView,
+                                            );
+                                        },
+                                        className: "text-left",
+                                      })
+                                    : this.getEventDescription(event)
+                              }
                               <!-- Events with buttons (Alliance requests) -->
-                              ${event.buttons
-                                ? html`
+                              ${
+                                event.buttons
+                                  ? html`
                                     <div class="flex flex-wrap gap-1.5 mt-1">
                                       ${event.buttons.map(
                                         (btn) => html`
@@ -1084,13 +1118,13 @@ export class EventsDisplay extends LitElement implements Layer {
                                               text-white rounded text-md
                                               md:text-sm cursor-pointer
                                               transition-colors duration-300
-                            ${btn.className.includes("btn-info")
-                              ? "bg-blue-500 hover:bg-blue-600"
-                              : btn.className.includes(
-                                "btn-gray",
-                              )
-                                ? "bg-gray-500 hover:bg-gray-600"
-                                : "bg-green-600 hover:bg-green-700"}"
+                            ${
+                              btn.className.includes("btn-info")
+                                ? "bg-blue-500 hover:bg-blue-600"
+                                : btn.className.includes("btn-gray")
+                                  ? "bg-gray-500 hover:bg-gray-600"
+                                  : "bg-green-600 hover:bg-green-700"
+                            }"
                                             @click=${() => {
                                               btn.action();
                                               if (!btn.preventClose) {
@@ -1113,62 +1147,72 @@ export class EventsDisplay extends LitElement implements Layer {
                                       )}
                                     </div>
                                   `
-                                : ""}
+                                  : ""
+                              }
                             </td>
                           </tr>
                         `,
                       )}
                       <!--- Incoming attacks row -->
-                      ${this.incomingAttacks.length > 0
-                        ? html`
+                      ${
+                        this.incomingAttacks.length > 0
+                          ? html`
                             <tr class="lg:px-2 lg:py-1 p-1">
                               <td class="lg:px-2 lg:py-1 p-1 text-left">
                                 ${this.renderIncomingAttacks()}
                               </td>
                             </tr>
                           `
-                        : ""}
+                          : ""
+                      }
 
                       <!--- Outgoing attacks row -->
-                      ${this.outgoingAttacks.length > 0
-                        ? html`
+                      ${
+                        this.outgoingAttacks.length > 0
+                          ? html`
                             <tr class="lg:px-2 lg:py-1 p-1">
                               <td class="lg:px-2 lg:py-1 p-1 text-left">
                                 ${this.renderOutgoingAttacks()}
                               </td>
                             </tr>
                           `
-                        : ""}
+                          : ""
+                      }
 
                       <!--- Outgoing land attacks row -->
-                      ${this.outgoingLandAttacks.length > 0
-                        ? html`
+                      ${
+                        this.outgoingLandAttacks.length > 0
+                          ? html`
                             <tr class="lg:px-2 lg:py-1 p-1">
                               <td class="lg:px-2 lg:py-1 p-1 text-left">
                                 ${this.renderOutgoingLandAttacks()}
                               </td>
                             </tr>
                           `
-                        : ""}
+                          : ""
+                      }
 
                       <!--- Boats row -->
-                      ${this.outgoingBoats.length > 0
-                        ? html`
+                      ${
+                        this.outgoingBoats.length > 0
+                          ? html`
                             <tr class="lg:px-2 lg:py-1 p-1">
                               <td class="lg:px-2 lg:py-1 p-1 text-left">
                                 ${this.renderBoats()}
                               </td>
                             </tr>
                           `
-                        : ""}
+                          : ""
+                      }
 
                       <!--- Empty row when no events or attacks -->
-                      ${filteredEvents.length === 0 &&
-                      this.incomingAttacks.length === 0 &&
-                      this.outgoingAttacks.length === 0 &&
-                      this.outgoingLandAttacks.length === 0 &&
-                      this.outgoingBoats.length === 0
-                        ? html`
+                      ${
+                        filteredEvents.length === 0 &&
+                        this.incomingAttacks.length === 0 &&
+                        this.outgoingAttacks.length === 0 &&
+                        this.outgoingLandAttacks.length === 0 &&
+                        this.outgoingBoats.length === 0
+                          ? html`
                             <tr>
                               <td
                                 class="lg:px-2 lg:py-1 p-1 min-w-72 text-left"
@@ -1177,13 +1221,15 @@ export class EventsDisplay extends LitElement implements Layer {
                               </td>
                             </tr>
                           `
-                        : ""}
+                          : ""
+                      }
                     </tbody>
                   </table>
                 </div>
               </div>
             </div>
-          `}
+          `
+      }
     `;
   }
 

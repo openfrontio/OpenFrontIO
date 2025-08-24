@@ -1,17 +1,19 @@
+import { EventBus } from "../../core/EventBus";
+import { GameView } from "../../core/game/GameView";
+import { UserSettings } from "../../core/game/UserSettings";
+import { GameStartingModal } from "../GameStartingModal";
+import { RedrawGraphicsEvent } from "../InputHandler";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
-import { EventBus } from "../../core/EventBus";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
-import { GameStartingModal } from "../GameStartingModal";
-import { GameView } from "../../core/game/GameView";
 import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
@@ -22,7 +24,6 @@ import { NameLayer } from "./layers/NameLayer";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
-import { RedrawGraphicsEvent } from "../InputHandler";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnAd } from "./layers/SpawnAd";
@@ -32,13 +33,12 @@ import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
-import { TransformHandler } from "./TransformHandler";
 import { UILayer } from "./layers/UILayer";
-import { UIState } from "./UIState";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
-import { UserSettings } from "../../core/game/UserSettings";
 import { WinModal } from "./layers/WinModal";
+import { TransformHandler } from "./TransformHandler";
+import { UIState } from "./UIState";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,

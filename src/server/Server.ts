@@ -1,8 +1,8 @@
-import * as dotenv from "dotenv";
-import { Cloudflare, TunnelConfig } from "./Cloudflare";
-import { GameEnv } from "../core/configuration/Config";
 import cluster from "cluster";
+import * as dotenv from "dotenv";
+import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { Cloudflare, TunnelConfig } from "./Cloudflare";
 import { startMaster } from "./Master";
 import { startWorker } from "./Worker";
 

@@ -4,11 +4,11 @@ const ANIMATION_DURATIONS: Record<string, number> = {
   "bright-rainbow": 4000,
   "copper-glow": 3000,
   "gold-glow": 3000,
-  "lava": 6000,
-  "neon": 3000,
-  "rainbow": 4000,
+  lava: 6000,
+  neon: 3000,
+  rainbow: 4000,
   "silver-glow": 3000,
-  "water": 6200,
+  water: 6200,
 };
 
 // TODO: Pass in cosmetics as a parameter when

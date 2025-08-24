@@ -8,11 +8,11 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { AttackExecution } from "./AttackExecution";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
 import { TileRef } from "../game/GameMap";
 import { targetTransportTile } from "../game/TransportShipUtils";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { PathFinder } from "../pathfinding/PathFinding";
+import { AttackExecution } from "./AttackExecution";
 
 export class TransportShipExecution implements Execution {
   private lastMove: number | undefined;

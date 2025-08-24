@@ -1,3 +1,9 @@
+import ipAnonymize from "ip-anonymize";
+import { Logger } from "winston";
+import WebSocket from "ws";
+import { z } from "zod";
+import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientSendWinnerMessage,
@@ -14,17 +20,11 @@ import {
   ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { Client } from "./Client";
-import { GameType } from "../core/game/Game";
-import { Logger } from "winston";
-import WebSocket from "ws";
-import { archive } from "./Archive";
 import { createGameRecord } from "../core/Util";
+import { archive } from "./Archive";
+import { Client } from "./Client";
 import { gatekeeper } from "./Gatekeeper";
-import ipAnonymize from "ip-anonymize";
 import { postJoinMessageHandler } from "./worker/websocket/handler/message/PostJoinHandler";
-import { z } from "zod";
 
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -44,7 +44,8 @@ export class GameServer {
   public activeClients: Client[] = [];
   lobbyCreatorID: string | undefined;
   private readonly allClients: Map<ClientID, Client> = new Map();
-  private readonly clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
+  private readonly clientsDisconnectedStatus: Map<ClientID, boolean> =
+    new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
 

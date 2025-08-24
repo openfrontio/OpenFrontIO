@@ -1,11 +1,20 @@
+import { translateText } from "../client/Utils";
+import { ServerConfig } from "../core/configuration/Config";
+import { getConfig } from "../core/configuration/ConfigLoader";
+import { EventBus } from "../core/EventBus";
+import { PlayerActions, UnitType } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
+import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
-  AutoUpgradeEvent,
-  DoBoatAttackEvent,
-  DoGroundAttackEvent,
-  InputHandler,
-  MouseMoveEvent,
-  MouseUpEvent,
-} from "./InputHandler";
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  HashUpdate,
+  WinUpdate,
+} from "../core/game/GameUpdates";
+import { GameView, PlayerView } from "../core/game/GameView";
+import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
+import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientID,
   GameID,
@@ -14,16 +23,20 @@ import {
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
+import { createGameRecord } from "../core/Util";
+import { WorkerClient } from "../core/worker/WorkerClient";
+import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-  HashUpdate,
-  WinUpdate,
-} from "../core/game/GameUpdates";
-import { GameRenderer, createRenderer } from "./graphics/GameRenderer";
-import { GameView, PlayerView } from "../core/game/GameView";
-import { PlayerActions, UnitType } from "../core/game/Game";
+  AutoUpgradeEvent,
+  DoBoatAttackEvent,
+  DoGroundAttackEvent,
+  InputHandler,
+  MouseMoveEvent,
+  MouseUpEvent,
+} from "./InputHandler";
+import { endGame, startGame, startTime } from "./LocalPersistantStats";
+import { getPersistentID } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -32,20 +45,7 @@ import {
   SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
-import { TerrainMapData, loadTerrainMap } from "../core/game/TerrainMapLoader";
-import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { EventBus } from "../core/EventBus";
-import { GameMapLoader } from "../core/game/GameMapLoader";
-import { ServerConfig } from "../core/configuration/Config";
-import { TileRef } from "../core/game/GameMap";
-import { UserSettings } from "../core/game/UserSettings";
-import { WorkerClient } from "../core/worker/WorkerClient";
 import { createCanvas } from "./Utils";
-import { createGameRecord } from "../core/Util";
-import { getConfig } from "../core/configuration/ConfigLoader";
-import { getPersistentID } from "./Main";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { translateText } from "../client/Utils";
 
 export type LobbyConfig = {
   serverConfig: ServerConfig;

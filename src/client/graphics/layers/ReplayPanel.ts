@@ -1,14 +1,14 @@
-import { LitElement, html } from "lit";
-import {
-  ReplaySpeedMultiplier,
-  defaultReplaySpeedMultiplier,
-} from "../../utilities/ReplaySpeedMultiplier";
+import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
 import { ReplaySpeedChangeEvent } from "../../InputHandler";
 import { translateText } from "../../Utils";
+import {
+  defaultReplaySpeedMultiplier,
+  ReplaySpeedMultiplier,
+} from "../../utilities/ReplaySpeedMultiplier";
+import { Layer } from "./Layer";
 
 export class ShowReplayPanelEvent {
   constructor(
@@ -71,9 +71,11 @@ export class ReplayPanel extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${this.isSingleplayer
-            ? translateText("replay_panel.game_speed")
-            : translateText("replay_panel.replay_speed")}
+          ${
+            this.isSingleplayer
+              ? translateText("replay_panel.game_speed")
+              : translateText("replay_panel.replay_speed")
+          }
         </label>
         <div class="grid grid-cols-2 gap-1">
           ${this.renderSpeedButton(ReplaySpeedMultiplier.slow, "×0.5")}
@@ -92,9 +94,9 @@ export class ReplayPanel extends LitElement implements Layer {
     const isActive = this._replaySpeedMultiplier === value;
     return html`
       <button
-        class="text-white font-bold py-0 rounded border transition ${isActive
-          ? "bg-blue-500 border-gray-400"
-          : "border-gray-500"}"
+        class="text-white font-bold py-0 rounded border transition ${
+          isActive ? "bg-blue-500 border-gray-400" : "border-gray-500"
+        }"
         @click=${() => this.onReplaySpeedChange(value)}
       >
         ${label}

@@ -3,8 +3,8 @@
 // However buildUnit do not create executions (e.g.: WarshipExecution)
 // If you also need execution use function below. Does not work with things not
 
-import { Game, Player, UnitType } from "../../src/core/game/Game";
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
+import { Game, Player, UnitType } from "../../src/core/game/Game";
 
 // built via UI (e.g.: trade ships)
 export function constructionExecution(

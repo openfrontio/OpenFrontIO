@@ -1,12 +1,12 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { SendWinnerEvent } from "../../Transport";
 import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
-import { SendWinnerEvent } from "../../Transport";
-import { translateText } from "../../../client/Utils";
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Layer {

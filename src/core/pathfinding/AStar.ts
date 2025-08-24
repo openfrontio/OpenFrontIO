@@ -11,19 +11,19 @@ export enum PathFindResultType {
 }
 export type AStarResult<NodeType> =
   | {
-    type: PathFindResultType.NextTile;
-    node: NodeType;
-  }
+      type: PathFindResultType.NextTile;
+      node: NodeType;
+    }
   | {
-    type: PathFindResultType.Pending;
-  }
+      type: PathFindResultType.Pending;
+    }
   | {
-    type: PathFindResultType.Completed;
-    node: NodeType;
-  }
+      type: PathFindResultType.Completed;
+      node: NodeType;
+    }
   | {
-    type: PathFindResultType.PathNotFound;
-  };
+      type: PathFindResultType.PathNotFound;
+    };
 
 export type Point = {
   x: number;

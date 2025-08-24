@@ -1,3 +1,4 @@
+import { AllPlayersStats } from "../Schemas";
 import {
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_RECV,
@@ -26,7 +27,6 @@ import {
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
-import { AllPlayersStats } from "../Schemas";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;

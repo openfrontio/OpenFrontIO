@@ -1,12 +1,12 @@
-import { GameID, GameInfo } from "../core/Schemas";
-import { GameMapType, GameMode } from "../core/game/Game";
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { ApiPublicLobbiesResponseSchema } from "../core/ExpressSchemas";
-import { JoinLobbyEvent } from "./Main";
-import { getClientID } from "../core/Util";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { translateText } from "../client/Utils";
+import { ApiPublicLobbiesResponseSchema } from "../core/ExpressSchemas";
+import { GameMapType, GameMode } from "../core/game/Game";
+import { GameID, GameInfo } from "../core/Schemas";
+import { getClientID } from "../core/Util";
+import { JoinLobbyEvent } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
@@ -126,20 +126,21 @@ export class PublicLobby extends LitElement {
             ? "bg-gradient-to-r from-green-600 to-green-500"
             : "bg-gradient-to-r from-blue-600 to-blue-500"
         } text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${
-          this.isButtonDebounced
-            ? "opacity-70 cursor-not-allowed"
-            : ""}"
+          this.isButtonDebounced ? "opacity-70 cursor-not-allowed" : ""
+        }"
       >
-        ${mapImageSrc
-          ? html`<img
+        ${
+          mapImageSrc
+            ? html`<img
               src="${mapImageSrc}"
               alt="${lobby.gameConfig.gameMap}"
               class="place-self-start col-span-full row-span-full h-full -z-10"
               style="mask-image: linear-gradient(to left, transparent, #fff)"
             />`
-          : html`<div
+            : html`<div
               class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
-            ></div>`}
+            ></div>`
+        }
         <div
           class="flex flex-col justify-between h-full col-span-full row-span-full p-4 md:p-6 text-right z-0"
         >
@@ -149,17 +150,19 @@ export class PublicLobby extends LitElement {
             </div>
             <div class="text-md font-medium text-blue-100">
               <span
-                class="text-sm ${this.isLobbyHighlighted
-                  ? "text-green-600"
-                  : "text-blue-600"} bg-white rounded-sm px-1"
+                class="text-sm ${
+                  this.isLobbyHighlighted ? "text-green-600" : "text-blue-600"
+                } bg-white rounded-sm px-1"
               >
-                ${lobby.gameConfig.gameMode === GameMode.Team
-                  ? typeof teamCount === "string"
-                    ? translateText(`public_lobby.teams_${teamCount}`)
-                    : translateText("public_lobby.teams", {
-                      num: teamCount ?? 0,
-                    })
-                  : translateText("game_mode.ffa")}</span
+                ${
+                  lobby.gameConfig.gameMode === GameMode.Team
+                    ? typeof teamCount === "string"
+                      ? translateText(`public_lobby.teams_${teamCount}`)
+                      : translateText("public_lobby.teams", {
+                          num: teamCount ?? 0,
+                        })
+                    : translateText("game_mode.ffa")
+                }</span
               >
               <span
                 >${translateText(

@@ -1,12 +1,12 @@
+import { EventBus } from "../../core/EventBus";
+import { Cell } from "../../core/game/Game";
+import { GameView } from "../../core/game/GameView";
 import { CenterCameraEvent, DragEvent, ZoomEvent } from "../InputHandler";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./layers/Leaderboard";
-import { Cell } from "../../core/game/Game";
-import { EventBus } from "../../core/EventBus";
-import { GameView } from "../../core/game/GameView";
 
 export const GOTO_INTERVAL_MS = 16;
 export const CAMERA_MAX_SPEED = 15;

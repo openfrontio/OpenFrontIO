@@ -1,24 +1,24 @@
+import { Colord, colord } from "colord";
+import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
+import { UnitType } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView, UnitView } from "../../../core/game/GameView";
+import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
   MouseUpEvent,
   UnitSelectionEvent,
 } from "../../InputHandler";
-import { Colord, colord } from "colord";
-import { GameView, UnitView } from "../../../core/game/GameView";
+import { MoveWarshipIntentEvent } from "../../Transport";
 import {
   getColoredSprite,
   isSpriteReady,
   loadAllSprites,
 } from "../SpriteLoader";
-import { BezenhamLine } from "../../../core/utilities/Line";
-import { EventBus } from "../../../core/EventBus";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { Layer } from "./Layer";
-import { MoveWarshipIntentEvent } from "../../Transport";
-import { Theme } from "../../../core/configuration/Config";
-import { TileRef } from "../../../core/game/GameMap";
 import { TransformHandler } from "../TransformHandler";
-import { UnitType } from "../../../core/game/Game";
+import { Layer } from "./Layer";
 
 enum Relationship {
   Self,
@@ -156,7 +156,8 @@ export class UnitLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
-    if (this.transportShipTrailCanvas === undefined) throw new Error("Not initialized");
+    if (this.transportShipTrailCanvas === undefined)
+      throw new Error("Not initialized");
     if (this.canvas === undefined) throw new Error("Not initialized");
     context.drawImage(
       this.transportShipTrailCanvas,
@@ -197,7 +198,8 @@ export class UnitLayer implements Layer {
     this.updateUnitsSprites(this.game.units().map((unit) => unit.id()));
 
     this.unitToTrail.forEach((trail, unit) => {
-      if (this.unitTrailContext === undefined) throw new Error("Not initialized");
+      if (this.unitTrailContext === undefined)
+        throw new Error("Not initialized");
       for (const t of trail) {
         this.paintCell(
           this.game.x(t),
@@ -309,7 +311,11 @@ export class UnitLayer implements Layer {
     const rel = this.relationship(unit);
 
     // Clear current and previous positions
-    this.clearCell(this.game.x(unit.lastTile()), this.game.y(unit.lastTile()), this.context);
+    this.clearCell(
+      this.game.x(unit.lastTile()),
+      this.game.y(unit.lastTile()),
+      this.context,
+    );
     const oldTile = this.oldShellTile.get(unit);
     if (oldTile !== undefined) {
       this.clearCell(this.game.x(oldTile), this.game.y(oldTile), this.context);
@@ -432,7 +438,11 @@ export class UnitLayer implements Layer {
     const rel = this.relationship(unit);
 
     if (this.context === undefined) throw new Error("Not initialized");
-    this.clearCell(this.game.x(unit.lastTile()), this.game.y(unit.lastTile()), this.context);
+    this.clearCell(
+      this.game.x(unit.lastTile()),
+      this.game.y(unit.lastTile()),
+      this.context,
+    );
 
     if (unit.isActive()) {
       // Paint area
@@ -504,11 +514,7 @@ export class UnitLayer implements Layer {
     context.fillRect(x, y, 1, 1);
   }
 
-  clearCell(
-    x: number,
-    y: number,
-    context: CanvasRenderingContext2D,
-  ) {
+  clearCell(x: number, y: number, context: CanvasRenderingContext2D) {
     context.clearRect(x, y, 1, 1);
   }
 

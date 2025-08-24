@@ -1,21 +1,21 @@
+import { Theme } from "../../../core/configuration/Config";
+import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
   ConquestUpdate,
   GameUpdateType,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
-import { Fx, FxType } from "../fx/Fx";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { ShockwaveFx, nukeFxFactory } from "../fx/NukeFx";
+import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { Layer } from "./Layer";
+import { conquestFxFactory } from "../fx/ConquestFx";
+import { Fx, FxType } from "../fx/Fx";
+import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TextFx } from "../fx/TextFx";
-import { Theme } from "../../../core/configuration/Config";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
-import { UnitType } from "../../../core/game/Game";
-import { conquestFxFactory } from "../fx/ConquestFx";
-import { renderNumber } from "../../Utils";
+import { Layer } from "./Layer";
 
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement | undefined;

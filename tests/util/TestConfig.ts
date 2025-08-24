@@ -1,3 +1,5 @@
+import { NukeMagnitude } from "../../src/core/configuration/Config";
+import { DefaultConfig } from "../../src/core/configuration/DefaultConfig";
 import {
   Game,
   Player,
@@ -5,8 +7,6 @@ import {
   Tick,
   UnitType,
 } from "../../src/core/game/Game";
-import { DefaultConfig } from "../../src/core/configuration/DefaultConfig";
-import { NukeMagnitude } from "../../src/core/configuration/Config";
 import { TileRef } from "../../src/core/game/GameMap";
 
 export class TestConfig extends DefaultConfig {

@@ -1,11 +1,11 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameEnv } from "../../../core/configuration/Config";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
 import { MultiTabDetector } from "../../MultiTabDetector";
 import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
 
 @customElement("multi-tab-modal")
 export class MultiTabModal extends LitElement implements Layer {

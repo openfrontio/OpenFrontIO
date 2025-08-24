@@ -1,7 +1,7 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { AirPathFinder } from "../pathfinding/PathFinding";
-import { PseudoRandom } from "../PseudoRandom";
 import { TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
+import { AirPathFinder } from "../pathfinding/PathFinding";
 
 export class ShellExecution implements Execution {
   private active = true;

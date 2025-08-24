@@ -1,8 +1,22 @@
 /* eslint-disable max-lines */
+
+import { renderNumber, renderTroops } from "../../client/Utils";
+import { PseudoRandom } from "../PseudoRandom";
+import { ClientID } from "../Schemas";
 import {
-  AllPlayers,
+  assertNever,
+  distSortUnit,
+  minInt,
+  simpleHash,
+  toInt,
+  within,
+} from "../Util";
+import { sanitizeUsername } from "../validations/username";
+import { AttackImpl } from "./AttackImpl";
+import {
   Alliance,
   AllianceRequest,
+  AllPlayers,
   Attack,
   BuildableUnit,
   Cell,
@@ -27,32 +41,19 @@ import {
   UnitParams,
   UnitType,
 } from "./Game";
+import { GameImpl } from "./GameImpl";
+import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
-import { TileRef, andFN, manhattanDistFN } from "./GameMap";
-import {
-  assertNever,
-  distSortUnit,
-  minInt,
-  simpleHash,
-  toInt,
-  within,
-} from "../Util";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
 } from "./TransportShipUtils";
-import { renderNumber, renderTroops } from "../../client/Utils";
-import { AttackImpl } from "./AttackImpl";
-import { ClientID } from "../Schemas";
-import { GameImpl } from "./GameImpl";
-import { PseudoRandom } from "../PseudoRandom";
 import { UnitImpl } from "./UnitImpl";
-import { sanitizeUsername } from "../validations/username";
 
 type Target = {
   tick: Tick;

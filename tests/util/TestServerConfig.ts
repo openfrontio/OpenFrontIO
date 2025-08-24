@@ -1,7 +1,7 @@
-import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
-import { GameID } from "../../src/core/Schemas";
-import { GameMapType } from "../../src/core/game/Game";
 import { JWK } from "jose";
+import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
+import { GameMapType } from "../../src/core/game/Game";
+import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
   allowedFlares(): string[] | undefined {

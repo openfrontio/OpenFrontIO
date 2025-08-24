@@ -1,14 +1,14 @@
 import {
-  RegExpMatcher,
   collapseDuplicatesTransformer,
   englishDataset,
   englishRecommendedTransformers,
+  RegExpMatcher,
   resolveConfusablesTransformer,
   resolveLeetSpeakTransformer,
   skipNonAlphabeticTransformer,
 } from "obscenity";
-import { simpleHash } from "../Util";
 import { translateText } from "../../client/Utils";
+import { simpleHash } from "../Util";
 
 const matcher = new RegExpMatcher({
   ...englishDataset.build(),

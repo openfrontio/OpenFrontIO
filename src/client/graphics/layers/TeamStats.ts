@@ -1,9 +1,9 @@
+import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { EventBus } from "../../../core/EventBus";
 import { GameMode, Team, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
 import { renderNumber, translateText } from "../../Utils";
-import { EventBus } from "../../../core/EventBus";
 import { Layer } from "./Layer";
 
 type TeamEntry = {
@@ -130,8 +130,9 @@ export class TeamStats extends LitElement implements Layer {
             <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
               ${translateText("leaderboard.team")}
             </div>
-            ${this.showUnits
-              ? html`
+            ${
+              this.showUnits
+                ? html`
                   <div class="py-1.5 text-center border-b border-slate-500">
                     ${translateText("leaderboard.launchers")}
                   </div>
@@ -145,7 +146,7 @@ export class TeamStats extends LitElement implements Layer {
                     ${translateText("leaderboard.cities")}
                   </div>
                 `
-              : html`
+                : html`
                   <div class="py-1.5 text-center border-b border-slate-500">
                     ${translateText("leaderboard.owned")}
                   </div>
@@ -155,7 +156,8 @@ export class TeamStats extends LitElement implements Layer {
                   <div class="py-1.5 text-center border-b border-slate-500">
                     ${translateText("leaderboard.troops")}
                   </div>
-                `}
+                `
+            }
           </div>
 
           <!-- Data rows -->

@@ -1,11 +1,11 @@
+import { base64url } from "jose";
+import { Logger } from "winston";
+import { CosmeticsSchema } from "../core/CosmeticSchemas";
 import {
   FailOpenPrivilegeChecker,
   PrivilegeChecker,
   PrivilegeCheckerImpl,
 } from "./Privilege";
-import { CosmeticsSchema } from "../core/CosmeticSchemas";
-import { Logger } from "winston";
-import { base64url } from "jose";
 
 // Refreshes the privilege checker every 5 minutes.
 // WARNING: This fails open if cosmetics.json is not available.

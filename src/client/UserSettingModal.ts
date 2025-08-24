@@ -2,12 +2,12 @@ import "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
-import { UserSettings } from "../core/game/UserSettings";
-import { translateText } from "../client/Utils";
 import { z } from "zod";
+import { translateText } from "../client/Utils";
+import { UserSettings } from "../core/game/UserSettings";
+import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 
 const KeybindSchema = z.record(z.string(), z.string());
 
@@ -233,18 +233,22 @@ export class UserSettingModal extends LitElement {
             <div class="flex mb-4 w-full justify-center">
               <button
                 class="w-1/2 text-center px-3 py-1 rounded-l 
-      ${this.settingsMode === "basic"
-        ? "bg-white/10 text-white"
-        : "bg-transparent text-gray-400"}"
+      ${
+        this.settingsMode === "basic"
+          ? "bg-white/10 text-white"
+          : "bg-transparent text-gray-400"
+      }"
                 @click=${() => (this.settingsMode = "basic")}
               >
                 ${translateText("user_setting.tab_basic")}
               </button>
               <button
                 class="w-1/2 text-center px-3 py-1 rounded-r 
-      ${this.settingsMode === "keybinds"
-        ? "bg-white/10 text-white"
-        : "bg-transparent text-gray-400"}"
+      ${
+        this.settingsMode === "keybinds"
+          ? "bg-white/10 text-white"
+          : "bg-transparent text-gray-400"
+      }"
                 @click=${() => (this.settingsMode = "keybinds")}
               >
                 ${translateText("user_setting.tab_keybinds")}
@@ -252,9 +256,11 @@ export class UserSettingModal extends LitElement {
             </div>
 
             <div class="settings-list">
-              ${this.settingsMode === "basic"
-                ? this.renderBasicSettings()
-                : this.renderKeybindSettings()}
+              ${
+                this.settingsMode === "basic"
+                  ? this.renderBasicSettings()
+                  : this.renderKeybindSettings()
+              }
             </div>
           </div>
         </div>
@@ -361,13 +367,15 @@ export class UserSettingModal extends LitElement {
         description="${translateText("user_setting.attack_ratio_desc")}"
         min="1"
         max="100"
-        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
-        100}
+        .value=${
+          Number(localStorage.getItem("settings.attackRatio") ?? "0.2") * 100
+        }
         @change=${this.sliderAttackRatio}
       ></setting-slider>
 
-      ${this.showEasterEggSettings
-        ? html`
+      ${
+        this.showEasterEggSettings
+          ? html`
             <setting-slider
               label="${translateText(
                 "user_setting.easter_writing_speed_label",
@@ -408,7 +416,8 @@ export class UserSettingModal extends LitElement {
               }}
             ></setting-number>
           `
-        : null}
+          : null
+      }
     `;
   }
 

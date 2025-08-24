@@ -1,23 +1,19 @@
-import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { emojiTable, flattenedEmojiTable } from "../../../core/Util";
-import { AllPlayers } from "../../../core/game/Game";
 import { EventBus } from "../../../core/EventBus";
-import { SendEmojiIntentEvent } from "../../Transport";
+import { AllPlayers } from "../../../core/game/Game";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
+import { emojiTable, flattenedEmojiTable } from "../../../core/Util";
+import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
+import { SendEmojiIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {
   @state() public isVisible = false;
 
-  init(
-    transformHandler: TransformHandler,
-    game: GameView,
-    eventBus: EventBus,
-  ) {
+  init(transformHandler: TransformHandler, game: GameView, eventBus: EventBus) {
     eventBus.on(ShowEmojiMenuEvent, (e) => {
       this.isVisible = true;
       const cell = transformHandler.screenToWorldCoordinates(e.x, e.y);

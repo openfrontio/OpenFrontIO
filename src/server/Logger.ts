@@ -1,14 +1,15 @@
-import * as dotenv from "dotenv";
 import * as logsAPI from "@opentelemetry/api-logs";
+import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import {
   LoggerProvider,
   SimpleLogRecordProcessor,
 } from "@opentelemetry/sdk-logs";
-import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OpenTelemetryTransportV3 } from "@opentelemetry/winston-transport";
-import { getOtelResource } from "./OtelResource";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import * as dotenv from "dotenv";
 import winston from "winston";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { getOtelResource } from "./OtelResource";
+
 dotenv.config();
 
 const config = getServerConfigFromServer();

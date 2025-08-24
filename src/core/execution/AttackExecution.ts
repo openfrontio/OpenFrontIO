@@ -1,3 +1,4 @@
+import { renderTroops } from "../../client/Utils";
 import {
   Attack,
   Execution,
@@ -6,13 +7,12 @@ import {
   Player,
   PlayerID,
   PlayerType,
-  TerraNullius,
   TerrainType,
+  TerraNullius,
 } from "../game/Game";
-import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
-import { PseudoRandom } from "../PseudoRandom";
 import { TileRef } from "../game/GameMap";
-import { renderTroops } from "../../client/Utils";
+import { PseudoRandom } from "../PseudoRandom";
+import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;
 export class AttackExecution implements Execution {
@@ -209,7 +209,9 @@ export class AttackExecution implements Execution {
       throw new Error("Attack not initialized");
     }
     let troopCount = this.attack.troops(); // cache troop count
-    const targetPlayer: Player | null = this.target.isPlayer() ? this.target : null; // cache target player
+    const targetPlayer: Player | null = this.target.isPlayer()
+      ? this.target
+      : null; // cache target player
 
     if (this.attack.retreated()) {
       if (targetPlayer !== null) {
@@ -230,9 +232,10 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    const alliance = this.target && this.target.isPlayer()
-      ? this._owner.allianceWith(this.target)
-      : null;
+    const alliance =
+      this.target && this.target.isPlayer()
+        ? this._owner.allianceWith(this.target)
+        : null;
     if (this.breakAlliance && alliance !== null) {
       this.breakAlliance = false;
       this._owner.breakAlliance(alliance);

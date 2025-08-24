@@ -1,7 +1,7 @@
-import { ClientID, Winner } from "../core/Schemas";
-import { Tick } from "../core/game/Game";
-import { TokenPayload } from "../core/ApiSchemas";
 import WebSocket from "ws";
+import { TokenPayload } from "../core/ApiSchemas";
+import { Tick } from "../core/game/Game";
+import { ClientID, Winner } from "../core/Schemas";
 
 export class Client {
   public lastPing: number = Date.now();

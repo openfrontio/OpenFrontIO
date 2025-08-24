@@ -1,17 +1,17 @@
+import http from "http";
+import ipAnonymize from "ip-anonymize";
+import { WebSocket } from "ws";
+import { z } from "zod";
+import { getServerConfigFromServer } from "../../../../../core/configuration/ConfigLoader";
 import {
   ClientMessageSchema,
   ServerErrorMessage,
 } from "../../../../../core/Schemas";
-import { getUserMe, verifyClientToken } from "../../../../jwt";
 import { Client } from "../../../../Client";
 import { GameManager } from "../../../../GameManager";
-import { PrivilegeRefresher } from "../../../../PrivilegeRefresher";
-import { WebSocket } from "ws";
-import { getServerConfigFromServer } from "../../../../../core/configuration/ConfigLoader";
-import http from "http";
-import ipAnonymize from "ip-anonymize";
+import { getUserMe, verifyClientToken } from "../../../../jwt";
 import { logger } from "../../../../Logger";
-import { z } from "zod";
+import { PrivilegeRefresher } from "../../../../PrivilegeRefresher";
 
 const config = getServerConfigFromServer();
 
@@ -62,13 +62,13 @@ async function handleJoinMessage(
 ): Promise<
   | undefined
   | {
-    success: true;
-  }
+      success: true;
+    }
   | {
-    success: false;
-    code: 1002;
-    error: string;
-    reason:
+      success: false;
+      code: 1002;
+      error: string;
+      reason:
         | "ClientJoinMessageSchema"
         | "Flag invalid"
         | "Flag restricted"
@@ -78,19 +78,19 @@ async function handleJoinMessage(
         | "Pattern restricted"
         | "Pattern unlisted"
         | "Unauthorized";
-  }
+    }
   | {
-    success: false;
-    code: 1011;
-    reason: "Internal server error";
-    error: string;
-  }
+      success: false;
+      code: 1011;
+      reason: "Internal server error";
+      error: string;
+    }
 > {
   const forwarded = req.headers["x-forwarded-for"];
   const ip = Array.isArray(forwarded)
     ? forwarded[0]
     : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-    forwarded || req.socket.remoteAddress || "unknown";
+      forwarded || req.socket.remoteAddress || "unknown";
 
   try {
     // Parse and handle client messages
@@ -121,8 +121,8 @@ async function handleJoinMessage(
     const expectedWorkerId = config.workerIndex(clientMsg.gameID);
     if (expectedWorkerId !== workerId) {
       log.warn(
-        `Worker mismatch: Game ${clientMsg.gameID
-        } should be on worker ${expectedWorkerId
+        `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${
+          expectedWorkerId
         }, but this is worker ${workerId}`,
       );
       return;

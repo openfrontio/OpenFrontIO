@@ -1,5 +1,5 @@
-import { RequiredPatternSchema } from "./Schemas";
 import { z } from "zod";
+import { RequiredPatternSchema } from "./Schemas";
 
 export const ProductSchema = z.object({
   productId: z.string(),

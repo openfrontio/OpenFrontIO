@@ -1,5 +1,7 @@
 /* eslint-disable max-lines */
-import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
+
+import { JWK } from "jose";
+import { z } from "zod";
 import {
   Difficulty,
   Duos,
@@ -12,23 +14,22 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
-  TerraNullius,
   TerrainType,
+  TerraNullius,
   Tick,
   Trios,
   UnitInfo,
   UnitType,
 } from "../game/Game";
+import { TileRef } from "../game/GameMap";
+import { PlayerView } from "../game/GameView";
+import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
-import { assertNever, simpleHash, within } from "../Util";
-import { JWK } from "jose";
 import { NukeType } from "../StatsSchemas";
+import { assertNever, simpleHash, within } from "../Util";
+import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
-import { PlayerView } from "../game/GameView";
-import { TileRef } from "../game/GameMap";
-import { UserSettings } from "../game/UserSettings";
-import { z } from "zod";
 
 const JwksSchema = z.object({
   keys: z

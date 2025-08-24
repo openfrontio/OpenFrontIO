@@ -2,16 +2,16 @@
  * @jest-environment jsdom
  */
 import {
-  COLORS,
-  MenuElementParams,
-  Slot,
   attackMenuElement,
   buildMenuElement,
+  COLORS,
+  MenuElementParams,
   rootMenuElement,
+  Slot,
 } from "../../../src/client/graphics/layers/RadialMenuElements";
-import { GameView, PlayerView } from "../../../src/core/game/GameView";
-import { TileRef } from "../../../src/core/game/GameMap";
 import { UnitType } from "../../../src/core/game/Game";
+import { TileRef } from "../../../src/core/game/GameMap";
+import { GameView, PlayerView } from "../../../src/core/game/GameView";
 
 jest.mock("../../../src/client/Utils", () => ({
   translateText: jest.fn((key: string) => key),

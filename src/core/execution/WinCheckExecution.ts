@@ -1,3 +1,4 @@
+import { GameEvent } from "../EventBus";
 import {
   ColoredTeams,
   Execution,
@@ -6,7 +7,6 @@ import {
   Player,
   Team,
 } from "../game/Game";
-import { GameEvent } from "../EventBus";
 
 export class WinEvent implements GameEvent {
   constructor(public readonly winner: Player) {}

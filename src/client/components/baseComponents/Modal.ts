@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 
@@ -83,18 +83,21 @@ export class OModal extends LitElement {
 
   render() {
     return html`
-      ${this.isModalOpen
-        ? html`
+      ${
+        this.isModalOpen
+          ? html`
             <aside class="c-modal">
               <div
-                class="c-modal__wrapper ${this.alwaysMaximized
-                  ? "always-maximized"
-                  : ""}"
+                class="c-modal__wrapper ${
+                  this.alwaysMaximized ? "always-maximized" : ""
+                }"
               >
                 <header class="c-modal__header">
-                  ${`${this.translationKey}` === ""
-                    ? `${this.title}`
-                    : `${translateText(this.translationKey)}`}
+                  ${
+                    `${this.translationKey}` === ""
+                      ? `${this.title}`
+                      : `${translateText(this.translationKey)}`
+                  }
                   <div class="c-modal__close" @click=${this.close}>✕</div>
                 </header>
                 <section class="c-modal__content">
@@ -103,7 +106,8 @@ export class OModal extends LitElement {
               </div>
             </aside>
           `
-        : html``}
+          : html``
+      }
     `;
   }
 }

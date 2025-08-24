@@ -1,18 +1,18 @@
 import {
   Execution,
   Game,
+  isStructureType,
   MessageType,
   Player,
   TerraNullius,
   TrajectoryTile,
   Unit,
   UnitType,
-  isStructureType,
 } from "../game/Game";
-import { NukeType } from "../StatsSchemas";
-import { ParabolaPathFinder } from "../pathfinding/PathFinding";
-import { PseudoRandom } from "../PseudoRandom";
 import { TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
+import { ParabolaPathFinder } from "../pathfinding/PathFinding";
+import { NukeType } from "../StatsSchemas";
 
 const SPRITE_RADIUS = 16;
 

@@ -1,3 +1,7 @@
+import { placeName } from "../client/graphics/NameBoxCalculator";
+import { getConfig } from "./configuration/ConfigLoader";
+import { Executor } from "./execution/ExecutionManager";
+import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
   Attack,
@@ -14,23 +18,19 @@ import {
   PlayerProfile,
   PlayerType,
 } from "./game/Game";
-import { ClientID, GameStartInfo, Turn } from "./Schemas";
+import { createGame } from "./game/GameImpl";
+import { TileRef } from "./game/GameMap";
+import { GameMapLoader } from "./game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
-import { sanitize, simpleHash } from "./Util";
-import { Executor } from "./execution/ExecutionManager";
-import { GameMapLoader } from "./game/GameMapLoader";
-import { PseudoRandom } from "./PseudoRandom";
-import { TileRef } from "./game/GameMap";
-import { WinCheckExecution } from "./execution/WinCheckExecution";
-import { createGame } from "./game/GameImpl";
-import { fixProfaneUsername } from "./validations/username";
-import { getConfig } from "./configuration/ConfigLoader";
 import { loadTerrainMap } from "./game/TerrainMapLoader";
-import { placeName } from "../client/graphics/NameBoxCalculator";
+import { PseudoRandom } from "./PseudoRandom";
+import { ClientID, GameStartInfo, Turn } from "./Schemas";
+import { sanitize, simpleHash } from "./Util";
+import { fixProfaneUsername } from "./validations/username";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
@@ -57,13 +57,13 @@ export async function createGameRunner(
   const nations = gameStart.config.disableNPCs
     ? []
     : gameMap.manifest.nations.map(
-      (n) =>
-        new Nation(
-          new Cell(n.coordinates[0], n.coordinates[1]),
-          n.strength,
-          new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
-        ),
-    );
+        (n) =>
+          new Nation(
+            new Cell(n.coordinates[0], n.coordinates[1]),
+            n.strength,
+            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+          ),
+      );
 
   const game: Game = createGame(
     humans,

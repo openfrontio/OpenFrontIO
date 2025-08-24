@@ -134,7 +134,7 @@
 
 .option-image {
   width: 100%;
-  aspect-ratio: 4/2;
+  aspect-ratio: 4 / 2;
   color: #aaa;
   transition: transform 0.2s ease-in-out;
   border-radius: 8px;
@@ -373,17 +373,18 @@ label.option-card:hover {
 }
 
 #helpModal .city-icon {
-  mask: url("../../resources/images/CityIconWhite.svg") no-repeat center / cover;
+  mask:
+    url("../../resources/images/CityIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .factory-icon {
-  mask: url("../../resources/images/FactoryIconWhite.svg") no-repeat center /
-    cover;
+  mask:
+    url("../../resources/images/FactoryIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .defense-post-icon {
-  mask: url("../../resources/images/ShieldIconWhite.svg") no-repeat center /
-    cover;
+  mask:
+    url("../../resources/images/ShieldIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .port-icon {
@@ -391,27 +392,32 @@ label.option-card:hover {
 }
 
 #helpModal .warship-icon {
-  mask: url("../../resources/images/BattleshipIconWhite.svg") no-repeat center /
+  mask:
+    url("../../resources/images/BattleshipIconWhite.svg") no-repeat center /
     cover;
 }
 
 #helpModal .missile-silo-icon {
-  mask: url("../../resources/non-commercial/svg/MissileSiloIconWhite.svg")
-    no-repeat center / cover;
+  mask:
+    url("../../resources/non-commercial/svg/MissileSiloIconWhite.svg") no-repeat
+    center / cover;
 }
 
 #helpModal .sam-launcher-icon {
-  mask: url("../../resources/non-commercial/svg/SamLauncherIconWhite.svg")
-    no-repeat center / cover;
+  mask:
+    url("../../resources/non-commercial/svg/SamLauncherIconWhite.svg") no-repeat
+    center / cover;
 }
 
 #helpModal .atom-bomb-icon {
-  mask: url("../../resources/images/NukeIconWhite.svg") no-repeat center / cover;
+  mask:
+    url("../../resources/images/NukeIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .hydrogen-bomb-icon {
-  mask: url("../../resources/images/MushroomCloudIconWhite.svg") no-repeat
-    center / cover;
+  mask:
+    url("../../resources/images/MushroomCloudIconWhite.svg") no-repeat center /
+    cover;
 }
 
 #helpModal .mirv-icon {
@@ -419,7 +425,8 @@ label.option-card:hover {
 }
 
 #helpModal .chat-icon {
-  mask: url("../../resources/images/ChatIconWhite.svg") no-repeat center / cover;
+  mask:
+    url("../../resources/images/ChatIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .target-icon {
@@ -427,33 +434,35 @@ label.option-card:hover {
 }
 
 #helpModal .alliance-icon {
-  mask: url("../../resources/images/AllianceIconWhite.svg") no-repeat center /
-    cover;
+  mask:
+    url("../../resources/images/AllianceIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .emoji-icon {
-  mask: url("../../resources/images/EmojiIconWhite.svg") no-repeat center /
-    cover;
+  mask:
+    url("../../resources/images/EmojiIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .betray-icon {
-  mask: url("../../resources/images/TraitorIconWhite.svg") no-repeat center /
-    cover;
+  mask:
+    url("../../resources/images/TraitorIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .donate-icon {
-  mask: url("../../resources/images/DonateTroopIconWhite.svg") no-repeat
-    center / cover;
+  mask:
+    url("../../resources/images/DonateTroopIconWhite.svg") no-repeat center /
+    cover;
 }
 
 #helpModal .donate-gold-icon {
-  mask: url("../../resources/images/DonateGoldIconWhite.svg") no-repeat center /
+  mask:
+    url("../../resources/images/DonateGoldIconWhite.svg") no-repeat center /
     cover;
 }
 
 #helpModal .build-icon {
-  mask: url("../../resources/images/BuildIconWhite.svg") no-repeat center /
-    cover;
+  mask:
+    url("../../resources/images/BuildIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .info-icon {

@@ -1,14 +1,14 @@
-import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
 import { Colord } from "colord";
-import { GameMode } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import leaderboardRegularIcon from "../../../../resources/images/LeaderboardIconRegularWhite.svg";
 import leaderboardSolidIcon from "../../../../resources/images/LeaderboardIconSolidWhite.svg";
 import teamRegularIcon from "../../../../resources/images/TeamIconRegularWhite.svg";
 import teamSolidIcon from "../../../../resources/images/TeamIconSolidWhite.svg";
+import { GameMode } from "../../../core/game/Game";
+import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
 
 @customElement("game-left-sidebar")
 export class GameLeftSidebar extends LitElement implements Layer {
@@ -97,8 +97,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
           transition-transform duration-300 ease-out transform
           ${this.isVisible ? "translate-x-0" : "-translate-x-full"}`}
       >
-        ${this.isPlayerTeamLabelVisible
-          ? html`
+        ${
+          this.isPlayerTeamLabelVisible
+            ? html`
               <div
                 class="flex items-center w-full h-8 lg:h-10 text-white py-1 lg:p-2"
                 @contextmenu=${(e: Event) => e.preventDefault()}
@@ -109,7 +110,8 @@ export class GameLeftSidebar extends LitElement implements Layer {
                 </span>
               </div>
             `
-          : null}
+            : null
+        }
         <div
           class=${`flex items-center gap-2 space-x-2 text-white ${
             this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
@@ -117,31 +119,37 @@ export class GameLeftSidebar extends LitElement implements Layer {
         >
           <div class="w-6 h-6 cursor-pointer" @click=${this.toggleLeaderboard}>
             <img
-              src=${this.isLeaderboardShow
-                ? leaderboardSolidIcon
-                : leaderboardRegularIcon}
+              src=${
+                this.isLeaderboardShow
+                  ? leaderboardSolidIcon
+                  : leaderboardRegularIcon
+              }
               alt="treeIcon"
               width="20"
               height="20"
             />
           </div>
-          ${this.isTeamGame
-            ? html`
+          ${
+            this.isTeamGame
+              ? html`
                 <div
                   class="w-6 h-6 cursor-pointer"
                   @click=${this.toggleTeamLeaderboard}
                 >
                   <img
-                    src=${this.isTeamLeaderboardShow
-                      ? teamSolidIcon
-                      : teamRegularIcon}
+                    src=${
+                      this.isTeamLeaderboardShow
+                        ? teamSolidIcon
+                        : teamRegularIcon
+                    }
                     alt="treeIcon"
                     width="20"
                     height="20"
                   />
                 </div>
               `
-            : null}
+              : null
+          }
         </div>
         <div class="block lg:flex flex-wrap gap-2">
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>

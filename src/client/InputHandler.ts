@@ -1,8 +1,8 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
+import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
   constructor(

@@ -1,7 +1,7 @@
 import { Execution, Game } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { GameUpdateType, RailTile, RailType } from "../game/GameUpdates";
 import { Railroad } from "../game/Railroad";
-import { TileRef } from "../game/GameMap";
 
 export class RailroadExecution implements Execution {
   private mg: Game | undefined;
@@ -43,9 +43,9 @@ export class RailroadExecution implements Execution {
       railType:
         tiles.length > 0
           ? this.computeExtremityDirection(
-            tiles[tiles.length - 1],
-            tiles[tiles.length - 2],
-          )
+              tiles[tiles.length - 1],
+              tiles[tiles.length - 2],
+            )
           : RailType.VERTICAL,
     });
   }

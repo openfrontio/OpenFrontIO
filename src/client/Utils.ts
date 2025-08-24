@@ -1,6 +1,6 @@
 import IntlMessageFormat from "intl-messageformat";
-import { LangSelector } from "./LangSelector";
 import { MessageType } from "../core/game/Game";
+import { LangSelector } from "./LangSelector";
 
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);

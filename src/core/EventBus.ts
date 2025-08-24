@@ -6,8 +6,10 @@ export type EventConstructor<T extends GameEvent = GameEvent> = new (
 ) => T;
 
 export class EventBus {
-  private readonly listeners: Map<EventConstructor, Array<(event: GameEvent) => void>> =
-    new Map();
+  private readonly listeners: Map<
+    EventConstructor,
+    Array<(event: GameEvent) => void>
+  > = new Map();
 
   emit<T extends GameEvent>(event: T): void {
     const eventConstructor = event.constructor as EventConstructor<T>;

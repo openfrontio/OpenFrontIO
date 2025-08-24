@@ -1,14 +1,14 @@
-import { AlternateViewEvent, RedrawGraphicsEvent } from "../../InputHandler";
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
-import { PauseGameEvent } from "../../Transport";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { AlternateViewEvent, RedrawGraphicsEvent } from "../../InputHandler";
+import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
 
 const button = ({
   classes = "",
@@ -209,10 +209,7 @@ export class OptionsMenu extends LitElement implements Layer {
         <div
           class="options-menu flex flex-col justify-around gap-y-3 mt-2
           bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md
-          ${!this
-            .showSettings
-            ? "hidden"
-            : ""}"
+          ${!this.showSettings ? "hidden" : ""}"
         >
           ${button({
             onClick: this.onTerrainButtonClick,

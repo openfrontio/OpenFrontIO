@@ -1,5 +1,5 @@
-import { AStar, PathFindResultType } from "./AStar";
 import FastPriorityQueue from "fastpriorityqueue";
+import { AStar, PathFindResultType } from "./AStar";
 
 /**
  * Implement this interface with your graph to find paths with A*
@@ -128,7 +128,8 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       const openSet = isForward ? this.fwdOpenSet : this.bwdOpenSet;
       const cameFrom = isForward ? this.fwdCameFrom : this.bwdCameFrom;
 
-      const tentativeGScore = (gScore.get(current) ?? 0) + this.graph.cost(neighbor);
+      const tentativeGScore =
+        (gScore.get(current) ?? 0) + this.graph.cost(neighbor);
       let penalty = 0;
       // With a direction change penalty, the path will get as straight as possible
       if (this.directionChangePenalty > 0) {

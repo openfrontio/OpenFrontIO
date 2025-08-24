@@ -1,6 +1,7 @@
 // This file contians schemas for the openfront worker express server
-import { GameConfigSchema, GameRecordSchema } from "./Schemas";
+
 import { z } from "zod";
+import { GameConfigSchema, GameRecordSchema } from "./Schemas";
 
 export const CreateGameInputSchema = GameConfigSchema.or(
   z

@@ -14,17 +14,17 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef, euclDistFN, manhattanDistFN } from "../game/GameMap";
+import { euclDistFN, manhattanDistFN, TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
+import { GameID } from "../Schemas";
 import { calculateBoundingBox, flattenedEmojiTable, simpleHash } from "../Util";
-import { BotBehavior } from "./utils/BotBehavior";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
-import { GameID } from "../Schemas";
 import { NukeExecution } from "./NukeExecution";
-import { PseudoRandom } from "../PseudoRandom";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { closestTwoTiles } from "./Util";
+import { BotBehavior } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private active = true;
@@ -174,8 +174,7 @@ export class FakeHumanExecution implements Execution {
     const enemyborder = Array.from(this.player.borderTiles())
       .flatMap((t) => game.neighbors(t))
       .filter(
-        (t) =>
-          game.isLand(t) && game.ownerID(t) !== this.player?.smallID(),
+        (t) => game.isLand(t) && game.ownerID(t) !== this.player?.smallID(),
       );
 
     if (enemyborder.length === 0) {
@@ -306,7 +305,9 @@ export class FakeHumanExecution implements Execution {
       UnitType.SAMLauncher,
     );
     const structureTiles = structures.map((u) => u.tile());
-    const randomTiles: (TileRef | null)[] = new Array<TileRef | null>(10).fill(null);
+    const randomTiles: (TileRef | null)[] = new Array<TileRef | null>(10).fill(
+      null,
+    );
     for (let i = 0; i < randomTiles.length; i++) {
       randomTiles[i] = this.randTerritoryTile(other);
     }
@@ -413,7 +414,9 @@ export class FakeHumanExecution implements Execution {
     if (this.player.isOnSameTeam(other)) return;
     const closest = closestTwoTiles(
       this.mg,
-      Array.from(this.player.borderTiles()).filter((t) => this.mg?.isOceanShore(t)),
+      Array.from(this.player.borderTiles()).filter((t) =>
+        this.mg?.isOceanShore(t),
+      ),
       Array.from(other.borderTiles()).filter((t) => this.mg?.isOceanShore(t)),
     );
     if (closest === null) {
@@ -467,8 +470,8 @@ export class FakeHumanExecution implements Execution {
     const tiles =
       type === UnitType.Port
         ? Array.from(this.player.borderTiles()).filter((t) =>
-          this.mg?.isOceanShore(t),
-        )
+            this.mg?.isOceanShore(t),
+          )
         : Array.from(this.player.tiles());
     if (tiles.length === 0) return null;
     const valueFunction = this.structureSpawnTileValue(type);
@@ -486,7 +489,7 @@ export class FakeHumanExecution implements Execution {
     return bestTile;
   }
 
-  private * arraySampler<T>(a: T[], sampleSize = 50): Generator<T> {
+  private *arraySampler<T>(a: T[], sampleSize = 50): Generator<T> {
     if (a.length <= sampleSize) {
       // Return all elements
       yield* a;
@@ -508,7 +511,9 @@ export class FakeHumanExecution implements Execution {
     const { mg } = this;
     const otherUnits = this.player.units(type);
     // Prefer spacing structures out of atom bomb range
-    const borderSpacing = this.mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+    const borderSpacing = this.mg
+      .config()
+      .nukeMagnitudes(UnitType.AtomBomb).outer;
     const structureSpacing = borderSpacing * 2;
     switch (type) {
       case UnitType.Port:
@@ -516,7 +521,9 @@ export class FakeHumanExecution implements Execution {
           let w = 0;
 
           // Prefer to be far away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+          const otherTiles: Set<TileRef> = new Set(
+            otherUnits.map((u) => u.tile()),
+          );
           otherTiles.delete(tile);
           const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
           if (closestOther !== null) {
@@ -543,7 +550,9 @@ export class FakeHumanExecution implements Execution {
           }
 
           // Prefer to be away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+          const otherTiles: Set<TileRef> = new Set(
+            otherUnits.map((u) => u.tile()),
+          );
           otherTiles.delete(tile);
           const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
           if (closestOther !== null) {

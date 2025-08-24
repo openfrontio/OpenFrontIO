@@ -1,13 +1,3 @@
-import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { createCanvas, renderNumber, renderTroops } from "../../Utils";
-import { AlternateViewEvent } from "../../InputHandler";
-import { EventBus } from "../../../core/EventBus";
-import { Layer } from "./Layer";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { Theme } from "../../../core/configuration/Config";
-import { TransformHandler } from "../TransformHandler";
-import { UserSettings } from "../../../core/game/UserSettings";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import allianceRequestBlackIcon from "../../../../resources/images/AllianceRequestBlackIcon.svg";
 import allianceRequestWhiteIcon from "../../../../resources/images/AllianceRequestWhiteIcon.svg";
@@ -17,10 +7,20 @@ import embargoBlackIcon from "../../../../resources/images/EmbargoBlackIcon.svg"
 import embargoWhiteIcon from "../../../../resources/images/EmbargoWhiteIcon.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
 import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
+import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { PseudoRandom } from "../../../core/PseudoRandom";
+import { AlternateViewEvent } from "../../InputHandler";
+import { createCanvas, renderNumber, renderTroops } from "../../Utils";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 class RenderInfo {
   public icons: Map<string, HTMLImageElement> = new Map(); // Track icon elements
@@ -611,8 +611,8 @@ export class NameLayer implements Layer {
     // Position element with scale
     if (render.location && render.location !== oldLocation) {
       const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform =
-        `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
+      // eslint-disable-next-line max-len
+      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
     }
   }
 

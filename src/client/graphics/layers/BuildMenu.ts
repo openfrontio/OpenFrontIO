@@ -1,39 +1,39 @@
-import {
-  BuildUnitIntentEvent,
-  SendUpgradeStructureIntentEvent,
-} from "../../Transport";
+import { css, html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
+import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
+import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
+import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
+import portIcon from "../../../../resources/images/PortIcon.svg";
+import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
+import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
+import { translateText } from "../../../client/Utils";
+import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
   Gold,
   PlayerActions,
   UnitType,
 } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
+import { GameView } from "../../../core/game/GameView";
 import {
   CloseViewEvent,
   MouseDownEvent,
   ShowBuildMenuEvent,
   ShowEmojiMenuEvent,
 } from "../../InputHandler";
-import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
-import { TileRef } from "../../../core/game/GameMap";
-import { TransformHandler } from "../TransformHandler";
-import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
-import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
-import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
+import {
+  BuildUnitIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 import { renderNumber } from "../../Utils";
-import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
-import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import { translateText } from "../../../client/Utils";
-import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 export type BuildItemDisplay = {
   unitType: UnitType;
@@ -389,7 +389,10 @@ export class BuildMenu extends LitElement implements Layer {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile?: TileRef): void {
+  public sendBuildOrUpgrade(
+    buildableUnit: BuildableUnit,
+    tile?: TileRef,
+  ): void {
     if (tile === undefined) throw new Error("Missing tile");
     if (this.eventBus === undefined) throw new Error("Not initialized");
     if (buildableUnit.canUpgrade !== false) {
@@ -430,9 +433,11 @@ export class BuildMenu extends LitElement implements Layer {
                     @click=${() =>
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
-                    title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
-                      : ""}
+                    title=${
+                      !enabled
+                        ? translateText("build_menu.not_enough_money")
+                        : ""
+                    }
                   >
                     <img
                       src=${item.icon}
@@ -444,8 +449,9 @@ export class BuildMenu extends LitElement implements Layer {
                       >${item.key && translateText(item.key)}</span
                     >
                     <span class="build-description"
-                      >${item.description &&
-                      translateText(item.description)}</span
+                      >${
+                        item.description && translateText(item.description)
+                      }</span
                     >
                     <span class="build-cost" translate="no">
                       ${renderNumber(
@@ -459,11 +465,13 @@ export class BuildMenu extends LitElement implements Layer {
                         style="vertical-align: middle;"
                       />
                     </span>
-                    ${item.countable
-                      ? html`<div class="build-count-chip">
+                    ${
+                      item.countable
+                        ? html`<div class="build-count-chip">
                           <span class="build-count">${this.count(item)}</span>
                         </div>`
-                      : ""}
+                        : ""
+                    }
                   </button>
                 `;
               })}

@@ -1,10 +1,10 @@
-import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";
 import { Game, PlayerInfo, PlayerType } from "../game/Game";
-import { GameID } from "../Schemas";
-import { PseudoRandom } from "../PseudoRandom";
-import { SpawnExecution } from "./SpawnExecution";
 import { TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
+import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
+import { SpawnExecution } from "./SpawnExecution";
+import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";
 
 export class BotSpawner {
   private readonly random: PseudoRandom;

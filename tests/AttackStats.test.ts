@@ -1,7 +1,7 @@
-import { GOLD_INDEX_WAR, GOLD_INDEX_WORK } from "../src/core/StatsSchemas";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { GOLD_INDEX_WAR, GOLD_INDEX_WORK } from "../src/core/StatsSchemas";
 import { setup } from "./util/Setup";
 
 let game: Game;

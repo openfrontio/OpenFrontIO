@@ -1,7 +1,7 @@
-import { Game, Player, UnitType } from "./Game";
-import { GameMap, TileRef, andFN, manhattanDistFN } from "./GameMap";
-import { MiniAStar } from "../pathfinding/MiniAStar";
 import { PathFindResultType } from "../pathfinding/AStar";
+import { MiniAStar } from "../pathfinding/MiniAStar";
+import { Game, Player, UnitType } from "./Game";
+import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
 
 export function canBuildTransportShip(
   game: Game,

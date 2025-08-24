@@ -1,16 +1,16 @@
 /* eslint-disable max-lines */
 import * as d3 from "d3";
+import backIcon from "../../../../resources/images/BackIconWhite.svg";
+import { EventBus, GameEvent } from "../../../core/EventBus";
+import { CloseViewEvent } from "../../InputHandler";
+import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
 import {
   CenterButtonElement,
   MenuElement,
   MenuElementParams,
   TooltipKey,
 } from "./RadialMenuElements";
-import { EventBus, GameEvent } from "../../../core/EventBus";
-import { CloseViewEvent } from "../../InputHandler";
-import { Layer } from "./Layer";
-import backIcon from "../../../../resources/images/BackIconWhite.svg";
-import { translateText } from "../../Utils";
 
 export class CloseRadialMenuEvent implements GameEvent {
   constructor() {}
@@ -41,7 +41,9 @@ type CenterButtonState = "default" | "back";
 type RequiredRadialMenuConfig = Required<RadialMenuConfig>;
 
 export class RadialMenu implements Layer {
-  private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined> | undefined;
+  private menuElement:
+    | d3.Selection<HTMLDivElement, unknown, null, undefined>
+    | undefined;
   private tooltipElement: HTMLDivElement | null = null;
   private isVisible = false;
 
@@ -150,9 +152,12 @@ export class RadialMenu implements Layer {
       .style("position", "absolute")
       .style("top", "50%")
       .style("left", "50%")
-      .style("transition", `top ${
-        this.config.menuTransitionDuration}ms ease, left ${
-        this.config.menuTransitionDuration}ms ease`)
+      .style(
+        "transition",
+        `top ${this.config.menuTransitionDuration}ms ease, left ${
+          this.config.menuTransitionDuration
+        }ms ease`,
+      )
       .style("transform", "translate(-50%, -50%)")
       .style("pointer-events", "all")
       .on("click", (event) => this.hideRadialMenu());
@@ -392,9 +397,10 @@ export class RadialMenu implements Layer {
     >,
     level: number,
   ) {
-    const onHover = (d: d3.PieArcDatum<MenuElement>, path: d3.Selection<
-      d3.BaseType, unknown, HTMLElement, unknown
-    >) => {
+    const onHover = (
+      d: d3.PieArcDatum<MenuElement>,
+      path: d3.Selection<d3.BaseType, unknown, HTMLElement, unknown>,
+    ) => {
       const disabled = this.params === null || d.data.disabled(this.params);
       if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
         this.showTooltip(d.data.tooltipItems);
@@ -413,9 +419,10 @@ export class RadialMenu implements Layer {
       path.attr("stroke-width", "3");
     };
 
-    const onMouseOut = (d: d3.PieArcDatum<MenuElement>, path: d3.Selection<
-      d3.BaseType, unknown, HTMLElement, unknown
-    >) => {
+    const onMouseOut = (
+      d: d3.PieArcDatum<MenuElement>,
+      path: d3.Selection<d3.BaseType, unknown, HTMLElement, unknown>,
+    ) => {
       const disabled = this.params === null || d.data.disabled(this.params);
       if (this.submenuHoverTimeout !== null) {
         window.clearTimeout(this.submenuHoverTimeout);
@@ -1072,14 +1079,18 @@ export class RadialMenu implements Layer {
     const vh = window.innerHeight;
 
     // If the menu cannot fully fit on an axis, pin it to the viewport center on that axis.
-    const clampedX = 2 * margin > vw ? vw / 2 : Math.min(Math.max(this.anchorX, margin), vw - margin);
-    const clampedY = 2 * margin > vh ? vh / 2 : Math.min(Math.max(this.anchorY, margin), vh - margin);
+    const clampedX =
+      2 * margin > vw
+        ? vw / 2
+        : Math.min(Math.max(this.anchorX, margin), vw - margin);
+    const clampedY =
+      2 * margin > vh
+        ? vh / 2
+        : Math.min(Math.max(this.anchorY, margin), vh - margin);
 
     if (this.menuElement === undefined) throw new Error("Not initialized");
     const svgSel = this.menuElement.select("svg");
-    svgSel
-      .style("top", `${clampedY}px`)
-      .style("left", `${clampedX}px`);
+    svgSel.style("top", `${clampedY}px`).style("left", `${clampedX}px`);
   }
 
   private readonly handleResize = () => {

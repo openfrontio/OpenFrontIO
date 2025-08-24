@@ -1,11 +1,9 @@
-import {
-  AllianceView,
-  AttackUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-  PlayerUpdate,
-  UnitUpdate,
-} from "./GameUpdates";
+import { base64url } from "jose";
+import { Config } from "../configuration/Config";
+import { PatternDecoder } from "../PatternDecoder";
+import { ClientID, GameID, Player } from "../Schemas";
+import { createRandomName } from "../Util";
+import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
   EmojiMessage,
@@ -18,24 +16,26 @@ import {
   PlayerProfile,
   PlayerType,
   Team,
-  TerraNullius,
   TerrainType,
+  TerraNullius,
   Tick,
   TrainType,
   UnitInfo,
   UnitType,
 } from "./Game";
-import { ClientID, GameID, Player } from "../Schemas";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
-import { UnitGrid, UnitPredicate } from "./UnitGrid";
-import { Config } from "../configuration/Config";
-import { PatternDecoder } from "../PatternDecoder";
-import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import {
+  AllianceView,
+  AttackUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  PlayerUpdate,
+  UnitUpdate,
+} from "./GameUpdates";
 import { TerrainMapData } from "./TerrainMapLoader";
+import { TerraNulliusImpl } from "./TerraNulliusImpl";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
-import { WorkerClient } from "../worker/WorkerClient";
-import { base64url } from "jose";
-import { createRandomName } from "../Util";
 
 const userSettings: UserSettings = new UserSettings();
 

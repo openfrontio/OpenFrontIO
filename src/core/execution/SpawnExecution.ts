@@ -1,7 +1,7 @@
 import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
-import { TileRef } from "../game/GameMap";
 import { getSpawnTiles } from "./Util";
 
 export class SpawnExecution implements Execution {

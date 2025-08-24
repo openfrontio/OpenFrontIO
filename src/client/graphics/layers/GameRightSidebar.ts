@@ -1,20 +1,20 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
-import { PauseGameEvent } from "../../Transport";
-import { ShowReplayPanelEvent } from "./ReplayPanel";
-import { ShowSettingsModalEvent } from "./SettingsModal";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import pauseIcon from "../../../../resources/images/PauseIconWhite.svg";
 import playIcon from "../../../../resources/images/PlayIconWhite.svg";
 import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhite.svg";
 import replaySolidIcon from "../../../../resources/images/ReplaySolidIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
+import { GameType } from "../../../core/game/Game";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView } from "../../../core/game/GameView";
+import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
+import { ShowReplayPanelEvent } from "./ReplayPanel";
+import { ShowSettingsModalEvent } from "./SettingsModal";
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {

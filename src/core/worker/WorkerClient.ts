@@ -5,16 +5,19 @@ import {
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
-import { ClientID, GameStartInfo, Turn } from "../Schemas";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { TileRef } from "../game/GameMap";
-import { WorkerMessage } from "./WorkerMessages";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
+import { WorkerMessage } from "./WorkerMessages";
 
 export class WorkerClient {
   private readonly worker: Worker;
   private isInitialized = false;
-  private readonly messageHandlers: Map<string, (message: WorkerMessage) => void>;
+  private readonly messageHandlers: Map<
+    string,
+    (message: WorkerMessage) => void
+  >;
   private gameUpdateCallback?: (
     update: GameUpdateViewData | ErrorUpdate,
   ) => void;

@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
@@ -119,17 +119,19 @@ export class MapDisplay extends LitElement {
   render() {
     return html`
       <div class="option-card ${this.selected ? "selected" : ""}">
-        ${this.isLoading
-          ? html`<div class="option-image">
+        ${
+          this.isLoading
+            ? html`<div class="option-image">
               ${translateText("map_component.loading")}
             </div>`
-          : this.mapWebpPath
-            ? html`<img
+            : this.mapWebpPath
+              ? html`<img
                 src="${this.mapWebpPath}"
                 alt="${this.mapKey}"
                 class="option-image"
               />`
-            : html`<div class="option-image">Error</div>`}
+              : html`<div class="option-image">Error</div>`
+        }
         <div class="option-card-title">${this.translation || this.mapName}</div>
       </div>
     `;

@@ -32,10 +32,10 @@ jest.mock("../src/client/Utils", () => ({
 }));
 
 import {
-  MAX_USERNAME_LENGTH,
-  MIN_USERNAME_LENGTH,
   fixProfaneUsername,
   isProfaneUsername,
+  MAX_USERNAME_LENGTH,
+  MIN_USERNAME_LENGTH,
   sanitizeUsername,
   validateUsername,
 } from "../src/core/validations/username";

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import "./LanguageModal";
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
 import ar from "../../resources/lang/ar.json";
@@ -289,16 +289,16 @@ export class LangSelector extends LitElement {
       this.languageList.find((l) => l.code === this.currentLang) ??
       (this.currentLang === "debug"
         ? {
-          code: "debug",
-          native: "Debug",
-          en: "Debug",
-          svg: "xx",
-        }
+            code: "debug",
+            native: "Debug",
+            en: "Debug",
+            svg: "xx",
+          }
         : {
-          native: "English",
-          en: "English",
-          svg: "uk_us_flag",
-        });
+            native: "English",
+            en: "English",
+            svg: "uk_us_flag",
+          });
 
     return html`
       <div class="container__row">
@@ -327,7 +327,7 @@ export class LangSelector extends LitElement {
         .languageList=${this.languageList}
         .currentLang=${this.currentLang}
         @language-selected=${(e: CustomEvent) =>
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           this.changeLanguage(e.detail.lang)}
         @close-modal=${() => (this.showModal = false)}
       ></language-modal>
@@ -348,7 +348,7 @@ function flattenTranslations(
     if (typeof value === "string") {
       result[fullKey] = value;
     } else if (value && typeof value === "object" && !Array.isArray(value)) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       flattenTranslations(value, fullKey, result);
     } else {
       console.warn("Unknown type", typeof value, value);

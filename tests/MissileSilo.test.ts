@@ -1,3 +1,6 @@
+import { NukeExecution } from "../src/core/execution/NukeExecution";
+import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -5,12 +8,9 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
-import { constructionExecution, executeTicks } from "./util/utils";
-import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { TileRef } from "../src/core/game/GameMap";
-import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
 import { setup } from "./util/Setup";
+import { constructionExecution, executeTicks } from "./util/utils";
 
 let game: Game;
 let attacker: Player;

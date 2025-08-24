@@ -7,6 +7,7 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
@@ -15,7 +16,6 @@ import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
-import { TileRef } from "../game/GameMap";
 import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
@@ -97,7 +97,8 @@ export class ConstructionExecution implements Execution {
       this.active = false;
       return;
     }
-    if (this.ticksUntilComplete === undefined) throw new Error("Not initialized");
+    if (this.ticksUntilComplete === undefined)
+      throw new Error("Not initialized");
     this.ticksUntilComplete--;
   }
 

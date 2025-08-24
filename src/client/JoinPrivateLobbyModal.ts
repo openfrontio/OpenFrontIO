@@ -1,16 +1,16 @@
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { html, LitElement } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameInfo, GameInfoSchema } from "../core/Schemas";
-import { LitElement, html } from "lit";
+import { getClientID } from "../core/Util";
 import {
   WorkerApiArchivedGameLobbySchema,
   WorkerApiGameIdExistsSchema,
 } from "../core/WorkerSchemas";
-import { customElement, query, state } from "lit/decorators.js";
 import { JoinLobbyEvent } from "./Main";
-import { getClientID } from "../core/Util";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { translateText } from "../client/Utils";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
@@ -82,13 +82,16 @@ export class JoinPrivateLobbyModal extends LitElement {
           ${this.message}
         </div>
         <div class="options-layout">
-          ${this.hasJoined && this.players.length > 0
-            ? html` <div class="options-section">
+          ${
+            this.hasJoined && this.players.length > 0
+              ? html` <div class="options-section">
                 <div class="option-title">
                   ${this.players.length}
-                  ${this.players.length === 1
-                    ? translateText("private_lobby.player")
-                    : translateText("private_lobby.players")}
+                  ${
+                    this.players.length === 1
+                      ? translateText("private_lobby.player")
+                      : translateText("private_lobby.players")
+                  }
                 </div>
 
                 <div class="players-list">
@@ -97,16 +100,19 @@ export class JoinPrivateLobbyModal extends LitElement {
                   )}
                 </div>
               </div>`
-            : ""}
+              : ""
+          }
         </div>
         <div class="flex justify-center">
-          ${!this.hasJoined
-            ? html` <o-button
+          ${
+            !this.hasJoined
+              ? html` <o-button
                 title=${translateText("private_lobby.join_lobby")}
                 block
                 @click=${this.joinLobby}
               ></o-button>`
-            : ""}
+              : ""
+          }
         </div>
       </o-modal>
     `;

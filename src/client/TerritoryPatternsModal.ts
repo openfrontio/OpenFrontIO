@@ -1,14 +1,14 @@
 import "./components/Difficulties";
 import "./components/Maps";
-import { LitElement, html, render } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { handlePurchase, patterns } from "./Cosmetics";
-import { Pattern } from "../core/CosmeticSchemas";
-import { PatternDecoder } from "../core/PatternDecoder";
-import type { TemplateResult } from "lit";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { UserSettings } from "../core/game/UserSettings";
 import { base64url } from "jose";
+import type { TemplateResult } from "lit";
+import { html, LitElement, render } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { UserMeResponse } from "../core/ApiSchemas";
+import { Pattern } from "../core/CosmeticSchemas";
+import { UserSettings } from "../core/game/UserSettings";
+import { PatternDecoder } from "../core/PatternDecoder";
+import { handlePurchase, patterns } from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -112,8 +112,9 @@ export class TerritoryPatternsModal extends LitElement {
       return html`
         <div
           class="fixed z-[10000] px-3 py-2 rounded bg-black text-white text-sm pointer-events-none shadow-md"
-          style="top: ${this.hoverPosition.y + 12}px; left: ${this.hoverPosition
-            .x + 12}px;"
+          style="top: ${this.hoverPosition.y + 12}px; left: ${
+            this.hoverPosition.x + 12
+          }px;"
         >
           ${translateText("territory_patterns.blocked.purchase")}
         </div>
@@ -129,9 +130,11 @@ export class TerritoryPatternsModal extends LitElement {
       <div style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);">
         <button
           class="border p-2 rounded-lg shadow text-black dark:text-white text-left w-full
-          ${isSelected
-            ? "bg-blue-500 text-white"
-            : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
+          ${
+            isSelected
+              ? "bg-blue-500 text-white"
+              : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+          }
           ${pattern.product !== null ? "opacity-50 cursor-not-allowed" : ""}"
           @click=${() =>
             pattern.product === null && this.selectPattern(pattern.pattern)}
@@ -162,8 +165,9 @@ export class TerritoryPatternsModal extends LitElement {
             )}
           </div>
         </button>
-        ${pattern.product !== null
-          ? html`
+        ${
+          pattern.product !== null
+            ? html`
               <button
                 class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600
                 text-white text-xs font-medium rounded transition-colors"
@@ -177,7 +181,8 @@ export class TerritoryPatternsModal extends LitElement {
                 (${pattern.product.price})
               </button>
             `
-          : null}
+            : null
+        }
       </div>
     `;
   }
@@ -198,9 +203,11 @@ export class TerritoryPatternsModal extends LitElement {
       >
         <button
           class="border p-2 rounded-lg shadow text-black dark:text-white text-left
-          ${this.selectedPattern === undefined
-            ? "bg-blue-500 text-white"
-            : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}"
+          ${
+            this.selectedPattern === undefined
+              ? "bg-blue-500 text-white"
+              : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+          }"
           style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);"
           @click=${() => this.selectPattern(undefined)}
         >
@@ -290,24 +297,29 @@ export class TerritoryPatternsModal extends LitElement {
         "
       >
         <div
-          style="display: grid; grid-template-columns: repeat(2, ${width /
-          2}px); grid-template-rows: repeat(2, ${height / 2}px);"
+          style="display: grid; grid-template-columns: repeat(2, ${
+            width / 2
+          }px); grid-template-rows: repeat(2, ${height / 2}px);"
         >
           <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
+            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${
+              width / 2
+            }px; height: ${height / 2}px;"
           ></div>
           <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
+            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${
+              width / 2
+            }px; height: ${height / 2}px;"
           ></div>
           <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
+            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${
+              width / 2
+            }px; height: ${height / 2}px;"
           ></div>
           <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
+            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${
+              width / 2
+            }px; height: ${height / 2}px;"
           ></div>
         </div>
       </div>

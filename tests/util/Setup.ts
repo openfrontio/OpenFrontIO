@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+import { z } from "zod";
 import {
   Difficulty,
   Game,
@@ -7,18 +10,15 @@ import {
   PlayerInfo,
   PlayerType,
 } from "../../src/core/game/Game";
+import { createGame } from "../../src/core/game/GameImpl";
 import {
-  MapManifestSchema,
   genTerrainFromBin,
+  MapManifestSchema,
 } from "../../src/core/game/TerrainMapLoader";
+import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { createGame } from "../../src/core/game/GameImpl";
-import fs from "fs";
-import path from "path";
-import { z } from "zod";
 
 export async function setup(
   mapName: string,

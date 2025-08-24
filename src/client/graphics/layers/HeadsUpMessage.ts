@@ -1,8 +1,8 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
 import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
 
 @customElement("heads-up-message")
 export class HeadsUpMessage extends LitElement implements Layer {

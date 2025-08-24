@@ -1,7 +1,20 @@
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
+import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
+import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
+import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
+import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import { translateText } from "../../../client/Utils";
+import { EventBus } from "../../../core/EventBus";
 import { AllPlayers, PlayerActions } from "../../../core/game/Game";
-import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
+import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { LitElement, html } from "lit";
+import { flattenedEmojiTable } from "../../../core/Util";
+import Countries from "../../data/countries.json";
+import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -11,24 +24,11 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
-import { customElement, state } from "lit/decorators.js";
 import { renderNumber, renderTroops } from "../../Utils";
-import { ChatModal } from "./ChatModal";
-import Countries from "../../data/countries.json";
-import { EmojiTable } from "./EmojiTable";
-import { EventBus } from "../../../core/EventBus";
-import { Layer } from "./Layer";
-import { TileRef } from "../../../core/game/GameMap";
 import { UIState } from "../UIState";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
-import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
-import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
-import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
-import { flattenedEmojiTable } from "../../../core/Util";
-import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import { translateText } from "../../../client/Utils";
+import { ChatModal } from "./ChatModal";
+import { EmojiTable } from "./EmojiTable";
+import { Layer } from "./Layer";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -195,10 +195,7 @@ export class PlayerPanel extends LitElement implements Layer {
       const remainingTicks = expiresAt - this.g.ticks();
 
       if (remainingTicks > 0) {
-        const remainingSeconds = Math.max(
-          0,
-          Math.floor(remainingTicks / 10),
-        ); // 10 ticks per second
+        const remainingSeconds = Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
         this.allianceExpiryText = this.formatDuration(remainingSeconds);
       }
     } else {
@@ -246,7 +243,10 @@ export class PlayerPanel extends LitElement implements Layer {
 
     //flag icon in the playerPanel
     const flagCode = other.cosmetics.flag;
-    const country = typeof flagCode === "string" ? Countries.find((c) => c.code === flagCode) : undefined;
+    const country =
+      typeof flagCode === "string"
+        ? Countries.find((c) => c.code === flagCode)
+        : undefined;
     const flagName = country?.name;
 
     return html`
@@ -283,8 +283,9 @@ export class PlayerPanel extends LitElement implements Layer {
                 </div>
               </div>
               <!-- Flag -->
-              ${country
-                ? html`
+              ${
+                country
+                  ? html`
                     <div>
                       <div class="text-white text-opacity-80 text-sm px-2">
                         ${translateText("player_panel.flag")}
@@ -298,7 +299,8 @@ export class PlayerPanel extends LitElement implements Layer {
                       </div>
                     </div>
                   `
-                : ""}
+                  : ""
+              }
               <!-- Resources section -->
               <div class="grid grid-cols-2 gap-2">
                 <div class="flex flex-col gap-1">
@@ -333,9 +335,11 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${translateText("player_panel.traitor")}
                 </div>
                 <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                  ${other.isTraitor()
-                    ? translateText("player_panel.yes")
-                    : translateText("player_panel.no")}
+                  ${
+                    other.isTraitor()
+                      ? translateText("player_panel.yes")
+                      : translateText("player_panel.no")
+                  }
                 </div>
               </div>
 
@@ -355,9 +359,11 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${translateText("player_panel.embargo")}
                 </div>
                 <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
-                  ${other.hasEmbargoAgainst(myPlayer)
-                    ? translateText("player_panel.yes")
-                    : translateText("player_panel.no")}
+                  ${
+                    other.hasEmbargoAgainst(myPlayer)
+                      ? translateText("player_panel.yes")
+                      : translateText("player_panel.no")
+                  }
                 </div>
               </div>
 
@@ -371,17 +377,20 @@ export class PlayerPanel extends LitElement implements Layer {
                   class="bg-opacity-50 bg-gray-700 rounded p-2 text-white max-w-72 max-h-20 overflow-y-auto"
                   translate="no"
                 >
-                  ${other.allies().length > 0
-                    ? other
-                      .allies()
-                      .map((p) => p.name())
-                      .join(", ")
-                    : translateText("player_panel.none")}
+                  ${
+                    other.allies().length > 0
+                      ? other
+                          .allies()
+                          .map((p) => p.name())
+                          .join(", ")
+                      : translateText("player_panel.none")
+                  }
                 </div>
               </div>
 
-              ${this.allianceExpiryText !== null
-                ? html`
+              ${
+                this.allianceExpiryText !== null
+                  ? html`
                     <div class="flex flex-col gap-1">
                       <div class="text-white text-opacity-80 text-sm px-2">
                         ${translateText("player_panel.alliance_time_remaining")}
@@ -393,7 +402,8 @@ export class PlayerPanel extends LitElement implements Layer {
                       </div>
                     </div>
                   `
-                : ""}
+                  : ""
+              }
 
               <!-- Action buttons -->
               <div class="flex justify-center gap-2">
@@ -406,8 +416,9 @@ export class PlayerPanel extends LitElement implements Layer {
                 >
                   <img src=${chatIcon} alt="Target" class="w-6 h-6" />
                 </button>
-                ${canTarget
-                  ? html`<button
+                ${
+                  canTarget
+                    ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleTargetClick(e, other)}
                       class="w-10 h-10 flex items-center justify-center
@@ -416,9 +427,11 @@ export class PlayerPanel extends LitElement implements Layer {
                     >
                       <img src=${targetIcon} alt="Target" class="w-6 h-6" />
                     </button>`
-                  : ""}
-                ${canBreakAlliance
-                  ? html`<button
+                    : ""
+                }
+                ${
+                  canBreakAlliance
+                    ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleBreakAllianceClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
@@ -431,9 +444,11 @@ export class PlayerPanel extends LitElement implements Layer {
                         class="w-6 h-6"
                       />
                     </button>`
-                  : ""}
-                ${canSendAllianceRequest
-                  ? html`<button
+                    : ""
+                }
+                ${
+                  canSendAllianceRequest
+                    ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleAllianceClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
@@ -442,9 +457,11 @@ export class PlayerPanel extends LitElement implements Layer {
                     >
                       <img src=${allianceIcon} alt="Alliance" class="w-6 h-6" />
                     </button>`
-                  : ""}
-                ${canDonateTroops
-                  ? html`<button
+                    : ""
+                }
+                ${
+                  canDonateTroops
+                    ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleDonateTroopClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
@@ -457,9 +474,11 @@ export class PlayerPanel extends LitElement implements Layer {
                         class="w-6 h-6"
                       />
                     </button>`
-                  : ""}
-                ${canDonateGold
-                  ? html`<button
+                    : ""
+                }
+                ${
+                  canDonateGold
+                    ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleDonateGoldClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
@@ -468,9 +487,11 @@ export class PlayerPanel extends LitElement implements Layer {
                     >
                       <img src=${donateGoldIcon} alt="Donate" class="w-6 h-6" />
                     </button>`
-                  : ""}
-                ${canSendEmoji
-                  ? html`<button
+                    : ""
+                }
+                ${
+                  canSendEmoji
+                    ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleEmojiClick(e, myPlayer, other)}
                       class="w-10 h-10 flex items-center justify-center
@@ -479,10 +500,12 @@ export class PlayerPanel extends LitElement implements Layer {
                     >
                       <img src=${emojiIcon} alt="Emoji" class="w-6 h-6" />
                     </button>`
-                  : ""}
+                    : ""
+                }
               </div>
-              ${canEmbargo && other !== myPlayer
-                ? html`<button
+              ${
+                canEmbargo && other !== myPlayer
+                  ? html`<button
                     @click=${(e: MouseEvent) =>
                       this.handleEmbargoClick(e, myPlayer, other)}
                     class="w-100 h-10 flex items-center justify-center
@@ -491,9 +514,11 @@ export class PlayerPanel extends LitElement implements Layer {
                   >
                     ${translateText("player_panel.stop_trade")}
                   </button>`
-                : ""}
-              ${!canEmbargo && other !== myPlayer
-                ? html`<button
+                  : ""
+              }
+              ${
+                !canEmbargo && other !== myPlayer
+                  ? html`<button
                     @click=${(e: MouseEvent) =>
                       this.handleStopEmbargoClick(e, myPlayer, other)}
                     class="w-100 h-10 flex items-center justify-center
@@ -502,7 +527,8 @@ export class PlayerPanel extends LitElement implements Layer {
                   >
                     ${translateText("player_panel.start_trade")}
                   </button>`
-                : ""}
+                  : ""
+              }
             </div>
           </div>
         </div>

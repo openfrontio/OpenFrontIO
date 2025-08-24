@@ -1,9 +1,12 @@
-import * as dotenv from "dotenv";
-import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
-import { getOtelResource, getPromLabels } from "./OtelResource";
-import { GameManager } from "./GameManager";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
+import * as dotenv from "dotenv";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { GameManager } from "./GameManager";
+import { getOtelResource, getPromLabels } from "./OtelResource";
 
 dotenv.config();
 

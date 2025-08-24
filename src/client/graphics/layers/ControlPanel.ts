@@ -1,14 +1,14 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { renderNumber, renderTroops } from "../../Utils";
-import { AttackRatioEvent } from "../../InputHandler";
-import { ClientID } from "../../../core/Schemas";
-import { EventBus } from "../../../core/EventBus";
-import { GameView } from "../../../core/game/GameView";
-import { Gold } from "../../../core/game/Game";
-import { Layer } from "./Layer";
-import { UIState } from "../UIState";
 import { translateText } from "../../../client/Utils";
+import { EventBus } from "../../../core/EventBus";
+import { Gold } from "../../../core/game/Game";
+import { GameView } from "../../../core/game/GameView";
+import { ClientID } from "../../../core/Schemas";
+import { AttackRatioEvent } from "../../InputHandler";
+import { renderNumber, renderTroops } from "../../Utils";
+import { UIState } from "../UIState";
+import { Layer } from "./Layer";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
@@ -166,10 +166,12 @@ export class ControlPanel extends LitElement implements Layer {
         }
       </style>
       <div
-        class="${this._isVisible
-          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 " +
-            "pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
-          : "hidden"}"
+        class="${
+          this._isVisible
+            ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 " +
+              "pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
+            : "hidden"
+        }"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div class="block bg-black/30 text-white mb-4 p-2 rounded">
@@ -180,9 +182,11 @@ export class ControlPanel extends LitElement implements Layer {
             <span translate="no"
               >${renderTroops(this._troops)} / ${renderTroops(this._maxTroops)}
               <span
-                class="${this._troopRateIsIncreasing
-                  ? "text-green-500"
-                  : "text-yellow-500"}"
+                class="${
+                  this._troopRateIsIncreasing
+                    ? "text-green-500"
+                    : "text-yellow-500"
+                }"
                 translate="no"
                 >(+${renderTroops(this.troopRate)})</span
               ></span

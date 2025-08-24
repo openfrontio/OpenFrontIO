@@ -1,9 +1,9 @@
-import { AStar, AStarResult, PathFindResultType } from "./AStar";
-import { GameMap, TileRef } from "../game/GameMap";
-import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { Game } from "../game/Game";
-import { MiniAStar } from "./MiniAStar";
+import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { DistanceBasedBezierCurve } from "../utilities/Line";
+import { AStar, AStarResult, PathFindResultType } from "./AStar";
+import { MiniAStar } from "./MiniAStar";
 
 const parabolaMinHeight = 50;
 

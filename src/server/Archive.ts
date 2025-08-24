@@ -1,8 +1,8 @@
-import { AnalyticsRecord, GameID, GameRecord } from "../core/Schemas";
 import { S3 } from "@aws-sdk/client-s3";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { logger } from "./Logger";
+import { AnalyticsRecord, GameID, GameRecord } from "../core/Schemas";
 import { replacer } from "../core/Util";
+import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
 

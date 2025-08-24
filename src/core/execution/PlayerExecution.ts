@@ -1,8 +1,8 @@
+import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
+import { GameImpl } from "../game/GameImpl";
 import { GameMap, TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
-import { Config } from "../configuration/Config";
-import { GameImpl } from "../game/GameImpl";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;

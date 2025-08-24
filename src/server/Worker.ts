@@ -1,28 +1,28 @@
+import express, { NextFunction, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
+import http from "http";
+import ipAnonymize from "ip-anonymize";
+import path from "path";
+import { fileURLToPath } from "url";
+import { WebSocket, WebSocketServer } from "ws";
+import { z } from "zod";
+import { ID } from "../core/BaseSchemas";
+import { GameEnv } from "../core/configuration/Config";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
+import { GameRecord, GameRecordSchema } from "../core/Schemas";
 import {
   CreateGameInputSchema,
   GameInputSchema,
   WorkerApiGameIdExists,
 } from "../core/WorkerSchemas";
-import { GameRecord, GameRecordSchema } from "../core/Schemas";
-import { LimiterType, gatekeeper } from "./Gatekeeper";
-import { WebSocket, WebSocketServer } from "ws";
 import { archive, readGameRecord } from "./Archive";
-import express, { NextFunction, Request, Response } from "express";
-import { GameEnv } from "../core/configuration/Config";
 import { GameManager } from "./GameManager";
-import { GameType } from "../core/game/Game";
-import { ID } from "../core/BaseSchemas";
-import { PrivilegeRefresher } from "./PrivilegeRefresher";
-import { fileURLToPath } from "url";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import http from "http";
-import { initWorkerMetrics } from "./WorkerMetrics";
-import ipAnonymize from "ip-anonymize";
+import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
-import path from "path";
+import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { initWorkerMetrics } from "./WorkerMetrics";
 import { preJoinMessageHandler } from "./worker/websocket/handler/message/PreJoinHandler";
-import rateLimit from "express-rate-limit";
-import { z } from "zod";
 
 const config = getServerConfigFromServer();
 
@@ -134,17 +134,9 @@ export async function startWorker() {
       const game = gm.createGame(id, gc, creatorClientID);
 
       log.info(
-        `Worker ${
-          workerId
-        }: IP ${
-          ipAnonymize(clientIP)
-        } creating ${
+        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${
           game.isPublic() ? "Public" : "Private"
-        }${
-          gc?.gameMode ? ` ${gc.gameMode}` : ""
-        } game with id ${
-          id
-        }${
+        }${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${
           creatorClientID ? `, creator: ${creatorClientID}` : ""
         }`,
       );

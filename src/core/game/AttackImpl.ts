@@ -1,7 +1,7 @@
 import { Attack, Cell, Player, TerraNullius } from "./Game";
 import { GameImpl } from "./GameImpl";
-import { PlayerImpl } from "./PlayerImpl";
 import { TileRef } from "./GameMap";
+import { PlayerImpl } from "./PlayerImpl";
 
 export class AttackImpl implements Attack {
   private _isActive = true;

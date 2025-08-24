@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 
@@ -111,7 +111,7 @@ export class LanguageModal extends LitElement {
                 <button
                   class="${buttonClasses}"
                   @click=${() =>
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                     this.selectLanguage(lang.code)}
                 >
                   <img

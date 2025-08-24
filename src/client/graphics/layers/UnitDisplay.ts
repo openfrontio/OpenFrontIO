@@ -1,17 +1,17 @@
-import { LitElement, html } from "lit";
-import { EventBus } from "../../../core/EventBus";
-import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
-import { ToggleStructureEvent } from "../../InputHandler";
-import { UnitType } from "../../../core/game/Game";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
-import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import portIcon from "../../../../resources/images/AnchorIcon.png";
+import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import portIcon from "../../../../resources/images/AnchorIcon.png";
-import { renderNumber } from "../../Utils";
+import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
+import { UnitType } from "../../../core/game/Game";
+import { GameView } from "../../../core/game/GameView";
+import { ToggleStructureEvent } from "../../InputHandler";
+import { renderNumber } from "../../Utils";
+import { Layer } from "./Layer";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {
@@ -69,9 +69,9 @@ export class UnitDisplay extends LitElement implements Layer {
     return html`
       <div
         class="px-2 flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 rounded text-white"
-        style="background: ${this._selectedStructure === unitType
-          ? "#ffffff2e"
-          : "none"}"
+        style="background: ${
+          this._selectedStructure === unitType ? "#ffffff2e" : "none"
+        }"
         @mouseenter="${() =>
           this.eventBus?.emit(new ToggleStructureEvent(unitType))}"
         @mouseleave="${() =>

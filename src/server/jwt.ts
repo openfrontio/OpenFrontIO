@@ -1,19 +1,19 @@
+import { jwtVerify } from "jose";
+import { z } from "zod";
 import {
   TokenPayload,
   TokenPayloadSchema,
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
-import { PersistentIdSchema } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
-import { jwtVerify } from "jose";
-import { z } from "zod";
+import { PersistentIdSchema } from "../core/Schemas";
 
 type TokenVerificationResult =
   | {
-    persistentId: string;
-    claims: TokenPayload | null;
-  }
+      persistentId: string;
+      claims: TokenPayload | null;
+    }
   | false;
 
 export async function verifyClientToken(

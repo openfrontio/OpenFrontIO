@@ -1,6 +1,6 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { ShellExecution } from "./ShellExecution";
 import { TileRef } from "../game/GameMap";
+import { ShellExecution } from "./ShellExecution";
 
 export class DefensePostExecution implements Execution {
   private mg: Game | undefined;

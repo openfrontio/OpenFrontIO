@@ -1,13 +1,13 @@
+import { AttackExecution } from "../../../src/core/execution/AttackExecution";
+import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
+import { AllianceRequestReplyExecution } from "../../../src/core/execution/alliance/AllianceRequestReplyExecution";
+import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
   PlayerInfo,
   PlayerType,
 } from "../../../src/core/game/Game";
-import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
-import { AllianceRequestReplyExecution } from "../../../src/core/execution/alliance/AllianceRequestReplyExecution";
-import { AttackExecution } from "../../../src/core/execution/AttackExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { TileRef } from "../../../src/core/game/GameMap";
 import { setup } from "../../util/Setup";
 

@@ -1,6 +1,6 @@
 import "./components/Difficulties";
 import "./components/Maps";
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, query } from "lit/decorators.js";
 import { getAltKey, getModifierKey, translateText } from "../client/Utils";
 

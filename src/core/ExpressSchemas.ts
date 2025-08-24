@@ -1,6 +1,7 @@
 // This file contians schemas for the primary openfront express server
-import { GameInfoSchema } from "./Schemas";
+
 import { z } from "zod";
+import { GameInfoSchema } from "./Schemas";
 
 export const ApiEnvResponseSchema = z.object({
   game_env: z.string(),

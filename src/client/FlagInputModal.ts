@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
 
@@ -33,10 +33,13 @@ export class FlagInputModal extends LitElement {
         <div
           class="flex flex-wrap justify-evenly gap-[1rem] overflow-y-auto overflow-x-hidden h-[90%]"
         >
-          ${this.isModalOpen ? Countries.filter(
-            (country) => !country.restricted && this.includedInSearch(country),
-          ).map(
-            (country) => html`
+          ${
+            this.isModalOpen
+              ? Countries.filter(
+                  (country) =>
+                    !country.restricted && this.includedInSearch(country),
+                ).map(
+                  (country) => html`
               <button
                 @click=${() => {
                   this.setFlag(country.code);
@@ -61,7 +64,9 @@ export class FlagInputModal extends LitElement {
                 <span class="country-name">${country.name}</span>
               </button>
             `,
-          ) : html``}
+                )
+              : html``
+          }
         </div>
       </o-modal>
     `;

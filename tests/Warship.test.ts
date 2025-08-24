@@ -1,3 +1,5 @@
+import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
+import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
   Game,
   Player,
@@ -5,10 +7,8 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
-import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
-import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import { executeTicks } from "./util/utils";
 import { setup } from "./util/Setup";
+import { executeTicks } from "./util/utils";
 
 const coastX = 7;
 let game: Game;

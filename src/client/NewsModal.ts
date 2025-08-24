@@ -1,9 +1,9 @@
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
-import changelog from "../../resources/changelog.md";
 import { resolveMarkdown } from "lit-markdown";
+import changelog from "../../resources/changelog.md";
 import { translateText } from "../client/Utils";
 
 @customElement("news-modal")

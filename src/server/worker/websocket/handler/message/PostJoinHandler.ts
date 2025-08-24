@@ -1,3 +1,5 @@
+import { Logger } from "winston";
+import { z } from "zod";
 import {
   ClientMessageSchema,
   ClientSendWinnerMessage,
@@ -5,8 +7,6 @@ import {
 } from "../../../../../core/Schemas";
 import { Client } from "../../../../Client";
 import { GameServer } from "../../../../GameServer";
-import { Logger } from "winston";
-import { z } from "zod";
 
 export async function postJoinMessageHandler(
   gs: GameServer,
@@ -118,7 +118,9 @@ export async function postJoinMessageHandler(
 function handleWinner(
   gs: GameServer,
   log: Logger,
-  client: Client, clientMsg: ClientSendWinnerMessage) {
+  client: Client,
+  clientMsg: ClientSendWinnerMessage,
+) {
   if (
     gs.outOfSyncClients.has(client.clientID) ||
     gs.kickedClients.has(client.clientID) ||

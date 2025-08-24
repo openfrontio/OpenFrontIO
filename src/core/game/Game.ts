@@ -1,3 +1,4 @@
+import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -6,7 +7,6 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
-import { Config } from "../configuration/Config";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";

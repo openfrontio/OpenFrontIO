@@ -1,9 +1,9 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { Layer } from "./Layer";
-import { TogglePerformanceOverlayEvent } from "../../InputHandler";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { TogglePerformanceOverlayEvent } from "../../InputHandler";
+import { Layer } from "./Layer";
 
 @customElement("fps-display")
 export class FPSDisplay extends LitElement implements Layer {

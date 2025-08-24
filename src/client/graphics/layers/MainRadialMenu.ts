@@ -1,26 +1,26 @@
-import {
-  COLORS,
-  MenuElementParams,
-  centerButtonElement,
-  rootMenuElement,
-} from "./RadialMenuElements";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
-import { BuildMenu } from "./BuildMenu";
-import { ChatIntegration } from "./ChatIntegration";
-import { ContextMenuEvent } from "../../InputHandler";
-import { EmojiTable } from "./EmojiTable";
-import { EventBus } from "../../../core/EventBus";
-import { Layer } from "./Layer";
 import { LitElement } from "lit";
-import { PlayerActionHandler } from "./PlayerActionHandler";
-import { PlayerActions } from "../../../core/game/Game";
-import { PlayerPanel } from "./PlayerPanel";
-import { TileRef } from "../../../core/game/GameMap";
-import { TransformHandler } from "../TransformHandler";
-import { UIState } from "../UIState";
 import { customElement } from "lit/decorators.js";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
+import { EventBus } from "../../../core/EventBus";
+import { PlayerActions } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { ContextMenuEvent } from "../../InputHandler";
+import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
+import { BuildMenu } from "./BuildMenu";
+import { ChatIntegration } from "./ChatIntegration";
+import { EmojiTable } from "./EmojiTable";
+import { Layer } from "./Layer";
+import { PlayerActionHandler } from "./PlayerActionHandler";
+import { PlayerPanel } from "./PlayerPanel";
+import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
+import {
+  COLORS,
+  centerButtonElement,
+  MenuElementParams,
+  rootMenuElement,
+} from "./RadialMenuElements";
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
@@ -90,13 +90,7 @@ export class MainRadialMenu extends LitElement implements Layer {
         const actions = await myPlayer.actions(tile);
         // Stale check: user might have clicked somewhere else already
         if (this.clickedTile !== tile) return;
-        this.updatePlayerActions(
-          myPlayer,
-          actions,
-          tile,
-          event.x,
-          event.y,
-        );
+        this.updatePlayerActions(myPlayer, actions, tile, event.x, event.y);
       } catch (err) {
         console.error("Failed to fetch player actions:", err);
       }
@@ -152,11 +146,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       try {
         const actions = await myPlayer.actions(tile);
         if (this.clickedTile !== tile) return; // stale
-        this.updatePlayerActions(
-          myPlayer,
-          actions,
-          tile,
-        );
+        this.updatePlayerActions(myPlayer, actions, tile);
       } catch (err) {
         console.error("Failed to refresh player actions:", err);
       }

@@ -1,7 +1,7 @@
 import Benchmark from "benchmark";
-import { PathFinder } from "../../src/core/pathfinding/PathFinding";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import { PathFinder } from "../../src/core/pathfinding/PathFinding";
 import { setup } from "../util/Setup";
 
 const game = await setup(

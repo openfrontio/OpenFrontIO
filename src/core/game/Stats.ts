@@ -1,6 +1,6 @@
+import { AllPlayersStats } from "../Schemas";
 import { NukeType, OtherUnitType, PlayerStats } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
-import { AllPlayersStats } from "../Schemas";
 
 export type Stats = {
   getPlayerStats(player: Player): PlayerStats | null;

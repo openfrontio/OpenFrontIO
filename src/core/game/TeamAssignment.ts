@@ -1,6 +1,6 @@
-import { PlayerInfo, PlayerType, Team } from "./Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+import { PlayerInfo, PlayerType, Team } from "./Game";
 
 export function assignTeams(
   players: PlayerInfo[],

@@ -1,7 +1,7 @@
 import { Execution, Game, Player } from "../game/Game";
-import { BotBehavior } from "./utils/BotBehavior";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
+import { BotBehavior } from "./utils/BotBehavior";
 
 export class BotExecution implements Execution {
   private active = true;

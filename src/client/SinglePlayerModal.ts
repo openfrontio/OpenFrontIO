@@ -2,29 +2,29 @@ import "./components/Difficulties";
 import "./components/Maps";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { html, LitElement } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import randomMap from "../../resources/images/RandomMap.webp";
+import { translateText } from "../client/Utils";
 import {
   Difficulty,
   Duos,
   GameMapType,
   GameMode,
   GameType,
+  mapCategories,
   Quads,
   Trios,
   UnitType,
-  mapCategories,
 } from "../core/game/Game";
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { UserSettings } from "../core/game/UserSettings";
+import { TeamCountConfig } from "../core/Schemas";
 import { generateID, getClientID } from "../core/Util";
 import { DifficultyDescription } from "./components/Difficulties";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
-import { TeamCountConfig } from "../core/Schemas";
-import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
-import randomMap from "../../resources/images/RandomMap.webp";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -96,8 +96,10 @@ export class SinglePlayerModal extends LitElement {
                           >
                             <map-display
                               .mapKey=${mapKey}
-                              .selected=${!this.useRandomMap &&
-                              this.selectedMap === mapValue}
+                              .selected=${
+                                !this.useRandomMap &&
+                                this.selectedMap === mapValue
+                              }
                               .translation=${translateText(
                                 `map.${mapKey?.toLowerCase()}`,
                               )}
@@ -110,9 +112,9 @@ export class SinglePlayerModal extends LitElement {
                 `,
               )}
               <div
-                class="option-card random-map ${this.useRandomMap
-                  ? "selected"
-                  : ""}"
+                class="option-card random-map ${
+                  this.useRandomMap ? "selected" : ""
+                }"
                 @click=${this.handleRandomMapToggle}
               >
                 <div class="option-image">
@@ -140,9 +142,9 @@ export class SinglePlayerModal extends LitElement {
                 .map(
                   ([key, value]) => html`
                     <div
-                      class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""}"
+                      class="option-card ${
+                        this.selectedDifficulty === value ? "selected" : ""
+                      }"
                       @click=${() => this.handleDifficultySelection(value)}
                     >
                       <difficulty-display
@@ -164,9 +166,9 @@ export class SinglePlayerModal extends LitElement {
             <div class="option-title">${translateText("host_modal.mode")}</div>
             <div class="option-cards">
               <div
-                class="option-card ${this.gameMode === GameMode.FFA
-                  ? "selected"
-                  : ""}"
+                class="option-card ${
+                  this.gameMode === GameMode.FFA ? "selected" : ""
+                }"
                 @click=${() => this.handleGameModeSelection(GameMode.FFA)}
               >
                 <div class="option-card-title">
@@ -174,9 +176,9 @@ export class SinglePlayerModal extends LitElement {
                 </div>
               </div>
               <div
-                class="option-card ${this.gameMode === GameMode.Team
-                  ? "selected"
-                  : ""}"
+                class="option-card ${
+                  this.gameMode === GameMode.Team ? "selected" : ""
+                }"
                 @click=${() => this.handleGameModeSelection(GameMode.Team)}
               >
                 <div class="option-card-title">
@@ -186,9 +188,10 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
-          ${this.gameMode === GameMode.FFA
-            ? ""
-            : html`
+          ${
+            this.gameMode === GameMode.FFA
+              ? ""
+              : html`
                 <!-- Team Count Selection -->
                 <div class="options-section">
                   <div class="option-title">
@@ -198,22 +201,27 @@ export class SinglePlayerModal extends LitElement {
                     ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
                       (o) => html`
                         <div
-                          class="option-card ${this.teamCount === o
-                            ? "selected"
-                            : ""}"
+                          class="option-card ${
+                            this.teamCount === o ? "selected" : ""
+                          }"
                           @click=${() => this.handleTeamCountSelection(o)}
                         >
                           <div class="option-card-title">
-                            ${typeof o === "string"
-                              ? translateText(`public_lobby.teams_${o}`)
-                              : translateText("public_lobby.teams", { num: o })}
+                            ${
+                              typeof o === "string"
+                                ? translateText(`public_lobby.teams_${o}`)
+                                : translateText("public_lobby.teams", {
+                                    num: o,
+                                  })
+                            }
                           </div>
                         </div>
                       `,
                     )}
                   </div>
                 </div>
-              `}
+              `
+          }
 
           <!-- Game Options -->
           <div class="options-section">
@@ -233,10 +241,11 @@ export class SinglePlayerModal extends LitElement {
                   .value="${String(this.bots)}"
                 />
                 <div class="option-card-title">
-                  <span>${translateText("single_modal.bots")}</span>${this
-                    .bots === 0
-                    ? translateText("single_modal.bots_disabled")
-                    : this.bots}
+                  <span>${translateText("single_modal.bots")}</span>${
+                    this.bots === 0
+                      ? translateText("single_modal.bots_disabled")
+                      : this.bots
+                  }
                 </div>
               </label>
 
@@ -410,7 +419,8 @@ export class SinglePlayerModal extends LitElement {
     }
 
     console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]
+      `Starting single player game with map: ${
+        GameMapType[this.selectedMap as keyof typeof GameMapType]
       }${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     const gameID = generateID();

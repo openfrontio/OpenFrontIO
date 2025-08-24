@@ -1,8 +1,8 @@
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { MarkDisconnectedExecution } from "../src/core/execution/MarkDisconnectedExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { executeTicks } from "./util/utils";
+import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
+import { executeTicks } from "./util/utils";
 
 let game: Game;
 let player1: Player;

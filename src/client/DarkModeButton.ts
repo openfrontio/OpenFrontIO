@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { UserSettings } from "../core/game/UserSettings";
 

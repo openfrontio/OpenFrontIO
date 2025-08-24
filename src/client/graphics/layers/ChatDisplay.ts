@@ -1,16 +1,16 @@
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { DirectiveResult } from "lit/directive.js";
+import { UnsafeHTMLDirective, unsafeHTML } from "lit/directives/unsafe-html.js";
+import { EventBus } from "../../../core/EventBus";
+import { MessageType } from "../../../core/game/Game";
 import {
   DisplayMessageUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
-import { LitElement, html } from "lit";
-import { UnsafeHTMLDirective, unsafeHTML } from "lit/directives/unsafe-html.js";
-import { customElement, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { EventBus } from "../../../core/EventBus";
 import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
-import { MessageType } from "../../../core/game/Game";
 import { onlyImages } from "../../../core/Util";
+import { Layer } from "./Layer";
 
 type ChatEvent = {
   description: string;
@@ -136,10 +136,9 @@ export class ChatDisplay extends LitElement implements Layer {
         <div>
           <div class="w-full bg-black/80 sticky top-0 px-[10px]">
             <button
-              class="text-white cursor-pointer pointer-events-auto ${this
-                ._hidden
-                ? "hidden"
-                : ""}"
+              class="text-white cursor-pointer pointer-events-auto ${
+                this._hidden ? "hidden" : ""
+              }"
               @click=${this.toggleHidden}
             >
               Hide
@@ -147,25 +146,24 @@ export class ChatDisplay extends LitElement implements Layer {
           </div>
 
           <button
-            class="text-white cursor-pointer pointer-events-auto ${this._hidden
-              ? ""
-              : "hidden"}"
+            class="text-white cursor-pointer pointer-events-auto ${
+              this._hidden ? "" : "hidden"
+            }"
             @click=${this.toggleHidden}
           >
             Chat
             <span
-              class="${this.newEvents
-                ? ""
-                : "hidden"} inline-block px-2 bg-red-500 rounded-sm"
+              class="${
+                this.newEvents ? "" : "hidden"
+              } inline-block px-2 bg-red-500 rounded-sm"
               >${this.newEvents}</span
             >
           </button>
 
           <table
-            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${this
-              ._hidden
-              ? "hidden"
-              : ""}"
+            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${
+              this._hidden ? "hidden" : ""
+            }"
             style="pointer-events: auto;"
           >
             <tbody>

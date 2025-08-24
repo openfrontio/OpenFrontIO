@@ -1,5 +1,5 @@
-import { GameMapLoader, MapData } from "./GameMapLoader";
 import { GameMapType } from "./Game";
+import { GameMapLoader, MapData } from "./GameMapLoader";
 import { MapManifestSchema } from "./TerrainMapLoader";
 
 export class FetchGameMapLoader implements GameMapLoader {

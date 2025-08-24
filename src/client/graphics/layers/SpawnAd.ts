@@ -1,9 +1,9 @@
-import { LitElement, css, html } from "lit";
+import { css, html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
-import { getGamesPlayed } from "../../Utils";
 import { translateText } from "../../../client/Utils";
+import { GameView } from "../../../core/game/GameView";
+import { getGamesPlayed } from "../../Utils";
+import { Layer } from "./Layer";
 
 const AD_TYPE = "bottom_rail";
 const AD_CONTAINER_ID = "bottom-rail-ad-container";
@@ -125,11 +125,13 @@ export class SpawnAd extends LitElement implements Layer {
           id="${AD_CONTAINER_ID}"
           class="w-full h-full flex items-center justify-center"
         >
-          ${!this.adLoaded
-            ? html`<span class="text-white text-sm"
+          ${
+            !this.adLoaded
+              ? html`<span class="text-white text-sm"
                 >${translateText("spawn_ad.loading")}</span
               >`
-            : ""}
+              : ""
+          }
         </div>
       </div>
     `;

@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
   ClientMessage,
@@ -10,12 +12,10 @@ import {
   Turn,
 } from "../core/Schemas";
 import { createGameRecord, decompressGameRecord, replacer } from "../core/Util";
-import { EventBus } from "../core/EventBus";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
-import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { getPersistentID } from "./Main";
-import { z } from "zod";
+import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class LocalServer {
   // All turns from the game record on replay.
@@ -117,10 +117,9 @@ export class LocalServer {
       }
       if (archivedHash !== clientMsg.hash) {
         console.error(
-          `desync detected on turn ${
-            clientMsg.turnNumber}, client hash: ${
-            clientMsg.hash}, server hash: ${
-            archivedHash}`,
+          `desync detected on turn ${clientMsg.turnNumber}, client hash: ${
+            clientMsg.hash
+          }, server hash: ${archivedHash}`,
         );
         this.clientMessage({
           type: "desync",

@@ -1,10 +1,10 @@
 import { Colord, colord } from "colord";
-import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerType, Team, TerrainType } from "../game/Game";
-import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
-import { ColorAllocator } from "./ColorAllocator";
+import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { PseudoRandom } from "../PseudoRandom";
+import { ColorAllocator } from "./ColorAllocator";
+import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Config";
 
 type ColorCache = Map<string, Colord>;
@@ -12,10 +12,19 @@ type ColorCache = Map<string, Colord>;
 export class PastelTheme implements Theme {
   private readonly borderColorCache: ColorCache = new Map<string, Colord>();
   private readonly rand = new PseudoRandom(123);
-  private readonly humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private readonly humanColorAllocator = new ColorAllocator(
+    humanColors,
+    fallbackColors,
+  );
   private readonly botColorAllocator = new ColorAllocator(botColors, botColors);
-  private readonly teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
-  private readonly nationColorAllocator = new ColorAllocator(nationColors, nationColors);
+  private readonly teamColorAllocator = new ColorAllocator(
+    humanColors,
+    fallbackColors,
+  );
+  private readonly nationColorAllocator = new ColorAllocator(
+    nationColors,
+    nationColors,
+  );
 
   /* eslint-disable sort-keys */
   private readonly background = colord({ r: 60, g: 60, b: 60 });

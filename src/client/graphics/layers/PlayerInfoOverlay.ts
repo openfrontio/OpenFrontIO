@@ -1,6 +1,9 @@
-import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { LitElement, TemplateResult, html } from "lit";
+import { html, LitElement, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { ref } from "lit-html/directives/ref.js";
+import { translateText } from "../../../client/Utils";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
   PlayerType,
@@ -8,16 +11,13 @@ import {
   Unit,
   UnitType,
 } from "../../../core/game/Game";
-import { customElement, property, state } from "lit/decorators.js";
-import { renderNumber, renderTroops } from "../../Utils";
-import { CloseRadialMenuEvent } from "./RadialMenu";
-import { EventBus } from "../../../core/EventBus";
-import { Layer } from "./Layer";
 import { TileRef } from "../../../core/game/GameMap";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
+import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
-import { ref } from "lit-html/directives/ref.js";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
-import { translateText } from "../../../client/Utils";
+import { Layer } from "./Layer";
+import { CloseRadialMenuEvent } from "./RadialMenu";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -222,17 +222,18 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <button
-          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
-            ? "text-green-500"
-            : "text-white"}"
+          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${
+            isFriendly ? "text-green-500" : "text-white"
+          }"
           @click=${() => {
             this.showDetails = !this.showDetails;
             this.requestUpdate?.();
           }}
         >
-          ${player.cosmetics.flag
-            ? player.cosmetics.flag.startsWith("!")
-              ? html`<div
+          ${
+            player.cosmetics.flag
+              ? player.cosmetics.flag.startsWith("!")
+                ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
                   ${ref((el) => {
                     if (el instanceof HTMLElement) {
@@ -242,38 +243,46 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     }
                   })}
                 ></div>`
-              : html`<img
+                : html`<img
                   class="h-8 mr-1 aspect-[3/4]"
                   src=${"/flags/" + player.cosmetics.flag + ".svg"}
                 />`
-            : html``}
+              : html``
+          }
           ${player.name()}
         </button>
 
         <!-- Collapsible section -->
-        ${this.showDetails
-          ? html`
-              ${player.team() !== null
-                ? html`<div class="text-sm opacity-80">
+        ${
+          this.showDetails
+            ? html`
+              ${
+                player.team() !== null
+                  ? html`<div class="text-sm opacity-80">
                     ${translateText("player_info_overlay.team")}:
                     ${player.team()}
                   </div>`
-                : ""}
+                  : ""
+              }
               <div class="text-sm opacity-80">
                 ${translateText("player_info_overlay.type")}: ${playerType}
               </div>
-              ${player.troops() >= 1
-                ? html`<div class="text-sm opacity-80" translate="no">
+              ${
+                player.troops() >= 1
+                  ? html`<div class="text-sm opacity-80" translate="no">
                     ${translateText("player_info_overlay.d_troops")}:
                     ${renderTroops(player.troops())}
                   </div>`
-                : ""}
-              ${attackingTroops >= 1
-                ? html`<div class="text-sm opacity-80" translate="no">
+                  : ""
+              }
+              ${
+                attackingTroops >= 1
+                  ? html`<div class="text-sm opacity-80" translate="no">
                     ${translateText("player_info_overlay.a_troops")}:
                     ${renderTroops(attackingTroops)}
                   </div>`
-                : ""}
+                  : ""
+              }
               <div class="text-sm opacity-80" translate="no">
                 ${translateText("player_info_overlay.gold")}:
                 ${renderNumber(player.gold())}
@@ -310,7 +319,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
               )}
               ${relationHtml}
             `
-          : ""}
+            : ""
+        }
       </div>
     `;
   }
@@ -328,14 +338,16 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         </div>
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
-          ${unit.hasHealth()
-            ? html`
+          ${
+            unit.hasHealth()
+              ? html`
                 <div class="text-sm opacity-80">
                   ${translateText("player_info_overlay.health")}:
                   ${unit.health()}
                 </div>
               `
-            : ""}
+              : ""
+          }
         </div>
       </div>
     `;

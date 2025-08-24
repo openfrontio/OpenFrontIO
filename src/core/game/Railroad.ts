@@ -1,6 +1,6 @@
-import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { Game } from "./Game";
 import { TileRef } from "./GameMap";
+import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { TrainStation } from "./TrainStation";
 
 export class Railroad {

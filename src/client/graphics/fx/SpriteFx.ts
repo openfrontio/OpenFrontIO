@@ -1,8 +1,8 @@
-import { Fx, FxType } from "./Fx";
+import { Theme } from "../../../core/configuration/Config";
+import { PlayerView } from "../../../core/game/GameView";
 import { AnimatedSprite } from "../AnimatedSprite";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { PlayerView } from "../../../core/game/GameView";
-import { Theme } from "../../../core/configuration/Config";
+import { Fx, FxType } from "./Fx";
 
 function fadeInOut(t: number, fadeIn = 0.3, fadeOut = 0.7): number {
   if (t < fadeIn) {

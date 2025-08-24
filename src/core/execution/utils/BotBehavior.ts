@@ -7,11 +7,11 @@ import {
   TerraNullius,
   Tick,
 } from "../../game/Game";
-import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
-import { AttackExecution } from "../AttackExecution";
-import { EmojiExecution } from "../EmojiExecution";
 import { PseudoRandom } from "../../PseudoRandom";
 import { flattenedEmojiTable } from "../../Util";
+import { AttackExecution } from "../AttackExecution";
+import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
+import { EmojiExecution } from "../EmojiExecution";
 
 export class BotBehavior {
   private enemy: Player | null = null;

@@ -1,5 +1,5 @@
-import { DefaultServerConfig } from "./DefaultConfig";
 import { GameEnv } from "./Config";
+import { DefaultServerConfig } from "./DefaultConfig";
 
 export const prodConfig = new (class extends DefaultServerConfig {
   numWorkers(): number {

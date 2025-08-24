@@ -1,7 +1,7 @@
 import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
 import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 export class SpawnTimer implements Layer {
   private ratios = [0];

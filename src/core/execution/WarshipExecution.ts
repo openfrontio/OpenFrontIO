@@ -1,17 +1,17 @@
 import {
   Execution,
   Game,
+  isUnit,
   OwnerComp,
   Unit,
   UnitParams,
   UnitType,
-  isUnit,
 } from "../game/Game";
+import { TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
-import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
-import { TileRef } from "../game/GameMap";
 
 export class WarshipExecution implements Execution {
   private random: PseudoRandom | undefined;
@@ -108,10 +108,8 @@ export class WarshipExecution implements Execution {
         const patrolTile = this.warship.patrolTile();
         if (
           patrolTile !== undefined &&
-          this.mg.euclideanDistSquared(
-            patrolTile,
-            unit.tile(),
-          ) > patrolRangeSquared
+          this.mg.euclideanDistSquared(patrolTile, unit.tile()) >
+            patrolRangeSquared
         ) {
           // Prevent warship from chasing trade ship that is too far away from
           // the patrol tile to prevent warships from wandering around the map.
@@ -224,10 +222,7 @@ export class WarshipExecution implements Execution {
         return;
       }
     }
-    const result = this.pathfinder.nextTile(
-      this.warship.tile(),
-      targetTile,
-    );
+    const result = this.pathfinder.nextTile(this.warship.tile(), targetTile);
     switch (result.type) {
       case PathFindResultType.Completed:
         this.warship.setTargetTile(undefined);

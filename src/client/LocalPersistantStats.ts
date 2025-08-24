@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { ID } from "../core/BaseSchemas";
 import {
   GameConfig,
   GameConfigSchema,
@@ -5,9 +7,7 @@ import {
   GameRecord,
   GameRecordSchema,
 } from "../core/Schemas";
-import { ID } from "../core/BaseSchemas";
 import { replacer } from "../core/Util";
-import { z } from "zod";
 
 const LocalStatsDataSchema = z.record(
   ID,

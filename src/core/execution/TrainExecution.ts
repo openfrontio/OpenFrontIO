@@ -6,9 +6,9 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { OrientedRailroad, getOrientedRailroad } from "../game/Railroad";
-import { RailNetwork } from "../game/RailNetwork";
 import { TileRef } from "../game/GameMap";
+import { RailNetwork } from "../game/RailNetwork";
+import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
 import { TrainStation } from "../game/TrainStation";
 
 export class TrainExecution implements Execution {

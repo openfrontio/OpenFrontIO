@@ -1,21 +1,21 @@
+import { PriorityQueue } from "@datastructures-js/priority-queue";
+import { Colord } from "colord";
+import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
+import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
+import { euclDistFN, TileRef } from "../../../core/game/GameMap";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { PseudoRandom } from "../../../core/PseudoRandom";
 import {
   AlternateViewEvent,
   DragEvent,
   MouseOverEvent,
   RedrawGraphicsEvent,
 } from "../../InputHandler";
-import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { TileRef, euclDistFN } from "../../../core/game/GameMap";
-import { Colord } from "colord";
-import { EventBus } from "../../../core/EventBus";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { Layer } from "./Layer";
-import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { PseudoRandom } from "../../../core/PseudoRandom";
-import { Theme } from "../../../core/configuration/Config";
 import { TransformHandler } from "../TransformHandler";
-import { UserSettings } from "../../../core/game/UserSettings";
+import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
   private readonly userSettings: UserSettings;
@@ -323,7 +323,8 @@ export class TerritoryLayer implements Layer {
   initImageData() {
     this.game.forEachTile((tile) => {
       if (this.imageData === undefined) throw new Error("Not initialized");
-      if (this.alternativeImageData === undefined) throw new Error("Not initialized");
+      if (this.alternativeImageData === undefined)
+        throw new Error("Not initialized");
       const cell = new Cell(this.game.x(tile), this.game.y(tile));
       const index = cell.y * this.game.width() + cell.x;
       const offset = index * 4;
@@ -337,7 +338,8 @@ export class TerritoryLayer implements Layer {
     if (this.highlightCanvas === undefined) throw new Error("Not initialized");
     if (this.context === undefined) throw new Error("Not initialized");
     if (this.imageData === undefined) throw new Error("Not initialized");
-    if (this.alternativeImageData === undefined) throw new Error("Not initialized");
+    if (this.alternativeImageData === undefined)
+      throw new Error("Not initialized");
     const now = Date.now();
     if (
       now > this.lastDragTime + this.nodrawDragDuration &&
@@ -413,7 +415,8 @@ export class TerritoryLayer implements Layer {
       return;
     }
     if (this.imageData === undefined) throw new Error("Not initialized");
-    if (this.alternativeImageData === undefined) throw new Error("Not initialized");
+    if (this.alternativeImageData === undefined)
+      throw new Error("Not initialized");
 
     if (!this.game.hasOwner(tile)) {
       if (this.game.hasFallout(tile)) {
@@ -509,7 +512,8 @@ export class TerritoryLayer implements Layer {
   }
 
   paintAlternateViewTile(tile: TileRef, other: PlayerView) {
-    if (this.alternativeImageData === undefined) throw new Error("Not initialized");
+    if (this.alternativeImageData === undefined)
+      throw new Error("Not initialized");
     const color = this.alternateViewColor(other);
     this.paintTile(this.alternativeImageData, tile, color, 255);
   }
@@ -525,14 +529,16 @@ export class TerritoryLayer implements Layer {
   clearTile(tile: TileRef) {
     const offset = tile * 4;
     if (this.imageData === undefined) throw new Error("Not initialized");
-    if (this.alternativeImageData === undefined) throw new Error("Not initialized");
+    if (this.alternativeImageData === undefined)
+      throw new Error("Not initialized");
     this.imageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
     this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
   }
 
   clearAlternativeTile(tile: TileRef) {
     const offset = tile * 4;
-    if (this.alternativeImageData === undefined) throw new Error("Not initialized");
+    if (this.alternativeImageData === undefined)
+      throw new Error("Not initialized");
     this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
   }
 
