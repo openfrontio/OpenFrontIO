@@ -62,9 +62,7 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     console.error("EmojiTable element not found in the DOM");
   }
-  emojiTable.transformHandler = transformHandler;
-  emojiTable.game = game;
-  emojiTable.initEventBus(eventBus);
+  emojiTable.init(transformHandler, game, eventBus);
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
@@ -202,6 +200,7 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
+  const samRadiusLayer = new SAMRadiusLayer(game, eventBus, transformHandler);
 
   const fpsDisplay = document.querySelector("fps-display") as FPSDisplay;
   if (!(fpsDisplay instanceof FPSDisplay)) {
@@ -234,12 +233,12 @@ export function createRenderer(
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game),
-    new SAMRadiusLayer(game, eventBus, transformHandler),
     structureLayer,
+    samRadiusLayer, // Insert the SAMRadiusLayer after structureLayer
     new StructureIconsLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
-    new UILayer(game, eventBus, transformHandler),
+    new UILayer(game, eventBus),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,

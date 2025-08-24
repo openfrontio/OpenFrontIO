@@ -33,6 +33,7 @@
     "@swc/core": "^1.13.3",
     "@swc/jest": "^0.2.39",
     "@total-typescript/ts-reset": "^0.6.1",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/benchmark": "^2.1.5",
     "@types/chai": "^4.3.17",
     "@types/d3": "^7.4.3",
