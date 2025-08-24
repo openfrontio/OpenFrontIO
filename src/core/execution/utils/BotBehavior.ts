@@ -120,7 +120,13 @@ export class BotBehavior {
     }
   }
 
-  private hasSufficientTroops(): boolean {
+  private hasReserveRatioTroops(): boolean {
+    const maxTroops = this.game.config().maxTroops(this.player);
+    const ratio = this.player.troops() / maxTroops;
+    return ratio >= this.reserveRatio;
+  }
+
+  private hasTriggerRatioTroops(): boolean {
     const maxTroops = this.game.config().maxTroops(this.player);
     const ratio = this.player.troops() / maxTroops;
     return ratio >= this.triggerRatio;
@@ -175,8 +181,11 @@ export class BotBehavior {
 
   selectEnemy(enemies: Player[]): Player | null {
     if (this.enemy === null) {
-      // Save up troops until we reach the trigger ratio
-      if (!this.hasSufficientTroops()) return null;
+      // Save up troops until we reach the reserve ratio
+      if (!this.hasReserveRatioTroops()) return null;
+
+      // Maybe save up troops until we reach the trigger ratio
+      if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return null;
 
       // Prefer neighboring bots
       const bots = this.player
@@ -238,7 +247,7 @@ export class BotBehavior {
   selectRandomEnemy(): Player | TerraNullius | null {
     if (this.enemy === null) {
       // Save up troops until we reach the trigger ratio
-      if (!this.hasSufficientTroops()) return null;
+      if (!this.hasTriggerRatioTroops()) return null;
 
       // Choose a new enemy randomly
       const neighbors = this.player.neighbors();
