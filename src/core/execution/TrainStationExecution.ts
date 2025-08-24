@@ -62,13 +62,13 @@ export class TrainStationExecution implements Execution {
 
   private spawnTrain(station: TrainStation, currentTick: number) {
     if (this.mg === undefined) throw new Error("Not initialized");
-    if (this.random === undefined) throw new Error("Not initialized");
     if (
       !this.spawnTrains ||
       currentTick - this.lastSpawnTick < this.ticksCooldown
     ) {
       return;
     }
+    if (this.random === undefined) throw new Error("Not initialized");
     const cluster = station.getCluster();
     if (cluster === null) {
       return;
