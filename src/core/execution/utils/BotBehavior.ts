@@ -15,7 +15,7 @@ import { flattenedEmojiTable } from "../../Util";
 
 export class BotBehavior {
   private enemy: Player | null = null;
-  private enemyUpdated: Tick;
+  private enemyUpdated: Tick | undefined;
 
   private readonly assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
 
@@ -75,6 +75,7 @@ export class BotBehavior {
   }
 
   forgetOldEnemies() {
+    if (this.enemyUpdated === undefined) return;
     // Forget old enemies
     if (this.game.ticks() - this.enemyUpdated > 100) {
       this.clearEnemy();

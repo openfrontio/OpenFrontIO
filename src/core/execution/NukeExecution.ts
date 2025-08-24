@@ -18,10 +18,10 @@ const SPRITE_RADIUS = 16;
 
 export class NukeExecution implements Execution {
   private active = true;
-  private mg: Game;
+  private mg: Game | undefined;
   private nuke: Unit | null = null;
   private tilesToDestroyCache: Set<TileRef> | undefined;
-  private pathFinder: ParabolaPathFinder;
+  private pathFinder: ParabolaPathFinder | undefined;
 
   constructor(
     private readonly nukeType: NukeType,
@@ -41,6 +41,7 @@ export class NukeExecution implements Execution {
   }
 
   public target(): Player | TerraNullius {
+    if (this.mg === undefined) throw new Error("Not initialized");
     return this.mg.owner(this.dst);
   }
 
@@ -51,6 +52,7 @@ export class NukeExecution implements Execution {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
+    if (this.mg === undefined) throw new Error("Not initialized");
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
@@ -63,6 +65,7 @@ export class NukeExecution implements Execution {
   }
 
   private maybeBreakAlliances(toDestroy: Set<TileRef>) {
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
@@ -94,6 +97,8 @@ export class NukeExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.pathFinder === undefined) throw new Error("Not initialized");
     if (this.nuke === null) {
       const spawn = this.src ?? this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {
@@ -179,6 +184,8 @@ export class NukeExecution implements Execution {
   }
 
   private getTrajectory(target: TileRef): TrajectoryTile[] {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.pathFinder === undefined) throw new Error("Not initialized");
     const trajectoryTiles: TrajectoryTile[] = [];
     const targetRangeSquared =
       this.mg.config().defaultNukeTargetableRange() ** 2;
@@ -199,6 +206,7 @@ export class NukeExecution implements Execution {
     nukeTile: TileRef,
     targetRangeSquared: number,
   ): boolean {
+    if (this.mg === undefined) throw new Error("Not initialized");
     return (
       this.mg.euclideanDistSquared(nukeTile, targetTile) < targetRangeSquared ||
       (this.src !== undefined &&
@@ -211,15 +219,18 @@ export class NukeExecution implements Execution {
     if (this.nuke === null || this.nuke.targetTile() === undefined) {
       return;
     }
+    if (this.mg === undefined) throw new Error("Not initialized");
     const targetRangeSquared =
       this.mg.config().defaultNukeTargetableRange() ** 2;
     const targetTile = this.nuke.targetTile();
+    if (targetTile === undefined) return;
     this.nuke.setTargetable(
-      this.isTargetable(targetTile!, this.nuke.tile(), targetRangeSquared),
+      this.isTargetable(targetTile, this.nuke.tile(), targetRangeSquared),
     );
   }
 
   private detonate() {
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
@@ -303,6 +314,7 @@ export class NukeExecution implements Execution {
   }
 
   private redrawBuildings(range: number) {
+    if (this.mg === undefined) throw new Error("Not initialized");
     const rangeSquared = range * range;
     for (const unit of this.mg.units()) {
       if (isStructureType(unit.type())) {

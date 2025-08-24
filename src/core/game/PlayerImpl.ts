@@ -119,7 +119,7 @@ export class PlayerImpl implements Player {
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
 
-  largestClusterBoundingBox: { min: Cell; max: Cell } | null;
+  largestClusterBoundingBox: { min: Cell; max: Cell } | null = null;
 
   toUpdate(): PlayerUpdate {
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>

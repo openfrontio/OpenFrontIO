@@ -3,7 +3,7 @@ import { ShellExecution } from "./ShellExecution";
 import { TileRef } from "../game/GameMap";
 
 export class DefensePostExecution implements Execution {
-  private mg: Game;
+  private mg: Game | undefined;
   private post: Unit | null = null;
   private active = true;
 
@@ -24,6 +24,7 @@ export class DefensePostExecution implements Execution {
   private shoot() {
     if (this.post === null) return;
     if (this.target === null) return;
+    if (this.mg === undefined) throw new Error("Not initialized");
     const shellAttackRate = this.mg.config().defensePostShellAttackRate();
     if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
       this.lastShellAttack = this.mg.ticks();

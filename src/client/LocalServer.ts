@@ -24,7 +24,7 @@ export class LocalServer {
   private readonly turns: Turn[] = [];
 
   private intents: Intent[] = [];
-  private startedAt: number;
+  private startedAt = 0;
 
   private paused = false;
   private replaySpeedMultiplier = defaultReplaySpeedMultiplier;
@@ -35,7 +35,7 @@ export class LocalServer {
   private turnsExecuted = 0;
   private turnStartTime = 0;
 
-  private turnCheckInterval: ReturnType<typeof setTimeout>;
+  private turnCheckInterval: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private readonly lobbyConfig: LobbyConfig,

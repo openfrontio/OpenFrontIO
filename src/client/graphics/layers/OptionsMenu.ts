@@ -43,8 +43,8 @@ const secondsToHms = (d: number): string => {
 
 @customElement("options-menu")
 export class OptionsMenu extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
   private readonly userSettings: UserSettings = new UserSettings();
 
   @state()
@@ -68,12 +68,12 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onTerrainButtonClick() {
     this.alternateView = !this.alternateView;
-    this.eventBus.emit(new AlternateViewEvent(this.alternateView));
+    this.eventBus?.emit(new AlternateViewEvent(this.alternateView));
     this.requestUpdate();
   }
 
   private onExitButtonClick() {
-    const isAlive = this.game.myPlayer()?.isAlive();
+    const isAlive = this.game?.myPlayer()?.isAlive();
     if (isAlive) {
       const isConfirmed = confirm(
         translateText("help_modal.exit_confirmation"),
@@ -95,7 +95,7 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
-    this.eventBus.emit(new PauseGameEvent(this.isPaused));
+    this.eventBus?.emit(new PauseGameEvent(this.isPaused));
   }
 
   private onToggleEmojisButtonClick() {
@@ -116,7 +116,7 @@ export class OptionsMenu extends LitElement implements Layer {
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.requestUpdate();
-    this.eventBus.emit(new RedrawGraphicsEvent());
+    this.eventBus?.emit(new RedrawGraphicsEvent());
   }
 
   private onToggleRandomNameModeButtonClick() {
@@ -143,6 +143,7 @@ export class OptionsMenu extends LitElement implements Layer {
   }
 
   init() {
+    if (!this.game) throw new Error("Not initialzied");
     console.log("init called from OptionsMenu");
     this.showPauseButton =
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
@@ -152,6 +153,7 @@ export class OptionsMenu extends LitElement implements Layer {
   }
 
   tick() {
+    if (!this.game) throw new Error("Not initialzied");
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;

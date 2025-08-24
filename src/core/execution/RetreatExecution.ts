@@ -5,8 +5,8 @@ const cancelDelay = 20;
 export class RetreatExecution implements Execution {
   private active = true;
   private retreatOrdered = false;
-  private startTick: number;
-  private mg: Game;
+  private startTick: number | undefined;
+  private mg: Game | undefined;
   constructor(
     private readonly player: Player,
     private readonly attackID: string,
@@ -18,6 +18,9 @@ export class RetreatExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.startTick === undefined) throw new Error("Not initialized");
+
     if (!this.retreatOrdered) {
       this.player.orderRetreat(this.attackID);
       this.retreatOrdered = true;

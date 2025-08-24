@@ -143,7 +143,9 @@ export function largestRectangleInHistogram(widths: number[]): Rectangle {
     const h = i === widths.length ? 0 : widths[i];
 
     while (stack.length > 0 && h < widths[stack[stack.length - 1]]) {
-      const height = widths[stack.pop()!];
+      const lastIndex = stack.pop();
+      if (lastIndex === undefined) break; // cannot happen due to the while guard
+      const height = widths[lastIndex];
       const width = stack.length === 0 ? i : i - stack[stack.length - 1] - 1;
 
       if (height * width > maxArea) {

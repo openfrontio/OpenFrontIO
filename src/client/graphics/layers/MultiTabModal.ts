@@ -9,9 +9,9 @@ import { translateText } from "../../Utils";
 
 @customElement("multi-tab-modal")
 export class MultiTabModal extends LitElement implements Layer {
-  public game: GameView;
+  public game: GameView | undefined;
 
-  private detector: MultiTabDetector;
+  private detector: MultiTabDetector | undefined;
 
   @property({ type: Number }) duration = 5000;
   @state() private countdown = 5;
@@ -28,6 +28,7 @@ export class MultiTabModal extends LitElement implements Layer {
   }
 
   tick() {
+    if (!this.game) throw new Error("Not initialzied");
     if (
       this.game.inSpawnPhase() ||
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
@@ -65,6 +66,7 @@ export class MultiTabModal extends LitElement implements Layer {
 
   // Show the modal with penalty information
   public show(duration: number): void {
+    if (!this.game) throw new Error("Not initialzied");
     if (!this.game.myPlayer()?.isAlive()) {
       return;
     }

@@ -10,7 +10,7 @@ const AD_CONTAINER_ID = "bottom-rail-ad-container";
 
 @customElement("spawn-ad")
 export class SpawnAd extends LitElement implements Layer {
-  public g: GameView;
+  public g: GameView | undefined;
 
   @state()
   private isVisible = false;
@@ -50,6 +50,7 @@ export class SpawnAd extends LitElement implements Layer {
   }
 
   public async tick() {
+    if (!this.g) return;
     if (
       !this.isVisible &&
       this.g.inSpawnPhase() &&

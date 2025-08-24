@@ -104,7 +104,8 @@ export class AttackImpl implements Attack {
         return null;
       }
       // No border tiles yet—use the source tile's location
-      const tile: number = this.sourceTile()!;
+      const tile = this.sourceTile();
+      if (tile === null) return null;
       return new Cell(this._mg.map().x(tile), this._mg.map().y(tile));
     }
 

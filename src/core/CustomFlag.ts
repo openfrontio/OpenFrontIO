@@ -14,7 +14,7 @@ const ANIMATION_DURATIONS: Record<string, number> = {
 // TODO: Pass in cosmetics as a parameter when
 // remote cosmetics are implemented for custom flags
 export function renderPlayerFlag(
-  flag: string,
+  flag: string | undefined,
   target: HTMLElement,
   cosmetics: Cosmetics | undefined = undefined,
 ) {
@@ -23,7 +23,7 @@ export function renderPlayerFlag(
     return;
   }
 
-  if (!flag.startsWith("!")) return;
+  if (!flag?.startsWith("!")) return;
 
   const code = flag.slice("!".length);
   const layers = code.split("_").map((segment) => {

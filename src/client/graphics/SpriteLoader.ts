@@ -120,7 +120,8 @@ export const colorizeCanvas = (
   canvas.width = source.width;
   canvas.height = source.height;
 
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D context not supported");
   ctx.drawImage(source, 0, 0);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -177,9 +178,8 @@ export const getColoredSprite = (
   const borderColor: Colord = customBorderColor ?? theme.borderColor(owner);
   const spawnHighlightColor = theme.spawnHighlightColor();
   const key = computeSpriteKey(unit, territoryColor, borderColor);
-  if (coloredSpriteCache.has(key)) {
-    return coloredSpriteCache.get(key)!;
-  }
+  const cached = coloredSpriteCache.get(key);
+  if (cached !== undefined) return cached;
 
   const sprite = getSpriteForUnit(unit);
   if (sprite === null) {

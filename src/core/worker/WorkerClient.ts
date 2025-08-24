@@ -44,13 +44,17 @@ export class WorkerClient {
         break;
 
       case "initialized":
-      default:
-        if (message.id && this.messageHandlers.has(message.id)) {
-          const handler = this.messageHandlers.get(message.id)!;
+      default: {
+        if (message.id === undefined) return;
+        const handler = this.messageHandlers.get(message.id);
+        if (handler === undefined) return;
+        try {
           handler(message);
+        } finally {
           this.messageHandlers.delete(message.id);
         }
         break;
+      }
     }
   }
 
