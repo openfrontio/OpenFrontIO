@@ -89,6 +89,7 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
+  private patternsModal: TerritoryPatternsModal;
 
   constructor() {}
 
@@ -205,19 +206,19 @@ class Client {
       flagInputModal.open();
     });
 
-    const territoryModal = document.querySelector(
+    this.patternsModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
     const patternButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
-    territoryModal instanceof TerritoryPatternsModal;
+    this.patternsModal instanceof TerritoryPatternsModal;
     if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
-    territoryModal.previewButton = patternButton;
-    territoryModal.refresh();
+    this.patternsModal.previewButton = patternButton;
+    this.patternsModal.refresh();
     patternButton.addEventListener("click", () => {
-      territoryModal.open();
+      this.patternsModal.open();
     });
 
     loginDiscordButton.addEventListener("click", discordLogin);
@@ -303,7 +304,7 @@ class Client {
         loginDiscordButton.hidden = false;
         loginDiscordButton.translationKey = "main.login_discord";
         logoutDiscordButton.hidden = true;
-        territoryModal.onUserMe(null);
+        this.patternsModal.onUserMe(null);
       } else {
         // Authorized
         console.log(
@@ -312,7 +313,7 @@ class Client {
         );
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
-        territoryModal.onUserMe(userMeResponse);
+        this.patternsModal.onUserMe(userMeResponse);
       }
     };
 
@@ -429,7 +430,15 @@ class Client {
     if (hash.startsWith("#")) {
       const params = new URLSearchParams(hash.slice(1));
       if (params.get("purchase-completed") === "true") {
-        alertAndStrip("purchase succeeded");
+        const patternName = params.get("pattern");
+        if (patternName === null) {
+          alert("Something went wrong. Please contact support.");
+          console.error("purchase-completed=true but no pattern name");
+          return;
+        }
+        alertAndStrip(`purchase succeeded: ${patternName}`);
+        this.userSettings.setSelectedPatternName(patternName ?? undefined);
+        this.patternsModal.refresh();
         return;
       } else if (params.get("purchase-completed") === "false") {
         alertAndStrip("purchase failed");

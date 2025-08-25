@@ -30,7 +30,12 @@ export async function fetchPatterns(
   return patterns;
 }
 
-export async function handlePurchase(priceId: string) {
+export async function handlePurchase(pattern: Pattern) {
+  if (pattern.product === null) {
+    alert("This pattern is not available for purchase.");
+    return;
+  }
+
   const response = await fetch(
     `${getApiBase()}/stripe/create-checkout-session`,
     {
@@ -40,8 +45,8 @@ export async function handlePurchase(priceId: string) {
         authorization: getAuthHeader(),
       },
       body: JSON.stringify({
-        priceId: priceId,
-        successUrl: `${window.location.origin}#purchase-completed=true`,
+        priceId: pattern.product.priceId,
+        successUrl: `${window.location.origin}#purchase-completed=true&pattern=${pattern.name}`,
         cancelUrl: `${window.location.origin}#purchase-completed=false`,
       }),
     },

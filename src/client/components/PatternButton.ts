@@ -16,7 +16,7 @@ export class PatternButton extends LitElement {
   onSelect?: (pattern: Pattern | null) => void;
 
   @property({ type: Function })
-  onPurchase?: (priceId: string) => void;
+  onPurchase?: (pattern: Pattern) => void;
 
   createRenderRoot() {
     return this;
@@ -40,7 +40,7 @@ export class PatternButton extends LitElement {
   private handlePurchase(e: Event) {
     e.stopPropagation();
     if (this.pattern?.product) {
-      this.onPurchase?.(this.pattern.product.priceId);
+      this.onPurchase?.(this.pattern);
     }
   }
 

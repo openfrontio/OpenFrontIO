@@ -120,11 +120,11 @@ export class UserSettings {
     return localStorage.getItem(PATTERN_KEY) ?? undefined;
   }
 
-  setSelectedPatternName(base64: string | undefined): void {
-    if (base64 === undefined) {
+  setSelectedPatternName(patternName: string | undefined): void {
+    if (patternName === undefined) {
       localStorage.removeItem(PATTERN_KEY);
     } else {
-      localStorage.setItem(PATTERN_KEY, base64);
+      localStorage.setItem(PATTERN_KEY, patternName);
     }
   }
 }
