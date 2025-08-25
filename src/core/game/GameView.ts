@@ -560,7 +560,7 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
-    return this.ticks() <= this._config.numSpawnPhaseTurns();
+    return this.ticks() <= this.numSpawnPhaseTurns();
   }
   numSpawnPhaseTurns(): number {
     return this._config.numSpawnPhaseTurns();
