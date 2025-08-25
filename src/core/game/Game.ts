@@ -354,6 +354,7 @@ export type AllianceRequest = {
   requestor(): Player;
   recipient(): Player;
   createdAt(): Tick;
+  status(): "pending" | "accepted" | "rejected";
 };
 
 export type Alliance = {
@@ -672,7 +673,7 @@ export type Game = {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ): boolean;
   nearbyUnits(
     tile: TileRef,

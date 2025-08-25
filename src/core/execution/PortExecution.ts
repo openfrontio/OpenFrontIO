@@ -97,7 +97,6 @@ export class PortExecution implements Execution {
         this.port.tile(),
         this.mg.config().trainStationMaxRange(),
         UnitType.Factory,
-        this.player.id(),
       );
       if (nearbyFactory) {
         this.mg.addExecution(new TrainStationExecution(this.port));
