@@ -83,7 +83,6 @@ export default [
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       "@typescript-eslint/prefer-readonly": "error",
       eqeqeq: "error",
-      "sort-keys": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
       "@typescript-eslint/no-unsafe-member-access": "error",
@@ -153,7 +152,6 @@ export default [
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
       "max-len": "off",
-      "sort-keys": "off",
     },
   },
   {
@@ -165,13 +163,6 @@ export default [
     files: ["**/*.test.{js,ts,jsx,tsx}", "tests/**/*.{js,ts,jsx,tsx}"],
     plugins: ["jest"],
     ...jest.configs["flat/style"],
-  },
-  {
-    files: ["src/client/**/*.{js,ts,jsx,tsx}"],
-    rules: {
-      // Disabled rules for frontend
-      "sort-keys": "off",
-    },
   },
   {
     plugins: {

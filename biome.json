@@ -1,35 +1,49 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
-  "vcs": {
-    "enabled": false,
-    "clientKind": "git",
-    "useIgnoreFile": true
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    },
+    "enabled": true
   },
   "files": {
     "ignoreUnknown": false
   },
   "formatter": {
     "enabled": true,
-    "indentWidth": 2,
-    "indentStyle": "space"
-  },
-  "linter": {
-    "enabled": false,
-    "rules": {
-      "recommended": true
-    }
+    "indentStyle": "space",
+    "indentWidth": 2
   },
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
     }
   },
-  "assist": {
-    "enabled": true,
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
+  "linter": {
+    "enabled": false
+  },
+  "overrides": [
+    {
+      "assist": {
+        "actions": {
+          "source": {
+            "useSortedKeys": "on"
+          }
+        }
+      },
+      "includes": [
+        "eslint-plugin-local/**/*.{js,ts,jsx,tsx}",
+        "src/**/*.{js,ts,jsx,tsx}",
+        "**/*.test.{js,ts,jsx,tsx}",
+        "tests/**/*.{js,ts,jsx,tsx}"
+      ]
     }
+  ],
+  "vcs": {
+    "clientKind": "git",
+    "enabled": true,
+    "useIgnoreFile": true
   }
 }
