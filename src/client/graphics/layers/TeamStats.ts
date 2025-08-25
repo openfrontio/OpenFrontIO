@@ -21,8 +21,8 @@ type TeamEntry = {
 
 @customElement("team-stats")
 export class TeamStats extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
 
   @property({ type: Boolean }) visible = false;
   teams: TeamEntry[] = [];
@@ -36,6 +36,7 @@ export class TeamStats extends LitElement implements Layer {
   init() {}
 
   tick() {
+    if (this.game === undefined) throw new Error("Not initialized");
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) return;
 
     if (!this._shownOnInit && !this.game.inSpawnPhase()) {
@@ -51,6 +52,7 @@ export class TeamStats extends LitElement implements Layer {
   }
 
   private updateTeamStats() {
+    if (this.game === undefined) throw new Error("Not initialized");
     const players = this.game.playerViews();
     const grouped: Record<Team, PlayerView[]> = {};
 
@@ -83,6 +85,7 @@ export class TeamStats extends LitElement implements Layer {
           }
         }
 
+        if (this.game === undefined) throw new Error("Not initialized");
         const totalScorePercent = totalScoreSort / this.game.numLandTiles();
 
         return {

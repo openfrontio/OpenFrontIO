@@ -4,13 +4,13 @@ export class TextFx implements Fx {
   private lifeTime = 0;
 
   constructor(
-    private text: string,
-    private x: number,
-    private y: number,
-    private duration: number,
-    private riseDistance = 30,
-    private font = "11px sans-serif",
-    private color: { r: number; g: number; b: number } = {
+    private readonly text: string,
+    private readonly x: number,
+    private readonly y: number,
+    private readonly duration: number,
+    private readonly riseDistance = 30,
+    private readonly font = "11px sans-serif",
+    private readonly color: { r: number; g: number; b: number } = {
       r: 255,
       g: 255,
       b: 255,

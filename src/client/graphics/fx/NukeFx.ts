@@ -9,10 +9,10 @@ import { GameView } from "../../../core/game/GameView";
 export class ShockwaveFx implements Fx {
   private lifeTime = 0;
   constructor(
-    private x: number,
-    private y: number,
-    private duration: number,
-    private maxRadius: number,
+    private readonly x: number,
+    private readonly y: number,
+    private readonly duration: number,
+    private readonly maxRadius: number,
   ) {}
 
   renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {

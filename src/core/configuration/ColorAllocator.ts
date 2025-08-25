@@ -20,9 +20,9 @@ extend([labPlugin]);
 
 export class ColorAllocator {
   private availableColors: Colord[];
-  private fallbackColors: Colord[];
-  private assigned = new Map<string, Colord>();
-  private teamPlayerColors = new Map<string, Colord>();
+  private readonly fallbackColors: Colord[];
+  private readonly assigned = new Map<string, Colord>();
+  private readonly teamPlayerColors = new Map<string, Colord>();
 
   constructor(colors: Colord[], fallback: Colord[]) {
     this.availableColors = [...colors];
@@ -48,14 +48,13 @@ export class ColorAllocator {
       case ColoredTeams.Bot:
         return botTeamColors;
       default:
-        throw new Error(`Unknown team color: ${team}`);
+        return [this.assignColor(team)];
     }
   }
 
   assignColor(id: string): Colord {
-    if (this.assigned.has(id)) {
-      return this.assigned.get(id)!;
-    }
+    const cached = this.assigned.get(id);
+    if (cached !== undefined) return cached;
 
     if (this.availableColors.length === 0) {
       this.availableColors = [...this.fallbackColors];
@@ -87,9 +86,8 @@ export class ColorAllocator {
   }
 
   assignTeamPlayerColor(team: Team, playerId: string): Colord {
-    if (this.teamPlayerColors.has(playerId)) {
-      return this.teamPlayerColors.get(playerId)!;
-    }
+    const cached = this.teamPlayerColors.get(playerId);
+    if (cached !== undefined) return cached;
 
     const teamColors = this.getTeamColorVariations(team);
     const hashValue = simpleHash(playerId);

@@ -3,7 +3,7 @@ import { GameMapType } from "./Game";
 import { MapManifestSchema } from "./TerrainMapLoader";
 
 export class FetchGameMapLoader implements GameMapLoader {
-  private maps: Map<GameMapType, MapData>;
+  private readonly maps: Map<GameMapType, MapData>;
 
   public constructor(
     private readonly prefix: string,

@@ -6,10 +6,10 @@ import { getSpawnTiles } from "./Util";
 
 export class SpawnExecution implements Execution {
   active = true;
-  private mg: Game;
+  private mg: Game | undefined;
 
   constructor(
-    private playerInfo: PlayerInfo,
+    private readonly playerInfo: PlayerInfo,
     public readonly tile: TileRef,
   ) {}
 
@@ -20,6 +20,7 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (!this.mg.isValidRef(this.tile)) {
       console.warn(`SpawnExecution: tile ${this.tile} not valid`);
       return;

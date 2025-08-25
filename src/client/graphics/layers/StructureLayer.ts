@@ -29,12 +29,12 @@ type UnitRenderConfig = {
 };
 
 export class StructureLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
-  private unitIcons: Map<string, HTMLImageElement> = new Map();
-  private theme: Theme;
-  private tempCanvas: HTMLCanvasElement;
-  private tempContext: CanvasRenderingContext2D;
+  private canvas: HTMLCanvasElement | undefined;
+  private context: CanvasRenderingContext2D | undefined;
+  private readonly unitIcons: Map<string, HTMLImageElement> = new Map();
+  private readonly theme: Theme;
+  private readonly tempCanvas: HTMLCanvasElement;
+  private readonly tempContext: CanvasRenderingContext2D;
 
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
@@ -71,9 +71,9 @@ export class StructureLayer implements Layer {
   };
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
     this.tempCanvas = document.createElement("canvas");
@@ -145,6 +145,7 @@ export class StructureLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
     if (
       this.transformHandler.scale <= ZOOM_THRESHOLD ||
       !this.game.config().userSettings()?.structureSprites()
@@ -264,16 +265,19 @@ export class StructureLayer implements Layer {
     this.tempContext.drawImage(image, 0, 0, width * 2, height * 2);
 
     // Draw the final result to the main canvas
+    if (this.context === undefined) throw new Error("Not initialized");
     this.context.drawImage(this.tempCanvas, startX * 2, startY * 2);
   }
 
   paintCell(cell: Cell, color: Colord, alpha: number) {
     this.clearCell(cell);
+    if (this.context === undefined) throw new Error("Not initialized");
     this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
     this.context.fillRect(cell.x * 2, cell.y * 2, 2, 2);
   }
 
   clearCell(cell: Cell) {
+    if (this.context === undefined) throw new Error("Not initialized");
     this.context.clearRect(cell.x * 2, cell.y * 2, 2, 2);
   }
 }

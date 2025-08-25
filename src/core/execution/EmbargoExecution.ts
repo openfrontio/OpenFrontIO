@@ -3,11 +3,11 @@ import { Execution, Game, Player, PlayerID } from "../game/Game";
 export class EmbargoExecution implements Execution {
   private active = true;
 
-  private target: Player;
+  private target: Player | undefined;
 
   constructor(
-    private player: Player,
-    private targetID: PlayerID,
+    private readonly player: Player,
+    private readonly targetID: PlayerID,
     private readonly action: "start" | "stop",
   ) {}
 
@@ -21,6 +21,7 @@ export class EmbargoExecution implements Execution {
   }
 
   tick(_: number): void {
+    if (this.target === undefined) throw new Error("Not initialized");
     if (this.action === "start") this.player.addEmbargo(this.target, false);
     else this.player.stopEmbargo(this.target);
 

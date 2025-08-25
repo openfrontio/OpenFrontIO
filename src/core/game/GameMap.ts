@@ -79,7 +79,7 @@ export class GameMapImpl implements GameMap {
     width: number,
     height: number,
     terrainData: Uint8Array,
-    private numLandTiles_: number,
+    private readonly numLandTiles_: number,
   ) {
     if (terrainData.length !== width * height) {
       throw new Error(

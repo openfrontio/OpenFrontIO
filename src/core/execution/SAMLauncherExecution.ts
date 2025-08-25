@@ -21,11 +21,11 @@ type Target = {
  */
 class SAMTargetingSystem {
   // Store unreachable nukes so the SAM won't compute an interception point for them every frame
-  private nukesToIgnore: Set<number> = new Set();
+  private readonly nukesToIgnore: Set<number> = new Set();
 
   constructor(
-    private mg: Game,
-    private sam: Unit,
+    private readonly mg: Game,
+    private readonly sam: Unit,
   ) {}
 
   updateUnreachableNukes(nearbyUnits: { unit: Unit; distSquared: number }[]) {
@@ -126,20 +126,20 @@ class SAMTargetingSystem {
 }
 
 export class SAMLauncherExecution implements Execution {
-  private mg: Game;
+  private mg: Game | undefined;
   private active = true;
 
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
-  private MIRVWarheadSearchRadius = 400;
-  private MIRVWarheadProtectionRadius = 50;
-  private targetingSystem: SAMTargetingSystem;
+  private readonly MIRVWarheadSearchRadius = 400;
+  private readonly MIRVWarheadProtectionRadius = 50;
+  private targetingSystem: SAMTargetingSystem | undefined;
 
   private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
     private player: Player,
-    private tile: TileRef | null,
+    private readonly tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
     if (sam !== null) {
@@ -156,6 +156,7 @@ export class SAMLauncherExecution implements Execution {
       return true;
     }
 
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (type === UnitType.MIRVWarhead) {
       return random < this.mg.config().samWarheadHittingChance();
     }
@@ -164,9 +165,7 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.mg === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (this.sam === null) {
       if (this.tile === null) {
         throw new Error("tile is null");
@@ -211,6 +210,7 @@ export class SAMLauncherExecution implements Execution {
       this.MIRVWarheadSearchRadius,
       UnitType.MIRVWarhead,
       ({ unit }) => {
+        if (this.mg === undefined) return false;
         if (!isUnit(unit)) return false;
         if (unit.owner() === this.player) return false;
         if (this.player.isFriendly(unit.owner())) return false;

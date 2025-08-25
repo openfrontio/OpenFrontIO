@@ -10,13 +10,13 @@ export class AttackImpl implements Attack {
   public _retreated = false;
 
   constructor(
-    private _id: string,
-    private _target: Player | TerraNullius,
-    private _attacker: Player,
+    private readonly _id: string,
+    private readonly _target: Player | TerraNullius,
+    private readonly _attacker: Player,
     private _troops: number,
-    private _sourceTile: TileRef | null,
-    private _border: Set<number>,
-    private _mg: GameImpl,
+    private readonly _sourceTile: TileRef | null,
+    private readonly _border: Set<number>,
+    private readonly _mg: GameImpl,
   ) {}
 
   sourceTile(): TileRef | null {
@@ -104,7 +104,8 @@ export class AttackImpl implements Attack {
         return null;
       }
       // No border tiles yet—use the source tile's location
-      const tile: number = this.sourceTile()!;
+      const tile = this.sourceTile();
+      if (tile === null) return null;
       return new Cell(this._mg.map().x(tile), this._mg.map().y(tile));
     }
 

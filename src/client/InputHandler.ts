@@ -121,7 +121,7 @@ export class InputHandler {
   private lastPointerDownX = 0;
   private lastPointerDownY = 0;
 
-  private pointers: Map<number, PointerEvent> = new Map();
+  private readonly pointers: Map<number, PointerEvent> = new Map();
 
   private lastPinchDistance = 0;
 
@@ -130,17 +130,17 @@ export class InputHandler {
   private alternateView = false;
 
   private moveInterval: ReturnType<typeof setTimeout> | null = null;
-  private activeKeys = new Set<string>();
+  private readonly activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   constructor(
-    private canvas: HTMLCanvasElement,
-    private eventBus: EventBus,
+    private readonly canvas: HTMLCanvasElement,
+    private readonly eventBus: EventBus,
   ) {}
 
   initialize() {

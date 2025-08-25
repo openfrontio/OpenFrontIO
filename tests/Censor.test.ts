@@ -2,7 +2,7 @@
 jest.mock("obscenity", () => {
   return {
     RegExpMatcher: class {
-      private dummy: string[] = ["foo", "bar", "leet", "code"];
+      private readonly dummy: string[] = ["foo", "bar", "leet", "code"];
       constructor(_opts: any) {}
       hasMatch(input: string): boolean {
         const lower = input.toLowerCase();

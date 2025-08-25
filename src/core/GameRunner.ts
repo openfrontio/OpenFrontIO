@@ -83,7 +83,7 @@ export async function createGameRunner(
 }
 
 export class GameRunner {
-  private turns: Turn[] = [];
+  private readonly turns: Turn[] = [];
   private currTurn = 0;
   private isExecuting = false;
 
@@ -91,8 +91,8 @@ export class GameRunner {
 
   constructor(
     public game: Game,
-    private execManager: Executor,
-    private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    private readonly execManager: Executor,
+    private readonly callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
   ) {}
 
   init() {
@@ -168,7 +168,7 @@ export class GameRunner {
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
       playerNameViewData: this.playerViewData,
       tick: this.game.ticks(),
-      updates: updates,
+      updates,
     });
     this.isExecuting = false;
   }

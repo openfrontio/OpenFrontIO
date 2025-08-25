@@ -12,32 +12,32 @@ export type GraphAdapter<NodeType> = {
 };
 
 export class SerialAStar<NodeType> implements AStar<NodeType> {
-  private fwdOpenSet: FastPriorityQueue<{
+  private readonly fwdOpenSet: FastPriorityQueue<{
     tile: NodeType;
     fScore: number;
   }>;
-  private bwdOpenSet: FastPriorityQueue<{
+  private readonly bwdOpenSet: FastPriorityQueue<{
     tile: NodeType;
     fScore: number;
   }>;
 
-  private fwdCameFrom = new Map<NodeType, NodeType>();
-  private bwdCameFrom = new Map<NodeType, NodeType>();
-  private fwdGScore = new Map<NodeType, number>();
-  private bwdGScore = new Map<NodeType, number>();
+  private readonly fwdCameFrom = new Map<NodeType, NodeType>();
+  private readonly bwdCameFrom = new Map<NodeType, NodeType>();
+  private readonly fwdGScore = new Map<NodeType, number>();
+  private readonly bwdGScore = new Map<NodeType, number>();
 
   private meetingPoint: NodeType | null = null;
   public completed = false;
-  private sources: NodeType[];
-  private closestSource: NodeType;
+  private readonly sources: NodeType[];
+  private readonly closestSource: NodeType;
 
   constructor(
     src: NodeType | NodeType[],
-    private dst: NodeType,
-    private iterations: number,
+    private readonly dst: NodeType,
+    private readonly iterations: number,
     private maxTries: number,
-    private graph: GraphAdapter<NodeType>,
-    private directionChangePenalty = 0,
+    private readonly graph: GraphAdapter<NodeType>,
+    private readonly directionChangePenalty = 0,
   ) {
     this.fwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);
     this.bwdOpenSet = new FastPriorityQueue((a, b) => a.fScore < b.fScore);
@@ -75,7 +75,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     if (this.completed) return PathFindResultType.Completed;
 
     this.maxTries -= 1;
-    let iterations = this.iterations;
+    let { iterations } = this;
 
     while (!this.fwdOpenSet.isEmpty() && !this.bwdOpenSet.isEmpty()) {
       iterations--;
@@ -87,6 +87,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       }
 
       // Process forward search
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const fwdCurrent = this.fwdOpenSet.poll()!.tile;
 
       // Check if we've found a meeting point
@@ -98,6 +99,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       this.expandNode(fwdCurrent, true);
 
       // Process backward search
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const bwdCurrent = this.bwdOpenSet.poll()!.tile;
 
       // Check if we've found a meeting point
@@ -126,7 +128,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       const openSet = isForward ? this.fwdOpenSet : this.bwdOpenSet;
       const cameFrom = isForward ? this.fwdCameFrom : this.bwdCameFrom;
 
-      const tentativeGScore = gScore.get(current)! + this.graph.cost(neighbor);
+      const tentativeGScore = (gScore.get(current) ?? 0) + this.graph.cost(neighbor);
       let penalty = 0;
       // With a direction change penalty, the path will get as straight as possible
       if (this.directionChangePenalty > 0) {
@@ -141,14 +143,15 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       }
 
       const totalG = tentativeGScore + penalty;
-      if (!gScore.has(neighbor) || totalG < gScore.get(neighbor)!) {
+      const g = gScore.get(neighbor);
+      if (g === undefined || totalG < g) {
         cameFrom.set(neighbor, current);
         gScore.set(neighbor, totalG);
         const fScore =
           totalG +
           this.heuristic(neighbor, isForward ? this.dst : this.closestSource);
         // eslint-disable-next-line sort-keys
-        openSet.add({ tile: neighbor, fScore: fScore });
+        openSet.add({ tile: neighbor, fScore });
       }
     }
   }
@@ -172,19 +175,23 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
 
     // Reconstruct path from start to meeting point
     const fwdPath: NodeType[] = [this.meetingPoint];
-    let current = this.meetingPoint;
+    let current: NodeType = this.meetingPoint;
 
-    while (this.fwdCameFrom.has(current)) {
-      current = this.fwdCameFrom.get(current)!;
+    let f = this.fwdCameFrom.get(current);
+    while (f !== undefined) {
+      current = f;
       fwdPath.unshift(current);
+      f = this.fwdCameFrom.get(current);
     }
 
     // Reconstruct path from meeting point to goal
     current = this.meetingPoint;
 
-    while (this.bwdCameFrom.has(current)) {
-      current = this.bwdCameFrom.get(current)!;
+    let b = this.bwdCameFrom.get(current);
+    while (b !== undefined) {
+      current = b;
       fwdPath.push(current);
+      b = this.bwdCameFrom.get(current);
     }
 
     return fwdPath;

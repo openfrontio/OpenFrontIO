@@ -65,8 +65,8 @@ export class GameImpl implements Game {
   _playersBySmallID: Player[] = [];
 
   private execs: Execution[] = [];
-  private _width: number;
-  private _height: number;
+  private readonly _width: number;
+  private readonly _height: number;
   _terraNullius: TerraNulliusImpl;
 
   allianceRequests: AllianceRequestImpl[] = [];
@@ -76,22 +76,22 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
-  private unitGrid: UnitGrid;
+  private readonly unitGrid: UnitGrid;
 
-  private playerTeams: Team[];
-  private botTeam: Team = ColoredTeams.Bot;
-  private _railNetwork: RailNetwork = createRailNetwork(this);
+  private playerTeams: Team[] = [];
+  private readonly botTeam: Team = ColoredTeams.Bot;
+  private readonly _railNetwork: RailNetwork = createRailNetwork(this);
 
   // Used to assign unique IDs to each new alliance
   private nextAllianceID = 0;
 
   constructor(
-    private _humans: PlayerInfo[],
-    private _nations: Nation[],
-    private _map: GameMap,
-    private miniGameMap: GameMap,
-    private _config: Config,
-    private _stats: Stats,
+    private readonly _humans: PlayerInfo[],
+    private readonly _nations: Nation[],
+    private readonly _map: GameMap,
+    private readonly miniGameMap: GameMap,
+    private readonly _config: Config,
+    private readonly _stats: Stats,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
@@ -125,7 +125,8 @@ export class GameImpl implements Game {
     if (numPlayerTeams < 2) {
       throw new Error(`Too few teams: ${numPlayerTeams}`);
     } else if (numPlayerTeams < 8) {
-      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
+      this.playerTeams.push(ColoredTeams.Red);
+      this.playerTeams.push(ColoredTeams.Blue);
       if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
       if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
       if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
@@ -651,8 +652,9 @@ export class GameImpl implements Game {
         "team",
         winner,
         ...this.players()
-          .filter((p) => p.team() === winner && p.clientID() !== null)
-          .map((p) => p.clientID()!),
+          .filter((p) => p.team() === winner)
+          .map((p) => p.clientID())
+          .filter((id): id is ClientID => id !== null),
       ];
     } else {
       const clientId = winner.clientID();
@@ -750,7 +752,7 @@ export class GameImpl implements Game {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ) {
     return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
   }

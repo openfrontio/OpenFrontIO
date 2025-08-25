@@ -10,6 +10,7 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
+import { ID } from "./BaseSchemas";
 import { PatternDecoder } from "./PatternDecoder";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { base64url } from "jose";
@@ -176,10 +177,6 @@ const EmojiSchema = z
   .number()
   .nonnegative()
   .max(flattenedEmojiTable.length - 1);
-export const ID = z
-  .string()
-  .regex(/^[a-zA-Z0-9]+$/)
-  .length(8);
 
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 

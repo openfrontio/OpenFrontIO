@@ -18,18 +18,18 @@ import { conquestFxFactory } from "../fx/ConquestFx";
 import { renderNumber } from "../../Utils";
 
 export class FxLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
+  private canvas: HTMLCanvasElement | undefined;
+  private context: CanvasRenderingContext2D | undefined;
 
   private lastRefresh = 0;
-  private refreshRate = 10;
-  private theme: Theme;
-  private animatedSpriteLoader: AnimatedSpriteLoader =
+  private readonly refreshRate = 10;
+  private readonly theme: Theme;
+  private readonly animatedSpriteLoader: AnimatedSpriteLoader =
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
 
-  constructor(private game: GameView) {
+  constructor(private readonly game: GameView) {
     this.theme = this.game.config().theme();
   }
 
@@ -71,11 +71,11 @@ export class FxLayer implements Layer {
       // Only display text fx for the current player
       return;
     }
-    const tile = bonus.tile;
+    const { tile } = bonus;
     const x = this.game.x(tile);
     let y = this.game.y(tile);
-    const gold = bonus.gold;
-    const troops = bonus.troops;
+    const { gold } = bonus;
+    const { troops } = bonus;
 
     if (gold > 0) {
       const shortened = renderNumber(gold, 0);
@@ -149,7 +149,7 @@ export class FxLayer implements Layer {
   }
 
   onRailroadEvent(railroad: RailroadUpdate) {
-    const railTiles = railroad.railTiles;
+    const { railTiles } = railroad;
     for (const rail of railTiles) {
       // No need for pseudorandom, this is fx
       const chanceFx = Math.floor(Math.random() * 3);
@@ -265,6 +265,7 @@ export class FxLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
     const now = Date.now();
     if (this.game.config().userSettings()?.fxLayer()) {
       if (now > this.lastRefresh + this.refreshRate) {
@@ -283,6 +284,8 @@ export class FxLayer implements Layer {
   }
 
   renderAllFx(context: CanvasRenderingContext2D, delta: number) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
+    if (this.context === undefined) throw new Error("Not initialized");
     if (this.allFx.length > 0) {
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.renderContextFx(delta);
@@ -290,6 +293,7 @@ export class FxLayer implements Layer {
   }
 
   renderContextFx(duration: number) {
+    if (this.context === undefined) throw new Error("Not initialized");
     for (let i = this.allFx.length - 1; i >= 0; i--) {
       if (!this.allFx[i].renderTick(duration, this.context)) {
         this.allFx.splice(i, 1);

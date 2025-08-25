@@ -47,7 +47,6 @@ const frequency: Partial<Record<GameMapName, number>> = {
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
   World: 8,
-  Yenisei: 6,
 };
 
 type MapWithMode = {
@@ -104,14 +103,20 @@ export class MapPlaylist {
       const numAttempts = 10000;
       for (let i = 0; i < numAttempts; i++) {
         if (this.shuffleMapsPlaylist()) {
-          log.info(`Generated map playlist in ${i} attempts`);
-          return this.mapsPlaylist.shift()!;
+          log.info(`Generated map playlist in ${i + 1} attempts`);
+          const next = this.mapsPlaylist.shift();
+          if (next !== undefined) return next;
+          log.error("Playlist unexpectedly empty after successful shuffle; using fallback.");
+          return { map: GameMapType.World, mode: GameMode.FFA };
         }
       }
       log.error("Failed to generate a valid map playlist");
     }
-    // Even if it failed, playlist will be partially populated.
-    return this.mapsPlaylist.shift()!;
+    // Even if it failed, playlist may be partially populated.
+    const fallback = this.mapsPlaylist.shift();
+    if (fallback !== undefined) return fallback;
+    log.error("Playlist empty after shuffle failure; using fallback.");
+    return { map: GameMapType.World, mode: GameMode.FFA };
   }
 
   private shuffleMapsPlaylist(): boolean {
@@ -159,7 +164,7 @@ export class MapPlaylist {
         continue;
       }
       nextEls.splice(i, 1);
-      playlist.push({ map: next, mode: mode });
+      playlist.push({ map: next, mode });
       return true;
     }
     return false;

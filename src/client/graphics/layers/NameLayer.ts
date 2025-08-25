@@ -36,35 +36,35 @@ class RenderInfo {
 }
 
 export class NameLayer implements Layer {
-  private canvas: HTMLCanvasElement;
+  private canvas: HTMLCanvasElement | undefined;
   private lastChecked = 0;
-  private renderCheckRate = 100;
-  private renderRefreshRate = 500;
-  private rand = new PseudoRandom(10);
+  private readonly renderCheckRate = 100;
+  private readonly renderRefreshRate = 500;
+  private readonly rand = new PseudoRandom(10);
   private renders: RenderInfo[] = [];
-  private seenPlayers: Set<PlayerView> = new Set();
-  private traitorIconImage: HTMLImageElement;
-  private disconnectedIconImage: HTMLImageElement;
-  private allianceRequestBlackIconImage: HTMLImageElement;
-  private allianceRequestWhiteIconImage: HTMLImageElement;
-  private allianceIconImage: HTMLImageElement;
-  private targetIconImage: HTMLImageElement;
-  private crownIconImage: HTMLImageElement;
-  private embargoBlackIconImage: HTMLImageElement;
-  private embargoWhiteIconImage: HTMLImageElement;
-  private nukeWhiteIconImage: HTMLImageElement;
-  private nukeRedIconImage: HTMLImageElement;
-  private shieldIconImage: HTMLImageElement;
-  private container: HTMLDivElement;
+  private readonly seenPlayers: Set<PlayerView> = new Set();
+  private readonly traitorIconImage: HTMLImageElement;
+  private readonly disconnectedIconImage: HTMLImageElement;
+  private readonly allianceRequestBlackIconImage: HTMLImageElement;
+  private readonly allianceRequestWhiteIconImage: HTMLImageElement;
+  private readonly allianceIconImage: HTMLImageElement;
+  private readonly targetIconImage: HTMLImageElement;
+  private readonly crownIconImage: HTMLImageElement;
+  private readonly embargoBlackIconImage: HTMLImageElement;
+  private readonly embargoWhiteIconImage: HTMLImageElement;
+  private readonly nukeWhiteIconImage: HTMLImageElement;
+  private readonly nukeRedIconImage: HTMLImageElement;
+  private readonly shieldIconImage: HTMLImageElement;
+  private container: HTMLDivElement | undefined;
   private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
   private isVisible = true;
 
   constructor(
-    private game: GameView,
-    private transformHandler: TransformHandler,
-    private eventBus: EventBus,
+    private readonly game: GameView,
+    private readonly transformHandler: TransformHandler,
+    private readonly eventBus: EventBus,
   ) {
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
@@ -93,6 +93,7 @@ export class NameLayer implements Layer {
   }
 
   resizeCanvas() {
+    if (!this.canvas) throw new Error("Not initialzied");
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
   }
@@ -185,6 +186,7 @@ export class NameLayer implements Layer {
       screenPosOld.x - window.innerWidth / 2,
       screenPosOld.y - window.innerHeight / 2,
     );
+    if (!this.container) throw new Error("Not initialzied");
     this.container.style.transform =
       `translate(${screenPos.x}px, ${screenPos.y}px) ` +
       `scale(${this.transformHandler.scale})`;
@@ -197,6 +199,7 @@ export class NameLayer implements Layer {
       }
     }
 
+    if (!this.canvas) throw new Error("Not initialzied");
     mainContex.drawImage(
       this.canvas,
       0,
@@ -233,7 +236,7 @@ export class NameLayer implements Layer {
     };
 
     if (player.cosmetics.flag) {
-      const flag = player.cosmetics.flag;
+      const { flag } = player.cosmetics;
       if (flag !== undefined && flag !== null && flag.startsWith("!")) {
         const flagWrapper = document.createElement("div");
         applyFlagStyles(flagWrapper);
@@ -302,6 +305,7 @@ export class NameLayer implements Layer {
     // Start off invisible so it doesn't flash at 0,0
     element.style.display = "none";
 
+    if (!this.container) throw new Error("Not initialzied");
     this.container.appendChild(element);
     return element;
   }

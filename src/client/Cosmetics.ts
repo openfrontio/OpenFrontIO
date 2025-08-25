@@ -44,7 +44,7 @@ export async function handlePurchase(priceId: string) {
         "authorization": getAuthHeader(),
       },
       body: JSON.stringify({
-        priceId: priceId,
+        priceId,
         successUrl: `${window.location.origin}#purchase-completed=true`,
         cancelUrl: `${window.location.origin}#purchase-completed=false`,
       }),

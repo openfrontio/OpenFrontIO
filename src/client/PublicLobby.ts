@@ -4,7 +4,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ApiPublicLobbiesResponseSchema } from "../core/ExpressSchemas";
 import { JoinLobbyEvent } from "./Main";
-import { generateID } from "../core/Util";
+import { getClientID } from "../core/Util";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { translateText } from "../client/Utils";
 
@@ -13,11 +13,11 @@ export class PublicLobby extends LitElement {
   @state() private lobbies: GameInfo[] = [];
   @state() public isLobbyHighlighted = false;
   @state() private isButtonDebounced = false;
-  @state() private mapImages: Map<GameID, string> = new Map();
+  @state() private readonly mapImages: Map<GameID, string> = new Map();
   private lobbiesInterval: number | null = null;
   private currLobby: GameInfo | null = null;
-  private debounceDelay = 750;
-  private lobbyIDToStart = new Map<GameID, number>();
+  private readonly debounceDelay = 750;
+  private readonly lobbyIDToStart = new Map<GameID, number>();
 
   createRenderRoot() {
     return this;
@@ -205,7 +205,7 @@ export class PublicLobby extends LitElement {
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobby.gameID,
-            clientID: generateID(),
+            clientID: getClientID(lobby.gameID),
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,

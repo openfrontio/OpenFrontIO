@@ -196,13 +196,13 @@ export class ClientGameRunner {
   private connectionCheckInterval: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private lobby: LobbyConfig,
-    private eventBus: EventBus,
-    private renderer: GameRenderer,
-    private input: InputHandler,
-    private transport: Transport,
-    private worker: WorkerClient,
-    private gameView: GameView,
+    private readonly lobby: LobbyConfig,
+    private readonly eventBus: EventBus,
+    private readonly renderer: GameRenderer,
+    private readonly input: InputHandler,
+    private readonly transport: Transport,
+    private readonly worker: WorkerClient,
+    private readonly gameView: GameView,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -288,7 +288,7 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
-    const worker = this.worker;
+    const { worker } = this;
     const keepWorkerAlive = () => {
       if (this.isActive) {
         worker.sendHeartbeat();
@@ -452,11 +452,7 @@ export class ClientGameRunner {
       return;
     }
 
-    this.findAndUpgradeNearestBuilding(tile);
-  }
-
-  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile).then((actions) => {
+    this.myPlayer.actions(tile).then((actions) => {
       const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
@@ -470,14 +466,14 @@ export class ClientGameRunner {
             .find((unit) => unit.id() === bu.canUpgrade);
           if (existingUnit) {
             const distance = this.gameView.manhattanDist(
-              clickedTile,
+              tile,
               existingUnit.tile(),
             );
 
             upgradeUnits.push({
               unitId: bu.canUpgrade,
               unitType: bu.type,
-              distance: distance,
+              distance,
             });
           }
         }
@@ -577,7 +573,7 @@ export class ClientGameRunner {
     if (!this.myPlayer) return;
 
     this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
-      if (this.myPlayer === null) throw new Error("not initialized");
+      if (this.myPlayer === null) throw new Error("Not initialized");
       this.eventBus.emit(
         new SendBoatAttackIntentEvent(
           this.gameView.owner(tile).id(),

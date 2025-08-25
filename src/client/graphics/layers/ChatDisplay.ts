@@ -21,10 +21,10 @@ type ChatEvent = {
 
 @customElement("chat-display")
 export class ChatDisplay extends LitElement implements Layer {
-  public eventBus: EventBus;
-  public game: GameView;
+  public eventBus: EventBus | undefined;
+  public game: GameView | undefined;
 
-  private active = false;
+  private readonly active = false;
 
   @state() private _hidden = false;
   @state() private newEvents = 0;
@@ -55,6 +55,7 @@ export class ChatDisplay extends LitElement implements Layer {
 
   onDisplayMessageEvent(event: DisplayMessageUpdate) {
     if (event.messageType !== MessageType.CHAT) return;
+    if (!this.game) return;
     const myPlayer = this.game.myPlayer();
     if (
       event.playerID !== null &&
@@ -75,6 +76,7 @@ export class ChatDisplay extends LitElement implements Layer {
 
   tick() {
     // this.active = true;
+    if (!this.game) return;
     const updates = this.game.updatesSinceLastTick();
     if (updates === null) return;
     const messages = updates[GameUpdateType.DisplayEvent] as

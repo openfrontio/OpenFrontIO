@@ -10,7 +10,7 @@ export class GutterAdModalEvent implements GameEvent {
 
 @customElement("gutter-ad-modal")
 export class GutterAdModal extends LitElement implements Layer {
-  public eventBus: EventBus;
+  public eventBus: EventBus | undefined;
 
   @state()
   private isVisible = false;
@@ -18,11 +18,11 @@ export class GutterAdModal extends LitElement implements Layer {
   @state()
   private adLoaded = false;
 
-  private leftAdType = "left_rail";
-  private rightAdType = "right_rail";
-  private leftContainerId = "gutter-ad-container-left";
-  private rightContainerId = "gutter-ad-container-right";
-  private margin = "10px";
+  private readonly leftAdType = "left_rail";
+  private readonly rightAdType = "right_rail";
+  private readonly leftContainerId = "gutter-ad-container-left";
+  private readonly rightContainerId = "gutter-ad-container-right";
+  private readonly margin = "10px";
 
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
@@ -30,6 +30,7 @@ export class GutterAdModal extends LitElement implements Layer {
   }
 
   init() {
+    if (!this.eventBus) throw new Error("Not initialized");
     if (getGamesPlayed() > 1) {
       this.eventBus.on(GutterAdModalEvent, (event) => {
         if (event.isVisible) {

@@ -8,8 +8,8 @@ export class SpawnTimer implements Layer {
   private colors = ["rgba(0, 128, 255, 0.7)", "rgba(0, 0, 0, 0.5)"];
 
   constructor(
-    private game: GameView,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly transformHandler: TransformHandler,
   ) {}
 
   init() {}

@@ -75,26 +75,26 @@ export class PlayerImpl implements Player {
 
   markedTraitorTick = -1;
 
-  private embargoes = new Map<PlayerID, Embargo>();
+  private readonly embargoes = new Map<PlayerID, Embargo>();
 
   public _borderTiles: Set<TileRef> = new Set();
 
   public _units: Unit[] = [];
   public _tiles: Set<TileRef> = new Set();
 
-  private _name: string;
-  private _displayName: string;
+  private readonly _name: string;
+  private readonly _displayName: string;
 
   public pastOutgoingAllianceRequests: AllianceRequest[] = [];
-  private _expiredAlliances: Alliance[] = [];
+  private readonly _expiredAlliances: Alliance[] = [];
 
-  private targets_: Target[] = [];
+  private readonly targets_: Target[] = [];
 
-  private outgoingEmojis_: EmojiMessage[] = [];
+  private readonly outgoingEmojis_: EmojiMessage[] = [];
 
-  private sentDonations: Donation[] = [];
+  private readonly sentDonations: Donation[] = [];
 
-  private relations = new Map<Player, number>();
+  private readonly relations = new Map<Player, number>();
 
   private lastDeleteUnitTick: Tick = -1;
 
@@ -106,8 +106,8 @@ export class PlayerImpl implements Player {
   private _isDisconnected = false;
 
   constructor(
-    private mg: GameImpl,
-    private _smallID: number,
+    private readonly mg: GameImpl,
+    private readonly _smallID: number,
     private readonly playerInfo: PlayerInfo,
     startTroops: number,
     private readonly _team: Team | null,
@@ -119,7 +119,7 @@ export class PlayerImpl implements Player {
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
 
-  largestClusterBoundingBox: { min: Cell; max: Cell } | null;
+  largestClusterBoundingBox: { min: Cell; max: Cell } | null = null;
 
   toUpdate(): PlayerUpdate {
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
@@ -165,7 +165,7 @@ export class PlayerImpl implements Player {
           retreating: a.retreating(),
         } satisfies AttackUpdate;
       }),
-      outgoingAllianceRequests: outgoingAllianceRequests,
+      outgoingAllianceRequests,
       alliances: this.alliances().map(
         (a) =>
           ({
@@ -397,9 +397,9 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    const hasPending =
-      this.incomingAllianceRequests().some((ar) => ar.requestor() === other) ||
-      this.outgoingAllianceRequests().some((ar) => ar.recipient() === other);
+    const hasPending = this.outgoingAllianceRequests().some(
+      (ar) => ar.recipient() === other,
+    );
 
     if (hasPending) {
       return false;
@@ -557,6 +557,9 @@ export class PlayerImpl implements Player {
   }
 
   canSendEmoji(recipient: Player | typeof AllPlayers): boolean {
+    if (recipient === this) {
+      return false;
+    }
     const recipientID =
       recipient === AllPlayers ? AllPlayers : recipient.smallID();
     const prevMsgs = this.outgoingEmojis_.filter(
@@ -706,7 +709,7 @@ export class PlayerImpl implements Player {
 
     this.embargoes.set(other.id(), {
       createdAt: this.mg.ticks(),
-      isTemporary: isTemporary,
+      isTemporary,
       target: other,
     });
   }
@@ -846,7 +849,7 @@ export class PlayerImpl implements Player {
     if (existing.length === 0) {
       return false;
     }
-    const unit = existing[0].unit;
+    const { unit } = existing[0];
     if (!this.canUpgradeUnit(unit.type())) {
       return false;
     }
@@ -887,7 +890,7 @@ export class PlayerImpl implements Player {
         canBuild: this.mg.inSpawnPhase()
           ? false
           : this.canBuild(u, tile, validTiles),
-        canUpgrade: canUpgrade,
+        canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
         type: u,
       } as BuildableUnit;

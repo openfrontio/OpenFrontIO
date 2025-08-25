@@ -6,7 +6,7 @@ import { translateText } from "../../Utils";
 
 @customElement("heads-up-message")
 export class HeadsUpMessage extends LitElement implements Layer {
-  public game: GameView;
+  public game: GameView | undefined;
 
   @state()
   private isVisible = false;
@@ -21,6 +21,7 @@ export class HeadsUpMessage extends LitElement implements Layer {
   }
 
   tick() {
+    if (!this.game) throw new Error("Not initialzied");
     if (!this.game.inSpawnPhase()) {
       this.isVisible = false;
       this.requestUpdate();

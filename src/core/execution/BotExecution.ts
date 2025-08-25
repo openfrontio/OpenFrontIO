@@ -5,18 +5,18 @@ import { simpleHash } from "../Util";
 
 export class BotExecution implements Execution {
   private active = true;
-  private random: PseudoRandom;
-  private mg: Game;
+  private readonly random: PseudoRandom;
+  private mg: Game | undefined;
   private neighborsTerraNullius = true;
 
   private behavior: BotBehavior | null = null;
-  private attackRate: number;
-  private attackTick: number;
-  private triggerRatio: number;
-  private reserveRatio: number;
-  private expandRatio: number;
+  private readonly attackRate: number;
+  private readonly attackTick: number;
+  private readonly triggerRatio: number;
+  private readonly reserveRatio: number;
+  private readonly expandRatio: number;
 
-  constructor(private bot: Player) {
+  constructor(private readonly bot: Player) {
     this.random = new PseudoRandom(simpleHash(bot.id()));
     this.attackRate = this.random.nextInt(40, 80);
     this.attackTick = this.random.nextInt(0, this.attackRate);
@@ -42,6 +42,7 @@ export class BotExecution implements Execution {
     }
 
     if (this.behavior === null) {
+      if (this.mg === undefined) throw new Error("Not initialized");
       this.behavior = new BotBehavior(
         this.random,
         this.mg,
@@ -63,7 +64,7 @@ export class BotExecution implements Execution {
 
   private maybeAttack() {
     if (this.behavior === null) {
-      throw new Error("not initialized");
+      throw new Error("Not initialized");
     }
     const toAttack = this.behavior.getNeighborTraitorToAttack();
     if (toAttack !== null) {
@@ -75,6 +76,7 @@ export class BotExecution implements Execution {
     }
 
     if (this.neighborsTerraNullius) {
+      if (this.mg === undefined) throw new Error("Not initialized");
       if (this.bot.sharesBorderWith(this.mg.terraNullius())) {
         this.behavior.sendAttack(this.mg.terraNullius());
         return;

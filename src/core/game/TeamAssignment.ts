@@ -16,10 +16,12 @@ export function assignTeams(
   // Sort players into clan groups or no-clan list
   for (const player of players) {
     if (player.clan) {
-      if (!clanGroups.has(player.clan)) {
-        clanGroups.set(player.clan, []);
+      let group = clanGroups.get(player.clan);
+      if (group === undefined) {
+        group = [];
+        clanGroups.set(player.clan, group);
       }
-      clanGroups.get(player.clan)!.push(player);
+      group.push(player);
     } else {
       noClanPlayers.push(player);
     }

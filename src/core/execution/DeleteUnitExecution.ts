@@ -2,11 +2,11 @@ import { Execution, Game, MessageType, Player } from "../game/Game";
 
 export class DeleteUnitExecution implements Execution {
   private active = true;
-  private mg: Game;
+  private mg: Game | undefined;
 
   constructor(
-    private player: Player,
-    private unitId: number,
+    private readonly player: Player,
+    private readonly unitId: number,
   ) {}
 
   activeDuringSpawnPhase(): boolean {

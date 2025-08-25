@@ -6,7 +6,7 @@ export type EventConstructor<T extends GameEvent = GameEvent> = new (
 ) => T;
 
 export class EventBus {
-  private listeners: Map<EventConstructor, Array<(event: GameEvent) => void>> =
+  private readonly listeners: Map<EventConstructor, Array<(event: GameEvent) => void>> =
     new Map();
 
   emit<T extends GameEvent>(event: T): void {
@@ -23,10 +23,11 @@ export class EventBus {
     eventType: EventConstructor<T>,
     callback: (event: T) => void,
   ): void {
-    if (!this.listeners.has(eventType)) {
-      this.listeners.set(eventType, []);
+    let callbacks = this.listeners.get(eventType);
+    if (callbacks === undefined) {
+      callbacks = [];
+      this.listeners.set(eventType, callbacks);
     }
-    const callbacks = this.listeners.get(eventType)!;
     callbacks.push(callback as (event: GameEvent) => void);
   }
 

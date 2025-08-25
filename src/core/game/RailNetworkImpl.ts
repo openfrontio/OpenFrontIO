@@ -21,7 +21,7 @@ export type StationManager = {
 };
 
 export class StationManagerImpl implements StationManager {
-  private stations: Set<TrainStation> = new Set();
+  private readonly stations: Set<TrainStation> = new Set();
 
   addStation(station: TrainStation) {
     this.stations.add(station);
@@ -49,7 +49,7 @@ export type RailPathFinderService = {
 };
 
 class RailPathFinderServiceImpl implements RailPathFinderService {
-  constructor(private game: Game) {}
+  constructor(private readonly game: Game) {}
 
   findTilePath(from: TileRef, to: TileRef): TileRef[] {
     const astar = new MiniAStar(
@@ -88,12 +88,12 @@ export function createRailNetwork(game: Game): RailNetwork {
 }
 
 export class RailNetworkImpl implements RailNetwork {
-  private maxConnectionDistance = 4;
+  private readonly maxConnectionDistance = 4;
 
   constructor(
-    private game: Game,
-    private stationManager: StationManager,
-    private pathService: RailPathFinderService,
+    private readonly game: Game,
+    private readonly stationManager: StationManager,
+    private readonly pathService: RailPathFinderService,
   ) {}
 
   connectStation(station: TrainStation) {
@@ -220,8 +220,9 @@ export class RailNetworkImpl implements RailNetwork {
       { station: start, distance: 0 },
     ];
 
-    while (queue.length > 0) {
-      const { station, distance } = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const { station, distance } = queue[head++];
       if (visited.has(station)) continue;
       visited.add(station);
 
@@ -244,8 +245,9 @@ export class RailNetworkImpl implements RailNetwork {
     const visited = new Set<TrainStation>();
     const queue = [start];
 
-    while (queue.length > 0) {
-      const current = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const current = queue[head++];
       if (visited.has(current)) continue;
       visited.add(current);
 

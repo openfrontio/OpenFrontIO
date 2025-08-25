@@ -1,12 +1,12 @@
 export class ProgressBar {
   private static readonly CLEAR_PADDING = 2;
   constructor(
-    private colors: string[] = [],
-    private ctx: CanvasRenderingContext2D,
-    private x: number,
-    private y: number,
-    private w: number,
-    private h: number,
+    private readonly colors: string[] = [],
+    private readonly ctx: CanvasRenderingContext2D,
+    private readonly x: number,
+    private readonly y: number,
+    private readonly w: number,
+    private readonly h: number,
     private progress = 0, // Progress from 0 to 1
   ) {
     this.setProgress(progress);

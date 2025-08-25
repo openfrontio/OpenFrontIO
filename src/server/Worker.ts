@@ -3,7 +3,7 @@ import {
   GameInputSchema,
   WorkerApiGameIdExists,
 } from "../core/WorkerSchemas";
-import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
+import { GameRecord, GameRecordSchema } from "../core/Schemas";
 import { LimiterType, gatekeeper } from "./Gatekeeper";
 import { WebSocket, WebSocketServer } from "ws";
 import { archive, readGameRecord } from "./Archive";
@@ -11,6 +11,7 @@ import express, { NextFunction, Request, Response } from "express";
 import { GameEnv } from "../core/configuration/Config";
 import { GameManager } from "./GameManager";
 import { GameType } from "../core/game/Game";
+import { ID } from "../core/BaseSchemas";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
@@ -89,7 +90,7 @@ export async function startWorker() {
   app.post(
     "/api/create_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const id = req.params.id;
+      const { id } = req.params;
       const creatorClientID = (() => {
         if (typeof req.query.creatorClientID !== "string") return undefined;
 
@@ -266,7 +267,7 @@ export async function startWorker() {
 
       return res.status(200).json({
         exists: true,
-        gameRecord: gameRecord,
+        gameRecord,
         success: true,
       });
     }),
@@ -340,7 +341,7 @@ export async function startWorker() {
     if (process.send) {
       process.send({
         type: "WORKER_READY",
-        workerId: workerId,
+        workerId,
       });
       log.info("signaled ready state to master");
     }

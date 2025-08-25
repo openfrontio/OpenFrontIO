@@ -15,20 +15,20 @@ import {
 } from "../core/game/Game";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { generateID, getClientID } from "../core/Util";
 import { DifficultyDescription } from "./components/Difficulties";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { TeamCountConfig } from "../core/Schemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
-import { generateID } from "../core/Util";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 import { translateText } from "../client/Utils";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
@@ -37,9 +37,9 @@ export class SinglePlayerModal extends LitElement {
   @state() private disableNPCs = false;
   @state() private bots = 400;
   @state() private infiniteGold = false;
-  @state() private donateGold = false;
+  @state() private readonly donateGold = false;
   @state() private infiniteTroops = false;
-  @state() private donateTroops = false;
+  @state() private readonly donateTroops = false;
   @state() private instantBuild = false;
   @state() private useRandomMap = false;
   @state() private gameMode: GameMode = GameMode.FFA;
@@ -47,7 +47,7 @@ export class SinglePlayerModal extends LitElement {
 
   @state() private disabledUnits: UnitType[] = [];
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   connectedCallback() {
     super.connectedCallback();
@@ -59,7 +59,7 @@ export class SinglePlayerModal extends LitElement {
     super.disconnectedCallback();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();
@@ -413,8 +413,8 @@ export class SinglePlayerModal extends LitElement {
       `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]
       }${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
-    const clientID = generateID();
     const gameID = generateID();
+    const clientID = getClientID(gameID);
 
     const usernameInput = document.querySelector(
       "username-input",
@@ -430,10 +430,10 @@ export class SinglePlayerModal extends LitElement {
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
-          clientID: clientID,
-          gameID: gameID,
+          clientID,
+          gameID,
           gameStartInfo: {
-            gameID: gameID,
+            gameID,
             players: [
               {
                 clientID,
