@@ -124,7 +124,7 @@ export default [
           object: true,
         },
       ],
-      "quote-props": ["error", "consistent-as-needed"],
+      "quote-props": ["error", "as-needed"],
       "space-before-blocks": ["error", "always"],
       "space-before-function-paren": [
         "error",
