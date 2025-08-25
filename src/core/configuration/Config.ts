@@ -135,7 +135,7 @@ export interface Config {
     numPlayerPorts: number,
     numPlayerTradeShips: number,
   ): number;
-  trainGold(rel: "self" | "friendly" | "other"): Gold;
+  trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;

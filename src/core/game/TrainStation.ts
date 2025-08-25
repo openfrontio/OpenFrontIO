@@ -233,12 +233,18 @@ export class Cluster {
   }
 }
 
-function rel(player: Player, other: Player): "self" | "friendly" | "other" {
+function rel(
+  player: Player,
+  other: Player,
+): "self" | "team" | "ally" | "other" {
   if (player === other) {
     return "self";
   }
-  if (player.isFriendly(other)) {
-    return "friendly";
+  if (player.isOnSameTeam(other)) {
+    return "team";
+  }
+  if (player.isAlliedWith(other)) {
+    return "ally";
   }
   return "other";
 }

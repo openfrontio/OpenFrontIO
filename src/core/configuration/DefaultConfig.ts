@@ -333,10 +333,11 @@ export class DefaultConfig implements Config {
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
     return (numPlayerFactories + 10) * 20;
   }
-  trainGold(rel: "self" | "friendly" | "other"): Gold {
+  trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     switch (rel) {
-      case "friendly":
+      case "ally":
         return 50_000n;
+      case "team":
       case "other":
         return 25_000n;
       case "self":
