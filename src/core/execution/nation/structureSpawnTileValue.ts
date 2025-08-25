@@ -46,7 +46,48 @@ export function structureSpawnTileValue(
       return (tile) => {
         let w = 0;
 
-        // Prefer to be far away from other structures of the same type
+        // Prefer to be away from other structures of the same type
+        const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+        otherTiles.delete(tile);
+        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+        if (closestOther !== null) {
+          const d = mg.manhattanDist(closestOther.x, tile);
+          w += Math.min(d, structureSpacing);
+        }
+
+        return w;
+      };
+    }
+    case UnitType.DefensePost: {
+      return (tile) => {
+        let w = 0;
+
+        // Prefer higher elevations
+        w += mg.magnitude(tile);
+
+        // Prefer to be close to the border
+        const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
+        if (closestBorder !== null) {
+          const d = mg.manhattanDist(closestBorder.x, tile);
+          w += Math.max(0, borderSpacing - Math.abs(borderSpacing - d));
+
+          // Prefer adjacent players who are hostile
+          const closestTile = mg.ref(closestBorder.x, closestBorder.y);
+          const neighborPlayers: Set<Player> = new Set();
+          for (const tile of mg.neighbors(closestTile)) {
+            if (!mg.isLand(tile)) continue;
+            const id = mg.ownerID(tile);
+            if (id === player.smallID()) continue;
+            const neighbor = mg.playerBySmallID(id);
+            if (!neighbor.isPlayer()) continue;
+            neighborPlayers.add(neighbor);
+          }
+          for (const neighbor of neighborPlayers) {
+            w += borderSpacing * player.relation(neighbor);
+          }
+        }
+
+        // Prefer to be away from other structures of the same type
         const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
         otherTiles.delete(tile);
         const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
@@ -61,7 +102,7 @@ export function structureSpawnTileValue(
     case UnitType.SAMLauncher: {
       const protectTiles: Set<TileRef> = new Set();
       for (const unit of player.units()) {
-        switch(unit.type()) {
+        switch (unit.type()) {
           case UnitType.City:
           case UnitType.Factory:
           case UnitType.MissileSilo:
@@ -84,7 +125,7 @@ export function structureSpawnTileValue(
           w += Math.min(d, borderSpacing);
         }
 
-        // Prefer to be far away from other structures of the same type
+        // Prefer to be away from other structures of the same type
         const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
         otherTiles.delete(tile);
         const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
