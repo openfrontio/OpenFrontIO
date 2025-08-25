@@ -10,14 +10,13 @@ const log = logger.child({ component: "Archive" });
 
 // R2 client configuration
 const r2 = new S3({
-  region: "auto", // R2 ignores region, but it's required by the SDK
-  /* eslint-disable sort-keys */
-  endpoint: config.r2Endpoint(),
   credentials: {
     accessKeyId: config.r2AccessKey(),
     secretAccessKey: config.r2SecretKey(),
   },
-  /* eslint-disable sort-keys */
+
+  endpoint: config.r2Endpoint(),
+  region: "auto", // R2 ignores region, but it's required by the SDK
 });
 
 const bucket = config.r2Bucket();
@@ -49,8 +48,8 @@ export async function archive(gameRecord: GameRecord) {
     const { message, stack, name } = error;
     log.error(`${gameRecord.info.gameID}: Final archive error: ${error}`, {
       message,
-      stack,
       name,
+      stack,
       ...(error && typeof error === "object" ? error : {}),
     });
   }
@@ -60,11 +59,11 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
   // Create analytics data object
   const { info, version, gitCommit, subdomain, domain } = gameRecord;
   const analyticsData: AnalyticsRecord = {
-    info,
-    version,
-    gitCommit,
-    subdomain,
     domain,
+    gitCommit,
+    info,
+    subdomain,
+    version,
   };
 
   try {
@@ -72,10 +71,10 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     const analyticsKey = `${info.gameID}.json`;
 
     await r2.putObject({
-      Bucket: bucket,
-      Key: `${analyticsFolder}/${analyticsKey}`,
       Body: JSON.stringify(analyticsData, replacer),
+      Bucket: bucket,
       ContentType: "application/json",
+      Key: `${analyticsFolder}/${analyticsKey}`,
     });
 
     log.info(`${info.gameID}: successfully wrote game analytics to R2`);
@@ -91,8 +90,8 @@ async function archiveAnalyticsToR2(gameRecord: GameRecord) {
     const { message, stack, name } = error;
     log.error(`${info.gameID}: Error writing game analytics to R2: ${error}`, {
       message,
-      stack,
       name,
+      stack,
       ...(error && typeof error === "object" ? error : {}),
     });
     throw error;
@@ -110,10 +109,10 @@ async function archiveFullGameToR2(gameRecord: GameRecord) {
 
   try {
     await r2.putObject({
-      Bucket: bucket,
-      Key: `${gameFolder}/${recordCopy.info.gameID}`,
       Body: JSON.stringify(recordCopy, replacer),
+      Bucket: bucket,
       ContentType: "application/json",
+      Key: `${gameFolder}/${recordCopy.info.gameID}`,
     });
   } catch (error) {
     log.error(`error saving game ${gameRecord.info.gameID}`);
@@ -148,8 +147,8 @@ export async function readGameRecord(
     // Log the error for monitoring purposes
     log.error(`${gameId}: Error reading game record from R2: ${error}`, {
       message,
-      stack,
       name,
+      stack,
       ...(error && typeof error === "object" ? error : {}),
     });
 
@@ -179,8 +178,8 @@ export async function gameRecordExists(gameId: GameID): Promise<boolean> {
     }
     log.error(`${gameId}: Error checking archive existence: ${error}`, {
       message,
-      stack,
       name,
+      stack,
       ...(error && typeof error === "object" ? error : {}),
     });
     return false;

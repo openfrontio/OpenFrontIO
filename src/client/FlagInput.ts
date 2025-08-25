@@ -36,9 +36,9 @@ export class FlagInput extends LitElement {
   private dispatchFlagEvent() {
     this.dispatchEvent(
       new CustomEvent("flag-change", {
-        detail: { flag: this.flag },
         bubbles: true,
         composed: true,
+        detail: { flag: this.flag },
       }),
     );
   }

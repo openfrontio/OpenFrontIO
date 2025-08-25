@@ -2,9 +2,9 @@ import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 
 const createMockStation = (id: string): jest.Mocked<TrainStation> => {
   return {
+    getCluster: jest.fn(() => null),
     id,
     setCluster: jest.fn(),
-    getCluster: jest.fn(() => null),
   } as any;
 };
 

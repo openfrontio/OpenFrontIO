@@ -20,8 +20,8 @@ describe("DeleteUnitExecution Security Tests", () => {
   beforeEach(async () => {
     game = await setup("plains", {
       infiniteGold: true,
-      instantBuild: true,
       infiniteTroops: true,
+      instantBuild: true,
     });
 
     const player1Info = new PlayerInfo(

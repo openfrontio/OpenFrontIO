@@ -79,8 +79,8 @@ export class SpawnAd extends LitElement implements Layer {
       window.ramp.que.push(() => {
         window.ramp.spaAddAds([
           {
-            type: AD_TYPE,
             selectorId: AD_CONTAINER_ID,
+            type: AD_TYPE,
           },
         ]);
         this.adLoaded = true;

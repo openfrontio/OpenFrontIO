@@ -86,9 +86,9 @@ describe("SAM", () => {
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(3, 1),
       trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(3, 1), targetable: true },
+        { targetable: true, tile: game.ref(1, 1) },
+        { targetable: true, tile: game.ref(2, 1) },
+        { targetable: true, tile: game.ref(3, 1) },
       ],
     });
     executeTicks(game, 3);
@@ -102,17 +102,17 @@ describe("SAM", () => {
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(3, 1),
       trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(3, 1), targetable: true },
+        { targetable: true, tile: game.ref(1, 1) },
+        { targetable: true, tile: game.ref(2, 1) },
+        { targetable: true, tile: game.ref(3, 1) },
       ],
     });
     attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 3),
       trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(1, 2), targetable: true },
-        { tile: game.ref(1, 3), targetable: true },
+        { targetable: true, tile: game.ref(1, 1) },
+        { targetable: true, tile: game.ref(1, 2) },
+        { targetable: true, tile: game.ref(1, 3) },
       ],
     });
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
@@ -130,9 +130,9 @@ describe("SAM", () => {
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(1, 3),
       trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(3, 1), targetable: true },
+        { targetable: true, tile: game.ref(1, 1) },
+        { targetable: true, tile: game.ref(2, 1) },
+        { targetable: true, tile: game.ref(3, 1) },
       ],
     });
 
@@ -158,9 +158,9 @@ describe("SAM", () => {
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(1, 3),
       trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(1, 2), targetable: true },
-        { tile: game.ref(1, 3), targetable: true },
+        { targetable: true, tile: game.ref(1, 1) },
+        { targetable: true, tile: game.ref(1, 2) },
+        { targetable: true, tile: game.ref(1, 3) },
       ],
     });
 

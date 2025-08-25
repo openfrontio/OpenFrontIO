@@ -18,9 +18,9 @@ export class UnitExplosionFx implements Fx {
     game: GameView,
   ) {
     const config = [
-      { dx: 0, dy: 0, delay: 0, type: FxType.UnitExplosion },
-      { dx: 4, dy: -6, delay: 80, type: FxType.UnitExplosion },
-      { dx: -6, dy: 4, delay: 160, type: FxType.UnitExplosion },
+      { delay: 0, dx: 0, dy: 0, type: FxType.UnitExplosion },
+      { delay: 80, dx: 4, dy: -6, type: FxType.UnitExplosion },
+      { delay: 160, dx: -6, dy: 4, type: FxType.UnitExplosion },
     ];
     for (const { dx, dy, delay, type } of config) {
       this.timeline.add(delay, () => {

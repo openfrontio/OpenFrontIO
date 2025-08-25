@@ -206,20 +206,20 @@ export class PublicLobby extends LitElement {
       this.currLobby = lobby;
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: {
-            gameID: lobby.gameID,
-            clientID: getClientID(lobby.gameID),
-          } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
+          detail: {
+            clientID: getClientID(lobby.gameID),
+            gameID: lobby.gameID,
+          } as JoinLobbyEvent,
         }),
       );
     } else {
       this.dispatchEvent(
         new CustomEvent("leave-lobby", {
-          detail: { lobby: this.currLobby },
           bubbles: true,
           composed: true,
+          detail: { lobby: this.currLobby },
         }),
       );
       this.leaveLobby();

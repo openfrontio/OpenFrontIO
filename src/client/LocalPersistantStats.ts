@@ -12,9 +12,9 @@ import { replacer } from "../core/Util";
 const LocalStatsDataSchema = z.record(
   ID,
   z.object({
-    lobby: GameConfigSchema.partial(),
     // Only once the game is over
     gameRecord: GameRecordSchema.optional(),
+    lobby: GameConfigSchema.partial(),
   }),
 );
 type LocalStatsData = z.infer<typeof LocalStatsDataSchema>;

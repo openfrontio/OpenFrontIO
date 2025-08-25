@@ -14,8 +14,8 @@ import { TileRef } from "../../../src/core/game/GameMap";
 import { GameView, PlayerView } from "../../../src/core/game/GameView";
 
 jest.mock("../../../src/client/Utils", () => ({
-  translateText: jest.fn((key: string) => key),
   renderNumber: jest.fn((num: number) => num.toString()),
+  translateText: jest.fn((key: string) => key),
 }));
 
 jest.mock("../../../src/client/graphics/layers/BuildMenu", () => {
@@ -23,46 +23,46 @@ jest.mock("../../../src/client/graphics/layers/BuildMenu", () => {
   return {
     flattenedBuildTable: [
       {
-        unitType: UnitType.City,
-        key: "unit_type.city",
+        countable: true,
         description: "unit_type.city_desc",
         icon: "city-icon",
-        countable: true,
+        key: "unit_type.city",
+        unitType: UnitType.City,
       },
       {
-        unitType: UnitType.Factory,
-        key: "unit_type.factory",
+        countable: true,
         description: "unit_type.factory_desc",
         icon: "factory-icon",
-        countable: true,
+        key: "unit_type.factory",
+        unitType: UnitType.Factory,
       },
       {
-        unitType: UnitType.AtomBomb,
-        key: "unit_type.atom_bomb",
+        countable: false,
         description: "unit_type.atom_bomb_desc",
         icon: "atom-bomb-icon",
-        countable: false,
+        key: "unit_type.atom_bomb",
+        unitType: UnitType.AtomBomb,
       },
       {
-        unitType: UnitType.Warship,
-        key: "unit_type.warship",
+        countable: true,
         description: "unit_type.warship_desc",
         icon: "warship-icon",
-        countable: true,
+        key: "unit_type.warship",
+        unitType: UnitType.Warship,
       },
       {
-        unitType: UnitType.HydrogenBomb,
-        key: "unit_type.hydrogen_bomb",
+        countable: false,
         description: "unit_type.hydrogen_bomb_desc",
         icon: "hydrogen-bomb-icon",
-        countable: false,
+        key: "unit_type.hydrogen_bomb",
+        unitType: UnitType.HydrogenBomb,
       },
       {
-        unitType: UnitType.MIRV,
-        key: "unit_type.mirv",
+        countable: false,
         description: "unit_type.mirv_desc",
         icon: "mirv-icon",
-        countable: false,
+        key: "unit_type.mirv",
+        unitType: UnitType.MIRV,
       },
     ],
   };
@@ -95,17 +95,17 @@ describe("RadialMenuElements", () => {
     } as unknown as PlayerView;
 
     mockGame = {
-      inSpawnPhase: jest.fn(() => false),
-      owner: jest.fn(() => mockPlayer),
-      isLand: jest.fn(() => true),
       config: jest.fn(() => ({
+        isUnitDisabled: jest.fn(() => false),
         theme: () => ({
           territoryColor: () => ({
             lighten: () => ({ alpha: () => ({ toRgbString: () => "#fff" }) }),
           }),
         }),
-        isUnitDisabled: jest.fn(() => false),
       })),
+      inSpawnPhase: jest.fn(() => false),
+      isLand: jest.fn(() => true),
+      owner: jest.fn(() => mockPlayer),
     } as unknown as GameView;
 
     mockBuildMenu = {
@@ -117,38 +117,38 @@ describe("RadialMenuElements", () => {
 
     mockPlayerActions = {
       buildableUnits: [
-        { type: UnitType.City, canBuild: true },
-        { type: UnitType.Factory, canBuild: true },
-        { type: UnitType.AtomBomb, canBuild: true },
-        { type: UnitType.Warship, canBuild: true },
-        { type: UnitType.HydrogenBomb, canBuild: true },
-        { type: UnitType.MIRV, canBuild: true },
-        { type: UnitType.TransportShip, canBuild: true },
+        { canBuild: true, type: UnitType.City },
+        { canBuild: true, type: UnitType.Factory },
+        { canBuild: true, type: UnitType.AtomBomb },
+        { canBuild: true, type: UnitType.Warship },
+        { canBuild: true, type: UnitType.HydrogenBomb },
+        { canBuild: true, type: UnitType.MIRV },
+        { canBuild: true, type: UnitType.TransportShip },
       ],
       canAttack: true,
       interaction: {
-        canSendAllianceRequest: true,
         canBreakAlliance: false,
-        canDonateTroops: true,
         canDonateGold: true,
+        canDonateTroops: true,
+        canSendAllianceRequest: true,
       },
     };
 
     mockTile = {} as TileRef;
 
     mockParams = {
+      buildMenu: mockBuildMenu,
+      chatIntegration: {} as any,
+      closeMenu: jest.fn(),
+      emojiTable: {} as any,
+      eventBus: {} as any,
+      game: mockGame,
       myPlayer: mockPlayer,
+      playerActionHandler: {} as any,
+      playerActions: mockPlayerActions,
+      playerPanel: {} as any,
       selected: mockPlayer,
       tile: mockTile,
-      playerActions: mockPlayerActions,
-      game: mockGame,
-      buildMenu: mockBuildMenu,
-      emojiTable: {} as any,
-      playerActionHandler: {} as any,
-      playerPanel: {} as any,
-      chatIntegration: {} as any,
-      eventBus: {} as any,
-      closeMenu: jest.fn(),
     };
   });
 

@@ -7,8 +7,8 @@ import { setup } from "./util/Setup";
 describe("Donate troops to an ally", () => {
   it("Troops should be successfully donated", async () => {
     const game = await setup("ocean_and_land", {
-      infiniteTroops: false,
       donateTroops: true,
+      infiniteTroops: false,
     });
 
     const donorInfo = new PlayerInfo(
@@ -70,8 +70,8 @@ describe("Donate troops to an ally", () => {
 describe("Donate gold to an ally", () => {
   it("Gold should be successfully donated", async () => {
     const game = await setup("ocean_and_land", {
-      infiniteGold: false,
       donateGold: true,
+      infiniteGold: false,
     });
 
     const donorInfo = new PlayerInfo(
@@ -134,8 +134,8 @@ describe("Donate gold to an ally", () => {
 describe("Donate troops to a non ally", () => {
   it("Troops should not be donated", async () => {
     const game = await setup("ocean_and_land", {
-      infiniteTroops: false,
       donateTroops: true,
+      infiniteTroops: false,
     });
 
     const donorInfo = new PlayerInfo(
@@ -194,8 +194,8 @@ describe("Donate troops to a non ally", () => {
 describe("Donate Gold to a non ally", () => {
   it("Gold should not be donated", async () => {
     const game = await setup("ocean_and_land", {
-      infiniteGold: false,
       donateGold: true,
+      infiniteGold: false,
     });
 
     const donorInfo = new PlayerInfo(

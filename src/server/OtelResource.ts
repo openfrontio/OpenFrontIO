@@ -17,15 +17,14 @@ export function getOtelResource() {
 
 export function getPromLabels() {
   return {
-    "service.instance.id": process.env.HOSTNAME,
-    /* eslint-disable sort-keys */
-    "openfront.environment": config.env(),
-    "openfront.host": process.env.HOST,
-    "openfront.domain": process.env.DOMAIN,
-    "openfront.subdomain": process.env.SUBDOMAIN,
     "openfront.component": process.env.WORKER_ID
       ? "Worker " + process.env.WORKER_ID
       : "Master",
-    /* eslint-enable sort-keys */
+    "openfront.domain": process.env.DOMAIN,
+
+    "openfront.environment": config.env(),
+    "openfront.host": process.env.HOST,
+    "openfront.subdomain": process.env.SUBDOMAIN,
+    "service.instance.id": process.env.HOSTNAME,
   };
 }

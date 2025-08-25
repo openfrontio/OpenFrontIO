@@ -100,9 +100,9 @@ export class UserSettingModal extends LitElement {
 
     this.dispatchEvent(
       new CustomEvent("dark-mode-changed", {
-        detail: { darkMode: enabled },
         bubbles: true,
         composed: true,
+        detail: { darkMode: enabled },
       }),
     );
 

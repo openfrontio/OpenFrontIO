@@ -79,8 +79,8 @@ export class MapPlaylist {
     return {
       bots: 400,
       difficulty: Difficulty.Medium,
-      disableNPCs: mode === GameMode.Team,
       disabledUnits: [],
+      disableNPCs: mode === GameMode.Team,
       donateGold: true,
       donateTroops: true,
       gameMap: map,

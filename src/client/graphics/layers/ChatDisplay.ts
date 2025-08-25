@@ -65,8 +65,8 @@ export class ChatDisplay extends LitElement implements Layer {
     }
 
     this.addEvent({
-      description: event.message,
       createdAt: this.game.ticks(),
+      description: event.message,
       highlight: true,
       unsafeDescription: true,
     });
@@ -97,9 +97,9 @@ export class ChatDisplay extends LitElement implements Layer {
           this.chatEvents = [
             ...this.chatEvents,
             {
+              createdAt: this.game.ticks(),
               description: msg.message,
               unsafeDescription: true,
-              createdAt: this.game.ticks(),
             },
           ];
         }

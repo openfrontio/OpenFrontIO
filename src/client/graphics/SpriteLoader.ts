@@ -15,8 +15,8 @@ import { UnitView } from "../../core/game/GameView";
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
 const TrainTypeSprite = {
-  Engine: "Engine",
   Carriage: "Carriage",
+  Engine: "Engine",
   LoadedCarriage: "LoadedCarriage",
 } as const;
 

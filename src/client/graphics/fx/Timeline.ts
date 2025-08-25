@@ -12,7 +12,7 @@ export class Timeline {
   private timeElapsed = 0;
 
   add(delay: number, action: () => void): Timeline {
-    this.tasks.push({ delay, action, triggered: false });
+    this.tasks.push({ action, delay, triggered: false });
     return this;
   }
 

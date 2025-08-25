@@ -21,9 +21,9 @@ export class SettingNumber extends LitElement {
 
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { value: newValue },
         bubbles: true,
         composed: true,
+        detail: { value: newValue },
       }),
     );
   }

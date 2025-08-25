@@ -7,22 +7,22 @@ describe("PrivilegeChecker.isCustomFlagAllowed (with mock cosmetics)", () => {
   };
 
   const mockCosmetics: Cosmetics = {
-    patterns: {},
     flag: {
+      color: {
+        a: { color: "#ff0000", flares: ["cosmetic:red"], name: "red" },
+        b: { color: "#00ff00", name: "green" },
+        c: { color: "#0000ff", flares: ["cosmetic:blue"], name: "blue" },
+      },
       layers: {
         a: {
-          name: "chocolate",
           flares: ["cosmetic:flags"],
+          name: "chocolate",
         },
         b: { name: "center_hline" },
         c: { name: "admin_layer" },
       },
-      color: {
-        a: { color: "#ff0000", name: "red", flares: ["cosmetic:red"] },
-        b: { color: "#00ff00", name: "green" },
-        c: { color: "#0000ff", name: "blue", flares: ["cosmetic:blue"] },
-      },
     },
+    patterns: {},
   };
 
   const checker = new PrivilegeCheckerImpl(mockCosmetics, dummyPatternDecoder);

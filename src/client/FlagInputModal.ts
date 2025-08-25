@@ -87,9 +87,9 @@ export class FlagInputModal extends LitElement {
     localStorage.setItem("flag", flag);
     this.dispatchEvent(
       new CustomEvent("flag-change", {
-        detail: { flag },
         bubbles: true,
         composed: true,
+        detail: { flag },
       }),
     );
   }

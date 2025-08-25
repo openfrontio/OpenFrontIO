@@ -18,17 +18,16 @@ export class RailroadExecution implements Execution {
     return this.active;
   }
 
-  /* eslint-disable sort-keys */
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     const { tiles } = this.railRoad;
     // Inverse direction computation for the first tile
     this.railTiles.push({
-      tile: tiles[0],
       railType:
         tiles.length > 0
           ? this.computeExtremityDirection(tiles[0], tiles[1])
           : RailType.VERTICAL,
+      tile: tiles[0],
     });
     for (let i = 1; i < tiles.length - 1; i++) {
       const direction = this.computeDirection(
@@ -36,10 +35,9 @@ export class RailroadExecution implements Execution {
         tiles[i],
         tiles[i + 1],
       );
-      this.railTiles.push({ tile: tiles[i], railType: direction });
+      this.railTiles.push({ railType: direction, tile: tiles[i] });
     }
     this.railTiles.push({
-      tile: tiles[tiles.length - 1],
       railType:
         tiles.length > 0
           ? this.computeExtremityDirection(
@@ -47,9 +45,9 @@ export class RailroadExecution implements Execution {
               tiles[tiles.length - 2],
             )
           : RailType.VERTICAL,
+      tile: tiles[tiles.length - 1],
     });
   }
-  /* eslint-enable sort-keys */
 
   private computeExtremityDirection(tile: TileRef, next: TileRef): RailType {
     if (this.mg === undefined) throw new Error("Not initialized");

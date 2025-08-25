@@ -375,14 +375,14 @@ export class Transport {
 
   joinGame(numTurns: number) {
     this.sendMsg({
-      type: "join",
-      gameID: this.lobbyConfig.gameID,
       clientID: this.lobbyConfig.clientID,
-      lastTurn: numTurns,
-      token: this.lobbyConfig.token,
-      username: this.lobbyConfig.playerName,
       flag: this.lobbyConfig.flag,
+      gameID: this.lobbyConfig.gameID,
+      lastTurn: numTurns,
       pattern: this.lobbyConfig.pattern,
+      token: this.lobbyConfig.token,
+      type: "join",
+      username: this.lobbyConfig.playerName,
     } satisfies ClientJoinMessage);
   }
 
@@ -408,26 +408,26 @@ export class Transport {
 
   private onSendAllianceRequest(event: SendAllianceRequestIntentEvent) {
     this.sendIntent({
-      type: "allianceRequest",
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
+      type: "allianceRequest",
     });
   }
 
   private onAllianceRequestReplyUIEvent(event: SendAllianceReplyIntentEvent) {
     this.sendIntent({
-      type: "allianceRequestReply",
+      accept: event.accepted,
       clientID: this.lobbyConfig.clientID,
       requestor: event.requestor.id(),
-      accept: event.accepted,
+      type: "allianceRequestReply",
     });
   }
 
   private onBreakAllianceRequestUIEvent(event: SendBreakAllianceIntentEvent) {
     this.sendIntent({
-      type: "breakAlliance",
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
+      type: "breakAlliance",
     });
   }
 
@@ -435,114 +435,114 @@ export class Transport {
     event: SendAllianceExtensionIntentEvent,
   ) {
     this.sendIntent({
-      type: "allianceExtension",
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
+      type: "allianceExtension",
     });
   }
 
   private onSendSpawnIntentEvent(event: SendSpawnIntentEvent) {
     this.sendIntent({
-      type: "spawn",
       clientID: this.lobbyConfig.clientID,
       flag: this.lobbyConfig.flag,
-      pattern: this.lobbyConfig.pattern,
       name: this.lobbyConfig.playerName,
+      pattern: this.lobbyConfig.pattern,
       playerType: PlayerType.Human,
       tile: event.tile,
+      type: "spawn",
     });
   }
 
   private onSendAttackIntent(event: SendAttackIntentEvent) {
     this.sendIntent({
-      type: "attack",
       clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
       troops: event.troops,
+      type: "attack",
     });
   }
 
   private onSendBoatAttackIntent(event: SendBoatAttackIntentEvent) {
     this.sendIntent({
-      type: "boat",
       clientID: this.lobbyConfig.clientID,
-      targetID: event.targetID,
-      troops: event.troops,
       dst: event.dst,
       src: event.src,
+      targetID: event.targetID,
+      troops: event.troops,
+      type: "boat",
     });
   }
 
   private onSendUpgradeStructureIntent(event: SendUpgradeStructureIntentEvent) {
     this.sendIntent({
+      clientID: this.lobbyConfig.clientID,
       type: "upgrade_structure",
       unit: event.unitType,
-      clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
     });
   }
 
   private onSendTargetPlayerIntent(event: SendTargetPlayerIntentEvent) {
     this.sendIntent({
-      type: "targetPlayer",
       clientID: this.lobbyConfig.clientID,
       target: event.targetID,
+      type: "targetPlayer",
     });
   }
 
   private onSendEmojiIntent(event: SendEmojiIntentEvent) {
     this.sendIntent({
-      type: "emoji",
       clientID: this.lobbyConfig.clientID,
+      emoji: event.emoji,
       recipient:
         event.recipient === AllPlayers ? AllPlayers : event.recipient.id(),
-      emoji: event.emoji,
+      type: "emoji",
     });
   }
 
   private onSendDonateGoldIntent(event: SendDonateGoldIntentEvent) {
     this.sendIntent({
-      type: "donate_gold",
       clientID: this.lobbyConfig.clientID,
-      recipient: event.recipient.id(),
       gold: event.gold,
+      recipient: event.recipient.id(),
+      type: "donate_gold",
     });
   }
 
   private onSendDonateTroopIntent(event: SendDonateTroopsIntentEvent) {
     this.sendIntent({
-      type: "donate_troops",
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
       troops: event.troops,
+      type: "donate_troops",
     });
   }
 
   private onSendQuickChatIntent(event: SendQuickChatEvent) {
     this.sendIntent({
-      type: "quick_chat",
       clientID: this.lobbyConfig.clientID,
-      recipient: event.recipient.id(),
       quickChatKey: event.quickChatKey,
+      recipient: event.recipient.id(),
       target: event.target,
+      type: "quick_chat",
     });
   }
 
   private onSendEmbargoIntent(event: SendEmbargoIntentEvent) {
     this.sendIntent({
-      type: "embargo",
+      action: event.action,
       clientID: this.lobbyConfig.clientID,
       targetID: event.target.id(),
-      action: event.action,
+      type: "embargo",
     });
   }
 
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
     this.sendIntent({
-      type: "build_unit",
       clientID: this.lobbyConfig.clientID,
-      unit: event.unit,
       tile: event.tile,
+      type: "build_unit",
+      unit: event.unit,
     });
   }
 
@@ -561,9 +561,9 @@ export class Transport {
   private onSendWinnerEvent(event: SendWinnerEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       this.sendMsg({
+        allPlayersStats: event.allPlayersStats,
         type: "winner",
         winner: event.winner,
-        allPlayersStats: event.allPlayersStats,
       } satisfies ClientSendWinnerMessage);
     } else {
       console.log(
@@ -577,9 +577,9 @@ export class Transport {
   private onSendHashEvent(event: SendHashEvent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       this.sendMsg({
-        type: "hash",
-        turnNumber: event.tick,
         hash: event.hash,
+        turnNumber: event.tick,
+        type: "hash",
       } satisfies ClientHashMessage);
     } else {
       console.log(
@@ -592,50 +592,50 @@ export class Transport {
 
   private onCancelAttackIntentEvent(event: CancelAttackIntentEvent) {
     this.sendIntent({
-      type: "cancel_attack",
-      clientID: this.lobbyConfig.clientID,
       attackID: event.attackID,
+      clientID: this.lobbyConfig.clientID,
+      type: "cancel_attack",
     });
   }
 
   private onCancelBoatIntentEvent(event: CancelBoatIntentEvent) {
     this.sendIntent({
-      type: "cancel_boat",
       clientID: this.lobbyConfig.clientID,
+      type: "cancel_boat",
       unitID: event.unitID,
     });
   }
 
   private onMoveWarshipEvent(event: MoveWarshipIntentEvent) {
     this.sendIntent({
-      type: "move_warship",
       clientID: this.lobbyConfig.clientID,
-      unitId: event.unitId,
       tile: event.tile,
+      type: "move_warship",
+      unitId: event.unitId,
     });
   }
 
   private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
     this.sendIntent({
-      type: "delete_unit",
       clientID: this.lobbyConfig.clientID,
+      type: "delete_unit",
       unitId: event.unitId,
     });
   }
 
   private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
     this.sendIntent({
-      type: "kick_player",
       clientID: this.lobbyConfig.clientID,
       target: event.target,
+      type: "kick_player",
     });
   }
 
   private sendIntent(intent: Intent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       const msg = {
-        type: "intent",
         intent,
+        type: "intent",
       } satisfies ClientIntentMessage;
       this.sendMsg(msg);
     } else {

@@ -56,9 +56,9 @@ export function placeName(game: Game, player: Player): NameViewData {
   center = new Cell(center.x, center.y - fontSize / 3);
 
   return {
+    size: fontSize,
     x: Math.ceil(center.x),
     y: Math.ceil(center.y),
-    size: fontSize,
   };
 }
 
@@ -69,13 +69,13 @@ export function createGrid(
   scalingFactor: number,
 ): boolean[][] {
   const scaledBoundingBox: { min: Point; max: Point } = {
-    min: {
-      x: Math.floor(boundingBox.min.x / scalingFactor),
-      y: Math.floor(boundingBox.min.y / scalingFactor),
-    },
     max: {
       x: Math.floor(boundingBox.max.x / scalingFactor),
       y: Math.floor(boundingBox.max.y / scalingFactor),
+    },
+    min: {
+      x: Math.floor(boundingBox.min.x / scalingFactor),
+      y: Math.floor(boundingBox.min.y / scalingFactor),
     },
   };
 
@@ -105,7 +105,7 @@ export function findLargestInscribedRectangle(grid: boolean[][]): Rectangle {
   const rows = grid[0].length;
   const cols = grid.length;
   const heights: number[] = new Array<number>(cols).fill(0);
-  let largestRect: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
+  let largestRect: Rectangle = { height: 0, width: 0, x: 0, y: 0 };
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
@@ -123,10 +123,10 @@ export function findLargestInscribedRectangle(grid: boolean[][]): Rectangle {
       largestRect.width * largestRect.height
     ) {
       largestRect = {
+        height: rectForRow.height,
+        width: rectForRow.width,
         x: rectForRow.x,
         y: row - rectForRow.height + 1,
-        width: rectForRow.width,
-        height: rectForRow.height,
       };
     }
   }
@@ -137,7 +137,7 @@ export function findLargestInscribedRectangle(grid: boolean[][]): Rectangle {
 export function largestRectangleInHistogram(widths: number[]): Rectangle {
   const stack: number[] = [];
   let maxArea = 0;
-  let largestRect: Rectangle = { x: 0, y: 0, width: 0, height: 0 };
+  let largestRect: Rectangle = { height: 0, width: 0, x: 0, y: 0 };
 
   for (let i = 0; i <= widths.length; i++) {
     const h = i === widths.length ? 0 : widths[i];
@@ -151,10 +151,10 @@ export function largestRectangleInHistogram(widths: number[]): Rectangle {
       if (height * width > maxArea) {
         maxArea = height * width;
         largestRect = {
+          height,
+          width,
           x: stack.length === 0 ? 0 : stack[stack.length - 1] + 1,
           y: 0,
-          width,
-          height,
         };
       }
     }

@@ -85,10 +85,10 @@ export async function logOut(allSessions = false) {
   const response = await fetch(
     getApiBase() + (allSessions ? "/revoke" : "/logout"),
     {
-      method: "POST",
       headers: {
         authorization: `Bearer ${token}`,
       },
+      method: "POST",
     },
   );
 
@@ -179,7 +179,7 @@ function _isLoggedIn(): IsLoggedInResponse {
     }
 
     const claims = result.data;
-    return { token, claims };
+    return { claims, token };
   } catch (e) {
     console.log(e);
     return false;
@@ -193,10 +193,10 @@ export async function postRefresh(): Promise<boolean> {
 
     // Refresh the JWT
     const response = await fetch(getApiBase() + "/refresh", {
-      method: "POST",
       headers: {
         authorization: `Bearer ${token}`,
       },
+      method: "POST",
     });
     if (response.status === 401) {
       clearToken();

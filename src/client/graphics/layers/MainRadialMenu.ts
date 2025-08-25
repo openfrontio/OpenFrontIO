@@ -114,18 +114,18 @@ export class MainRadialMenu extends LitElement implements Layer {
     }
 
     const params: MenuElementParams = {
-      myPlayer,
-      selected: recipient,
-      tile,
-      playerActions: actions,
-      game: this.game,
       buildMenu: this.buildMenu,
-      emojiTable: this.emojiTable,
-      playerActionHandler: this.playerActionHandler,
-      playerPanel: this.playerPanel,
       chatIntegration: this.chatIntegration,
       closeMenu: () => this.closeMenu(),
+      emojiTable: this.emojiTable,
       eventBus: this.eventBus,
+      game: this.game,
+      myPlayer,
+      playerActionHandler: this.playerActionHandler,
+      playerActions: actions,
+      playerPanel: this.playerPanel,
+      selected: recipient,
+      tile,
     };
 
     this.radialMenu.setParams(params);

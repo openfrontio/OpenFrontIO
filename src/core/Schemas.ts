@@ -138,8 +138,8 @@ export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 export const GameConfigSchema = z.object({
   bots: z.number().int().min(0).max(400),
   difficulty: z.enum(Difficulty),
-  disableNPCs: z.boolean(),
   disabledUnits: z.enum(UnitType).array().optional(),
+  disableNPCs: z.boolean(),
   donateGold: z.boolean(),
   donateTroops: z.boolean(),
   gameMap: z.enum(GameMapType),

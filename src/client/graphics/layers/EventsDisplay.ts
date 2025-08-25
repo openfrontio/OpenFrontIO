@@ -279,35 +279,35 @@ export class EventsDisplay extends LitElement implements Layer {
       if (!other.isAlive()) continue;
 
       this.addEvent({
-        description: translateText("events_display.about_to_expire", {
-          name: other.name(),
-        }),
-        type: MessageType.RENEW_ALLIANCE,
-        duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
         buttons: [
           {
-            text: translateText("events_display.focus"),
-            className: "btn-gray",
             action: () => this.eventBus?.emit(new GoToPlayerEvent(other)),
+            className: "btn-gray",
             preventClose: true,
+            text: translateText("events_display.focus"),
           },
           {
+            action: () =>
+              this.eventBus?.emit(new SendAllianceExtensionIntentEvent(other)),
+            className: "btn",
             text: translateText("events_display.renew_alliance", {
               name: other.name(),
             }),
-            className: "btn",
-            action: () =>
-              this.eventBus?.emit(new SendAllianceExtensionIntentEvent(other)),
           },
           {
-            text: translateText("events_display.ignore"),
-            className: "btn-info",
             action: () => {},
+            className: "btn-info",
+            text: translateText("events_display.ignore"),
           },
         ],
-        highlight: true,
         createdAt: this.game.ticks(),
+        description: translateText("events_display.about_to_expire", {
+          name: other.name(),
+        }),
+        duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
         focusID: other.smallID(),
+        highlight: true,
+        type: MessageType.RENEW_ALLIANCE,
       });
     }
   }
@@ -374,8 +374,8 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     this.addEvent({
-      description,
       createdAt: this.game.ticks(),
+      description,
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
@@ -417,11 +417,11 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     this.addEvent({
-      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
-        user: otherPlayerDiplayName,
-        msg: translatedMessage,
-      }),
       createdAt: this.game.ticks(),
+      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
+        msg: translatedMessage,
+        user: otherPlayerDiplayName,
+      }),
       highlight: true,
       type: MessageType.CHAT,
       unsafeDescription: false,
@@ -443,43 +443,43 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: translateText("events_display.request_alliance", {
-        name: requestor.name(),
-      }),
       buttons: [
         {
-          text: translateText("events_display.focus"),
-          className: "btn-gray",
           action: () => this.eventBus?.emit(new GoToPlayerEvent(requestor)),
+          className: "btn-gray",
           preventClose: true,
+          text: translateText("events_display.focus"),
         },
         {
-          text: translateText("events_display.accept_alliance"),
-          className: "btn",
           action: () =>
             this.eventBus?.emit(
               new SendAllianceReplyIntentEvent(requestor, recipient, true),
             ),
+          className: "btn",
+          text: translateText("events_display.accept_alliance"),
         },
         {
-          text: translateText("events_display.reject_alliance"),
-          className: "btn-info",
           action: () =>
             this.eventBus?.emit(
               new SendAllianceReplyIntentEvent(requestor, recipient, false),
             ),
+          className: "btn-info",
+          text: translateText("events_display.reject_alliance"),
         },
       ],
-      highlight: true,
-      type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),
+      description: translateText("events_display.request_alliance", {
+        name: requestor.name(),
+      }),
+      duration: 150,
+      focusID: update.requestorID,
+      highlight: true,
       onDelete: () =>
         this.eventBus?.emit(
           new SendAllianceReplyIntentEvent(requestor, recipient, false),
         ),
       priority: 0,
-      duration: 150,
-      focusID: update.requestorID,
+      type: MessageType.ALLIANCE_REQUEST,
     });
   }
 
@@ -511,18 +511,18 @@ export class EventsDisplay extends LitElement implements Layer {
       update.request.recipientID,
     ) as PlayerView;
     this.addEvent({
+      createdAt: this.game.ticks(),
       description: translateText("events_display.alliance_request_status", {
         name: recipient.name(),
         status: update.accepted
           ? translateText("events_display.alliance_accepted")
           : translateText("events_display.alliance_rejected"),
       }),
+      focusID: update.request.recipientID,
+      highlight: true,
       type: update.accepted
         ? MessageType.ALLIANCE_ACCEPTED
         : MessageType.ALLIANCE_REJECTED,
-      highlight: true,
-      createdAt: this.game.ticks(),
-      focusID: update.request.recipientID,
     });
   }
 
@@ -552,34 +552,34 @@ export class EventsDisplay extends LitElement implements Layer {
             });
 
       this.addEvent({
-        description: translateText("events_display.betrayal_description", {
-          name: betrayed.name(),
-          malusPercent,
-          durationText,
-        }),
-        type: MessageType.ALLIANCE_BROKEN,
-        highlight: true,
         createdAt: this.game.ticks(),
+        description: translateText("events_display.betrayal_description", {
+          durationText,
+          malusPercent,
+          name: betrayed.name(),
+        }),
         focusID: update.betrayedID,
+        highlight: true,
+        type: MessageType.ALLIANCE_BROKEN,
       });
     } else if (betrayed === myPlayer) {
       const buttons = [
         {
-          text: translateText("events_display.focus"),
-          className: "btn-gray",
           action: () => this.eventBus?.emit(new GoToPlayerEvent(traitor)),
+          className: "btn-gray",
           preventClose: true,
+          text: translateText("events_display.focus"),
         },
       ];
       this.addEvent({
+        buttons,
+        createdAt: this.game.ticks(),
         description: translateText("events_display.betrayed_you", {
           name: traitor.name(),
         }),
-        type: MessageType.ALLIANCE_BROKEN,
-        highlight: true,
-        createdAt: this.game.ticks(),
         focusID: update.traitorID,
-        buttons,
+        highlight: true,
+        type: MessageType.ALLIANCE_BROKEN,
       });
     }
   }
@@ -600,13 +600,13 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
+      createdAt: this.game.ticks(),
       description: translateText("events_display.alliance_expired", {
         name: other.name(),
       }),
-      type: MessageType.ALLIANCE_EXPIRED,
-      highlight: true,
-      createdAt: this.game.ticks(),
       focusID: otherID,
+      highlight: true,
+      type: MessageType.ALLIANCE_EXPIRED,
     });
   }
 
@@ -619,14 +619,14 @@ export class EventsDisplay extends LitElement implements Layer {
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
 
     this.addEvent({
+      createdAt: this.game.ticks(),
       description: translateText("events_display.attack_request", {
         name: other.name(),
         target: target.name(),
       }),
-      type: MessageType.ATTACK_REQUEST,
-      highlight: true,
-      createdAt: this.game.ticks(),
       focusID: event.targetID,
+      highlight: true,
+      type: MessageType.ATTACK_REQUEST,
     });
   }
 
@@ -674,24 +674,24 @@ export class EventsDisplay extends LitElement implements Layer {
 
     if (recipient === myPlayer) {
       this.addEvent({
-        description: `${sender.displayName()}: ${update.emoji.message}`,
-        unsafeDescription: true,
-        type: MessageType.CHAT,
-        highlight: true,
         createdAt: this.game.ticks(),
+        description: `${sender.displayName()}: ${update.emoji.message}`,
         focusID: update.emoji.senderID,
+        highlight: true,
+        type: MessageType.CHAT,
+        unsafeDescription: true,
       });
     } else if (sender === myPlayer && recipient !== AllPlayers) {
       this.addEvent({
-        description: translateText("events_display.sent_emoji", {
-          name: (recipient as PlayerView).displayName(),
-          emoji: update.emoji.message,
-        }),
-        unsafeDescription: true,
-        type: MessageType.CHAT,
-        highlight: true,
         createdAt: this.game.ticks(),
+        description: translateText("events_display.sent_emoji", {
+          emoji: update.emoji.message,
+          name: (recipient as PlayerView).displayName(),
+        }),
         focusID: recipient.smallID(),
+        highlight: true,
+        type: MessageType.CHAT,
+        unsafeDescription: true,
       });
     }
   }
@@ -707,12 +707,12 @@ export class EventsDisplay extends LitElement implements Layer {
     const unitView = this.game.unit(event.unitID);
 
     this.addEvent({
-      description: event.message,
-      type: event.messageType,
-      unsafeDescription: false,
-      highlight: true,
       createdAt: this.game.ticks(),
+      description: event.message,
+      highlight: true,
+      type: event.messageType,
       unitView,
+      unsafeDescription: false,
     });
   }
 
@@ -754,6 +754,7 @@ export class EventsDisplay extends LitElement implements Layer {
               const attacker = this.game?.playerBySmallID(attack.attackerID);
               return html`
                 ${this.renderButton({
+                  className: "text-left text-red-400",
                   content: html`
                     ${renderTroops(attack.troops)}
                     ${attacker?.isPlayer() ? attacker.name() : "unknown"}
@@ -764,7 +765,6 @@ export class EventsDisplay extends LitElement implements Layer {
                     }
                   `,
                   onClick: () => this.attackWarningOnClick(attack),
-                  className: "text-left text-red-400",
                   translate: false,
                 })}
               `;
@@ -786,22 +786,22 @@ export class EventsDisplay extends LitElement implements Layer {
                 return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
+                      className: "text-left text-blue-400",
                       content: html`
                         ${renderTroops(attack.troops)}
                         ${target?.isPlayer() ? target.name() : "unknown"}
                       `,
                       onClick: async () => this.attackWarningOnClick(attack),
-                      className: "text-left text-blue-400",
                       translate: false,
                     })}
                     ${
                       !attack.retreating
                         ? this.renderButton({
+                            className: "text-left flex-shrink-0",
                             content: "❌",
+                            disabled: attack.retreating,
                             onClick: () =>
                               this.emitCancelAttackIntent(attack.id),
-                            className: "text-left flex-shrink-0",
-                            disabled: attack.retreating,
                           })
                         : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
@@ -829,19 +829,19 @@ export class EventsDisplay extends LitElement implements Layer {
                 (landAttack) => html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
+                      className: "text-left text-gray-400",
                       content: html`${renderTroops(landAttack.troops)}
                       ${translateText("help_modal.ui_wilderness")}`,
-                      className: "text-left text-gray-400",
                       translate: false,
                     })}
                     ${
                       !landAttack.retreating
                         ? this.renderButton({
+                            className: "text-left flex-shrink-0",
                             content: "❌",
+                            disabled: landAttack.retreating,
                             onClick: () =>
                               this.emitCancelAttackIntent(landAttack.id),
-                            className: "text-left flex-shrink-0",
-                            disabled: landAttack.retreating,
                           })
                         : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
@@ -869,19 +869,19 @@ export class EventsDisplay extends LitElement implements Layer {
                 (boat) => html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
+                      className: "text-left text-blue-400",
                       content: html`${translateText("events_display.boat")}:
                       ${renderTroops(boat.troops())}`,
                       onClick: () => this.emitGoToUnitEvent(boat),
-                      className: "text-left text-blue-400",
                       translate: false,
                     })}
                     ${
                       !boat.retreating()
                         ? this.renderButton({
-                            content: "❌",
-                            onClick: () => this.emitBoatCancelIntent(boat.id()),
                             className: "text-left flex-shrink-0",
+                            content: "❌",
                             disabled: boat.retreating(),
+                            onClick: () => this.emitBoatCancelIntent(boat.id()),
                           })
                         : html`<span class="flex-shrink-0 text-blue-400"
                           >(${translateText(
@@ -948,6 +948,9 @@ export class EventsDisplay extends LitElement implements Layer {
           ? html`
             <div class="relative w-fit lg:bottom-2.5 lg:right-2.5 z-50">
               ${this.renderButton({
+                className:
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 " +
+                  "lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
                 content: html`
                   Events
                   <span
@@ -958,9 +961,6 @@ export class EventsDisplay extends LitElement implements Layer {
                   >
                 `,
                 onClick: this.toggleHidden,
-                className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 " +
-                  "lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
               })}
             </div>
           `
@@ -976,6 +976,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
                     ${this.renderButton({
+                      className: "cursor-pointer pointer-events-auto",
                       content: html`<img
                         src="${swordIcon}"
                         class="w-5 h-5"
@@ -987,9 +988,9 @@ export class EventsDisplay extends LitElement implements Layer {
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.ATTACK),
-                      className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
+                      className: "cursor-pointer pointer-events-auto",
                       content: html`<img
                         src="${donateGoldIcon}"
                         class="w-5 h-5"
@@ -1001,9 +1002,9 @@ export class EventsDisplay extends LitElement implements Layer {
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.TRADE),
-                      className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
+                      className: "cursor-pointer pointer-events-auto",
                       content: html`<img
                         src="${allianceIcon}"
                         class="w-5 h-5"
@@ -1015,9 +1016,9 @@ export class EventsDisplay extends LitElement implements Layer {
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.ALLIANCE),
-                      className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
+                      className: "cursor-pointer pointer-events-auto",
                       content: html`<img
                         src="${chatIcon}"
                         class="w-5 h-5"
@@ -1029,7 +1030,6 @@ export class EventsDisplay extends LitElement implements Layer {
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.CHAT),
-                      className: "cursor-pointer pointer-events-auto",
                     })}
                   </div>
                   <div class="flex items-center gap-3">
@@ -1051,10 +1051,10 @@ export class EventsDisplay extends LitElement implements Layer {
                         : ""
                     }
                     ${this.renderButton({
-                      content: translateText("leaderboard.hide"),
-                      onClick: this.toggleHidden,
                       className:
                         "text-white cursor-pointer pointer-events-auto",
+                      content: translateText("leaderboard.hide"),
+                      onClick: this.toggleHidden,
                     })}
                   </div>
                 </div>
@@ -1083,6 +1083,7 @@ export class EventsDisplay extends LitElement implements Layer {
                               ${
                                 event.focusID
                                   ? this.renderButton({
+                                      className: "text-left",
                                       content: this.getEventDescription(event),
                                       onClick: () => {
                                         event.focusID &&
@@ -1090,10 +1091,10 @@ export class EventsDisplay extends LitElement implements Layer {
                                             event.focusID,
                                           );
                                       },
-                                      className: "text-left",
                                     })
                                   : event.unitView
                                     ? this.renderButton({
+                                        className: "text-left",
                                         content:
                                           this.getEventDescription(event),
                                         onClick: () => {
@@ -1102,7 +1103,6 @@ export class EventsDisplay extends LitElement implements Layer {
                                               event.unitView,
                                             );
                                         },
-                                        className: "text-left",
                                       })
                                     : this.getEventDescription(event)
                               }

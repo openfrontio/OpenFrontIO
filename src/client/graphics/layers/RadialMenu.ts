@@ -91,17 +91,17 @@ export class RadialMenu implements Layer {
     config: RadialMenuConfig = {},
   ) {
     this.config = {
-      menuSize: config.menuSize ?? 190,
-      submenuScale: config.submenuScale ?? 1.5,
+      centerButtonIcon: config.centerButtonIcon ?? "",
       centerButtonSize: config.centerButtonSize ?? 30,
-      iconSize: config.iconSize ?? 32,
       centerIconSize: config.centerIconSize ?? 48,
       disabledColor: config.disabledColor ?? d3.rgb(128, 128, 128).toString(),
-      menuTransitionDuration: config.menuTransitionDuration ?? 300,
-      mainMenuInnerRadius: config.mainMenuInnerRadius ?? 40,
-      centerButtonIcon: config.centerButtonIcon ?? "",
-      maxNestedLevels: config.maxNestedLevels ?? 3,
+      iconSize: config.iconSize ?? 32,
       innerRadiusIncrement: config.innerRadiusIncrement ?? 20,
+      mainMenuInnerRadius: config.mainMenuInnerRadius ?? 40,
+      maxNestedLevels: config.maxNestedLevels ?? 3,
+      menuSize: config.menuSize ?? 190,
+      menuTransitionDuration: config.menuTransitionDuration ?? 300,
+      submenuScale: config.submenuScale ?? 1.5,
       tooltipStyle: config.tooltipStyle ?? "",
     };
     this.originalCenterButtonIcon = this.config.centerButtonIcon;

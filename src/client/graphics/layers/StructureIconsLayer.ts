@@ -68,20 +68,20 @@ export class StructureIconsLayer implements Layer {
     UnitType,
     { visible: boolean; iconPath: string; image: HTMLImageElement | null }
   > = new Map([
-    [UnitType.City, { visible: true, iconPath: cityIcon, image: null }],
-    [UnitType.Factory, { visible: true, iconPath: factoryIcon, image: null }],
+    [UnitType.City, { iconPath: cityIcon, image: null, visible: true }],
+    [UnitType.Factory, { iconPath: factoryIcon, image: null, visible: true }],
     [
       UnitType.DefensePost,
-      { visible: true, iconPath: shieldIcon, image: null },
+      { iconPath: shieldIcon, image: null, visible: true },
     ],
-    [UnitType.Port, { visible: true, iconPath: anchorIcon, image: null }],
+    [UnitType.Port, { iconPath: anchorIcon, image: null, visible: true }],
     [
       UnitType.MissileSilo,
-      { visible: true, iconPath: missileSiloIcon, image: null },
+      { iconPath: missileSiloIcon, image: null, visible: true },
     ],
     [
       UnitType.SAMLauncher,
-      { visible: true, iconPath: SAMMissileIcon, image: null },
+      { iconPath: SAMMissileIcon, image: null, visible: true },
     ],
   ]);
   private renderSprites = true;
@@ -119,14 +119,14 @@ export class StructureIconsLayer implements Layer {
     this.dotsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
     await this.renderer.init({
-      canvas: this.pixicanvas,
-      resolution: 1,
-      width: this.pixicanvas.width,
-      height: this.pixicanvas.height,
       antialias: false,
-      clearBeforeRender: true,
       backgroundAlpha: 0,
       backgroundColor: 0x00000000,
+      canvas: this.pixicanvas,
+      clearBeforeRender: true,
+      height: this.pixicanvas.height,
+      resolution: 1,
+      width: this.pixicanvas.width,
     });
   }
 
@@ -249,10 +249,10 @@ export class StructureIconsLayer implements Layer {
       render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
       if (structureInfos.visible && focusStructure) {
         render.iconContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
+          new OutlineFilter({ color: "rgb(255, 255, 255)", thickness: 2 }),
         ];
         render.dotContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
+          new OutlineFilter({ color: "rgb(255, 255, 255)", thickness: 2 }),
         ];
       } else {
         render.iconContainer.filters = [];
@@ -490,11 +490,11 @@ export class StructureIconsLayer implements Layer {
 
     if (renderIcon) {
       const SHAPE_OFFSETS = {
-        triangle: [6, 11],
-        square: [5, 5],
+        circle: [6, 6],
         octagon: [6, 6],
         pentagon: [7, 7],
-        circle: [6, 6],
+        square: [5, 5],
+        triangle: [6, 11],
       };
       const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
       context.drawImage(
@@ -509,24 +509,24 @@ export class StructureIconsLayer implements Layer {
   private createLevelSprite(unit: UnitView): PIXI.Container {
     if (this.levelsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
-      type: "level",
       stage: this.levelsStage,
+      type: "level",
     });
   }
 
   private createDotSprite(unit: UnitView): PIXI.Container {
     if (this.dotsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
-      type: "dot",
       stage: this.dotsStage,
+      type: "dot",
     });
   }
 
   private createIconSprite(unit: UnitView): PIXI.Container {
     if (this.iconsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
-      type: "icon",
       stage: this.iconsStage,
+      type: "icon",
     });
   }
 
@@ -557,11 +557,11 @@ export class StructureIconsLayer implements Layer {
     // Add level text if needed
     if ((type === "icon" || type === "level") && unit.level() > 1) {
       const text = new PIXI.BitmapText({
-        text: unit.level().toString(),
         style: {
           fontFamily: "round_6x6_modified",
           fontSize: 14,
         },
+        text: unit.level().toString(),
       });
       text.anchor.set(0.5);
 

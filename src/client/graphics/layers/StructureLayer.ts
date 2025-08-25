@@ -14,7 +14,7 @@ import { GameView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
+const underConstructionColor = colord({ b: 150, g: 150, r: 150 });
 
 // Base radius values and scaling factor for unit borders and territories
 const BASE_BORDER_RADIUS = 16.5;
@@ -39,33 +39,33 @@ export class StructureLayer implements Layer {
   // Configuration for supported unit types only
   private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
-      icon: anchorIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      icon: anchorIcon,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.City]: {
-      icon: cityIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      icon: cityIcon,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.Factory]: {
-      icon: factoryIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      icon: factoryIcon,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.MissileSilo]: {
-      icon: missileSiloIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      icon: missileSiloIcon,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.DefensePost]: {
-      icon: shieldIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      icon: shieldIcon,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.SAMLauncher]: {
-      icon: SAMMissileIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
+      icon: SAMMissileIcon,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
   };

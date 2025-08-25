@@ -6,7 +6,7 @@ export class SettingToggle extends LitElement {
   @property() label = "Setting";
   @property() description = "";
   @property() id = "";
-  @property({ type: Boolean, reflect: true }) checked = false;
+  @property({ reflect: true, type: Boolean }) checked = false;
   @property({ type: Boolean }) easter = false;
 
   createRenderRoot() {
@@ -18,9 +18,9 @@ export class SettingToggle extends LitElement {
     this.checked = input.checked;
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { checked: this.checked },
         bubbles: true,
         composed: true,
+        detail: { checked: this.checked },
       }),
     );
   }

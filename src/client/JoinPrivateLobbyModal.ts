@@ -145,9 +145,9 @@ export class JoinPrivateLobbyModal extends LitElement {
     this.message = "";
     this.dispatchEvent(
       new CustomEvent("leave-lobby", {
-        detail: { lobby: this.lobbyIdInput.value },
         bubbles: true,
         composed: true,
+        detail: { lobby: this.lobbyIdInput.value },
       }),
     );
   }
@@ -211,8 +211,8 @@ export class JoinPrivateLobbyModal extends LitElement {
     const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
     const response = await fetch(url, {
-      method: "GET",
       headers: { "Content-Type": "application/json" },
+      method: "GET",
     });
 
     const json = await response.json();
@@ -224,12 +224,12 @@ export class JoinPrivateLobbyModal extends LitElement {
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: {
-            gameID: lobbyId,
-            clientID: getClientID(lobbyId),
-          } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
+          detail: {
+            clientID: getClientID(lobbyId),
+            gameID: lobbyId,
+          } as JoinLobbyEvent,
         }),
       );
 
@@ -245,8 +245,8 @@ export class JoinPrivateLobbyModal extends LitElement {
     const archiveUrl = `/${config.workerPath(lobbyId)}/api/archived_game/${lobbyId}`;
 
     const archiveResponse = await fetch(archiveUrl, {
-      method: "GET",
       headers: { "Content-Type": "application/json" },
+      method: "GET",
     });
 
     const json = await archiveResponse.json();
@@ -268,13 +268,13 @@ export class JoinPrivateLobbyModal extends LitElement {
     if (archiveData.exists) {
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: {
-            gameID: lobbyId,
-            gameRecord: archiveData.gameRecord,
-            clientID: getClientID(lobbyId),
-          } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
+          detail: {
+            clientID: getClientID(lobbyId),
+            gameID: lobbyId,
+            gameRecord: archiveData.gameRecord,
+          } as JoinLobbyEvent,
         }),
       );
 
@@ -291,10 +291,10 @@ export class JoinPrivateLobbyModal extends LitElement {
     fetch(
       `/${config.workerPath(this.lobbyIdInput.value)}/api/game/${this.lobbyIdInput.value}`,
       {
-        method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
+        method: "GET",
       },
     )
       .then((response) => response.json())

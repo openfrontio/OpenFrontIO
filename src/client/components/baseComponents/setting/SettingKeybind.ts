@@ -6,7 +6,7 @@ import { translateText } from "../../../../client/Utils";
 export class SettingKeybind extends LitElement {
   @property() label = "Setting";
   @property() description = "";
-  @property({ type: String, reflect: true }) action = "";
+  @property({ reflect: true, type: String }) action = "";
   @property({ type: String }) defaultKey = "";
   @property({ type: String }) value = "";
   @property({ type: Boolean }) easter = false;
@@ -80,9 +80,9 @@ export class SettingKeybind extends LitElement {
 
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { action: this.action, value: code },
         bubbles: true,
         composed: true,
+        detail: { action: this.action, value: code },
       }),
     );
 
@@ -94,9 +94,9 @@ export class SettingKeybind extends LitElement {
     this.value = this.defaultKey;
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { action: this.action, value: this.defaultKey },
         bubbles: true,
         composed: true,
+        detail: { action: this.action, value: this.defaultKey },
       }),
     );
   }
@@ -105,9 +105,9 @@ export class SettingKeybind extends LitElement {
     this.value = "";
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { action: this.action, value: "Null" },
         bubbles: true,
         composed: true,
+        detail: { action: this.action, value: "Null" },
       }),
     );
     this.requestUpdate();

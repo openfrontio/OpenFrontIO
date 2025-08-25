@@ -376,7 +376,6 @@ export class DefaultConfig implements Config {
     return 1_000_000;
   }
 
-  /* eslint-disable sort-keys */
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
       case UnitType.TransportShip:
@@ -389,14 +388,14 @@ export class DefaultConfig implements Config {
           cost: this.costWrapper(UnitType.Warship, (numUnits: number) =>
             Math.min(1_000_000, (numUnits + 1) * 250_000),
           ),
-          territoryBound: false,
           maxHealth: 1000,
+          territoryBound: false,
         };
       case UnitType.Shell:
         return {
           cost: () => 0n,
-          territoryBound: false,
           damage: 250,
+          territoryBound: false,
         };
       case UnitType.SAMMissile:
         return {
@@ -405,13 +404,13 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Port:
         return {
+          canBuildTrainStation: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           cost: this.costWrapper(UnitType.Port, (numUnits: number) =>
             Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
           ),
           territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
-          canBuildTrainStation: true,
         };
       case UnitType.AtomBomb:
         return {
@@ -440,47 +439,47 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
+          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           cost: this.costWrapper(UnitType.MissileSilo, () => 1_000_000),
           territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
       case UnitType.DefensePost:
         return {
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
           cost: this.costWrapper(UnitType.DefensePost, (numUnits: number) =>
             Math.min(250_000, (numUnits + 1) * 50_000),
           ),
           territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.SAMLauncher:
         return {
+          constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           cost: this.costWrapper(UnitType.SAMLauncher, (numUnits: number) =>
             Math.min(3_000_000, (numUnits + 1) * 1_500_000),
           ),
           territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
         };
       case UnitType.City:
         return {
+          canBuildTrainStation: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           cost: this.costWrapper(UnitType.City, (numUnits: number) =>
             Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
           ),
           territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
-          canBuildTrainStation: true,
         };
       case UnitType.Factory:
         return {
+          canBuildTrainStation: true,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           cost: this.costWrapper(UnitType.Factory, (numUnits: number) =>
             Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
           ),
-          territoryBound: true,
-          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
-          canBuildTrainStation: true,
           experimental: true,
+          territoryBound: true,
           upgradable: true,
         };
       case UnitType.Construction:
@@ -491,14 +490,13 @@ export class DefaultConfig implements Config {
       case UnitType.Train:
         return {
           cost: () => 0n,
-          territoryBound: false,
           experimental: true,
+          territoryBound: false,
         };
       default:
         assertNever(type);
     }
   }
-  /* eslint-enable sort-keys */
 
   private costWrapper(
     type: UnitType,

@@ -439,43 +439,43 @@ export class SinglePlayerModal extends LitElement {
     }
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
+        bubbles: true,
+        composed: true,
         detail: {
           clientID,
           gameID,
           gameStartInfo: {
+            config: {
+              bots: this.bots,
+              difficulty: this.selectedDifficulty,
+              disabledUnits: this.disabledUnits
+                .map((u) => Object.values(UnitType).find((ut) => ut === u))
+                .filter((ut): ut is UnitType => ut !== undefined),
+              disableNPCs: this.disableNPCs,
+              donateGold: this.donateGold,
+              donateTroops: this.donateTroops,
+              gameMap: this.selectedMap,
+              gameMode: this.gameMode,
+              gameType: GameType.Singleplayer,
+              infiniteGold: this.infiniteGold,
+              infiniteTroops: this.infiniteTroops,
+              instantBuild: this.instantBuild,
+              playerTeams: this.teamCount,
+            },
             gameID,
             players: [
               {
                 clientID,
-                username: usernameInput.getCurrentUsername(),
                 flag:
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
                 pattern: this.userSettings.getSelectedPattern(),
+                username: usernameInput.getCurrentUsername(),
               },
             ],
-            config: {
-              gameMap: this.selectedMap,
-              gameType: GameType.Singleplayer,
-              gameMode: this.gameMode,
-              playerTeams: this.teamCount,
-              difficulty: this.selectedDifficulty,
-              disableNPCs: this.disableNPCs,
-              bots: this.bots,
-              infiniteGold: this.infiniteGold,
-              donateGold: this.donateGold,
-              infiniteTroops: this.infiniteTroops,
-              donateTroops: this.donateTroops,
-              instantBuild: this.instantBuild,
-              disabledUnits: this.disabledUnits
-                .map((u) => Object.values(UnitType).find((ut) => ut === u))
-                .filter((ut): ut is UnitType => ut !== undefined),
-            },
           },
         } satisfies JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
       }),
     );
     this.close();

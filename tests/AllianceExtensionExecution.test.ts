@@ -15,8 +15,8 @@ describe("AllianceExtensionExecution", () => {
       "ocean_and_land",
       {
         infiniteGold: true,
-        instantBuild: true,
         infiniteTroops: true,
+        instantBuild: true,
       },
       [
         playerInfo("player1", PlayerType.Human),

@@ -76,9 +76,9 @@ export class LocalServer {
       throw new Error("missing gameStartInfo");
     }
     this.clientMessage({
-      type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
+      type: "start",
     } satisfies ServerStartGameMessage);
   }
 
@@ -122,11 +122,11 @@ export class LocalServer {
           }, server hash: ${archivedHash}`,
         );
         this.clientMessage({
-          type: "desync",
-          turn: clientMsg.turnNumber,
-          correctHash: archivedHash,
           clientsWithCorrectHash: 0,
+          correctHash: archivedHash,
           totalActiveClients: 1,
+          turn: clientMsg.turnNumber,
+          type: "desync",
           yourHash: clientMsg.hash,
         });
       } else {
@@ -160,14 +160,14 @@ export class LocalServer {
       this.intents = this.replayTurns[this.turns.length].intents;
     }
     const pastTurn: Turn = {
-      turnNumber: this.turns.length,
       intents: this.intents,
+      turnNumber: this.turns.length,
     };
     this.turns.push(pastTurn);
     this.intents = [];
     this.clientMessage({
-      type: "turn",
       turn: pastTurn,
+      type: "turn",
     });
   }
 
@@ -179,10 +179,10 @@ export class LocalServer {
     }
     const players: PlayerRecord[] = [
       {
-        persistentID: getPersistentID(),
-        username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
+        persistentID: getPersistentID(),
         stats: this.allPlayersStats[this.lobbyConfig.clientID],
+        username: this.lobbyConfig.playerName,
       },
     ];
     if (this.lobbyConfig.gameStartInfo === undefined) {

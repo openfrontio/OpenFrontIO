@@ -77,11 +77,11 @@ describe("BotBehavior.handleAllianceRequests", () => {
       .mockReturnValue(new Array(alliancesCount));
 
     const mockRequest = {
-      requestor: () => requestor,
-      recipient: () => player,
-      createdAt: () => 0 as unknown as Tick,
       accept: jest.fn(),
+      createdAt: () => 0 as unknown as Tick,
+      recipient: () => player,
       reject: jest.fn(),
+      requestor: () => requestor,
     } as unknown as AllianceRequest;
 
     jest
@@ -120,8 +120,8 @@ describe("BotBehavior.handleAllianceRequests", () => {
 
   test("should accept alliance if requestor is much larger (> 3 times size of recipient) and has too many alliances (>= 3)", () => {
     const request = setupAllianceRequest({
-      numTilesRequestor: 40,
       alliancesCount: 4,
+      numTilesRequestor: 40,
     });
 
     botBehavior.handleAllianceRequests();
@@ -132,8 +132,8 @@ describe("BotBehavior.handleAllianceRequests", () => {
 
   test("should accept alliance if requestor is much larger (> 3 times size of recipient) and does not have too many alliances (< 3)", () => {
     const request = setupAllianceRequest({
-      numTilesRequestor: 40,
       alliancesCount: 2,
+      numTilesRequestor: 40,
     });
 
     botBehavior.handleAllianceRequests();
@@ -171,8 +171,8 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
 
     mockPlayer = {
       alliances: jest.fn(() => [mockAlliance]),
-      relation: jest.fn(),
       id: jest.fn(() => "bot_id"),
+      relation: jest.fn(),
       type: jest.fn(() => PlayerType.FakeHuman),
     };
 

@@ -49,11 +49,11 @@ export class ChatModal extends LitElement {
     string,
     Array<{ text: string; requiresPlayer: boolean }>
   > = {
-    help: [{ text: "Please give me troops!", requiresPlayer: false }],
-    attack: [{ text: "Attack [P1]!", requiresPlayer: true }],
-    defend: [{ text: "Defend [P1]!", requiresPlayer: true }],
-    greet: [{ text: "Hello!", requiresPlayer: false }],
-    misc: [{ text: "Let's go!", requiresPlayer: false }],
+    attack: [{ requiresPlayer: true, text: "Attack [P1]!" }],
+    defend: [{ requiresPlayer: true, text: "Defend [P1]!" }],
+    greet: [{ requiresPlayer: false, text: "Hello!" }],
+    help: [{ requiresPlayer: false, text: "Please give me troops!" }],
+    misc: [{ requiresPlayer: false, text: "Let's go!" }],
   };
 
   public categories = [

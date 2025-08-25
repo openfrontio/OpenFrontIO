@@ -11,17 +11,17 @@ const createMockStation = (unitId: number): any => {
   const cluster = new Cluster();
   const railroads = new Set<Railroad>();
   return {
+    addRailroad: jest.fn(),
+    clearRailroads: jest.fn(),
+    getCluster: jest.fn(() => cluster),
+    getRailroads: jest.fn(() => railroads),
+    neighbors: jest.fn(() => []),
+    setCluster: jest.fn(),
+    tile: jest.fn(),
     unit: {
       id: unitId,
       setTrainStation: jest.fn(),
     },
-    tile: jest.fn(),
-    neighbors: jest.fn(() => []),
-    getCluster: jest.fn(() => cluster),
-    setCluster: jest.fn(),
-    addRailroad: jest.fn(),
-    getRailroads: jest.fn(() => railroads),
-    clearRailroads: jest.fn(),
   };
 };
 
@@ -55,22 +55,22 @@ describe("RailNetworkImpl", () => {
   beforeEach(() => {
     stationManager = {
       addStation: jest.fn(),
-      removeStation: jest.fn(),
       findStation: jest.fn(),
       getAll: jest.fn(() => new Set()),
+      removeStation: jest.fn(),
     };
     pathService = {
-      findTilePath: jest.fn(() => [0]),
       findStationsPath: jest.fn(() => [0]),
+      findTilePath: jest.fn(() => [0]),
     };
     game = {
-      nearbyUnits: jest.fn(() => []),
       addExecution: jest.fn(),
       config: () => ({
+        railroadMaxSize: () => 100,
         trainStationMaxRange: () => 80,
         trainStationMinRange: () => 10,
-        railroadMaxSize: () => 100,
       }),
+      nearbyUnits: jest.fn(() => []),
     };
 
     network = new RailNetworkImpl(game, stationManager, pathService);
@@ -153,7 +153,7 @@ describe("RailNetworkImpl", () => {
     neighborStation.getCluster = jest.fn(() => cluster);
     cluster.has = jest.fn(() => false);
 
-    const neighborUnit = { unit: neighborStation.unit, distSquared: 20 };
+    const neighborUnit = { distSquared: 20, unit: neighborStation.unit };
 
     game.nearbyUnits.mockReturnValue([neighborUnit]);
     stationManager.findStation.mockReturnValue(neighborStation);

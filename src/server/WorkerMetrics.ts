@@ -31,8 +31,8 @@ export function initWorkerMetrics(gameManager: GameManager): void {
 
   // Configure the metric reader
   const metricReader = new PeriodicExportingMetricReader({
-    exportIntervalMillis: 15000, // Export metrics every 15 seconds
     exporter: metricExporter,
+    exportIntervalMillis: 15000, // Export metrics every 15 seconds
   });
 
   // Create a meter provider

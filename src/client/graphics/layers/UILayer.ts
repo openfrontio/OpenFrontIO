@@ -252,9 +252,9 @@ export class UILayer implements Layer {
 
     // Store current selection box position for next cleanup
     this.lastSelectionBoxCenter = {
+      size: selectionSize,
       x: centerX,
       y: centerY,
-      size: selectionSize,
     };
   }
 
@@ -349,8 +349,8 @@ export class UILayer implements Layer {
         0,
       );
       this.allProgressBars.set(unit.id(), {
-        unit,
         progressBar,
+        unit,
       });
     }
   }

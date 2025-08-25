@@ -29,8 +29,8 @@ describe("Attack", () => {
   beforeEach(async () => {
     game = await setup("ocean_and_land", {
       infiniteGold: true,
-      instantBuild: true,
       infiniteTroops: true,
+      instantBuild: true,
     });
     const attackerInfo = new PlayerInfo(
       "attacker dude",
@@ -130,8 +130,8 @@ describe("Attack race condition with alliance requests", () => {
   beforeEach(async () => {
     game = await setup("ocean_and_land", {
       infiniteGold: true,
-      instantBuild: true,
       infiniteTroops: true,
+      instantBuild: true,
     });
 
     const playerAInfo = new PlayerInfo(

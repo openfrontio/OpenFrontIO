@@ -213,10 +213,10 @@ export class ClientGameRunner {
     }
     const players: PlayerRecord[] = [
       {
-        persistentID: getPersistentID(),
-        username: this.lobby.playerName,
         clientID: this.lobby.clientID,
+        persistentID: getPersistentID(),
         stats: update.allPlayersStats[this.lobby.clientID],
+        username: this.lobby.playerName,
       },
     ];
 
@@ -312,8 +312,8 @@ export class ClientGameRunner {
           }
           while (turn.turnNumber - 1 > this.turnsSeen) {
             this.worker.sendTurn({
-              turnNumber: this.turnsSeen,
               intents: [],
+              turnNumber: this.turnsSeen,
             });
             this.turnsSeen++;
           }
@@ -471,9 +471,9 @@ export class ClientGameRunner {
             );
 
             upgradeUnits.push({
+              distance,
               unitId: bu.canUpgrade,
               unitType: bu.type,
-              distance,
             });
           }
         }

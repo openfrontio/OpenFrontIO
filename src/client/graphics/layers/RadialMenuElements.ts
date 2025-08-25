@@ -67,32 +67,32 @@ export type CenterButtonElement = {
 };
 
 export const COLORS = {
+  ally: "#53ac75",
+  attack: "#ff0000",
+  boat: "#3f6ab1",
+  breakAlly: "#c74848",
   build: "#ebe250",
   building: "#2c2c2c",
-  boat: "#3f6ab1",
-  ally: "#53ac75",
-  breakAlly: "#c74848",
+  chat: {
+    attack: "#f44336",
+    default: "#66c",
+    defend: "#2196f3",
+    greet: "#ff9800",
+    help: "#4caf50",
+    misc: "#9c27b0",
+    warnings: "#e3c532",
+  },
   delete: "#ff0000",
+  embargo: "#6600cc",
   info: "#64748B",
-  target: "#ff0000",
-  attack: "#ff0000",
   infoDetails: "#7f8c8d",
   infoEmoji: "#f1c40f",
-  trade: "#008080",
-  embargo: "#6600cc",
+  target: "#ff0000",
   tooltip: {
     cost: "#ffd700",
     count: "#aaa",
   },
-  chat: {
-    default: "#66c",
-    help: "#4caf50",
-    attack: "#f44336",
-    defend: "#2196f3",
-    greet: "#ff9800",
-    misc: "#9c27b0",
-    warnings: "#e3c532",
-  },
+  trade: "#008080",
 };
 
 export enum Slot {
@@ -107,11 +107,11 @@ export enum Slot {
 
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 const infoChatElement: MenuElement = {
+  color: COLORS.chat.default,
+  disabled: () => false,
+  icon: chatIcon,
   id: "info_chat",
   name: "chat",
-  disabled: () => false,
-  color: COLORS.chat.default,
-  icon: chatIcon,
   subMenu: (params: MenuElementParams) =>
     params.chatIntegration
       .createQuickChatMenu(params.selected!)
@@ -124,59 +124,51 @@ const infoChatElement: MenuElement = {
 };
 
 const allyTargetElement: MenuElement = {
-  id: "ally_target",
-  name: "target",
-  disabled: (params: MenuElementParams): boolean => {
-    if (params.selected === null) return true;
-    return !params.playerActions.interaction?.canTarget;
-  },
-  color: COLORS.target,
-  icon: targetIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleTargetPlayer(params.selected!.id());
     params.closeMenu();
   },
+  color: COLORS.target,
+  disabled: (params: MenuElementParams): boolean => {
+    if (params.selected === null) return true;
+    return !params.playerActions.interaction?.canTarget;
+  },
+  icon: targetIcon,
+  id: "ally_target",
+  name: "target",
 };
 
 const allyTradeElement: MenuElement = {
-  id: "ally_trade",
-  name: "trade",
-  disabled: (params: MenuElementParams) =>
-    !!params.playerActions?.interaction?.canEmbargo,
-  displayed: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canEmbargo,
-  color: COLORS.trade,
-  text: translateText("player_panel.start_trade"),
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleEmbargo(params.selected!, "stop");
     params.closeMenu();
   },
+  color: COLORS.trade,
+  disabled: (params: MenuElementParams) =>
+    !!params.playerActions?.interaction?.canEmbargo,
+  displayed: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canEmbargo,
+  id: "ally_trade",
+  name: "trade",
+  text: translateText("player_panel.start_trade"),
 };
 
 const allyEmbargoElement: MenuElement = {
-  id: "ally_embargo",
-  name: "embargo",
-  disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canEmbargo,
-  displayed: (params: MenuElementParams) =>
-    !!params.playerActions?.interaction?.canEmbargo,
-  color: COLORS.embargo,
-  text: translateText("player_panel.stop_trade"),
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleEmbargo(params.selected!, "start");
     params.closeMenu();
   },
+  color: COLORS.embargo,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canEmbargo,
+  displayed: (params: MenuElementParams) =>
+    !!params.playerActions?.interaction?.canEmbargo,
+  id: "ally_embargo",
+  name: "embargo",
+  text: translateText("player_panel.stop_trade"),
 };
 
 const allyRequestElement: MenuElement = {
-  id: "ally_request",
-  name: "request",
-  disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canSendAllianceRequest,
-  displayed: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.ally,
-  icon: allianceIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleAllianceRequest(
       params.myPlayer,
@@ -184,17 +176,17 @@ const allyRequestElement: MenuElement = {
     );
     params.closeMenu();
   },
+  color: COLORS.ally,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canSendAllianceRequest,
+  displayed: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canBreakAlliance,
+  icon: allianceIcon,
+  id: "ally_request",
+  name: "request",
 };
 
 const allyBreakElement: MenuElement = {
-  id: "ally_break",
-  name: "break",
-  disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canBreakAlliance,
-  displayed: (params: MenuElementParams) =>
-    !!params.playerActions?.interaction?.canBreakAlliance,
-  color: COLORS.breakAlly,
-  icon: traitorIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleBreakAlliance(
       params.myPlayer,
@@ -202,59 +194,62 @@ const allyBreakElement: MenuElement = {
     );
     params.closeMenu();
   },
+  color: COLORS.breakAlly,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canBreakAlliance,
+  displayed: (params: MenuElementParams) =>
+    !!params.playerActions?.interaction?.canBreakAlliance,
+  icon: traitorIcon,
+  id: "ally_break",
+  name: "break",
 };
 
 const allyDonateGoldElement: MenuElement = {
-  id: "ally_donate_gold",
-  name: "donate gold",
-  disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonateGold,
-  color: COLORS.ally,
-  icon: donateGoldIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleDonateGold(params.selected!);
     params.closeMenu();
   },
+  color: COLORS.ally,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canDonateGold,
+  icon: donateGoldIcon,
+  id: "ally_donate_gold",
+  name: "donate gold",
 };
 
 const allyDonateTroopsElement: MenuElement = {
-  id: "ally_donate_troops",
-  name: "donate troops",
-  disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonateTroops,
-  color: COLORS.ally,
-  icon: donateTroopIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleDonateTroops(params.selected!);
     params.closeMenu();
   },
+  color: COLORS.ally,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions?.interaction?.canDonateTroops,
+  icon: donateTroopIcon,
+  id: "ally_donate_troops",
+  name: "donate troops",
 };
 
 const infoPlayerElement: MenuElement = {
-  id: "info_player",
-  name: "player",
-  disabled: () => false,
-  color: COLORS.info,
-  icon: infoIcon,
   action: (params: MenuElementParams) => {
     params.playerPanel.show(params.playerActions, params.tile);
   },
+  color: COLORS.info,
+  disabled: () => false,
+  icon: infoIcon,
+  id: "info_player",
+  name: "player",
 };
 
 const infoEmojiElement: MenuElement = {
+  color: COLORS.infoEmoji,
+  disabled: () => false,
+  icon: emojiIcon,
   id: "info_emoji",
   name: "emoji",
-  disabled: () => false,
-  color: COLORS.infoEmoji,
-  icon: emojiIcon,
   subMenu: (params: MenuElementParams) => {
     const emojiElements: MenuElement[] = [
       {
-        id: "emoji_more",
-        name: "more",
-        disabled: () => false,
-        color: COLORS.infoEmoji,
-        icon: emojiIcon,
         action: (params: MenuElementParams) => {
           params.emojiTable.showTable((emoji) => {
             const targetPlayer =
@@ -268,17 +263,17 @@ const infoEmojiElement: MenuElement = {
             params.emojiTable.hideTable();
           });
         },
+        color: COLORS.infoEmoji,
+        disabled: () => false,
+        icon: emojiIcon,
+        id: "emoji_more",
+        name: "more",
       },
     ];
 
     const emojiCount = 8;
     for (let i = 0; i < emojiCount; i++) {
       emojiElements.push({
-        id: `emoji_${i}`,
-        name: flattenedEmojiTable[i],
-        text: flattenedEmojiTable[i],
-        disabled: () => false,
-        fontSize: "25px",
         action: (params: MenuElementParams) => {
           const targetPlayer =
             params.selected === params.game.myPlayer()
@@ -287,6 +282,11 @@ const infoEmojiElement: MenuElement = {
           params.playerActionHandler.handleEmoji(targetPlayer!, i);
           params.closeMenu();
         },
+        disabled: () => false,
+        fontSize: "25px",
+        id: `emoji_${i}`,
+        name: flattenedEmojiTable[i],
+        text: flattenedEmojiTable[i],
       });
     }
 
@@ -296,15 +296,15 @@ const infoEmojiElement: MenuElement = {
 /* eslint-enable @typescript-eslint/no-non-null-assertion */
 
 export const infoMenuElement: MenuElement = {
-  id: Slot.Info,
-  name: "info",
-  disabled: (params: MenuElementParams) =>
-    !params.selected || params.game.inSpawnPhase(),
-  icon: infoIcon,
-  color: COLORS.info,
   action: (params: MenuElementParams) => {
     params.playerPanel.show(params.playerActions, params.tile);
   },
+  color: COLORS.info,
+  disabled: (params: MenuElementParams) =>
+    !params.selected || params.game.inSpawnPhase(),
+  icon: infoIcon,
+  id: Slot.Info,
+  name: "info",
 };
 
 function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
@@ -359,34 +359,6 @@ function createMenuElements(
           : !ATTACK_UNIT_TYPES.includes(item.unitType)),
     )
     .map((item: BuildItemDisplay) => ({
-      id: `${elementIdPrefix}_${item.unitType}`,
-      name: item.key
-        ? item.key.replace("unit_type.", "")
-        : item.unitType.toString(),
-      disabled: (params: MenuElementParams) =>
-        !params.buildMenu.canBuildOrUpgrade(item),
-      color: params.buildMenu.canBuildOrUpgrade(item)
-        ? filterType === "attack"
-          ? COLORS.attack
-          : COLORS.building
-        : undefined,
-      icon: item.icon,
-      tooltipItems: [
-        { text: translateText(item.key ?? ""), className: "title" },
-        {
-          text: translateText(item.description ?? ""),
-          className: "description",
-        },
-        {
-          text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-          className: "cost",
-        },
-        item.countable
-          ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-          : null,
-      ].filter(
-        (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
-      ),
       action: (params: MenuElementParams) => {
         const buildableUnit = params.playerActions.buildableUnits.find(
           (bu) => bu.type === item.unitType,
@@ -399,15 +371,43 @@ function createMenuElements(
         }
         params.closeMenu();
       },
+      color: params.buildMenu.canBuildOrUpgrade(item)
+        ? filterType === "attack"
+          ? COLORS.attack
+          : COLORS.building
+        : undefined,
+      disabled: (params: MenuElementParams) =>
+        !params.buildMenu.canBuildOrUpgrade(item),
+      icon: item.icon,
+      id: `${elementIdPrefix}_${item.unitType}`,
+      name: item.key
+        ? item.key.replace("unit_type.", "")
+        : item.unitType.toString(),
+      tooltipItems: [
+        { className: "title", text: translateText(item.key ?? "") },
+        {
+          className: "description",
+          text: translateText(item.description ?? ""),
+        },
+        {
+          className: "cost",
+          text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
+        },
+        item.countable
+          ? { className: "count", text: `${params.buildMenu.count(item)}x` }
+          : null,
+      ].filter(
+        (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
+      ),
     }));
 }
 
 export const attackMenuElement: MenuElement = {
-  id: Slot.Attack,
-  name: "radial_attack",
+  color: COLORS.attack,
   disabled: (params: MenuElementParams) => params.game.inSpawnPhase(),
   icon: swordIcon,
-  color: COLORS.attack,
+  id: Slot.Attack,
+  name: "radial_attack",
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
@@ -416,8 +416,29 @@ export const attackMenuElement: MenuElement = {
 };
 
 export const deleteUnitElement: MenuElement = {
-  id: Slot.Delete,
-  name: "delete",
+  action: (params: MenuElementParams) => {
+    const DELETE_SELECTION_RADIUS = 5;
+    const myUnits = params.myPlayer
+      .units()
+      .filter(
+        (unit) =>
+          params.game.manhattanDist(unit.tile(), params.tile) <=
+          DELETE_SELECTION_RADIUS,
+      );
+
+    if (myUnits.length > 0) {
+      myUnits.sort(
+        (a, b) =>
+          params.game.manhattanDist(a.tile(), params.tile) -
+          params.game.manhattanDist(b.tile(), params.tile),
+      );
+
+      params.playerActionHandler.handleDeleteUnit(myUnits[0].id());
+    }
+
+    params.closeMenu();
+  },
+  color: COLORS.delete,
   disabled: (params: MenuElementParams) => {
     const tileOwner = params.game.owner(params.tile);
     const isLand = params.game.isLand(params.tile);
@@ -450,47 +471,26 @@ export const deleteUnitElement: MenuElement = {
     return myUnits.length === 0;
   },
   icon: xIcon,
-  color: COLORS.delete,
+  id: Slot.Delete,
+  name: "delete",
   tooltipKeys: [
     {
-      key: "radial_menu.delete_unit_title",
       className: "title",
+      key: "radial_menu.delete_unit_title",
     },
     {
-      key: "radial_menu.delete_unit_description",
       className: "description",
+      key: "radial_menu.delete_unit_description",
     },
   ],
-  action: (params: MenuElementParams) => {
-    const DELETE_SELECTION_RADIUS = 5;
-    const myUnits = params.myPlayer
-      .units()
-      .filter(
-        (unit) =>
-          params.game.manhattanDist(unit.tile(), params.tile) <=
-          DELETE_SELECTION_RADIUS,
-      );
-
-    if (myUnits.length > 0) {
-      myUnits.sort(
-        (a, b) =>
-          params.game.manhattanDist(a.tile(), params.tile) -
-          params.game.manhattanDist(b.tile(), params.tile),
-      );
-
-      params.playerActionHandler.handleDeleteUnit(myUnits[0].id());
-    }
-
-    params.closeMenu();
-  },
 };
 
 export const buildMenuElement: MenuElement = {
-  id: Slot.Build,
-  name: "build",
+  color: COLORS.build,
   disabled: (params: MenuElementParams) => params.game.inSpawnPhase(),
   icon: buildIcon,
-  color: COLORS.build,
+  id: Slot.Build,
+  name: "build",
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
@@ -499,15 +499,6 @@ export const buildMenuElement: MenuElement = {
 };
 
 export const boatMenuElement: MenuElement = {
-  id: Slot.Boat,
-  name: "boat",
-  disabled: (params: MenuElementParams) =>
-    !params.playerActions.buildableUnits.some(
-      (unit) => unit.type === UnitType.TransportShip && unit.canBuild,
-    ),
-  icon: boatIcon,
-  color: COLORS.boat,
-
   action: async (params: MenuElementParams) => {
     const spawn = await params.playerActionHandler.findBestTransportShipSpawn(
       params.myPlayer,
@@ -523,9 +514,28 @@ export const boatMenuElement: MenuElement = {
 
     params.closeMenu();
   },
+  color: COLORS.boat,
+  disabled: (params: MenuElementParams) =>
+    !params.playerActions.buildableUnits.some(
+      (unit) => unit.type === UnitType.TransportShip && unit.canBuild,
+    ),
+  icon: boatIcon,
+  id: Slot.Boat,
+  name: "boat",
 };
 
 export const centerButtonElement: CenterButtonElement = {
+  action: (params: MenuElementParams) => {
+    if (params.game.inSpawnPhase()) {
+      params.playerActionHandler.handleSpawn(params.tile);
+    } else {
+      params.playerActionHandler.handleAttack(
+        params.myPlayer,
+        params.selected?.id() ?? null,
+      );
+    }
+    params.closeMenu();
+  },
   disabled: (params: MenuElementParams): boolean => {
     const tileOwner = params.game.owner(params.tile);
     const isLand = params.game.isLand(params.tile);
@@ -540,25 +550,14 @@ export const centerButtonElement: CenterButtonElement = {
     }
     return !params.playerActions.canAttack;
   },
-  action: (params: MenuElementParams) => {
-    if (params.game.inSpawnPhase()) {
-      params.playerActionHandler.handleSpawn(params.tile);
-    } else {
-      params.playerActionHandler.handleAttack(
-        params.myPlayer,
-        params.selected?.id() ?? null,
-      );
-    }
-    params.closeMenu();
-  },
 };
 
 export const rootMenuElement: MenuElement = {
-  id: "root",
-  name: "root",
+  color: COLORS.info,
   disabled: () => false,
   icon: infoIcon,
-  color: COLORS.info,
+  id: "root",
+  name: "root",
   subMenu: (params: MenuElementParams) => {
     let ally = allyRequestElement;
     if (params.selected?.isAlliedWith(params.myPlayer)) {

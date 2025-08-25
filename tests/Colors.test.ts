@@ -16,14 +16,14 @@ import {
 import { ColoredTeams } from "../src/core/game/Game";
 
 const mockColors: Colord[] = [
-  colord({ r: 255, g: 0, b: 0 }),
-  colord({ r: 0, g: 255, b: 0 }),
-  colord({ r: 0, g: 0, b: 255 }),
+  colord({ b: 0, g: 0, r: 255 }),
+  colord({ b: 0, g: 255, r: 0 }),
+  colord({ b: 255, g: 0, r: 0 }),
 ];
 
 const fallbackMockColors: Colord[] = [
-  colord({ r: 0, g: 0, b: 0 }),
-  colord({ r: 255, g: 255, b: 255 }),
+  colord({ b: 0, g: 0, r: 0 }),
+  colord({ b: 255, g: 255, r: 255 }),
 ];
 
 const fallbackColors = [...fallbackMockColors, ...mockColors];
@@ -148,19 +148,19 @@ describe("ColorAllocator", () => {
 
 describe("selectDistinctColor", () => {
   test("returns the most distant color", () => {
-    const assignedColors = [colord({ r: 255, g: 0, b: 0 })]; // bright red
+    const assignedColors = [colord({ b: 0, g: 0, r: 255 })]; // bright red
     const availableColors = [
-      colord({ r: 254, g: 1, b: 1 }), // too close
-      colord({ r: 0, g: 255, b: 0 }), // distinct green
-      colord({ r: 0, g: 0, b: 255 }), // distinct blue
+      colord({ b: 1, g: 1, r: 254 }), // too close
+      colord({ b: 0, g: 255, r: 0 }), // distinct green
+      colord({ b: 255, g: 0, r: 0 }), // distinct blue
     ];
 
     const result = selectDistinctColorIndex(availableColors, assignedColors);
     expect(result).not.toBeNull();
     const rgb = availableColors[result!].toRgb();
     expect([
-      { r: 0, g: 255, b: 0, a: 1 },
-      { r: 0, g: 0, b: 255, a: 1 },
+      { a: 1, b: 0, g: 255, r: 0 },
+      { a: 1, b: 255, g: 0, r: 0 },
     ]).toContainEqual(rgb);
   });
 });

@@ -544,12 +544,12 @@ export class HostLobbyModal extends LitElement {
       .then(() => {
         this.dispatchEvent(
           new CustomEvent("join-lobby", {
-            detail: {
-              gameID: this.lobbyId,
-              clientID: this.lobbyCreatorClientID,
-            } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
+            detail: {
+              clientID: this.lobbyCreatorClientID,
+              gameID: this.lobbyId,
+            } as JoinLobbyEvent,
           }),
         );
       });
@@ -655,24 +655,24 @@ export class HostLobbyModal extends LitElement {
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`,
       {
-        method: "PUT",
+        body: JSON.stringify({
+          bots: this.bots,
+          difficulty: this.selectedDifficulty,
+          disabledUnits: this.disabledUnits,
+          disableNPCs: this.disableNPCs,
+          donateGold: this.donateGold,
+          donateTroops: this.donateTroops,
+          gameMap: this.selectedMap,
+          gameMode: this.gameMode,
+          infiniteGold: this.infiniteGold,
+          infiniteTroops: this.infiniteTroops,
+          instantBuild: this.instantBuild,
+          playerTeams: this.teamCount,
+        } satisfies Partial<GameConfig>),
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          gameMap: this.selectedMap,
-          difficulty: this.selectedDifficulty,
-          disableNPCs: this.disableNPCs,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          donateGold: this.donateGold,
-          infiniteTroops: this.infiniteTroops,
-          donateTroops: this.donateTroops,
-          instantBuild: this.instantBuild,
-          gameMode: this.gameMode,
-          disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
-        } satisfies Partial<GameConfig>),
+        method: "PUT",
       },
     );
     return response;
@@ -709,10 +709,10 @@ export class HostLobbyModal extends LitElement {
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
-        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        method: "POST",
       },
     );
     return response;
@@ -736,10 +736,10 @@ export class HostLobbyModal extends LitElement {
   private async pollPlayers() {
     const config = await getServerConfigFromClient();
     fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
-      method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
+      method: "GET",
     })
       .then((response) => response.json())
       .then(GameInfoSchema.parse)
@@ -754,9 +754,9 @@ export class HostLobbyModal extends LitElement {
     // Dispatch event to be handled by WebSocket instead of HTTP
     this.dispatchEvent(
       new CustomEvent("kick-player", {
-        detail: { target: clientID },
         bubbles: true,
         composed: true,
+        detail: { target: clientID },
       }),
     );
   }
@@ -769,10 +769,10 @@ async function createLobby(creatorClientID: string): Promise<GameInfo> {
     const response = await fetch(
       `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
       {
-        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        method: "POST",
         // body: JSON.stringify(data), // Include this if you need to send data
       },
     );

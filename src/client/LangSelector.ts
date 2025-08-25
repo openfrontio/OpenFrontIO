@@ -51,32 +51,32 @@ export class LangSelector extends LitElement {
     ar,
     bg,
     bn,
+    cs,
+    da,
     de,
     en,
-    es,
     eo,
+    es,
+    fi,
     fr,
-    it,
+    gl,
+    he,
     hi,
+    it,
     ja,
+    ko,
     nl,
     pl,
     "pt-BR": pt_BR,
     ru,
     sh,
-    tr,
-    tp,
-    uk,
-    cs,
-    he,
-    da,
-    fi,
-    "sv-SE": sv_SE,
-    "zh-CN": zh_CN,
-    ko,
-    gl,
-    sl,
     sk,
+    sl,
+    "sv-SE": sv_SE,
+    tp,
+    tr,
+    uk,
+    "zh-CN": zh_CN,
   };
 
   createRenderRoot() {
@@ -148,8 +148,8 @@ export class LangSelector extends LitElement {
 
         list.push({
           code: langData.lang_code ?? langCode,
-          native: langData.native ?? langCode,
           en: langData.en ?? langCode,
+          native: langData.native ?? langCode,
           svg: langData.svg ?? langCode,
         });
       }
@@ -159,8 +159,8 @@ export class LangSelector extends LitElement {
       if (this.debugKeyPressed) {
         debugLang = {
           code: "debug",
-          native: "Debug",
           en: "Debug",
+          native: "Debug",
           svg: "xx",
         };
         this.debugMode = true;
@@ -290,13 +290,13 @@ export class LangSelector extends LitElement {
       (this.currentLang === "debug"
         ? {
             code: "debug",
-            native: "Debug",
             en: "Debug",
+            native: "Debug",
             svg: "xx",
           }
         : {
-            native: "English",
             en: "English",
+            native: "English",
             svg: "uk_us_flag",
           });
 

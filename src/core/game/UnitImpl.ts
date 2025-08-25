@@ -114,33 +114,31 @@ export class UnitImpl implements Unit {
     return this._id;
   }
 
-  /* eslint-disable sort-keys */
   toUpdate(): UnitUpdate {
     return {
-      type: GameUpdateType.Unit,
-      unitType: this._type,
+      constructionType: this._constructionType,
+      hasTrainStation: this._hasTrainStation,
+      health: this.hasHealth() ? Number(this._health) : undefined,
       id: this._id,
-      troops: this._troops,
-      ownerID: this._owner.smallID(),
-      lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
+      lastOwnerID: this._lastOwner?.smallID(),
+      lastPos: this._lastTile,
+      level: this.level(),
+      loaded: this._loaded,
+      missileTimerQueue: this._missileTimerQueue,
+      ownerID: this._owner.smallID(),
+      pos: this._tile,
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
-      pos: this._tile,
       targetable: this._targetable,
-      lastPos: this._lastTile,
-      health: this.hasHealth() ? Number(this._health) : undefined,
-      constructionType: this._constructionType,
-      targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
-      missileTimerQueue: this._missileTimerQueue,
-      level: this.level(),
-      hasTrainStation: this._hasTrainStation,
+      targetUnitId: this._targetUnit?.id() ?? undefined,
       trainType: this._trainType,
-      loaded: this._loaded,
+      troops: this._troops,
+      type: GameUpdateType.Unit,
+      unitType: this._type,
     };
   }
-  /* eslint-enable sort-keys */
 
   type(): UnitType {
     return this._type;

@@ -107,15 +107,15 @@ export class Leaderboard extends LitElement implements Layer {
         troops = 0;
       }
       return {
+        gold: renderNumber(player.gold()),
+        isMyPlayer: player === myPlayer,
         name: player.displayName(),
+        player,
         position: index + 1,
         score: formatPercentage(
           player.numTilesOwned() / numTilesWithoutFallout,
         ),
-        gold: renderNumber(player.gold()),
         troops: renderNumber(troops),
-        isMyPlayer: player === myPlayer,
-        player,
       };
     });
 
@@ -137,15 +137,15 @@ export class Leaderboard extends LitElement implements Layer {
       }
       this.players.pop();
       this.players.push({
+        gold: renderNumber(myPlayer.gold()),
+        isMyPlayer: true,
         name: myPlayer.displayName(),
+        player: myPlayer,
         position: place,
         score: formatPercentage(
           myPlayer.numTilesOwned() / this.game.numLandTiles(),
         ),
-        gold: renderNumber(myPlayer.gold()),
         troops: renderNumber(myPlayerTroops),
-        isMyPlayer: true,
-        player: myPlayer,
       });
     }
 

@@ -150,11 +150,11 @@ export const translateText = (
  * Severity colors mapping for message types
  */
 export const severityColors: Record<string, string> = {
-  fail: "text-red-400",
-  warn: "text-yellow-400",
-  success: "text-green-400",
-  info: "text-gray-200",
   blue: "text-blue-400",
+  fail: "text-red-400",
+  info: "text-gray-200",
+  success: "text-green-400",
+  warn: "text-yellow-400",
   white: "text-white",
 };
 

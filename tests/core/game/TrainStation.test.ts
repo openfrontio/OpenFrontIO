@@ -14,34 +14,34 @@ describe("TrainStation", () => {
 
   beforeEach(() => {
     game = {
-      ticks: jest.fn().mockReturnValue(123),
+      addExecution: jest.fn(),
+      addUpdate: jest.fn(),
       config: jest.fn().mockReturnValue({
         trainGold: (isFriendly: boolean) =>
           isFriendly ? BigInt(1000) : BigInt(500),
       }),
-      addUpdate: jest.fn(),
-      addExecution: jest.fn(),
+      ticks: jest.fn().mockReturnValue(123),
     } as any;
 
     player = {
       addGold: jest.fn(),
-      id: 1,
       canTrade: jest.fn().mockReturnValue(true),
+      id: 1,
       isFriendly: jest.fn().mockReturnValue(false),
     } as any;
 
     unit = {
-      owner: jest.fn().mockReturnValue(player),
+      isActive: jest.fn().mockReturnValue(true),
       level: jest.fn().mockReturnValue(1),
+      owner: jest.fn().mockReturnValue(player),
       tile: jest.fn().mockReturnValue({ x: 0, y: 0 }),
       type: jest.fn(),
-      isActive: jest.fn().mockReturnValue(true),
     } as any;
 
     trainExecution = {
+      level: jest.fn(),
       loadCargo: jest.fn(),
       owner: jest.fn().mockReturnValue(player),
-      level: jest.fn(),
     } as any;
   });
 
@@ -82,7 +82,7 @@ describe("TrainStation", () => {
   it("adds and retrieves neighbors", () => {
     const stationA = new TrainStation(game, unit);
     const stationB = new TrainStation(game, unit);
-    const railRoad = { from: stationA, to: stationB, tiles: [] } as any;
+    const railRoad = { from: stationA, tiles: [], to: stationB } as any;
 
     stationA.addRailroad(railRoad);
 
@@ -96,8 +96,8 @@ describe("TrainStation", () => {
 
     const railRoad = {
       from: stationA,
-      to: stationB,
       tiles: [{ x: 1, y: 1 }],
+      to: stationB,
     } as any;
 
     stationA.addRailroad(railRoad);

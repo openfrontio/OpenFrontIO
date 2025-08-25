@@ -11,9 +11,9 @@ export class TextFx implements Fx {
     private readonly riseDistance = 30,
     private readonly font = "11px sans-serif",
     private readonly color: { r: number; g: number; b: number } = {
-      r: 255,
-      g: 255,
       b: 255,
+      g: 255,
+      r: 255,
     },
   ) {}
 

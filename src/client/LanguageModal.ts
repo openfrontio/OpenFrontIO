@@ -54,9 +54,9 @@ export class LanguageModal extends LitElement {
   private readonly selectLanguage = (lang: string) => {
     this.dispatchEvent(
       new CustomEvent("language-selected", {
-        detail: { lang },
         bubbles: true,
         composed: true,
+        detail: { lang },
       }),
     );
   };

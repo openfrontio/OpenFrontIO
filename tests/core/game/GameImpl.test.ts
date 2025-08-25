@@ -21,8 +21,8 @@ describe("GameImpl", () => {
   beforeEach(async () => {
     game = await setup("ocean_and_land", {
       infiniteGold: true,
-      instantBuild: true,
       infiniteTroops: true,
+      instantBuild: true,
     });
     const attackerInfo = new PlayerInfo(
       "attacker dude",

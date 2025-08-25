@@ -26,26 +26,24 @@ export class PastelTheme implements Theme {
     nationColors,
   );
 
-  /* eslint-disable sort-keys */
-  private readonly background = colord({ r: 60, g: 60, b: 60 });
-  private readonly shore = colord({ r: 204, g: 203, b: 158 });
+  private readonly background = colord({ b: 60, g: 60, r: 60 });
+  private readonly shore = colord({ b: 158, g: 203, r: 204 });
   private readonly falloutColors = [
-    colord({ r: 120, g: 255, b: 71 }), // Original color
-    colord({ r: 130, g: 255, b: 85 }), // Slightly lighter
-    colord({ r: 110, g: 245, b: 65 }), // Slightly darker
-    colord({ r: 125, g: 255, b: 75 }), // Warmer tint
-    colord({ r: 115, g: 250, b: 68 }), // Cooler tint
+    colord({ b: 71, g: 255, r: 120 }), // Original color
+    colord({ b: 85, g: 255, r: 130 }), // Slightly lighter
+    colord({ b: 65, g: 245, r: 110 }), // Slightly darker
+    colord({ b: 75, g: 255, r: 125 }), // Warmer tint
+    colord({ b: 68, g: 250, r: 115 }), // Cooler tint
   ];
-  private readonly water = colord({ r: 70, g: 132, b: 180 });
-  private readonly shorelineWater = colord({ r: 100, g: 143, b: 255 });
+  private readonly water = colord({ b: 180, g: 132, r: 70 });
+  private readonly shorelineWater = colord({ b: 255, g: 143, r: 100 });
 
-  private readonly _selfColor = colord({ r: 0, g: 255, b: 0 });
-  private readonly _allyColor = colord({ r: 255, g: 255, b: 0 });
-  private readonly _neutralColor = colord({ r: 128, g: 128, b: 128 });
-  private readonly _enemyColor = colord({ r: 255, g: 0, b: 0 });
+  private readonly _selfColor = colord({ b: 0, g: 255, r: 0 });
+  private readonly _allyColor = colord({ b: 0, g: 255, r: 255 });
+  private readonly _neutralColor = colord({ b: 128, g: 128, r: 128 });
+  private readonly _enemyColor = colord({ b: 0, g: 0, r: 255 });
 
-  private readonly _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
-  /* eslint-enable sort-keys */
+  private readonly _spawnHighlightColor = colord({ b: 79, g: 213, r: 255 });
 
   teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
@@ -71,24 +69,23 @@ export class PastelTheme implements Theme {
 
   specialBuildingColor(player: PlayerView): Colord {
     const tc = this.territoryColor(player).rgba;
-    /* eslint-disable sort-keys */
+
     return colord({
-      r: Math.max(tc.r - 50, 0),
-      g: Math.max(tc.g - 50, 0),
       b: Math.max(tc.b - 50, 0),
+      g: Math.max(tc.g - 50, 0),
+      r: Math.max(tc.r - 50, 0),
     });
-    /* eslint-enable sort-keys */
   }
 
   railroadColor(player: PlayerView): Colord {
     const tc = this.territoryColor(player).rgba;
-    /* eslint-disable sort-keys */
+
     const color = colord({
-      r: Math.max(tc.r - 10, 0),
-      g: Math.max(tc.g - 10, 0),
       b: Math.max(tc.b - 10, 0),
+      g: Math.max(tc.g - 10, 0),
+      r: Math.max(tc.r - 10, 0),
     });
-    /* eslint-enable sort-keys */
+
     return color;
   }
 
@@ -97,28 +94,26 @@ export class PastelTheme implements Theme {
     if (cached !== undefined) return cached;
 
     const tc = this.territoryColor(player).rgba;
-    /* eslint-disable sort-keys */
+
     const color = colord({
-      r: Math.max(tc.r - 40, 0),
-      g: Math.max(tc.g - 40, 0),
       b: Math.max(tc.b - 40, 0),
+      g: Math.max(tc.g - 40, 0),
+      r: Math.max(tc.r - 40, 0),
     });
-    /* eslint-enable sort-keys */
 
     this.borderColorCache.set(player.id(), color);
     return color;
   }
 
-  /* eslint-disable sort-keys */
   defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
     return {
-      light: this.territoryColor(player).darken(0.2),
       dark: this.territoryColor(player).darken(0.4),
+      light: this.territoryColor(player).darken(0.2),
     };
   }
 
   focusedBorderColor(): Colord {
-    return colord({ r: 230, g: 230, b: 230 });
+    return colord({ b: 230, g: 230, r: 230 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
@@ -134,32 +129,31 @@ export class PastelTheme implements Theme {
           return this.shorelineWater;
         }
         return colord({
-          r: Math.max(w.r - 10 + (11 - Math.min(mag, 10)), 0),
-          g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
           b: Math.max(w.b - 10 + (11 - Math.min(mag, 10)), 0),
+          g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
+          r: Math.max(w.r - 10 + (11 - Math.min(mag, 10)), 0),
         });
 
       case TerrainType.Plains:
         return colord({
-          r: 190,
-          g: 220 - 2 * mag,
           b: 138,
+          g: 220 - 2 * mag,
+          r: 190,
         });
       case TerrainType.Highland:
         return colord({
-          r: 200 + 2 * mag,
-          g: 183 + 2 * mag,
           b: 138 + 2 * mag,
+          g: 183 + 2 * mag,
+          r: 200 + 2 * mag,
         });
       case TerrainType.Mountain:
         return colord({
-          r: 230 + mag / 2,
-          g: 230 + mag / 2,
           b: 230 + mag / 2,
+          g: 230 + mag / 2,
+          r: 230 + mag / 2,
         });
     }
   }
-  /* eslint-enable sort-keys */
 
   backgroundColor(): Colord {
     return this.background;

@@ -93,9 +93,9 @@ export class UsernameInput extends LitElement {
   private dispatchUsernameEvent() {
     this.dispatchEvent(
       new CustomEvent("username-change", {
-        detail: { username: this.username },
         bubbles: true,
         composed: true,
+        detail: { username: this.username },
       }),
     );
   }

@@ -22,66 +22,66 @@ describe("TradeShipExecution", () => {
     });
     game.displayMessage = jest.fn();
     origOwner = {
-      canBuild: jest.fn(() => true),
-      buildUnit: jest.fn((type, spawn, opts) => tradeShip),
-      displayName: jest.fn(() => "Origin"),
       addGold: jest.fn(),
-      units: jest.fn(() => [dstPort]),
-      unitCount: jest.fn(() => 1),
-      id: jest.fn(() => 1),
+      buildUnit: jest.fn((type, spawn, opts) => tradeShip),
+      canBuild: jest.fn(() => true),
       canTrade: jest.fn(() => true),
+      displayName: jest.fn(() => "Origin"),
+      id: jest.fn(() => 1),
+      unitCount: jest.fn(() => 1),
+      units: jest.fn(() => [dstPort]),
     } as any;
 
     dstOwner = {
-      id: jest.fn(() => 2),
       addGold: jest.fn(),
-      displayName: jest.fn(() => "Destination"),
-      units: jest.fn(() => [dstPort]),
-      unitCount: jest.fn(() => 1),
       canTrade: jest.fn(() => true),
+      displayName: jest.fn(() => "Destination"),
+      id: jest.fn(() => 2),
+      unitCount: jest.fn(() => 1),
+      units: jest.fn(() => [dstPort]),
     } as any;
 
     pirate = {
-      id: jest.fn(() => 3),
       addGold: jest.fn(),
-      displayName: jest.fn(() => "Destination"),
-      units: jest.fn(() => [piratePort]),
-      unitCount: jest.fn(() => 1),
       canTrade: jest.fn(() => true),
+      displayName: jest.fn(() => "Destination"),
+      id: jest.fn(() => 3),
+      unitCount: jest.fn(() => 1),
+      units: jest.fn(() => [piratePort]),
     } as any;
 
     piratePort = {
-      tile: jest.fn(() => 40011),
-      owner: jest.fn(() => pirate),
       isActive: jest.fn(() => true),
+      owner: jest.fn(() => pirate),
+      tile: jest.fn(() => 40011),
     } as any;
 
     srcPort = {
-      tile: jest.fn(() => 20011),
-      owner: jest.fn(() => origOwner),
       isActive: jest.fn(() => true),
+      owner: jest.fn(() => origOwner),
+      tile: jest.fn(() => 20011),
     } as any;
 
     dstPort = {
-      tile: jest.fn(() => 30015), // 15x15
-      owner: jest.fn(() => dstOwner),
       isActive: jest.fn(() => true),
+      owner: jest.fn(() => dstOwner),
+      tile: jest.fn(() => 30015), // 15x15
     } as any;
 
     tradeShip = {
-      isActive: jest.fn(() => true),
-      owner: jest.fn(() => origOwner),
-      move: jest.fn(),
-      setTargetUnit: jest.fn(),
-      setSafeFromPirates: jest.fn(),
       delete: jest.fn(),
+      isActive: jest.fn(() => true),
+      move: jest.fn(),
+      owner: jest.fn(() => origOwner),
+      setSafeFromPirates: jest.fn(),
+      setTargetUnit: jest.fn(),
       tile: jest.fn(() => 2001),
     } as any;
 
     tradeShipExecution = new TradeShipExecution(origOwner, srcPort, dstPort);
     tradeShipExecution.init(game, 0);
     tradeShipExecution["pathFinder"] = {
-      nextTile: jest.fn(() => ({ type: 0, node: 2001 })),
+      nextTile: jest.fn(() => ({ node: 2001, type: 0 })),
     } as any;
     tradeShipExecution["tradeShip"] = tradeShip;
   });
@@ -112,7 +112,7 @@ describe("TradeShipExecution", () => {
 
   it("should complete trade and award gold", () => {
     tradeShipExecution["pathFinder"] = {
-      nextTile: jest.fn(() => ({ type: 2, node: 2001 })),
+      nextTile: jest.fn(() => ({ node: 2001, type: 2 })),
     } as any;
     tradeShipExecution.tick(1);
     expect(tradeShip.delete).toHaveBeenCalledWith(false);

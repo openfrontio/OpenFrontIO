@@ -181,10 +181,10 @@ export class OptionsMenu extends LitElement implements Layer {
         >
           <div class="flex items-stretch gap-1 lg:gap-2">
             ${button({
+              children: this.isPaused ? "▶️" : "⏸",
               classes: !this.showPauseButton ? "hidden" : "",
               onClick: this.onPauseButtonClick,
               title: this.isPaused ? "Resume game" : "Pause game",
-              children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
               class="w-[55px] h-8 lg:w-24 lg:h-10 flex items-center justify-center
@@ -194,14 +194,14 @@ export class OptionsMenu extends LitElement implements Layer {
               ${secondsToHms(this.timer)}
             </div>
             ${button({
+              children: "❌",
               onClick: this.onExitButtonClick,
               title: "Exit game",
-              children: "❌",
             })}
             ${button({
+              children: "⚙️",
               onClick: this.onSettingsButtonClick,
               title: "Settings",
-              children: "⚙️",
             })}
           </div>
         </div>
@@ -212,65 +212,65 @@ export class OptionsMenu extends LitElement implements Layer {
           ${!this.showSettings ? "hidden" : ""}"
         >
           ${button({
+            children: "🌲: " + (this.alternateView ? "On" : "Off"),
             onClick: this.onTerrainButtonClick,
             title: "Toggle Terrain",
-            children: "🌲: " + (this.alternateView ? "On" : "Off"),
           })}
           ${button({
+            children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
             onClick: this.onToggleEmojisButtonClick,
             title: "Toggle Emojis",
-            children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
           })}
           ${button({
+            children: "🚨: " + (this.userSettings.alertFrame() ? "On" : "Off"),
             onClick: this.onToggleAlertFrameButtonClick,
             title: "Toggle Alert frame",
-            children: "🚨: " + (this.userSettings.alertFrame() ? "On" : "Off"),
           })}
           ${button({
+            children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
             onClick: this.onToggleSpecialEffectsButtonClick,
             title: "Toggle Special effects",
-            children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
           })}
           ${button({
-            onClick: this.onToggleTerritoryPatterns,
-            title: "Territory Patterns",
             children:
               "🏳️: " + (this.userSettings.territoryPatterns() ? "On" : "Off"),
+            onClick: this.onToggleTerritoryPatterns,
+            title: "Territory Patterns",
           })}
           ${button({
+            children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
             onClick: this.onToggleDarkModeButtonClick,
             title: "Dark Mode",
-            children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
           })}
           ${button({
-            onClick: this.onToggleRandomNameModeButtonClick,
-            title: "Random name mode",
             children:
               "🥷: " + (this.userSettings.anonymousNames() ? "On" : "Off"),
+            onClick: this.onToggleRandomNameModeButtonClick,
+            title: "Random name mode",
           })}
           ${button({
-            onClick: this.onToggleLeftClickOpensMenu,
-            title: "Left click",
             children:
               "🖱️: " +
               (this.userSettings.leftClickOpensMenu()
                 ? "Opens menu"
                 : "Attack"),
+            onClick: this.onToggleLeftClickOpensMenu,
+            title: "Left click",
           })}
           ${button({
-            onClick: this.onTogglePerformanceOverlayButtonClick,
-            title: "Performance Overlay",
             children:
               "🚀: " + (this.userSettings.performanceOverlay() ? "On" : "Off"),
+            onClick: this.onTogglePerformanceOverlayButtonClick,
+            title: "Performance Overlay",
           })}
           <!-- ${button({
-            onClick: this.onToggleFocusLockedButtonClick,
-            title: "Lock Focus",
             children:
               "🗺: " +
               (this.userSettings.focusLocked()
                 ? "Focus locked"
                 : "Hover focus"),
+            onClick: this.onToggleFocusLockedButtonClick,
+            title: "Lock Focus",
           })} -->
         </div>
       </div>

@@ -28,8 +28,8 @@ export function renderPlayerFlag(
   const code = flag.slice("!".length);
   const layers = code.split("_").map((segment) => {
     const [layerKey, colorKey] = segment.split("-");
-    // eslint-disable-next-line sort-keys
-    return { layerKey, colorKey };
+
+    return { colorKey, layerKey };
   });
 
   target.innerHTML = "";

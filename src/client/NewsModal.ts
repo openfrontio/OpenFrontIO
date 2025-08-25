@@ -74,8 +74,8 @@ export class NewsModal extends LitElement {
             <div class="news-container">
               <div class="news-content">
                 ${resolveMarkdown(this.markdown, {
-                  includeImages: true,
                   includeCodeBlockClassNames: true,
+                  includeImages: true,
                 })}
               </div>
             </div>

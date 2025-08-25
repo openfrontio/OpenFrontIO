@@ -23,8 +23,8 @@ export class OButton extends LitElement {
           "c-button": true,
           "c-button--block": this.block,
           "c-button--blockDesktop": this.blockDesktop,
-          "c-button--secondary": this.secondary,
           "c-button--disabled": this.disable,
+          "c-button--secondary": this.secondary,
         })}
         ?disabled=${this.disable}
       >

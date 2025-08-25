@@ -21,8 +21,7 @@ export async function verifyClientToken(
   config: ServerConfig,
 ): Promise<TokenVerificationResult> {
   if (PersistentIdSchema.safeParse(token).success) {
-    // eslint-disable-next-line sort-keys
-    return { persistentId: token, claims: null };
+    return { claims: null, persistentId: token };
   }
   try {
     const issuer = config.jwtIssuer();

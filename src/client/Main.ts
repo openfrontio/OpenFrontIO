@@ -471,18 +471,18 @@ class Client {
     this.gameStop = joinLobby(
       this.eventBus,
       {
-        gameID: lobby.gameID,
-        serverConfig: config,
-        pattern: this.userSettings.getSelectedPattern(),
+        clientID: getClientID(lobby.gameID),
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
             : this.flagInput.getCurrentFlag(),
-        playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: getPlayToken(),
-        clientID: getClientID(lobby.gameID),
-        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
+        gameID: lobby.gameID,
         gameRecord: lobby.gameRecord,
+        gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
+        pattern: this.userSettings.getSelectedPattern(),
+        playerName: this.usernameInput?.getCurrentUsername() ?? "",
+        serverConfig: config,
+        token: getPlayToken(),
       },
       () => {
         console.log("Closing modals");

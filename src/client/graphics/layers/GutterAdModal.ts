@@ -96,12 +96,12 @@ export class GutterAdModal extends LitElement implements Layer {
       window.ramp.que.push(() => {
         window.ramp.spaAddAds([
           {
-            type: this.leftAdType,
             selectorId: this.leftContainerId,
+            type: this.leftAdType,
           },
           {
-            type: this.rightAdType,
             selectorId: this.rightContainerId,
+            type: this.rightAdType,
           },
         ]);
         this.adLoaded = true;

@@ -21,9 +21,9 @@ export class SettingSlider extends LitElement {
 
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { value: this.value },
         bubbles: true,
         composed: true,
+        detail: { value: this.value },
       }),
     );
   }

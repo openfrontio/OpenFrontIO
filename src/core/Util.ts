@@ -89,8 +89,7 @@ export function calculateBoundingBox(
     maxY = Math.max(maxY, cell.y);
   });
 
-  // eslint-disable-next-line sort-keys
-  return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
+  return { max: new Cell(maxX, maxY), min: new Cell(minX, minY) };
 }
 
 export function calculateBoundingBoxCenter(

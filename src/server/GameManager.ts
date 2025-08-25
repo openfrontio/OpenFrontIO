@@ -41,8 +41,8 @@ export class GameManager {
       {
         bots: 400,
         difficulty: Difficulty.Medium,
-        disableNPCs: false,
         disabledUnits: [],
+        disableNPCs: false,
         donateGold: false,
         donateTroops: false,
         gameMap: GameMapType.World,

@@ -128,58 +128,56 @@ export class PlayerImpl implements Player {
     );
     const stats = this.mg.stats().getPlayerStats(this);
 
-    /* eslint-disable sort-keys */
     return {
-      type: GameUpdateType.Player,
-      clientID: this.clientID(),
-      name: this.name(),
-      displayName: this.displayName(),
-      id: this.id(),
-      team: this.team() ?? undefined,
-      smallID: this.smallID(),
-      playerType: this.type(),
-      isAlive: this.isAlive(),
-      isDisconnected: this.isDisconnected(),
-      tilesOwned: this.numTilesOwned(),
-      gold: this._gold,
-      troops: this.troops(),
-      allies: this.alliances().map((a) => a.other(this).smallID()),
-      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
-      isTraitor: this.isTraitor(),
-      targets: this.targets().map((p) => p.smallID()),
-      outgoingEmojis: this.outgoingEmojis(),
-      outgoingAttacks: this._outgoingAttacks.map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      incomingAttacks: this._incomingAttacks.map((a) => {
-        return {
-          attackerID: a.attacker().smallID(),
-          targetID: a.target().smallID(),
-          troops: a.troops(),
-          id: a.id(),
-          retreating: a.retreating(),
-        } satisfies AttackUpdate;
-      }),
-      outgoingAllianceRequests,
       alliances: this.alliances().map(
         (a) =>
           ({
-            id: a.id(),
-            other: a.other(this).id(),
             createdAt: a.createdAt(),
             expiresAt: a.expiresAt(),
+            id: a.id(),
+            other: a.other(this).id(),
           }) satisfies AllianceView,
       ),
-      hasSpawned: this.hasSpawned(),
+      allies: this.alliances().map((a) => a.other(this).smallID()),
       betrayals: stats?.betrayals,
+      clientID: this.clientID(),
+      displayName: this.displayName(),
+      embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
+      gold: this._gold,
+      hasSpawned: this.hasSpawned(),
+      id: this.id(),
+      incomingAttacks: this._incomingAttacks.map((a) => {
+        return {
+          attackerID: a.attacker().smallID(),
+          id: a.id(),
+          retreating: a.retreating(),
+          targetID: a.target().smallID(),
+          troops: a.troops(),
+        } satisfies AttackUpdate;
+      }),
+      isAlive: this.isAlive(),
+      isDisconnected: this.isDisconnected(),
+      isTraitor: this.isTraitor(),
+      name: this.name(),
+      outgoingAllianceRequests,
+      outgoingAttacks: this._outgoingAttacks.map((a) => {
+        return {
+          attackerID: a.attacker().smallID(),
+          id: a.id(),
+          retreating: a.retreating(),
+          targetID: a.target().smallID(),
+          troops: a.troops(),
+        } satisfies AttackUpdate;
+      }),
+      outgoingEmojis: this.outgoingEmojis(),
+      playerType: this.type(),
+      smallID: this.smallID(),
+      targets: this.targets().map((p) => p.smallID()),
+      team: this.team() ?? undefined,
+      tilesOwned: this.numTilesOwned(),
+      troops: this.troops(),
+      type: GameUpdateType.Player,
     };
-    /* eslint-enable sort-keys */
   }
 
   smallID(): number {
@@ -512,8 +510,7 @@ export class PlayerImpl implements Player {
   }
 
   target(other: Player): void {
-    // eslint-disable-next-line sort-keys
-    this.targets_.push({ tick: this.mg.ticks(), target: other });
+    this.targets_.push({ target: other, tick: this.mg.ticks() });
     this.mg.target(this, other);
   }
 

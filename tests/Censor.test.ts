@@ -1,6 +1,9 @@
 // Mocking the obscenity library to control its behavior in tests.
 jest.mock("obscenity", () => {
   return {
+    collapseDuplicatesTransformer: () => ({}),
+    englishDataset: { build: () => ({}) },
+    englishRecommendedTransformers: {},
     RegExpMatcher: class {
       private readonly dummy: string[] = ["foo", "bar", "leet", "code"];
       constructor(_opts: any) {}
@@ -16,9 +19,6 @@ jest.mock("obscenity", () => {
         return this.dummy.some((token) => decoded.includes(token));
       }
     },
-    collapseDuplicatesTransformer: () => ({}),
-    englishRecommendedTransformers: {},
-    englishDataset: { build: () => ({}) },
     resolveConfusablesTransformer: () => ({}),
     resolveLeetSpeakTransformer: () => ({}),
     skipNonAlphabeticTransformer: () => ({}),
@@ -53,14 +53,14 @@ describe("username.ts functions", () => {
 
   describe("isProfaneUsername & fixProfaneUsername with leet decoding (mocked)", () => {
     test.each([
-      { username: "l33t", profane: true }, // decodes to "leet"
-      { username: "L33T", profane: true },
-      { username: "l33tc0de", profane: true }, // decodes to "leetcode", contains "leet" and "code"
-      { username: "L33TC0DE", profane: true },
-      { username: "foo123", profane: true }, // contains "foo"
-      { username: "b4r", profane: true }, // decodes to "bar"
-      { username: "safeName", profane: false },
-      { username: "s4f3", profane: false }, // decodes to "safe" but "safe" not in dummy list
+      { profane: true, username: "l33t" }, // decodes to "leet"
+      { profane: true, username: "L33T" },
+      { profane: true, username: "l33tc0de" }, // decodes to "leetcode", contains "leet" and "code"
+      { profane: true, username: "L33TC0DE" },
+      { profane: true, username: "foo123" }, // contains "foo"
+      { profane: true, username: "b4r" }, // decodes to "bar"
+      { profane: false, username: "safeName" },
+      { profane: false, username: "s4f3" }, // decodes to "safe" but "safe" not in dummy list
     ])('isProfaneUsername("%s") → %s', ({ username, profane }) => {
       expect(isProfaneUsername(username)).toBe(profane);
     });
@@ -113,17 +113,17 @@ describe("username.ts functions", () => {
 
   describe("sanitizeUsername", () => {
     test.each([
-      { input: "GoodName", expected: "GoodName" },
-      { input: "a!", expected: "axx" },
-      { input: "a$%b", expected: "abx" },
+      { expected: "GoodName", input: "GoodName" },
+      { expected: "axx", input: "a!" },
+      { expected: "abx", input: "a$%b" },
       {
-        input: "abc".repeat(10),
         expected: "abc"
           .repeat(Math.floor(MAX_USERNAME_LENGTH / 3))
           .slice(0, MAX_USERNAME_LENGTH),
+        input: "abc".repeat(10),
       },
-      { input: "", expected: "xxx" },
-      { input: "Ünicode🐈Test!", expected: "Ünicode🐈Test" },
+      { expected: "xxx", input: "" },
+      { expected: "Ünicode🐈Test", input: "Ünicode🐈Test!" },
     ])('sanitizeUsername("%s") → "%s"', ({ input, expected }) => {
       const out = sanitizeUsername(input);
       expect(out).toBe(expected);

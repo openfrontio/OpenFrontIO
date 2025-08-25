@@ -89,17 +89,17 @@ export class TeamStats extends LitElement implements Layer {
         const totalScorePercent = totalScoreSort / this.game.numLandTiles();
 
         return {
-          teamName: teamStr,
-          totalScoreStr: formatPercentage(totalScorePercent),
-          totalScoreSort,
-          totalGold: renderNumber(totalGold),
-          totalTroops: renderNumber(totalTroops / 10),
           players: teamPlayers,
+          teamName: teamStr,
+          totalCities: renderNumber(totalCities),
+          totalGold: renderNumber(totalGold),
 
           totalLaunchers: renderNumber(totalLaunchers),
           totalSAMs: renderNumber(totalSAMs),
+          totalScoreSort,
+          totalScoreStr: formatPercentage(totalScorePercent),
+          totalTroops: renderNumber(totalTroops / 10),
           totalWarShips: renderNumber(totalWarShips),
-          totalCities: renderNumber(totalCities),
         };
       })
       .sort((a, b) => b.totalScoreSort - a.totalScoreSort);

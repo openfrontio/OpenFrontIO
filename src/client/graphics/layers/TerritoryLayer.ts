@@ -544,8 +544,8 @@ export class TerritoryLayer implements Layer {
 
   enqueueTile(tile: TileRef) {
     this.tileToRenderQueue.push({
-      tile,
       lastUpdate: this.game.ticks() + this.random.nextFloat(0, 0.5),
+      tile,
     });
   }
 

@@ -11,8 +11,6 @@ describe("UILayer", () => {
 
   beforeEach(() => {
     game = {
-      width: () => 100,
-      height: () => 100,
       config: () => ({
         theme: () => ({
           territoryColor: () => ({
@@ -20,12 +18,14 @@ describe("UILayer", () => {
           }),
         }),
       }),
-      x: () => 10,
-      y: () => 10,
-      unitInfo: () => ({ maxHealth: 10, constructionDuration: 5 }),
+      height: () => 100,
       myPlayer: () => ({ id: () => 1 }),
       ticks: () => 1,
+      unitInfo: () => ({ constructionDuration: 5, maxHealth: 10 }),
       updatesSinceLastTick: () => undefined,
+      width: () => 100,
+      x: () => 10,
+      y: () => 10,
     };
     eventBus = { on: jest.fn() };
   });
@@ -46,10 +46,10 @@ describe("UILayer", () => {
     const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
-      type: () => "Warship",
       isActive: () => true,
-      tile: () => ({}),
       owner: () => ({}),
+      tile: () => ({}),
+      type: () => "Warship",
     };
     const event = { isSelected: true, unit };
     ui.drawSelectionBox = jest.fn();
@@ -61,13 +61,13 @@ describe("UILayer", () => {
     const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
-      id: () => 1,
-      type: () => "Warship",
-      health: () => 5,
-      tile: () => ({}),
-      owner: () => ({}),
-      isActive: () => true,
       createdAt: () => 1,
+      health: () => 5,
+      id: () => 1,
+      isActive: () => true,
+      owner: () => ({}),
+      tile: () => ({}),
+      type: () => "Warship",
     } as unknown as UnitView;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
@@ -90,12 +90,12 @@ describe("UILayer", () => {
     const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
-      id: () => 1,
-      type: () => "Warship",
       health: () => 5,
-      tile: () => ({}),
-      owner: () => ({}),
+      id: () => 1,
       isActive: () => true,
+      owner: () => ({}),
+      tile: () => ({}),
+      type: () => "Warship",
     } as unknown as UnitView;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
@@ -111,8 +111,8 @@ describe("UILayer", () => {
     ui.redraw();
     const unit = {
       id: () => 2,
-      tile: () => ({}),
       isActive: () => true,
+      tile: () => ({}),
     } as unknown as UnitView;
     ui.createLoadingBar(unit);
     expect(ui["allProgressBars"].has(2)).toBe(true);
@@ -122,12 +122,12 @@ describe("UILayer", () => {
     const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
-      id: () => 2,
-      type: () => "Construction",
       constructionType: () => "City",
+      id: () => 2,
+      isActive: () => true,
       owner: () => ({ id: () => 1 }),
       tile: () => ({}),
-      isActive: () => true,
+      type: () => "Construction",
     } as unknown as UnitView;
     ui.onUnitEvent(unit);
     expect(ui["allProgressBars"].has(2)).toBe(true);
@@ -142,13 +142,13 @@ describe("UILayer", () => {
     const ui = new UILayer(game, eventBus);
     ui.redraw();
     const unit = {
-      id: () => 2,
-      type: () => "Construction",
       constructionType: () => "City",
+      createdAt: () => 1,
+      id: () => 2,
+      isActive: () => true,
       owner: () => ({ id: () => 1 }),
       tile: () => ({}),
-      isActive: () => true,
-      createdAt: () => 1,
+      type: () => "Construction",
     } as unknown as UnitView;
     ui.onUnitEvent(unit);
     expect(ui["allProgressBars"].has(2)).toBe(true);
