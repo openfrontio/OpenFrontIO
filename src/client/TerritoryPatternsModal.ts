@@ -44,31 +44,19 @@ export class TerritoryPatternsModal extends LitElement {
     super();
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-    this.selectedPattern = this.userSettings.getSelectedPattern();
-    this.updateComplete.then(() => {
-      const containers = this.renderRoot.querySelectorAll(".preview-container");
-      if (this.resizeObserver) {
-        containers.forEach((container) =>
-          this.resizeObserver?.observe(container),
-        );
-      }
-      this.updatePreview();
-    });
-    this.open();
-  }
-
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
   }
 
   async onUserMe(userMeResponse: UserMeResponse | null) {
+    if (userMeResponse === null) {
+      this.userSettings.setSelectedPattern(undefined);
+      this.selectedPattern = undefined;
+    }
     this.patterns = await patterns(userMeResponse);
     this.me = userMeResponse;
-    this.requestUpdate();
+    this.refresh();
   }
 
   private readonly handleKeyDown = (e: KeyboardEvent) => {
@@ -140,7 +128,7 @@ export class TerritoryPatternsModal extends LitElement {
           @mouseleave=${() => this.handleMouseLeave()}
         >
           <div class="text-sm font-bold mb-1">
-            ${translateText(`territory_patterns.pattern.${pattern.name}`)}
+            ${translatePatternName("territory_patterns.pattern", pattern.name)}
           </div>
           <div
             class="preview-container"
@@ -245,7 +233,7 @@ export class TerritoryPatternsModal extends LitElement {
     this.modalEl?.open();
     window.addEventListener("keydown", this.handleKeyDown);
     this.isActive = true;
-    this.requestUpdate();
+    return this.refresh();
   }
 
   public close() {
@@ -258,7 +246,7 @@ export class TerritoryPatternsModal extends LitElement {
   private selectPattern(pattern: string | undefined) {
     this.userSettings.setSelectedPattern(pattern);
     this.selectedPattern = pattern;
-    this.updatePreview();
+    this.refresh();
     this.close();
   }
 
@@ -314,10 +302,22 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  public updatePreview() {
-    if (this.previewButton === null) return;
+  public async refresh() {
     const preview = this.renderPatternPreview(this.selectedPattern, 48, 48);
+    this.requestUpdate();
+
+    // Wait for the DOM to be updated and the o-modal element to be available
+    await this.updateComplete;
+
+    // Now modalEl should be available
+    if (this.modalEl) {
+      this.modalEl.open();
+    } else {
+      console.warn("modalEl is still null after updateComplete");
+    }
+    if (this.previewButton === null) return;
     render(preview, this.previewButton);
+    this.requestUpdate();
   }
 
   private setLockedPatterns(lockedPatterns: string[], reason: string) {
@@ -406,4 +406,13 @@ export function generatePreviewDataUrl(
   const dataUrl = canvas.toDataURL("image/png");
   patternCache.set(pattern, dataUrl);
   return dataUrl;
+}
+
+function translatePatternName(prefix: string, patternName: string): string {
+  const translation = translateText(`${prefix}.${patternName}`);
+  if (translation.startsWith(prefix)) {
+    // Translation was not found, fallback to pattern name
+    return patternName[0].toUpperCase() + patternName.substring(1);
+  }
+  return translation;
 }
