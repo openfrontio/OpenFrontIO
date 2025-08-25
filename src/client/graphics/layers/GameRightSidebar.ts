@@ -202,9 +202,10 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     const turnsSinceSpawn = this.game.ticks() - this._spawnPhaseTurns;
     const totalTurnsSinceSpawn = this._totalTurns - this._spawnPhaseTurns;
-    const progress = (turnsSinceSpawn <= 0 || totalTurnsSinceSpawn <= 0)
+    const ratio = totalTurnsSinceSpawn <= 0
       ? 0
-      : Math.min(100, Math.max(0, Math.floor(turnsSinceSpawn / totalTurnsSinceSpawn) * 100));
+      : turnsSinceSpawn / totalTurnsSinceSpawn;
+    const progress = Math.min(100, Math.max(0, Math.floor(ratio * 100)));
 
     return html`
       <div class="progress-container mt-2 mx-2.5">
