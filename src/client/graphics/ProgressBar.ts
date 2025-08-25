@@ -16,12 +16,12 @@ export class ProgressBar {
     progress = Math.max(0, Math.min(1, progress));
     this.clear();
     // Draw the loading bar background
-    this.ctx.fillStyle = "rgba(0, 0, 0, 1)";
+    this.ctx.fillStyle = "rgba(26, 26, 26, 0.9)";
     this.ctx.fillRect(this.x - 1, this.y - 1, this.w, this.h);
 
     // Draw the loading progress
     if (this.colors.length === 0) {
-      this.ctx.fillStyle = "#808080"; // default gray
+      this.ctx.fillStyle = "#4a6741"; // military green default
     } else {
       const idx = Math.min(
         this.colors.length - 1,

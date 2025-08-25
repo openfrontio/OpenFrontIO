@@ -1,9 +1,11 @@
 .l-footer {
-  background: var(--boxBackgroundColor);
+  background: rgba(26, 26, 26, 0.95);
   backdrop-filter: blur(var(--blur-md));
+  border-top: 2px solid rgba(74, 103, 65, 0.3);
   display: flex;
   justify-content: center;
   padding: 12px;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
 
   @media (min-width: 800px) {
     padding: 12px 24px;

@@ -177,19 +177,25 @@ export class BuildMenu extends LitElement implements Layer {
       left: 50%;
       transform: translate(-50%, -50%);
       z-index: 9999;
-      background-color: #1e1e1e;
+      background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(42, 42, 42, 0.9));
+      border: 3px solid rgba(74, 103, 65, 0.7);
       padding: 15px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      border-radius: 10px;
+      box-shadow: 
+        0 0 30px rgba(0, 0, 0, 0.8),
+        inset 0 1px 0 rgba(74, 103, 65, 0.3),
+        0 0 20px rgba(74, 103, 65, 0.2);
+      border-radius: 8px;
       display: flex;
       flex-direction: column;
       align-items: center;
       max-width: 95vw;
       max-height: 95vh;
       overflow-y: auto;
+      backdrop-filter: blur(10px);
     }
     .build-description {
       font-size: 0.6rem;
+      color: #cccccc;
     }
     .build-row {
       display: flex;
@@ -201,10 +207,10 @@ export class BuildMenu extends LitElement implements Layer {
       position: relative;
       width: 120px;
       height: 140px;
-      border: 2px solid #444;
-      background-color: #2c2c2c;
-      color: white;
-      border-radius: 12px;
+      border: 2px solid rgba(74, 103, 65, 0.6);
+      background: linear-gradient(135deg, rgba(42, 42, 42, 0.8), rgba(26, 26, 26, 0.9));
+      color: #f0f0f0;
+      border-radius: 6px;
       cursor: pointer;
       transition: all 0.3s ease;
       display: flex;
@@ -214,40 +220,56 @@ export class BuildMenu extends LitElement implements Layer {
       margin: 8px;
       padding: 10px;
       gap: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      box-shadow: 
+        inset 0 1px 0 rgba(74, 103, 65, 0.2),
+        0 2px 8px rgba(0, 0, 0, 0.3);
     }
     .build-button:not(:disabled):hover {
-      background-color: #3a3a3a;
+      background: linear-gradient(135deg, rgba(74, 103, 65, 0.4), rgba(42, 42, 42, 0.9));
       transform: scale(1.05);
-      border-color: #666;
+      border-color: rgba(74, 103, 65, 0.9);
+      box-shadow: 
+        inset 0 1px 0 rgba(74, 103, 65, 0.4),
+        0 4px 15px rgba(74, 103, 65, 0.3);
     }
     .build-button:not(:disabled):active {
-      background-color: #4a4a4a;
+      background: linear-gradient(135deg, rgba(74, 103, 65, 0.6), rgba(26, 26, 26, 0.9));
       transform: scale(0.95);
     }
     .build-button:disabled {
-      background-color: #1a1a1a;
-      border-color: #333;
+      background: linear-gradient(135deg, rgba(26, 26, 26, 0.6), rgba(42, 42, 42, 0.4));
+      border-color: rgba(74, 103, 65, 0.3);
       cursor: not-allowed;
-      opacity: 0.7;
-    }
-    .build-button:disabled img {
       opacity: 0.5;
     }
+    .build-button:disabled img {
+      opacity: 0.4;
+      filter: grayscale(70%);
+    }
     .build-button:disabled .build-cost {
-      color: #ff4444;
+      color: #ff6666;
     }
     .build-icon {
       font-size: 40px;
       margin-bottom: 5px;
+      filter: drop-shadow(0 0 6px rgba(74, 103, 65, 0.4));
     }
     .build-name {
       font-size: 14px;
       font-weight: bold;
       margin-bottom: 5px;
       text-align: center;
+      color: #f0f0f0;
+      text-shadow: 0 0 8px rgba(74, 103, 65, 0.6);
     }
     .build-cost {
       font-size: 14px;
+      color: #e6e6e6;
+      font-weight: 600;
+    }
     }
     .hidden {
       display: none !important;
@@ -256,8 +278,8 @@ export class BuildMenu extends LitElement implements Layer {
       position: absolute;
       top: -10px;
       right: -10px;
-      background-color: #2c2c2c;
-      color: white;
+      background: linear-gradient(135deg, rgba(74, 103, 65, 0.8), rgba(42, 42, 42, 0.9));
+      color: #f0f0f0;
       padding: 2px 10px;
       border-radius: 10000px;
       transition: all 0.3s ease;
@@ -265,23 +287,30 @@ export class BuildMenu extends LitElement implements Layer {
       display: flex;
       justify-content: center;
       align-content: center;
-      border: 1px solid #444;
+      border: 1px solid rgba(74, 103, 65, 0.6);
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     }
     .build-button:not(:disabled):hover > .build-count-chip {
-      background-color: #3a3a3a;
-      border-color: #666;
+      background: linear-gradient(135deg, rgba(74, 103, 65, 0.9), rgba(42, 42, 42, 0.9));
+      border-color: rgba(74, 103, 65, 0.8);
+      box-shadow: 0 3px 10px rgba(74, 103, 65, 0.4);
     }
     .build-button:not(:disabled):active > .build-count-chip {
-      background-color: #4a4a4a;
+      background: linear-gradient(135deg, rgba(74, 103, 65, 1), rgba(42, 42, 42, 0.9));
     }
     .build-button:disabled > .build-count-chip {
-      background-color: #1a1a1a;
-      border-color: #333;
+      background: linear-gradient(135deg, rgba(26, 26, 26, 0.6), rgba(42, 42, 42, 0.4));
+      border-color: rgba(74, 103, 65, 0.3);
       cursor: not-allowed;
+      opacity: 0.5;
     }
     .build-count {
       font-weight: bold;
       font-size: 14px;
+      color: #f0f0f0;
     }
 
     @media (max-width: 768px) {
@@ -406,9 +435,13 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   render() {
+    if (this._hidden) {
+      return html``;
+    }
+
     return html`
       <div
-        class="build-menu ${this._hidden ? "hidden" : ""}"
+        class="build-menu"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         ${this.filteredBuildTable.map(

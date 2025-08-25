@@ -50,24 +50,34 @@
   max-width: 300px;
   padding: 15px 20px;
   font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   cursor: pointer;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  transition: background-color 0.3s;
+  background: linear-gradient(135deg, #4a6741, #3d5536);
+  color: #f0f0f0;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  transition: all 0.3s ease;
   display: inline-block;
   margin: 0 0 20px 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .start-game-button:not(:disabled):hover {
-  background-color: #0056b3;
+  background: linear-gradient(135deg, #3d5536, #2d4026);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
 }
 
 .start-game-button:disabled {
-  background: linear-gradient(to right, #4a4a4a, #3d3d3d);
-  opacity: 0.7;
+  background: linear-gradient(to right, #3a3a3a, #2d2d2d);
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
 }
 
 .options-layout {
@@ -78,16 +88,22 @@
 }
 
 .options-section {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(26, 26, 26, 0.9);
+  border: 2px solid rgba(74, 103, 65, 0.3);
   padding: 12px 24px 24px 24px;
-  border-radius: 12px;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .option-title {
   margin: 0 0 16px 0;
   font-size: 20px;
-  color: #fff;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #f0f0f0;
   text-align: center;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .option-cards {
@@ -107,27 +123,31 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  background: rgba(30, 30, 30, 0.95);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  background: rgba(42, 42, 42, 0.95);
+  border: 2px solid rgba(74, 103, 65, 0.3);
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .option-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(40, 40, 40, 0.95);
+  border-color: rgba(74, 103, 65, 0.6);
+  background: rgba(52, 52, 52, 0.95);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 .option-card.selected {
-  border-color: #4a9eff;
-  background: rgba(74, 158, 255, 0.1);
+  border-color: #4a6741;
+  background: rgba(74, 103, 65, 0.2);
+  box-shadow: 0 0 12px rgba(74, 103, 65, 0.4);
 }
 
 .option-card-title {
   font-size: 14px;
-  color: #aaa;
+  font-weight: 600;
+  color: #d0d0d0;
   text-align: center;
   margin: 0 0 4px 0;
 }
@@ -135,10 +155,11 @@
 .option-image {
   width: 100%;
   aspect-ratio: 4/2;
-  color: #aaa;
+  color: #d0d0d0;
   transition: transform 0.2s ease-in-out;
-  border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background-color: rgba(74, 103, 65, 0.1);
+  border: 1px solid rgba(74, 103, 65, 0.3);
   font-size: 14px;
   display: flex;
   align-items: center;
@@ -156,8 +177,8 @@ label.option-card:hover {
 .checkbox-icon {
   width: 16px;
   height: 16px;
-  border: 2px solid #aaa;
-  border-radius: 6px;
+  border: 2px solid #d0d0d0;
+  border-radius: 3px;
   margin: 4px;
   display: flex;
   align-items: center;
@@ -166,13 +187,14 @@ label.option-card:hover {
 }
 
 .option-card.selected .checkbox-icon {
-  border-color: #4a9eff;
-  background: #4a9eff;
+  border-color: #4a6741;
+  background: #4a6741;
 }
 
 .option-card.selected .checkbox-icon::after {
   content: "✓";
   color: white;
+  font-weight: bold;
 }
 
 /* HostLobbyModal css */
@@ -220,18 +242,20 @@ label.option-card:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(26, 26, 26, 0.9);
   padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  border: 2px solid rgba(74, 103, 65, 0.3);
   cursor: pointer;
   transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .lobby-id-button:hover {
-  background: rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(42, 42, 42, 0.9);
+  border-color: rgba(74, 103, 65, 0.5);
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 .lobby-id {
@@ -254,12 +278,15 @@ label.option-card:hover {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #2a2a2a;
-  color: #fff;
+  background: rgba(74, 103, 65, 0.8);
+  border: 1px solid rgba(74, 103, 65, 0.6);
+  color: #f0f0f0;
   padding: 8px 12px;
   margin: 4px;
-  border-radius: 16px;
+  border-radius: 4px;
   font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 #bots-count,
@@ -275,32 +302,36 @@ label.option-card:hover {
 #bots-count::-moz-range-track,
 #private-lobby-bots-count::-moz-range-track {
   height: 8px;
-  background: white;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
 #bots-count::-moz-range-progress,
 #private-lobby-bots-count::-moz-range-progress {
   height: 8px;
-  background-color: #0075ff;
+  background-color: #4a6741;
+  border-radius: 4px;
 }
 
 #bots-count::-moz-range-thumb,
 #private-lobby-bots-count::-moz-range-thumb {
   height: 16px;
   width: 16px;
-  background: #0075ff;
-  border: none;
+  background: #4a6741;
+  border: 2px solid #f0f0f0;
   border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Chrome */
 #bots-count::-webkit-slider-runnable-track,
 #private-lobby-bots-count::-webkit-slider-runnable-track {
   height: 8px;
+  border-radius: 4px;
   background: linear-gradient(
     to right,
-    #0075ff var(--progress, 0%),
-    white var(--progress, 0%)
+    #4a6741 var(--progress, 0%),
+    rgba(255, 255, 255, 0.2) var(--progress, 0%)
   );
 }
 
@@ -309,20 +340,21 @@ label.option-card:hover {
   -webkit-appearance: none;
   height: 16px;
   width: 16px;
-  background: #0075ff;
-  border: none;
+  background: #4a6741;
+  border: 2px solid #f0f0f0;
   border-radius: 50%;
   margin-top: -4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .random-map {
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  background: rgba(30, 30, 30, 0.95);
+  border: 2px solid rgba(74, 103, 65, 0.3);
+  background: rgba(42, 42, 42, 0.95);
 }
 
 .random-map.selected {
-  border: 2px solid #4a9eff;
-  background: rgba(74, 158, 255, 0.1);
+  border: 2px solid #4a6741;
+  background: rgba(74, 103, 65, 0.2);
 }
 
 #helpModal table {
@@ -575,26 +607,37 @@ label.option-card:hover {
   outline: 0;
   padding: 10px;
   font-size: 16px;
-  border: 1px solid #ccc;
-  color: #202020;
-  border-radius: 8px;
+  font-family: monospace;
+  font-weight: 600;
+  border: 2px solid rgba(74, 103, 65, 0.3);
+  background: rgba(26, 26, 26, 0.9);
+  color: #e8e8e8;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.lobby-id-box input:focus {
+  border-color: #4a6741;
+  box-shadow: 0 0 8px rgba(74, 103, 65, 0.3);
 }
 
 .lobby-id-paste-button {
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(26, 26, 26, 0.9);
   padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  border: 2px solid rgba(74, 103, 65, 0.3);
   cursor: pointer;
   transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .lobby-id-paste-button:hover {
-  background: rgba(0, 0, 0, 0.3);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(42, 42, 42, 0.9);
+  border-color: rgba(74, 103, 65, 0.5);
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 .lobby-id-paste-button-icon {
@@ -605,9 +648,11 @@ label.option-card:hover {
 }
 
 .options-section {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(26, 26, 26, 0.9);
+  border: 2px solid rgba(74, 103, 65, 0.3);
   padding: 12px 24px 24px 24px;
-  border-radius: 12px;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .option-title {
@@ -628,11 +673,11 @@ label.option-card:hover {
 /* News Button Notification */
 news-button .active button {
   position: relative;
-  border-color: #2563eb !important;
+  border-color: #4a6741 !important;
   border-width: 2px !important;
   box-shadow:
-    0 0 0 1px rgba(37, 99, 235, 0.5),
-    0 0 8px rgba(37, 99, 235, 0.4);
+    0 0 0 1px rgba(74, 103, 65, 0.5),
+    0 0 8px rgba(74, 103, 65, 0.4);
 }
 
 news-button .active button::after {
@@ -642,8 +687,8 @@ news-button .active button::after {
   right: -2px;
   width: 12px;
   height: 12px;
-  background: #f59e0b;
-  border: 2px solid white;
+  background: #d4a853;
+  border: 2px solid #1a1a1a;
   border-radius: 50%;
   animation: newsPulse 1.5s ease-in-out infinite;
 }
@@ -661,15 +706,18 @@ news-button .active button::after {
 
 .host-badge {
   font-size: 11px;
-  color: #4caf50;
+  color: #d4a853;
   font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .remove-player-btn {
   width: 16px;
   height: 16px;
   border: none;
-  background: #ff4444;
+  background: #a64d4d;
   color: white;
   border-radius: 50%;
   font-size: 11px;
@@ -678,8 +726,11 @@ news-button .active button::after {
   align-items: center;
   justify-content: center;
   margin-left: 4px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .remove-player-btn:hover {
-  background: #ff6666;
+  background: #b85555;
+  transform: scale(1.1);
 }

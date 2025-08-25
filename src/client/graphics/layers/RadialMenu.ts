@@ -94,7 +94,7 @@ export class RadialMenu implements Layer {
       centerButtonSize: config.centerButtonSize ?? 30,
       iconSize: config.iconSize ?? 32,
       centerIconSize: config.centerIconSize ?? 48,
-      disabledColor: config.disabledColor ?? d3.rgb(128, 128, 128).toString(),
+      disabledColor: config.disabledColor ?? "rgba(128, 128, 128, 0.4)",
       menuTransitionDuration: config.menuTransitionDuration ?? 300,
       mainMenuInnerRadius: config.mainMenuInnerRadius ?? 40,
       centerButtonIcon: config.centerButtonIcon ?? "",
@@ -216,14 +216,20 @@ export class RadialMenu implements Layer {
     this.tooltipElement.className = "radial-tooltip";
     this.tooltipElement.style.position = "absolute";
     this.tooltipElement.style.pointerEvents = "none";
-    this.tooltipElement.style.background = "rgba(0, 0, 0, 0.7)";
-    this.tooltipElement.style.color = "white";
-    this.tooltipElement.style.padding = "6px 10px";
-    this.tooltipElement.style.borderRadius = "6px";
+    this.tooltipElement.style.background = "linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(42, 42, 42, 0.9))";
+    this.tooltipElement.style.color = "#f0f0f0";
+    this.tooltipElement.style.padding = "8px 12px";
+    this.tooltipElement.style.borderRadius = "4px";
     this.tooltipElement.style.fontSize = "12px";
     this.tooltipElement.style.zIndex = "10000";
     this.tooltipElement.style.maxWidth = "250px";
     this.tooltipElement.style.display = "none";
+    this.tooltipElement.style.border = "2px solid rgba(74, 103, 65, 0.7)";
+    this.tooltipElement.style.boxShadow = "0 4px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(74, 103, 65, 0.3)";
+    this.tooltipElement.style.backdropFilter = "blur(8px)";
+    this.tooltipElement.style.textTransform = "uppercase";
+    this.tooltipElement.style.letterSpacing = "0.5px";
+    this.tooltipElement.style.fontWeight = "600";
     document.body.appendChild(this.tooltipElement);
 
     const style = document.createElement("style");
@@ -232,6 +238,8 @@ export class RadialMenu implements Layer {
         font-weight: bold;
         font-size: 14px;
         margin-bottom: 4px;
+        color: rgba(74, 103, 65, 1);
+        text-shadow: 0 0 8px rgba(74, 103, 65, 0.8);
       }
 
       ${this.config.tooltipStyle}
@@ -322,8 +330,8 @@ export class RadialMenu implements Layer {
         const disabled = this.params === null || d.data.disabled(this.params);
         const color = disabled
           ? this.config.disabledColor
-          : (d.data.color ?? "#333333");
-        const opacity = disabled ? 0.5 : 0.7;
+          : (d.data.color ?? "rgba(74, 103, 65, 0.8)");
+        const opacity = disabled ? 0.3 : 0.85;
 
         if (d.data.id === this.selectedItemId && this.currentLevel > level) {
           return color;
@@ -331,7 +339,7 @@ export class RadialMenu implements Layer {
 
         return d3.color(color)?.copy({ opacity })?.toString() ?? color;
       })
-      .attr("stroke", "#ffffff")
+      .attr("stroke", "rgba(74, 103, 65, 0.9)")
       .attr("stroke-width", "2")
       .style("cursor", (d) =>
         this.params === null || d.data.disabled(this.params)

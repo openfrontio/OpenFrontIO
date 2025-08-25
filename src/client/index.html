@@ -275,8 +275,16 @@
     <button
       id="settings-button"
       title="Settings"
-      class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center"
-      style="width: 80px; height: 80px; background-color: #0075ff"
+      class="fixed bottom-4 right-4 z-50 rounded border-2 p-2 shadow-lg transition-all duration-300 flex items-center justify-center"
+      style="
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #4a6741, #3d5536);
+        border-color: rgba(74, 103, 65, 0.6);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      "
+      onmouseover="this.style.background='linear-gradient(135deg, #3d5536, #2d4026)'; this.style.borderColor='rgba(74, 103, 65, 0.8)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(0, 0, 0, 0.4)';"
+      onmouseout="this.style.background='linear-gradient(135deg, #4a6741, #3d5536)'; this.style.borderColor='rgba(74, 103, 65, 0.6)'; this.style.transform='translateY(0px)'; this.style.boxShadow='0 4px 8px rgba(0, 0, 0, 0.3)';"
     >
       <img
         src="../../resources/images/SettingIconWhite.svg"
@@ -394,7 +402,7 @@
     <host-lobby-modal></host-lobby-modal>
     <join-private-lobby-modal></join-private-lobby-modal>
     <emoji-table></emoji-table>
-    <build-menu></build-menu>
+    <!-- <build-menu></build-menu> -->
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
     <game-top-bar></game-top-bar>

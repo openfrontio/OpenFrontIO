@@ -1,9 +1,11 @@
 .l-header {
-  background: var(--boxBackgroundColor);
+  background: rgba(26, 26, 26, 0.95);
   backdrop-filter: blur(var(--blur-md));
+  border-bottom: 2px solid rgba(74, 103, 65, 0.3);
   display: flex;
   justify-content: center;
   padding: 24px 24px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 
   @media (min-width: 800px) {
     padding: 24px 24px;
@@ -22,18 +24,21 @@
 .l-header__logo {
   max-width: 450px;
   fill: url(#logo-gradient);
-  filter: drop-shadow(1px 1px 0px rgb(255, 255, 255))
-    drop-shadow(-1px -1px 0px rgb(255, 255, 255))
-    drop-shadow(1px -1px 0px rgb(255, 255, 255))
-    drop-shadow(-1px 1px 0px rgb(255, 255, 255))
-    drop-shadow(3px 3px 0px rgb(255, 255, 255));
+  filter: drop-shadow(2px 2px 0px rgba(74, 103, 65, 0.8))
+    drop-shadow(-1px -1px 0px rgba(74, 103, 65, 0.8))
+    drop-shadow(1px -1px 0px rgba(74, 103, 65, 0.8))
+    drop-shadow(-1px 1px 0px rgba(74, 103, 65, 0.8))
+    drop-shadow(3px 3px 4px rgba(0, 0, 0, 0.5));
 }
 
 .l-header__highlightText {
-  color: #2563eb;
+  color: #4a6741;
   font-weight: 700;
-  filter: drop-shadow(1px 1px 0px rgb(255, 255, 255))
-    drop-shadow(-1px -1px 0px rgb(255, 255, 255))
-    drop-shadow(1px -1px 0px rgb(255, 255, 255))
-    drop-shadow(-1px 1px 0px rgb(255, 255, 255));
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  filter: drop-shadow(1px 1px 0px rgba(255, 255, 255, 0.3))
+    drop-shadow(-1px -1px 0px rgba(255, 255, 255, 0.3))
+    drop-shadow(1px -1px 0px rgba(255, 255, 255, 0.3))
+    drop-shadow(-1px 1px 0px rgba(255, 255, 255, 0.3))
+    drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
 }

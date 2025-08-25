@@ -11,10 +11,10 @@ import { UnitType } from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 
 const COLOR_PROGRESSION = [
-  "rgb(232, 25, 25)",
-  "rgb(240, 122, 25)",
-  "rgb(202, 231, 15)",
-  "rgb(44, 239, 18)",
+  "rgb(180, 45, 45)", // Dark red for critical
+  "rgb(200, 120, 45)", // Dark orange for low
+  "rgb(170, 180, 45)", // Dark yellow-green for medium
+  "rgb(74, 103, 65)", // Military olive green for good
 ];
 const HEALTHBAR_WIDTH = 11; // Width of the health bar
 const LOADINGBAR_WIDTH = 14; // Width of the loading bar

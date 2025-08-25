@@ -10,15 +10,15 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 10px;
+  background: rgba(42, 42, 42, 0.95);
+  border: 2px solid rgba(74, 103, 65, 0.3);
+  border-radius: 4px;
   padding: 12px 20px;
   width: 360px !important;
   max-width: 360px !important;
   min-width: 360px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: background 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
   gap: 12px;
 }
 
@@ -60,12 +60,14 @@
   left: 50%;
   transform: translate(-50%, -50%) scale(0.9);
   padding: 16px 24px;
-  background: rgba(0, 0, 0, 0.8);
-  color: #fff;
+  background: rgba(26, 26, 26, 0.95);
+  border: 2px solid rgba(74, 103, 65, 0.5);
+  color: #f0f0f0;
   font-size: 20px;
-  border-radius: 12px;
+  border-radius: 4px;
   animation: fadePop 5s ease-out forwards;
   z-index: 9999;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
 }
 
 .setting-popup {
@@ -74,12 +76,14 @@
   left: 50%;
   transform: translate(-50%, -50%) scale(0.9);
   padding: 16px 24px;
-  background: rgba(0, 0, 0, 0.8);
-  color: #fff;
+  background: rgba(26, 26, 26, 0.95);
+  border: 2px solid rgba(74, 103, 65, 0.5);
+  color: #f0f0f0;
   font-size: 20px;
-  border-radius: 12px;
+  border-radius: 4px;
   animation: fadePop_2 10s ease-out forwards;
   z-index: 9999;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes fadePop {
@@ -120,7 +124,8 @@
 }
 
 .setting-item:hover {
-  background: #2a2a2a;
+  background: rgba(52, 52, 52, 0.95);
+  border-color: rgba(74, 103, 65, 0.5);
 }
 
 .setting-item.easter-egg:hover {
@@ -140,9 +145,9 @@
 }
 
 .setting-label {
-  color: #f0f0f0;
+  color: #e8e8e8;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .setting-input {
@@ -176,10 +181,15 @@
 
 .setting-input.slider {
   -webkit-appearance: none;
+  appearance: none;
   width: 180px;
   height: 10px;
-  background: linear-gradient(to right, #2196f3 50%, #444 50%);
-  border-radius: 5px;
+  background: linear-gradient(
+    to right,
+    #4a6741 50%,
+    rgba(255, 255, 255, 0.2) 50%
+  );
+  border-radius: 4px;
   outline: none;
   transition: background 0.3s;
 }
@@ -190,21 +200,22 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fff;
-  border: 2px solid #2196f3;
+  background: #f0f0f0;
+  border: 2px solid #4a6741;
   cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .setting-input.slider::-moz-range-track {
-  background-color: #444;
+  background-color: rgba(255, 255, 255, 0.2);
   height: 10px;
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 .setting-input.slider::-moz-range-progress {
-  background-color: #2196f3;
+  background-color: #4a6741;
   height: 10px;
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 .setting-input.slider:focus {
@@ -215,16 +226,23 @@
   width: 100%;
   text-align: center;
   font-size: 13px;
-  color: #aaa;
+  color: #d0d0d0;
 }
 
 .setting-input.number {
   width: 80px;
   padding: 6px 8px;
-  border: 1px solid #aaa;
-  border-radius: 6px;
-  background-color: #ffffff;
-  color: #000000;
+  border: 2px solid rgba(74, 103, 65, 0.3);
+  border-radius: 4px;
+  background-color: rgba(26, 26, 26, 0.9);
+  color: #e8e8e8;
+  transition: all 0.2s ease;
+}
+
+.setting-input.number:focus {
+  border-color: #4a6741;
+  outline: none;
+  box-shadow: 0 0 8px rgba(74, 103, 65, 0.3);
 }
 
 .switch {
@@ -252,7 +270,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #d9534f;
+  background-color: #a64d4d;
   transition: 0.4s;
   border-radius: 34px;
 }
@@ -267,10 +285,11 @@
   background-color: white;
   transition: 0.4s;
   border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .switch input:checked + .slider-round {
-  background-color: #4caf50;
+  background-color: #4a6741;
 }
 
 .switch input:checked + .slider-round::before {
@@ -284,7 +303,7 @@
 
 .setting-description {
   font-size: 12px;
-  color: #888;
+  color: #b0b0b0;
   margin-top: 2px;
   white-space: normal;
   word-break: break-word;
@@ -300,27 +319,30 @@
 .setting-keybind-description {
   flex: 1;
   font-size: 0.75rem;
-  color: #e5e5e5;
+  color: #d0d0d0;
   word-break: break-word;
   overflow-wrap: break-word;
   min-width: 0;
 }
 
 .setting-key {
-  background-color: black;
-  color: white;
+  background-color: #2a2a2a;
+  color: #e8e8e8;
   font-weight: 600;
   padding: 4px 12px;
-  border-radius: 6px;
+  border: 2px solid rgba(74, 103, 65, 0.3);
+  border-radius: 4px;
   font-family: monospace;
   font-size: 0.875rem;
-  box-shadow: 0 2px 0 #444;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   white-space: nowrap;
   user-select: none;
   outline: none;
+  transition: all 0.2s ease;
 }
 
 .setting-key:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #4a6741;
   outline-offset: 2px;
+  border-color: #4a6741;
 }

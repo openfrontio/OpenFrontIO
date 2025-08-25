@@ -1,13 +1,17 @@
 .t-link {
-  color: #ffffffb3;
+  color: #d0d0d0;
+  font-weight: 600;
+  text-decoration: none;
   transition: var(--transition);
 
   &:hover {
-    color: #fff;
+    color: #4a6741;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     transition: var(--transition);
   }
 }
 
 .t-text-white {
-  color: #ffffffb3;
+  color: #e8e8e8;
+  font-weight: 500;
 }
