@@ -110,8 +110,7 @@ export class TerritoryPatternsModal extends LitElement {
       >
         <pattern-button
           .pattern=${null}
-          .onSelect=${(p: Pattern | null) => this.selectPattern(p)}
-          .onPurchase=${(priceId: string) => handlePurchase(priceId)}
+          .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
         ></pattern-button>
         ${buttons}
       </div>
