@@ -1,9 +1,5 @@
-import { renderNumber } from "../../client/Utils";
-import { Config } from "../configuration/Config";
+/* eslint-disable max-lines */
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
-import { simpleHash } from "../Util";
-import { AllianceImpl } from "./AllianceImpl";
-import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {
   Alliance,
   AllianceRequest,
@@ -24,8 +20,8 @@ import {
   PlayerType,
   Quads,
   Team,
-  TerrainType,
   TerraNullius,
+  TerrainType,
   Trios,
   Unit,
   UnitInfo,
@@ -33,14 +29,19 @@ import {
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { AllianceImpl } from "./AllianceImpl";
+import { AllianceRequestImpl } from "./AllianceRequestImpl";
+import { Config } from "../configuration/Config";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
-import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
-import { assignTeams } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { assignTeams } from "./TeamAssignment";
+import { createRailNetwork } from "./RailNetworkImpl";
+import { renderNumber } from "../../client/Utils";
+import { simpleHash } from "../Util";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -64,8 +65,8 @@ export class GameImpl implements Game {
   _playersBySmallID: Player[] = [];
 
   private execs: Execution[] = [];
-  private _width: number;
-  private _height: number;
+  private readonly _width: number;
+  private readonly _height: number;
   _terraNullius: TerraNulliusImpl;
 
   allianceRequests: AllianceRequestImpl[] = [];
@@ -75,22 +76,22 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
-  private unitGrid: UnitGrid;
+  private readonly unitGrid: UnitGrid;
 
-  private playerTeams: Team[];
-  private botTeam: Team = ColoredTeams.Bot;
-  private _railNetwork: RailNetwork = createRailNetwork(this);
+  private playerTeams: Team[] = [];
+  private readonly botTeam: Team = ColoredTeams.Bot;
+  private readonly _railNetwork: RailNetwork = createRailNetwork(this);
 
   // Used to assign unique IDs to each new alliance
-  private nextAllianceID: number = 0;
+  private nextAllianceID = 0;
 
   constructor(
-    private _humans: PlayerInfo[],
-    private _nations: Nation[],
-    private _map: GameMap,
-    private miniGameMap: GameMap,
-    private _config: Config,
-    private _stats: Stats,
+    private readonly _humans: PlayerInfo[],
+    private readonly _nations: Nation[],
+    private readonly _map: GameMap,
+    private readonly miniGameMap: GameMap,
+    private readonly _config: Config,
+    private readonly _stats: Stats,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
@@ -124,7 +125,8 @@ export class GameImpl implements Game {
     if (numPlayerTeams < 2) {
       throw new Error(`Too few teams: ${numPlayerTeams}`);
     } else if (numPlayerTeams < 8) {
-      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
+      this.playerTeams.push(ColoredTeams.Red);
+      this.playerTeams.push(ColoredTeams.Blue);
       if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
       if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
       if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
@@ -247,7 +249,7 @@ export class GameImpl implements Game {
       .incomingAllianceRequests()
       .find((ar) => ar.requestor() === recipient);
     if (correspondingReq !== undefined) {
-      console.log(`got corresponding alliance requests, accepting`);
+      console.log("got corresponding alliance requests, accepting");
       correspondingReq.accept();
       return null;
     }
@@ -287,9 +289,9 @@ export class GameImpl implements Game {
 
     // Automatically remove embargoes only if they were automatically created
     if (requestor.hasEmbargoAgainst(recipient))
-      requestor.endTemporaryEmbargo(recipient.id());
+      requestor.endTemporaryEmbargo(recipient);
     if (recipient.hasEmbargoAgainst(requestor))
-      recipient.endTemporaryEmbargo(requestor.id());
+      recipient.endTemporaryEmbargo(requestor);
 
     this.addUpdate({
       accepted: true,
@@ -501,7 +503,7 @@ export class GameImpl implements Game {
 
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
-      throw Error(`cannot conquer water`);
+      throw Error("cannot conquer water");
     }
     const previousOwner = this.owner(tile) as TerraNullius | PlayerImpl;
     if (previousOwner.isPlayer()) {
@@ -522,7 +524,7 @@ export class GameImpl implements Game {
 
   relinquish(tile: TileRef) {
     if (!this.hasOwner(tile)) {
-      throw new Error(`Cannot relinquish tile because it is unowned`);
+      throw new Error("Cannot relinquish tile because it is unowned");
     }
     if (this.isWater(tile)) {
       throw new Error("Cannot relinquish water");
@@ -650,8 +652,9 @@ export class GameImpl implements Game {
         "team",
         winner,
         ...this.players()
-          .filter((p) => p.team() === winner && p.clientID() !== null)
-          .map((p) => p.clientID()!),
+          .filter((p) => p.team() === winner)
+          .map((p) => p.clientID())
+          .filter((id): id is ClientID => id !== null),
       ];
     } else {
       const clientId = winner.clientID();
@@ -749,7 +752,7 @@ export class GameImpl implements Game {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ) {
     return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
   }

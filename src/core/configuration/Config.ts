@@ -1,5 +1,3 @@
-import { Colord } from "colord";
-import { JWK } from "jose";
 import {
   Difficulty,
   Game,
@@ -14,11 +12,13 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { GameMap, TileRef } from "../game/GameMap";
+import { Colord } from "colord";
+import { JWK } from "jose";
+import { NukeType } from "../StatsSchemas";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
-import { NukeType } from "../StatsSchemas";
 
 export enum GameEnv {
   Dev,
@@ -26,7 +26,7 @@ export enum GameEnv {
   Prod,
 }
 
-export interface ServerConfig {
+export type ServerConfig = {
   turnIntervalMs(): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(
@@ -63,14 +63,14 @@ export interface ServerConfig {
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
   replayUrl(gameId: GameID): string;
-}
+};
 
-export interface NukeMagnitude {
+export type NukeMagnitude = {
   inner: number;
   outer: number;
-}
+};
 
-export interface Config {
+export type Config = {
   samHittingChance(): number;
   samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
@@ -83,7 +83,9 @@ export interface Config {
   isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
+  donateGold(): boolean;
   infiniteTroops(): boolean;
+  donateTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
@@ -120,6 +122,7 @@ export interface Config {
   shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
+  allianceRequestDuration(): Tick;
   allianceRequestCooldown(): Tick;
   temporaryEmbargoDuration(): Tick;
   targetDuration(): Tick;
@@ -132,7 +135,7 @@ export interface Config {
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(numberOfPorts: number): number;
-  trainGold(): Gold;
+  trainGold(isFriendly: boolean): Gold;
   trainSpawnRate(numberOfStations: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
@@ -169,9 +172,9 @@ export interface Config {
   structureMinDist(): number;
   isReplay(): boolean;
   allianceExtensionPromptOffset(): number;
-}
+};
 
-export interface Theme {
+export type Theme = {
   teamColor(team: Team): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
@@ -187,6 +190,7 @@ export interface Theme {
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;
+  neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
-}
+};

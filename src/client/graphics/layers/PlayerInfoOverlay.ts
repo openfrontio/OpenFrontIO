@@ -1,9 +1,6 @@
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { LitElement, TemplateResult, html } from "lit";
-import { ref } from "lit-html/directives/ref.js";
-import { customElement, property, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
-import { renderPlayerFlag } from "../../../core/CustomFlag";
-import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
   PlayerType,
@@ -11,13 +8,16 @@ import {
   Unit,
   UnitType,
 } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
+import { customElement, property, state } from "lit/decorators.js";
 import { renderNumber, renderTroops } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
+import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
+import { TileRef } from "../../../core/game/GameMap";
+import { TransformHandler } from "../TransformHandler";
+import { ref } from "lit-html/directives/ref.js";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { translateText } from "../../../client/Utils";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -60,11 +60,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private unit: UnitView | null = null;
 
   @state()
-  private _isInfoVisible: boolean = false;
+  private _isInfoVisible = false;
 
   private _isActive = false;
 
   private lastMouseUpdate = 0;
+
+  private showDetails = true;
 
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
@@ -105,7 +107,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const owner = this.game.owner(tile);
 
     if (owner && owner.isPlayer()) {
-      this.player = owner as PlayerView;
+      this.player = owner;
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
@@ -219,85 +221,96 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div class="p-2">
-        <div
+        <button
           class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
+          @click=${() => {
+            this.showDetails = !this.showDetails;
+            this.requestUpdate?.();
+          }}
         >
           ${player.cosmetics.flag
-            ? player.cosmetics.flag!.startsWith("!")
+            ? player.cosmetics.flag.startsWith("!")
               ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
                   ${ref((el) => {
                     if (el instanceof HTMLElement) {
                       requestAnimationFrame(() => {
-                        renderPlayerFlag(player.cosmetics.flag!, el);
+                        renderPlayerFlag(player.cosmetics.flag, el);
                       });
                     }
                   })}
                 ></div>`
               : html`<img
                   class="h-8 mr-1 aspect-[3/4]"
-                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
+                  src=${"/flags/" + player.cosmetics.flag + ".svg"}
                 />`
             : html``}
           ${player.name()}
-        </div>
-        ${player.team() !== null
-          ? html`<div class="text-sm opacity-80">
-              ${translateText("player_info_overlay.team")}: ${player.team()}
-            </div>`
+        </button>
+
+        <!-- Collapsible section -->
+        ${this.showDetails
+          ? html`
+              ${player.team() !== null
+                ? html`<div class="text-sm opacity-80">
+                    ${translateText("player_info_overlay.team")}:
+                    ${player.team()}
+                  </div>`
+                : ""}
+              <div class="text-sm opacity-80">
+                ${translateText("player_info_overlay.type")}: ${playerType}
+              </div>
+              ${player.troops() >= 1
+                ? html`<div class="text-sm opacity-80" translate="no">
+                    ${translateText("player_info_overlay.d_troops")}:
+                    ${renderTroops(player.troops())}
+                  </div>`
+                : ""}
+              ${attackingTroops >= 1
+                ? html`<div class="text-sm opacity-80" translate="no">
+                    ${translateText("player_info_overlay.a_troops")}:
+                    ${renderTroops(attackingTroops)}
+                  </div>`
+                : ""}
+              <div class="text-sm opacity-80" translate="no">
+                ${translateText("player_info_overlay.gold")}:
+                ${renderNumber(player.gold())}
+              </div>
+              ${this.displayUnitCount(
+                player,
+                UnitType.Port,
+                "player_info_overlay.ports",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.City,
+                "player_info_overlay.cities",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.Factory,
+                "player_info_overlay.factories",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.MissileSilo,
+                "player_info_overlay.missile_launchers",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.SAMLauncher,
+                "player_info_overlay.sams",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.Warship,
+                "player_info_overlay.warships",
+              )}
+              ${relationHtml}
+            `
           : ""}
-        <div class="text-sm opacity-80">
-          ${translateText("player_info_overlay.type")}: ${playerType}
-        </div>
-        ${player.troops() >= 1
-          ? html`<div class="text-sm opacity-80" translate="no">
-              ${translateText("player_info_overlay.d_troops")}:
-              ${renderTroops(player.troops())}
-            </div>`
-          : ""}
-        ${attackingTroops >= 1
-          ? html`<div class="text-sm opacity-80" translate="no">
-              ${translateText("player_info_overlay.a_troops")}:
-              ${renderTroops(attackingTroops)}
-            </div>`
-          : ""}
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.gold")}:
-          ${renderNumber(player.gold())}
-        </div>
-        ${this.displayUnitCount(
-          player,
-          UnitType.Port,
-          "player_info_overlay.ports",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.City,
-          "player_info_overlay.cities",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.Factory,
-          "player_info_overlay.factories",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.MissileSilo,
-          "player_info_overlay.missile_launchers",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.SAMLauncher,
-          "player_info_overlay.sams",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.Warship,
-          "player_info_overlay.warships",
-        )}
-        ${relationHtml}
       </div>
     `;
   }
@@ -343,7 +356,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg
+          transition-all duration-300  text-white text-lg md:text-base
+          ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

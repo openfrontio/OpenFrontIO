@@ -1,12 +1,12 @@
-import { Cell } from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
 import { AStar, PathFindResultType } from "./AStar";
+import { GameMap, TileRef } from "../game/GameMap";
 import { GraphAdapter, SerialAStar } from "./SerialAStar";
+import { Cell } from "../game/Game";
 
 export class GameMapAdapter implements GraphAdapter<TileRef> {
   constructor(
-    private gameMap: GameMap,
-    private waterPath: boolean,
+    private readonly gameMap: GameMap,
+    private readonly waterPath: boolean,
   ) {}
 
   neighbors(node: TileRef): TileRef[] {
@@ -27,17 +27,17 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
   }
 }
 export class MiniAStar implements AStar<TileRef> {
-  private aStar: AStar<TileRef>;
+  private readonly aStar: AStar<TileRef>;
 
   constructor(
-    private gameMap: GameMap,
-    private miniMap: GameMap,
-    private src: TileRef | TileRef[],
-    private dst: TileRef,
+    private readonly gameMap: GameMap,
+    private readonly miniMap: GameMap,
+    private readonly src: TileRef | TileRef[],
+    private readonly dst: TileRef,
     iterations: number,
     maxTries: number,
-    waterPath: boolean = true,
-    directionChangePenalty: number = 0,
+    waterPath = true,
+    directionChangePenalty = 0,
   ) {
     const srcArray: TileRef[] = Array.isArray(src) ? src : [src];
     const miniSrc = srcArray.map((srcPoint) =>
@@ -113,7 +113,7 @@ function fixExtremes(upscaled: Cell[], cellDst: Cell, cellSrc?: Cell): Cell[] {
   return upscaled;
 }
 
-function upscalePath(path: Cell[], scaleFactor: number = 2): Cell[] {
+function upscalePath(path: Cell[], scaleFactor = 2): Cell[] {
   // Scale up each point
   const scaledPath = path.map(
     (point) => new Cell(point.x * scaleFactor, point.y * scaleFactor),

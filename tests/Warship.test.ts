@@ -1,5 +1,3 @@
-import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
-import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
   Game,
   Player,
@@ -7,8 +5,10 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
-import { setup } from "./util/Setup";
+import { MoveWarshipExecution } from "../src/core/execution/MoveWarshipExecution";
+import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import { executeTicks } from "./util/utils";
+import { setup } from "./util/Setup";
 
 const coastX = 7;
 let game: Game;
@@ -38,7 +38,7 @@ describe("Warship", () => {
   });
 
   test("Warship heals only if player has port", async () => {
-    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    const { maxHealth } = game.config().unitInfo(UnitType.Warship);
     if (typeof maxHealth !== "number") {
       expect(typeof maxHealth).toBe("number");
       throw new Error("unreachable");

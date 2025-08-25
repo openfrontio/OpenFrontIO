@@ -1,14 +1,14 @@
-import { html, LitElement } from "lit";
+import { AlternateViewEvent, RedrawGraphicsEvent } from "../../InputHandler";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
-import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
-import { PauseGameEvent } from "../../Transport";
-import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
+import { PauseGameEvent } from "../../Transport";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { translateText } from "../../Utils";
 
 const button = ({
   classes = "",
@@ -43,37 +43,37 @@ const secondsToHms = (d: number): string => {
 
 @customElement("options-menu")
 export class OptionsMenu extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
-  private userSettings: UserSettings = new UserSettings();
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
+  private readonly userSettings: UserSettings = new UserSettings();
 
   @state()
-  private showPauseButton: boolean = true;
+  private showPauseButton = true;
 
   @state()
-  private isPaused: boolean = false;
+  private isPaused = false;
 
   @state()
-  private timer: number = 0;
+  private timer = 0;
 
   @state()
-  private showSettings: boolean = false;
+  private showSettings = false;
 
   private isVisible = false;
 
   private hasWinner = false;
 
   @state()
-  private alternateView: boolean = false;
+  private alternateView = false;
 
   private onTerrainButtonClick() {
     this.alternateView = !this.alternateView;
-    this.eventBus.emit(new AlternateViewEvent(this.alternateView));
+    this.eventBus?.emit(new AlternateViewEvent(this.alternateView));
     this.requestUpdate();
   }
 
   private onExitButtonClick() {
-    const isAlive = this.game.myPlayer()?.isAlive();
+    const isAlive = this.game?.myPlayer()?.isAlive();
     if (isAlive) {
       const isConfirmed = confirm(
         translateText("help_modal.exit_confirmation"),
@@ -95,7 +95,7 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
-    this.eventBus.emit(new PauseGameEvent(this.isPaused));
+    this.eventBus?.emit(new PauseGameEvent(this.isPaused));
   }
 
   private onToggleEmojisButtonClick() {
@@ -116,7 +116,7 @@ export class OptionsMenu extends LitElement implements Layer {
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.requestUpdate();
-    this.eventBus.emit(new RefreshGraphicsEvent());
+    this.eventBus?.emit(new RedrawGraphicsEvent());
   }
 
   private onToggleRandomNameModeButtonClick() {
@@ -143,6 +143,7 @@ export class OptionsMenu extends LitElement implements Layer {
   }
 
   init() {
+    if (!this.game) throw new Error("Not initialzied");
     console.log("init called from OptionsMenu");
     this.showPauseButton =
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
@@ -152,6 +153,7 @@ export class OptionsMenu extends LitElement implements Layer {
   }
 
   tick() {
+    if (!this.game) throw new Error("Not initialzied");
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
@@ -205,7 +207,9 @@ export class OptionsMenu extends LitElement implements Layer {
         </div>
 
         <div
-          class="options-menu flex flex-col justify-around gap-y-3 mt-2 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md ${!this
+          class="options-menu flex flex-col justify-around gap-y-3 mt-2
+          bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md
+          ${!this
             .showSettings
             ? "hidden"
             : ""}"

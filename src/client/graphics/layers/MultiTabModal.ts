@@ -3,22 +3,22 @@ import { customElement, property, state } from "lit/decorators.js";
 import { GameEnv } from "../../../core/configuration/Config";
 import { GameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { Layer } from "./Layer";
 import { MultiTabDetector } from "../../MultiTabDetector";
 import { translateText } from "../../Utils";
-import { Layer } from "./Layer";
 
 @customElement("multi-tab-modal")
 export class MultiTabModal extends LitElement implements Layer {
-  public game: GameView;
+  public game: GameView | undefined;
 
-  private detector: MultiTabDetector;
+  private detector: MultiTabDetector | undefined;
 
-  @property({ type: Number }) duration: number = 5000;
-  @state() private countdown: number = 5;
-  @state() private isVisible: boolean = false;
-  @state() private fakeIp: string = "";
-  @state() private deviceFingerprint: string = "";
-  @state() private reported: boolean = true;
+  @property({ type: Number }) duration = 5000;
+  @state() private countdown = 5;
+  @state() private isVisible = false;
+  @state() private fakeIp = "";
+  @state() private deviceFingerprint = "";
+  @state() private reported = true;
 
   private intervalId?: number;
 
@@ -28,6 +28,7 @@ export class MultiTabModal extends LitElement implements Layer {
   }
 
   tick() {
+    if (!this.game) throw new Error("Not initialzied");
     if (
       this.game.inSpawnPhase() ||
       this.game.config().gameConfig().gameType === GameType.Singleplayer ||
@@ -65,6 +66,7 @@ export class MultiTabModal extends LitElement implements Layer {
 
   // Show the modal with penalty information
   public show(duration: number): void {
+    if (!this.game) throw new Error("Not initialzied");
     if (!this.game.myPlayer()?.isAlive()) {
       return;
     }
@@ -121,7 +123,8 @@ export class MultiTabModal extends LitElement implements Layer {
         class="fixed inset-0 z-50 overflow-auto bg-red-500/20 flex items-center justify-center"
       >
         <div
-          class="relative p-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full m-4 transition-all transform"
+          class="relative p-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl
+          max-w-md w-full m-4 transition-all transform"
         >
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-2xl font-bold text-red-600 dark:text-red-400">

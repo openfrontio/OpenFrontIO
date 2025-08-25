@@ -1,10 +1,7 @@
-import { Unit } from "../../../src/core/game/Game";
-import {
-  RailNetworkImpl,
-  StationManagerImpl,
-} from "../../../src/core/game/RailNetworkImpl";
-import { Railroad } from "../../../src/core/game/Railroad";
+import { RailNetworkImpl, StationManagerImpl } from "../../../src/core/game/RailNetworkImpl";
 import { Cluster } from "../../../src/core/game/TrainStation";
+import { Railroad } from "../../../src/core/game/Railroad";
+import { Unit } from "../../../src/core/game/Game";
 
 // Mock types
 const createMockStation = (unitId: number): any => {
@@ -42,7 +39,7 @@ describe("StationManagerImpl", () => {
     const station = createMockStation(1);
     manager.addStation(station);
     manager.removeStation(station);
-    expect(manager.findStation(station.unit)).toBe(null);
+    expect(manager.findStation(station.unit)).toBeNull();
   });
 });
 

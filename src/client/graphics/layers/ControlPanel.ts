@@ -1,45 +1,47 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
-import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
-import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
-import { UIState } from "../UIState";
+import { AttackRatioEvent } from "../../InputHandler";
+import { ClientID } from "../../../core/Schemas";
+import { EventBus } from "../../../core/EventBus";
+import { GameView } from "../../../core/game/GameView";
+import { Gold } from "../../../core/game/Game";
 import { Layer } from "./Layer";
+import { UIState } from "../UIState";
+import { translateText } from "../../../client/Utils";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
-  public game: GameView;
-  public clientID: ClientID;
-  public eventBus: EventBus;
-  public uiState: UIState;
+  public game: GameView | undefined;
+  public clientID: ClientID | undefined;
+  public eventBus: EventBus | undefined;
+  public uiState: UIState | undefined;
 
   @state()
-  private attackRatio: number = 0.2;
+  private attackRatio = 0.2;
 
   @state()
-  private _maxTroops: number;
+  private _maxTroops = 0;
 
   @state()
-  private troopRate: number;
+  private troopRate = 0;
 
   @state()
-  private _troops: number;
+  private _troops = 0;
 
   @state()
   private _isVisible = false;
 
   @state()
-  private _gold: Gold;
+  private _gold: Gold = 0n;
 
-  private _troopRateIsIncreasing: boolean = true;
+  private _troopRateIsIncreasing = true;
 
-  private _lastTroopIncreaseRate: number;
+  private _lastTroopIncreaseRate = 0;
 
   init() {
+    if (!this.uiState) throw new Error("Not initialized");
+    if (!this.eventBus) throw new Error("Not initialized");
     this.attackRatio = Number(
       localStorage.getItem("settings.attackRatio") ?? "0.2",
     );
@@ -71,6 +73,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
+    if (!this.game) return;
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this.setVisibile(true);
     }
@@ -94,7 +97,8 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   private updateTroopIncrease() {
-    const player = this.game?.myPlayer();
+    if (this.game === undefined) return;
+    const player = this.game.myPlayer();
     if (player === null) return;
     const troopIncreaseRate = this.game.config().troopIncreaseRate(player);
     this._troopRateIsIncreasing =
@@ -103,6 +107,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   onAttackRatioChange(newRatio: number) {
+    if (this.uiState === undefined) return;
     this.uiState.attackRatio = newRatio;
   }
 
@@ -162,7 +167,8 @@ export class ControlPanel extends LitElement implements Layer {
       </style>
       <div
         class="${this._isVisible
-          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
+          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 " +
+            "pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >

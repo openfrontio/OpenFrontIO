@@ -1,14 +1,20 @@
 import { AllianceRequest, Player, Tick } from "./Game";
-import { GameImpl } from "./GameImpl";
 import { AllianceRequestUpdate, GameUpdateType } from "./GameUpdates";
+import { GameImpl } from "./GameImpl";
 
 export class AllianceRequestImpl implements AllianceRequest {
+  private status_: "pending" | "accepted" | "rejected" = "pending";
+
   constructor(
-    private requestor_: Player,
-    private recipient_: Player,
-    private tickCreated: number,
-    private game: GameImpl,
+    private readonly requestor_: Player,
+    private readonly recipient_: Player,
+    private readonly tickCreated: number,
+    private readonly game: GameImpl,
   ) {}
+
+  status(): "pending" | "accepted" | "rejected" {
+    return this.status_;
+  }
 
   requestor(): Player {
     return this.requestor_;
@@ -23,9 +29,11 @@ export class AllianceRequestImpl implements AllianceRequest {
   }
 
   accept(): void {
+    this.status_ = "accepted";
     this.game.acceptAllianceRequest(this);
   }
   reject(): void {
+    this.status_ = "rejected";
     this.game.rejectAllianceRequest(this);
   }
 

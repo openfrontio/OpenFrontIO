@@ -1,15 +1,15 @@
-import { Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { PlayerID } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
 import {
   GameUpdateType,
-  RailroadUpdate,
   RailTile,
   RailType,
+  RailroadUpdate,
 } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { Colord } from "colord";
+import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
+import { PlayerID } from "../../../core/game/Game";
+import { Theme } from "../../../core/configuration/Config";
+import { TileRef } from "../../../core/game/GameMap";
 import { getRailroadRects } from "./RailroadSprites";
 
 type RailRef = {
@@ -19,15 +19,15 @@ type RailRef = {
 };
 
 export class RailroadLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
-  private theme: Theme;
+  private canvas: HTMLCanvasElement | undefined;
+  private context: CanvasRenderingContext2D | undefined;
+  private readonly theme: Theme;
   // Save the number of railroads per tiles. Delete when it reaches 0
-  private existingRailroads = new Map<TileRef, RailRef>();
+  private readonly existingRailroads = new Map<TileRef, RailRef>();
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
 
-  constructor(private game: GameView) {
+  constructor(private readonly game: GameView) {
     this.theme = game.config().theme();
   }
 
@@ -90,6 +90,7 @@ export class RailroadLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
     this.updateRailColors();
     context.drawImage(
       this.canvas,
@@ -138,6 +139,7 @@ export class RailroadLayer implements Layer {
     if (!ref || ref.numOccurence <= 0) {
       this.existingRailroads.delete(railRoad.tile);
       this.railTileList = this.railTileList.filter((t) => t !== railRoad.tile);
+      if (this.context === undefined) throw new Error("Not initialized");
       this.context.clearRect(
         this.game.x(railRoad.tile) * 2 - 1,
         this.game.y(railRoad.tile) * 2 - 1,
@@ -151,15 +153,17 @@ export class RailroadLayer implements Layer {
     const x = this.game.x(railRoad.tile);
     const y = this.game.y(railRoad.tile);
     const owner = this.game.owner(railRoad.tile);
-    const recipient = owner.isPlayer() ? (owner as PlayerView) : null;
+    const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
       ? this.theme.railroadColor(recipient)
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });
+    if (this.context === undefined) throw new Error("Not initialized");
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(x, y, railRoad.railType);
   }
 
   private paintRailRects(x: number, y: number, direction: RailType) {
+    if (this.context === undefined) throw new Error("Not initialized");
     const railRects = getRailroadRects(direction);
     for (const [dx, dy, w, h] of railRects) {
       this.context.fillRect(x * 2 + dx, y * 2 + dy, w, h);

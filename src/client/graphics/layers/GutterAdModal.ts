@@ -1,8 +1,8 @@
+import { EventBus, GameEvent } from "../../../core/EventBus";
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus, GameEvent } from "../../../core/EventBus";
-import { getGamesPlayed } from "../../Utils";
 import { Layer } from "./Layer";
+import { getGamesPlayed } from "../../Utils";
 
 export class GutterAdModalEvent implements GameEvent {
   constructor(public readonly isVisible: boolean) {}
@@ -10,19 +10,19 @@ export class GutterAdModalEvent implements GameEvent {
 
 @customElement("gutter-ad-modal")
 export class GutterAdModal extends LitElement implements Layer {
-  public eventBus: EventBus;
+  public eventBus: EventBus | undefined;
 
   @state()
-  private isVisible: boolean = false;
+  private isVisible = false;
 
   @state()
-  private adLoaded: boolean = false;
+  private adLoaded = false;
 
-  private leftAdType: string = "left_rail";
-  private rightAdType: string = "right_rail";
-  private leftContainerId: string = "gutter-ad-container-left";
-  private rightContainerId: string = "gutter-ad-container-right";
-  private margin: string = "10px";
+  private readonly leftAdType = "left_rail";
+  private readonly rightAdType = "right_rail";
+  private readonly leftContainerId = "gutter-ad-container-left";
+  private readonly rightContainerId = "gutter-ad-container-right";
+  private readonly margin = "10px";
 
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
@@ -30,6 +30,7 @@ export class GutterAdModal extends LitElement implements Layer {
   }
 
   init() {
+    if (!this.eventBus) throw new Error("Not initialized");
     if (getGamesPlayed() > 1) {
       this.eventBus.on(GutterAdModalEvent, (event) => {
         if (event.isVisible) {
@@ -136,7 +137,9 @@ export class GutterAdModal extends LitElement implements Layer {
     return html`
       <!-- Left Gutter Ad -->
       <div
-        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center justify-center"
+        class="hidden xl:flex fixed left-0 top-1/2 transform -translate-y-1/2
+        w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center
+        justify-center"
         style="margin-left: ${this.margin};"
       >
         <div
@@ -147,7 +150,9 @@ export class GutterAdModal extends LitElement implements Layer {
 
       <!-- Right Gutter Ad -->
       <div
-        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2 w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center justify-center"
+        class="hidden xl:flex fixed right-0 top-1/2 transform -translate-y-1/2
+        w-[160px] min-h-[600px] z-[10] pointer-events-auto items-center
+        justify-center"
         style="margin-right: ${this.margin};"
       >
         <div

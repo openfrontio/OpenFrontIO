@@ -1,5 +1,5 @@
-import { JWK } from "jose";
-import { z } from "zod";
+/* eslint-disable max-lines */
+import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
 import {
   Difficulty,
   Duos,
@@ -12,22 +12,23 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
-  TerrainType,
   TerraNullius,
+  TerrainType,
   Tick,
   Trios,
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { PlayerView } from "../game/GameView";
-import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
-import { NukeType } from "../StatsSchemas";
 import { assertNever, simpleHash, within } from "../Util";
-import { Config, GameEnv, NukeMagnitude, ServerConfig, Theme } from "./Config";
+import { JWK } from "jose";
+import { NukeType } from "../StatsSchemas";
 import { PastelTheme } from "./PastelTheme";
 import { PastelThemeDark } from "./PastelThemeDark";
+import { PlayerView } from "../game/GameView";
+import { TileRef } from "../game/GameMap";
+import { UserSettings } from "../game/UserSettings";
+import { z } from "zod";
 
 const JwksSchema = z.object({
   keys: z
@@ -67,6 +68,7 @@ const numPlayersConfig = {
   [GameMapType.World]: [150, 80, 50],
   [GameMapType.GiantWorldMap]: [150, 100, 60],
   [GameMapType.Halkidiki]: [50, 40, 30],
+  [GameMapType.NorthernHemisphere]: [100, 60, 40],
   [GameMapType.StraitOfGibraltar]: [50, 40, 30],
   [GameMapType.Italia]: [50, 40, 30],
   [GameMapType.Pluto]: [70, 50, 40],
@@ -99,7 +101,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.CF_CREDS_PATH ?? "";
   }
 
-  private publicKey: JWK;
+  private publicKey: JWK | undefined;
   abstract jwtAudience(): string;
   jwtIssuer(): string {
     const audience = this.jwtAudience();
@@ -213,13 +215,13 @@ export abstract class DefaultServerConfig implements ServerConfig {
 }
 
 export class DefaultConfig implements Config {
-  private pastelTheme: PastelTheme = new PastelTheme();
-  private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
+  private readonly pastelTheme: PastelTheme = new PastelTheme();
+  private readonly pastelThemeDark: PastelThemeDark = new PastelThemeDark();
   constructor(
-    private _serverConfig: ServerConfig,
-    private _gameConfig: GameConfig,
-    private _userSettings: UserSettings | null,
-    private _isReplay: boolean,
+    private readonly _serverConfig: ServerConfig,
+    private readonly _gameConfig: GameConfig,
+    private readonly _userSettings: UserSettings | null,
+    private readonly _isReplay: boolean,
   ) {}
 
   stripePublishableKey(): string {
@@ -328,15 +330,22 @@ export class DefaultConfig implements Config {
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }
+  donateGold(): boolean {
+    return this._gameConfig.donateGold;
+  }
   infiniteTroops(): boolean {
     return this._gameConfig.infiniteTroops;
   }
+  donateTroops(): boolean {
+    return this._gameConfig.donateTroops;
+  }
   trainSpawnRate(numberOfStations: number): number {
-    return Math.min(1400, Math.round(20 * Math.pow(numberOfStations, 0.5)));
+    return Math.min(1400, Math.round(40 * Math.pow(numberOfStations, 0.5)));
   }
-  trainGold(): Gold {
-    return BigInt(4_000);
+  trainGold(isFriendly: boolean): Gold {
+    return isFriendly ? 100_000n : 25_000n;
   }
+
   trainStationMinRange(): number {
     return 15;
   }
@@ -529,6 +538,9 @@ export class DefaultConfig implements Config {
   }
   targetCooldown(): Tick {
     return 15 * 10;
+  }
+  allianceRequestDuration(): Tick {
+    return 20 * 10;
   }
   allianceRequestCooldown(): Tick {
     return 30 * 10;

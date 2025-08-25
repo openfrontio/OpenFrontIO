@@ -1,8 +1,8 @@
-import { UnitInfo, UnitType } from "../game/Game";
-import { UserSettings } from "../game/UserSettings";
+import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 import { GameConfig, GameID } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
-import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
+import { UnitInfo, UnitType } from "../game/Game";
+import { UserSettings } from "../game/UserSettings";
 
 export class DevServerConfig extends DefaultServerConfig {
   adminToken(): string {

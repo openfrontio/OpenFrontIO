@@ -1,45 +1,51 @@
 import {
   Execution,
   Game,
-  isUnit,
   MessageType,
   Player,
   Unit,
   UnitType,
+  isUnit,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { SAMMissileExecution } from "./SAMMissileExecution";
+import { TileRef } from "../game/GameMap";
 
 type Target = {
   unit: Unit;
   tile: TileRef;
 };
 
+type InterceptionTile = {
+  tile: TileRef;
+  tick: number;
+};
+
 /**
  * Smart SAM targeting system preshoting nukes so its range is strictly enforced
  */
 class SAMTargetingSystem {
-  // Store unreachable nukes so the SAM won't compute an interception point for them every frame
-  private nukesToIgnore: Set<number> = new Set();
+  // Interception tiles are computed a single time, but it may not be reachable yet.
+  // Store the result so it can be intercepted at the proper time, rather than recomputing each ticks
+  // Null interception tile means there are no interception tiles in range. Store it to
+  private readonly precomputedNukes: Map<number, InterceptionTile | null> =
+    new Map();
+  private readonly missileSpeed: number;
 
   constructor(
-    private mg: Game,
-    private player: Player,
-    private sam: Unit,
-  ) {}
+    private readonly mg: Game,
+    private readonly sam: Unit,
+  ) {
+    this.missileSpeed = this.mg.config().defaultSamMissileSpeed();
+  }
 
   updateUnreachableNukes(nearbyUnits: { unit: Unit; distSquared: number }[]) {
     const nearbyUnitSet = new Set(nearbyUnits.map((u) => u.unit.id()));
-    for (const nukeId of this.nukesToIgnore) {
+    for (const nukeId of this.precomputedNukes.keys()) {
       if (!nearbyUnitSet.has(nukeId)) {
-        this.nukesToIgnore.delete(nukeId);
+        this.precomputedNukes.delete(nukeId);
       }
     }
-  }
-
-  private storeUnreachableNukes(nukeId: number) {
-    this.nukesToIgnore.add(nukeId);
   }
 
   private isInRange(tile: TileRef) {
@@ -49,32 +55,33 @@ class SAMTargetingSystem {
   }
 
   private tickToReach(currentTile: TileRef, tile: TileRef): number {
-    const missileSpeed = this.mg.config().defaultSamMissileSpeed();
-    return Math.ceil(this.mg.manhattanDist(currentTile, tile) / missileSpeed);
+    return Math.ceil(
+      this.mg.manhattanDist(currentTile, tile) / this.missileSpeed,
+    );
   }
 
-  private computeInterceptionTile(unit: Unit): TileRef | undefined {
+  private computeInterceptionTile(unit: Unit): InterceptionTile | undefined {
     const trajectory = unit.trajectory();
     const samTile = this.sam.tile();
     const currentIndex = unit.trajectoryIndex();
     const explosionTick: number = trajectory.length - currentIndex;
-    for (let i = unit.trajectoryIndex(); i < trajectory.length; i++) {
+    for (let i = currentIndex; i < trajectory.length; i++) {
       const trajectoryTile = trajectory[i];
       if (trajectoryTile.targetable && this.isInRange(trajectoryTile.tile)) {
         const nukeTickToReach = i - currentIndex;
         const samTickToReach = this.tickToReach(samTile, trajectoryTile.tile);
-        const reachableOnTime = Math.abs(nukeTickToReach - samTickToReach) <= 1;
-        if (reachableOnTime && samTickToReach < explosionTick) {
-          return trajectoryTile.tile;
+        const tickBeforeShooting = nukeTickToReach - samTickToReach;
+        if (samTickToReach < explosionTick && tickBeforeShooting >= 0) {
+          return { tick: tickBeforeShooting, tile: trajectoryTile.tile };
         }
       }
     }
     return undefined;
   }
 
-  public getSingleTarget(): Target | null {
+  public getSingleTarget(ticks: number): Target | null {
     // Look beyond the SAM range so it can preshot nukes
-    const detectionRange = this.mg.config().defaultSamRange() * 1.5;
+    const detectionRange = this.mg.config().defaultSamRange() * 2;
     const nukes = this.mg.nearbyUnits(
       this.sam.tile(),
       detectionRange,
@@ -82,8 +89,8 @@ class SAMTargetingSystem {
       ({ unit }) => {
         return (
           isUnit(unit) &&
-          unit.owner() !== this.player &&
-          !this.player.isFriendly(unit.owner())
+          unit.owner() !== this.sam.owner() &&
+          !this.sam.owner().isFriendly(unit.owner())
         );
       },
     );
@@ -93,16 +100,42 @@ class SAMTargetingSystem {
 
     const targets: Array<Target> = [];
     for (const nuke of nukes) {
-      if (this.nukesToIgnore.has(nuke.unit.id())) {
-        continue;
+      const nukeId = nuke.unit.id();
+      const cached = this.precomputedNukes.get(nukeId);
+      if (cached !== undefined) {
+        if (cached === null) {
+          // Known unreachable, skip.
+          continue;
+        }
+        if (cached.tick === ticks) {
+          // Time to shoot!
+          targets.push({ tile: cached.tile, unit: nuke.unit });
+          this.precomputedNukes.delete(nukeId);
+          continue;
+        }
+        if (cached.tick > ticks) {
+          // Not due yet, skip for now.
+          continue;
+        }
+        // Missed the planned tick (e.g was on cooldown), recompute a new interception tile if possible
+        this.precomputedNukes.delete(nukeId);
       }
       const interceptionTile = this.computeInterceptionTile(nuke.unit);
       if (interceptionTile !== undefined) {
-        // eslint-disable-next-line sort-keys
-        targets.push({ unit: nuke.unit, tile: interceptionTile });
+        if (interceptionTile.tick <= 1) {
+          // Shoot instantly
+          // eslint-disable-next-line sort-keys
+          targets.push({ unit: nuke.unit, tile: interceptionTile.tile });
+        } else {
+          // Nuke will be reachable but not yet. Store the result.
+          this.precomputedNukes.set(nukeId, {
+            tick: interceptionTile.tick + ticks,
+            tile: interceptionTile.tile,
+          });
+        }
       } else {
         // Store unreachable nukes in order to prevent useless interception computation
-        this.storeUnreachableNukes(nuke.unit.id());
+        this.precomputedNukes.set(nukeId, null);
       }
     }
 
@@ -127,20 +160,20 @@ class SAMTargetingSystem {
 }
 
 export class SAMLauncherExecution implements Execution {
-  private mg: Game;
-  private active: boolean = true;
+  private mg: Game | undefined;
+  private active = true;
 
   // As MIRV go very fast we have to detect them very early but we only
   // shoot the one targeting very close (MIRVWarheadProtectionRadius)
-  private MIRVWarheadSearchRadius = 400;
-  private MIRVWarheadProtectionRadius = 50;
-  private targetingSystem: SAMTargetingSystem;
+  private readonly MIRVWarheadSearchRadius = 400;
+  private readonly MIRVWarheadProtectionRadius = 50;
+  private targetingSystem: SAMTargetingSystem | undefined;
 
   private pseudoRandom: PseudoRandom | undefined;
 
   constructor(
     private player: Player,
-    private tile: TileRef | null,
+    private readonly tile: TileRef | null,
     private sam: Unit | null = null,
   ) {
     if (sam !== null) {
@@ -157,6 +190,7 @@ export class SAMLauncherExecution implements Execution {
       return true;
     }
 
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (type === UnitType.MIRVWarhead) {
       return random < this.mg.config().samWarheadHittingChance();
     }
@@ -165,9 +199,7 @@ export class SAMLauncherExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.mg === null || this.player === null) {
-      throw new Error("Not initialized");
-    }
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (this.sam === null) {
       if (this.tile === null) {
         throw new Error("tile is null");
@@ -180,11 +212,7 @@ export class SAMLauncherExecution implements Execution {
       }
       this.sam = this.player.buildUnit(UnitType.SAMLauncher, spawnTile, {});
     }
-    this.targetingSystem ??= new SAMTargetingSystem(
-      this.mg,
-      this.player,
-      this.sam,
-    );
+    this.targetingSystem ??= new SAMTargetingSystem(this.mg, this.sam);
 
     if (this.sam.isInCooldown()) {
       const frontTime = this.sam.missileTimerQueue()[0];
@@ -216,6 +244,7 @@ export class SAMLauncherExecution implements Execution {
       this.MIRVWarheadSearchRadius,
       UnitType.MIRVWarhead,
       ({ unit }) => {
+        if (this.mg === undefined) return false;
         if (!isUnit(unit)) return false;
         if (unit.owner() === this.player) return false;
         if (this.player.isFriendly(unit.owner())) return false;
@@ -231,7 +260,10 @@ export class SAMLauncherExecution implements Execution {
 
     let target: Target | null = null;
     if (mirvWarheadTargets.length === 0) {
-      target = this.targetingSystem.getSingleTarget();
+      target = this.targetingSystem.getSingleTarget(ticks);
+      if (target !== null) {
+        console.log("Target acquired");
+      }
     }
 
     const isSingleTarget = target && !target.unit.targetedBySAM();

@@ -1,15 +1,15 @@
 import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
+import { TileRef } from "../game/GameMap";
 import { getSpawnTiles } from "./Util";
 
 export class SpawnExecution implements Execution {
-  active: boolean = true;
-  private mg: Game;
+  active = true;
+  private mg: Game | undefined;
 
   constructor(
-    private playerInfo: PlayerInfo,
+    private readonly playerInfo: PlayerInfo,
     public readonly tile: TileRef,
   ) {}
 
@@ -20,6 +20,7 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (!this.mg.isValidRef(this.tile)) {
       console.warn(`SpawnExecution: tile ${this.tile} not valid`);
       return;

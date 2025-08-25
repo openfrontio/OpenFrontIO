@@ -79,7 +79,7 @@ describe("InputHandler AutoUpgrade", () => {
         }),
       );
 
-      const calls = mockEmit.mock.calls;
+      const { calls } = mockEmit.mock;
       const lastCall = calls[calls.length - 1];
       expect(lastCall[0]).not.toBeInstanceOf(AutoUpgradeEvent);
     });

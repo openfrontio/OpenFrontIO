@@ -31,6 +31,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   FalklandIslands: "Falkland Islands",
   Baikal: "Baikal",
   Halkidiki: "Halkidiki",
+  NorthernHemisphere: "Northern Hemisphere",
   StraitOfGibraltar: "Strait of Gibraltar",
   Italia: "Italia",
   Yenisei: "Yenisei",
@@ -41,7 +42,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
 export class MapDisplay extends LitElement {
   @property({ type: String }) mapKey = "";
   @property({ type: Boolean }) selected = false;
-  @property({ type: String }) translation: string = "";
+  @property({ type: String }) translation = "";
   @state() private mapWebpPath: string | null = null;
   @state() private mapName: string | null = null;
   @state() private isLoading = true;

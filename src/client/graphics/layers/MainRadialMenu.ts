@@ -1,45 +1,44 @@
-import { LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { TransformHandler } from "../TransformHandler";
-import { UIState } from "../UIState";
-import { BuildMenu } from "./BuildMenu";
-import { ChatIntegration } from "./ChatIntegration";
-import { EmojiTable } from "./EmojiTable";
-import { Layer } from "./Layer";
-import { PlayerActionHandler } from "./PlayerActionHandler";
-import { PlayerPanel } from "./PlayerPanel";
-import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
 import {
-  centerButtonElement,
   COLORS,
   MenuElementParams,
+  centerButtonElement,
   rootMenuElement,
 } from "./RadialMenuElements";
-
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
+import { BuildMenu } from "./BuildMenu";
+import { ChatIntegration } from "./ChatIntegration";
 import { ContextMenuEvent } from "../../InputHandler";
+import { EmojiTable } from "./EmojiTable";
+import { EventBus } from "../../../core/EventBus";
+import { Layer } from "./Layer";
+import { LitElement } from "lit";
+import { PlayerActionHandler } from "./PlayerActionHandler";
+import { PlayerActions } from "../../../core/game/Game";
+import { PlayerPanel } from "./PlayerPanel";
+import { TileRef } from "../../../core/game/GameMap";
+import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
+import { customElement } from "lit/decorators.js";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
-  private radialMenu: RadialMenu;
+  private readonly radialMenu: RadialMenu;
 
-  private playerActionHandler: PlayerActionHandler;
-  private chatIntegration: ChatIntegration;
+  private readonly playerActionHandler: PlayerActionHandler;
+  private readonly chatIntegration: ChatIntegration;
 
   private clickedTile: TileRef | null = null;
 
   constructor(
-    private eventBus: EventBus,
-    private game: GameView,
-    private transformHandler: TransformHandler,
-    private emojiTable: EmojiTable,
-    private buildMenu: BuildMenu,
-    private uiState: UIState,
-    private playerPanel: PlayerPanel,
+    private readonly eventBus: EventBus,
+    private readonly game: GameView,
+    private readonly transformHandler: TransformHandler,
+    private readonly emojiTable: EmojiTable,
+    private readonly buildMenu: BuildMenu,
+    private readonly uiState: UIState,
+    private readonly playerPanel: PlayerPanel,
   ) {
     super();
 
@@ -73,7 +72,7 @@ export class MainRadialMenu extends LitElement implements Layer {
 
   init() {
     this.radialMenu.init();
-    this.eventBus.on(ContextMenuEvent, (event) => {
+    this.eventBus.on(ContextMenuEvent, async (event) => {
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
@@ -81,22 +80,26 @@ export class MainRadialMenu extends LitElement implements Layer {
       if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
         return;
       }
-      if (this.game.myPlayer() === null) {
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer === null) {
         return;
       }
-      this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
-      this.game
-        .myPlayer()!
-        .actions(this.clickedTile)
-        .then((actions) => {
-          this.updatePlayerActions(
-            this.game.myPlayer()!,
-            actions,
-            this.clickedTile!,
-            event.x,
-            event.y,
-          );
-        });
+      const tile = this.game.ref(worldCoords.x, worldCoords.y);
+      this.clickedTile = tile;
+      try {
+        const actions = await myPlayer.actions(tile);
+        // Stale check: user might have clicked somewhere else already
+        if (this.clickedTile !== tile) return;
+        this.updatePlayerActions(
+          myPlayer,
+          actions,
+          tile,
+          event.x,
+          event.y,
+        );
+      } catch (err) {
+        console.error("Failed to fetch player actions:", err);
+      }
     });
   }
 
@@ -110,7 +113,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     this.buildMenu.playerActions = actions;
 
     const tileOwner = this.game.owner(tile);
-    const recipient = tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
+    const recipient = tileOwner.isPlayer() ? tileOwner : null;
 
     if (myPlayer && recipient) {
       this.chatIntegration.setupChatModal(myPlayer, recipient);
@@ -142,16 +145,21 @@ export class MainRadialMenu extends LitElement implements Layer {
   async tick() {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
     if (this.game.ticks() % 5 === 0) {
-      this.game
-        .myPlayer()!
-        .actions(this.clickedTile)
-        .then((actions) => {
-          this.updatePlayerActions(
-            this.game.myPlayer()!,
-            actions,
-            this.clickedTile!,
-          );
-        });
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer === null) return;
+      const tile = this.clickedTile;
+      if (tile === null) return;
+      try {
+        const actions = await myPlayer.actions(tile);
+        if (this.clickedTile !== tile) return; // stale
+        this.updatePlayerActions(
+          myPlayer,
+          actions,
+          tile,
+        );
+      } catch (err) {
+        console.error("Failed to refresh player actions:", err);
+      }
     }
   }
 

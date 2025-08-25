@@ -1,6 +1,3 @@
-import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
 import {
   Game,
   Player,
@@ -8,9 +5,12 @@ import {
   PlayerType,
   UnitType,
 } from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { setup } from "./util/Setup";
 import { constructionExecution, executeTicks } from "./util/utils";
+import { NukeExecution } from "../src/core/execution/NukeExecution";
+import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { TileRef } from "../src/core/game/GameMap";
+import { UpgradeStructureExecution } from "../src/core/execution/UpgradeStructureExecution";
+import { setup } from "./util/Setup";
 
 let game: Game;
 let attacker: Player;
@@ -91,7 +91,7 @@ describe("MissileSilo", () => {
   });
 
   test("missilesilo should have increased level after upgrade", async () => {
-    expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(1);
+    expect(attacker.units(UnitType.MissileSilo)[0].level()).toBe(1);
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
       attacker,
@@ -100,6 +100,6 @@ describe("MissileSilo", () => {
     game.addExecution(upgradeStructureExecution);
     executeTicks(game, 2);
 
-    expect(attacker.units(UnitType.MissileSilo)[0].level()).toEqual(2);
+    expect(attacker.units(UnitType.MissileSilo)[0].level()).toBe(2);
   });
 });

@@ -1,14 +1,10 @@
-import { Theme } from "../../../core/configuration/Config";
-import { PlayerView } from "../../../core/game/GameView";
+import { Fx, FxType } from "./Fx";
 import { AnimatedSprite } from "../AnimatedSprite";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
-import { Fx, FxType } from "./Fx";
+import { PlayerView } from "../../../core/game/GameView";
+import { Theme } from "../../../core/configuration/Config";
 
-function fadeInOut(
-  t: number,
-  fadeIn: number = 0.3,
-  fadeOut: number = 0.7,
-): number {
+function fadeInOut(t: number, fadeIn = 0.3, fadeOut = 0.7): number {
   if (t < fadeIn) {
     const f = t / fadeIn; // Map to [0, 1]
     return f * f;
@@ -24,9 +20,9 @@ function fadeInOut(
  */
 export class FadeFx implements Fx {
   constructor(
-    private fxToFade: SpriteFx,
-    private fadeIn: number,
-    private fadeOut: number,
+    private readonly fxToFade: SpriteFx,
+    private readonly fadeIn: number,
+    private readonly fadeOut: number,
   ) {}
 
   renderTick(duration: number, ctx: CanvasRenderingContext2D): boolean {
@@ -62,7 +58,7 @@ export class SpriteFx implements Fx {
       theme,
     );
     if (!this.animatedSprite) {
-      console.error("Could not load animated sprite", fxType);
+      throw new Error(`Could not load animated sprite ${fxType}`);
     } else {
       this.waitToTheEnd = duration ? true : false;
       this.duration = duration ?? this.animatedSprite.lifeTime() ?? 1000;

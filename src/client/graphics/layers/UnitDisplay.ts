@@ -1,23 +1,23 @@
-import { html, LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
-import portIcon from "../../../../resources/images/AnchorIcon.png";
+import { LitElement, html } from "lit";
+import { EventBus } from "../../../core/EventBus";
+import { GameView } from "../../../core/game/GameView";
+import { Layer } from "./Layer";
+import { ToggleStructureEvent } from "../../InputHandler";
+import { UnitType } from "../../../core/game/Game";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import { customElement } from "lit/decorators.js";
+import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
-import { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
-import { ToggleStructureEvent } from "../../InputHandler";
+import portIcon from "../../../../resources/images/AnchorIcon.png";
 import { renderNumber } from "../../Utils";
-import { Layer } from "./Layer";
+import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
-  private _selectedStructure: UnitType | null = null;
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
+  private readonly _selectedStructure: UnitType | null = null;
   private _cities = 0;
   private _factories = 0;
   private _missileSilo = 0;
@@ -31,6 +31,7 @@ export class UnitDisplay extends LitElement implements Layer {
   }
 
   init() {
+    if (this.game === undefined) throw new Error("Not initialized");
     const config = this.game.config();
     this.allDisabled =
       config.isUnitDisabled(UnitType.City) &&
@@ -60,6 +61,7 @@ export class UnitDisplay extends LitElement implements Layer {
     unitType: UnitType,
     altText: string,
   ) {
+    if (this.game === undefined) throw new Error("Not initialized");
     if (this.game.config().isUnitDisabled(unitType)) {
       return html``;
     }
@@ -71,9 +73,9 @@ export class UnitDisplay extends LitElement implements Layer {
           ? "#ffffff2e"
           : "none"}"
         @mouseenter="${() =>
-          this.eventBus.emit(new ToggleStructureEvent(unitType))}"
+          this.eventBus?.emit(new ToggleStructureEvent(unitType))}"
         @mouseleave="${() =>
-          this.eventBus.emit(new ToggleStructureEvent(null))}"
+          this.eventBus?.emit(new ToggleStructureEvent(null))}"
       >
         <img
           src=${icon}
@@ -104,7 +106,9 @@ export class UnitDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] bg-gray-800/70 backdrop-blur-sm border border-slate-400 rounded-lg p-2 hidden lg:block"
+        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100]
+        bg-gray-800/70 backdrop-blur-sm border border-slate-400 rounded-lg p-2
+        hidden lg:block"
       >
         <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1">
           ${this.renderUnitItem(cityIcon, this._cities, UnitType.City, "city")}

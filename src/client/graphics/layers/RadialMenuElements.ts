@@ -1,16 +1,15 @@
-import { Config } from "../../../core/configuration/Config";
 import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { flattenedEmojiTable } from "../../../core/Util";
-import { renderNumber, translateText } from "../../Utils";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { renderNumber, translateText } from "../../Utils";
 import { ChatIntegration } from "./ChatIntegration";
+import { Config } from "../../../core/configuration/Config";
 import { EmojiTable } from "./EmojiTable";
+import { EventBus } from "../../../core/EventBus";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
+import { TileRef } from "../../../core/game/GameMap";
 import { TooltipItem } from "./RadialMenu";
-
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
 import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
@@ -18,14 +17,14 @@ import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
 import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import { flattenedEmojiTable } from "../../../core/Util";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
-import { EventBus } from "../../../core/EventBus";
 
-export interface MenuElementParams {
+export type MenuElementParams = {
   myPlayer: PlayerView;
   selected: PlayerView | null;
   tile: TileRef;
@@ -38,9 +37,9 @@ export interface MenuElementParams {
   chatIntegration: ChatIntegration;
   eventBus: EventBus;
   closeMenu: () => void;
-}
+};
 
-export interface MenuElement {
+export type MenuElement = {
   id: string;
   name: string;
   displayed?: boolean | ((params: MenuElementParams) => boolean);
@@ -54,18 +53,18 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
-}
+};
 
-export interface TooltipKey {
+export type TooltipKey = {
   key: string;
   className: string;
   params?: Record<string, string | number>;
-}
+};
 
-export interface CenterButtonElement {
+export type CenterButtonElement = {
   disabled: (params: MenuElementParams) => boolean;
   action: (params: MenuElementParams) => void;
-}
+};
 
 export const COLORS = {
   build: "#ebe250",
@@ -106,6 +105,7 @@ export enum Slot {
   Delete = "delete",
 }
 
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 const infoChatElement: MenuElement = {
   id: "info_chat",
   name: "chat",
@@ -208,7 +208,7 @@ const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
   name: "donate gold",
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonate,
+    !params.playerActions?.interaction?.canDonateGold,
   color: COLORS.ally,
   icon: donateGoldIcon,
   action: (params: MenuElementParams) => {
@@ -221,7 +221,7 @@ const allyDonateTroopsElement: MenuElement = {
   id: "ally_donate_troops",
   name: "donate troops",
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonate,
+    !params.playerActions?.interaction?.canDonateTroops,
   color: COLORS.ally,
   icon: donateTroopIcon,
   action: (params: MenuElementParams) => {
@@ -293,6 +293,7 @@ const infoEmojiElement: MenuElement = {
     return emojiElements;
   },
 };
+/* eslint-enable @typescript-eslint/no-non-null-assertion */
 
 export const infoMenuElement: MenuElement = {
   id: Slot.Info,
@@ -566,8 +567,7 @@ export const rootMenuElement: MenuElement = {
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
-      tileOwner.isPlayer() &&
-      (tileOwner as PlayerView).id() === params.myPlayer.id();
+      tileOwner.isPlayer() && tileOwner.id() === params.myPlayer.id();
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,

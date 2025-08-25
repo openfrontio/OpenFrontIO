@@ -1,19 +1,19 @@
-import { LitElement, html } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { z } from "zod";
-import { translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
-import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import { LitElement, html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
+import { UserSettings } from "../core/game/UserSettings";
+import { translateText } from "../client/Utils";
+import { z } from "zod";
 
 const KeybindSchema = z.record(z.string(), z.string());
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   @state() private settingsMode: "basic" | "keybinds" = "basic";
   @state() private keybinds: Record<string, string> = {};
@@ -35,7 +35,7 @@ export class UserSettingModal extends LitElement {
     }
   }
 
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
     isModalOpen: boolean;
@@ -51,7 +51,7 @@ export class UserSettingModal extends LitElement {
     document.body.style.overflow = "auto";
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
 
     if (e.code === "Escape") {
@@ -182,16 +182,6 @@ export class UserSettingModal extends LitElement {
     }
   }
 
-  private sliderTroopRatio(e: CustomEvent<{ value: number }>) {
-    const value = e.detail?.value;
-    if (typeof value === "number") {
-      const ratio = value / 100;
-      localStorage.setItem("settings.troopRatio", ratio.toString());
-    } else {
-      console.warn("Slider event missing detail.value", e);
-    }
-  }
-
   private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -244,8 +234,8 @@ export class UserSettingModal extends LitElement {
               <button
                 class="w-1/2 text-center px-3 py-1 rounded-l 
       ${this.settingsMode === "basic"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+        ? "bg-white/10 text-white"
+        : "bg-transparent text-gray-400"}"
                 @click=${() => (this.settingsMode = "basic")}
               >
                 ${translateText("user_setting.tab_basic")}
@@ -253,8 +243,8 @@ export class UserSettingModal extends LitElement {
               <button
                 class="w-1/2 text-center px-3 py-1 rounded-r 
       ${this.settingsMode === "keybinds"
-                  ? "bg-white/10 text-white"
-                  : "bg-transparent text-gray-400"}"
+        ? "bg-white/10 text-white"
+        : "bg-transparent text-gray-400"}"
                 @click=${() => (this.settingsMode = "keybinds")}
               >
                 ${translateText("user_setting.tab_keybinds")}
@@ -389,7 +379,7 @@ export class UserSettingModal extends LitElement {
               max="100"
               value="40"
               easter="true"
-              @change=${(e: CustomEvent) => {
+              @change=${(e: CustomEvent<{ value: unknown }>) => {
                 const value = e.detail?.value;
                 if (value !== undefined) {
                   console.log("Changed:", value);
@@ -408,7 +398,7 @@ export class UserSettingModal extends LitElement {
               min="0"
               max="1000"
               easter="true"
-              @change=${(e: CustomEvent) => {
+              @change=${(e: CustomEvent<{ value: unknown }>) => {
                 const value = e.detail?.value;
                 if (value !== undefined) {
                   console.log("Changed:", value);

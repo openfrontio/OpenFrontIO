@@ -1,48 +1,47 @@
-import version from "../../resources/version.txt";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { EventBus } from "../core/EventBus";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
-import { ServerConfig } from "../core/configuration/Config";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
-import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
+import "./GoogleAdElement";
+import "./LangSelector";
+import "./PublicLobby";
+import "./UsernameInput";
+import "./components/NewsButton";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
+import "./styles.css";
+import { GameRecord, GameStartInfo } from "../core/Schemas";
+import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
+import { generateCryptoRandomUUID, incrementGamesPlayed, translateText } from "./Utils";
+import { DarkModeButton } from "./DarkModeButton";
+import { EventBus } from "../core/EventBus";
 import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
-import "./GoogleAdElement";
+import { GameType } from "../core/game/Game";
 import { HelpModal } from "./HelpModal";
-import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import { HostLobbyModal } from "./HostLobbyModal";
+import { ID } from "../core/BaseSchemas";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { NewsButton } from "./components/NewsButton";
 import { NewsModal } from "./NewsModal";
-import "./PublicLobby";
+import { OButton } from "./components/baseComponents/Button";
 import { PublicLobby } from "./PublicLobby";
+import { SendKickPlayerIntentEvent } from "./Transport";
+import { ServerConfig } from "../core/configuration/Config";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
-import { SendKickPlayerIntentEvent } from "./Transport";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { UserSettingModal } from "./UserSettingModal";
-import "./UsernameInput";
+import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
-import {
-  generateCryptoRandomUUID,
-  incrementGamesPlayed,
-  translateText,
-} from "./Utils";
-import "./components/NewsButton";
-import { NewsButton } from "./components/NewsButton";
-import "./components/baseComponents/Button";
-import { OButton } from "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
-import "./styles.css";
+import { getClientID } from "../core/Util";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { joinLobby } from "./ClientGameRunner";
+import version from "../../resources/version.txt";
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     PageOS: {
       session: {
@@ -55,6 +54,7 @@ declare global {
       spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
       destroyUnits: (adType: string) => void;
       settings?: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         slots?: any;
       };
       spaNewPage: (url: string) => void;
@@ -62,13 +62,14 @@ declare global {
   }
 
   // Extend the global interfaces to include your custom events
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
-    "kick-player": CustomEvent;
+    "kick-player": CustomEvent<KickPlayerEvent>;
   }
 }
 
-export interface JoinLobbyEvent {
+export type JoinLobbyEvent = {
   clientID: string;
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
@@ -76,19 +77,23 @@ export interface JoinLobbyEvent {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
-}
+};
+
+export type KickPlayerEvent = {
+  target: string;
+};
 
 class Client {
   private gameStop: (() => void) | null = null;
-  private eventBus: EventBus = new EventBus();
+  private readonly eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
 
-  private joinModal: JoinPrivateLobbyModal;
-  private publicLobby: PublicLobby;
-  private userSettings: UserSettings = new UserSettings();
+  private joinModal: JoinPrivateLobbyModal | undefined;
+  private publicLobby: PublicLobby | undefined;
+  private readonly userSettings: UserSettings = new UserSettings();
 
   constructor() {}
 
@@ -215,14 +220,7 @@ class Client {
     if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
     territoryModal.previewButton = patternButton;
-    territoryModal.updatePreview();
-    territoryModal.resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target.classList.contains("preview-container")) {
-          territoryModal.buttonWidth = entry.contentRect.width;
-        }
-      }
-    });
+    territoryModal.refresh();
     patternButton.addEventListener("click", () => {
       territoryModal.open();
     });
@@ -353,14 +351,14 @@ class Client {
 
     const hostModal = document.querySelector(
       "host-lobby-modal",
-    ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
+    ) as HostLobbyModal;
+    hostModal instanceof HostLobbyModal;
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         hostModal.open();
-        this.publicLobby.leaveLobby();
+        this.publicLobby?.leaveLobby();
       }
     });
 
@@ -375,7 +373,7 @@ class Client {
       throw new Error("Missing join-private-lobby-button");
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        this.joinModal.open();
+        this.joinModal?.open();
       }
     });
 
@@ -390,7 +388,7 @@ class Client {
 
     const onHashUpdate = () => {
       // Reset the UI to its initial state
-      this.joinModal.close();
+      this.joinModal?.close();
       if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
@@ -444,7 +442,7 @@ class Client {
       }
       const lobbyId = params.get("join");
       if (lobbyId && ID.safeParse(lobbyId).success) {
-        this.joinModal.open(lobbyId);
+        this.joinModal?.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);
       }
     }
@@ -471,7 +469,7 @@ class Client {
             : this.flagInput.getCurrentFlag(),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
-        clientID: lobby.clientID,
+        clientID: getClientID(lobby.gameID),
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
@@ -504,7 +502,7 @@ class Client {
             modal.isModalOpen = false;
           }
         });
-        this.publicLobby.stop();
+        this.publicLobby?.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
@@ -517,8 +515,8 @@ class Client {
         startingModal.show();
       },
       () => {
-        this.joinModal.close();
-        this.publicLobby.stop();
+        this.joinModal?.close();
+        this.publicLobby?.stop();
         incrementGamesPlayed();
 
         try {
@@ -545,10 +543,10 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
-    this.publicLobby.leaveLobby();
+    this.publicLobby?.leaveLobby();
   }
 
-  private handleKickPlayer(event: CustomEvent) {
+  private handleKickPlayer(event: CustomEvent<KickPlayerEvent>) {
     const { target } = event.detail;
 
     // Forward to eventBus if available
@@ -610,7 +608,7 @@ function hasAllowedFlare(
   const allowed = config.allowedFlares();
   if (allowed === undefined) return true;
   if (userMeResponse === false) return false;
-  const flares = userMeResponse.player.flares;
+  const { flares } = userMeResponse.player;
   if (flares === undefined) return false;
   return allowed.length === 0 || allowed.some((f) => flares.includes(f));
 }

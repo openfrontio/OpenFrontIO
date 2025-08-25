@@ -46,11 +46,12 @@ ENV NPM_CONFIG_IGNORE_SCRIPTS=1
 # Copy package.json and package-lock.json
 COPY package*.json ./
 # Install dependencies
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Final image
 FROM base
-
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT="$GIT_COMMIT"
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \

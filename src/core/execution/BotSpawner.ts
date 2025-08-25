@@ -1,17 +1,17 @@
-import { Game, PlayerInfo, PlayerType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { PseudoRandom } from "../PseudoRandom";
-import { GameID } from "../Schemas";
-import { simpleHash } from "../Util";
-import { SpawnExecution } from "./SpawnExecution";
 import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";
+import { Game, PlayerInfo, PlayerType } from "../game/Game";
+import { GameID } from "../Schemas";
+import { PseudoRandom } from "../PseudoRandom";
+import { SpawnExecution } from "./SpawnExecution";
+import { TileRef } from "../game/GameMap";
+import { simpleHash } from "../Util";
 
 export class BotSpawner {
-  private random: PseudoRandom;
-  private bots: SpawnExecution[] = [];
+  private readonly random: PseudoRandom;
+  private readonly bots: SpawnExecution[] = [];
 
   constructor(
-    private gs: Game,
+    private readonly gs: Game,
     gameID: GameID,
   ) {
     this.random = new PseudoRandom(simpleHash(gameID));

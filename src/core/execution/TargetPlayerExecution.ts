@@ -1,13 +1,13 @@
 import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class TargetPlayerExecution implements Execution {
-  private target: Player;
+  private target: Player | undefined;
 
   private active = true;
 
   constructor(
-    private requestor: Player,
-    private targetID: PlayerID,
+    private readonly requestor: Player,
+    private readonly targetID: PlayerID,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -21,6 +21,7 @@ export class TargetPlayerExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.target === undefined) throw new Error("Not initialized");
     if (this.requestor.canTarget(this.target)) {
       this.requestor.target(this.target);
       this.target.updateRelation(this.requestor, -40);

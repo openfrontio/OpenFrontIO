@@ -4,11 +4,12 @@ import { TrainStationExecution } from "./TrainStationExecution";
 
 export class FactoryExecution implements Execution {
   private factory: Unit | null = null;
-  private active: boolean = true;
-  private game: Game;
+  private active = true;
+  private game: Game | undefined;
+
   constructor(
     private player: Player,
-    private tile: TileRef,
+    private readonly tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -46,8 +47,9 @@ export class FactoryExecution implements Execution {
 
   createStation(): void {
     if (this.factory !== null) {
+      if (this.game === undefined) throw new Error("Not initialized");
       const structures = this.game.nearbyUnits(
-        this.factory.tile()!,
+        this.factory.tile(),
         this.game.config().trainStationMaxRange(),
         [UnitType.City, UnitType.Port, UnitType.Factory],
       );

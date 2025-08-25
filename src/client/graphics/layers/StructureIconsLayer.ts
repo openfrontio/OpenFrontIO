@@ -1,33 +1,33 @@
-import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
-import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
+import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { EventBus } from "../../../core/EventBus";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { Layer } from "./Layer";
+import { OutlineFilter } from "pixi-filters";
+import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
+import { Theme } from "../../../core/configuration/Config";
+import { ToggleStructureEvent } from "../../InputHandler";
+import { TransformHandler } from "../TransformHandler";
 import anchorIcon from "../../../../resources/images/AnchorIcon.png";
+import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
 import cityIcon from "../../../../resources/images/CityIcon.png";
 import factoryIcon from "../../../../resources/images/FactoryUnit.png";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
-import { Theme } from "../../../core/configuration/Config";
-import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ToggleStructureEvent } from "../../InputHandler";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
 
 type ShapeType = "triangle" | "square" | "pentagon" | "octagon" | "circle";
 
 class StructureRenderInfo {
-  public isOnScreen: boolean = false;
+  public isOnScreen = false;
   constructor(
     public unit: UnitView,
     public owner: PlayerID,
     public iconContainer: PIXI.Container,
     public levelContainer: PIXI.Container,
     public dotContainer: PIXI.Container,
-    public level: number = 0,
-    public underConstruction: boolean = true,
+    public level = 0,
+    public underConstruction = true,
   ) {}
 }
 
@@ -54,17 +54,17 @@ const ICON_SIZE = {
 const OFFSET_ZOOM_Y = 4; // offset for the y position of the level over the sprite
 
 export class StructureIconsLayer implements Layer {
-  private pixicanvas: HTMLCanvasElement;
-  private iconsStage: PIXI.Container;
-  private levelsStage: PIXI.Container;
-  private dotsStage: PIXI.Container;
-  private shouldRedraw: boolean = true;
-  private textureCache: Map<string, PIXI.Texture> = new Map();
-  private theme: Theme;
-  private renderer: PIXI.Renderer;
+  private pixicanvas: HTMLCanvasElement | undefined;
+  private iconsStage: PIXI.Container | undefined;
+  private levelsStage: PIXI.Container | undefined;
+  private dotsStage: PIXI.Container | undefined;
+  private shouldRedraw = true;
+  private readonly textureCache: Map<string, PIXI.Texture> = new Map();
+  private readonly theme: Theme;
+  private renderer: PIXI.Renderer | undefined;
   private renders: StructureRenderInfo[] = [];
-  private seenUnits: Set<UnitView> = new Set();
-  private structures: Map<
+  private readonly seenUnits: Set<UnitView> = new Set();
+  private readonly structures: Map<
     UnitType,
     { visible: boolean; iconPath: string; image: HTMLImageElement | null }
   > = new Map([
@@ -87,9 +87,9 @@ export class StructureIconsLayer implements Layer {
   private renderSprites = true;
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
+    private readonly transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
     this.structures.forEach((u, unitType) => this.loadIcon(u, unitType));
@@ -163,7 +163,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   resizeCanvas() {
-    if (this.renderer) {
+    if (this.renderer && this.pixicanvas) {
       this.pixicanvas.width = window.innerWidth;
       this.pixicanvas.height = window.innerHeight;
       this.renderer.resize(innerWidth, innerHeight, 1);
@@ -232,8 +232,9 @@ export class StructureIconsLayer implements Layer {
   private modifyVisibility(render: StructureRenderInfo) {
     const structureType =
       render.unit.type() === UnitType.Construction
-        ? render.unit.constructionType()!
+        ? render.unit.constructionType()
         : render.unit.type();
+    if (structureType === undefined) return;
     const structureInfos = this.structures.get(structureType);
 
     let focusStructure = false;
@@ -321,10 +322,13 @@ export class StructureIconsLayer implements Layer {
 
     if (this.transformHandler.hasChanged() || this.shouldRedraw) {
       if (this.transformHandler.scale > ZOOM_THRESHOLD && this.renderSprites) {
+        if (this.levelsStage === undefined) throw new Error("Not initialized");
         this.renderer.render(this.levelsStage);
       } else if (this.transformHandler.scale > DOTS_ZOOM_THRESHOLD) {
+        if (this.iconsStage === undefined) throw new Error("Not initialized");
         this.renderer.render(this.iconsStage);
       } else {
+        if (this.dotsStage === undefined) throw new Error("Not initialized");
         this.renderer.render(this.dotsStage);
       }
       this.shouldRedraw = false;
@@ -341,24 +345,24 @@ export class StructureIconsLayer implements Layer {
       );
       return PIXI.Texture.EMPTY;
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const structureType = isConstruction ? constructionType! : unit.type();
     const cacheKey = isConstruction
       ? `construction-${structureType}` + (renderIcon ? "-icon" : "")
       : `${this.theme.territoryColor(unit.owner()).toRgbString()}-${structureType}` +
         (renderIcon ? "-icon" : "");
-    if (this.textureCache.has(cacheKey)) {
-      return this.textureCache.get(cacheKey)!;
-    }
+    const cached = this.textureCache.get(cacheKey);
+    if (cached !== undefined) return cached;
 
     const shape = STRUCTURE_SHAPES[structureType];
     const texture = shape
       ? this.createIcon(
-          unit.owner(),
-          structureType,
-          isConstruction,
-          shape,
-          renderIcon,
-        )
+        unit.owner(),
+        structureType,
+        isConstruction,
+        shape,
+        renderIcon,
+      )
       : PIXI.Texture.EMPTY;
 
     this.textureCache.set(cacheKey, texture);
@@ -379,7 +383,8 @@ export class StructureIconsLayer implements Layer {
     }
     structureCanvas.width = Math.ceil(iconSize);
     structureCanvas.height = Math.ceil(iconSize);
-    const context = structureCanvas.getContext("2d")!;
+    const context = structureCanvas.getContext("2d");
+    if (!context) throw new Error("2D context not supported");
 
     let borderColor: string;
     if (isConstruction) {
@@ -502,6 +507,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createLevelSprite(unit: UnitView): PIXI.Container {
+    if (this.levelsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
       type: "level",
       stage: this.levelsStage,
@@ -509,6 +515,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createDotSprite(unit: UnitView): PIXI.Container {
+    if (this.dotsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
       type: "dot",
       stage: this.dotsStage,
@@ -516,6 +523,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private createIconSprite(unit: UnitView): PIXI.Container {
+    if (this.iconsStage === undefined) throw new Error("Not initialized");
     return this.createUnitContainer(unit, {
       type: "icon",
       stage: this.iconsStage,
@@ -532,7 +540,7 @@ export class StructureIconsLayer implements Layer {
     const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
 
     const { type, stage } = options;
-    const scale = this.transformHandler.scale;
+    const { scale } = this.transformHandler;
     const spritesEnabled = this.game
       .config()
       .userSettings()
@@ -561,7 +569,8 @@ export class StructureIconsLayer implements Layer {
         unit.type() === UnitType.Construction
           ? unit.constructionType()
           : unit.type();
-      const shape = STRUCTURE_SHAPES[unitType!];
+      const shape =
+        unitType !== undefined ? STRUCTURE_SHAPES[unitType] : undefined;
       if (shape !== undefined) {
         text.position.y = Math.round(-ICON_SIZE[shape] / 2 - 2);
       }
@@ -598,7 +607,8 @@ export class StructureIconsLayer implements Layer {
     const imageCanvas = document.createElement("canvas");
     imageCanvas.width = image.width;
     imageCanvas.height = image.height;
-    const ctx = imageCanvas.getContext("2d")!;
+    const ctx = imageCanvas.getContext("2d");
+    if (!ctx) throw new Error("2D context not supported");
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
     ctx.globalCompositeOperation = "destination-in";
@@ -612,7 +622,7 @@ export class StructureIconsLayer implements Layer {
     const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
     screenPos.x = Math.round(screenPos.x);
 
-    const scale = this.transformHandler.scale;
+    const { scale } = this.transformHandler;
     screenPos.y = Math.round(
       scale >= ZOOM_THRESHOLD &&
         this.game.config().userSettings()?.structureSprites()
@@ -629,6 +639,7 @@ export class StructureIconsLayer implements Layer {
         ? ICON_SIZE[STRUCTURE_SHAPES[type]]
         : 28;
 
+    if (this.pixicanvas === undefined) throw new Error("Not initialized");
     const onScreen =
       screenPos.x + margin > 0 &&
       screenPos.x - margin < this.pixicanvas.width &&

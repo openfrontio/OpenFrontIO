@@ -2,8 +2,8 @@ import { Execution, Game, Player } from "../game/Game";
 
 export class MarkDisconnectedExecution implements Execution {
   constructor(
-    private player: Player,
-    private isDisconnected: boolean,
+    private readonly player: Player,
+    private readonly isDisconnected: boolean,
   ) {}
 
   init(mg: Game, ticks: number): void {

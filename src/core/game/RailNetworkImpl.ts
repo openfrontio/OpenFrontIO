@@ -1,27 +1,27 @@
-import { RailroadExecution } from "../execution/RailroadExecution";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { MiniAStar } from "../pathfinding/MiniAStar";
-import { SerialAStar } from "../pathfinding/SerialAStar";
+import { Cluster, TrainStation, TrainStationMapAdapter } from "./TrainStation";
 import { Game, Unit, UnitType } from "./Game";
-import { TileRef } from "./GameMap";
+import { MiniAStar } from "../pathfinding/MiniAStar";
+import { PathFindResultType } from "../pathfinding/AStar";
 import { RailNetwork } from "./RailNetwork";
 import { Railroad } from "./Railroad";
-import { Cluster, TrainStation, TrainStationMapAdapter } from "./TrainStation";
+import { RailroadExecution } from "../execution/RailroadExecution";
+import { SerialAStar } from "../pathfinding/SerialAStar";
+import { TileRef } from "./GameMap";
 
 /**
  * The Stations handle their own neighbors so the graph is naturally traversable,
  * but it would be expensive to look through the graph to find a station.
  * This class stores the existing stations for quick access
  */
-export interface StationManager {
+export type StationManager = {
   addStation(station: TrainStation): void;
   removeStation(station: TrainStation): void;
   findStation(unit: Unit): TrainStation | null;
   getAll(): Set<TrainStation>;
-}
+};
 
 export class StationManagerImpl implements StationManager {
-  private stations: Set<TrainStation> = new Set();
+  private readonly stations: Set<TrainStation> = new Set();
 
   addStation(station: TrainStation) {
     this.stations.add(station);
@@ -43,13 +43,13 @@ export class StationManagerImpl implements StationManager {
   }
 }
 
-export interface RailPathFinderService {
+export type RailPathFinderService = {
   findTilePath(from: TileRef, to: TileRef): TileRef[];
   findStationsPath(from: TrainStation, to: TrainStation): TrainStation[];
-}
+};
 
 class RailPathFinderServiceImpl implements RailPathFinderService {
-  constructor(private game: Game) {}
+  constructor(private readonly game: Game) {}
 
   findTilePath(from: TileRef, to: TileRef): TileRef[] {
     const astar = new MiniAStar(
@@ -88,12 +88,12 @@ export function createRailNetwork(game: Game): RailNetwork {
 }
 
 export class RailNetworkImpl implements RailNetwork {
-  private maxConnectionDistance: number = 4;
+  private readonly maxConnectionDistance = 4;
 
   constructor(
-    private game: Game,
-    private stationManager: StationManager,
-    private pathService: RailPathFinderService,
+    private readonly game: Game,
+    private readonly stationManager: StationManager,
+    private readonly pathService: RailPathFinderService,
   ) {}
 
   connectStation(station: TrainStation) {
@@ -220,8 +220,9 @@ export class RailNetworkImpl implements RailNetwork {
       { station: start, distance: 0 },
     ];
 
-    while (queue.length > 0) {
-      const { station, distance } = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const { station, distance } = queue[head++];
       if (visited.has(station)) continue;
       visited.add(station);
 
@@ -244,8 +245,9 @@ export class RailNetworkImpl implements RailNetwork {
     const visited = new Set<TrainStation>();
     const queue = [start];
 
-    while (queue.length > 0) {
-      const current = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const current = queue[head++];
       if (visited.has(current)) continue;
       visited.add(current);
 

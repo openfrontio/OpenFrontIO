@@ -1,17 +1,17 @@
+import { TrainType, UnitType } from "../../core/game/Game";
 import { Colord } from "colord";
+import { Theme } from "../../core/configuration/Config";
+import { UnitView } from "../../core/game/GameView";
 import atomBombSprite from "../../../resources/sprites/atombomb.png";
 import hydrogenBombSprite from "../../../resources/sprites/hydrogenbomb.png";
 import mirvSprite from "../../../resources/sprites/mirv2.png";
 import samMissileSprite from "../../../resources/sprites/samMissile.png";
 import tradeShipSprite from "../../../resources/sprites/tradeship.png";
 import trainCarriageSprite from "../../../resources/sprites/trainCarriage.png";
-import trainLoadedCarriageSprite from "../../../resources/sprites/trainCarriageLoaded.png";
 import trainEngineSprite from "../../../resources/sprites/trainEngine.png";
+import trainLoadedCarriageSprite from "../../../resources/sprites/trainCarriageLoaded.png";
 import transportShipSprite from "../../../resources/sprites/transportship.png";
 import warshipSprite from "../../../resources/sprites/warship.png";
-import { Theme } from "../../core/configuration/Config";
-import { TrainType, UnitType } from "../../core/game/Game";
-import { UnitView } from "../../core/game/GameView";
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
 const TrainTypeSprite = {
@@ -120,11 +120,12 @@ export const colorizeCanvas = (
   canvas.width = source.width;
   canvas.height = source.height;
 
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D context not supported");
   ctx.drawImage(source, 0, 0);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
+  const { data } = imageData;
 
   const colorARgb = colorA.toRgb();
   const colorBRgb = colorB.toRgb();
@@ -177,9 +178,8 @@ export const getColoredSprite = (
   const borderColor: Colord = customBorderColor ?? theme.borderColor(owner);
   const spawnHighlightColor = theme.spawnHighlightColor();
   const key = computeSpriteKey(unit, territoryColor, borderColor);
-  if (coloredSpriteCache.has(key)) {
-    return coloredSpriteCache.get(key)!;
-  }
+  const cached = coloredSpriteCache.get(key);
+  if (cached !== undefined) return cached;
 
   const sprite = getSpriteForUnit(unit);
   if (sprite === null) {

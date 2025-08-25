@@ -1,4 +1,3 @@
-import { renderNumber } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -7,22 +6,23 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
+import { TileRef } from "../game/GameMap";
 import { distSortUnit } from "../Util";
+import { renderNumber } from "../../client/Utils";
 
 export class TradeShipExecution implements Execution {
   private active = true;
-  private mg: Game;
+  private mg: Game | undefined;
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
-  private pathFinder: PathFinder;
+  private pathFinder: PathFinder | undefined;
   private tilesTraveled = 0;
 
   constructor(
-    private origOwner: Player,
-    private srcPort: Unit,
+    private readonly origOwner: Player,
+    private readonly srcPort: Unit,
     private _dstPort: Unit,
   ) {}
 
@@ -32,13 +32,15 @@ export class TradeShipExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.pathFinder === undefined) throw new Error("Not initialized");
     if (this.tradeShip === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,
         this.srcPort.tile(),
       );
       if (spawn === false) {
-        console.warn(`cannot build trade ship`);
+        console.warn("cannot build trade ship");
         this.active = false;
         return;
       }
@@ -131,21 +133,23 @@ export class TradeShipExecution implements Execution {
   }
 
   private complete() {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.tradeShip === undefined) throw new Error("Not initialized");
     this.active = false;
-    this.tradeShip!.delete(false);
+    this.tradeShip.delete(false);
     const gold = this.mg
       .config()
       .tradeShipGold(
         this.tilesTraveled,
-        this.tradeShip!.owner().unitCount(UnitType.Port),
+        this.tradeShip.owner().unitCount(UnitType.Port),
       );
 
     if (this.wasCaptured) {
-      this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
+      this.tradeShip.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
         MessageType.CAPTURED_ENEMY_UNIT,
-        this.tradeShip!.owner().id(),
+        this.tradeShip.owner().id(),
         gold,
       );
     } else {

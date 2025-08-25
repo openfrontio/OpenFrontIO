@@ -1,14 +1,14 @@
+import { GameView, UnitView } from "../../../core/game/GameView";
 import { Colord } from "colord";
 import { EventBus } from "../../../core/EventBus";
-import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, UnitView } from "../../../core/game/GameView";
-import { UserSettings } from "../../../core/game/UserSettings";
-import { UnitSelectionEvent } from "../../InputHandler";
-import { ProgressBar } from "../ProgressBar";
-import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { ProgressBar } from "../ProgressBar";
+import { Theme } from "../../../core/configuration/Config";
+import { TransformHandler } from "../TransformHandler";
+import { UnitSelectionEvent } from "../../InputHandler";
+import { UnitType } from "../../../core/game/Game";
+import { UserSettings } from "../../../core/game/UserSettings";
 
 const COLOR_PROGRESSION = [
   "rgb(232, 25, 25)",
@@ -25,16 +25,15 @@ const PROGRESSBAR_HEIGHT = 3; // Height of a bar
  * such as selection boxes, health bars, etc.
  */
 export class UILayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D | null;
-  private theme: Theme | null = null;
-  private userSettings: UserSettings = new UserSettings();
+  private canvas: HTMLCanvasElement | undefined;
+  private context: CanvasRenderingContext2D | null = null;
+  private readonly theme: Theme | null = null;
   private selectionAnimTime = 0;
-  private allProgressBars: Map<
+  private readonly allProgressBars: Map<
     number,
     { unit: UnitView; progressBar: ProgressBar }
   > = new Map();
-  private allHealthBars: Map<number, ProgressBar> = new Map();
+  private readonly allHealthBars: Map<number, ProgressBar> = new Map();
   // Keep track of currently selected unit
   private selectedUnit: UnitView | null = null;
 
@@ -49,9 +48,8 @@ export class UILayer implements Layer {
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
 
   constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-    private transformHandler: TransformHandler,
+    private readonly game: GameView,
+    private readonly eventBus: EventBus,
   ) {
     this.theme = game.config().theme();
   }
@@ -71,7 +69,8 @@ export class UILayer implements Layer {
 
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.[GameUpdateType.Unit]
+      ?.map((unit) => this.game.unit(unit.id))
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
@@ -85,6 +84,7 @@ export class UILayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -263,7 +263,7 @@ export class UILayer implements Layer {
    * Draw health bar for a unit
    */
   public drawHealthBar(unit: UnitView) {
-    const maxHealth = this.game.unitInfo(unit.type()).maxHealth;
+    const { maxHealth } = this.game.unitInfo(unit.type());
     if (maxHealth === undefined || this.context === null) {
       return;
     }

@@ -1,28 +1,29 @@
-import express, { NextFunction, Request, Response } from "express";
-import rateLimit from "express-rate-limit";
-import http from "http";
-import ipAnonymize from "ip-anonymize";
-import path from "path";
-import { fileURLToPath } from "url";
-import { WebSocket, WebSocketServer } from "ws";
-import { z } from "zod";
-import { GameEnv } from "../core/configuration/Config";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
-import { GameRecord, GameRecordSchema, ID } from "../core/Schemas";
-import { replacer } from "../core/Util";
 import {
   CreateGameInputSchema,
   GameInputSchema,
   WorkerApiGameIdExists,
 } from "../core/WorkerSchemas";
+import { GameRecord, GameRecordSchema } from "../core/Schemas";
+import { LimiterType, gatekeeper } from "./Gatekeeper";
+import { WebSocket, WebSocketServer } from "ws";
 import { archive, readGameRecord } from "./Archive";
+import express, { NextFunction, Request, Response } from "express";
+import { GameEnv } from "../core/configuration/Config";
 import { GameManager } from "./GameManager";
-import { gatekeeper, LimiterType } from "./Gatekeeper";
-import { logger } from "./Logger";
+import { GameType } from "../core/game/Game";
+import { ID } from "../core/BaseSchemas";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
-import { preJoinMessageHandler } from "./worker/websocket/handler/message/PreJoinHandler";
+import { fileURLToPath } from "url";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import http from "http";
 import { initWorkerMetrics } from "./WorkerMetrics";
+import ipAnonymize from "ip-anonymize";
+import { logger } from "./Logger";
+import path from "path";
+import { preJoinMessageHandler } from "./worker/websocket/handler/message/PreJoinHandler";
+import rateLimit from "express-rate-limit";
+import { replacer } from "../core/Util";
+import { z } from "zod";
 
 const config = getServerConfigFromServer();
 
@@ -31,7 +32,7 @@ const log = logger.child({ comp: `w_${workerId}` });
 
 // Worker setup
 export async function startWorker() {
-  log.info(`Worker starting...`);
+  log.info("Worker starting...");
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -90,7 +91,7 @@ export async function startWorker() {
   app.post(
     "/api/create_game/:id",
     gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const id = req.params.id;
+      const { id } = req.params;
       const creatorClientID = (() => {
         if (typeof req.query.creatorClientID !== "string") return undefined;
 
@@ -99,7 +100,7 @@ export async function startWorker() {
       })();
 
       if (!id) {
-        log.warn(`cannot create game, id not found`);
+        log.warn("cannot create game, id not found");
         return res.status(400).json({ error: "Game ID is required" });
       }
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
@@ -134,7 +135,19 @@ export async function startWorker() {
       const game = gm.createGame(id, gc, creatorClientID);
 
       log.info(
-        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
+        `Worker ${
+          workerId
+        }: IP ${
+          ipAnonymize(clientIP)
+        } creating ${
+          game.isPublic() ? "Public" : "Private"
+        }${
+          gc?.gameMode ? ` ${gc.gameMode}` : ""
+        } game with id ${
+          id
+        }${
+          creatorClientID ? `, creator: ${creatorClientID}` : ""
+        }`,
       );
       res.json(game.gameInfo());
     }),
@@ -260,7 +273,7 @@ export async function startWorker() {
           JSON.stringify(
             {
               exists: true,
-              gameRecord: gameRecord,
+              gameRecord,
               success: true,
             },
             replacer,
@@ -318,6 +331,7 @@ export async function startWorker() {
     );
 
     ws.on("error", (error: Error) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
         ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
@@ -336,9 +350,9 @@ export async function startWorker() {
     if (process.send) {
       process.send({
         type: "WORKER_READY",
-        workerId: workerId,
+        workerId,
       });
-      log.info(`signaled ready state to master`);
+      log.info("signaled ready state to master");
     }
   });
 
@@ -350,10 +364,10 @@ export async function startWorker() {
 
   // Process-level error handlers
   process.on("uncaughtException", (err) => {
-    log.error(`uncaught exception:`, err);
+    log.error("uncaught exception:", err);
   });
 
   process.on("unhandledRejection", (reason, promise) => {
-    log.error(`unhandled rejection at:`, promise, "reason:", reason);
+    log.error("unhandled rejection at:", promise, "reason:", reason);
   });
 }

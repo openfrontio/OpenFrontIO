@@ -1,30 +1,3 @@
-import { translateText } from "../client/Utils";
-import { EventBus } from "../core/EventBus";
-import {
-  ClientID,
-  GameID,
-  GameRecord,
-  GameStartInfo,
-  PlayerRecord,
-  ServerMessage,
-} from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
-import { ServerConfig } from "../core/configuration/Config";
-import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
-import { GameMapLoader } from "../core/game/GameMapLoader";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-  HashUpdate,
-  WinUpdate,
-} from "../core/game/GameUpdates";
-import { GameView, PlayerView } from "../core/game/GameView";
-import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
-import { UserSettings } from "../core/game/UserSettings";
-import { WorkerClient } from "../core/worker/WorkerClient";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -33,9 +6,24 @@ import {
   MouseMoveEvent,
   MouseUpEvent,
 } from "./InputHandler";
-import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentID } from "./Main";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import {
+  ClientID,
+  GameID,
+  GameRecord,
+  GameStartInfo,
+  PlayerRecord,
+  ServerMessage,
+} from "../core/Schemas";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  HashUpdate,
+  WinUpdate,
+} from "../core/game/GameUpdates";
+import { GameRenderer, createRenderer } from "./graphics/GameRenderer";
+import { GameView, PlayerView } from "../core/game/GameView";
+import { PlayerActions, UnitType } from "../core/game/Game";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
@@ -44,10 +32,22 @@ import {
   SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
+import { TerrainMapData, loadTerrainMap } from "../core/game/TerrainMapLoader";
+import { endGame, startGame, startTime } from "./LocalPersistantStats";
+import { EventBus } from "../core/EventBus";
+import { GameMapLoader } from "../core/game/GameMapLoader";
+import { ServerConfig } from "../core/configuration/Config";
+import { TileRef } from "../core/game/GameMap";
+import { UserSettings } from "../core/game/UserSettings";
+import { WorkerClient } from "../core/worker/WorkerClient";
 import { createCanvas } from "./Utils";
-import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import { createGameRecord } from "../core/Util";
+import { getConfig } from "../core/configuration/ConfigLoader";
+import { getPersistentID } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { translateText } from "../client/Utils";
 
-export interface LobbyConfig {
+export type LobbyConfig = {
   serverConfig: ServerConfig;
   pattern: string | undefined;
   flag: string;
@@ -59,7 +59,7 @@ export interface LobbyConfig {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
-}
+};
 
 export function joinLobby(
   eventBus: EventBus,
@@ -192,17 +192,17 @@ export class ClientGameRunner {
 
   private lastMousePosition: { x: number; y: number } | null = null;
 
-  private lastMessageTime: number = 0;
-  private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private lastMessageTime = 0;
+  private connectionCheckInterval: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private lobby: LobbyConfig,
-    private eventBus: EventBus,
-    private renderer: GameRenderer,
-    private input: InputHandler,
-    private transport: Transport,
-    private worker: WorkerClient,
-    private gameView: GameView,
+    private readonly lobby: LobbyConfig,
+    private readonly eventBus: EventBus,
+    private readonly renderer: GameRenderer,
+    private readonly input: InputHandler,
+    private readonly transport: Transport,
+    private readonly worker: WorkerClient,
+    private readonly gameView: GameView,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -288,7 +288,7 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
-    const worker = this.worker;
+    const { worker } = this;
     const keepWorkerAlive = () => {
       if (this.isActive) {
         worker.sendHeartbeat();
@@ -364,7 +364,7 @@ export class ClientGameRunner {
     this.transport.connect(onconnect, onmessage);
   }
 
-  public stop(saveFullGame: boolean = false) {
+  public stop(saveFullGame = false) {
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -420,7 +420,7 @@ export class ClientGameRunner {
 
       const owner = this.gameView.owner(tile);
       if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
+        this.gameView.setFocusedPlayer(owner);
       } else {
         this.gameView.setFocusedPlayer(null);
       }
@@ -452,11 +452,7 @@ export class ClientGameRunner {
       return;
     }
 
-    this.findAndUpgradeNearestBuilding(tile);
-  }
-
-  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile).then((actions) => {
+    this.myPlayer.actions(tile).then((actions) => {
       const upgradeUnits: {
         unitId: number;
         unitType: UnitType;
@@ -470,14 +466,14 @@ export class ClientGameRunner {
             .find((unit) => unit.id() === bu.canUpgrade);
           if (existingUnit) {
             const distance = this.gameView.manhattanDist(
-              clickedTile,
+              tile,
               existingUnit.tile(),
             );
 
             upgradeUnits.push({
               unitId: bu.canUpgrade,
               unitType: bu.type,
-              distance: distance,
+              distance,
             });
           }
         }
@@ -563,7 +559,7 @@ export class ClientGameRunner {
       (bu) => bu.type === UnitType.TransportShip,
     );
     if (bu === undefined) {
-      console.warn(`no transport ship buildable units`);
+      console.warn("no transport ship buildable units");
       return false;
     }
     return (
@@ -577,7 +573,7 @@ export class ClientGameRunner {
     if (!this.myPlayer) return;
 
     this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
-      if (this.myPlayer === null) throw new Error("not initialized");
+      if (this.myPlayer === null) throw new Error("Not initialized");
       this.eventBus.emit(
         new SendBoatAttackIntentEvent(
           this.gameView.owner(tile).id(),
@@ -623,7 +619,7 @@ export class ClientGameRunner {
     if (this.gameView.isLand(tile)) {
       const owner = this.gameView.owner(tile);
       if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
+        this.gameView.setFocusedPlayer(owner);
       } else {
         this.gameView.setFocusedPlayer(null);
       }
@@ -637,7 +633,7 @@ export class ClientGameRunner {
         .sort((a, b) => a.distSquared - b.distSquared);
 
       if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
+        this.gameView.setFocusedPlayer(units[0].unit.owner());
       } else {
         this.gameView.setFocusedPlayer(null);
       }

@@ -1,47 +1,47 @@
-import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
-import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
-import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
-import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
-import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
-import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
-import { translateText } from "../../../client/Utils";
-import { EventBus } from "../../../core/EventBus";
+import {
+  BuildUnitIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 import {
   BuildableUnit,
   Gold,
   PlayerActions,
   UnitType,
 } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameView } from "../../../core/game/GameView";
 import {
   CloseViewEvent,
   MouseDownEvent,
   ShowBuildMenuEvent,
   ShowEmojiMenuEvent,
 } from "../../InputHandler";
-import {
-  BuildUnitIntentEvent,
-  SendUpgradeStructureIntentEvent,
-} from "../../Transport";
-import { renderNumber } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { EventBus } from "../../../core/EventBus";
+import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
+import { TileRef } from "../../../core/game/GameMap";
+import { TransformHandler } from "../TransformHandler";
+import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
+import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
+import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
+import missileSiloIcon from "../../../../resources/non-commercial/svg/MissileSiloIconWhite.svg";
+import portIcon from "../../../../resources/images/PortIcon.svg";
+import { renderNumber } from "../../Utils";
+import samlauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
+import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import { translateText } from "../../../client/Utils";
+import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 
-export interface BuildItemDisplay {
+export type BuildItemDisplay = {
   unitType: UnitType;
   icon: string;
   description?: string;
   key?: string;
   countable?: boolean;
-}
+};
 
 export const buildTable: BuildItemDisplay[][] = [
   [
@@ -123,15 +123,18 @@ export const flattenedBuildTable = buildTable.flat();
 
 @customElement("build-menu")
 export class BuildMenu extends LitElement implements Layer {
-  public game: GameView;
-  public eventBus: EventBus;
-  private clickedTile: TileRef;
-  public playerActions: PlayerActions | null;
+  public game: GameView | undefined;
+  public eventBus: EventBus | undefined;
+  private clickedTile: TileRef | undefined;
+  public playerActions: PlayerActions | null = null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
-  public transformHandler: TransformHandler;
+  public transformHandler: TransformHandler | undefined;
 
   init() {
+    if (this.eventBus === undefined) throw new Error("Not initialized");
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
+      if (!this.game) return;
+      if (!this.transformHandler) return;
       if (!this.game.myPlayer()?.isAlive()) {
         return;
       }
@@ -386,7 +389,9 @@ export class BuildMenu extends LitElement implements Layer {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
-  public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
+  public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile?: TileRef): void {
+    if (tile === undefined) throw new Error("Missing tile");
+    if (this.eventBus === undefined) throw new Error("Not initialized");
     if (buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
@@ -481,8 +486,9 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   private refresh() {
+    if (this.clickedTile === undefined) return;
     this.game
-      .myPlayer()
+      ?.myPlayer()
       ?.actions(this.clickedTile)
       .then((actions) => {
         this.playerActions = actions;

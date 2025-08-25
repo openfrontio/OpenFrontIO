@@ -1,19 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { ApiEnvResponse, ApiPublicLobbiesResponse } from "../core/ExpressSchemas";
+import { LimiterType, gatekeeper } from "./Gatekeeper";
+import { GameInfo } from "../core/Schemas";
+import { ID } from "../core/BaseSchemas";
+import { MapPlaylist } from "./MapPlaylist";
 import cluster from "cluster";
 import express from "express";
-import rateLimit from "express-rate-limit";
-import http from "http";
-import path from "path";
 import { fileURLToPath } from "url";
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import {
-  ApiEnvResponse,
-  ApiPublicLobbiesResponse,
-} from "../core/ExpressSchemas";
-import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { gatekeeper, LimiterType } from "./Gatekeeper";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import http from "http";
 import { logger } from "./Logger";
-import { MapPlaylist } from "./MapPlaylist";
+import path from "path";
+import rateLimit from "express-rate-limit";
 
 const config = getServerConfigFromServer();
 const playlist = new MapPlaylist();
@@ -91,7 +90,8 @@ export async function startMaster() {
 
   cluster.on("message", (worker, message) => {
     if (message.type === "WORKER_READY") {
-      const workerId = message.workerId;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { workerId } = message;
       readyWorkers.add(workerId);
       log.info(
         `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
@@ -121,9 +121,10 @@ export async function startMaster() {
 
   // Handle worker crashes
   cluster.on("exit", (worker, code, signal) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
     const workerId = (worker as any).process?.env?.WORKER_ID;
     if (!workerId) {
-      log.error(`worker crashed could not find id`);
+      log.error("worker crashed could not find id");
       return;
     }
 
@@ -134,6 +135,7 @@ export async function startMaster() {
 
     // Restart the worker with the same ID
     const newWorker = cluster.fork({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       WORKER_ID: workerId,
     });
 

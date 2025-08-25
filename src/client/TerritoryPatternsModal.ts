@@ -1,25 +1,25 @@
-import { base64url } from "jose";
-import type { TemplateResult } from "lit";
-import { html, LitElement, render } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { Pattern } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
-import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
 import "./components/Maps";
+import { LitElement, html, render } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
 import { handlePurchase, patterns } from "./Cosmetics";
+import { Pattern } from "../core/CosmeticSchemas";
+import { PatternDecoder } from "../core/PatternDecoder";
+import type { TemplateResult } from "lit";
+import { UserMeResponse } from "../core/ApiSchemas";
+import { UserSettings } from "../core/game/UserSettings";
+import { base64url } from "jose";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
+  @query("o-modal") private readonly modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
   };
 
   public previewButton: HTMLElement | null = null;
-  public buttonWidth: number = 150;
+  public buttonWidth = 150;
 
   @state() private selectedPattern: string | undefined;
 
@@ -34,30 +34,14 @@ export class TerritoryPatternsModal extends LitElement {
   private patterns: Pattern[] = [];
   private me: UserMeResponse | null = null;
 
-  public resizeObserver: ResizeObserver;
+  public resizeObserver: ResizeObserver | undefined;
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   private isActive = false;
 
   constructor() {
     super();
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-    this.selectedPattern = this.userSettings.getSelectedPattern();
-    this.updateComplete.then(() => {
-      const containers = this.renderRoot.querySelectorAll(".preview-container");
-      if (this.resizeObserver) {
-        containers.forEach((container) =>
-          this.resizeObserver.observe(container),
-        );
-      }
-      this.updatePreview();
-    });
-    this.open();
   }
 
   disconnectedCallback() {
@@ -66,12 +50,16 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   async onUserMe(userMeResponse: UserMeResponse | null) {
+    if (userMeResponse === null) {
+      this.userSettings.setSelectedPattern(undefined);
+      this.selectedPattern = undefined;
+    }
     this.patterns = await patterns(userMeResponse);
     this.me = userMeResponse;
-    this.requestUpdate();
+    this.refresh();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
+  private readonly handleKeyDown = (e: KeyboardEvent) => {
     if (e.code === "Escape") {
       e.preventDefault();
       this.close();
@@ -140,7 +128,7 @@ export class TerritoryPatternsModal extends LitElement {
           @mouseleave=${() => this.handleMouseLeave()}
         >
           <div class="text-sm font-bold mb-1">
-            ${translateText(`territory_patterns.pattern.${pattern.name}`)}
+            ${translatePatternName("territory_patterns.pattern", pattern.name)}
           </div>
           <div
             class="preview-container"
@@ -165,14 +153,16 @@ export class TerritoryPatternsModal extends LitElement {
         ${pattern.product !== null
           ? html`
               <button
-                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
+                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600
+                text-white text-xs font-medium rounded transition-colors"
                 @click=${(e: Event) => {
                   e.stopPropagation();
-                  handlePurchase(pattern.product!.priceId);
+                  if (!pattern.product) return;
+                  handlePurchase(pattern.product.priceId);
                 }}
               >
                 ${translateText("territory_patterns.purchase")}
-                (${pattern.product!.price})
+                (${pattern.product.price})
               </button>
             `
           : null}
@@ -243,7 +233,7 @@ export class TerritoryPatternsModal extends LitElement {
     this.modalEl?.open();
     window.addEventListener("keydown", this.handleKeyDown);
     this.isActive = true;
-    this.requestUpdate();
+    return this.refresh();
   }
 
   public close() {
@@ -256,7 +246,7 @@ export class TerritoryPatternsModal extends LitElement {
   private selectPattern(pattern: string | undefined) {
     this.userSettings.setSelectedPattern(pattern);
     this.selectedPattern = pattern;
-    this.updatePreview();
+    this.refresh();
     this.close();
   }
 
@@ -312,10 +302,22 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  public updatePreview() {
-    if (this.previewButton === null) return;
+  public async refresh() {
     const preview = this.renderPatternPreview(this.selectedPattern, 48, 48);
+    this.requestUpdate();
+
+    // Wait for the DOM to be updated and the o-modal element to be available
+    await this.updateComplete;
+
+    // Now modalEl should be available
+    if (this.modalEl) {
+      this.modalEl.open();
+    } else {
+      console.warn("modalEl is still null after updateComplete");
+    }
+    if (this.previewButton === null) return;
     render(preview, this.previewButton);
+    this.requestUpdate();
   }
 
   private setLockedPatterns(lockedPatterns: string[], reason: string) {
@@ -361,9 +363,8 @@ export function generatePreviewDataUrl(
 ): string {
   pattern ??= DEFAULT_PATTERN_B64;
 
-  if (patternCache.has(pattern)) {
-    return patternCache.get(pattern)!;
-  }
+  const cached = patternCache.get(pattern);
+  if (cached !== undefined) return cached;
 
   // Calculate canvas size
   const decoder = new PatternDecoder(pattern, base64url.decode);
@@ -388,7 +389,7 @@ export function generatePreviewDataUrl(
 
   // Create an image
   const imageData = ctx.createImageData(width, height);
-  const data = imageData.data;
+  const { data } = imageData;
   let i = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -405,4 +406,13 @@ export function generatePreviewDataUrl(
   const dataUrl = canvas.toDataURL("image/png");
   patternCache.set(pattern, dataUrl);
   return dataUrl;
+}
+
+function translatePatternName(prefix: string, patternName: string): string {
+  const translation = translateText(`${prefix}.${patternName}`);
+  if (translation.startsWith(prefix)) {
+    // Translation was not found, fallback to pattern name
+    return patternName[0].toUpperCase() + patternName.substring(1);
+  }
+  return translation;
 }

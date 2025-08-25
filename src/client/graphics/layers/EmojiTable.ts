@@ -1,34 +1,36 @@
+import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
+import { GameView, PlayerView } from "../../../core/game/GameView";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { AllPlayers } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
-import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { emojiTable, flattenedEmojiTable } from "../../../core/Util";
-import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
+import { AllPlayers } from "../../../core/game/Game";
+import { EventBus } from "../../../core/EventBus";
 import { SendEmojiIntentEvent } from "../../Transport";
+import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
 import { TransformHandler } from "../TransformHandler";
 
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {
   @state() public isVisible = false;
-  public transformHandler: TransformHandler;
-  public game: GameView;
 
-  initEventBus(eventBus: EventBus) {
+  init(
+    transformHandler: TransformHandler,
+    game: GameView,
+    eventBus: EventBus,
+  ) {
     eventBus.on(ShowEmojiMenuEvent, (e) => {
       this.isVisible = true;
-      const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-      if (!this.game.isValidCoord(cell.x, cell.y)) {
+      const cell = transformHandler.screenToWorldCoordinates(e.x, e.y);
+      if (!game.isValidCoord(cell.x, cell.y)) {
         return;
       }
 
-      const tile = this.game.ref(cell.x, cell.y);
-      if (!this.game.hasOwner(tile)) {
+      const tile = game.ref(cell.x, cell.y);
+      if (!game.hasOwner(tile)) {
         return;
       }
 
-      const targetPlayer = this.game.owner(tile);
+      const targetPlayer = game.owner(tile);
       // maybe redundant due to owner check but better safe than sorry
       if (targetPlayer instanceof TerraNulliusImpl) {
         return;
@@ -36,7 +38,7 @@ export class EmojiTable extends LitElement {
 
       this.showTable((emoji) => {
         const recipient =
-          targetPlayer === this.game.myPlayer()
+          targetPlayer === game.myPlayer()
             ? AllPlayers
             : (targetPlayer as PlayerView);
         eventBus.emit(
@@ -64,16 +66,17 @@ export class EmojiTable extends LitElement {
 
     return html`
       <div
-        class="bg-slate-800 max-w-[95vw] max-h-[95vh] pt-[15px] pb-[15px] fixed flex flex-col -translate-x-1/2 -translate-y-1/2 
-                items-center rounded-[10px] z-[9999] top-[50%] left-[50%] justify-center"
+        class="bg-slate-800 max-w-[95vw] max-h-[95vh] pt-[15px] pb-[15px] fixed
+          flex flex-col -translate-x-1/2 -translate-y-1/2 items-center
+          rounded-[10px] z-[9999] top-[50%] left-[50%] justify-center"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @wheel=${(e: WheelEvent) => e.stopPropagation()}
       >
         <!-- Close button -->
         <button
-          class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
-                  bg-red-500 hover:bg-red-900 text-white rounded-full
-                  text-sm font-bold transition-colors"
+          class="absolute -top-2 -right-2 w-6 h-6 flex items-center
+            justify-center bg-red-500 hover:bg-red-900 text-white rounded-full
+            text-sm font-bold transition-colors"
           @click=${this.hideTable}
         >
           ✕
@@ -88,10 +91,14 @@ export class EmojiTable extends LitElement {
                 ${row.map(
                   (emoji) => html`
                     <button
-                      class="flex transition-transform duration-300 ease justify-center items-center cursor-pointer
-                              border border-solid border-slate-500 rounded-[12px] bg-slate-700 hover:bg-slate-600 active:bg-slate-500 
-                              md:m-[8px] md:text-[60px] md:w-[80px] md:h-[80px] hover:scale-[1.1] active:scale-[0.95]
-                              sm:w-[60px] sm:h-[60px] sm:text-[32px] sm:m-[5px] text-[28px] w-[50px] h-[50px] m-[3px]"
+                      class="flex transition-transform duration-300 ease
+                        justify-center items-center cursor-pointer border
+                        border-solid border-slate-500 rounded-[12px]
+                        bg-slate-700 hover:bg-slate-600 active:bg-slate-500
+                        md:m-[8px] md:text-[60px] md:w-[80px] md:h-[80px]
+                        hover:scale-[1.1] active:scale-[0.95] sm:w-[60px]
+                        sm:h-[60px] sm:text-[32px] sm:m-[5px] text-[28px]
+                        w-[50px] h-[50px] m-[3px]"
                       @click=${() => this.onEmojiClicked(emoji)}
                     >
                       ${emoji}

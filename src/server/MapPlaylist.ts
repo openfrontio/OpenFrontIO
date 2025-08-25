@@ -1,4 +1,3 @@
-import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
@@ -9,8 +8,9 @@ import {
   Quads,
   Trios,
 } from "../core/game/Game";
-import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
+import { PseudoRandom } from "../core/PseudoRandom";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { logger } from "./Logger";
 
 const log = logger.child({});
@@ -20,39 +20,39 @@ const config = getServerConfigFromServer();
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
 const frequency: Partial<Record<GameMapName, number>> = {
-  Africa: 2,
-  Asia: 1,
-  Australia: 1,
-  Baikal: 2,
-  BetweenTwoSeas: 1,
-  BlackSea: 1,
-  Britannia: 1,
-  DeglaciatedAntarctica: 1,
-  EastAsia: 1,
-  Europe: 2,
-  EuropeClassic: 1,
-  FalklandIslands: 1,
-  FaroeIslands: 1,
-  GatewayToTheAtlantic: 1,
-  Halkidiki: 1,
-  Iceland: 1,
-  Italia: 1,
-  Mars: 1,
-  MarsRevised: 1,
-  Mena: 1,
-  NorthAmerica: 1,
-  Pangaea: 1,
-  Pluto: 1,
-  SouthAmerica: 1,
-  StraitOfGibraltar: 1,
-  World: 3,
-  Yenisei: 1,
+  Africa: 7,
+  Asia: 6,
+  Australia: 4,
+  Baikal: 5,
+  BetweenTwoSeas: 5,
+  BlackSea: 6,
+  Britannia: 5,
+  DeglaciatedAntarctica: 4,
+  EastAsia: 5,
+  Europe: 3,
+  EuropeClassic: 3,
+  FalklandIslands: 4,
+  FaroeIslands: 4,
+  GatewayToTheAtlantic: 5,
+  Halkidiki: 4,
+  Iceland: 4,
+  Italia: 6,
+  Mars: 3,
+  MarsRevised: 3,
+  Mena: 6,
+  NorthAmerica: 5,
+  NorthernHemisphere: 5,
+  Pangaea: 5,
+  Pluto: 6,
+  SouthAmerica: 5,
+  StraitOfGibraltar: 5,
+  World: 8,
 };
 
-interface MapWithMode {
+type MapWithMode = {
   map: GameMapType;
   mode: GameMode;
-}
+};
 
 const TEAM_COUNTS = [
   2,
@@ -81,6 +81,8 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       disableNPCs: mode === GameMode.Team,
       disabledUnits: [],
+      donateGold: true,
+      donateTroops: true,
       gameMap: map,
       gameMode: mode,
       gameType: GameType.Public,
@@ -101,14 +103,20 @@ export class MapPlaylist {
       const numAttempts = 10000;
       for (let i = 0; i < numAttempts; i++) {
         if (this.shuffleMapsPlaylist()) {
-          log.info(`Generated map playlist in ${i} attempts`);
-          return this.mapsPlaylist.shift()!;
+          log.info(`Generated map playlist in ${i + 1} attempts`);
+          const next = this.mapsPlaylist.shift();
+          if (next !== undefined) return next;
+          log.error("Playlist unexpectedly empty after successful shuffle; using fallback.");
+          return { map: GameMapType.World, mode: GameMode.FFA };
         }
       }
       log.error("Failed to generate a valid map playlist");
     }
-    // Even if it failed, playlist will be partially populated.
-    return this.mapsPlaylist.shift()!;
+    // Even if it failed, playlist may be partially populated.
+    const fallback = this.mapsPlaylist.shift();
+    if (fallback !== undefined) return fallback;
+    log.error("Playlist empty after shuffle failure; using fallback.");
+    return { map: GameMapType.World, mode: GameMode.FFA };
   }
 
   private shuffleMapsPlaylist(): boolean {
@@ -126,6 +134,7 @@ export class MapPlaylist {
     const team: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
+    // eslint-disable-next-line @typescript-eslint/prefer-for-of
     for (let i = 0; i < maps.length; i++) {
       if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
         return false;
@@ -155,7 +164,7 @@ export class MapPlaylist {
         continue;
       }
       nextEls.splice(i, 1);
-      playlist.push({ map: next, mode: mode });
+      playlist.push({ map: next, mode });
       return true;
     }
     return false;

@@ -1,21 +1,21 @@
 import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
+import { TileRef } from "../game/GameMap";
 
 export class ShellExecution implements Execution {
   private active = true;
-  private pathFinder: AirPathFinder;
+  private pathFinder: AirPathFinder | undefined;
   private shell: Unit | undefined;
-  private mg: Game;
-  private destroyAtTick: number = -1;
-  private random: PseudoRandom;
+  private mg: Game | undefined;
+  private destroyAtTick = -1;
+  private random: PseudoRandom | undefined;
 
   constructor(
-    private spawn: TileRef,
-    private _owner: Player,
-    private ownerUnit: Unit,
-    private target: Unit,
+    private readonly spawn: TileRef,
+    private readonly _owner: Player,
+    private readonly ownerUnit: Unit,
+    private readonly target: Unit,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -25,6 +25,8 @@ export class ShellExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.pathFinder === undefined) throw new Error("Not initialized");
     this.shell ??= this._owner.buildUnit(UnitType.Shell, this.spawn, {});
     if (!this.shell.isActive()) {
       this.active = false;
@@ -62,6 +64,8 @@ export class ShellExecution implements Execution {
   }
 
   private effectOnTarget(): number {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.random === undefined) throw new Error("Not initialized");
     const { damage } = this.mg.config().unitInfo(UnitType.Shell);
     const baseDamage = damage ?? 250;
 
