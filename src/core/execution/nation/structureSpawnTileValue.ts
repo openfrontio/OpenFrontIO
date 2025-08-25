@@ -1,4 +1,4 @@
-import { Game, Player, UnitType } from "../../game/Game";
+import { Game, Player, Relation, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { closestTwoTiles } from "../Util";
 
@@ -65,25 +65,24 @@ export function structureSpawnTileValue(
         // Prefer higher elevations
         w += mg.magnitude(tile);
 
-        // Prefer to be close to the border
         const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
         if (closestBorder !== null) {
+          // Prefer to be borderSpacing tiles from the border
           const d = mg.manhattanDist(closestBorder.x, tile);
           w += Math.max(0, borderSpacing - Math.abs(borderSpacing - d));
 
           // Prefer adjacent players who are hostile
-          const closestTile = mg.ref(closestBorder.x, closestBorder.y);
-          const neighborPlayers: Set<Player> = new Set();
-          for (const tile of mg.neighbors(closestTile)) {
+          const neighbors: Set<Player> = new Set();
+          for (const tile of mg.neighbors(closestBorder.x)) {
             if (!mg.isLand(tile)) continue;
             const id = mg.ownerID(tile);
             if (id === player.smallID()) continue;
             const neighbor = mg.playerBySmallID(id);
             if (!neighbor.isPlayer()) continue;
-            neighborPlayers.add(neighbor);
+            neighbors.add(neighbor);
           }
-          for (const neighbor of neighborPlayers) {
-            w += borderSpacing * player.relation(neighbor);
+          for (const neighbor of neighbors) {
+            w += borderSpacing * (Relation.Friendly - player.relation(neighbor));
           }
         }
 
