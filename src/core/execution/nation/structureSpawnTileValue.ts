@@ -1,30 +1,6 @@
-import { Game, Player, Unit, UnitType } from "../../game/Game";
+import { Game, Player, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { closestTwoTiles } from "../Util";
-
-// Prefer to be away from other structures of the same type
-function distanceStructureFromSimilars(otherUnits: Unit[], tile: TileRef, mg: Game, w: number,
-  structureSpacing: number) {
-  const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
-  otherTiles.delete(tile);
-  const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-  if (closestOther !== null) {
-    const d = mg.manhattanDist(closestOther.x, tile);
-    w += Math.min(d, structureSpacing);
-  }
-  return w;
-}
-
-// Prefer to be away from the border
-function distanceStructureFromBorder(borderTiles: ReadonlySet<TileRef>, tile: TileRef, mg: Game,
-  w: number, borderSpacing: number) {
-  const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
-  if (closestBorder !== null) {
-    const d = mg.manhattanDist(closestBorder.x, tile);
-    w += Math.min(d, borderSpacing);
-  }
-  return w;
-}
 
 export function structureSpawnTileValue(
   mg: Game,
@@ -39,8 +15,16 @@ export function structureSpawnTileValue(
   switch (type) {
     case UnitType.Port:
       return (tile) => {
+        let w = 0;
         // Prefer to be away from other structures of the same type
-        return distanceStructureFromSimilars(otherUnits, tile, mg, 0, structureSpacing);
+        const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+        otherTiles.delete(tile);
+        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+        if (closestOther !== null) {
+          const d = mg.manhattanDist(closestOther.x, tile);
+          w += Math.min(d, structureSpacing);
+        }
+        return w;
       };
     case UnitType.City:
     case UnitType.Factory:
@@ -52,11 +36,23 @@ export function structureSpawnTileValue(
         w += mg.magnitude(tile);
 
         // Prefer to be away from the border
-        w = distanceStructureFromBorder(borderTiles, tile, mg, w, borderSpacing);
+        const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
+        if (closestBorder !== null) {
+          const d = mg.manhattanDist(closestBorder.x, tile);
+          w += Math.min(d, borderSpacing);
+        }
 
         // TODO: Cities and factories should consider train range limits
         // Prefer to be away from other structures of the same type
-        return distanceStructureFromSimilars(otherUnits, tile, mg, w, structureSpacing);
+        const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
+        otherTiles.delete(tile);
+        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+        if (closestOther !== null) {
+          const d = mg.manhattanDist(closestOther.x, tile);
+          w += Math.min(d, structureSpacing);
+        }
+
+        return w;
       };
     case UnitType.SAMLauncher:
       const structureTiles: TileRef[] = [];
@@ -86,18 +82,21 @@ export function structureSpawnTileValue(
         const hydrogenSpacing = mg.config().nukeMagnitudes(UnitType.HydrogenBomb).inner;
 
         for (const certainTile of structureTiles) {
-          const dx = mg.x(certainTile) - mg.x(tile);
-          const dy = mg.y(certainTile) - mg.y(tile);
-          const distanceMagnitude = dx * dx + dy * dy;
-          if (distanceMagnitude > hydrogenSpacing) { w -= (distanceMagnitude - hydrogenSpacing); }
-          else if (distanceMagnitude < hydrogenSpacing) { w += (hydrogenSpacing - distanceMagnitude); }
+          const d = mg.manhattanDist(certainTile, tile);
+          w += hydrogenSpacing - d;
         }
 
         // Prefer higher elevations
         w += mg.magnitude(tile);
 
         // Prefer to be away from border.
-        return distanceStructureFromBorder(borderTiles, tile, mg, w, borderSpacing);
+        const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
+        if (closestBorder !== null) {
+          const d = mg.manhattanDist(closestBorder.x, tile);
+          w += Math.min(d, borderSpacing);
+        }
+
+        return w;
       };
     default:
       throw new Error(`Value function not implemented for ${type}`);
