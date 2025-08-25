@@ -1,8 +1,8 @@
-// components/PatternButton.ts
+import { base64url } from "jose";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Pattern } from "../../core/CosmeticSchemas";
-import { generatePreviewDataUrl } from "../TerritoryPatternsModal";
+import { PatternDecoder } from "../../core/PatternDecoder";
 import { translateText } from "../Utils";
 
 export const BUTTON_WIDTH = 150;
@@ -18,25 +18,8 @@ export class PatternButton extends LitElement {
   @property({ type: Function })
   onPurchase?: (priceId: string) => void;
 
-  // Override to prevent shadow DOM creation (matching WinModal)
   createRenderRoot() {
     return this;
-  }
-
-  private renderPatternPreview(pattern: string): TemplateResult {
-    const dataUrl = generatePreviewDataUrl(pattern, BUTTON_WIDTH, BUTTON_WIDTH);
-    return html`<img
-      src="${dataUrl}"
-      alt="Pattern preview"
-      class="w-full h-full object-contain"
-      style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"
-    />`;
-  }
-
-  private renderBlankPreview(): TemplateResult {
-    return html`<div
-      class="w-full h-full bg-gray-100 border border-gray-300 rounded"
-    ></div>`;
   }
 
   private translatePatternName(prefix: string, patternName: string): string {
@@ -86,10 +69,13 @@ export class PatternButton extends LitElement {
           </div>
           <div
             class="w-[120px] h-[120px] flex items-center justify-center bg-white rounded p-1 mx-auto"
+            style="overflow: hidden;"
           >
-            ${isDefaultPattern
-              ? this.renderBlankPreview()
-              : this.renderPatternPreview(this.pattern!.pattern)}
+            ${renderPatternPreview(
+              this.pattern?.pattern ?? null,
+              BUTTON_WIDTH,
+              BUTTON_WIDTH,
+            )}
           </div>
         </button>
 
@@ -108,4 +94,123 @@ export class PatternButton extends LitElement {
       </div>
     `;
   }
+}
+
+export function renderPatternPreview(
+  pattern: string | null,
+  width: number,
+  height: number,
+): TemplateResult {
+  if (pattern === null) {
+    return renderBlankPreview(width, height);
+  }
+  const dataUrl = generatePreviewDataUrl(pattern, width, height);
+  return html`<img
+    src="${dataUrl}"
+    alt="Pattern preview"
+    class="w-full h-full object-contain"
+    style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"
+  />`;
+}
+
+function renderBlankPreview(width: number, height: number): TemplateResult {
+  return html`
+    <div
+      style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: ${height}px;
+        width: ${width}px;
+        background-color: #ffffff;
+        border-radius: 4px;
+        box-sizing: border-box;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid #ccc;
+      "
+    >
+      <div
+        style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 0; width: calc(100% - 1px); height: calc(100% - 2px); box-sizing: border-box;"
+      >
+        <div
+          style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); box-sizing: border-box;"
+        ></div>
+        <div
+          style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); box-sizing: border-box;"
+        ></div>
+        <div
+          style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); box-sizing: border-box;"
+        ></div>
+        <div
+          style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); box-sizing: border-box;"
+        ></div>
+      </div>
+    </div>
+  `;
+}
+
+const patternCache = new Map<string, string>();
+const DEFAULT_PATTERN_B64 = "AAAAAA"; // Empty 2x2 pattern
+const COLOR_SET = [0, 0, 0, 255]; // Black
+const COLOR_UNSET = [255, 255, 255, 255]; // White
+function generatePreviewDataUrl(
+  pattern?: string,
+  width?: number,
+  height?: number,
+): string {
+  pattern ??= DEFAULT_PATTERN_B64;
+  const patternLookupKey = `${pattern}-${width}-${height}`;
+
+  if (patternCache.has(patternLookupKey)) {
+    return patternCache.get(patternLookupKey)!;
+  }
+
+  // Calculate canvas size
+  let decoder: PatternDecoder;
+  try {
+    decoder = new PatternDecoder(pattern, base64url.decode);
+  } catch (e) {
+    console.error("Error decoding pattern", e);
+    return "";
+  }
+
+  const scaledWidth = decoder.scaledWidth();
+  const scaledHeight = decoder.scaledHeight();
+
+  width =
+    width === undefined
+      ? scaledWidth
+      : Math.max(1, Math.floor(width / scaledWidth)) * scaledWidth;
+  height =
+    height === undefined
+      ? scaledHeight
+      : Math.max(1, Math.floor(height / scaledHeight)) * scaledHeight;
+
+  // Create the canvas
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D context not supported");
+
+  // Create an image
+  const imageData = ctx.createImageData(width, height);
+  const data = imageData.data;
+  let i = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const rgba = decoder.isSet(x, y) ? COLOR_SET : COLOR_UNSET;
+      data[i++] = rgba[0]; // Red
+      data[i++] = rgba[1]; // Green
+      data[i++] = rgba[2]; // Blue
+      data[i++] = rgba[3]; // Alpha
+    }
+  }
+
+  // Create a data URL
+  ctx.putImageData(imageData, 0, 0);
+  const dataUrl = canvas.toDataURL("image/png");
+  patternCache.set(patternLookupKey, dataUrl);
+  return dataUrl;
 }

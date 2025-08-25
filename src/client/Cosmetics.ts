@@ -12,7 +12,7 @@ export async function fetchPatterns(
   }
 
   const patterns: Map<string, Pattern> = new Map();
-  const playerFlares = new Set(userMe?.player.flares);
+  const playerFlares = new Set(userMe?.player?.flares ?? []);
 
   for (const name in cosmetics.patterns) {
     const patternData = cosmetics.patterns[name];

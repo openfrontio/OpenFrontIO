@@ -1,13 +1,12 @@
-import { base64url } from "jose";
 import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
-import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
 import "./components/PatternButton";
+import { renderPatternPreview } from "./components/PatternButton";
 import { fetchPatterns, handlePurchase } from "./Cosmetics";
 import { translateText } from "./Utils";
 
@@ -148,19 +147,9 @@ export class TerritoryPatternsModal extends LitElement {
     this.close();
   }
 
-  private renderPatternPreview(
-    pattern?: string,
-    width?: number,
-    height?: number,
-  ): TemplateResult {
-    return html`
-      <img src="${generatePreviewDataUrl(pattern, width, height)}"></img>
-    `;
-  }
-
   public async refresh() {
-    const preview = this.renderPatternPreview(
-      this.selectedPattern?.pattern,
+    const preview = renderPatternPreview(
+      this.selectedPattern?.pattern ?? null,
       48,
       48,
     );
@@ -179,69 +168,4 @@ export class TerritoryPatternsModal extends LitElement {
     render(preview, this.previewButton);
     this.requestUpdate();
   }
-}
-
-const patternCache = new Map<string, string>();
-const DEFAULT_PATTERN_B64 = "AAAAAA"; // Empty 2x2 pattern
-const COLOR_SET = [0, 0, 0, 255]; // Black
-const COLOR_UNSET = [255, 255, 255, 255]; // White
-export function generatePreviewDataUrl(
-  pattern?: string,
-  width?: number,
-  height?: number,
-): string {
-  pattern ??= DEFAULT_PATTERN_B64;
-  const patternLookupKey = `${pattern}-${width}-${height}`;
-
-  if (patternCache.has(patternLookupKey)) {
-    return patternCache.get(patternLookupKey)!;
-  }
-
-  // Calculate canvas size
-  let decoder: PatternDecoder;
-  try {
-    decoder = new PatternDecoder(pattern, base64url.decode);
-  } catch (e) {
-    console.error("Error decoding pattern", e);
-    return "";
-  }
-
-  const scaledWidth = decoder.scaledWidth();
-  const scaledHeight = decoder.scaledHeight();
-
-  width =
-    width === undefined
-      ? scaledWidth
-      : Math.max(1, Math.floor(width / scaledWidth)) * scaledWidth;
-  height =
-    height === undefined
-      ? scaledHeight
-      : Math.max(1, Math.floor(height / scaledHeight)) * scaledHeight;
-
-  // Create the canvas
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D context not supported");
-
-  // Create an image
-  const imageData = ctx.createImageData(width, height);
-  const data = imageData.data;
-  let i = 0;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const rgba = decoder.isSet(x, y) ? COLOR_SET : COLOR_UNSET;
-      data[i++] = rgba[0]; // Red
-      data[i++] = rgba[1]; // Green
-      data[i++] = rgba[2]; // Blue
-      data[i++] = rgba[3]; // Alpha
-    }
-  }
-
-  // Create a data URL
-  ctx.putImageData(imageData, 0, 0);
-  const dataUrl = canvas.toDataURL("image/png");
-  patternCache.set(patternLookupKey, dataUrl);
-  return dataUrl;
 }
