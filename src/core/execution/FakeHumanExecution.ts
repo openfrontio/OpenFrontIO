@@ -25,6 +25,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { closestTwoTiles } from "./Util";
+import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 
 export class FakeHumanExecution implements Execution {
   private active = true;
@@ -464,6 +465,7 @@ export class FakeHumanExecution implements Execution {
   }
 
   private structureSpawnTile(type: UnitType): TileRef | null {
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (this.player === null) throw new Error("Not initialized");
     const tiles =
       type === UnitType.Port
@@ -472,7 +474,7 @@ export class FakeHumanExecution implements Execution {
         )
         : Array.from(this.player.tiles());
     if (tiles.length === 0) return null;
-    const valueFunction = this.structureSpawnTileValue(type);
+    const valueFunction = structureSpawnTileValue(this.mg, this.player, type);
     let bestTile: TileRef | null = null;
     let bestValue = 0;
     const sampledTiles = this.arraySampler(tiles);
@@ -499,110 +501,6 @@ export class FakeHumanExecution implements Execution {
         remaining.delete(t);
         yield t;
       }
-    }
-  }
-
-  private structureSpawnTileValue(type: UnitType): (tile: TileRef) => number {
-    if (this.mg === undefined) throw new Error("Not initialized");
-    if (this.player === null) throw new Error("Not initialized");
-    const borderTiles = this.player.borderTiles();
-    const { mg } = this;
-    const otherUnits = this.player.units(type);
-    // Prefer spacing structures out of atom bomb range
-    const borderSpacing = this.mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
-    const structureSpacing = borderSpacing * 2;
-    switch (type) {
-      case UnitType.Port:
-        return (tile) => {
-          let w = 0;
-
-          // Prefer to be far away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
-          otherTiles.delete(tile);
-          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-          if (closestOther !== null) {
-            const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, structureSpacing);
-          }
-
-          return w;
-        };
-      case UnitType.City:
-      case UnitType.Factory:
-      case UnitType.MissileSilo:
-        return (tile) => {
-          let w = 0;
-
-          // Prefer higher elevations
-          w += mg.magnitude(tile);
-
-          // Prefer to be away from the border
-          const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
-          if (closestBorder !== null) {
-            const d = mg.manhattanDist(closestBorder.x, tile);
-            w += Math.min(d, borderSpacing);
-          }
-
-          // Prefer to be away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(otherUnits.map((u) => u.tile()));
-          otherTiles.delete(tile);
-          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-          if (closestOther !== null) {
-            const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, structureSpacing);
-          }
-
-          // TODO: Cities and factories should consider train range limits
-          return w;
-        };
-      case UnitType.SAMLauncher:
-        const structureTiles: TileRef[] = [];
-        for (const unit of this.player.units()) {
-          switch(unit.type()) {
-            case UnitType.City:
-            case UnitType.Factory:
-            case UnitType.MissileSilo:
-            case UnitType.Port:
-            case UnitType.DefensePost:
-            case UnitType.SAMLauncher:
-              structureTiles.push(unit.tile());
-
-          }
-        }
-        return (tile) => {
-          if (this.player === null) throw new Error("Not initialised.");
-          let w = 0;
-
-          // According to the inner radius of a hydrogen bomb around each structure:
-          // - Increase points for how much closer the tile is to the structure
-          // in relation to the perimeter.
-          // - Deecrease points for how much farther the tile is to the structure
-          // in relation to the perimeter.
-          // This pushes the nation to focus SAMs in a "goldilocks zone" that is neither
-          // too close nor too far from their structure clusters.
-          const hydrogenSpacing = this.mg.config().nukeMagnitudes(UnitType.HydrogenBomb).inner;
-
-          for (const certainTile of structureTiles) {
-            const distanceVector = [mg.x(certainTile) - mg.x(tile), mg.y(certainTile) - mg.y(tile)];
-            const distanceMagnitude = (distanceVector[0] ** 2 + distanceVector[1] ** 2);
-            if (distanceMagnitude > hydrogenSpacing) { w -= (distanceMagnitude - hydrogenSpacing); }
-            else if (distanceMagnitude < hydrogenSpacing) { w += (hydrogenSpacing - distanceMagnitude); }
-          }
-
-          // Prefer higher elevations
-          w += mg.magnitude(tile);
-
-          // Prefer to be away from the border
-          const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
-          if (closestBorder !== null) {
-            const d = mg.manhattanDist(closestBorder.x, tile);
-            w += Math.min(d, borderSpacing);
-          }
-
-          return w;
-        };
-      default:
-        throw new Error(`Value function not implemented for ${type}`);
     }
   }
 
