@@ -397,9 +397,9 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    const hasPending =
-      this.incomingAllianceRequests().some((ar) => ar.requestor() === other) ||
-      this.outgoingAllianceRequests().some((ar) => ar.recipient() === other);
+    const hasPending = this.outgoingAllianceRequests().some(
+      (ar) => ar.recipient() === other,
+    );
 
     if (hasPending) {
       return false;
@@ -557,6 +557,9 @@ export class PlayerImpl implements Player {
   }
 
   canSendEmoji(recipient: Player | typeof AllPlayers): boolean {
+    if (recipient === this) {
+      return false;
+    }
     const recipientID =
       recipient === AllPlayers ? AllPlayers : recipient.smallID();
     const prevMsgs = this.outgoingEmojis_.filter(
