@@ -1,9 +1,13 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
+import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import "../../components/PatternButton";
+import { fetchPatterns, handlePurchase } from "../../Cosmetics";
+import { getUserMe } from "../../jwt";
 import { SendWinnerEvent } from "../../Transport";
 import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
@@ -21,6 +25,9 @@ export class WinModal extends LitElement implements Layer {
   @state()
   showButtons = false;
 
+  @state()
+  private patternContent: TemplateResult | null = null;
+
   private _title: string;
 
   // Override to prevent shadow DOM creation
@@ -28,153 +35,117 @@ export class WinModal extends LitElement implements Layer {
     return this;
   }
 
-  static styles = css`
-    .win-modal {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: rgba(30, 30, 30, 0.7);
-      padding: 25px;
-      border-radius: 10px;
-      z-index: 9999;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
-      color: white;
-      width: 350px;
-      transition:
-        opacity 0.3s ease-in-out,
-        visibility 0.3s ease-in-out;
-    }
-
-    .win-modal.visible {
-      display: block;
-      animation: fadeIn 0.3s ease-out;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translate(-50%, -48%);
-      }
-      to {
-        opacity: 1;
-        transform: translate(-50%, -50%);
-      }
-    }
-
-    .win-modal h2 {
-      margin: 0 0 15px 0;
-      font-size: 26px;
-      text-align: center;
-      color: white;
-    }
-
-    .win-modal p {
-      margin: 0 0 20px 0;
-      text-align: center;
-      background-color: rgba(0, 0, 0, 0.3);
-      padding: 10px;
-      border-radius: 5px;
-    }
-
-    .button-container {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .win-modal button {
-      flex: 1;
-      padding: 12px;
-      font-size: 16px;
-      cursor: pointer;
-      background: rgba(0, 150, 255, 0.6);
-      color: white;
-      border: none;
-      border-radius: 5px;
-      transition:
-        background-color 0.2s ease,
-        transform 0.1s ease;
-    }
-
-    .win-modal button:hover {
-      background: rgba(0, 150, 255, 0.8);
-      transform: translateY(-1px);
-    }
-
-    .win-modal button:active {
-      transform: translateY(1px);
-    }
-
-    @media (max-width: 768px) {
-      .win-modal {
-        width: 90%;
-        max-width: 300px;
-        padding: 20px;
-      }
-
-      .win-modal h2 {
-        font-size: 26px;
-      }
-
-      .win-modal button {
-        padding: 10px;
-        font-size: 14px;
-      }
-    }
-  `;
-
   constructor() {
     super();
-    // Add styles to document
-    const styleEl = document.createElement("style");
-    styleEl.textContent = WinModal.styles.toString();
-    document.head.appendChild(styleEl);
   }
 
   render() {
     return html`
-      <div class="win-modal ${this.isVisible ? "visible" : ""}">
-        <h2>${this._title || ""}</h2>
+      <div
+        class="${this.isVisible
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 rounded-lg z-[9999] shadow-2xl backdrop-blur-sm text-white w-[350px] max-w-[90%] md:max-w-[350px] animate-fadeIn"
+          : "hidden"}"
+      >
+        <h2 class="m-0 mb-4 text-[26px] text-center text-white">
+          ${this._title || ""}
+        </h2>
         ${this.innerHtml()}
         <div
-          class="button-container ${this.showButtons ? "visible" : "hidden"}"
+          class="${this.showButtons
+            ? "flex justify-between gap-2.5"
+            : "hidden"}"
         >
-          <button @click=${this._handleExit}>
+          <button
+            @click=${this._handleExit}
+            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
+          >
             ${translateText("win_modal.exit")}
           </button>
-          <button @click=${this.hide}>
+          <button
+            @click=${this.hide}
+            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
+          >
             ${translateText("win_modal.keep")}
           </button>
         </div>
       </div>
+
+      <style>
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -48%);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      </style>
     `;
   }
 
   innerHtml() {
-    return html`<p>
+    return this.renderPatternButton();
+  }
+
+  renderPatternButton() {
+    return html`
+      <div class="text-center mb-6 bg-black/30 p-2.5 rounded">
+        <h3 class="text-xl font-semibold text-white mb-3">
+          ${translateText("win_modal.support_openfront")}
+        </h3>
+        <p class="text-white mb-3">
+          ${translateText("win_modal.territory_pattern")}
+        </p>
+        <div class="flex justify-center">${this.patternContent}</div>
+      </div>
+    `;
+  }
+
+  async loadPatternContent() {
+    const me = await getUserMe();
+    const patterns = await fetchPatterns(me !== false ? me : null);
+
+    const purchasable = Array.from(patterns.values()).filter(
+      (p) => p.product !== null,
+    );
+
+    if (purchasable.length === 0) {
+      this.patternContent = html``;
+      return;
+    }
+
+    const pattern = purchasable[Math.floor(Math.random() * purchasable.length)];
+
+    this.patternContent = html`
+      <pattern-button
+        .pattern=${pattern}
+        .onSelect=${(p: Pattern | null) => {}}
+        .onPurchase=${(priceId: string) => handlePurchase(priceId)}
+      ></pattern-button>
+    `;
+  }
+
+  steamWishlist(): TemplateResult {
+    return html`<p class="m-0 mb-5 text-center bg-black/30 p-2.5 rounded">
       <a
         href="https://store.steampowered.com/app/3560670"
         target="_blank"
         rel="noopener noreferrer"
-        style="
-          color: #4a9eff;
-          text-decoration: underline;
-          font-weight: 500;
-          transition: color 0.2s ease;
-          font-size: 24px;
-        "
-        onmouseover="this.style.color='#6db3ff'"
-        onmouseout="this.style.color='#4a9eff'"
+        class="text-[#4a9eff] underline font-medium transition-colors duration-200 text-2xl hover:text-[#6db3ff]"
       >
         ${translateText("win_modal.wishlist")}
       </a>
     </p>`;
   }
 
-  show() {
+  async show() {
+    await this.loadPatternContent();
     this.eventBus.emit(new GutterAdModalEvent(true));
     setTimeout(() => {
       this.isVisible = true;

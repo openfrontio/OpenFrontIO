@@ -7,11 +7,9 @@ import { Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PatternDecoder } from "../core/PatternDecoder";
 import "./components/Difficulties";
-import "./components/Maps";
-import { handlePurchase, patterns } from "./Cosmetics";
+import "./components/PatternButton";
+import { fetchPatterns, handlePurchase } from "./Cosmetics";
 import { translateText } from "./Utils";
-
-const BUTTON_WIDTH = 150;
 
 @customElement("territory-patterns-modal")
 export class TerritoryPatternsModal extends LitElement {
@@ -22,10 +20,7 @@ export class TerritoryPatternsModal extends LitElement {
 
   public previewButton: HTMLElement | null = null;
 
-  @state() private selectedPattern: Pattern | undefined;
-
-  @state() private hoveredPattern: Pattern | null = null;
-  @state() private hoverPosition = { x: 0, y: 0 };
+  @state() private selectedPattern: Pattern | null;
 
   @state() private keySequence: string[] = [];
   @state() private showChocoPattern = false;
@@ -48,12 +43,12 @@ export class TerritoryPatternsModal extends LitElement {
   async onUserMe(userMeResponse: UserMeResponse | null) {
     if (userMeResponse === null) {
       this.userSettings.setSelectedPatternName(undefined);
-      this.selectedPattern = undefined;
+      this.selectedPattern = null;
     }
-    this.patterns = await patterns(userMeResponse);
+    this.patterns = await fetchPatterns(userMeResponse);
     const storedPatternName = this.userSettings.getSelectedPatternName();
     if (storedPatternName) {
-      this.selectedPattern = this.patterns.get(storedPatternName);
+      this.selectedPattern = this.patterns.get(storedPatternName) ?? null;
     }
     this.refresh();
   }
@@ -94,86 +89,18 @@ export class TerritoryPatternsModal extends LitElement {
     return this;
   }
 
-  private renderTooltip(): TemplateResult | null {
-    if (this.hoveredPattern && this.hoveredPattern.product !== undefined) {
-      return html`
-        <div
-          class="fixed z-[10000] px-3 py-2 rounded bg-black text-white text-sm pointer-events-none shadow-md"
-          style="top: ${this.hoverPosition.y + 12}px; left: ${this.hoverPosition
-            .x + 12}px;"
-        >
-          ${translateText("territory_patterns.blocked.purchase")}
-        </div>
-      `;
-    }
-    return null;
-  }
-
-  private renderPatternButton(pattern: Pattern): TemplateResult {
-    const isSelected = this.selectedPattern?.name === pattern.name;
-
-    return html`
-      <div style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);">
-        <button
-          class="border p-2 rounded-lg shadow text-black dark:text-white text-left w-full
-          ${isSelected
-            ? "bg-blue-500 text-white"
-            : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
-          ${pattern.product !== null ? "opacity-50 cursor-not-allowed" : ""}"
-          @click=${() =>
-            pattern.product === null && this.selectPattern(pattern)}
-          @mouseenter=${(e: MouseEvent) => this.handleMouseEnter(pattern, e)}
-          @mousemove=${(e: MouseEvent) => this.handleMouseMove(e)}
-          @mouseleave=${() => this.handleMouseLeave()}
-        >
-          <div class="text-sm font-bold mb-1">
-            ${translatePatternName("territory_patterns.pattern", pattern.name)}
-          </div>
-          <div
-            class="preview-container"
-            style="
-              width: 100%;
-              aspect-ratio: 1;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              background: #fff;
-              border-radius: 8px;
-              overflow: hidden;
-            "
-          >
-            ${this.renderPatternPreview(
-              pattern.pattern,
-              BUTTON_WIDTH,
-              BUTTON_WIDTH,
-            )}
-          </div>
-        </button>
-        ${pattern.product !== null
-          ? html`
-              <button
-                class="w-full mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors"
-                @click=${(e: Event) => {
-                  e.stopPropagation();
-                  handlePurchase(pattern.product!.priceId);
-                }}
-              >
-                ${translateText("territory_patterns.purchase")}
-                (${pattern.product!.price})
-              </button>
-            `
-          : null}
-      </div>
-    `;
-  }
-
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
     for (const [name, pattern] of this.patterns) {
       if (!this.showChocoPattern && name === "choco") continue;
 
-      const result = this.renderPatternButton(pattern);
-      buttons.push(result);
+      buttons.push(html`
+        <pattern-button
+          .pattern=${pattern}
+          .onSelect=${(p: Pattern | null) => this.selectPattern(p)}
+          .onPurchase=${(priceId: string) => handlePurchase(priceId)}
+        ></pattern-button>
+      `);
     }
 
     return html`
@@ -181,33 +108,11 @@ export class TerritoryPatternsModal extends LitElement {
         class="flex flex-wrap gap-4 p-2"
         style="justify-content: center; align-items: flex-start;"
       >
-        <button
-          class="border p-2 rounded-lg shadow text-black dark:text-white text-left
-          ${this.selectedPattern === undefined
-            ? "bg-blue-500 text-white"
-            : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}"
-          style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);"
-          @click=${() => this.selectPattern(undefined)}
-        >
-          <div class="text-sm font-bold mb-1">
-            ${translateText("territory_patterns.pattern.default")}
-          </div>
-          <div
-            class="preview-container"
-            style="
-              width: 100%;
-              aspect-ratio: 1;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              background: #fff;
-              border-radius: 8px;
-              overflow: hidden;
-            "
-          >
-            ${this.renderBlankPreview(BUTTON_WIDTH, BUTTON_WIDTH)}
-          </div>
-        </button>
+        <pattern-button
+          .pattern=${null}
+          .onSelect=${(p: Pattern | null) => this.selectPattern(p)}
+          .onPurchase=${(priceId: string) => handlePurchase(priceId)}
+        ></pattern-button>
         ${buttons}
       </div>
     `;
@@ -216,7 +121,6 @@ export class TerritoryPatternsModal extends LitElement {
   render() {
     if (!this.isActive) return html``;
     return html`
-      ${this.renderTooltip()}
       <o-modal
         id="territoryPatternsModal"
         title="${translateText("territory_patterns.title")}"
@@ -238,7 +142,7 @@ export class TerritoryPatternsModal extends LitElement {
     window.removeEventListener("keydown", this.handleKeyDown);
   }
 
-  private selectPattern(pattern: Pattern | undefined) {
+  private selectPattern(pattern: Pattern | null) {
     this.userSettings.setSelectedPatternName(pattern?.name);
     this.selectedPattern = pattern;
     this.refresh();
@@ -252,48 +156,6 @@ export class TerritoryPatternsModal extends LitElement {
   ): TemplateResult {
     return html`
       <img src="${generatePreviewDataUrl(pattern, width, height)}"></img>
-    `;
-  }
-
-  private renderBlankPreview(width: number, height: number): TemplateResult {
-    return html`
-      <div
-        style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: ${height}px;
-          width: ${width}px;
-          background-color: #ffffff;
-          border-radius: 4px;
-          box-sizing: border-box;
-          overflow: hidden;
-          position: relative;
-          border: 1px solid #ccc;
-        "
-      >
-        <div
-          style="display: grid; grid-template-columns: repeat(2, ${width /
-          2}px); grid-template-rows: repeat(2, ${height / 2}px);"
-        >
-          <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
-          ></div>
-          <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
-          ></div>
-          <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
-          ></div>
-          <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
-          ></div>
-        </div>
-      </div>
     `;
   }
 
@@ -317,23 +179,6 @@ export class TerritoryPatternsModal extends LitElement {
     if (this.previewButton === null) return;
     render(preview, this.previewButton);
     this.requestUpdate();
-  }
-
-  private handleMouseEnter(pattern: Pattern, event: MouseEvent) {
-    if (pattern.product !== null) {
-      this.hoveredPattern = pattern;
-      this.hoverPosition = { x: event.clientX, y: event.clientY };
-    }
-  }
-
-  private handleMouseMove(event: MouseEvent) {
-    if (this.hoveredPattern) {
-      this.hoverPosition = { x: event.clientX, y: event.clientY };
-    }
-  }
-
-  private handleMouseLeave() {
-    this.hoveredPattern = null;
   }
 }
 
@@ -400,13 +245,4 @@ export function generatePreviewDataUrl(
   const dataUrl = canvas.toDataURL("image/png");
   patternCache.set(patternLookupKey, dataUrl);
   return dataUrl;
-}
-
-function translatePatternName(prefix: string, patternName: string): string {
-  const translation = translateText(`${prefix}.${patternName}`);
-  if (translation.startsWith(prefix)) {
-    // Translation was not found, fallback to pattern name
-    return patternName[0].toUpperCase() + patternName.substring(1);
-  }
-  return translation;
 }

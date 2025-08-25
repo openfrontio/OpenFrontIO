@@ -2,7 +2,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
 
-export async function patterns(
+export async function fetchPatterns(
   userMe: UserMeResponse | null,
 ): Promise<Map<string, Pattern>> {
   const cosmetics = await getCosmetics();
