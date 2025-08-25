@@ -355,7 +355,7 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(50_000 + 50 * dist);
+    const baseGold = Math.floor(100_000 + 100 * dist);
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
@@ -363,19 +363,31 @@ export class DefaultConfig implements Config {
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
-  tradeShipSpawnRate(numTradeShips: number, numPlayerPorts: number): number {
+  tradeShipSpawnRate(
+    numTradeShips: number,
+    numPlayerPorts: number,
+    numPlayerTradeShips: number,
+  ): number {
     // Geometric mean of base spawn rate and port multiplier
     const combined = Math.sqrt(
-      this.tradeShipBaseSpawn(numTradeShips) *
+      this.tradeShipBaseSpawn(numTradeShips, numPlayerTradeShips) *
         this.tradeShipPortMultiplier(numPlayerPorts),
     );
 
-    return Math.floor(12 / combined);
+    return Math.floor(25 / combined);
   }
 
-  private tradeShipBaseSpawn(numTradeShips: number): number {
-    const decayRate = Math.LN2 / 30;
-    return 1 - sigmoid(numTradeShips, decayRate, 100);
+  private tradeShipBaseSpawn(
+    numTradeShips: number,
+    numPlayerTradeShips: number,
+  ): number {
+    if (numPlayerTradeShips < 3) {
+      // If other players have many ports, then they can starve out smaller players.
+      // So this prevents smaller players from being completely starved out.
+      return 1;
+    }
+    const decayRate = Math.LN2 / 10;
+    return 1 - sigmoid(numTradeShips, decayRate, 55);
   }
 
   private tradeShipPortMultiplier(numPlayerPorts: number): number {
