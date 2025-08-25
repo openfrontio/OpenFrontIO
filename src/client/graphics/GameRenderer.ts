@@ -66,10 +66,11 @@ export function createRenderer(
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
     console.error("BuildMenu element not found in the DOM");
+  } else {
+    buildMenu.game = game;
+    buildMenu.eventBus = eventBus;
+    buildMenu.transformHandler = transformHandler;
   }
-  buildMenu.game = game;
-  buildMenu.eventBus = eventBus;
-  buildMenu.transformHandler = transformHandler;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!leaderboard || !(leaderboard instanceof Leaderboard)) {
