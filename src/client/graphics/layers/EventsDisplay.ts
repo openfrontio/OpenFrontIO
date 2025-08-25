@@ -470,6 +470,9 @@ export class EventsDisplay extends LitElement implements Layer {
         },
       ],
       createdAt: this.game.ticks(),
+      description: translateText("events_display.request_alliance", {
+        name: requestor.name(),
+      }),
       duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
       focusID: update.requestorID,
       priority: 0,
@@ -477,6 +480,7 @@ export class EventsDisplay extends LitElement implements Layer {
         // Recipient sent a separate request, so they became allied without the recipient responding.
         return requestor.isAlliedWith(recipient);
       },
+      type: MessageType.ALLIANCE_REQUEST,
     });
   }
 

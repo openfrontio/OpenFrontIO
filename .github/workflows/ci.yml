@@ -70,4 +70,4 @@ jobs:
           node-version: "20"
           cache: "npm"
       - run: npm ci
-      - run: npx prettier --check .
+      - run: npx biome format .
