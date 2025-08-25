@@ -17,6 +17,12 @@ import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier"
 import { getPersistentID } from "./Main";
 import { z } from "zod";
 
+export class ReplayDataUpdateEvent {
+  constructor(
+    public readonly totalTurns: number,
+  ) {}
+}
+
 export class LocalServer {
   // All turns from the game record on replay.
   private replayTurns: Turn[] = [];
@@ -71,6 +77,8 @@ export class LocalServer {
       this.replayTurns = decompressGameRecord(
         this.lobbyConfig.gameRecord,
       ).turns;
+
+      this.emitReplayDataUpdate();
     }
     if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
@@ -217,5 +225,17 @@ export class LocalServer {
       this.lobbyConfig.gameStartInfo.gameID,
     );
     navigator.sendBeacon(`/${workerPath}/api/archive_singleplayer_game`, blob);
+  }
+
+  private emitReplayDataUpdate(): void {
+    if (this.replayTurns.length <= 0) {
+      return;
+    }
+
+    this.eventBus.emit(
+      new ReplayDataUpdateEvent(
+        this.replayTurns.length,
+      ),
+    );
   }
 }

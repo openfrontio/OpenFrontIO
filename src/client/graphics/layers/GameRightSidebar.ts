@@ -6,6 +6,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 import { PauseGameEvent } from "../../Transport";
+import { ReplayDataUpdateEvent } from "../../../client/LocalServer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
 import { ShowSettingsModalEvent } from "./SettingsModal";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -25,6 +26,9 @@ export class GameRightSidebar extends LitElement implements Layer {
   private _isSinglePlayer = false;
 
   @state()
+  private _isReplay = false;
+
+  @state()
   private _isReplayVisible = false;
 
   @state()
@@ -32,6 +36,12 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   @state()
   private isPaused = false;
+
+  @state()
+  private _totalTurns = 0;
+
+  @state()
+  private _spawnPhaseTurns = 0;
 
   @state()
   private timer = 0;
@@ -43,11 +53,17 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   init() {
-    this._isSinglePlayer =
-      this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
-      (this.game?.config().isReplay() ?? false);
+    this._isSinglePlayer = this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer;
+    this._isReplay = this.game?.config().isReplay() ?? false;
     this._isVisible = true;
+    this._spawnPhaseTurns = this.game?.numSpawnPhaseTurns() ?? 0;
     this.requestUpdate();
+
+    if (this.eventBus && this._isReplay) {
+      this.eventBus.on(ReplayDataUpdateEvent, (event: ReplayDataUpdateEvent) => {
+        this._totalTurns = event.totalTurns;
+      });
+    }
   }
 
   tick() {
@@ -77,7 +93,7 @@ export class GameRightSidebar extends LitElement implements Layer {
   private toggleReplayPanel(): void {
     this._isReplayVisible = !this._isReplayVisible;
     this.eventBus?.emit(
-      new ShowReplayPanelEvent(this._isReplayVisible, this._isSinglePlayer),
+      new ShowReplayPanelEvent(this._isReplayVisible, this._isSinglePlayer || this._isReplay),
     );
   }
 
@@ -147,12 +163,14 @@ export class GameRightSidebar extends LitElement implements Layer {
             ${this.secondsToHms(this.timer)}
           </div>
         </div>
+
+        ${this.maybeRenderReplayProgressBar()}
       </aside>
     `;
   }
 
   maybeRenderReplayButtons() {
-    if (this._isSinglePlayer || this.game?.config()?.isReplay()) {
+    if (this._isSinglePlayer || this._isReplay) {
       return html` <div
           class="w-6 h-6 cursor-pointer"
           @click=${this.toggleReplayPanel}
@@ -177,5 +195,24 @@ export class GameRightSidebar extends LitElement implements Layer {
     } else {
       return html``;
     }
+  }
+
+  maybeRenderReplayProgressBar() {
+    if (!this.game || !this._isReplay || this._totalTurns === 0) return html``;
+
+    const turnsSinceSpawn = this.game.ticks() - this._spawnPhaseTurns;
+    const totalTurnsSinceSpawn = this._totalTurns - this._spawnPhaseTurns;
+    const progress = (turnsSinceSpawn <= 0) ? 0 : (turnsSinceSpawn / totalTurnsSinceSpawn) * 100;
+
+    return html`
+      <div class="progress-container mt-2 mx-2.5">
+        <div class="w-full bg-gray-600 rounded-sm h-2 overflow-hidden">
+          <div
+            class="bg-blue-500 h-2 transition-all duration-200"
+            style="width: ${progress}%"
+          ></div>
+        </div>
+      </div>
+    `;
   }
 }
