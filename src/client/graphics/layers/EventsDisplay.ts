@@ -470,13 +470,13 @@ export class EventsDisplay extends LitElement implements Layer {
         },
       ],
       createdAt: this.game.ticks(),
-      priority: 0,
       duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
+      focusID: update.requestorID,
+      priority: 0,
       shouldDelete: (game) => {
         // Recipient sent a separate request, so they became allied without the recipient responding.
         return requestor.isAlliedWith(recipient);
       },
-      focusID: update.requestorID,
     });
   }
 

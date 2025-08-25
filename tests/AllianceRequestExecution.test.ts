@@ -1,7 +1,7 @@
-import { Game, Player, PlayerType } from "../src/core/game/Game";
-import { playerInfo, setup } from "./util/Setup";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
+import { Game, Player, PlayerType } from "../src/core/game/Game";
+import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
 let player1: Player;
@@ -13,8 +13,8 @@ describe("AllianceRequestExecution", () => {
       "plains",
       {
         infiniteGold: true,
-        instantBuild: true,
         infiniteTroops: true,
+        instantBuild: true,
       },
       [
         playerInfo("player1", PlayerType.Human),
