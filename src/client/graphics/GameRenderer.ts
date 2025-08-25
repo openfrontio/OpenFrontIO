@@ -337,6 +337,7 @@ export class GameRenderer {
 
   renderGame() {
     const start = performance.now();
+    this.context.setTransform(1, 0, 0, 1, 0, 0);
     // Set background
     this.context.fillStyle = this.game
       .config()
@@ -350,11 +351,12 @@ export class GameRenderer {
       active: boolean,
     ): boolean => {
       if (needsTransform && !active) {
-        this.context.save();
+        // this.context.save();
         this.transformHandler.handleTransform(this.context);
         return true;
       } else if (!needsTransform && active) {
-        this.context.restore();
+        // this.context.restore();
+        this.context.setTransform(1, 0, 0, 1, 0, 0);
         return false;
       }
       return active;
