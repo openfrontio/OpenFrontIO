@@ -13,7 +13,7 @@ import { translateText } from "../../Utils";
 export class ShowReplayPanelEvent {
   constructor(
     public visible = true,
-    public isSingleplayerOrReplay = false,
+    public isSingleplayer = false,
   ) {}
 }
 
@@ -29,7 +29,7 @@ export class ReplayPanel extends LitElement implements Layer {
   private _replaySpeedMultiplier: number = defaultReplaySpeedMultiplier;
 
   @property({ type: Boolean })
-  isSingleplayerOrReplay = false;
+  isSingleplayer = false;
 
   createRenderRoot() {
     return this; // Enable Tailwind CSS
@@ -39,7 +39,7 @@ export class ReplayPanel extends LitElement implements Layer {
     if (this.eventBus) {
       this.eventBus.on(ShowReplayPanelEvent, (event: ShowReplayPanelEvent) => {
         this.visible = event.visible;
-        this.isSingleplayerOrReplay = event.isSingleplayerOrReplay;
+        this.isSingleplayer = event.isSingleplayer;
       });
     }
   }
@@ -71,7 +71,7 @@ export class ReplayPanel extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
-          ${this.isSingleplayerOrReplay
+          ${this.isSingleplayer
             ? translateText("replay_panel.game_speed")
             : translateText("replay_panel.replay_speed")}
         </label>

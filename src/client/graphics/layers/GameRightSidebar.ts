@@ -93,7 +93,7 @@ export class GameRightSidebar extends LitElement implements Layer {
   private toggleReplayPanel(): void {
     this._isReplayVisible = !this._isReplayVisible;
     this.eventBus?.emit(
-      new ShowReplayPanelEvent(this._isReplayVisible, this._isSinglePlayer || this._isReplay),
+      new ShowReplayPanelEvent(this._isReplayVisible, this._isSinglePlayer),
     );
   }
 
