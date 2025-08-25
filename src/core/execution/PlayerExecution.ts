@@ -209,22 +209,39 @@ export class PlayerExecution implements Execution {
   }
 
   private getCapturingPlayer(cluster: Set<TileRef>): Player | null {
-    const neighborsIDs = new Set<number>();
+    // Collect unique neighbor IDs (excluding self) as candidates
+    const candidatesIDs = new Set<number>();
+    const selfID = this.player.smallID();
+
     for (const t of cluster) {
       for (const neighbor of this.mg.neighbors(t)) {
-        if (this.mg.ownerID(neighbor) !== this.player.smallID()) {
-          neighborsIDs.add(this.mg.ownerID(neighbor));
+        if (this.mg.ownerID(neighbor) !== selfID) {
+          candidatesIDs.add(this.mg.ownerID(neighbor));
         }
       }
     }
 
-    let largestNeighborAttack: Player | null = null;
-    let largestTroopCount: number = 0;
-    for (const id of neighborsIDs) {
+    // Filter out friendly and non-player candidates
+    const neighborsIDs = new Set<number>();
+    const neighbors = new Set<Player>();
+    for (const id of candidatesIDs) {
       const neighbor = this.mg.playerBySmallID(id);
-      if (!neighbor.isPlayer() || this.player.isFriendly(neighbor)) {
+      if (!neighbor.isPlayer() || neighbor.isFriendly(this.player)) {
         continue;
       }
+      neighborsIDs.add(id);
+      neighbors.add(neighbor);
+    }
+
+    // If there are no enemies, return null
+    if (neighbors.size === 0) {
+      return null;
+    }
+
+    // Get the largest attack from the neighbors
+    let largestNeighborAttack: Player | null = null;
+    let largestTroopCount = 0;
+    for (const neighbor of neighbors) {
       for (const attack of neighbor.outgoingAttacks()) {
         if (attack.target() === this.player) {
           if (attack.troops() > largestTroopCount) {
@@ -238,11 +255,8 @@ export class PlayerExecution implements Execution {
       return largestNeighborAttack;
     }
 
-    // fall back to getting mode if no attacks
+    // Fall back to getting mode if no attacks
     const mode = getMode(neighborsIDs);
-    if (!this.mg.playerBySmallID(mode).isPlayer()) {
-      return null;
-    }
     const capturing = this.mg.playerBySmallID(mode);
     if (!capturing.isPlayer()) {
       return null;
