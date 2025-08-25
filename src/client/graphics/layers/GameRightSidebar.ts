@@ -200,11 +200,9 @@ export class GameRightSidebar extends LitElement implements Layer {
   maybeRenderReplayProgressBar() {
     if (!this.game || !this._isReplay || this._totalTurns === 0) return html``;
 
-    const turnsSinceSpawn = this.game.ticks() - this._spawnPhaseTurns;
-    const totalTurnsSinceSpawn = this._totalTurns - this._spawnPhaseTurns;
-    const ratio = totalTurnsSinceSpawn <= 0
-      ? 0
-      : turnsSinceSpawn / totalTurnsSinceSpawn;
+    const turnsSinceSpawn = Math.max(0, this.game.ticks() - this._spawnPhaseTurns);
+    const totalTurnsSinceSpawn = Math.max(0, this._totalTurns - this._spawnPhaseTurns);
+    const ratio = totalTurnsSinceSpawn === 0 ? 0 : turnsSinceSpawn / totalTurnsSinceSpawn;
     const progress = Math.min(100, Math.max(0, Math.floor(ratio * 100)));
 
     return html`
