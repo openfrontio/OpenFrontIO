@@ -99,10 +99,7 @@ export default [
       "function-call-argument-newline": ["error", "consistent"],
       "max-depth": ["error", { max: 5 }],
       "max-len": ["error", { code: 120 }],
-      "max-lines": [
-        "error",
-        { max: 676, skipBlankLines: true, skipComments: true },
-      ],
+      "max-lines": ["error", { max: 677, skipBlankLines: true, skipComments: true }],
       "max-lines-per-function": ["error", { max: 561 }],
       "no-loss-of-precision": "error",
       "no-multi-spaces": "error",

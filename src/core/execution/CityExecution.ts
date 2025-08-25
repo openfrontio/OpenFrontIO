@@ -52,7 +52,6 @@ export class CityExecution implements Execution {
         this.city.tile(),
         this.mg.config().trainStationMaxRange(),
         UnitType.Factory,
-        this.player.id(),
       );
       if (nearbyFactory) {
         this.mg.addExecution(new TrainStationExecution(this.city));
