@@ -8,6 +8,9 @@ import type { Layer } from "./Layer";
 export const isNukeType = (t: UnitType) =>
   t === UnitType.AtomBomb || t === UnitType.HydrogenBomb || t === UnitType.MIRV;
 
+/**
+ * Renders a deterministic preview for single-blast nukes and MIRV scatter.
+ */
 export class NukePreview implements Layer {
   constructor(
     private game: GameView,
@@ -25,8 +28,8 @@ export class NukePreview implements Layer {
     return false;
   }
 
-  // deterministic hash
-  private h32 = (x: number) => {
+  // 32-bit deterministic hash
+  private h32 = (x: number): number => {
     x ^= x >>> 16;
     x = Math.imul(x, 0x7feb352d);
     x ^= x >>> 15;
@@ -35,76 +38,77 @@ export class NukePreview implements Layer {
     return x >>> 0;
   };
 
+  private rand01 = (x: number, y: number, seed: number): number =>
+    (this.h32(this.h32(x) ^ this.h32(y) ^ seed) & 0xffff) / 0x10000;
+
   renderLayer(ctx: CanvasRenderingContext2D): void {
     const p = this.ui.nukePreview;
     const anchor = this.ui.nukeAnchor;
     if (!p?.active || !anchor) return;
 
-    // seed stability per (type, anchor)
+    // Stable seed per (type, anchor)
     const sig = `${p.nukeType}|${anchor.x}|${anchor.y}`;
     if (this._npSig !== sig) {
       this._npSig = sig;
       this._npSeed = this.game.ticks();
     }
-
     const seed = this._npSeed;
 
-    // MIRV branch (scatter a bunch of mini-warheads)
     if (p.nukeType === "MIRV") {
       this.renderMirvPreview(ctx, anchor.x, anchor.y, seed);
       return;
     }
 
-    // === existing single-blast code (atom/hydrogen) ===
-    const { inner, outer } = this.game
-      .config()
-      .nukeMagnitudes(p.nukeType as NukeType);
+    this.renderSingleBlastPreview(ctx, anchor.x, anchor.y, p.nukeType as NukeType, seed);
+  }
+
+  // ---------- Single-blast (Atom/Hydrogen) ----------
+
+  private renderSingleBlastPreview(
+    ctx: CanvasRenderingContext2D,
+    ax: number,
+    ay: number,
+    nukeType: NukeType,
+    seed: number,
+  ): void {
+    const { inner, outer } = this.game.config().nukeMagnitudes(nukeType);
     const s = this.transform.scale;
-    const rInner = inner * s;
-    const rOuter = outer * s;
 
     const rect = this.transform.boundingRect();
-    const tl = this.transform.worldToScreenCoordinates(
-      new Cell(anchor.x, anchor.y),
-    );
-    const cx = tl.x - rect.left + s * 0.5;
-    const cy = tl.y - rect.top + s * 0.5;
+    const topLeftPx = this.transform.worldToScreenCoordinates(new Cell(ax, ay));
+    const cx = topLeftPx.x - rect.left + s * 0.5;
+    const cy = topLeftPx.y - rect.top + s * 0.5;
+
+    const rInnerPx = inner * s;
+    const rOuterPx = outer * s;
 
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "source-over";
     ctx.imageSmoothingEnabled = false;
 
-    // inner ring + fill
-    ctx.beginPath();
-    ctx.setLineDash([]);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "rgba(220, 20, 60, 0.65)";
-    ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
-    ctx.stroke();
+    // Inner circle stroke + fill
+    this.drawCircle(ctx, cx, cy, rInnerPx, {
+      strokeWidth: 2,
+      stroke: "rgba(220, 20, 60, 0.65)",
+      fill: "rgba(220, 20, 60, 0.30)",
+    });
 
-    ctx.beginPath();
-    ctx.fillStyle = "rgba(220, 20, 60, 0.30)";
-    ctx.arc(cx, cy, rInner, 0, Math.PI * 2);
-    ctx.fill();
-
-
-    const rand01 = (x: number, y: number) =>
-      (this.h32(this.h32(x) ^ this.h32(y) ^ seed) & 0xffff) / 0x10000;
-
-    // probabilistic band
-    const outer2 = outer * outer,
-      inner2 = inner * inner;
+    // Probabilistic band between inner and outer radii
+    const outer2 = outer * outer;
+    const inner2 = inner * inner;
     const tileStep = Math.max(1, Math.floor(2 / Math.max(0.5, s)));
     ctx.fillStyle = "rgba(220, 20, 60, 0.14)";
 
     for (let dy = -outer; dy <= outer; dy += tileStep) {
-      const wy = anchor.y + dy;
+      const wy = ay + dy;
       for (let dx = -outer; dx <= outer; dx += tileStep) {
-        const wx = anchor.x + dx;
+        const wx = ax + dx;
         const d2 = dx * dx + dy * dy;
         if (d2 > outer2) continue;
-        if (d2 <= inner2 || rand01(wx, wy) < 0.5) {
+
+        // Fill if inside inner or by probability
+        if (d2 <= inner2 || this.rand01(wx, wy, seed) < 0.5) {
           const pt = this.transform.worldToScreenCoordinates(new Cell(wx, wy));
           const px = pt.x - rect.left;
           const py = pt.y - rect.top;
@@ -114,93 +118,52 @@ export class NukePreview implements Layer {
       }
     }
 
-    // safety line just inside real outer
+    // Static safety line just inside the outer radius
     const halfTilePx = s * tileStep * 0.5;
     const visualPad = Math.max(halfTilePx + 1, 3);
-    const rOuterVisual = Math.max(rInner + 2, rOuter - visualPad);
-    ctx.beginPath();
-    ctx.setLineDash([]);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(220,20,60,0.35)";
-    ctx.arc(cx, cy, rOuterVisual, 0, Math.PI * 2);
-    ctx.stroke();
+    const rOuterVisual = Math.max(rInnerPx + 2, rOuterPx - visualPad);
+    this.strokeCircle(ctx, cx, cy, rOuterVisual, 1, "rgba(220,20,60,0.35)");
 
-    // spinning rings outside the band
-    const bandPx = Math.max(0, rOuter - rInner);
-    const offsetOut = Math.max(4, Math.min(24, bandPx * 0.2));
-    const sepOut = Math.max(6, Math.min(18, bandPx * 0.18));
-    const rRing1 = rOuter + offsetOut;
-    const rRing2 = rRing1 + sepOut;
-
-    const dash = 12,
-      gap = 10,
-      speed = 15;
-    const t = performance.now() / 1000;
-    const cycle = dash + gap;
-    const spin = (t * speed) % cycle;
-
-    ctx.beginPath();
-    ctx.setLineDash([dash, gap]);
-    ctx.lineDashOffset = -spin;
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = "rgba(220, 20, 60, 0.95)";
-    ctx.arc(cx, cy, rRing1, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.setLineDash([dash, gap]);
-    ctx.lineDashOffset = spin;
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgba(220, 20, 60, 0.9)";
-    ctx.arc(cx, cy, rRing2, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.setLineDash([]);
     ctx.restore();
   }
+
+  // ---------- MIRV scatter preview ----------
 
   private renderMirvPreview(
     ctx: CanvasRenderingContext2D,
     ax: number,
     ay: number,
     seed: number,
-  ) {
+  ): void {
     const s = this.transform.scale;
     const rect = this.transform.boundingRect();
 
-    // Use the actual MIRV warhead magnitudes (no extra scaling)
+    // Warhead magnitudes
     const wh = this.game.config().nukeMagnitudes(UnitType.MIRVWarhead);
     const rInnerPx = wh.inner * s;
     const rOuterPx = wh.outer * s;
 
-    // Match MirvExecution.mirvRange exactly
+    // MIRV parameters
     const MIRV_RANGE = 1500; // tiles
-    const MIN_SPACING = 25; // tiles (Manhattan), like proximityCheck
-    const PREVIEW_COUNT = 100; // draw ~100 for clarity/perf
+    const MIN_SPACING = 25; // Manhattan distance
+    const PREVIEW_COUNT = 100; // count for perf/clarity
 
-    // Owner gate: preview only on tiles with the same owner as the anchor (player or TerraNullius)
     const anchorOwner = this.game.owner(this.game.ref(ax, ay));
 
-    // Recompute targets only when signature changes
-    const sig = `MIRV|${ax}|${ay}|${anchorOwner.isPlayer() ? (anchorOwner as any).id() : "TN"}`;
+    // Recompute candidate targets when signature changes
+    const sig =
+      `MIRV|${ax}|${ay}|${anchorOwner.isPlayer() ? (anchorOwner as any).id() : "TN"}`;
     if (this._mirvSig !== sig) {
       this._mirvSig = sig;
       this._mirvTargets = [];
 
-      // We’ll pick PREVIEW_COUNT positions uniformly from the circle (radius 1500),
-      // respecting owner/land and min spacing, with a bounded attempts budget.
-      const range2 = MIRV_RANGE * MIRV_RANGE;
       let attempts = 0;
       const MAX_ATTEMPTS = 15000;
 
-      while (
-        this._mirvTargets.length < PREVIEW_COUNT &&
-        attempts < MAX_ATTEMPTS
-      ) {
+      while (this._mirvTargets.length < PREVIEW_COUNT && attempts < MAX_ATTEMPTS) {
         attempts++;
 
-        // Uniform sample in circle via polar
-        // Use a deterministic PRNG from seed + attempts
+        // Uniform sample in circle via polar with deterministic PRNG
         const r01 = (this.h32(seed ^ attempts) & 0xffff) / 0x10000;
         const t01 = (this.h32(seed ^ (attempts * 2654435761)) & 0xffff) / 0x10000;
 
@@ -218,10 +181,9 @@ export class NukePreview implements Layer {
         if (!this.game.isLand(tile)) continue;
 
         const owner = this.game.owner(tile);
-        // must match the same owner object (player or TerraNullius)
         if (owner !== anchorOwner) continue;
 
-        // respect min Manhattan spacing among already selected targets
+        // Enforce minimum Manhattan spacing
         let tooClose = false;
         for (const t of this._mirvTargets) {
           if (Math.abs(t.x - tx) + Math.abs(t.y - ty) < MIN_SPACING) {
@@ -236,14 +198,6 @@ export class NukePreview implements Layer {
       }
     }
 
-    // Spin/dash (tiny rings)
-    const dash = 8,
-      gap = 8,
-      speed = 18;
-    const time = performance.now() / 1000;
-    const cycle = dash + gap;
-    const spin = (time * speed) % cycle;
-
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = "source-over";
@@ -253,36 +207,66 @@ export class NukePreview implements Layer {
       let cx = pt.x - rect.left + s * 0.5;
       let cy = pt.y - rect.top + s * 0.5;
 
-      // slight intra-tile jitter so they don’t sit perfectly centered
-      const jx = ((w & 0xff) / 255 - 0.5) * (s * 0.45);
-      const jy = (((w >> 8) & 0xff) / 255 - 0.5) * (s * 0.45);
-      cx += jx;
-      cy += jy;
+      // Sub-tile jitter for visual variety
+      cx += ((w & 0xff) / 255 - 0.5) * (s * 0.45);
+      cy += (((w >> 8) & 0xff) / 255 - 0.5) * (s * 0.45);
 
-      // mini inner stroke + fill
-      ctx.beginPath();
-      ctx.setLineDash([]);
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(220, 20, 60, 0.7)";
-      ctx.arc(cx, cy, rInnerPx, 0, Math.PI * 2);
-      ctx.stroke();
+      // Inner circle stroke + fill
+      this.drawCircle(ctx, cx, cy, rInnerPx, {
+        strokeWidth: 1,
+        stroke: "rgba(220, 20, 60, 0.7)",
+        fill: "rgba(220, 20, 60, 0.22)",
+      });
 
-      ctx.beginPath();
-      ctx.fillStyle = "rgba(220, 20, 60, 0.22)";
-      ctx.arc(cx, cy, rInnerPx, 0, Math.PI * 2);
-      ctx.fill();
-
-      // tiny spinning ring right outside inner
-      ctx.beginPath();
-      ctx.setLineDash([dash, gap]);
-      ctx.lineDashOffset = w & 1 ? -spin : spin; // alternate direction for variety
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(220, 20, 60, 0.9)";
-      ctx.arc(cx, cy, Math.max(rInnerPx + 2, rOuterPx - 1), 0, Math.PI * 2);
-      ctx.stroke();
+      // Static outer boundary hint
+      this.strokeCircle(
+        ctx,
+        cx,
+        cy,
+        Math.max(rInnerPx + 2, rOuterPx - 1),
+        1,
+        "rgba(220, 20, 60, 0.35)",
+      );
     }
 
-    ctx.setLineDash([]);
     ctx.restore();
+  }
+
+  // ---------- Drawing helpers ----------
+
+  private drawCircle(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    r: number,
+    opts: { strokeWidth: number; stroke: string; fill: string },
+  ): void {
+    ctx.beginPath();
+    ctx.setLineDash([]);
+    ctx.lineWidth = opts.strokeWidth;
+    ctx.strokeStyle = opts.stroke;
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = opts.fill;
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private strokeCircle(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    r: number,
+    width: number,
+    color: string,
+  ): void {
+    ctx.beginPath();
+    ctx.setLineDash([]);
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
   }
 }
