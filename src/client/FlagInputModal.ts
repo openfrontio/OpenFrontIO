@@ -69,9 +69,12 @@ export class FlagInputModal extends LitElement {
   }
 
   private includedInSearch(country: { name: string; code: string }): boolean {
+    const q = this.search.toLowerCase();
+    const localized = getTranslatedCountryName(country.code, country.name).toLowerCase();
     return (
-      country.name.toLowerCase().includes(this.search.toLowerCase()) ||
-      country.code.toLowerCase().includes(this.search.toLowerCase())
+      country.name.toLowerCase().includes(q) ||
+      country.code.toLowerCase().includes(q) ||
+      localized.includes(q)
     );
   }
 
