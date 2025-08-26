@@ -10,6 +10,8 @@ import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
+import { UIState } from "../UIState";
+import { isNukeType } from "./NukePreview";
 
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
@@ -24,7 +26,6 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
-import { UIState } from "../UIState";
 
 export type MenuElementParams = {
   myPlayer: PlayerView;
@@ -343,14 +344,6 @@ const ATTACK_UNIT_TYPES: UnitType[] = [
   UnitType.HydrogenBomb,
   UnitType.Warship,
 ];
-
-function isNukeType(t: UnitType) {
-  return (
-    t === UnitType.AtomBomb ||
-    t === UnitType.HydrogenBomb ||
-    t === UnitType.MIRV
-  );
-}
 
 function createMenuElements(
   params: MenuElementParams,

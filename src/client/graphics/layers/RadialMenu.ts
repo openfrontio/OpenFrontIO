@@ -378,7 +378,7 @@ export class RadialMenu implements Layer {
   private setMenuDim(dim: boolean) {
     this.menuElement
       .style("opacity", dim ? "0.1" : "1")
-      .style("transition", "opacity 120ms ease"); // smooth like the build menu)
+      .style("transition", "opacity 120ms ease");
   }
 
   private setupEventHandlers(

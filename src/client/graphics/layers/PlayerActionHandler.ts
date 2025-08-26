@@ -17,6 +17,7 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { UIState } from "../UIState";
+import { isNukeType } from "./NukePreview";
 
 export class PlayerActionHandler {
   constructor(
@@ -32,7 +33,7 @@ export class PlayerActionHandler {
   }
 
   startNukePreview(t: UnitType) {
-    if (t === UnitType.AtomBomb || t === UnitType.HydrogenBomb || t === UnitType.MIRV) {
+    if (isNukeType(t)) {
       this.uiState.nukePreview = { active: true, nukeType: t };
     }
   }

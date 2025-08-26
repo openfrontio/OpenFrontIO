@@ -5,6 +5,9 @@ import type { TransformHandler } from "../TransformHandler";
 import type { UIState } from "../UIState";
 import type { Layer } from "./Layer";
 
+export const isNukeType = (t: UnitType) =>
+  t === UnitType.AtomBomb || t === UnitType.HydrogenBomb || t === UnitType.MIRV;
+
 export class NukePreview implements Layer {
   constructor(
     private game: GameView,
