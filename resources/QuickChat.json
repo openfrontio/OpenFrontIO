@@ -5,6 +5,10 @@
       "requiresPlayer": false
     },
     {
+      "key": "troops_frontlines",
+      "requiresPlayer": false
+    },
+    {
       "key": "gold",
       "requiresPlayer": false
     },
@@ -25,8 +29,8 @@
       "requiresPlayer": true
     },
     {
-      "key": "team_up",
-      "requiresPlayer": true
+      "key": "trade_partners",
+      "requiresPlayer": false
     }
   ],
   "attack": [
@@ -45,11 +49,19 @@
     {
       "key": "finish",
       "requiresPlayer": true
+    },
+    {
+      "key": "build_warships",
+      "requiresPlayer": false
     }
   ],
   "defend": [
     {
       "key": "defend",
+      "requiresPlayer": true
+    },
+    {
+      "key": "defend_from",
       "requiresPlayer": true
     },
     {
@@ -59,11 +71,19 @@
     {
       "key": "ally",
       "requiresPlayer": true
+    },
+    {
+      "key": "build_posts",
+      "requiresPlayer": false
     }
   ],
   "greet": [
     {
       "key": "hello",
+      "requiresPlayer": false
+    },
+    {
+      "key": "good_job",
       "requiresPlayer": false
     },
     {
@@ -109,6 +129,18 @@
     {
       "key": "trust_broken",
       "requiresPlayer": false
+    },
+    {
+      "key": "ruining_games",
+      "requiresPlayer": false
+    },
+    {
+      "key": "dont_do_that",
+      "requiresPlayer": false
+    },
+    {
+      "key": "same_team",
+      "requiresPlayer": false
     }
   ],
   "misc": [
@@ -125,7 +157,19 @@
       "requiresPlayer": false
     },
     {
+      "key": "team_up",
+      "requiresPlayer": true
+    },
+    {
       "key": "pr",
+      "requiresPlayer": false
+    },
+    {
+      "key": "build_closer",
+      "requiresPlayer": false
+    },
+    {
+      "key": "coastline",
       "requiresPlayer": false
     }
   ],
@@ -163,6 +207,10 @@
       "requiresPlayer": true
     },
     {
+      "key": "betrayed_me",
+      "requiresPlayer": true
+    },
+    {
       "key": "getting_big",
       "requiresPlayer": true
     },
@@ -176,6 +224,18 @@
     },
     {
       "key": "mirv_ready",
+      "requiresPlayer": true
+    },
+    {
+      "key": "snowballing",
+      "requiresPlayer": true
+    },
+    {
+      "key": "cheating",
+      "requiresPlayer": true
+    },
+    {
+      "key": "stop_trading",
       "requiresPlayer": true
     }
   ]
