@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
+import { getTranslatedCountryName } from "./Utils";
 
 @customElement("flag-input-modal")
 export class FlagInputModal extends LitElement {
@@ -58,7 +59,7 @@ export class FlagInputModal extends LitElement {
                     }
                   }}
                 />
-                <span class="country-name">${country.name}</span>
+                <span class="country-name">${getTranslatedCountryName(country.code, country.name)}</span>
               </button>
             `,
           ) : html``}

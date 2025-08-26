@@ -230,6 +230,7 @@ export class LangSelector extends LitElement {
       "o-modal",
       "o-button",
       "territory-patterns-modal",
+      "flag-input-modal",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;

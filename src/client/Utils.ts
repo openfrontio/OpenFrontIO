@@ -146,6 +146,20 @@ export const translateText = (
   }
 };
 
+export function getTranslatedCountryName(
+  countryCode: string,
+  countryName: string,
+): string {
+  const normalizedCode = countryCode.toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9\-_]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  const translationKey = `countries.${normalizedCode}`;
+  const translatedName = translateText(translationKey);
+  return translatedName === translationKey ? countryName : translatedName;
+}
+
 /**
  * Severity colors mapping for message types
  */

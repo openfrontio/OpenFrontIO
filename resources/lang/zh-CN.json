@@ -585,5 +585,17 @@
     "redirecting": "正在将您重新定向……",
     "not_authorized": "您没有权限访问此网站。",
     "contact_admin": "如果您认为您看到此消息有误，请与网站管理员联系。"
+  },
+  "countries": {
+    "xx": "无",
+    "abbasid_caliphate": "阿拔斯王朝",
+    "achaemenid_empire": "阿契美尼德帝国",
+    "ae": "阿联酋",
+    "af": "阿富汗",
+    "african_union": "非洲联盟",
+    "sh-ac": "阿森松岛",
+    "1_airgialla": "埃尔嘉拉",
+    "amazigh_flag": "阿马齐格",
+    "austria-hungary": "奥匈帝国"
   }
 }
