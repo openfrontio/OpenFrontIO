@@ -14,7 +14,7 @@ import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
-import { translateText } from "../../Utils";
+import { removeBeforeUnloadCallback, translateText } from "../../Utils";
 import SoundManager from "../../sound/SoundManager";
 import { Layer } from "./Layer";
 
@@ -152,6 +152,7 @@ export class SettingsModal extends LitElement implements Layer {
   }
 
   private onExitButtonClick() {
+    removeBeforeUnloadCallback();
     // redirect to the home page
     window.location.href = "/";
   }

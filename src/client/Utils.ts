@@ -55,6 +55,7 @@ export function createCanvas(): HTMLCanvasElement {
 
   return canvas;
 }
+
 /**
  * A polyfill for crypto.randomUUID that provides fallback implementations
  * for older browsers, particularly Safari versions < 15.4
@@ -244,4 +245,17 @@ export function isInIframe(): boolean {
     // we're definitely in an iframe
     return true;
   }
+}
+
+export function beforeUnloadCallback(event: BeforeUnloadEvent): void {
+  event.preventDefault();
+  event.returnValue = false;
+}
+
+export function setBeforeUnloadCallback(): void {
+  window.addEventListener("beforeunload", beforeUnloadCallback);
+}
+
+export function removeBeforeUnloadCallback(): void {
+  window.removeEventListener("beforeunload", beforeUnloadCallback);
 }

@@ -167,9 +167,8 @@ class Client {
 
     window.addEventListener("beforeunload", () => {
       console.log("Browser is closing");
-      if (this.gameStop !== null) {
-        this.gameStop();
-      }
+      if (this.gameStop === null) return;
+      this.gameStop();
     });
 
     const gutterAds = document.querySelector("gutter-ads");

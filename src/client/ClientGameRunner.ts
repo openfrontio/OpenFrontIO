@@ -45,7 +45,7 @@ import {
   SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
-import { createCanvas } from "./Utils";
+import { createCanvas, setBeforeUnloadCallback } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import SoundManager from "./sound/SoundManager";
 
@@ -96,6 +96,7 @@ export function joinLobby(
       onPrestart();
     }
     if (message.type === "start") {
+      setBeforeUnloadCallback();
       // Trigger prestart for singleplayer games
       onPrestart();
       console.log(
