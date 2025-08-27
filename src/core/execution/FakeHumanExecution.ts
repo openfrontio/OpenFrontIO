@@ -1,3 +1,4 @@
+import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 import {
   Cell,
   Difficulty,
@@ -15,8 +16,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef, euclDistFN, manhattanDistFN } from "../game/GameMap";
-import { calculateBoundingBox, flattenedEmojiTable, simpleHash } from "../Util";
-import { BotBehavior } from "./utils/BotBehavior";
+import { calculateBoundingBox, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { GameID } from "../Schemas";
@@ -43,7 +43,6 @@ export class FakeHumanExecution implements Execution {
   private readonly lastEmojiSent = new Map<Player, Tick>();
   private readonly lastNukeSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
-  private readonly heckleEmoji: number[];
 
   constructor(
     gameID: GameID,
@@ -57,7 +56,6 @@ export class FakeHumanExecution implements Execution {
     this.triggerRatio = this.random.nextInt(60, 90) / 100;
     this.reserveRatio = this.random.nextInt(30, 60) / 100;
     this.expandRatio = this.random.nextInt(15, 25) / 100;
-    this.heckleEmoji = ["🤡", "😡"].map((e) => flattenedEmojiTable.indexOf(e));
   }
 
   init(mg: Game) {
@@ -281,7 +279,7 @@ export class FakeHumanExecution implements Execution {
       new EmojiExecution(
         this.player,
         enemy.id(),
-        this.random.randElement(this.heckleEmoji),
+        this.random.randElement(EMOJI_HECKLE),
       ),
     );
   }
@@ -437,6 +435,8 @@ export class FakeHumanExecution implements Execution {
       this.maybeSpawnStructure(UnitType.Port) ||
       this.maybeSpawnWarship() ||
       this.maybeSpawnStructure(UnitType.Factory) ||
+      this.maybeSpawnStructure(UnitType.DefensePost) ||
+      this.maybeSpawnStructure(UnitType.SAMLauncher) ||
       this.maybeSpawnStructure(UnitType.MissileSilo)
     );
   }
