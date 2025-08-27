@@ -23,13 +23,33 @@ describe("Country Translations", () => {
     }
   });
 
+  test("no unused flag keys should exist in en.json", () => {
+    const unusedKeys: string[] = [];
+    const validKeys = new Set(Countries.map((country) => normalizeKeyName(country.code)));
+
+    Object.keys(EnTranslations.flags).forEach((key) => {
+      if (!validKeys.has(key)) {
+        unusedKeys.push(key);
+      }
+    });
+
+    if (unusedKeys.length > 0) {
+      throw new Error(
+        `Found ${unusedKeys.length} unused flag keys in en.json:\n` +
+        unusedKeys.map((key) => `- flags.${key}`).join("\n") +
+        "\n\nPlease remove these unused keys from resources/lang/en.json " +
+        "or add corresponding entries to countries.json",
+      );
+    }
+  });
+
   test("country code normalization should work correctly", () => {
     expect(normalizeKeyName("xx")).toBe("xx");
     expect(normalizeKeyName("Abbasid Caliphate")).toBe("abbasid_caliphate");
     expect(normalizeKeyName("sh-ac")).toBe("sh-ac");
     expect(normalizeKeyName("1_Airgialla")).toBe("1_airgialla");
     expect(normalizeKeyName("United States")).toBe("united_states");
-    expect(normalizeKeyName("Côte d'Ivoire")).toBe("cote_divoire");
+    expect(normalizeKeyName("__Côte d'Ivoire__")).toBe("cote_divoire");
   });
 
   test("translation keys should have non-empty values", () => {
