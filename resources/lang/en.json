@@ -368,26 +368,31 @@
     },
     "help": {
       "troops": "Please give me troops!",
+      "troops_frontlines": "Send troops to the frontlines!",
       "gold": "Please give me gold!",
       "no_attack": "Please don't attack me!",
       "sorry_attack": "Sorry, I didn’t mean to attack.",
       "alliance": "Alliance?",
       "help_defend": "Help me defend against [P1]!",
-      "team_up": "Let’s team up against [P1]!"
+      "trade_partners": "Let's be trade partners!"
     },
     "attack": {
       "attack": "Attack [P1]!",
       "mirv": "Launch a MIRV at [P1]!",
       "focus": "Focus fire on [P1]!",
-      "finish": "Let's finish off [P1]!"
+      "finish": "Let's finish off [P1]!",
+      "build_warships": "Build Warships!"
     },
     "defend": {
       "defend": "Defend [P1]!",
+      "defend_from": "Defend from [P1]!",
       "dont_attack": "Don’t attack [P1]!",
-      "ally": "[P1] is my ally!"
+      "ally": "[P1] is my ally!",
+      "build_posts": "Build Defense Posts!"
     },
     "greet": {
       "hello": "Hello!",
+      "good_job": "Good job!",
       "good_luck": "Good luck!",
       "have_fun": "Have fun!",
       "gg": "GG!",
@@ -398,13 +403,19 @@
       "thanks": "Thanks!",
       "oops": "Oops, wrong button!",
       "trust_me": "You can trust me. Promise!",
-      "trust_broken": "I trusted you..."
+      "trust_broken": "I trusted you...",
+      "ruining_games": "You're ruining both of our games.",
+      "dont_do_that": "Don't do that!",
+      "same_team": "I'm on your side!"
     },
     "misc": {
       "go": "Let’s go!",
       "strategy": "Nice strategy!",
       "fun": "This game is fun!",
-      "pr": "When will my PR finally get merged...?"
+      "team_up": "Let’s team up against [P1]!",
+      "pr": "When will my PR finally get merged...?",
+      "build_closer": "Build closer to get trains!",
+      "coastline": "Please let me get a coastline."
     },
     "warnings": {
       "strong": "[P1] is strong.",
@@ -415,10 +426,14 @@
       "has_allies": "[P1] has many allies.",
       "no_allies": "[P1] has no allies.",
       "betrayed": "[P1] betrayed their ally!",
+      "betrayed_me": "[P1] betrayed me!",
       "getting_big": "[P1] is growing too fast!",
       "danger_base": "[P1] is unprotected!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
-      "mirv_ready": "[P1] has enough gold to launch a MIRV!"
+      "mirv_ready": "[P1] has enough gold to launch a MIRV!",
+      "snowballing": "[P1] is snowballing too fast!",
+      "cheating": "[P1] is cheating!",
+      "stop_trading": "Stop trading with [P1]!"
     }
   },
   "build_menu": {
