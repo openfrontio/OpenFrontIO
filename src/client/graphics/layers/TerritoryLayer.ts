@@ -185,7 +185,7 @@ export class TerritoryLayer implements Layer {
         color = isColorBlind
           ? this.theme.colorBlindSpawnHighlightColor()
           : this.theme.spawnHighlightColor();
-      } else if (myPlayer === human) {
+      } else if (human.smallID() === myPlayer.smallID()) {
         color = isColorBlind
           ? this.theme.colorBlindSelfColor()
           : this.theme.selfColor();
@@ -193,12 +193,15 @@ export class TerritoryLayer implements Layer {
         color = isColorBlind
           ? this.theme.colorBlindAllyColor()
           : this.theme.allyColor();
+      } else if (!human.hasEmbargo(myPlayer)) {
+        color = isColorBlind
+          ? this.theme.colorBlindNeutralColor()
+          : this.theme.neutralColor();
       } else {
         color = isColorBlind
           ? this.theme.colorBlindEnemyColor()
           : this.theme.enemyColor();
       }
-      console.log(human.name(), human === myPlayer, color.toRgbString().replace(/[^\d,]/g, ""));
       for (const tile of this.game.bfs(
         centerTile,
         euclDistFN(centerTile, 9, true),
