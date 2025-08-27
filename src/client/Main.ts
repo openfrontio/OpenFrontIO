@@ -11,7 +11,6 @@ import "./styles.css";
 import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import { generateCryptoRandomUUID, incrementGamesPlayed, translateText } from "./Utils";
-import { ColorBlindModeButton } from "./ColorBlindModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import { EventBus } from "../core/EventBus";
 import { FlagInput } from "./FlagInput";
@@ -91,7 +90,6 @@ class Client {
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
-  private colorBlindModeButton: ColorBlindModeButton | null = null;
 
   private joinModal: JoinPrivateLobbyModal | undefined;
   private publicLobby: PublicLobby | undefined;
@@ -146,13 +144,6 @@ class Client {
     ) as DarkModeButton;
     if (!this.darkModeButton) {
       console.warn("Dark mode button element not found");
-    }
-
-    this.colorBlindModeButton = document.querySelector(
-      "color-blind-mode-button",
-    ) as ColorBlindModeButton;
-    if (!this.colorBlindModeButton) {
-      console.warn("Color blind mode button element not found");
     }
 
     const loginDiscordButton = document.getElementById(

@@ -184,7 +184,7 @@ export class PastelTheme implements Theme {
   }
 
   colorBlindSelfColor(): Colord {
-    return this._colorBlindAllyColor;
+    return this._colorBlindSelfColor;
   }
   colorBlindAllyColor(): Colord {
     return this._colorBlindAllyColor;

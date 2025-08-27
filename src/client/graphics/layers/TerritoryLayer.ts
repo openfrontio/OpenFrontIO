@@ -177,21 +177,24 @@ export class TerritoryLayer implements Layer {
       if (!centerTile) {
         continue;
       }
-      let color = this.userSettings.colorBlindMode()
-        ? this.theme.colorBlindSpawnHighlightColor()
-        : this.theme.spawnHighlightColor();
+      const isColorBlind = this.userSettings.colorBlindMode();
       const myPlayer = this.game.myPlayer();
-      if (myPlayer !== null &&
-        myPlayer === human) {
-        color = this.userSettings.colorBlindMode()
+      let color;
+
+      if (!myPlayer) {
+        color = isColorBlind
+          ? this.theme.colorBlindSpawnHighlightColor()
+          : this.theme.spawnHighlightColor();
+      } else if (myPlayer === human) {
+        color = isColorBlind
           ? this.theme.colorBlindSelfColor()
           : this.theme.selfColor();
-      }
-      else if (
-        myPlayer !== null &&
-        myPlayer.isFriendly(human)
-      ) {
-        color = this.userSettings.colorBlindMode()
+      } else if (myPlayer.isFriendly(human)) {
+        color = isColorBlind
+          ? this.theme.colorBlindAllyColor()
+          : this.theme.allyColor();
+      } else {
+        color = isColorBlind
           ? this.theme.colorBlindEnemyColor()
           : this.theme.enemyColor();
       }

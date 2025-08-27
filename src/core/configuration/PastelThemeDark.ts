@@ -180,7 +180,7 @@ export class PastelThemeDark implements Theme {
   }
 
   colorBlindSelfColor(): Colord {
-    return this._colorBlindAllyColor;
+    return this._colorBlindSelfColor;
   }
   colorBlindAllyColor(): Colord {
     return this._colorBlindAllyColor;
