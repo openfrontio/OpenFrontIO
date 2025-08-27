@@ -39,7 +39,7 @@ export class TerritoryLayer implements Layer {
   // Used for spawn highlighting
   private highlightCanvas: HTMLCanvasElement | undefined;
   private highlightContext: CanvasRenderingContext2D | undefined;
-  private readonly spawnFlagIconImage: HTMLImageElement | null = null;
+  private readonly spawnFlagIconImage: HTMLImageElement;
 
   private highlightedTerritory: PlayerView | null = null;
 
@@ -63,7 +63,12 @@ export class TerritoryLayer implements Layer {
     this.theme = game.config().theme();
     this.cachedTerritoryPatternsEnabled = undefined;
     this.spawnFlagIconImage = new Image();
+    this.spawnFlagIconImage.decoding = "async";
     this.spawnFlagIconImage.src = spawnFlagIcon;
+    this.spawnFlagIconImage.onload = () => this.eventBus.emit(new RedrawGraphicsEvent());
+    this.spawnFlagIconImage.onerror = (e) => {
+      console.warn("Failed to load spawn flag icon:", e);
+    };
   }
 
   shouldTransform(): boolean {
