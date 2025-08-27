@@ -81,9 +81,9 @@ export class PastelThemeDark implements Theme {
   }
 
   borderColor(player: PlayerView): Colord {
-    if (this.borderColorCache.has(player.id())) {
-      return this.borderColorCache.get(player.id())!;
-    }
+    const cached = this.borderColorCache.get(player.id());
+    if (cached !== undefined) return cached;
+
     const tc = this.territoryColor(player).rgba;
     const color = colord({
       r: Math.max(tc.r - 40, 0),

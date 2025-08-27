@@ -4,6 +4,7 @@ import {
 } from "./execution/utils/BotNames";
 import { Cell, Unit } from "./game/Game";
 import {
+  ClientID,
   GameConfig,
   GameID,
   GameRecord,
@@ -13,6 +14,7 @@ import {
 } from "./Schemas";
 import { GameMap, TileRef } from "./game/GameMap";
 import DOMPurify from "dompurify";
+import { ID } from "./BaseSchemas";
 import { ServerConfig } from "./configuration/Config";
 import { customAlphabet } from "nanoid";
 
@@ -227,6 +229,19 @@ export function generateID(): GameID {
   return nanoid();
 }
 
+export function getClientID(gameID: GameID): ClientID {
+  const cachedGame = localStorage.getItem("game_id");
+  const cachedClient = localStorage.getItem("client_id");
+
+  if (gameID === cachedGame && cachedClient && ID.safeParse(cachedClient).success) return cachedClient;
+
+  const clientId = generateID();
+  localStorage.setItem("game_id", gameID);
+  localStorage.setItem("client_id", clientId);
+
+  return clientId;
+}
+
 export function toInt(num: number): bigint {
   if (num === Infinity) {
     return BigInt(Number.MAX_SAFE_INTEGER);
@@ -265,7 +280,7 @@ export function createRandomName(
   return randomName;
 }
 
-export const emojiTable: string[][] = [
+export const emojiTable = [
   ["😀", "😊", "🥰", "😇", "😎"],
   ["😞", "🥺", "😭", "😱", "😡"],
   ["😈", "🤡", "🖕", "🥱", "🤦‍♂️"],
@@ -277,9 +292,9 @@ export const emojiTable: string[][] = [
   ["⬅️", "🎯", "➡️", "🥈", "🥉"],
   ["↙️", "⬇️", "↘️", "❤️", "💔"],
   ["💰", "⚓", "⛵", "🏡", "🛡️"],
-];
+] as const;
 // 2d to 1d array
-export const flattenedEmojiTable: string[] = emojiTable.flat();
+export const flattenedEmojiTable = emojiTable.flat();
 
 /**
  * JSON.stringify replacer function that converts bigint values to strings.

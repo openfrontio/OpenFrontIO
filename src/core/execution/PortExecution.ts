@@ -6,10 +6,10 @@ import { TrainStationExecution } from "./TrainStationExecution";
 
 export class PortExecution implements Execution {
   private active = true;
-  private mg: Game;
+  private mg: Game | undefined;
   private port: Unit | null = null;
-  private random: PseudoRandom;
-  private checkOffset: number;
+  private random: PseudoRandom | undefined;
+  private checkOffset: number | undefined;
 
   constructor(
     private player: Player,
@@ -23,9 +23,9 @@ export class PortExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.mg === null || this.random === null || this.checkOffset === null) {
-      throw new Error("Not initialized");
-    }
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.random === undefined) throw new Error("Not initialized");
+    if (this.checkOffset === undefined) throw new Error("Not initialized");
     if (this.port === null) {
       const { tile } = this;
       const spawn = this.player.canBuild(UnitType.Port, tile);
@@ -77,9 +77,12 @@ export class PortExecution implements Execution {
   }
 
   shouldSpawnTradeShip(): boolean {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.random === undefined) throw new Error("Not initialized");
     const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
     const spawnRate = this.mg.config().tradeShipSpawnRate(numTradeShips);
-    for (let i = 0; i < this.port!.level(); i++) {
+    const level = this.port?.level() ?? 0;
+    for (let i = 0; i < level; i++) {
       if (this.random.chance(spawnRate)) {
         return true;
       }
@@ -88,12 +91,12 @@ export class PortExecution implements Execution {
   }
 
   createStation(): void {
+    if (this.mg === undefined) throw new Error("Not initialized");
     if (this.port !== null) {
       const nearbyFactory = this.mg.hasUnitNearby(
         this.port.tile(),
         this.mg.config().trainStationMaxRange(),
         UnitType.Factory,
-        this.player.id(),
       );
       if (nearbyFactory) {
         this.mg.addExecution(new TrainStationExecution(this.port));

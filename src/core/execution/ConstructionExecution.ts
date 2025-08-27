@@ -21,11 +21,11 @@ import { WarshipExecution } from "./WarshipExecution";
 export class ConstructionExecution implements Execution {
   private construction: Unit | null = null;
   private active = true;
-  private mg: Game;
+  private mg: Game | undefined;
 
-  private ticksUntilComplete: Tick;
+  private ticksUntilComplete: Tick | undefined;
 
-  private cost: Gold;
+  private cost: Gold | undefined;
 
   constructor(
     private player: Player,
@@ -53,6 +53,7 @@ export class ConstructionExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.construction === null) {
+      if (this.mg === undefined) throw new Error("Not initialized");
       const info = this.mg.unitInfo(this.constructionType);
       if (info.constructionDuration === undefined) {
         this.completeConstruction();
@@ -90,15 +91,18 @@ export class ConstructionExecution implements Execution {
       this.player = this.construction.owner();
       this.construction.delete(false);
       // refund the cost so player has the gold to build the unit
+      if (this.cost === undefined) throw new Error("Not initialized");
       this.player.addGold(this.cost);
       this.completeConstruction();
       this.active = false;
       return;
     }
+    if (this.ticksUntilComplete === undefined) throw new Error("Not initialized");
     this.ticksUntilComplete--;
   }
 
   private completeConstruction() {
+    if (this.mg === undefined) throw new Error("Not initialized");
     const { player } = this;
     switch (this.constructionType) {
       case UnitType.AtomBomb:

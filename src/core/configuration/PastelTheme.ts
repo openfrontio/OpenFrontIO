@@ -84,9 +84,9 @@ export class PastelTheme implements Theme {
   }
 
   borderColor(player: PlayerView): Colord {
-    if (this.borderColorCache.has(player.id())) {
-      return this.borderColorCache.get(player.id())!;
-    }
+    const cached = this.borderColorCache.get(player.id());
+    if (cached !== undefined) return cached;
+
     const tc = this.territoryColor(player).rgba;
     /* eslint-disable sort-keys */
     const color = colord({

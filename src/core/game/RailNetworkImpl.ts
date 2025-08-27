@@ -220,8 +220,9 @@ export class RailNetworkImpl implements RailNetwork {
       { station: start, distance: 0 },
     ];
 
-    while (queue.length > 0) {
-      const { station, distance } = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const { station, distance } = queue[head++];
       if (visited.has(station)) continue;
       visited.add(station);
 
@@ -244,8 +245,9 @@ export class RailNetworkImpl implements RailNetwork {
     const visited = new Set<TrainStation>();
     const queue = [start];
 
-    while (queue.length > 0) {
-      const current = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const current = queue[head++];
       if (visited.has(current)) continue;
       visited.add(current);
 

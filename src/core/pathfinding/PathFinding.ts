@@ -106,7 +106,7 @@ export class PathFinder {
   private curr: TileRef | null = null;
   private dst: TileRef | null = null;
   private path: TileRef[] | null = null;
-  private aStar: AStar<TileRef>;
+  private aStar: AStar<TileRef> | undefined;
   private computeFinished = true;
 
   private constructor(
@@ -170,7 +170,7 @@ export class PathFinder {
       }
     }
 
-    switch (this.aStar.compute()) {
+    switch (this.aStar?.compute()) {
       case PathFindResultType.Completed:
         this.computeFinished = true;
         this.path = this.aStar.reconstructPath();

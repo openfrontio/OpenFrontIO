@@ -61,9 +61,7 @@ export function createRenderer(
   if (!emojiTable || !(emojiTable instanceof EmojiTable)) {
     console.error("EmojiTable element not found in the DOM");
   }
-  emojiTable.transformHandler = transformHandler;
-  emojiTable.game = game;
-  emojiTable.initEventBus(eventBus);
+  emojiTable.init(transformHandler, game, eventBus);
 
   const buildMenu = document.querySelector("build-menu") as BuildMenu;
   if (!buildMenu || !(buildMenu instanceof BuildMenu)) {
@@ -229,15 +227,18 @@ export function createRenderer(
   }
   alertFrame.game = game;
 
+  // When updating these layers please be mindful of the order.
+  // Try to group layers by the return value of shouldTransform.
+  // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game),
     structureLayer,
-    new StructureIconsLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
-    new UILayer(game, eventBus, transformHandler),
+    new UILayer(game, eventBus),
+    new StructureIconsLayer(game, eventBus, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,

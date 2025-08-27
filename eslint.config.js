@@ -79,6 +79,7 @@ export default [
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-inferrable-types": "error",
       "@typescript-eslint/no-mixed-enums": "error",
+      "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/no-require-imports": "error",
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
       "@typescript-eslint/prefer-as-const": "error",
@@ -106,7 +107,7 @@ export default [
       "function-call-argument-newline": ["error", "consistent"],
       "max-depth": ["error", { max: 5 }],
       "max-len": ["error", { code: 120 }],
-      "max-lines": ["error", { max: 676, skipBlankLines: true, skipComments: true }],
+      "max-lines": ["error", { max: 650, skipBlankLines: true, skipComments: true }],
       "max-lines-per-function": ["error", { max: 561 }],
       "no-loss-of-precision": "error",
       "no-multi-spaces": "error",
@@ -143,6 +144,7 @@ export default [
     rules: {
       // Disabled rules for tests, configs
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",

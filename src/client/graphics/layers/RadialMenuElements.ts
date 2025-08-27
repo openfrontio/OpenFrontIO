@@ -105,6 +105,7 @@ export enum Slot {
   Delete = "delete",
 }
 
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 const infoChatElement: MenuElement = {
   id: "info_chat",
   name: "chat",
@@ -292,6 +293,7 @@ const infoEmojiElement: MenuElement = {
     return emojiElements;
   },
 };
+/* eslint-enable @typescript-eslint/no-non-null-assertion */
 
 export const infoMenuElement: MenuElement = {
   id: Slot.Info,

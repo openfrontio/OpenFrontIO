@@ -8,7 +8,7 @@ import "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import { generateCryptoRandomUUID, incrementGamesPlayed, translateText } from "./Utils";
 import { DarkModeButton } from "./DarkModeButton";
@@ -19,6 +19,7 @@ import { GameStartingModal } from "./GameStartingModal";
 import { GameType } from "../core/game/Game";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal } from "./HostLobbyModal";
+import { ID } from "../core/BaseSchemas";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
@@ -34,6 +35,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { UserSettingModal } from "./UserSettingModal";
 import { UserSettings } from "../core/game/UserSettings";
 import { UsernameInput } from "./UsernameInput";
+import { getClientID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { joinLobby } from "./ClientGameRunner";
 import version from "../../resources/version.txt";
@@ -89,8 +91,8 @@ class Client {
   private flagInput: FlagInput | null = null;
   private darkModeButton: DarkModeButton | null = null;
 
-  private joinModal: JoinPrivateLobbyModal;
-  private publicLobby: PublicLobby;
+  private joinModal: JoinPrivateLobbyModal | undefined;
+  private publicLobby: PublicLobby | undefined;
   private readonly userSettings: UserSettings = new UserSettings();
 
   constructor() {}
@@ -218,14 +220,7 @@ class Client {
     if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
     territoryModal.previewButton = patternButton;
-    territoryModal.updatePreview();
-    territoryModal.resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target.classList.contains("preview-container")) {
-          territoryModal.buttonWidth = entry.contentRect.width;
-        }
-      }
-    });
+    territoryModal.refresh();
     patternButton.addEventListener("click", () => {
       territoryModal.open();
     });
@@ -363,7 +358,7 @@ class Client {
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         hostModal.open();
-        this.publicLobby.leaveLobby();
+        this.publicLobby?.leaveLobby();
       }
     });
 
@@ -378,7 +373,7 @@ class Client {
       throw new Error("Missing join-private-lobby-button");
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
-        this.joinModal.open();
+        this.joinModal?.open();
       }
     });
 
@@ -393,7 +388,7 @@ class Client {
 
     const onHashUpdate = () => {
       // Reset the UI to its initial state
-      this.joinModal.close();
+      this.joinModal?.close();
       if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
@@ -447,7 +442,7 @@ class Client {
       }
       const lobbyId = params.get("join");
       if (lobbyId && ID.safeParse(lobbyId).success) {
-        this.joinModal.open(lobbyId);
+        this.joinModal?.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);
       }
     }
@@ -474,7 +469,7 @@ class Client {
             : this.flagInput.getCurrentFlag(),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
-        clientID: lobby.clientID,
+        clientID: getClientID(lobby.gameID),
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
@@ -507,7 +502,7 @@ class Client {
             modal.isModalOpen = false;
           }
         });
-        this.publicLobby.stop();
+        this.publicLobby?.stop();
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
@@ -520,8 +515,8 @@ class Client {
         startingModal.show();
       },
       () => {
-        this.joinModal.close();
-        this.publicLobby.stop();
+        this.joinModal?.close();
+        this.publicLobby?.stop();
         incrementGamesPlayed();
 
         try {
@@ -548,7 +543,7 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
-    this.publicLobby.leaveLobby();
+    this.publicLobby?.leaveLobby();
   }
 
   private handleKickPlayer(event: CustomEvent<KickPlayerEvent>) {

@@ -25,10 +25,9 @@ const PROGRESSBAR_HEIGHT = 3; // Height of a bar
  * such as selection boxes, health bars, etc.
  */
 export class UILayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D | null;
+  private canvas: HTMLCanvasElement | undefined;
+  private context: CanvasRenderingContext2D | null = null;
   private readonly theme: Theme | null = null;
-  private readonly userSettings: UserSettings = new UserSettings();
   private selectionAnimTime = 0;
   private readonly allProgressBars: Map<
     number,
@@ -51,7 +50,6 @@ export class UILayer implements Layer {
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
-    private readonly transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
   }
@@ -71,7 +69,8 @@ export class UILayer implements Layer {
 
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.[GameUpdateType.Unit]
+      ?.map((unit) => this.game.unit(unit.id))
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
@@ -85,6 +84,7 @@ export class UILayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    if (this.canvas === undefined) throw new Error("Not initialized");
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,

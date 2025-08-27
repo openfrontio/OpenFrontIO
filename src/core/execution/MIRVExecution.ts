@@ -16,20 +16,20 @@ import { simpleHash } from "../Util";
 export class MirvExecution implements Execution {
   private active = true;
 
-  private mg: Game;
+  private mg: Game | undefined;
 
   private nuke: Unit | null = null;
 
   private readonly mirvRange = 1500;
   private readonly warheadCount = 350;
 
-  private random: PseudoRandom;
+  private random: PseudoRandom | undefined;
 
-  private pathFinder: ParabolaPathFinder;
+  private pathFinder: ParabolaPathFinder | undefined;
 
-  private targetPlayer: Player | TerraNullius;
+  private targetPlayer: Player | TerraNullius | undefined;
 
-  private separateDst: TileRef;
+  private separateDst: TileRef | undefined;
 
   private speed = -1;
 
@@ -61,6 +61,9 @@ export class MirvExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.pathFinder === undefined) throw new Error("Not initialized");
+    if (this.targetPlayer === undefined) throw new Error("Not initialized");
     if (this.nuke === null) {
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {
@@ -98,7 +101,9 @@ export class MirvExecution implements Execution {
   }
 
   private separate() {
-    if (this.nuke === null) throw new Error("uninitialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.random === undefined) throw new Error("Not initialized");
+    if (this.nuke === null) throw new Error("Not initialized");
     const dsts: TileRef[] = [this.dst];
     let attempts = 1000;
     while (attempts > 0 && dsts.length < this.warheadCount) {
@@ -110,9 +115,10 @@ export class MirvExecution implements Execution {
       dsts.push(potential);
     }
     console.log(`dsts: ${dsts.length}`);
+    const game = this.mg;
     dsts.sort(
       (a, b) =>
-        this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
+        game.manhattanDist(b, this.dst) - game.manhattanDist(a, this.dst),
     );
     console.log(`got ${dsts.length} dsts!!`);
 
@@ -133,6 +139,8 @@ export class MirvExecution implements Execution {
   }
 
   randomLand(ref: TileRef, taken: TileRef[]): TileRef | null {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.random === undefined) throw new Error("Not initialized");
     let tries = 0;
     const mirvRange2 = this.mirvRange * this.mirvRange;
     while (tries < 100) {
@@ -168,6 +176,7 @@ export class MirvExecution implements Execution {
   }
 
   private proximityCheck(tile: TileRef, taken: TileRef[]): boolean {
+    if (this.mg === undefined) throw new Error("Not initialized");
     for (const t of taken) {
       if (this.mg.manhattanDist(tile, t) < 55) {
         return true;

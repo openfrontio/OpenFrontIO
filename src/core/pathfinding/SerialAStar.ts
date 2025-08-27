@@ -87,6 +87,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       }
 
       // Process forward search
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const fwdCurrent = this.fwdOpenSet.poll()!.tile;
 
       // Check if we've found a meeting point
@@ -98,6 +99,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       this.expandNode(fwdCurrent, true);
 
       // Process backward search
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const bwdCurrent = this.bwdOpenSet.poll()!.tile;
 
       // Check if we've found a meeting point
@@ -126,7 +128,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       const openSet = isForward ? this.fwdOpenSet : this.bwdOpenSet;
       const cameFrom = isForward ? this.fwdCameFrom : this.bwdCameFrom;
 
-      const tentativeGScore = gScore.get(current)! + this.graph.cost(neighbor);
+      const tentativeGScore = (gScore.get(current) ?? 0) + this.graph.cost(neighbor);
       let penalty = 0;
       // With a direction change penalty, the path will get as straight as possible
       if (this.directionChangePenalty > 0) {
@@ -141,7 +143,8 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       }
 
       const totalG = tentativeGScore + penalty;
-      if (!gScore.has(neighbor) || totalG < gScore.get(neighbor)!) {
+      const g = gScore.get(neighbor);
+      if (g === undefined || totalG < g) {
         cameFrom.set(neighbor, current);
         gScore.set(neighbor, totalG);
         const fScore =
@@ -172,19 +175,23 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
 
     // Reconstruct path from start to meeting point
     const fwdPath: NodeType[] = [this.meetingPoint];
-    let current = this.meetingPoint;
+    let current: NodeType = this.meetingPoint;
 
-    while (this.fwdCameFrom.has(current)) {
-      current = this.fwdCameFrom.get(current)!;
+    let f = this.fwdCameFrom.get(current);
+    while (f !== undefined) {
+      current = f;
       fwdPath.unshift(current);
+      f = this.fwdCameFrom.get(current);
     }
 
     // Reconstruct path from meeting point to goal
     current = this.meetingPoint;
 
-    while (this.bwdCameFrom.has(current)) {
-      current = this.bwdCameFrom.get(current)!;
+    let b = this.bwdCameFrom.get(current);
+    while (b !== undefined) {
+      current = b;
       fwdPath.push(current);
+      b = this.bwdCameFrom.get(current);
     }
 
     return fwdPath;

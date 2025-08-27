@@ -121,6 +121,7 @@ export type Config = {
   shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
+  allianceRequestDuration(): Tick;
   allianceRequestCooldown(): Tick;
   temporaryEmbargoDuration(): Tick;
   targetDuration(): Tick;

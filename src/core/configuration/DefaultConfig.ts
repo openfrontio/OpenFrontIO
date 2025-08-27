@@ -68,6 +68,7 @@ const numPlayersConfig = {
   [GameMapType.World]: [150, 80, 50],
   [GameMapType.GiantWorldMap]: [150, 100, 60],
   [GameMapType.Halkidiki]: [50, 40, 30],
+  [GameMapType.NorthernHemisphere]: [100, 60, 40],
   [GameMapType.StraitOfGibraltar]: [50, 40, 30],
   [GameMapType.Italia]: [50, 40, 30],
   [GameMapType.Pluto]: [70, 50, 40],
@@ -100,7 +101,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.CF_CREDS_PATH ?? "";
   }
 
-  private publicKey: JWK;
+  private publicKey: JWK | undefined;
   abstract jwtAudience(): string;
   jwtIssuer(): string {
     const audience = this.jwtAudience();
@@ -532,6 +533,9 @@ export class DefaultConfig implements Config {
   }
   targetCooldown(): Tick {
     return 15 * 10;
+  }
+  allianceRequestDuration(): Tick {
+    return 20 * 10;
   }
   allianceRequestCooldown(): Tick {
     return 30 * 10;

@@ -78,7 +78,7 @@ export class GameImpl implements Game {
   private updates: GameUpdates = createGameUpdatesMap();
   private readonly unitGrid: UnitGrid;
 
-  private playerTeams: Team[];
+  private playerTeams: Team[] = [];
   private readonly botTeam: Team = ColoredTeams.Bot;
   private readonly _railNetwork: RailNetwork = createRailNetwork(this);
 
@@ -125,7 +125,8 @@ export class GameImpl implements Game {
     if (numPlayerTeams < 2) {
       throw new Error(`Too few teams: ${numPlayerTeams}`);
     } else if (numPlayerTeams < 8) {
-      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
+      this.playerTeams.push(ColoredTeams.Red);
+      this.playerTeams.push(ColoredTeams.Blue);
       if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
       if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
       if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
@@ -651,8 +652,9 @@ export class GameImpl implements Game {
         "team",
         winner,
         ...this.players()
-          .filter((p) => p.team() === winner && p.clientID() !== null)
-          .map((p) => p.clientID()!),
+          .filter((p) => p.team() === winner)
+          .map((p) => p.clientID())
+          .filter((id): id is ClientID => id !== null),
       ];
     } else {
       const clientId = winner.clientID();
@@ -750,7 +752,7 @@ export class GameImpl implements Game {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ) {
     return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
   }

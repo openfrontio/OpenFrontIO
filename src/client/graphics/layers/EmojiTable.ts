@@ -12,23 +12,25 @@ import { TransformHandler } from "../TransformHandler";
 @customElement("emoji-table")
 export class EmojiTable extends LitElement {
   @state() public isVisible = false;
-  public transformHandler: TransformHandler;
-  public game: GameView;
 
-  initEventBus(eventBus: EventBus) {
+  init(
+    transformHandler: TransformHandler,
+    game: GameView,
+    eventBus: EventBus,
+  ) {
     eventBus.on(ShowEmojiMenuEvent, (e) => {
       this.isVisible = true;
-      const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-      if (!this.game.isValidCoord(cell.x, cell.y)) {
+      const cell = transformHandler.screenToWorldCoordinates(e.x, e.y);
+      if (!game.isValidCoord(cell.x, cell.y)) {
         return;
       }
 
-      const tile = this.game.ref(cell.x, cell.y);
-      if (!this.game.hasOwner(tile)) {
+      const tile = game.ref(cell.x, cell.y);
+      if (!game.hasOwner(tile)) {
         return;
       }
 
-      const targetPlayer = this.game.owner(tile);
+      const targetPlayer = game.owner(tile);
       // maybe redundant due to owner check but better safe than sorry
       if (targetPlayer instanceof TerraNulliusImpl) {
         return;
@@ -36,7 +38,7 @@ export class EmojiTable extends LitElement {
 
       this.showTable((emoji) => {
         const recipient =
-          targetPlayer === this.game.myPlayer()
+          targetPlayer === game.myPlayer()
             ? AllPlayers
             : (targetPlayer as PlayerView);
         eventBus.emit(

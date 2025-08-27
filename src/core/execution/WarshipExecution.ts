@@ -14,10 +14,10 @@ import { ShellExecution } from "./ShellExecution";
 import { TileRef } from "../game/GameMap";
 
 export class WarshipExecution implements Execution {
-  private random: PseudoRandom;
-  private warship: Unit;
-  private mg: Game;
-  private pathfinder: PathFinder;
+  private random: PseudoRandom | undefined;
+  private warship: Unit | undefined;
+  private mg: Game | undefined;
+  private pathfinder: PathFinder | undefined;
   private lastShellAttack = 0;
   private readonly alreadySentShell = new Set<Unit>();
 
@@ -51,6 +51,7 @@ export class WarshipExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    if (this.warship === undefined) throw new Error("Not initialized");
     if (this.warship.health() <= 0) {
       this.warship.delete();
       return;
@@ -75,6 +76,8 @@ export class WarshipExecution implements Execution {
   }
 
   private findTargetUnit(): Unit | undefined {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
     const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
@@ -102,9 +105,11 @@ export class WarshipExecution implements Execution {
         ) {
           continue;
         }
+        const patrolTile = this.warship.patrolTile();
         if (
+          patrolTile !== undefined &&
           this.mg.euclideanDistSquared(
-            this.warship.patrolTile()!,
+            patrolTile,
             unit.tile(),
           ) > patrolRangeSquared
         ) {
@@ -150,9 +155,13 @@ export class WarshipExecution implements Execution {
   }
 
   private shootTarget() {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
+    const targetUnit = this.warship.targetUnit();
+    if (targetUnit === undefined) return;
     const shellAttackRate = this.mg.config().warshipShellAttackRate();
     if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
-      if (this.warship.targetUnit()?.type() !== UnitType.TransportShip) {
+      if (targetUnit?.type() !== UnitType.TransportShip) {
         // Warships don't need to reload when attacking transport ships.
         this.lastShellAttack = this.mg.ticks();
       }
@@ -161,12 +170,12 @@ export class WarshipExecution implements Execution {
           this.warship.tile(),
           this.warship.owner(),
           this.warship,
-          this.warship.targetUnit()!,
+          targetUnit,
         ),
       );
-      if (!this.warship.targetUnit()!.hasHealth()) {
+      if (!targetUnit.hasHealth()) {
         // Don't send multiple shells to target that can be oneshotted
-        this.alreadySentShell.add(this.warship.targetUnit()!);
+        this.alreadySentShell.add(targetUnit);
         this.warship.setTargetUnit(undefined);
         return;
       }
@@ -174,16 +183,20 @@ export class WarshipExecution implements Execution {
   }
 
   private huntDownTradeShip() {
+    if (this.pathfinder === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
+    const targetUnit = this.warship.targetUnit();
+    if (targetUnit === undefined) return;
     for (let i = 0; i < 2; i++) {
       // target is trade ship so capture it.
       const result = this.pathfinder.nextTile(
         this.warship.tile(),
-        this.warship.targetUnit()!.tile(),
+        targetUnit.tile(),
         5,
       );
       switch (result.type) {
         case PathFindResultType.Completed:
-          this.warship.owner().captureUnit(this.warship.targetUnit()!);
+          this.warship.owner().captureUnit(targetUnit);
           this.warship.setTargetUnit(undefined);
           this.warship.move(this.warship.tile());
           return;
@@ -201,16 +214,19 @@ export class WarshipExecution implements Execution {
   }
 
   private patrol() {
-    if (this.warship.targetTile() === undefined) {
-      this.warship.setTargetTile(this.randomTile());
-      if (this.warship.targetTile() === undefined) {
+    if (this.pathfinder === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
+    let targetTile = this.warship.targetTile();
+    if (targetTile === undefined) {
+      targetTile = this.randomTile();
+      this.warship.setTargetTile(targetTile);
+      if (targetTile === undefined) {
         return;
       }
     }
-
     const result = this.pathfinder.nextTile(
       this.warship.tile(),
-      this.warship.targetTile()!,
+      targetTile,
     );
     switch (result.type) {
       case PathFindResultType.Completed:
@@ -231,7 +247,7 @@ export class WarshipExecution implements Execution {
   }
 
   isActive(): boolean {
-    return this.warship?.isActive();
+    return this.warship?.isActive() ?? false;
   }
 
   activeDuringSpawnPhase(): boolean {
@@ -239,16 +255,21 @@ export class WarshipExecution implements Execution {
   }
 
   randomTile(allowShoreline = false): TileRef | undefined {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.random === undefined) throw new Error("Not initialized");
+    if (this.warship === undefined) throw new Error("Not initialized");
     let warshipPatrolRange = this.mg.config().warshipPatrolRange();
     const maxAttemptBeforeExpand = 500;
     let attempts = 0;
     let expandCount = 0;
+    const patrolTile = this.warship.patrolTile();
+    if (patrolTile === undefined) return;
     while (expandCount < 3) {
       const x =
-        this.mg.x(this.warship.patrolTile()!) +
+        this.mg.x(patrolTile) +
         this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       const y =
-        this.mg.y(this.warship.patrolTile()!) +
+        this.mg.y(patrolTile) +
         this.random.nextInt(-warshipPatrolRange / 2, warshipPatrolRange / 2);
       if (!this.mg.isValidCoord(x, y)) {
         continue;

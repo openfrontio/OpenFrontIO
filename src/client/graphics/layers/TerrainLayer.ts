@@ -4,10 +4,10 @@ import { Theme } from "../../../core/configuration/Config";
 import { TransformHandler } from "../TransformHandler";
 
 export class TerrainLayer implements Layer {
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
-  private imageData: ImageData;
-  private theme: Theme;
+  private canvas: HTMLCanvasElement | undefined;
+  private context: CanvasRenderingContext2D | undefined;
+  private imageData: ImageData | undefined;
+  private theme: Theme | undefined;
 
   constructor(
     private readonly game: GameView,
@@ -48,7 +48,8 @@ export class TerrainLayer implements Layer {
   initImageData() {
     this.theme = this.game.config().theme();
     this.game.forEachTile((tile) => {
-      const terrainColor = this.theme.terrainColor(this.game, tile);
+      const terrainColor = this.theme?.terrainColor(this.game, tile);
+      if (terrainColor === undefined || this.imageData === undefined) return;
       // TODO: isn'te tileref and index the same?
       const index = this.game.y(tile) * this.game.width() + this.game.x(tile);
       const offset = index * 4;
@@ -66,6 +67,7 @@ export class TerrainLayer implements Layer {
     } else {
       context.imageSmoothingEnabled = false;
     }
+    if (this.canvas === undefined) throw new Error("Not initialized");
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,

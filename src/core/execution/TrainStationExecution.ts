@@ -4,9 +4,9 @@ import { TrainExecution } from "./TrainExecution";
 import { TrainStation } from "../game/TrainStation";
 
 export class TrainStationExecution implements Execution {
-  private mg: Game;
+  private mg: Game | undefined;
   private active = true;
-  private random: PseudoRandom;
+  private random: PseudoRandom | undefined;
   private station: TrainStation | null = null;
   private readonly numCars = 5;
   private lastSpawnTick = 0;
@@ -49,6 +49,8 @@ export class TrainStationExecution implements Execution {
   }
 
   private shouldSpawnTrain(clusterSize: number): boolean {
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.random === undefined) throw new Error("Not initialized");
     const spawnRate = this.mg.config().trainSpawnRate(clusterSize);
     for (let i = 0; i < this.unit.level(); i++) {
       if (this.random.chance(spawnRate)) {
@@ -59,12 +61,10 @@ export class TrainStationExecution implements Execution {
   }
 
   private spawnTrain(station: TrainStation, currentTick: number) {
-    if (
-      !this.spawnTrains ||
-      currentTick - this.lastSpawnTick < this.ticksCooldown
-    ) {
-      return;
-    }
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (!this.spawnTrains) return;
+    if (this.random === undefined) throw new Error("Not initialized");
+    if (currentTick < this.lastSpawnTick + this.ticksCooldown) return;
     const cluster = station.getCluster();
     if (cluster === null) {
       return;

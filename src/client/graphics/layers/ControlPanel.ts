@@ -12,34 +12,36 @@ import { translateText } from "../../../client/Utils";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
-  public game: GameView;
-  public clientID: ClientID;
-  public eventBus: EventBus;
-  public uiState: UIState;
+  public game: GameView | undefined;
+  public clientID: ClientID | undefined;
+  public eventBus: EventBus | undefined;
+  public uiState: UIState | undefined;
 
   @state()
   private attackRatio = 0.2;
 
   @state()
-  private _maxTroops: number;
+  private _maxTroops = 0;
 
   @state()
-  private troopRate: number;
+  private troopRate = 0;
 
   @state()
-  private _troops: number;
+  private _troops = 0;
 
   @state()
   private _isVisible = false;
 
   @state()
-  private _gold: Gold;
+  private _gold: Gold = 0n;
 
   private _troopRateIsIncreasing = true;
 
-  private _lastTroopIncreaseRate: number;
+  private _lastTroopIncreaseRate = 0;
 
   init() {
+    if (!this.uiState) throw new Error("Not initialized");
+    if (!this.eventBus) throw new Error("Not initialized");
     this.attackRatio = Number(
       localStorage.getItem("settings.attackRatio") ?? "0.2",
     );
@@ -71,6 +73,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   tick() {
+    if (!this.game) return;
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this.setVisibile(true);
     }
@@ -94,7 +97,8 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   private updateTroopIncrease() {
-    const player = this.game?.myPlayer();
+    if (this.game === undefined) return;
+    const player = this.game.myPlayer();
     if (player === null) return;
     const troopIncreaseRate = this.game.config().troopIncreaseRate(player);
     this._troopRateIsIncreasing =
@@ -103,6 +107,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   onAttackRatioChange(newRatio: number) {
+    if (this.uiState === undefined) return;
     this.uiState.attackRatio = newRatio;
   }
 
