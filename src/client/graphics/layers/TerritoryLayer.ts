@@ -38,6 +38,7 @@ export class TerritoryLayer implements Layer {
   // Used for spawn highlighting
   private highlightCanvas: HTMLCanvasElement | undefined;
   private highlightContext: CanvasRenderingContext2D | undefined;
+  private spawnFlagIcon: HTMLImageElement | null = null;
 
   private highlightedTerritory: PlayerView | null = null;
 
@@ -60,6 +61,18 @@ export class TerritoryLayer implements Layer {
     this.userSettings = userSettings;
     this.theme = game.config().theme();
     this.cachedTerritoryPatternsEnabled = undefined;
+    this.loadSpawnFlagIcon();
+  }
+
+  private loadSpawnFlagIcon() {
+    this.spawnFlagIcon = new Image();
+    this.spawnFlagIcon.src = "/images/RedFlagIcon.svg";
+    this.spawnFlagIcon.onload = () => {
+      console.log("Spawn flag icon loaded successfully");
+    };
+    this.spawnFlagIcon.onerror = () => {
+      console.error("Failed to load spawn flag icon");
+    };
   }
 
   shouldTransform(): boolean {
@@ -193,6 +206,19 @@ export class TerritoryLayer implements Layer {
         if (!this.game.hasOwner(tile)) {
           this.paintHighlightTile(tile, color, 255);
         }
+      }
+
+      if (this.spawnFlagIcon && this.spawnFlagIcon.complete && this.highlightContext) {
+        const iconSize = 32;
+        const offsetX = center.x - iconSize / 5;
+        const offsetY = center.y - iconSize;
+        this.highlightContext.drawImage(
+          this.spawnFlagIcon,
+          offsetX,
+          offsetY,
+          iconSize,
+          iconSize,
+        );
       }
     }
   }
