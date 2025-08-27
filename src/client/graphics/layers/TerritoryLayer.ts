@@ -177,14 +177,23 @@ export class TerritoryLayer implements Layer {
       if (!centerTile) {
         continue;
       }
-      let color = this.theme.spawnHighlightColor();
+      let color = this.userSettings.colorBlindMode()
+        ? this.theme.colorBlindSpawnHighlightColor()
+        : this.theme.spawnHighlightColor();
       const myPlayer = this.game.myPlayer();
-      if (
+      if (myPlayer !== null &&
+        myPlayer === human) {
+        color = this.userSettings.colorBlindMode()
+          ? this.theme.colorBlindSelfColor()
+          : this.theme.selfColor();
+      }
+      else if (
         myPlayer !== null &&
-        myPlayer !== human &&
         myPlayer.isFriendly(human)
       ) {
-        color = this.theme.selfColor();
+        color = this.userSettings.colorBlindMode()
+          ? this.theme.colorBlindEnemyColor()
+          : this.theme.enemyColor();
       }
       for (const tile of this.game.bfs(
         centerTile,
@@ -494,18 +503,28 @@ export class TerritoryLayer implements Layer {
   alternateViewColor(other: PlayerView): Colord {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) {
-      return this.theme.neutralColor();
+      return this.userSettings.colorBlindMode()
+        ? this.theme.colorBlindNeutralColor()
+        : this.theme.neutralColor();
     }
     if (other.smallID() === myPlayer.smallID()) {
-      return this.theme.selfColor();
+      return this.userSettings.colorBlindMode()
+        ? this.theme.colorBlindSelfColor()
+        : this.theme.selfColor();
     }
     if (other.isFriendly(myPlayer)) {
-      return this.theme.allyColor();
+      return this.userSettings.colorBlindMode()
+        ? this.theme.colorBlindAllyColor()
+        : this.theme.allyColor();
     }
     if (!other.hasEmbargo(myPlayer)) {
-      return this.theme.neutralColor();
+      return this.userSettings.colorBlindMode()
+        ? this.theme.colorBlindNeutralColor()
+        : this.theme.neutralColor();
     }
-    return this.theme.enemyColor();
+    return this.userSettings.colorBlindMode()
+      ? this.theme.colorBlindEnemyColor()
+      : this.theme.enemyColor();
   }
 
   paintAlternateViewTile(tile: TileRef, other: PlayerView) {

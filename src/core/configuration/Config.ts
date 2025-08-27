@@ -191,5 +191,10 @@ export type Theme = {
   allyColor(): Colord;
   neutralColor(): Colord;
   enemyColor(): Colord;
+  colorBlindSelfColor(): Colord;
+  colorBlindAllyColor(): Colord;
+  colorBlindNeutralColor(): Colord;
+  colorBlindEnemyColor(): Colord;
   spawnHighlightColor(): Colord;
+  colorBlindSpawnHighlightColor(): Colord;
 };

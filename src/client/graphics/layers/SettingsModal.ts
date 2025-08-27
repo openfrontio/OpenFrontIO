@@ -5,6 +5,7 @@ import { EventBus } from "../../../core/EventBus";
 import { Layer } from "./Layer";
 import { PauseGameEvent } from "../../Transport";
 import { UserSettings } from "../../../core/game/UserSettings";
+import colorBlindModeIcon from "../../../../resources/images/ColorBlindModeIconWhite.svg";
 import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
@@ -127,6 +128,12 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleDarkModeButtonClick() {
     this.userSettings?.toggleDarkMode();
+    this.eventBus?.emit(new RedrawGraphicsEvent());
+    this.requestUpdate();
+  }
+
+  private onToggleColorBlindModeButtonClick() {
+    this.userSettings?.toggleColorBlindMode();
     this.eventBus?.emit(new RedrawGraphicsEvent());
     this.requestUpdate();
   }
@@ -257,6 +264,34 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings?.darkMode()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3
+              hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleColorBlindModeButtonClick}"
+            >
+              <img
+                src=${colorBlindModeIcon}
+                alt="colorBlindModeIcon"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.color_blind_mode_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${this.userSettings?.darkMode()
+                    ? translateText("user_setting.color_blind_mode_enabled")
+                    : translateText("user_setting.light_mode_enabled")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings?.colorBlindMode()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
