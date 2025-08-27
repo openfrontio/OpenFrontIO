@@ -8,6 +8,8 @@ on:
   push:
     branches: [main]
 
+permissions: {}
+
 jobs:
   build:
     name: 🏗️ Build
