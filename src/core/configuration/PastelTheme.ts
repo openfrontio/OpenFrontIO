@@ -30,13 +30,13 @@ export class PastelTheme implements Theme {
   private readonly water = colord({ r: 70, g: 132, b: 180 });
   private readonly shorelineWater = colord({ r: 100, g: 143, b: 255 });
 
-  private readonly _selfColor = colord({ r: 0, g: 255, b: 0 });
-  private readonly _allyColor = colord({ r: 255, g: 255, b: 0 });
+  private readonly _selfColor = colord({ r: 255, g: 255, b: 0 });
+  private readonly _allyColor = colord({ r: 0, g: 255, b: 0 });
   private readonly _neutralColor = colord({ r: 128, g: 128, b: 128 });
   private readonly _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
-  private readonly _colorBlindSelfColor = colord({ r: 0, g: 180, b: 255 });
-  private readonly _colorBlindAllyColor = colord({ r: 255, g: 200, b: 0 });
+  private readonly _colorBlindSelfColor = colord({ r: 255, g: 200, b: 0 });
+  private readonly _colorBlindAllyColor = colord({ r: 0, g: 180, b: 255 });
   private readonly _colorBlindNeutralColor = colord({ r: 160, g: 160, b: 160 });
   private readonly _colorBlindEnemyColor = colord({ r: 230, g: 0, b: 255 });
 

@@ -198,6 +198,7 @@ export class TerritoryLayer implements Layer {
           ? this.theme.colorBlindEnemyColor()
           : this.theme.enemyColor();
       }
+      console.log(human.name(), human === myPlayer, color.toRgbString().replace(/[^\d,]/g, ""));
       for (const tile of this.game.bfs(
         centerTile,
         euclDistFN(centerTile, 9, true),
