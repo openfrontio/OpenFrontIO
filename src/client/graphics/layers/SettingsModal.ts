@@ -286,8 +286,8 @@ export class SettingsModal extends LitElement implements Layer {
                 </div>
                 <div class="text-sm text-slate-400">
                   ${this.userSettings?.darkMode()
-                    ? translateText("user_setting.color_blind_mode_enabled")
-                    : translateText("user_setting.color_blind_mode_disabled")}
+                    ? translateText("user_setting.color_blind_mode_disabled")
+                    : translateText("user_setting.color_blind_mode_enabled")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
