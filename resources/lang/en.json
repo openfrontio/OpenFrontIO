@@ -629,7 +629,7 @@
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
   },
-  "countries": {
+  "flags": {
     "xx": "None",
     "abbasid_caliphate": "Abbasid Caliphate",
     "achaemenid_empire": "Achaemenid Empire",
