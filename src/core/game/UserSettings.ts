@@ -117,11 +117,6 @@ export class UserSettings {
 
   toggleColorBlindMode() {
     this.set("settings.colorBlindMode", !this.colorBlindMode());
-    if (this.colorBlindMode()) {
-      // document.documentElement.classList.add("dark");
-    } else {
-      // document.documentElement.classList.remove("dark");
-    }
   }
 
   getSelectedPattern(): string | undefined {

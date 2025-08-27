@@ -119,20 +119,6 @@ export class UserSettingModal extends LitElement {
 
     this.userSettings.set("settings.colorBlindMode", enabled);
 
-    if (enabled) {
-      // document.documentElement.classList.add("dark");
-    } else {
-      // document.documentElement.classList.remove("dark");
-    }
-
-    this.dispatchEvent(
-      new CustomEvent("color-blind-mode-changed", {
-        detail: { colorBlindMode: enabled },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-
     console.log("🕶️ Color Blind Mode:", enabled ? "ON" : "OFF");
   }
 
