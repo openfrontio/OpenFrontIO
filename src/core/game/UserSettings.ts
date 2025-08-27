@@ -48,6 +48,10 @@ export class UserSettings {
     return this.get("settings.darkMode", false);
   }
 
+  colorBlindMode() {
+    return this.get("settings.colorBlindMode", false);
+  }
+
   leftClickOpensMenu() {
     return this.get("settings.leftClickOpensMenu", false);
   }
@@ -108,6 +112,15 @@ export class UserSettings {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
+    }
+  }
+
+  toggleColorBlindMode() {
+    this.set("settings.colorBlindMode", !this.colorBlindMode());
+    if (this.colorBlindMode()) {
+      // document.documentElement.classList.add("dark");
+    } else {
+      // document.documentElement.classList.remove("dark");
     }
   }
 

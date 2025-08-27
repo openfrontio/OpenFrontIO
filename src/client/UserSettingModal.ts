@@ -109,6 +109,33 @@ export class UserSettingModal extends LitElement {
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
+  toggleColorBlindMode(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+
+    if (typeof enabled !== "boolean") {
+      console.warn("Unexpected toggle event payload", e);
+      return;
+    }
+
+    this.userSettings.set("settings.colorBlindMode", enabled);
+
+    if (enabled) {
+      // document.documentElement.classList.add("dark");
+    } else {
+      // document.documentElement.classList.remove("dark");
+    }
+
+    this.dispatchEvent(
+      new CustomEvent("color-blind-mode-changed", {
+        detail: { colorBlindMode: enabled },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    console.log("🕶️ Color Blind Mode:", enabled ? "ON" : "OFF");
+  }
+
   private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -272,6 +299,16 @@ export class UserSettingModal extends LitElement {
         .checked=${this.userSettings.darkMode()}
         @change=${(e: CustomEvent<{ checked: boolean }>) =>
           this.toggleDarkMode(e)}
+      ></setting-toggle>
+
+      <!-- 🕶️ Color Blind Mode -->
+      <setting-toggle
+        label="${translateText("user_setting.color_blind_mode_label")}"
+        description="${translateText("user_setting.color_blind_mode_desc")}"
+        id="color-blind-color-mode-toggle"
+        .checked=${this.userSettings.colorBlindMode()}
+        @change=${(e: CustomEvent<{ checked: boolean }>) =>
+          this.toggleColorBlindMode(e)}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
