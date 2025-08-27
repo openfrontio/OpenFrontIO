@@ -14,11 +14,33 @@ import { EmojiExecution } from "../EmojiExecution";
 import { PseudoRandom } from "../../PseudoRandom";
 import { flattenedEmojiTable } from "../../Util";
 
+const emojiId = (e: typeof flattenedEmojiTable[number]) => flattenedEmojiTable.indexOf(e);
+const EMOJI_ASSIST_ACCEPT = ([
+  "👍",
+  "⛵",
+  "🤝",
+  "🎯",
+] as const).map(emojiId);
+const EMOJI_RELATION_TOO_LOW = ([
+  "🥱",
+  "🤦‍♂️",
+] as const).map(emojiId);
+const EMOJI_TARGET_ME = ([
+  "🥺",
+  "💀",
+] as const).map(emojiId);
+const EMOJI_TARGET_ALLY = ([
+  "🕊️",
+  "👎",
+] as const).map(emojiId);
+export const EMOJI_HECKLE = ([
+  "🤡",
+  "😡",
+] as const).map(emojiId);
+
 export class BotBehavior {
   private enemy: Player | null = null;
   private enemyUpdated: Tick | undefined;
-
-  private readonly assistAcceptEmoji = flattenedEmojiTable.indexOf("👍");
 
   constructor(
     private readonly random: PseudoRandom,
@@ -155,26 +177,26 @@ export class BotBehavior {
   }
 
   assistAllies() {
-    outer: for (const ally of this.player.allies()) {
+    for (const ally of this.player.allies()) {
       if (ally.targets().length === 0) continue;
       if (this.player.relation(ally) < Relation.Friendly) {
-        // this.emoji(ally, "🤦");
+        this.emoji(ally, this.random.randElement(EMOJI_RELATION_TOO_LOW));
         continue;
       }
       for (const target of ally.targets()) {
         if (target === this.player) {
-          // this.emoji(ally, "💀");
+          this.emoji(ally, this.random.randElement(EMOJI_TARGET_ME));
           continue;
         }
         if (this.player.isAlliedWith(target)) {
-          // this.emoji(ally, "👎");
+          this.emoji(ally, this.random.randElement(EMOJI_TARGET_ALLY));
           continue;
         }
         // All checks passed, assist them
         this.player.updateRelation(ally, -20);
         this.setNewEnemy(target);
-        this.emoji(ally, this.assistAcceptEmoji);
-        break outer;
+        this.emoji(ally, this.random.randElement(EMOJI_ASSIST_ACCEPT));
+        return;
       }
     }
   }
