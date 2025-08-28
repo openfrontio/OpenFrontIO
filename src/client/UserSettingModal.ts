@@ -51,7 +51,7 @@ export class UserSettingModal extends LitElement {
   private handleKeyDown = (e: KeyboardEvent) => {
     if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
 
-    if (e.code === "Escape") {
+    if (e.key === "Escape") {
       e.preventDefault();
       this.close();
     }
@@ -210,6 +210,9 @@ export class UserSettingModal extends LitElement {
   ) {
     const { action, value } = e.detail;
     const prevValue = this.keybinds[action] ?? "";
+
+    // Log the key pressed
+    console.log(`Key pressed for action "${action}":`, value);
 
     const values = Object.entries(this.keybinds)
       .filter(([k]) => k !== action)

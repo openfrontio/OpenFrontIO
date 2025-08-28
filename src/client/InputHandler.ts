@@ -236,7 +236,7 @@ export class InputHandler {
     }, 1);
 
     window.addEventListener("keydown", (e) => {
-      if (e.code === this.keybinds.toggleView) {
+      if (e.key === this.keybinds.toggleView) {
         e.preventDefault();
         if (!this.alternateView) {
           this.alternateView = true;
@@ -244,7 +244,7 @@ export class InputHandler {
         }
       }
 
-      if (e.code === "Escape") {
+      if (e.key === "Escape") {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
       }
@@ -270,13 +270,13 @@ export class InputHandler {
           "ControlRight",
           "ShiftLeft",
           "ShiftRight",
-        ].includes(e.code)
+        ].includes(e.key)
       ) {
-        this.activeKeys.add(e.code);
+        this.activeKeys.add(e.key);
       }
     });
     window.addEventListener("keyup", (e) => {
-      if (e.code === this.keybinds.toggleView) {
+      if (e.key === this.keybinds.toggleView) {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
@@ -287,40 +287,40 @@ export class InputHandler {
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
 
-      if (e.code === this.keybinds.boatAttack) {
+      if (e.key === this.keybinds.boatAttack) {
         e.preventDefault();
         this.eventBus.emit(new DoBoatAttackEvent());
       }
 
-      if (e.code === this.keybinds.groundAttack) {
+      if (e.key === this.keybinds.groundAttack) {
         e.preventDefault();
         this.eventBus.emit(new DoGroundAttackEvent());
       }
 
-      if (e.code === this.keybinds.attackRatioDown) {
+      if (e.key === this.keybinds.attackRatioDown) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(-10));
       }
 
-      if (e.code === this.keybinds.attackRatioUp) {
+      if (e.key === this.keybinds.attackRatioUp) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(10));
       }
 
-      if (e.code === this.keybinds.centerCamera) {
+      if (e.key === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
       }
 
       // Shift-D to toggle performance overlay
-      console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
-      if (e.code === "KeyD" && e.shiftKey) {
+      console.log(e.key, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
+      if (e.key === "KeyD" && e.shiftKey) {
         e.preventDefault();
         console.log("TogglePerformanceOverlayEvent");
         this.eventBus.emit(new TogglePerformanceOverlayEvent());
       }
 
-      this.activeKeys.delete(e.code);
+      this.activeKeys.delete(e.key);
     });
   }
 

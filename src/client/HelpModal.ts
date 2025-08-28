@@ -26,7 +26,7 @@ export class HelpModal extends LitElement {
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
+    if (e.key === "Escape") {
       e.preventDefault();
       this.close();
     }
