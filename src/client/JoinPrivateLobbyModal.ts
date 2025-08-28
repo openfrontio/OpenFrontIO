@@ -19,9 +19,11 @@ export class JoinPrivateLobbyModal extends LitElement {
     close: () => void;
   };
   @query("#lobbyIdInput") private readonly lobbyIdInput!: HTMLInputElement;
+  @query("#bettingAmountInput") private readonly bettingAmountInput!: HTMLInputElement;
   @state() private message = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
+  @state() private bettingAmount = "0.001";
 
   private playersInterval: ReturnType<typeof setTimeout> | null = null;
 
@@ -78,6 +80,21 @@ export class JoinPrivateLobbyModal extends LitElement {
             </svg>
           </button>
         </div>
+        <div class="betting-amount-box" style="margin-top: 1rem;">
+          <label for="bettingAmountInput" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+            Betting Amount (ETH)
+          </label>
+          <input
+            type="number"
+            id="bettingAmountInput"
+            placeholder="0.001"
+            step="0.001"
+            min="0"
+            .value=${this.bettingAmount}
+            @input=${this.handleBettingAmountChange}
+            style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"
+          />
+        </div>
         <div class="message-area ${this.message ? "show" : ""}">
           ${this.message}
         </div>
@@ -126,6 +143,7 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   public close() {
     this.lobbyIdInput.value = "";
+    this.bettingAmount = "0.001";
     this.modalEl?.close();
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
@@ -168,6 +186,11 @@ export class JoinPrivateLobbyModal extends LitElement {
   private handleChange(e: Event) {
     const value = (e.target as HTMLInputElement).value.trim();
     this.setLobbyId(value);
+  }
+
+  private handleBettingAmountChange(e: Event) {
+    const { value } = e.target as HTMLInputElement;
+    this.bettingAmount = value;
   }
 
   private async pasteFromClipboard() {
@@ -221,6 +244,7 @@ export class JoinPrivateLobbyModal extends LitElement {
           detail: {
             gameID: lobbyId,
             clientID: getClientID(lobbyId),
+            bettingAmount: this.bettingAmount,
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -266,6 +290,7 @@ export class JoinPrivateLobbyModal extends LitElement {
             gameID: lobbyId,
             gameRecord: archiveData.gameRecord,
             clientID: getClientID(lobbyId),
+            bettingAmount: this.bettingAmount,
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,

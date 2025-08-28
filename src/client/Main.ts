@@ -77,6 +77,8 @@ export type JoinLobbyEvent = {
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  // Betting amount in ETH for on-chain lobbies
+  bettingAmount?: string;
 };
 
 export type KickPlayerEvent = {

@@ -36,6 +36,7 @@ export class HostLobbyModal extends LitElement {
     open: () => void;
     close: () => void;
   };
+  @query("#bettingAmountInput") private readonly bettingAmountInput!: HTMLInputElement;
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
@@ -54,6 +55,7 @@ export class HostLobbyModal extends LitElement {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID = "";
   @state() private lobbyIdVisible = true;
+  @state() private bettingAmount = "0.001";
 
   private playersInterval: ReturnType<typeof setTimeout> | null = null;
   // Add a new timer for debouncing bot changes
@@ -178,6 +180,21 @@ export class HostLobbyModal extends LitElement {
               }
             </div>
           </button>
+        </div>
+        <div class="betting-amount-box" style="margin-top: 1rem;">
+          <label for="bettingAmountInput" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+            Betting Amount (ETH)
+          </label>
+          <input
+            type="number"
+            id="bettingAmountInput"
+            placeholder="0.001"
+            step="0.001"
+            min="0"
+            .value=${this.bettingAmount}
+            @input=${this.handleBettingAmountChange}
+            style="width: 100% !important; padding: 0.5rem !important; border: 1px solid #ccc !important; border-radius: 4px !important; color: #000 !important; background-color: #fff !important; font-size: 14px !important;"
+          />
         </div>
         <div class="options-layout">
           <!-- Map Selection -->
@@ -541,6 +558,7 @@ export class HostLobbyModal extends LitElement {
             detail: {
               gameID: this.lobbyId,
               clientID: this.lobbyCreatorClientID,
+              bettingAmount: this.bettingAmount,
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -554,6 +572,7 @@ export class HostLobbyModal extends LitElement {
   public close() {
     this.modalEl?.close();
     this.copySuccess = false;
+    this.bettingAmount = "0.001";
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
       this.playersInterval = null;
@@ -642,6 +661,11 @@ export class HostLobbyModal extends LitElement {
   private async handleTeamCountSelection(value: TeamCountConfig) {
     this.teamCount = value;
     this.putGameConfig();
+  }
+
+  private handleBettingAmountChange(e: Event) {
+    const { value } = e.target as HTMLInputElement;
+    this.bettingAmount = value;
   }
 
   private async putGameConfig() {
