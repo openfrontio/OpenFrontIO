@@ -24,6 +24,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { DifficultyDescription } from "./components/Difficulties";
 import { JoinLobbyEvent } from "./Main";
 import { UserSettings } from "../core/game/UserSettings";
+import { createLobby as createLobbyOnChain } from "./contract";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import randomMap from "../../resources/images/RandomMap.webp";
@@ -56,6 +57,10 @@ export class HostLobbyModal extends LitElement {
   @state() private lobbyCreatorClientID = "";
   @state() private lobbyIdVisible = true;
   @state() private bettingAmount = "0.001";
+  @state() private onChainTxHash = "";
+  @state() private onChainSuccess = false;
+  @state() private onChainLoading = false;
+  @state() private onChainError = "";
 
   private playersInterval: ReturnType<typeof setTimeout> | null = null;
   // Add a new timer for debouncing bot changes
@@ -193,8 +198,44 @@ export class HostLobbyModal extends LitElement {
             min="0"
             .value=${this.bettingAmount}
             @input=${this.handleBettingAmountChange}
-            style="width: 100% !important; padding: 0.5rem !important; border: 1px solid #ccc !important; border-radius: 4px !important; color: #000 !important; background-color: #fff !important; font-size: 14px !important;"
+            style="width: 100% !important; padding: 0.5rem !important; 
+                   border: 1px solid #ccc !important; border-radius: 4px !important; 
+                   color: #000 !important; background-color: #fff !important; 
+                   font-size: 14px !important;"
           />
+        </div>
+        <div style="margin-top: 1rem;">
+          <button
+            id="create-lobby-on-chain"
+            @click=${this.deployLobbyOnChain}
+            ?disabled=${this.onChainLoading || !this.bettingAmount}
+            style="width: 100%; padding: 0.8rem; background-color: #4CAF50; 
+                   color: white; border: none; border-radius: 4px; 
+                   font-size: 16px; cursor: pointer; font-weight: bold;"
+          >
+            ${this.onChainLoading ? "Deploying..." : "Create Lobby On-Chain"}
+          </button>
+          ${this.onChainSuccess
+            ? html`
+                <div style="margin-top: 0.5rem; padding: 0.5rem; 
+                           background-color: #d4edda; border: 1px solid #c3e6cb; 
+                           border-radius: 4px; color: #155724;">
+                  <strong>Success!</strong><br />
+                  Transaction Hash: 
+                  <span style="font-family: monospace; word-break: break-all; font-size: 12px;">
+                    ${this.onChainTxHash}
+                  </span>
+                </div>
+              `
+            : this.onChainError
+            ? html`
+                <div style="margin-top: 0.5rem; padding: 0.5rem; 
+                           background-color: #f8d7da; border: 1px solid #f5c6cb; 
+                           border-radius: 4px; color: #721c24;">
+                  <strong>Error:</strong> ${this.onChainError}
+                </div>
+              `
+            : ""}
         </div>
         <div class="options-layout">
           <!-- Map Selection -->
@@ -573,6 +614,10 @@ export class HostLobbyModal extends LitElement {
     this.modalEl?.close();
     this.copySuccess = false;
     this.bettingAmount = "0.001";
+    this.onChainTxHash = "";
+    this.onChainSuccess = false;
+    this.onChainLoading = false;
+    this.onChainError = "";
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
       this.playersInterval = null;
@@ -666,6 +711,39 @@ export class HostLobbyModal extends LitElement {
   private handleBettingAmountChange(e: Event) {
     const { value } = e.target as HTMLInputElement;
     this.bettingAmount = value;
+  }
+
+  private async deployLobbyOnChain() {
+    if (!this.bettingAmount || parseFloat(this.bettingAmount) <= 0) {
+      this.onChainError = "Invalid betting amount";
+      return;
+    }
+
+    this.onChainLoading = true;
+    this.onChainSuccess = false;
+    this.onChainTxHash = "";
+    this.onChainError = "";
+
+    try {
+      const result = await createLobbyOnChain({
+        lobbyId: this.lobbyId,
+        betAmount: this.bettingAmount,
+      });
+
+      this.onChainTxHash = result.hash;
+      this.onChainSuccess = true;
+      console.log("Lobby deployed on-chain successfully:", result);
+    } catch (error) {
+      console.error("Failed to deploy lobby on-chain:", error);
+      this.onChainSuccess = false;
+      if (error instanceof Error) {
+        this.onChainError = error.message;
+      } else {
+        this.onChainError = "Failed to deploy lobby on-chain. Please check your wallet connection.";
+      }
+    } finally {
+      this.onChainLoading = false;
+    }
   }
 
   private async putGameConfig() {
