@@ -227,15 +227,18 @@ export function createRenderer(
   }
   alertFrame.game = game;
 
+  // When updating these layers please be mindful of the order.
+  // Try to group layers by the return value of shouldTransform.
+  // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game),
     structureLayer,
-    new StructureIconsLayer(game, eventBus, transformHandler),
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus),
+    new StructureIconsLayer(game, eventBus, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,
