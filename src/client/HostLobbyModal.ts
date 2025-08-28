@@ -561,11 +561,13 @@ export class HostLobbyModal extends LitElement {
         <div class="start-game-button-container">
           <button
             @click=${this.startGame}
-            ?disabled=${this.clients.length < 2}
+            ?disabled=${this.clients.length < 2 || !this.onChainSuccess}
             class="start-game-button"
           >
             ${
-              this.clients.length === 1
+              !this.onChainSuccess
+                ? "Deploy On-Chain First"
+                : this.clients.length === 1
                 ? translateText("host_modal.waiting")
                 : translateText("host_modal.start")
             }
@@ -790,6 +792,13 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async startGame() {
+    // Check if the lobby has been successfully deployed on-chain
+    if (!this.onChainSuccess) {
+      console.error("Cannot start game: Lobby must be deployed on-chain first");
+      // You could show an error message to the user here
+      return;
+    }
+
     if (this.useRandomMap) {
       this.selectedMap = this.getRandomMap();
     }
