@@ -111,6 +111,7 @@
     "@opentelemetry/sdk-metrics": "^2.0.0",
     "@opentelemetry/semantic-conventions": "^1.32.0",
     "@opentelemetry/winston-transport": "^0.11.0",
+    "@openzeppelin/contracts": "^5.4.0",
     "@privy-io/js-sdk-core": "^0.54.0",
     "@wagmi/connectors": "^5.9.8",
     "@wagmi/core": "^2.20.1",

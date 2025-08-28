@@ -421,18 +421,21 @@ class Client {
     const connectWalletButton = document.getElementById(
       "connect-wallet",
     ) as OButton;
-    
+    const disconnectWalletButton = document.getElementById(
+      "disconnect-wallet",
+    ) as OButton;
+
     connectWalletButton.addEventListener("click", async () => {
       try {
         console.log("Attempting to connect wallet...");
-        
+
         // Import wallet utilities
         const { wagmiConfig } = await import("./wallet");
         const { connect, getAccount } = await import("@wagmi/core");
         const { injected } = await import("@wagmi/connectors");
-        
+
         console.log("Wagmi config loaded:", wagmiConfig);
-        
+
         // Check if already connected
         const account = getAccount(wagmiConfig);
         if (account.isConnected) {
@@ -441,18 +444,18 @@ class Client {
           connectWalletButton.disable = true;
           return;
         }
-        
+
         // Try connecting with injected wallet
         console.log("Attempting to connect with injected connector...");
         const result = await connect(wagmiConfig, { connector: injected() });
         console.log("Connection successful:", result);
-        
+
         // Update button text
         connectWalletButton.title = `Connected: ${result.accounts[0].slice(0, 6)}...`;
         connectWalletButton.disable = true;
       } catch (error) {
         console.error("Wallet connection error details:", error);
-        
+
         // More specific error handling
         if (error instanceof Error) {
           if (error.message.includes("User rejected")) {
