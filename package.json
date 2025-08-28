@@ -4,6 +4,7 @@
     "build-dev": "webpack --config webpack.config.js --mode development",
     "build-prod": "webpack --config webpack.config.js --mode production",
     "start:client": "webpack serve --open --node-env development",
+    "start:client2": "webpack serve --open --node-env development --port 9001",
     "start:server": "node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
     "start:server-dev": "cross-env GAME_ENV=dev node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
     "dev": "cross-env GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
