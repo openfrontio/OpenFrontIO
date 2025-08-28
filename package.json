@@ -111,6 +111,9 @@
     "@opentelemetry/sdk-metrics": "^2.0.0",
     "@opentelemetry/semantic-conventions": "^1.32.0",
     "@opentelemetry/winston-transport": "^0.11.0",
+    "@privy-io/js-sdk-core": "^0.54.0",
+    "@wagmi/connectors": "^5.9.8",
+    "@wagmi/core": "^2.20.1",
     "colord": "^2.9.3",
     "colorjs.io": "^0.5.2",
     "dompurify": "^3.1.7",
@@ -127,6 +130,7 @@
     "seedrandom": "^3.0.5",
     "ts-node": "^10.9.2",
     "uuid": "^11.1.0",
+    "viem": "^2.36.0",
     "winston": "^3.17.0",
     "ws": "^8.18.0",
     "zod": "^4.0.5"

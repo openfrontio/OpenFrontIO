@@ -154,7 +154,7 @@ app.get(
   "/api/env",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
     const envConfig: ApiEnvResponse = {
-      game_env: process.env.GAME_ENV ?? "",
+      game_env: process.env.GAME_ENV || "dev",
     };
     if (!envConfig.game_env) return res.sendStatus(500);
     res.json(envConfig);
