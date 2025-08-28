@@ -8,8 +8,8 @@ import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import { customElement } from "lit/decorators.js";
 import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import portIcon from "../../../../resources/images/AnchorIcon.png";
+import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.svg";
+import portIcon from "../../../../resources/images/AnchorIcon.svg";
 import { renderNumber } from "../../Utils";
 import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
 
