@@ -59,7 +59,7 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
+    if (e.key === "Escape") {
       e.preventDefault();
       this.close();
     }

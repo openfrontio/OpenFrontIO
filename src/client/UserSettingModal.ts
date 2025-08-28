@@ -51,7 +51,7 @@ export class UserSettingModal extends LitElement {
   private handleKeyDown = (e: KeyboardEvent) => {
     if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
 
-    if (e.code === "Escape") {
+    if (e.key === "Escape") {
       e.preventDefault();
       this.close();
     }
