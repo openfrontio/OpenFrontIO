@@ -28,14 +28,19 @@ export class PlayerExecution implements Execution {
   tick(ticks: number) {
     if (this.mg === undefined) throw new Error("Not initialized");
     if (this.config === undefined) throw new Error("Not initialized");
+
+    const { mg } = this;
     this.player.decayRelations();
     this.player.units().forEach((u) => {
-      const tileOwner = this.mg?.owner(u.tile());
+      const tileOwner = mg.owner(u.tile());
       if (u.info().territoryBound) {
         if (tileOwner?.isPlayer()) {
           if (tileOwner !== this.player) {
-            if (u.type() === UnitType.DefensePost) u.delete(true, tileOwner);
-            else this.mg?.player(tileOwner.id()).captureUnit(u);
+            if (u.type() === UnitType.DefensePost) {
+              u.delete(true, tileOwner);
+            } else {
+              mg.player(tileOwner.id()).captureUnit(u);
+            }
           }
         } else {
           u.delete();

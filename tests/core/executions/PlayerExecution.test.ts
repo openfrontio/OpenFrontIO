@@ -37,20 +37,18 @@ describe("PlayerExecution", () => {
     game.addExecution(new PlayerExecution(player));
     game.addExecution(new PlayerExecution(otherPlayer));
   });
+
   test("DefensePost is destroyed, not captured, when tile owner changes", () => {
     const tile = game.ref(50, 50);
     player.conquer(tile);
     const defensePost = player.buildUnit(UnitType.DefensePost, tile, {});
 
-    expect(defensePost.isActive()).toBe(true);
-    expect(defensePost.owner()).toBe(player);
+    expect(game.unitCount(UnitType.DefensePost)).toBe(1);
 
     otherPlayer.conquer(tile);
     executeTicks(game, 2);
 
-    expect(defensePost.isActive()).toBe(false);
-    expect(player.units(UnitType.DefensePost)).toHaveLength(0); // Neither player owns the now inactive DefensePost
-    expect(otherPlayer.units(UnitType.DefensePost)).toHaveLength(0);
+    expect(game.unitCount(UnitType.DefensePost)).toBe(0);
   });
 
   test("City is captured (transferred), not destroyed, when tile owner changes", () => {
@@ -58,14 +56,13 @@ describe("PlayerExecution", () => {
     player.conquer(tile);
     const city = player.buildUnit(UnitType.City, tile, {});
 
+    expect(game.unitCount(UnitType.City)).toBe(1);
     expect(city.owner()).toBe(player);
 
     otherPlayer.conquer(tile);
     executeTicks(game, 2);
 
-    expect(city.isActive()).toBe(true);
+    expect(game.unitCount(UnitType.City)).toBe(1);
     expect(city.owner()).toBe(otherPlayer);
-    expect(player.units(UnitType.City)).toHaveLength(0);
-    expect(otherPlayer.units(UnitType.City)).toHaveLength(1); // City transferred
   });
 });
