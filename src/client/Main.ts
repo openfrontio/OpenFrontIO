@@ -95,7 +95,7 @@ class Client {
   private publicLobby: PublicLobby | undefined;
   private readonly userSettings: UserSettings = new UserSettings();
 
-  constructor() {}
+  constructor() { }
 
   initialize(): void {
     const gameVersion = document.getElementById(
@@ -313,7 +313,7 @@ class Client {
         // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
-            "Sharing this ID will allow others to view your game history and stats.",
+          "Sharing this ID will allow others to view your game history and stats.",
         );
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
@@ -417,6 +417,10 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
+
+    const connectWalletButton = document.getElementById(
+      "connect-wallet",
+    ) as OButton;
   }
 
   private handleHash() {
