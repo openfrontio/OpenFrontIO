@@ -211,9 +211,6 @@ export class UserSettingModal extends LitElement {
     const { action, value } = e.detail;
     const prevValue = this.keybinds[action] ?? "";
 
-    // Log the key pressed
-    console.log(`Key pressed for action "${action}":`, value);
-
     const values = Object.entries(this.keybinds)
       .filter(([k]) => k !== action)
       .map(([, v]) => v);
