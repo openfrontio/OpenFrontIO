@@ -34,7 +34,8 @@ export class PlayerExecution implements Execution {
       if (u.info().territoryBound) {
         if (tileOwner?.isPlayer()) {
           if (tileOwner !== this.player) {
-            this.mg?.player(tileOwner.id()).captureUnit(u);
+            if (u.type() === UnitType.DefensePost) u.delete(true, tileOwner);
+            else this.mg?.player(tileOwner.id()).captureUnit(u);
           }
         } else {
           u.delete();
