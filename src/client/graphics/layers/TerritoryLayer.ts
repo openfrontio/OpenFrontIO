@@ -23,6 +23,7 @@ export class TerritoryLayer implements Layer {
   private context: CanvasRenderingContext2D | undefined;
   private imageData: ImageData | undefined;
   private alternativeImageData: ImageData | undefined;
+  private borderAnimTime = 0;
 
   private cachedTerritoryPatternsEnabled: boolean | undefined;
 
@@ -195,6 +196,35 @@ export class TerritoryLayer implements Layer {
         }
       }
     }
+    // Breathing border animation
+    this.borderAnimTime += 1;
+    const minPadding = 3;
+    const maxPadding = 8;
+    // Range: [minPadding..maxPadding]
+    const breathingPadding = minPadding + (maxPadding - minPadding) * (0.5 + 0.5 * Math.sin(this.borderAnimTime * 0.3));
+
+    if (focusedPlayer) {
+    // Clear previous animated border
+      if(this.highlightContext) {
+        this.highlightContext.clearRect(
+          0,
+          0,
+          this.game.width(),
+          this.game.height(),
+        );
+      }
+
+      const center = focusedPlayer.nameLocation();
+      if (center) {
+        this.drawBreathingRing(
+          center.x,
+          center.y,
+          breathingPadding,
+          this.theme.spawnHighlightColor(),
+        );
+      }
+    }
+
   }
 
   init() {
@@ -565,4 +595,19 @@ export class TerritoryLayer implements Layer {
     if (this.highlightContext === undefined) throw new Error("Not initialized");
     this.highlightContext.clearRect(x, y, 1, 1);
   }
+  private drawBreathingRing(
+    cx: number,
+    cy: number,
+    radius: number,
+    color: Colord,
+  ) {
+    const ctx = this.highlightContext;
+    if (!ctx) return;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = color.toRgbString();
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
 }
