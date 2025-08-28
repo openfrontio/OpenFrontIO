@@ -257,7 +257,7 @@ export class BotBehavior {
       }
 
       // Select a random player
-      if (this.enemy === null) {
+      if (this.enemy === null && enemies.length > 0) {
         this.setNewEnemy(this.random.randElement(enemies));
       }
     }
