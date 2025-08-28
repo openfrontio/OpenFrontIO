@@ -421,6 +421,26 @@ class Client {
     const connectWalletButton = document.getElementById(
       "connect-wallet",
     ) as OButton;
+    
+    connectWalletButton.addEventListener("click", async () => {
+      try {
+        // Import wallet utilities
+        const { wagmiConfig, privy } = await import("./wallet");
+        const { connect } = await import("@wagmi/core");
+        const { injected } = await import("@wagmi/connectors");
+        
+        // Try connecting with injected wallet first (MetaMask, etc.)
+        const result = await connect(wagmiConfig, { connector: injected() });
+        console.log("Connected wallet:", result.accounts[0]);
+        
+        // Update button text
+        connectWalletButton.title = "Wallet Connected";
+        connectWalletButton.disable = true;
+      } catch (error) {
+        console.error("Failed to connect wallet:", error);
+        alert("Failed to connect wallet. Please try again.");
+      }
+    });
   }
 
   private handleHash() {
