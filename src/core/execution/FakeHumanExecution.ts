@@ -53,9 +53,9 @@ export class FakeHumanExecution implements Execution {
     );
     this.attackRate = this.random.nextInt(40, 80);
     this.attackTick = this.random.nextInt(0, this.attackRate);
-    this.triggerRatio = this.random.nextInt(60, 90) / 100;
-    this.reserveRatio = this.random.nextInt(30, 60) / 100;
-    this.expandRatio = this.random.nextInt(15, 25) / 100;
+    this.triggerRatio = this.random.nextInt(50, 60) / 100;
+    this.reserveRatio = this.random.nextInt(30, 40) / 100;
+    this.expandRatio = this.random.nextInt(10, 20) / 100;
   }
 
   init(mg: Game) {
@@ -205,22 +205,12 @@ export class FakeHumanExecution implements Execution {
       const toAlly = this.random.randElement(enemies);
       if (this.player.canSendAllianceRequest(toAlly)) {
         this.player.createAllianceRequest(toAlly);
-        return;
       }
-    }
-
-    // 50-50 attack weakest player vs random player
-    const toAttack = this.random.chance(2)
-      ? enemies[0]
-      : this.random.randElement(enemies);
-    if (this.shouldAttack(toAttack)) {
-      this.behavior.sendAttack(toAttack);
-      return;
     }
 
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
-    const enemy = this.behavior.selectEnemy();
+    const enemy = this.behavior.selectEnemy(enemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
     this.maybeSendNuke(enemy);
