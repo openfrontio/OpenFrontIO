@@ -40,3 +40,15 @@ declare module "*.xml" {
   const value: string;
   export default value;
 }
+
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_WALLETCONNECT_PROJECT_ID: string
+  readonly VITE_PRIVY_APP_ID: string
+  readonly VITE_PRIVY_CLIENT_ID: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
