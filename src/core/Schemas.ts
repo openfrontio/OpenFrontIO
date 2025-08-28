@@ -411,6 +411,7 @@ export const PlayerSchema = z.object({
   flag: FlagSchema,
   pattern: PatternSchema,
   username: UsernameSchema,
+  walletAddress: z.string(),
 });
 
 export const GameStartInfoSchema = z.object({
@@ -517,6 +518,7 @@ export const ClientJoinMessageSchema = z.object({
   token: TokenSchema, // WARNING: PII
   type: z.literal("join"),
   username: UsernameSchema,
+  walletAddress: z.string().optional(),
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

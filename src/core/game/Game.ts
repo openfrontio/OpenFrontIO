@@ -389,6 +389,7 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly nation?: Nation | null,
+    public readonly walletAddress?: string | null,
   ) {
     // Compute clan from name
     if (!name.startsWith("[") || !name.includes("]")) {

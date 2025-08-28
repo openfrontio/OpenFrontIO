@@ -55,6 +55,7 @@ export type LobbyConfig = {
   clientID: ClientID;
   gameID: GameID;
   token: string;
+  walletAddress?: string;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.

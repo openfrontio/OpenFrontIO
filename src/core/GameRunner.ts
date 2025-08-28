@@ -51,6 +51,8 @@ export async function createGameRunner(
         PlayerType.Human,
         p.clientID,
         random.nextID(),
+        null,
+        p.walletAddress,
       ),
   );
 
@@ -61,7 +63,7 @@ export async function createGameRunner(
         new Nation(
           new Cell(n.coordinates[0], n.coordinates[1]),
           n.strength,
-          new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+          new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID(), null, null),
         ),
     );
 

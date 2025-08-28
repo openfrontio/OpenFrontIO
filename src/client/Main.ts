@@ -525,6 +525,7 @@ class Client {
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: getClientID(lobby.gameID),
+        walletAddress: await this.getCurrentWalletAddress(),
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
@@ -607,6 +608,16 @@ class Client {
     // Forward to eventBus if available
     if (this.eventBus) {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
+
+  private async getCurrentWalletAddress(): Promise<string | undefined> {
+    try {
+      const { getCurrentWalletAddress } = await import("./wallet");
+      return getCurrentWalletAddress();
+    } catch (error) {
+      console.warn("Failed to get wallet address:", error);
+      return undefined;
     }
   }
 }

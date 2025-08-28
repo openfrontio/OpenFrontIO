@@ -301,6 +301,7 @@ export class GameServer {
         flag: c.flag,
         pattern: c.pattern,
         username: c.username,
+        walletAddress: c.walletAddress || "",
       })),
     });
     if (!result.success) {

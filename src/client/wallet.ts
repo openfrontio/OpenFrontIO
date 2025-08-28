@@ -35,3 +35,9 @@ export const privy = new Privy({
   supportedChains: [baseSepolia, anvil],
   storage: new LocalStorage(),
 })
+
+// Get current wallet address if connected
+export function getCurrentWalletAddress(): string | undefined {
+  const account = getAccount(wagmiConfig)
+  return account?.address
+}

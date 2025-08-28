@@ -236,6 +236,7 @@ async function handleJoinMessage(
       ws,
       clientMsg.flag,
       clientMsg.pattern,
+      clientMsg.walletAddress,
     );
 
     const wasFound = gm.addClient(client, clientMsg.gameID, clientMsg.lastTurn);

@@ -383,6 +383,7 @@ export class Transport {
       username: this.lobbyConfig.playerName,
       flag: this.lobbyConfig.flag,
       pattern: this.lobbyConfig.pattern,
+      walletAddress: this.lobbyConfig.walletAddress,
     } satisfies ClientJoinMessage);
   }
 
