@@ -4,13 +4,13 @@ import {
   RailType,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
+import { getBridgeRects, getRailroadRects } from "./RailroadSprites";
 import { Colord } from "colord";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 import { PlayerID } from "../../../core/game/Game";
 import { Theme } from "../../../core/configuration/Config";
 import { TileRef } from "../../../core/game/GameMap";
-import { getRailroadRects } from "./RailroadSprites";
 
 type RailRef = {
   tile: RailTile;
@@ -140,33 +140,57 @@ export class RailroadLayer implements Layer {
       this.existingRailroads.delete(railRoad.tile);
       this.railTileList = this.railTileList.filter((t) => t !== railRoad.tile);
       if (this.context === undefined) throw new Error("Not initialized");
-      this.context.clearRect(
-        this.game.x(railRoad.tile) * 2 - 1,
-        this.game.y(railRoad.tile) * 2 - 1,
-        3,
-        3,
-      );
+      if (this.game.isWater(railRoad.tile)) {
+        this.context.clearRect(
+          this.game.x(railRoad.tile) * 2 - 2,
+          this.game.y(railRoad.tile) * 2 - 2,
+          5,
+          6,
+        );
+      } else {
+        this.context.clearRect(
+          this.game.x(railRoad.tile) * 2 - 1,
+          this.game.y(railRoad.tile) * 2 - 1,
+          3,
+          3,
+        );
+      }
     }
   }
 
   paintRail(railRoad: RailTile) {
-    const x = this.game.x(railRoad.tile);
-    const y = this.game.y(railRoad.tile);
-    const owner = this.game.owner(railRoad.tile);
+    if (this.context === undefined) throw new Error("Not initialized");
+    const { tile } = railRoad;
+    const { railType } = railRoad;
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    // If rail tile is over water, paint a bridge underlay first
+    if (this.game.isWater(tile)) {
+      this.paintBridge(this.context, x, y, railType);
+    }
+    const owner = this.game.owner(tile);
     const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
       ? this.theme.railroadColor(recipient)
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });
-    if (this.context === undefined) throw new Error("Not initialized");
     this.context.fillStyle = color.toRgbString();
-    this.paintRailRects(x, y, railRoad.railType);
+    this.paintRailRects(this.context, x, y, railType);
   }
 
-  private paintRailRects(x: number, y: number, direction: RailType) {
-    if (this.context === undefined) throw new Error("Not initialized");
+  private paintRailRects(context: CanvasRenderingContext2D, x: number, y: number, direction: RailType) {
     const railRects = getRailroadRects(direction);
     for (const [dx, dy, w, h] of railRects) {
-      this.context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
+      context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
     }
+  }
+
+  private paintBridge(context: CanvasRenderingContext2D, x: number, y: number, direction: RailType) {
+    context.save();
+    context.fillStyle = "rgb(197,69,72)";
+    const bridgeRects = getBridgeRects(direction);
+    for (const [dx, dy, w, h] of bridgeRects) {
+      context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
+    }
+    context.restore();
   }
 }
