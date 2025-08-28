@@ -173,9 +173,10 @@ export class InputHandler {
     this.canvas.addEventListener(
       "wheel",
       (e) => {
-        this.onScroll(e);
+        if (!this.onTrackpadPan(e)) {
+          this.onScroll(e);
+        }
         this.onShiftScroll(e);
-        this.onTrackpadPan(e);
         e.preventDefault();
       },
       { passive: false },
@@ -413,20 +414,8 @@ export class InputHandler {
       const realCtrl =
         this.activeKeys.has("ControlLeft") ||
         this.activeKeys.has("ControlRight");
-
-      const isZoomGesture =
-        event.ctrlKey ||
-        event.metaKey ||
-        Math.abs(event.deltaZ) > 0 ||
-        (event.deltaMode === 1 && Math.abs(event.deltaY) > 0) ||
-        (event.deltaMode === 0 && Math.abs(event.deltaY) >= 50);
-
-      if (isZoomGesture) {
-        const ratio = event.ctrlKey && !realCtrl ? 10 : 1;
-        this.eventBus.emit(
-          new ZoomEvent(event.x, event.y, event.deltaY * ratio),
-        );
-      }
+      const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
+      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
     }
   }
 
@@ -438,32 +427,25 @@ export class InputHandler {
     }
   }
 
-  private onTrackpadPan(event: WheelEvent) {
-    if (event.shiftKey) {
-      return;
+  private onTrackpadPan(event: WheelEvent): boolean {
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      return false;
     }
 
-    if (event.ctrlKey || event.metaKey) {
-      return;
+    const isTrackpadPan = event.deltaMode === 0 && event.deltaX !== 0;
+
+    if (!isTrackpadPan) {
+      return false;
     }
 
-    const isTrackpadPan =
-      event.deltaMode === 0 &&
-      (Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) > 0) &&
-      ((Math.abs(event.deltaX) > 0 && Math.abs(event.deltaY) > 0) ||
-        event.deltaX % 1 !== 0 ||
-        event.deltaY % 1 !== 0 ||
-        (Math.abs(event.deltaX) < 30 && Math.abs(event.deltaY) < 30));
+    const panSensitivity = 1.0;
+    const deltaX = -event.deltaX * panSensitivity;
+    const deltaY = -event.deltaY * panSensitivity;
 
-    if (isTrackpadPan) {
-      const panSensitivity = 1.0;
-      const deltaX = -event.deltaX * panSensitivity;
-      const deltaY = -event.deltaY * panSensitivity;
-
-      if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
-        this.eventBus.emit(new DragEvent(deltaX, deltaY));
-      }
+    if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
+      this.eventBus.emit(new DragEvent(deltaX, deltaY));
     }
+    return true;
   }
 
   private onPointerMove(event: PointerEvent) {
@@ -513,6 +495,11 @@ export class InputHandler {
   private onTouchStart(event: TouchEvent) {
     if (event.touches.length === 2) {
       event.preventDefault();
+      // Solve screen jittering problem
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      this.lastPointerX = (touch1.clientX + touch2.clientX) / 2;
+      this.lastPointerY = (touch1.clientY + touch2.clientY) / 2;
     }
   }
 
