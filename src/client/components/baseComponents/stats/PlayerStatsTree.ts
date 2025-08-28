@@ -10,7 +10,7 @@ import { PlayerStats } from "../../../../core/StatsSchemas";
 @customElement("player-stats-tree-view")
 export class PlayerStatsTreeView extends LitElement {
   @property({ type: Object }) statsTree?: PlayerStatsTree;
-  @state() visibility: GameType = GameType.Public;
+  @state() selectedType: GameType = GameType.Public;
   @state() selectedMode: GameMode = GameMode.FFA;
   @state() selectedDifficulty: Difficulty = Difficulty.Medium;
 
@@ -20,13 +20,13 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private get availableModes(): GameMode[] {
-    const typeNode = this.statsTree?.[this.visibility];
+    const typeNode = this.statsTree?.[this.selectedType];
     if (!typeNode) return [];
     return Object.keys(typeNode) as GameMode[];
   }
 
   private get availableDifficulties(): Difficulty[] {
-    const typeNode = this.statsTree?.[this.visibility];
+    const typeNode = this.statsTree?.[this.selectedType];
     const modeNode = typeNode?.[this.selectedMode];
     if (!modeNode) return [];
     return Object.keys(modeNode) as Difficulty[];
@@ -43,7 +43,7 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private getSelectedLeaf(): PlayerStatsLeaf | null {
-    const typeNode = this.statsTree?.[this.visibility];
+    const typeNode = this.statsTree?.[this.selectedType];
     if (!typeNode) return null;
     const modeNode = typeNode[this.selectedMode];
     if (!modeNode) return null;
@@ -59,8 +59,8 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private setGameType(t: GameType) {
-    if (this.visibility === t) return;
-    this.visibility = t;
+    if (this.selectedType === t) return;
+    this.selectedType = t;
     const modes = this.availableModes;
     if (!modes.includes(this.selectedMode)) {
       this.selectedMode = modes[0] ?? this.selectedMode;
@@ -90,8 +90,8 @@ export class PlayerStatsTreeView extends LitElement {
 
   render() {
     const types = this.availableTypes;
-    if (types.length && !types.includes(this.visibility)) {
-      this.visibility = types[0];
+    if (types.length && !types.includes(this.selectedType)) {
+      this.selectedType = types[0];
     }
     const modes = this.availableModes;
     if (modes.length && !modes.includes(this.selectedMode)) {
@@ -104,23 +104,28 @@ export class PlayerStatsTreeView extends LitElement {
 
     const leaf = this.getSelectedLeaf();
     const wlr = leaf
-      ? (leaf.losses === 0n ? leaf.wins : Number(leaf.wins) / Number(leaf.losses))
+      ? leaf.losses === 0n
+        ? leaf.wins
+        : Number(leaf.wins) / Number(leaf.losses)
       : 0;
 
     return html`
-      <!-- Visibility toggle -->
-      <div class="flex gap-2 mt-2">
+      <!-- Type selector -->
+      <div class="flex gap-2 mt-2 justify-center">
         ${types.map(
           (t) => html`
             <button
-              class="text-xs px-2 py-0.5 rounded border ${this.visibility === t
+              class="text-xs px-2 py-0.5 rounded border ${this.selectedType ===
+              t
                 ? "border-white/60 text-white"
                 : "border-white/20 text-gray-300"}"
               @click=${() => this.setGameType(t)}
             >
               ${t === GameType.Public
                 ? translateText("player_modal.public")
-                : translateText("player_modal.private")}
+                : t === GameType.Private
+                  ? translateText("player_modal.private")
+                  : translateText("player_modal.singleplayer")}
             </button>
           `,
         )}
@@ -128,11 +133,12 @@ export class PlayerStatsTreeView extends LitElement {
 
       <!-- Mode selector -->
       ${modes.length
-        ? html`<div class="flex gap-2 mt-2">
+        ? html`<div class="flex gap-2 mt-2 justify-center">
             ${modes.map(
               (m) => html`
                 <button
-                  class="text-xs px-2 py-0.5 rounded border ${this.selectedMode === m
+                  class="text-xs px-2 py-0.5 rounded border ${this
+                    .selectedMode === m
                     ? "border-white/60 text-white"
                     : "border-white/20 text-gray-300"}"
                   @click=${() => this.setMode(m)}
@@ -147,11 +153,12 @@ export class PlayerStatsTreeView extends LitElement {
 
       <!-- Difficulty selector -->
       ${diffs.length
-        ? html`<div class="flex gap-2 mt-2">
+        ? html`<div class="flex gap-2 mt-2 justify-center">
             ${diffs.map(
-              (d) => html`
-                <button
-                  class="text-xs px-2 py-0.5 rounded border ${this.selectedDifficulty === d
+              (d) =>
+                html` <button
+                  class="text-xs px-2 py-0.5 rounded border ${this
+                    .selectedDifficulty === d
                     ? "border-white/60 text-white"
                     : "border-white/20 text-gray-300"}"
                   @click=${() => this.setDifficulty(d)}
@@ -162,7 +169,6 @@ export class PlayerStatsTreeView extends LitElement {
             )}
           </div>`
         : html``}
-
       ${leaf
         ? html`
             <hr class="w-2/3 border-gray-600 my-2" />
@@ -187,7 +193,9 @@ export class PlayerStatsTreeView extends LitElement {
 
             <hr class="w-2/3 border-gray-600 my-2" />
 
-            <player-stats-table .stats=${this.getDisplayedStats()}></player-stats-table>
+            <player-stats-table
+              .stats=${this.getDisplayedStats()}
+            ></player-stats-table>
           `
         : html``}
     `;

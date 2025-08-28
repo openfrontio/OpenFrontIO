@@ -618,6 +618,7 @@
     "title": "Player Info",
     "public": "Public",
     "private": "Private",
+    "singleplayer": "Single Player",
     "stats_wins": "Wins",
     "stats_losses": "Losses",
     "stats_wlr": "Win:Loss Ratio",
