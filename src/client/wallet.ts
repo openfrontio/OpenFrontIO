@@ -24,14 +24,14 @@ export const wagmiConfig = createConfig({
   },
   connectors: [
     injected(), // MetaMask, etc.
-    walletConnect({ projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID })
+    walletConnect({ projectId: process.env.VITE_WALLETCONNECT_PROJECT_ID || '' })
   ],
 })
 
 // Privy instance
 export const privy = new Privy({
-  appId: import.meta.env.VITE_PRIVY_APP_ID,
-  clientId: import.meta.env.VITE_PRIVY_CLIENT_ID,
+  appId: process.env.VITE_PRIVY_APP_ID || '',
+  clientId: process.env.VITE_PRIVY_CLIENT_ID || '',
   supportedChains: [baseSepolia, anvil],
   storage: new LocalStorage(),
 })

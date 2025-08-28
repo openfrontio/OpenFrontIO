@@ -129,6 +129,15 @@ export default async (env, argv) => {
         "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
           process.env.STRIPE_PUBLISHABLE_KEY,
         ),
+        "process.env.VITE_WALLETCONNECT_PROJECT_ID": JSON.stringify(
+          process.env.VITE_WALLETCONNECT_PROJECT_ID,
+        ),
+        "process.env.VITE_PRIVY_APP_ID": JSON.stringify(
+          process.env.VITE_PRIVY_APP_ID,
+        ),
+        "process.env.VITE_PRIVY_CLIENT_ID": JSON.stringify(
+          process.env.VITE_PRIVY_CLIENT_ID,
+        ),
       }),
       new CopyPlugin({
         patterns: [

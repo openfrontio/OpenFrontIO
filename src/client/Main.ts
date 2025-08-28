@@ -424,21 +424,47 @@ class Client {
     
     connectWalletButton.addEventListener("click", async () => {
       try {
+        console.log("Attempting to connect wallet...");
+        
         // Import wallet utilities
-        const { wagmiConfig, privy } = await import("./wallet");
-        const { connect } = await import("@wagmi/core");
+        const { wagmiConfig } = await import("./wallet");
+        const { connect, getAccount } = await import("@wagmi/core");
         const { injected } = await import("@wagmi/connectors");
         
-        // Try connecting with injected wallet first (MetaMask, etc.)
+        console.log("Wagmi config loaded:", wagmiConfig);
+        
+        // Check if already connected
+        const account = getAccount(wagmiConfig);
+        if (account.isConnected) {
+          console.log("Already connected:", account.address);
+          connectWalletButton.title = `Connected: ${account.address?.slice(0, 6)}...`;
+          connectWalletButton.disable = true;
+          return;
+        }
+        
+        // Try connecting with injected wallet
+        console.log("Attempting to connect with injected connector...");
         const result = await connect(wagmiConfig, { connector: injected() });
-        console.log("Connected wallet:", result.accounts[0]);
+        console.log("Connection successful:", result);
         
         // Update button text
-        connectWalletButton.title = "Wallet Connected";
+        connectWalletButton.title = `Connected: ${result.accounts[0].slice(0, 6)}...`;
         connectWalletButton.disable = true;
       } catch (error) {
-        console.error("Failed to connect wallet:", error);
-        alert("Failed to connect wallet. Please try again.");
+        console.error("Wallet connection error details:", error);
+        
+        // More specific error handling
+        if (error instanceof Error) {
+          if (error.message.includes("User rejected")) {
+            alert("Connection cancelled by user.");
+          } else if (error.message.includes("No injected provider")) {
+            alert("No wallet extension found. Please install MetaMask or similar wallet.");
+          } else {
+            alert(`Connection failed: ${error.message}`);
+          }
+        } else {
+          alert("Failed to connect wallet. Please try again.");
+        }
       }
     });
   }
