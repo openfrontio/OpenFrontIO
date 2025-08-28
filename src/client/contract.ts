@@ -147,3 +147,43 @@ export async function createLobby(params: CreateLobbyParams): Promise<CreateLobb
   };
 }
 
+export async function isLobbyOnChain(lobbyId: string): Promise<boolean> {
+  try {
+    const lobbyIdBytes32 = stringToBytes32(lobbyId);
+
+    console.log('Checking lobby on-chain:', {
+      lobbyId,
+      lobbyIdBytes32
+    });
+
+    const result = await readContract(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'getLobby',
+      args: [lobbyIdBytes32]
+    }) as [string, bigint, string[], number, string, bigint];
+
+    const [host, betAmount, participants, status, winner, totalPrize] = result;
+
+    // If the host address is the zero address (0x0000...), the lobby doesn't exist
+    const isDeployed = host !== '0x0000000000000000000000000000000000000000';
+
+    console.log('Lobby check result:', {
+      lobbyId,
+      isDeployed,
+      host,
+      betAmount: betAmount.toString(),
+      participants,
+      status,
+      winner,
+      totalPrize: totalPrize.toString()
+    });
+
+    return isDeployed;
+  } catch (error) {
+    console.error('Error checking lobby on-chain:', error);
+    // If there's an error (like lobby doesn't exist), return false
+    return false;
+  }
+}
+

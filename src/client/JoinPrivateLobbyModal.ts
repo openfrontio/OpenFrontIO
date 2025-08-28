@@ -11,6 +11,7 @@ import { JoinLobbyEvent } from "./Main";
 import { getClientID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { translateText } from "../client/Utils";
+import { isLobbyOnChain } from "./contract";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
@@ -79,21 +80,6 @@ export class JoinPrivateLobbyModal extends LitElement {
               ></path>
             </svg>
           </button>
-        </div>
-        <div class="betting-amount-box" style="margin-top: 1rem;">
-          <label for="bettingAmountInput" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-            Betting Amount (ETH)
-          </label>
-          <input
-            type="number"
-            id="bettingAmountInput"
-            placeholder="0.001"
-            step="0.001"
-            min="0"
-            .value=${this.bettingAmount}
-            @input=${this.handleBettingAmountChange}
-            style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;"
-          />
         </div>
         <div class="message-area ${this.message ? "show" : ""}">
           ${this.message}
@@ -208,7 +194,18 @@ export class JoinPrivateLobbyModal extends LitElement {
     this.message = `${translateText("private_lobby.checking")}`;
 
     try {
-      // First, check if the game exists in active lobbies
+      // First, check if the lobby is deployed on-chain
+      console.log("Checking if lobby is deployed on-chain...");
+      const isOnChain = await isLobbyOnChain(lobbyId);
+      
+      if (!isOnChain) {
+        this.message = "This lobby has not been deployed on-chain. Please ask the host to deploy it first.";
+        return;
+      }
+
+      console.log("Lobby is deployed on-chain, proceeding with join...");
+
+      // Then, check if the game exists in active lobbies
       const gameExists = await this.checkActiveLobby(lobbyId);
       if (gameExists) return;
 
