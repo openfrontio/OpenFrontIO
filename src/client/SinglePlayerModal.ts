@@ -461,6 +461,7 @@ export class SinglePlayerModal extends LitElement {
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
             },
+            lobbyCreatedAt: Date.now(),
           },
         } satisfies JoinLobbyEvent,
         bubbles: true,

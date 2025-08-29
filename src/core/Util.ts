@@ -180,6 +180,7 @@ export function createGameRecord(
       duration,
       end,
       gameID,
+      lobbyCreatedAt: Date.now(),
       num_turns,
       players,
       start,
