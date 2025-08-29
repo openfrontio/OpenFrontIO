@@ -399,6 +399,19 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
 
+  decreaseLevel(): void {
+    this._level--;
+    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+      this._missileTimerQueue.pop();
+    }
+
+    if (this._level <= 0) {
+      this.delete();
+    } else {
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
   trainType(): TrainType | undefined {
     return this._trainType;
   }

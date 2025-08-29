@@ -38,12 +38,14 @@ describe("PlayerExecution", () => {
     game.addExecution(new PlayerExecution(otherPlayer));
   });
 
-  test("DefensePost is destroyed, not captured, when tile owner changes", () => {
+  test("DefensePost lv. 1 is destroyed when tile owner changes", () => {
     const tile = game.ref(50, 50);
     player.conquer(tile);
     const defensePost = player.buildUnit(UnitType.DefensePost, tile, {});
 
+    game.executeNextTick();
     expect(game.unitCount(UnitType.DefensePost)).toBe(1);
+    expect(defensePost.level()).toBe(1);
 
     otherPlayer.conquer(tile);
     executeTicks(game, 2);
@@ -51,18 +53,43 @@ describe("PlayerExecution", () => {
     expect(game.unitCount(UnitType.DefensePost)).toBe(0);
   });
 
-  test("City is captured (transferred), not destroyed, when tile owner changes", () => {
+  test("DefensePost lv. 2+ is downgraded when tile owner changes", () => {
+    const tile = game.ref(50, 50);
+    player.conquer(tile);
+    const defensePost = player.buildUnit(UnitType.DefensePost, tile, {});
+    defensePost.increaseLevel();
+
+    expect(defensePost.level()).toBe(2);
+    expect(game.unitCount(UnitType.DefensePost)).toBe(2); // unitCount sums levels
+    expect(player.units(UnitType.DefensePost)).toHaveLength(1);
+    expect(defensePost.isActive()).toBe(true);
+
+    otherPlayer.conquer(tile);
+    executeTicks(game, 2);
+
+    expect(defensePost.level()).toBe(1);
+    expect(game.unitCount(UnitType.DefensePost)).toBe(1);
+    expect(otherPlayer.units(UnitType.DefensePost)).toHaveLength(1);
+    expect(defensePost.owner()).toBe(otherPlayer);
+    expect(defensePost.isActive()).toBe(true);
+  });
+
+  test("Non-DefensePost structures are transferred (not downgraded) when tile owner changes", () => {
     const tile = game.ref(50, 50);
     player.conquer(tile);
     const city = player.buildUnit(UnitType.City, tile, {});
 
     expect(game.unitCount(UnitType.City)).toBe(1);
+    expect(city.level()).toBe(1);
     expect(city.owner()).toBe(player);
+    expect(city.isActive()).toBe(true);
 
     otherPlayer.conquer(tile);
     executeTicks(game, 2);
 
     expect(game.unitCount(UnitType.City)).toBe(1);
+    expect(city.level()).toBe(1);
     expect(city.owner()).toBe(otherPlayer);
+    expect(city.isActive()).toBe(true);
   });
 });

@@ -31,22 +31,25 @@ export class PlayerExecution implements Execution {
 
     const { mg } = this;
     this.player.decayRelations();
-    this.player.units().forEach((u) => {
+
+    const units = [...this.player.units()];
+    for (const u of units) {
+      if (!u.isActive()) continue;
+      if (!u.info().territoryBound) continue;
+
       const tileOwner = mg.owner(u.tile());
-      if (u.info().territoryBound) {
-        if (tileOwner?.isPlayer()) {
-          if (tileOwner !== this.player) {
-            if (u.type() === UnitType.DefensePost) {
-              u.delete(true, tileOwner);
-            } else {
-              mg.player(tileOwner.id()).captureUnit(u);
-            }
-          }
-        } else {
-          u.delete();
-        }
+
+      if (!tileOwner?.isPlayer()) {
+        u.delete();
+        continue;
       }
-    });
+      if (tileOwner.smallID() === this.player.smallID()) continue;
+
+      if (u.type() === UnitType.DefensePost) {
+        u.decreaseLevel();
+      }
+      mg.player(tileOwner.id()).captureUnit(u);
+    }
 
     if (!this.player.isAlive()) {
       // Player has no tiles, delete any remaining units and gold
