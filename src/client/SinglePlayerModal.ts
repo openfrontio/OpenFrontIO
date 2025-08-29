@@ -16,7 +16,6 @@ import {
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { generateID, getClientID } from "../core/Util";
-import { DifficultyDescription } from "./components/Difficulties";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { TeamCountConfig } from "../core/Schemas";
@@ -150,7 +149,7 @@ export class SinglePlayerModal extends LitElement {
                       ></difficulty-display>
                       <p class="option-card-title">
                         ${translateText(
-                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
+                          `difficulty.${key}`,
                         )}
                       </p>
                     </div>

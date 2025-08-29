@@ -241,9 +241,9 @@
   },
   "difficulty": {
     "difficulty": "Difficulty",
-    "Relaxed": "Relaxed",
-    "Balanced": "Balanced",
-    "Intense": "Intense",
+    "Easy": "Relaxed",
+    "Medium": "Balanced",
+    "Hard": "Intense",
     "Impossible": "Impossible"
   },
   "game_mode": {

@@ -4,6 +4,7 @@ import { GraphAdapter, SerialAStar } from "./SerialAStar";
 import { Cell } from "../game/Game";
 
 export class GameMapAdapter implements GraphAdapter<TileRef> {
+  private readonly waterPenalty = 3;
   constructor(
     private readonly gameMap: GameMap,
     private readonly waterPath: boolean,
@@ -14,7 +15,12 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
   }
 
   cost(node: TileRef): number {
-    return this.gameMap.cost(node);
+    let base = this.gameMap.cost(node);
+    // Avoid crossing water when possible
+    if (!this.waterPath && this.gameMap.isWater(node)) {
+      base += this.waterPenalty;
+    }
+    return base;
   }
 
   position(node: TileRef): { x: number; y: number } {
@@ -22,8 +28,14 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
   }
 
   isTraversable(from: TileRef, to: TileRef): boolean {
-    const isWater = this.gameMap.isWater(to);
-    return this.waterPath ? isWater : !isWater;
+    const toWater = this.gameMap.isWater(to);
+    if (this.waterPath) {
+      return toWater;
+    }
+    // Allow water access from/to shore
+    const fromShore = this.gameMap.isShoreline(from);
+    const toShore = this.gameMap.isShoreline(to);
+    return !toWater || fromShore || toShore;
   }
 }
 export class MiniAStar implements AStar<TileRef> {
