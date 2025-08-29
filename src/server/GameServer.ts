@@ -296,6 +296,7 @@ export class GameServer {
     const result = GameStartInfoSchema.safeParse({
       config: this.gameConfig,
       gameID: this.id,
+      lobbyCreatedAt: this.createdAt,
       players: this.activeClients.map((c) => ({
         clientID: c.clientID,
         flag: c.flag,
@@ -332,6 +333,7 @@ export class GameServer {
       ws.send(
         JSON.stringify({
           gameStartInfo: this.gameStartInfo,
+          lobbyCreatedAt: this.createdAt,
           turns: this.turns.slice(lastTurn),
           type: "start",
         } satisfies ServerStartGameMessage),
