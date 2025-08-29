@@ -106,8 +106,9 @@ export class UnitDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100]
-        bg-gray-800/70 backdrop-blur-sm border border-slate-400 rounded-lg p-2
+        class="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-[1100]
+        bg-gray-800/70 shadow-lg backdrop-blur border-t-[1px] border-l-[1px] border-r-[1px] border-slate-400 
+        rounded-tl-md rounded-tr-md p-2 lg:p-3
         hidden lg:block"
       >
         <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1">

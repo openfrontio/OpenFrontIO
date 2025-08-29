@@ -109,16 +109,14 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     return html`
       <aside
-        class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2
-          bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-tl-lg rounded-bl-lg
+        class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 lg:p-3 
+          bg-gray-800/70 backdrop-blur shadow-lg rounded-bl-md border-l-[1px] border-b-[1px] border-slate-400
           transition-transform duration-300 ease-out transform
           ${this._isVisible ? "translate-x-0" : "translate-x-full"}`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class=${`flex justify-end items-center gap-2 text-white ${
-            this._isReplayVisible ? "mb-2" : ""
-          }`}
+          class="flex justify-end items-center gap-2 text-white"
         >
           ${this.maybeRenderReplayButtons()}
           <div

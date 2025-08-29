@@ -92,8 +92,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
     return html`
       <aside
         class=${`fixed top-[20px] left-0 z-[1000] flex flex-col
-          max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40
-          backdrop-blur-sm shadow-xs rounded-tr-lg rounded-br-lg
+          max-h-[calc(100vh-80px)] overflow-y-auto p-2 lg:p-3 bg-gray-800/70
+          backdrop-blur shadow-lg rounded-tr-md rounded-br-md
+          border-t-[1px] border-r-[1px] border-b-[1px] border-slate-400
           transition-transform duration-300 ease-out transform
           ${this.isVisible ? "translate-x-0" : "-translate-x-full"}`}
       >

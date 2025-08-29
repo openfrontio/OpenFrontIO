@@ -44,6 +44,7 @@ import { Layer } from "./Layer";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import eventSolidWhiteIcon from "../../../../resources/images/EventWhite.svg";
 import { onlyImages } from "../../../core/Util";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 
@@ -923,9 +924,15 @@ export class EventsDisplay extends LitElement implements Layer {
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
-            <div class="relative w-fit lg:bottom-2.5 lg:right-2.5 z-50">
+            <div class="relative w-fit  z-50">
               ${this.renderButton({
                 content: html`
+                  <img
+                    src=${eventSolidWhiteIcon}
+                    alt="eventIcon"
+                    width="20"
+                    height="20"
+                  />
                   Events
                   <span
                     class="${this.newEvents
@@ -936,19 +943,20 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 " +
-                  "lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
+                  "flex gap-1 text-white cursor-pointer pointer-events-auto w-fit p-2 " +
+                  "lg:p-3 border border-slate-400 rounded-t-none md:rounded-tl-md bg-gray-800/70 backdrop-blur",
               })}
             </div>
           `
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
+              class="relative w-full z-50 sm:w-96 backdrop-blur"
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 rounded-t-none md:rounded-t-md bg-gray-800/70"
+                class="w-full p-2 lg:p-3 rounded-t-none md:rounded-tl-md
+                bg-gray-800/70 border-t-[1px] border-l-[1px] border-slate-400"
               >
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
@@ -1034,9 +1042,9 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="rounded-b-none md:rounded-b-md bg-gray-800/70
+                class="rounded-b-none bg-gray-800/70
                   max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full
-                  h-full"
+                  h-full border-l-[1px] border-slate-400"
               >
                 <div>
                   <table
