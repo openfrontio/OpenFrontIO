@@ -7,6 +7,7 @@ import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
 import { SendWinnerEvent } from "../../Transport";
 import { translateText } from "../../../client/Utils";
+import { claimPrize } from "../../contract";
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Layer {
@@ -21,7 +22,14 @@ export class WinModal extends LitElement implements Layer {
   @state()
   showButtons = false;
 
+  @state()
+  private claimingPrize = false;
+
+  @state()
+  private prizeClaimStatus = "";
+
   private _title = "";
+  private currentGameId = "";
 
   // Override to prevent shadow DOM creation
   createRenderRoot() {
@@ -139,9 +147,23 @@ export class WinModal extends LitElement implements Layer {
       <div class="win-modal ${this.isVisible ? "visible" : ""}">
         <h2>${this._title}</h2>
         ${this.innerHtml()}
+        ${this.prizeClaimStatus ? html`
+          <p style="color: ${this.prizeClaimStatus.includes('Success') ? '#4a9eff' : '#ff4a4a'}; text-align: center; margin: 10px 0;">
+            ${this.prizeClaimStatus}
+          </p>
+        ` : ''}
         <div
           class="button-container ${this.showButtons ? "visible" : "hidden"}"
         >
+          ${this.shouldShowClaimButton() ? html`
+            <button 
+              @click=${this._handleClaimPrize}
+              ?disabled=${this.claimingPrize}
+              style="background: ${this.claimingPrize ? 'rgba(100, 100, 100, 0.6)' : 'rgba(0, 200, 0, 0.6)'};"
+            >
+              ${this.claimingPrize ? 'Claiming...' : 'Claim Prize'}
+            </button>
+          ` : ''}
           <button @click=${this._handleExit}>
             ${translateText("win_modal.exit")}
           </button>
@@ -193,6 +215,29 @@ export class WinModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private shouldShowClaimButton(): boolean {
+    // Only show claim button if the current player won
+    return this._title.includes(translateText("win_modal.you_won")) && this.currentGameId !== "";
+  }
+
+  private async _handleClaimPrize() {
+    if (this.claimingPrize || !this.currentGameId) return;
+    
+    this.claimingPrize = true;
+    this.prizeClaimStatus = "";
+    this.requestUpdate();
+    
+    try {
+      const result = await claimPrize({ lobbyId: this.currentGameId });
+      this.prizeClaimStatus = `Success! Transaction: ${result.hash.slice(0, 10)}...`;
+    } catch (error) {
+      this.prizeClaimStatus = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    } finally {
+      this.claimingPrize = false;
+      this.requestUpdate();
+    }
+  }
+
   private _handleExit() {
     this.hide();
     window.location.href = "/";
@@ -202,6 +247,9 @@ export class WinModal extends LitElement implements Layer {
 
   tick() {
     if (this.game === undefined) throw new Error("Not initialized");
+    
+    // Set current game ID for claim functionality
+    this.currentGameId = this.game.gameID();
     const myPlayer = this.game.myPlayer();
     if (
       !this.hasShownDeathModal &&

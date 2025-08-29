@@ -1,7 +1,8 @@
-import { createConfig, http, createClient } from '@wagmi/core';
+import { createConfig, http } from '@wagmi/core';
 import { hardhat, baseSepolia, localhost } from '@wagmi/core/chains';
 import { readContract, writeContract } from '@wagmi/core';
-import { parseEther, formatEther, type Hash, keccak256, toHex, createWalletClient, privateKeyToAccount, type Address } from 'viem';
+import { type Hash, keccak256, toHex, createWalletClient, type Address } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
 // Contract configuration
 const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const;

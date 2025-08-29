@@ -183,6 +183,7 @@ export class LocalServer {
         persistentID: getPersistentID(),
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
+        walletAddress: this.lobbyConfig.walletAddress || "",
         stats: this.allPlayersStats[this.lobbyConfig.clientID],
       },
     ];

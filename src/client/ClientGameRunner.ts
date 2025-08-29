@@ -217,6 +217,7 @@ export class ClientGameRunner {
         persistentID: getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
+        walletAddress: this.lobby.walletAddress || "",
         stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];

@@ -64,6 +64,9 @@ export class GameServer {
   kickedClients: Set<ClientID> = new Set();
   outOfSyncClients: Set<ClientID> = new Set();
 
+  // Blockchain integration
+  winnerDeclaredTxHash: string | null = null;
+
   private readonly websockets: Set<WebSocket> = new Set();
 
   winnerVotes: Map<
@@ -559,6 +562,10 @@ export class GameServer {
     return this.clientsDisconnectedStatus.get(clientID) ?? true;
   }
 
+  public getClient(clientID: ClientID): Client | undefined {
+    return this.allClients.get(clientID);
+  }
+
   private markClientDisconnected(clientID: string, isDisconnected: boolean) {
     this.clientsDisconnectedStatus.set(clientID, isDisconnected);
     this.addIntent({
@@ -572,6 +579,7 @@ export class GameServer {
     this.log.info("archiving game", {
       gameID: this.id,
       winner: this.winner?.winner,
+      winnerDeclaredTxHash: this.winnerDeclaredTxHash,
     });
 
     // Players must stay in the same order as the game start info.
@@ -587,6 +595,7 @@ export class GameServer {
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
           username: player.username,
+          walletAddress: this.allClients.get(player.clientID)?.walletAddress ?? "",
         } satisfies PlayerRecord;
       },
     );

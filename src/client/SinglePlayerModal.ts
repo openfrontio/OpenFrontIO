@@ -403,7 +403,7 @@ export class SinglePlayerModal extends LitElement {
       : this.disabledUnits.filter((u) => u !== unit);
   }
 
-  private startGame() {
+  private async startGame() {
     // If random map is selected, choose a random map now
     if (this.useRandomMap) {
       this.selectedMap = this.getRandomMap();
@@ -443,6 +443,7 @@ export class SinglePlayerModal extends LitElement {
                     ? ""
                     : flagInput.getCurrentFlag(),
                 pattern: this.userSettings.getSelectedPattern(),
+                walletAddress: await this.getCurrentWalletAddress(),
               },
             ],
             config: {
@@ -469,5 +470,15 @@ export class SinglePlayerModal extends LitElement {
       }),
     );
     this.close();
+  }
+
+  private async getCurrentWalletAddress(): Promise<string> {
+    try {
+      const { getCurrentWalletAddress } = await import("./wallet");
+      return getCurrentWalletAddress() || "";
+    } catch (error) {
+      console.warn("Failed to get wallet address for single player:", error);
+      return "";
+    }
   }
 }

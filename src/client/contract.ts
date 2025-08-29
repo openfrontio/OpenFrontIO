@@ -44,6 +44,13 @@ const CONTRACT_ABI = [
     "stateMutability": "payable"
   },
   {
+    "type": "function",
+    "name": "claimPrize",
+    "inputs": [{ "name": "lobbyId", "type": "bytes32", "internalType": "bytes32" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "event",
     "name": "LobbyCreated",
     "inputs": [
@@ -117,6 +124,16 @@ export interface JoinLobbyParams {
 }
 
 export interface JoinLobbyResult {
+  hash: Hash;
+  lobbyId: string;
+  playerAddress: string;
+}
+
+export interface ClaimPrizeParams {
+  lobbyId: string;
+}
+
+export interface ClaimPrizeResult {
   hash: Hash;
   lobbyId: string;
   playerAddress: string;
@@ -301,6 +318,62 @@ export async function joinLobby(params: JoinLobbyParams): Promise<JoinLobbyResul
       throw new Error('Transaction was cancelled by user.');
     } else {
       throw new Error(`Failed to join lobby: ${error.message || 'Unknown error'}`);
+    }
+  }
+}
+
+export async function claimPrize(params: ClaimPrizeParams): Promise<ClaimPrizeResult> {
+  const { lobbyId } = params;
+
+  // Check if wallet is connected
+  const account = getAccount(config);
+  if (!account.isConnected || !account.address) {
+    // Try to connect wallet
+    await connectWallet();
+    // Get account again after connection
+    const newAccount = getAccount(config);
+    if (!newAccount.isConnected || !newAccount.address) {
+      throw new Error('Wallet connection failed');
+    }
+  }
+
+  const lobbyIdBytes32 = stringToBytes32(lobbyId);
+  
+  console.log('Claiming prize for lobby:', {
+    lobbyId,
+    lobbyIdBytes32,
+    playerAddress: account.address
+  });
+
+  try {
+    const hash = await writeContract(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'claimPrize',
+      args: [lobbyIdBytes32]
+    });
+
+    console.log('Successfully claimed prize, transaction hash:', hash);
+
+    return {
+      hash,
+      lobbyId,
+      playerAddress: account.address!
+    };
+  } catch (error: any) {
+    console.error('Failed to claim prize:', error);
+    
+    // Handle specific contract errors
+    if (error.message.includes('NotWinner')) {
+      throw new Error('You are not the winner of this lobby.');
+    } else if (error.message.includes('GameNotFinished')) {
+      throw new Error('The game has not finished yet.');
+    } else if (error.message.includes('PrizeAlreadyClaimed')) {
+      throw new Error('Prize has already been claimed.');
+    } else if (error.message.includes('User rejected')) {
+      throw new Error('Transaction was cancelled by user.');
+    } else {
+      throw new Error(`Failed to claim prize: ${error.message || 'Unknown error'}`);
     }
   }
 }
