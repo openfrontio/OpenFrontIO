@@ -257,7 +257,16 @@
           translationKey="main.single_player"
           block
         ></o-button>
-
+        <div class="container__row container__row--equal">
+          <lang-selector class="w-full"></lang-selector>
+          <o-button
+            id="settings-button"
+            title="Settings"
+            translationKey="user_setting.title"
+            block
+            secondary
+          ></o-button>
+        </div>
         <o-button
           id="help-button"
           title="Instructions"
@@ -265,25 +274,8 @@
           block
           secondary
         ></o-button>
-        <div class="container__row">
-          <lang-selector class="w-full"></lang-selector>
-        </div>
       </div>
     </main>
-
-    <!-- User Setting -->
-    <button
-      id="settings-button"
-      title="Settings"
-      class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center"
-      style="width: 80px; height: 80px; background-color: #0075ff"
-    >
-      <img
-        src="../../resources/images/SettingIconWhite.svg"
-        alt="Settings"
-        style="width: 72px; height: 72px"
-      />
-    </button>
 
     <!-- Game components -->
     <div id="customMenu" class="mt-4 sm:mt-6 lg:mt-8">

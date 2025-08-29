@@ -130,8 +130,7 @@ export class LangSelector extends LitElement {
   private loadLanguage(lang: string): Record<string, string> {
     const language = this.languageMap[lang] ?? {};
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    const flat = flattenTranslations(language);
-    return flat;
+    return flattenTranslations(language);
   }
 
   private async loadLanguageList() {
@@ -301,27 +300,14 @@ export class LangSelector extends LitElement {
         });
 
     return html`
-      <div class="container__row">
-        <button
-          id="lang-selector"
-          @click=${this.openModal}
-          class="text-center appearance-none w-full bg-blue-100
-          dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-gray-600
-          text-blue-900 dark:text-gray-100 p-3 sm:p-4 lg:p-5 font-medium
-          text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer
-          transition-colors duration-300 flex items-center gap-2
-          justify-center"
-        >
-          <img
-            id="lang-flag"
-            class="w-6 h-4"
-            src="/flags/${currentLang.svg}.svg"
-            alt="flag"
-          />
-          <span id="lang-name">${currentLang.native} (${currentLang.en})</span>
-        </button>
-      </div>
-
+      <o-button
+        id="lang-selector"
+        title="${currentLang.native} (${currentLang.en})"
+        block
+        secondary
+        imagePath="/flags/${currentLang.svg}.svg"
+        @click=${this.openModal}
+      ></o-button>
       <language-modal
         .visible=${this.showModal}
         .languageList=${this.languageList}

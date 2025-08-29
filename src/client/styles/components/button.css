@@ -14,6 +14,15 @@
   @media (min-width: 1024px) {
     font-size: 18px;
   }
+
+  span {
+    vertical-align: middle;
+  }
+
+  img {
+    display: inline-block;
+    margin-right: 1rem;
+  }
 }
 
 .c-button:hover,

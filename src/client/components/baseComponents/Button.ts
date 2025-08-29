@@ -7,6 +7,7 @@ import { translateText } from "../../Utils";
 export class OButton extends LitElement {
   @property({ type: String }) title = "";
   @property({ type: String }) translationKey = "";
+  @property({ type: String }) imagePath = ""; // New property for the image path
   @property({ type: Boolean }) secondary = false;
   @property({ type: Boolean }) block = false;
   @property({ type: Boolean }) blockDesktop = false;
@@ -17,6 +18,10 @@ export class OButton extends LitElement {
   }
 
   render() {
+    const buttonText = this.translationKey
+      ? translateText(this.translationKey)
+      : this.title;
+
     return html`
       <button
         class=${classMap({
@@ -28,9 +33,11 @@ export class OButton extends LitElement {
         })}
         ?disabled=${this.disable}
       >
-        ${`${this.translationKey}` === ""
-          ? `${this.title}`
-          : `${translateText(this.translationKey)}`}
+        ${this.imagePath
+          ? html`<img src="${this.imagePath}" width="24px" height="24px" class="c-button__icon" alt="" />`
+          : ""}
+
+        <span>${buttonText}</span>
       </button>
     `;
   }
