@@ -480,7 +480,7 @@ export type Unit = {
   // Upgradable Structures
   level(): number;
   increaseLevel(): void;
-  decreaseLevel(): void;
+  decreaseLevel(destroyer?: Player): void;
 
   // Warships
   setPatrolTile(tile: TileRef): void;

@@ -46,7 +46,7 @@ export class PlayerExecution implements Execution {
       if (tileOwner.smallID() === this.player.smallID()) continue;
 
       if (u.type() === UnitType.DefensePost) {
-        u.decreaseLevel();
+        u.decreaseLevel(mg.player(tileOwner.id()));
       }
       mg.player(tileOwner.id()).captureUnit(u);
     }
