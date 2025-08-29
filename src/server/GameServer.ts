@@ -333,7 +333,6 @@ export class GameServer {
       ws.send(
         JSON.stringify({
           gameStartInfo: this.gameStartInfo,
-          lobbyCreatedAt: this.createdAt,
           turns: this.turns.slice(lastTurn),
           type: "start",
         } satisfies ServerStartGameMessage),

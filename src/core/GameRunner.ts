@@ -93,7 +93,7 @@ export class GameRunner {
     public game: Game,
     private readonly execManager: Executor,
     private readonly callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
-  ) { }
+  ) {}
 
   init() {
     if (this.game.config().bots() > 0) {

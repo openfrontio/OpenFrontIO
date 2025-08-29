@@ -416,7 +416,7 @@ export const PlayerSchema = z.object({
 export const GameStartInfoSchema = z.object({
   config: GameConfigSchema,
   gameID: ID,
-  lobbyCreatedAt: z.number(),
+  lobbyCreatedAt: z.number().int().nonnegative(),
   players: PlayerSchema.array(),
 });
 
@@ -448,8 +448,6 @@ export const ServerPrestartMessageSchema = z.object({
 
 export const ServerStartGameMessageSchema = z.object({
   gameStartInfo: GameStartInfoSchema,
-  // Turns the client missed if they are late to the game.
-  lobbyCreatedAt: z.number(),
   turns: TurnSchema.array(),
   type: z.literal("start"),
 });
