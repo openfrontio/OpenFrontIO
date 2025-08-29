@@ -15,10 +15,6 @@
     font-size: 18px;
   }
 
-  span {
-    vertical-align: middle;
-  }
-
   img {
     display: inline-block;
     margin-right: 1rem;
@@ -63,6 +59,15 @@
     width: auto;
     margin: 0 auto;
   }
+}
+
+.c-button__text {
+  vertical-align: middle;
+}
+
+.c-button__icon {
+  display: inline-block;
+  margin-right: 1rem;
 }
 
 .dark .c-button {
