@@ -7,8 +7,10 @@ import {
   GameStartInfoSchema,
   Intent,
   PlayerRecord,
+  ServerDesyncMessage,
   ServerDesyncSchema,
   ServerErrorMessage,
+  ServerPrestartMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -258,22 +260,10 @@ export class GameServer {
     }
     this._hasPrestarted = true;
 
-    const prestartMsg = ServerPrestartMessageSchema.safeParse({
+    const msg = JSON.stringify({
       gameMap: this.gameConfig.gameMap,
       type: "prestart",
-    });
-
-    if (!prestartMsg.success) {
-      console.error(
-        `error creating prestart message for game ${this.id}, ${prestartMsg.error}`.substring(
-          0,
-          250,
-        ),
-      );
-      return;
-    }
-
-    const msg = JSON.stringify(prestartMsg.data);
+    } satisfies ServerPrestartMessage);
     this.activeClients.forEach((c) => {
       this.log.info("sending prestart message", {
         clientID: c.clientID,
@@ -293,7 +283,7 @@ export class GameServer {
     // if no client connects/pings.
     this.lastPingUpdate = Date.now();
 
-    const result = GameStartInfoSchema.safeParse({
+    this.gameStartInfo = {
       config: this.gameConfig,
       gameID: this.id,
       players: this.activeClients.map((c) => ({
@@ -302,13 +292,7 @@ export class GameServer {
         pattern: c.pattern,
         username: c.username,
       })),
-    });
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      this.log.error("Error parsing game start info", { message: error });
-      return;
-    }
-    this.gameStartInfo = result.data satisfies GameStartInfo;
+    };
 
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
@@ -622,23 +606,14 @@ export class GameServer {
       return;
     }
 
-    const serverDesync = ServerDesyncSchema.safeParse({
+    const desyncMsg = JSON.stringify({
       clientsWithCorrectHash:
         this.activeClients.length - outOfSyncClients.length,
       correctHash: mostCommonHash,
       totalActiveClients: this.activeClients.length,
       turn: lastHashTurn,
       type: "desync",
-    });
-    if (!serverDesync.success) {
-      this.log.warn("failed to create desync message", {
-        error: serverDesync.error,
-        gameID: this.id,
-      });
-      return;
-    }
-
-    const desyncMsg = JSON.stringify(serverDesync.data);
+    } satisfies ServerDesyncMessage);
     for (const c of outOfSyncClients) {
       this.outOfSyncClients.add(c.clientID);
       if (this.sentDesyncMessageClients.has(c.clientID)) {
