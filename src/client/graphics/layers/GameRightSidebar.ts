@@ -112,7 +112,7 @@ export class GameRightSidebar extends LitElement implements Layer {
         class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 lg:p-3 
           bg-gray-800/70 backdrop-blur shadow-lg rounded-bl-md border-l-[1px] border-b-[1px] border-slate-400
           transition-transform duration-300 ease-out transform
-          ${this._isVisible ? "translate-x-0" : "translate-x-full"}`}
+          ${this._isVisible ? "translate-x-0 pointer-events-auto" : "translate-x-full pointer-events-none"}`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
