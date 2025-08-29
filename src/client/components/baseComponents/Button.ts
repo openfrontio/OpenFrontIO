@@ -37,7 +37,7 @@ export class OButton extends LitElement {
           ? html`<img src="${this.imagePath}" width="24px" height="24px" class="c-button__icon" alt="" />`
           : ""}
 
-        <span>${buttonText}</span>
+        <span class="c-button__text">${buttonText}</span>
       </button>
     `;
   }
