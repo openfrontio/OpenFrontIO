@@ -34,7 +34,6 @@ export class PlayerExecution implements Execution {
 
     const units = [...this.player.units()];
     for (const u of units) {
-      if (!u.isActive()) continue;
       if (!u.info().territoryBound) continue;
 
       const tileOwner = mg.owner(u.tile());
