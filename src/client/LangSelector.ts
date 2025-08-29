@@ -76,7 +76,7 @@ export class LangSelector extends LitElement {
   };
 
   createRenderRoot() {
-    return this; // Use Light DOM if you prefer this
+    return this;
   }
 
   connectedCallback() {
@@ -87,10 +87,10 @@ export class LangSelector extends LitElement {
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "t") this.debugKeyPressed = true;
+      if (e.key?.toLowerCase() === "t") this.debugKeyPressed = true;
     });
     window.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() === "t") this.debugKeyPressed = false;
+      if (e.key?.toLowerCase() === "t") this.debugKeyPressed = false;
     });
   }
 

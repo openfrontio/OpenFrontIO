@@ -1,6 +1,7 @@
 import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
+import { getPersistentID } from "./Main";
 
 export async function fetchPatterns(
   userMe: UserMeResponse | null,
@@ -43,11 +44,11 @@ export async function handlePurchase(pattern: Pattern) {
       headers: {
         "Content-Type": "application/json",
         authorization: getAuthHeader(),
+        "X-Persistent-Id": getPersistentID(),
       },
       body: JSON.stringify({
         priceId: pattern.product.priceId,
-        successUrl: `${window.location.origin}#purchase-completed=true&pattern=${pattern.name}`,
-        cancelUrl: `${window.location.origin}#purchase-completed=false`,
+        hostname: window.location.origin,
       }),
     },
   );
