@@ -23,9 +23,6 @@ export type Stats = {
   // Player betrays another player
   betray(player: Player): void;
 
-  // Time between lobby creation and game start (ms)
-  lobbyFillTime?(fillTimeMs: number): void;
-
   // Player sends a trade ship to target
   boatSendTrade(player: Player, target: Player): void;
 

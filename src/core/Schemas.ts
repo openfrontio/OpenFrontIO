@@ -448,6 +448,7 @@ export const ServerPrestartMessageSchema = z.object({
 
 export const ServerStartGameMessageSchema = z.object({
   gameStartInfo: GameStartInfoSchema,
+  // Turns the client missed if they are late to the game.
   turns: TurnSchema.array(),
   type: z.literal("start"),
 });
@@ -541,6 +542,7 @@ export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 export const GameEndInfoSchema = GameStartInfoSchema.extend({
   duration: z.number().nonnegative(),
   end: z.number(),
+  lobbyFillTime: z.number().nonnegative(),
   num_turns: z.number(),
   players: PlayerRecordSchema.array(),
   start: z.number(),

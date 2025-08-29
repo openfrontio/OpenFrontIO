@@ -600,6 +600,7 @@ export class GameServer {
         Date.now(),
         this.winner?.winner,
         this.config,
+        this.gameStartInfo.lobbyCreatedAt,
       ),
     );
   }

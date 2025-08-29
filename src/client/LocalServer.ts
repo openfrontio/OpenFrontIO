@@ -198,6 +198,7 @@ export class LocalServer {
       Date.now(),
       this.winner?.winner,
       this.lobbyConfig.serverConfig,
+      this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
     );
     if (!saveFullGame) {
       // Clear turns because beacon only supports up to 64kb

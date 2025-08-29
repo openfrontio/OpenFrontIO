@@ -162,7 +162,13 @@ export function createGameRecord(
   end: number,
   winner: Winner,
   serverConfig: ServerConfig,
+  // Source-of-truth lobby creation time (ms). Default to `start` for backward compat.
+  lobbyCreatedAt: number = start,
 ): GameRecord {
+  if (lobbyCreatedAt > start) {
+    // Normalize to avoid negative fill times due to clock skew.
+    lobbyCreatedAt = start;
+  }
   const duration = Math.floor((end - start) / 1000);
   const version = "v0.0.2";
   const gitCommit = serverConfig.gitCommit();
@@ -172,6 +178,7 @@ export function createGameRecord(
   const turns = allTurns.filter(
     (t) => t.intents.length !== 0 || t.hash !== undefined,
   );
+  const lobbyFillTime = Math.max(0, start - lobbyCreatedAt);
   const record: GameRecord = {
     domain,
     gitCommit,
@@ -180,7 +187,8 @@ export function createGameRecord(
       duration,
       end,
       gameID,
-      lobbyCreatedAt: Date.now(),
+      lobbyCreatedAt,
+      lobbyFillTime,
       num_turns,
       players,
       start,
