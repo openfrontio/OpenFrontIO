@@ -427,6 +427,9 @@ class Client {
       "disconnect-wallet",
     ) as OButton;
 
+    // Initialize wallet button states
+    this.initializeWalletButtons(connectWalletButton, disconnectWalletButton);
+
     connectWalletButton.addEventListener("click", async () => {
       try {
         console.log("Attempting to connect wallet...");
@@ -444,6 +447,8 @@ class Client {
           console.log("Already connected:", account.address);
           connectWalletButton.title = `Connected: ${account.address?.slice(0, 6)}...`;
           connectWalletButton.disable = true;
+          connectWalletButton.hidden = true;
+          disconnectWalletButton.hidden = false;
           return;
         }
 
@@ -452,9 +457,12 @@ class Client {
         const result = await connect(wagmiConfig, { connector: injected() });
         console.log("Connection successful:", result);
 
-        // Update button text
+        // Update button states
         connectWalletButton.title = `Connected: ${result.accounts[0].slice(0, 6)}...`;
         connectWalletButton.disable = true;
+        connectWalletButton.hidden = true;
+        disconnectWalletButton.title = `Disconnect: ${result.accounts[0].slice(0, 6)}...`;
+        disconnectWalletButton.hidden = false;
       } catch (error) {
         console.error("Wallet connection error details:", error);
 
@@ -469,6 +477,49 @@ class Client {
           }
         } else {
           alert("Failed to connect wallet. Please try again.");
+        }
+      }
+    });
+
+    disconnectWalletButton.addEventListener("click", async () => {
+      try {
+        console.log("Attempting to disconnect wallet...");
+
+        // Import wallet utilities
+        const { wagmiConfig } = await import("./wallet");
+        const { disconnect, getAccount } = await import("@wagmi/core");
+
+        // Check if actually connected
+        const account = getAccount(wagmiConfig);
+        if (!account.isConnected) {
+          console.log("No wallet connected");
+          // Reset button states anyway
+          connectWalletButton.hidden = false;
+          connectWalletButton.disable = false;
+          connectWalletButton.title = "Connect your wallet";
+          disconnectWalletButton.hidden = true;
+          return;
+        }
+
+        console.log("Disconnecting wallet:", account.address);
+        
+        // Disconnect the wallet
+        await disconnect(wagmiConfig);
+        console.log("Wallet disconnected successfully");
+
+        // Update button states
+        connectWalletButton.hidden = false;
+        connectWalletButton.disable = false;
+        connectWalletButton.title = "Connect your wallet";
+        disconnectWalletButton.hidden = true;
+
+      } catch (error) {
+        console.error("Wallet disconnection error details:", error);
+        
+        if (error instanceof Error) {
+          alert(`Disconnection failed: ${error.message}`);
+        } else {
+          alert("Failed to disconnect wallet. Please try again.");
         }
       }
     });
@@ -618,6 +669,37 @@ class Client {
     } catch (error) {
       console.warn("Failed to get wallet address:", error);
       return undefined;
+    }
+  }
+
+  private async initializeWalletButtons(connectButton: OButton, disconnectButton: OButton) {
+    try {
+      // Import wallet utilities
+      const { wagmiConfig } = await import("./wallet");
+      const { getAccount } = await import("@wagmi/core");
+
+      // Check current connection status
+      const account = getAccount(wagmiConfig);
+      
+      if (account.isConnected && account.address) {
+        console.log("Wallet already connected:", account.address);
+        // Show disconnect button, hide connect button
+        connectButton.hidden = true;
+        disconnectButton.hidden = false;
+        disconnectButton.title = `Disconnect: ${account.address.slice(0, 6)}...`;
+      } else {
+        console.log("No wallet connected");
+        // Show connect button, hide disconnect button
+        connectButton.hidden = false;
+        connectButton.title = "Connect your wallet";
+        disconnectButton.hidden = true;
+      }
+    } catch (error) {
+      console.warn("Failed to initialize wallet buttons:", error);
+      // Default to showing connect button on error
+      connectButton.hidden = false;
+      connectButton.title = "Connect your wallet";
+      disconnectButton.hidden = true;
     }
   }
 }
