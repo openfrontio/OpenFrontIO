@@ -21,7 +21,6 @@ import {
 } from "../core/game/Game";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { DifficultyDescription } from "./components/Difficulties";
 import { JoinLobbyEvent } from "./Main";
 import { UserSettings } from "../core/game/UserSettings";
 import { generateID } from "../core/Util";
@@ -258,7 +257,7 @@ export class HostLobbyModal extends LitElement {
                       ></difficulty-display>
                       <p class="option-card-title">
                         ${translateText(
-                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
+                          `difficulty.${key}`,
                         )}
                       </p>
                     </div>
