@@ -1,10 +1,10 @@
 import { createConfig, http } from '@wagmi/core';
 import { hardhat } from '@wagmi/core/chains';
-import { writeContract, readContract, connect, getAccount } from '@wagmi/core';
+import { writeContract, readContract, connect, getAccount, watchContractEvent } from '@wagmi/core';
 import { parseEther, formatEther, type Hash, keccak256, toHex } from 'viem';
 import { injected, metaMask, walletConnect } from '@wagmi/connectors';
 
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const;
+const CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" as const;
 
 const CONTRACT_ABI = [
   {
@@ -45,6 +45,23 @@ const CONTRACT_ABI = [
   },
   {
     "type": "function",
+    "name": "startGame",
+    "inputs": [{ "name": "lobbyId", "type": "bytes32", "internalType": "bytes32" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "declareWinner",
+    "inputs": [
+      { "name": "lobbyId", "type": "bytes32", "internalType": "bytes32" },
+      { "name": "winner", "type": "address", "internalType": "address" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "claimPrize",
     "inputs": [{ "name": "lobbyId", "type": "bytes32", "internalType": "bytes32" }],
     "outputs": [],
@@ -66,6 +83,33 @@ const CONTRACT_ABI = [
     "inputs": [
       { "name": "lobbyId", "type": "bytes32", "indexed": true, "internalType": "bytes32" },
       { "name": "participant", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GameStarted",
+    "inputs": [
+      { "name": "lobbyId", "type": "bytes32", "indexed": true, "internalType": "bytes32" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "WinnerDeclared",
+    "inputs": [
+      { "name": "lobbyId", "type": "bytes32", "indexed": true, "internalType": "bytes32" },
+      { "name": "winner", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PrizeClaimed",
+    "inputs": [
+      { "name": "lobbyId", "type": "bytes32", "indexed": true, "internalType": "bytes32" },
+      { "name": "winner", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" }
     ],
     "anonymous": false
   },
@@ -139,6 +183,16 @@ export interface ClaimPrizeResult {
   playerAddress: string;
 }
 
+export interface StartGameParams {
+  lobbyId: string;
+}
+
+export interface StartGameResult {
+  hash: Hash;
+  lobbyId: string;
+  playerAddress: string;
+}
+
 export async function connectWallet(): Promise<void> {
   try {
     // Try to connect with injected wallet (MetaMask, etc.)
@@ -195,11 +249,28 @@ export async function createLobby(params: CreateLobbyParams): Promise<CreateLobb
   };
 }
 
-export async function isLobbyOnChain(lobbyId: string): Promise<boolean> {
+export enum GameStatus {
+  Created = 0,
+  InProgress = 1,
+  Finished = 2,
+  Claimed = 3
+}
+
+export interface LobbyInfo {
+  host: string;
+  betAmount: bigint;
+  participants: string[];
+  status: GameStatus;
+  winner: string;
+  totalPrize: bigint;
+  exists: boolean;
+}
+
+export async function getLobbyInfo(lobbyId: string): Promise<LobbyInfo | null> {
   try {
     const lobbyIdBytes32 = stringToBytes32(lobbyId);
 
-    console.log('Checking lobby on-chain:', {
+    console.log('Getting lobby info from blockchain:', {
       lobbyId,
       lobbyIdBytes32
     });
@@ -214,25 +285,39 @@ export async function isLobbyOnChain(lobbyId: string): Promise<boolean> {
     const [host, betAmount, participants, status, winner, totalPrize] = result;
 
     // If the host address is the zero address (0x0000...), the lobby doesn't exist
-    const isDeployed = host !== '0x0000000000000000000000000000000000000000';
+    const exists = host !== '0x0000000000000000000000000000000000000000';
 
-    console.log('Lobby check result:', {
-      lobbyId,
-      isDeployed,
+    const lobbyInfo: LobbyInfo = {
       host,
-      betAmount: betAmount.toString(),
+      betAmount,
       participants,
-      status,
+      status: status as GameStatus,
       winner,
-      totalPrize: totalPrize.toString()
+      totalPrize,
+      exists
+    };
+
+    console.log('Lobby info result:', {
+      lobbyId,
+      exists,
+      host,
+      betAmount: formatEther(betAmount),
+      participants: participants.length,
+      status: GameStatus[status],
+      winner: winner === '0x0000000000000000000000000000000000000000' ? 'None' : winner,
+      totalPrize: formatEther(totalPrize)
     });
 
-    return isDeployed;
+    return lobbyInfo;
   } catch (error) {
-    console.error('Error checking lobby on-chain:', error);
-    // If there's an error (like lobby doesn't exist), return false
-    return false;
+    console.error('Error getting lobby info from blockchain:', error);
+    return null;
   }
+}
+
+export async function isLobbyOnChain(lobbyId: string): Promise<boolean> {
+  const lobbyInfo = await getLobbyInfo(lobbyId);
+  return lobbyInfo?.exists ?? false;
 }
 
 export async function joinLobby(params: JoinLobbyParams): Promise<JoinLobbyResult> {
@@ -378,3 +463,196 @@ export async function claimPrize(params: ClaimPrizeParams): Promise<ClaimPrizeRe
   }
 }
 
+export interface DeclareWinnerParams {
+  lobbyId: string;
+  winner: string;
+}
+
+export interface DeclareWinnerResult {
+  hash: Hash;
+  lobbyId: string;
+  winnerAddress: string;
+}
+
+export async function declareWinner(params: DeclareWinnerParams): Promise<DeclareWinnerResult> {
+  const { lobbyId, winner } = params;
+
+  // Check if wallet is connected
+  const account = getAccount(config);
+  if (!account.isConnected || !account.address) {
+    // Try to connect wallet
+    await connectWallet();
+    // Get account again after connection
+    const newAccount = getAccount(config);
+    if (!newAccount.isConnected || !newAccount.address) {
+      throw new Error('Wallet connection failed');
+    }
+  }
+
+  const lobbyIdBytes32 = stringToBytes32(lobbyId);
+  
+  console.log('Declaring winner for lobby:', {
+    lobbyId,
+    lobbyIdBytes32,
+    winner,
+    callerAddress: account.address
+  });
+
+  try {
+    const hash = await writeContract(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'declareWinner',
+      args: [lobbyIdBytes32, winner as `0x${string}`]
+    });
+
+    console.log('Successfully declared winner, transaction hash:', hash);
+
+    return {
+      hash,
+      lobbyId,
+      winnerAddress: winner
+    };
+  } catch (error: any) {
+    console.error('Failed to declare winner:', error);
+    
+    // Handle specific contract errors
+    if (error.message.includes('NotGameServer')) {
+      throw new Error('Only the game server can declare winners.');
+    } else if (error.message.includes('GameNotInProgress')) {
+      throw new Error('Game is not in progress.');
+    } else if (error.message.includes('InvalidWinner')) {
+      throw new Error('Invalid winner address.');
+    } else if (error.message.includes('User rejected')) {
+      throw new Error('Transaction was cancelled by user.');
+    } else {
+      throw new Error(`Failed to declare winner: ${error.message || 'Unknown error'}`);
+    }
+  }
+}
+
+// Event watching functions
+export interface ContractEventCallbacks {
+  onGameStarted?: (lobbyId: string) => void;
+  onWinnerDeclared?: (lobbyId: string, winner: string) => void;
+  onPrizeClaimed?: (lobbyId: string, winner: string, amount: bigint) => void;
+}
+
+export function watchLobbyEvents(lobbyId: string, callbacks: ContractEventCallbacks) {
+  const lobbyIdBytes32 = stringToBytes32(lobbyId);
+  const unwatchFunctions: (() => void)[] = [];
+
+  // Watch GameStarted events
+  if (callbacks.onGameStarted) {
+    const unwatchGameStarted = watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'GameStarted',
+      args: { lobbyId: lobbyIdBytes32 },
+      onLogs: (logs) => {
+        logs.forEach((log) => {
+          console.log('GameStarted event received:', log);
+          callbacks.onGameStarted?.(lobbyId);
+        });
+      }
+    });
+    unwatchFunctions.push(unwatchGameStarted);
+  }
+
+  // Watch WinnerDeclared events
+  if (callbacks.onWinnerDeclared) {
+    const unwatchWinnerDeclared = watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'WinnerDeclared',
+      args: { lobbyId: lobbyIdBytes32 },
+      onLogs: (logs) => {
+        logs.forEach((log) => {
+          console.log('WinnerDeclared event received:', log);
+          const { winner } = log.args as { winner: string };
+          callbacks.onWinnerDeclared?.(lobbyId, winner);
+        });
+      }
+    });
+    unwatchFunctions.push(unwatchWinnerDeclared);
+  }
+
+  // Watch PrizeClaimed events
+  if (callbacks.onPrizeClaimed) {
+    const unwatchPrizeClaimed = watchContractEvent(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      eventName: 'PrizeClaimed',
+      args: { lobbyId: lobbyIdBytes32 },
+      onLogs: (logs) => {
+        logs.forEach((log) => {
+          console.log('PrizeClaimed event received:', log);
+          const { winner, amount } = log.args as { winner: string; amount: bigint };
+          callbacks.onPrizeClaimed?.(lobbyId, winner, amount);
+        });
+      }
+    });
+    unwatchFunctions.push(unwatchPrizeClaimed);
+  }
+
+  // Return function to unwatch all events
+  return () => {
+    unwatchFunctions.forEach(unwatch => unwatch());
+  };
+}
+
+export async function startGame(params: StartGameParams): Promise<StartGameResult> {
+  const { lobbyId } = params;
+
+  // Check if wallet is connected
+  const account = getAccount(config);
+  if (!account.isConnected || !account.address) {
+    // Try to connect wallet
+    await connectWallet();
+    // Get account again after connection
+    const newAccount = getAccount(config);
+    if (!newAccount.isConnected || !newAccount.address) {
+      throw new Error('Wallet connection failed');
+    }
+  }
+
+  const lobbyIdBytes32 = stringToBytes32(lobbyId);
+  
+  console.log('Starting game for lobby:', {
+    lobbyId,
+    lobbyIdBytes32,
+    playerAddress: account.address
+  });
+
+  try {
+    const hash = await writeContract(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'startGame',
+      args: [lobbyIdBytes32]
+    });
+
+    console.log('Successfully started game, transaction hash:', hash);
+
+    return {
+      hash,
+      lobbyId,
+      playerAddress: account.address!
+    };
+  } catch (error: any) {
+    console.error('Failed to start game:', error);
+    
+    // Handle specific contract errors
+    if (error.message.includes('NotHost')) {
+      throw new Error('Only the host can start the game.');
+    } else if (error.message.includes('GameAlreadyStarted')) {
+      throw new Error('The game has already started.');
+    } else if (error.message.includes('LobbyNotFound')) {
+      throw new Error('Lobby does not exist.');
+    } else if (error.message.includes('User rejected')) {
+      throw new Error('Transaction was cancelled by user.');
+    } else {
+      throw new Error(`Failed to start game: ${error.message || 'Unknown error'}`);
+    }
+  }
+}

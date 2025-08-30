@@ -24,7 +24,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { DifficultyDescription } from "./components/Difficulties";
 import { JoinLobbyEvent } from "./Main";
 import { UserSettings } from "../core/game/UserSettings";
-import { createLobby as createLobbyOnChain } from "./contract";
+import { createLobby as createLobbyOnChain, startGame as startGameOnChain } from "./contract";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import randomMap from "../../resources/images/RandomMap.webp";
@@ -61,6 +61,9 @@ export class HostLobbyModal extends LitElement {
   @state() private onChainSuccess = false;
   @state() private onChainLoading = false;
   @state() private onChainError = "";
+  @state() private startGameLoading = false;
+  @state() private startGameError = "";
+  @state() private startGameTxHash = "";
 
   private playersInterval: ReturnType<typeof setTimeout> | null = null;
   // Add a new timer for debouncing bot changes
@@ -558,14 +561,38 @@ export class HostLobbyModal extends LitElement {
             )}
         </div>
 
+        ${this.startGameError
+          ? html`
+              <div style="margin-top: 0.5rem; padding: 0.5rem; 
+                         background-color: #f8d7da; border: 1px solid #f5c6cb; 
+                         border-radius: 4px; color: #721c24;">
+                <strong>Start Game Error:</strong> ${this.startGameError}
+              </div>
+            `
+          : this.startGameTxHash
+          ? html`
+              <div style="margin-top: 0.5rem; padding: 0.5rem; 
+                         background-color: #d4edda; border: 1px solid #c3e6cb; 
+                         border-radius: 4px; color: #155724;">
+                <strong>Game Started On-Chain!</strong><br />
+                Transaction: 
+                <span style="font-family: monospace; word-break: break-all; font-size: 12px;">
+                  ${this.startGameTxHash}
+                </span>
+              </div>
+            `
+          : ""}
+
         <div class="start-game-button-container">
           <button
             @click=${this.startGame}
-            ?disabled=${this.clients.length < 2 || !this.onChainSuccess}
+            ?disabled=${this.clients.length < 2 || !this.onChainSuccess || this.startGameLoading}
             class="start-game-button"
           >
             ${
-              !this.onChainSuccess
+              this.startGameLoading
+                ? "Starting Game..."
+                : !this.onChainSuccess
                 ? "Deploy On-Chain First"
                 : this.clients.length === 1
                 ? translateText("host_modal.waiting")
@@ -620,6 +647,9 @@ export class HostLobbyModal extends LitElement {
     this.onChainSuccess = false;
     this.onChainLoading = false;
     this.onChainError = "";
+    this.startGameLoading = false;
+    this.startGameError = "";
+    this.startGameTxHash = "";
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
       this.playersInterval = null;
@@ -795,32 +825,63 @@ export class HostLobbyModal extends LitElement {
     // Check if the lobby has been successfully deployed on-chain
     if (!this.onChainSuccess) {
       console.error("Cannot start game: Lobby must be deployed on-chain first");
-      // You could show an error message to the user here
+      this.startGameError = "Lobby must be deployed on-chain first";
       return;
     }
 
-    if (this.useRandomMap) {
-      this.selectedMap = this.getRandomMap();
-    }
+    this.startGameLoading = true;
+    this.startGameError = "";
+    this.startGameTxHash = "";
 
-    await this.putGameConfig();
-    console.log(
-      `Starting private game with map: ${
-        GameMapType[this.selectedMap as keyof typeof GameMapType]} ${
-        this.useRandomMap ? " (Randomly selected)" : ""}`,
-    );
-    this.close();
-    const config = await getServerConfigFromClient();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    try {
+      // First, start the game on-chain
+      console.log("Starting game on-chain for lobby:", this.lobbyId);
+      const onChainResult = await startGameOnChain({ lobbyId: this.lobbyId });
+      this.startGameTxHash = onChainResult.hash;
+      console.log("Game started on-chain successfully:", onChainResult);
+
+      // Then proceed with the existing server-side game start logic
+      if (this.useRandomMap) {
+        this.selectedMap = this.getRandomMap();
+      }
+
+      await this.putGameConfig();
+      console.log(
+        `Starting private game with map: ${
+          GameMapType[this.selectedMap as keyof typeof GameMapType]} ${
+          this.useRandomMap ? " (Randomly selected)" : ""}`,
+      );
+      
+      const config = await getServerConfigFromClient();
+      const response = await fetch(
+        `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      },
-    );
-    return response;
+      );
+
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
+      // Close modal only on success
+      this.close();
+      return response;
+
+    } catch (error) {
+      console.error("Failed to start game:", error);
+      this.startGameTxHash = "";
+      if (error instanceof Error) {
+        this.startGameError = error.message;
+      } else {
+        this.startGameError = "Failed to start game. Please try again.";
+      }
+    } finally {
+      this.startGameLoading = false;
+    }
   }
 
   private async copyToClipboard() {

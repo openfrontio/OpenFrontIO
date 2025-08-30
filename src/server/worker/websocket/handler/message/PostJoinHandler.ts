@@ -282,13 +282,27 @@ function handleWinner(
 
   const activeUniqueIPs = new Set(gs.activeClients.map((c) => c.ip));
 
-  // Require at least two unique IPs to agree
-  if (activeUniqueIPs.size < 2) {
+  // Require at least two unique IPs to agree (skip in development for testing)
+  const isDev = process.env.NODE_ENV !== 'production';
+  
+  log.info("Winner voting status", {
+    gameID: gs.id,
+    activeUniqueIPs: activeUniqueIPs.size,
+    votesForWinner: potentialWinner.ips.size,
+    isDevelopment: isDev,
+    winner: clientMsg.winner
+  });
+  
+  if (activeUniqueIPs.size < 2 && !isDev) {
+    log.info("Not enough unique IPs for voting in production", {
+      required: 2,
+      actual: activeUniqueIPs.size
+    });
     return;
   }
 
-  // Check if winner has majority
-  if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
+  // Check if winner has majority (or allow single player in development)
+  if (!isDev && potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
     return;
   }
 
@@ -303,8 +317,13 @@ function handleWinner(
   );
 
   // Declare winner on blockchain if this is an on-chain game
+  log.info("🏆 Attempting to declare winner on blockchain", {
+    gameID: gs.id,
+    winner: clientMsg.winner
+  });
+  
   declareWinnerOnChain(gs, log, clientMsg).catch((error) => {
-    log.error("Failed to declare winner on blockchain", {
+    log.error("❌ Failed to declare winner on blockchain", {
       gameID: gs.id,
       error: error instanceof Error ? error.message : String(error),
     });

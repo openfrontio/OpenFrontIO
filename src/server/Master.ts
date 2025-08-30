@@ -106,15 +106,16 @@ export async function startMaster() {
           });
         };
 
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
+        // Disabled automatic lobby generation - lobbies should only be created by users
+        // setInterval(
+        //   () =>
+        //     fetchLobbies().then((lobbies) => {
+        //       if (lobbies === 0) {
+        //         scheduleLobbies();
+        //       }
+        //     }),
+        //   100,
+        // );
       }
     }
   });
