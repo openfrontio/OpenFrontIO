@@ -1,3 +1,4 @@
+import { Action, ActionKeybindMapDefaults } from "./utilities/InputMap";
 import { EventBus, GameEvent } from "../core/EventBus";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { UnitType } from "../core/game/Game";
@@ -144,23 +145,26 @@ export class InputHandler {
   ) {}
 
   initialize() {
-    this.keybinds = {
-      toggleView: "Space",
-      centerCamera: "KeyC",
-      moveUp: "KeyW",
-      moveDown: "KeyS",
-      moveLeft: "KeyA",
-      moveRight: "KeyD",
-      zoomOut: "KeyQ",
-      zoomIn: "KeyE",
-      attackRatioDown: "Digit1",
-      attackRatioUp: "Digit2",
-      boatAttack: "KeyB",
-      groundAttack: "KeyG",
-      modifierKey: "ControlLeft",
-      altKey: "AltLeft",
-      ...(JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}") ?? {}),
-    };
+    this.keybinds = {};
+    for (const [action, key] of ActionKeybindMapDefaults.entries()) {
+      const actionKey = this.convertToCamelCase(Action[action]);
+      this.keybinds[actionKey] = key;
+    }
+
+    const userKeybinds = JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}") ?? {};
+
+    for (const [action, key] of Object.entries(userKeybinds) as [string, string][]) {
+
+      let keyToWrite = key;
+
+      if (/^Key[A-Z]$/.test(key)) {
+        keyToWrite = key.slice(3).toLowerCase();
+      } else if (/^Digit[0-9]$/.test(key)) {
+        keyToWrite = key.slice(5);
+      }
+
+      this.keybinds[action] = keyToWrite;
+    }
 
     // Mac users might have different keybinds
     const isMac = navigator.userAgent.includes("Mac");
@@ -254,7 +258,7 @@ export class InputHandler {
     }, 1);
 
     window.addEventListener("keydown", (e) => {
-      if (e.code === this.keybinds.toggleView) {
+      if (e.key === this.keybinds.toggleView) {
         e.preventDefault();
         if (!this.alternateView) {
           this.alternateView = true;
@@ -284,17 +288,15 @@ export class InputHandler {
           this.keybinds.attackRatioDown,
           this.keybinds.attackRatioUp,
           this.keybinds.centerCamera,
-          "ControlLeft",
-          "ControlRight",
-          "ShiftLeft",
-          "ShiftRight",
-        ].includes(e.code)
+          "Control",
+          "Shift",
+        ].includes(e.key)
       ) {
-        this.activeKeys.add(e.code);
+        this.activeKeys.add(e.key);
       }
     });
     window.addEventListener("keyup", (e) => {
-      if (e.code === this.keybinds.toggleView) {
+      if (e.key === this.keybinds.toggleView) {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
@@ -305,41 +307,62 @@ export class InputHandler {
         this.eventBus.emit(new RedrawGraphicsEvent());
       }
 
-      if (e.code === this.keybinds.boatAttack) {
+      if (e.key === this.keybinds.boatAttack) {
         e.preventDefault();
         this.eventBus.emit(new DoBoatAttackEvent());
       }
 
-      if (e.code === this.keybinds.groundAttack) {
+      if (e.key === this.keybinds.groundAttack) {
         e.preventDefault();
         this.eventBus.emit(new DoGroundAttackEvent());
       }
 
-      if (e.code === this.keybinds.attackRatioDown) {
+      if (e.key === this.keybinds.attackRatioDown) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(-10));
       }
 
-      if (e.code === this.keybinds.attackRatioUp) {
+      if (e.key === this.keybinds.attackRatioUp) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(10));
       }
 
-      if (e.code === this.keybinds.centerCamera) {
+      if (e.key === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
       }
 
       // Shift-D to toggle performance overlay
-      console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
+      console.log(e.key, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
       if (e.code === "KeyD" && e.shiftKey) {
         e.preventDefault();
         console.log("TogglePerformanceOverlayEvent");
         this.eventBus.emit(new TogglePerformanceOverlayEvent());
       }
 
-      this.activeKeys.delete(e.code);
+      this.activeKeys.delete(e.key);
     });
+  }
+
+  /**
+   * Converts a string to its alphanumeric lower camelCase variant.
+   * Example: "Hello World" -> "helloWorld"
+   * @param str The input string.
+   * @returns The lower camelCase version of the string.
+   */
+  private convertToCamelCase(str: string): string {
+    const cleaned = str.replace(/[^a-zA-Z0-9\s_-]+/g, "");
+    const words = cleaned.split(/[\s_-]+/).filter(Boolean);
+    if (words.length === 0) return "";
+    return (
+      words[0].toLowerCase() +
+      words
+        .slice(1)
+        .map(
+          (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
+        )
+        .join("")
+    );
   }
 
   private onPointerDown(event: PointerEvent) {

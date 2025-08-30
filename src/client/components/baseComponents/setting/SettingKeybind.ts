@@ -74,13 +74,13 @@ export class SettingKeybind extends LitElement {
     if (!this.listening) return;
     e.preventDefault();
 
-    const { code } = e;
+    const { key } = e;
 
-    this.value = code;
+    this.value = key;
 
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { action: this.action, value: code },
+        detail: { action: this.action, value: key },
         bubbles: true,
         composed: true,
       }),

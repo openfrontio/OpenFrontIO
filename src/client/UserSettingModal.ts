@@ -2,6 +2,7 @@ import "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import { Action, ActionKeybindMapDefaults } from "./utilities/InputMap";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
@@ -422,7 +423,7 @@ export class UserSettingModal extends LitElement {
         action="toggleView"
         label=${translateText("user_setting.toggle_view")}
         description=${translateText("user_setting.toggle_view_desc")}
-        defaultKey="Space"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.TOGGLE_VIEW)}"
         .value=${this.keybinds["toggleView"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -435,7 +436,7 @@ export class UserSettingModal extends LitElement {
         action="attackRatioDown"
         label=${translateText("user_setting.attack_ratio_down")}
         description=${translateText("user_setting.attack_ratio_down_desc")}
-        defaultKey="Digit1"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.ATTACK_RATIO_DOWN)}"
         .value=${this.keybinds["attackRatioDown"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -444,7 +445,7 @@ export class UserSettingModal extends LitElement {
         action="attackRatioUp"
         label=${translateText("user_setting.attack_ratio_up")}
         description=${translateText("user_setting.attack_ratio_up_desc")}
-        defaultKey="Digit2"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.ATTACK_RATIO_UP)}"
         .value=${this.keybinds["attackRatioUp"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -457,7 +458,7 @@ export class UserSettingModal extends LitElement {
         action="boatAttack"
         label=${translateText("user_setting.boat_attack")}
         description=${translateText("user_setting.boat_attack_desc")}
-        defaultKey="KeyB"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.BOAT_ATTACK)}"
         .value=${this.keybinds["boatAttack"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -466,7 +467,7 @@ export class UserSettingModal extends LitElement {
         action="groundAttack"
         label=${translateText("user_setting.ground_attack")}
         description=${translateText("user_setting.ground_attack_desc")}
-        defaultKey="KeyG"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.GROUND_ATTACK)}"
         .value=${this.keybinds["groundAttack"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -479,7 +480,7 @@ export class UserSettingModal extends LitElement {
         action="zoomOut"
         label=${translateText("user_setting.zoom_out")}
         description=${translateText("user_setting.zoom_out_desc")}
-        defaultKey="KeyQ"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.ZOOM_OUT)}"
         .value=${this.keybinds["zoomOut"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -488,7 +489,7 @@ export class UserSettingModal extends LitElement {
         action="zoomIn"
         label=${translateText("user_setting.zoom_in")}
         description=${translateText("user_setting.zoom_in_desc")}
-        defaultKey="KeyE"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.ZOOM_IN)}"
         .value=${this.keybinds["zoomIn"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -501,7 +502,7 @@ export class UserSettingModal extends LitElement {
         action="centerCamera"
         label=${translateText("user_setting.center_camera")}
         description=${translateText("user_setting.center_camera_desc")}
-        defaultKey="KeyC"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.CENTER_CAMERA)}"
         .value=${this.keybinds["centerCamera"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -510,7 +511,7 @@ export class UserSettingModal extends LitElement {
         action="moveUp"
         label=${translateText("user_setting.move_up")}
         description=${translateText("user_setting.move_up_desc")}
-        defaultKey="KeyW"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.MOVE_UP)}"
         .value=${this.keybinds["moveUp"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -519,7 +520,7 @@ export class UserSettingModal extends LitElement {
         action="moveLeft"
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
-        defaultKey="KeyA"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.MOVE_LEFT)}"
         .value=${this.keybinds["moveLeft"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -528,7 +529,7 @@ export class UserSettingModal extends LitElement {
         action="moveDown"
         label=${translateText("user_setting.move_down")}
         description=${translateText("user_setting.move_down_desc")}
-        defaultKey="KeyS"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.MOVE_DOWN)}"
         .value=${this.keybinds["moveDown"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -537,7 +538,7 @@ export class UserSettingModal extends LitElement {
         action="moveRight"
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
-        defaultKey="KeyD"
+        defaultKey="${ActionKeybindMapDefaults.get(Action.MOVE_RIGHT)}"
         .value=${this.keybinds["moveRight"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
