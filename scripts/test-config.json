@@ -1,0 +1,262 @@
+{
+  "testEnvironment": {
+    "name": "WinModal Blockchain Integration Test Suite",
+    "version": "1.0.0",
+    "description": "Automated testing configuration for OpenFront WinModal blockchain features"
+  },
+  "blockchain": {
+    "network": "anvil-local",
+    "rpcUrl": "http://localhost:8545",
+    "chainId": 31337,
+    "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "testAccounts": {
+      "deployer": {
+        "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "privateKey": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+      },
+      "player1": {
+        "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+        "privateKey": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+      },
+      "player2": {
+        "address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        "privateKey": "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+      }
+    }
+  },
+  "gameConfig": {
+    "testLobbyIds": [
+      "0x845c60c0b23c9dfa602377c055dfdf4d3af95a3ec9b350942c02565af41152ec",
+      "0x7d2c4f8e6b3a5d9c1e8f2a4b7c9e1d3f5a8b2c6d9e4f1a7c3b5d8e2f4a9c1b6e",
+      "0x3f1a5c8e2b7d4f9a6c3e8b1d5f2a9c4e7b0d3f8a1c6e9b4d7f0a3c8e5b2d9f1a"
+    ],
+    "defaultBetAmount": "100000000000000000",
+    "maxTestDuration": 300000,
+    "gameStates": {
+      "created": 0,
+      "inProgress": 1,
+      "finished": 2,
+      "claimed": 3
+    }
+  },
+  "devServer": {
+    "url": "http://localhost:8080",
+    "port": 8080,
+    "checkInterval": 5000,
+    "maxStartupTime": 60000
+  },
+  "testing": {
+    "timeouts": {
+      "blockchain": 10000,
+      "transaction": 30000,
+      "ui": 5000,
+      "server": 60000
+    },
+    "retries": {
+      "blockchain": 3,
+      "transaction": 2,
+      "ui": 2,
+      "server": 5
+    },
+    "intervals": {
+      "statusCheck": 10000,
+      "healthCheck": 30000,
+      "cleanup": 5000
+    }
+  },
+  "testSuites": {
+    "quick": {
+      "description": "Quick validation test (2 minutes)",
+      "estimatedDuration": 120000,
+      "tests": [
+        "environment-check",
+        "blockchain-connection",
+        "contract-deployment",
+        "basic-lobby-status"
+      ]
+    },
+    "comprehensive": {
+      "description": "Full comprehensive test (10 minutes)",
+      "estimatedDuration": 600000,
+      "tests": [
+        "environment-check",
+        "blockchain-connection",
+        "contract-deployment",
+        "lobby-state-progression",
+        "ui-integration",
+        "winmodal-display",
+        "prize-claim-functionality",
+        "real-time-updates",
+        "error-handling",
+        "performance-check"
+      ]
+    },
+    "ui-only": {
+      "description": "UI components testing only",
+      "estimatedDuration": 180000,
+      "tests": [
+        "winmodal-display",
+        "blockchain-status-display",
+        "prize-claim-button",
+        "real-time-updates",
+        "responsive-design",
+        "error-handling"
+      ]
+    },
+    "blockchain-only": {
+      "description": "Blockchain integration testing only",
+      "estimatedDuration": 240000,
+      "tests": [
+        "blockchain-connection",
+        "contract-deployment",
+        "lobby-creation",
+        "game-start",
+        "winner-declaration",
+        "prize-claim",
+        "state-progression"
+      ]
+    }
+  },
+  "testData": {
+    "sampleLobbyStates": {
+      "created": {
+        "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "betAmount": "100000000000000000",
+        "totalPrize": "200000000000000000",
+        "status": 0,
+        "winner": "0x0000000000000000000000000000000000000000",
+        "participantCount": 2
+      },
+      "inProgress": {
+        "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "betAmount": "100000000000000000",
+        "totalPrize": "200000000000000000",
+        "status": 1,
+        "winner": "0x0000000000000000000000000000000000000000",
+        "participantCount": 2
+      },
+      "finished": {
+        "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "betAmount": "100000000000000000",
+        "totalPrize": "200000000000000000",
+        "status": 2,
+        "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "participantCount": 2
+      },
+      "claimed": {
+        "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "betAmount": "100000000000000000",
+        "totalPrize": "200000000000000000",
+        "status": 3,
+        "winner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "participantCount": 2
+      }
+    },
+    "uiTestScenarios": {
+      "winScenarios": [
+        {
+          "title": "You Won!",
+          "status": "finished",
+          "showClaimButton": true,
+          "prizeAmount": "0.2000"
+        },
+        {
+          "title": "Your Team Won!",
+          "status": "finished",
+          "showClaimButton": true,
+          "prizeAmount": "0.1500"
+        }
+      ],
+      "loseScenarios": [
+        {
+          "title": "John Doe Won!",
+          "status": "finished",
+          "showClaimButton": false,
+          "prizeAmount": "0.2000"
+        },
+        {
+          "title": "You Died",
+          "status": "inProgress",
+          "showClaimButton": false,
+          "prizeAmount": "0.0000"
+        }
+      ],
+      "errorScenarios": [
+        {
+          "type": "network",
+          "message": "Failed to connect to blockchain",
+          "code": "NETWORK_ERROR"
+        },
+        {
+          "type": "transaction",
+          "message": "Transaction failed: insufficient gas",
+          "code": "TX_FAILED"
+        },
+        {
+          "type": "contract",
+          "message": "Prize already claimed",
+          "code": "ALREADY_CLAIMED"
+        }
+      ]
+    }
+  },
+  "logging": {
+    "level": "info",
+    "format": "detailed",
+    "outputs": {
+      "console": true,
+      "file": true,
+      "filePattern": "test-results-${date}.log"
+    },
+    "categories": {
+      "blockchain": true,
+      "ui": true,
+      "performance": true,
+      "errors": true,
+      "debug": false
+    }
+  },
+  "performance": {
+    "thresholds": {
+      "blockchainResponse": 5000,
+      "uiRender": 100,
+      "modalDisplay": 500,
+      "transactionConfirm": 30000
+    },
+    "metrics": [
+      "response-time",
+      "render-time",
+      "memory-usage",
+      "transaction-speed"
+    ]
+  },
+  "cleanup": {
+    "autoCleanup": true,
+    "preserveLogs": true,
+    "killProcessesOnExit": true,
+    "tempFileCleanup": true
+  },
+  "dependencies": {
+    "required": [
+      "node",
+      "npm",
+      "cast",
+      "anvil"
+    ],
+    "optional": [
+      "playwright",
+      "chrome"
+    ],
+    "versions": {
+      "node": ">=18.0.0",
+      "foundry": ">=0.2.0"
+    }
+  },
+  "paths": {
+    "scripts": "./scripts",
+    "logs": "./scripts/logs",
+    "temp": "./scripts/temp",
+    "testPages": "./scripts/test-pages",
+    "contractArtifacts": "./src/contracts/out"
+  }
+}

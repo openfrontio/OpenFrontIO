@@ -1,0 +1,38 @@
+
+> start:client
+> webpack serve --open --node-env development
+
+<i> [webpack-dev-server] [HPM] Proxy created: /socket  -> ws://localhost:3000
+<i> [webpack-dev-server] [HPM] Proxy created: /w0  -> ws://localhost:3001
+<i> [webpack-dev-server] [HPM] Proxy created: /w1  -> ws://localhost:3002
+<i> [webpack-dev-server] [HPM] Proxy created: /w2  -> ws://localhost:3003
+<i> [webpack-dev-server] [HPM] Proxy created: /w0  -> http://localhost:3001
+<i> [webpack-dev-server] [HPM] Proxy rewrite rule created: "^/w0" ~> ""
+<i> [webpack-dev-server] [HPM] Proxy created: /w1  -> http://localhost:3002
+<i> [webpack-dev-server] [HPM] Proxy rewrite rule created: "^/w1" ~> ""
+<i> [webpack-dev-server] [HPM] Proxy created: /w2  -> http://localhost:3003
+<i> [webpack-dev-server] [HPM] Proxy rewrite rule created: "^/w2" ~> ""
+<i> [webpack-dev-server] [HPM] Proxy created: /api/env,/api/game,/api/public_lobbies,/api/join_game,/api/start_game,/api/create_game,/api/archive_singleplayer_game,/api/auth/callback,/api/auth/discord,/api/kick_player  -> http://localhost:3000
+/Users/han/Developer/MyProjects/OpenFrontIO-on-chain/node_modules/webpack-dev-server/lib/Server.js:2638
+        throw error;
+        ^
+
+Error: listen EADDRINUSE: address already in use :::9000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at READ_WRITE (/Users/han/Developer/MyProjects/OpenFrontIO-on-chain/node_modules/webpack-dev-server/lib/Server.js:3460:23)
+    at new Promise (<anonymous>)
+    at Server.start (/Users/han/Developer/MyProjects/OpenFrontIO-on-chain/node_modules/webpack-dev-server/lib/Server.js:3458:7)
+    at async Command.<anonymous> (/Users/han/Developer/MyProjects/OpenFrontIO-on-chain/node_modules/@webpack-cli/serve/lib/index.js:161:21)
+    at async Command.parseAsync (/Users/han/Developer/MyProjects/OpenFrontIO-on-chain/node_modules/webpack-cli/node_modules/commander/lib/command.js:1092:5)
+    at async Command.<anonymous> (/Users/han/Developer/MyProjects/OpenFrontIO-on-chain/node_modules/webpack-cli/lib/webpack-cli.js:1340:13)
+    at async Command.parseAsync (/Users/han/Developer/MyProjects/OpenFrontIO-on-chain/node_modules/webpack-cli/node_modules/commander/lib/command.js:1092:5) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 9000
+}
+
+Node.js v22.17.0

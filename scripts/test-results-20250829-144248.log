@@ -1,0 +1,43 @@
+[0;34m[2025-08-29 14:42:48][0m WinModal Blockchain Integration Test Script Started
+[0;34m[2025-08-29 14:42:48][0m Project root: /Users/han/Developer/MyProjects/OpenFrontIO-on-chain
+[0;34m[2025-08-29 14:42:48][0m Log file: /Users/han/Developer/MyProjects/OpenFrontIO-on-chain/scripts/test-results-20250829-144248.log
+[0;34m[2025-08-29 14:42:48][0m Starting comprehensive WinModal blockchain integration test...
+[0;34m[2025-08-29 14:42:48][0m Checking dependencies...
+[0;32m[SUCCESS][0m All dependencies available
+[0;34m[2025-08-29 14:42:48][0m Checking Anvil blockchain...
+[0;32m[SUCCESS][0m Anvil blockchain is running
+[0;34m[2025-08-29 14:42:48][0m Checking smart contract deployment...
+[0;32m[SUCCESS][0m Smart contract is deployed
+[0;34m[2025-08-29 14:42:50][0m Starting development server...
+[0;34m[2025-08-29 14:42:52][0m Waiting for development server to start... (1/30)
+[0;34m[2025-08-29 14:42:54][0m Waiting for development server to start... (2/30)
+[0;34m[2025-08-29 14:42:56][0m Waiting for development server to start... (3/30)
+[0;34m[2025-08-29 14:42:58][0m Waiting for development server to start... (4/30)
+[0;34m[2025-08-29 14:43:00][0m Waiting for development server to start... (5/30)
+[0;34m[2025-08-29 14:43:02][0m Waiting for development server to start... (6/30)
+[0;34m[2025-08-29 14:43:04][0m Waiting for development server to start... (7/30)
+[0;34m[2025-08-29 14:43:06][0m Waiting for development server to start... (8/30)
+[0;34m[2025-08-29 14:43:08][0m Waiting for development server to start... (9/30)
+[0;34m[2025-08-29 14:43:10][0m Waiting for development server to start... (10/30)
+[0;34m[2025-08-29 14:43:12][0m Waiting for development server to start... (11/30)
+[0;34m[2025-08-29 14:43:14][0m Waiting for development server to start... (12/30)
+[0;34m[2025-08-29 14:43:16][0m Waiting for development server to start... (13/30)
+[0;34m[2025-08-29 14:43:18][0m Waiting for development server to start... (14/30)
+[0;34m[2025-08-29 14:43:21][0m Waiting for development server to start... (15/30)
+[0;34m[2025-08-29 14:43:23][0m Waiting for development server to start... (16/30)
+[0;34m[2025-08-29 14:43:25][0m Waiting for development server to start... (17/30)
+[0;34m[2025-08-29 14:43:27][0m Waiting for development server to start... (18/30)
+[0;34m[2025-08-29 14:43:29][0m Waiting for development server to start... (19/30)
+[0;34m[2025-08-29 14:43:31][0m Waiting for development server to start... (20/30)
+[0;34m[2025-08-29 14:43:33][0m Waiting for development server to start... (21/30)
+[0;34m[2025-08-29 14:43:35][0m Waiting for development server to start... (22/30)
+[0;34m[2025-08-29 14:43:37][0m Waiting for development server to start... (23/30)
+[0;34m[2025-08-29 14:43:39][0m Waiting for development server to start... (24/30)
+[0;34m[2025-08-29 14:43:41][0m Waiting for development server to start... (25/30)
+[0;34m[2025-08-29 14:43:43][0m Waiting for development server to start... (26/30)
+[0;34m[2025-08-29 14:43:45][0m Waiting for development server to start... (27/30)
+[0;34m[2025-08-29 14:43:47][0m Waiting for development server to start... (28/30)
+[0;34m[2025-08-29 14:43:49][0m Waiting for development server to start... (29/30)
+[0;34m[2025-08-29 14:43:51][0m Waiting for development server to start... (30/30)
+[0;31m[ERROR][0m Development server failed to start after 60 seconds
+[0;34m[2025-08-29 14:43:53][0m Cleaning up test environment...

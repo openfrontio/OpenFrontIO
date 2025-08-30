@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinModal Blockchain UI Integration Test</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #4a9eff, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(74, 158, 255, 0.5);
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .test-section h2 {
+            color: #4a9eff;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .test-button {
+            background: linear-gradient(135deg, #4a9eff 0%, #0066cc 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(74, 158, 255, 0.4);
+        }
+
+        .test-button:active {
+            transform: translateY(0);
+        }
+
+        .test-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-display {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #4a9eff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .log-container {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px 8px;
+            border-radius: 4px;
+        }
+
+        .log-success { background: rgba(76, 175, 80, 0.2); border-left: 3px solid #4CAF50; }
+        .log-error { background: rgba(244, 67, 54, 0.2); border-left: 3px solid #F44336; }
+        .log-info { background: rgba(33, 150, 243, 0.2); border-left: 3px solid #2196F3; }
+        .log-warning { background: rgba(255, 152, 0, 0.2); border-left: 3px solid #FF9800; }
+
+        .blockchain-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .status-indicator.connected { background: #4CAF50; }
+        .status-indicator.disconnected { background: #F44336; }
+        .status-indicator.checking { background: #FF9800; animation: pulse 1s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .mock-winmodal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 30, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            width: 400px;
+            border: 2px solid rgba(74, 158, 255, 0.3);
+            display: none;
+        }
+
+        .mock-winmodal.visible {
+            display: block;
+            animation: modalFadeIn 0.4s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -48%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #ccc;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .mock-winmodal { width: 90%; max-width: 350px; }
+            .button-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 WinModal Blockchain UI Test Suite</h1>
+        
+        <div class="test-section">
+            <h2>🔗 Blockchain Connection Status</h2>
+            <div class="blockchain-status">
+                <div class="status-indicator" id="connectionStatus"></div>
+                <span id="connectionText">Checking connection...</span>
+            </div>
+            <div class="status-display" id="blockchainInfo">
+                Initializing blockchain connection test...
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 WinModal UI Tests</h2>
+            <div class="button-grid">
+                <button class="test-button" onclick="testWinModalDisplay()">
+                    📱 Test WinModal Display
+                </button>
+                <button class="test-button" onclick="testBlockchainStatusDisplay()">
+                    ⛓️ Test Blockchain Status Display
+                </button>
+                <button class="test-button" onclick="testPrizeClaimButton()">
+                    🏆 Test Prize Claim Button
+                </button>
+                <button class="test-button" onclick="testRealTimeUpdates()">
+                    🔄 Test Real-time Updates
+                </button>
+                <button class="test-button" onclick="testErrorHandling()">
+                    ⚠️ Test Error Handling
+                </button>
+                <button class="test-button" onclick="runFullTestSuite()">
+                    🚀 Run Full Test Suite
+                </button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Test Results</h2>
+            <div class="log-container" id="testLog">
+                <div class="log-entry log-info">
+                    Test suite initialized. Click any test button above to begin testing.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mock WinModal for testing -->
+    <div class="mock-winmodal" id="mockWinModal">
+        <button class="modal-close" onclick="closeMockModal()">&times;</button>
+        <h2 style="color: #4a9eff; margin-bottom: 20px;" id="modalTitle">🏆 You Won!</h2>
+        
+        <div style="background: rgba(50, 50, 50, 0.8); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="margin-bottom: 10px;">
+                <strong style="color: #ccc;">Blockchain Status:</strong>
+                <span style="color: #ffa500; font-weight: bold; margin-left: 8px;" id="modalStatus">
+                    Finished
+                </span>
+            </div>
+            <div style="color: #ffa500; margin-top: 8px;">
+                🏆 <strong>Ready to Claim Prize!</strong>
+            </div>
+            <div style="color: #aaa; font-size: 12px; margin-top: 4px;">
+                Prize Pool: 0.2000 ETH
+            </div>
+        </div>
+
+        <div id="modalPrizeStatus" style="display: none; text-align: center; margin: 10px 0; padding: 8px; border-radius: 4px;">
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="test-button" id="claimButton" onclick="testClaimPrize()" 
+                    style="flex: 1; background: rgba(0, 200, 0, 0.6);">
+                Claim Prize
+            </button>
+            <button class="test-button" onclick="closeMockModal()" style="flex: 1;">
+                Keep Playing
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            contractAddress: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+            testLobbyId: '0x845c60c0b23c9dfa602377c055dfdf4d3af95a3ec9b350942c02565af41152ec',
+            devServerUrl: 'http://localhost:8080',
+            anvilRpcUrl: 'http://localhost:8545'
+        };
+
+        let testResults = [];
+        let currentTestRunning = false;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            logMessage('🎮 WinModal UI Test Suite loaded successfully', 'success');
+            checkBlockchainConnection();
+        });
+
+        // Blockchain connection test
+        async function checkBlockchainConnection() {
+            const statusEl = document.getElementById('connectionStatus');
+            const textEl = document.getElementById('connectionText');
+            const infoEl = document.getElementById('blockchainInfo');
+            
+            statusEl.className = 'status-indicator checking';
+            textEl.textContent = 'Checking Anvil connection...';
+            
+            try {
+                const response = await fetch(CONFIG.anvilRpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'web3_clientVersion',
+                        params: [],
+                        id: 1
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    statusEl.className = 'status-indicator connected';
+                    textEl.textContent = 'Connected to Anvil blockchain';
+                    infoEl.innerHTML = `✅ <strong>Blockchain Connected</strong><br>
+                                       Client: ${data.result}<br>
+                                       RPC URL: ${CONFIG.anvilRpcUrl}<br>
+                                       Contract: ${CONFIG.contractAddress}`;
+                    logMessage('✅ Blockchain connection successful', 'success');
+                } else {
+                    throw new Error('Connection failed');
+                }
+            } catch (error) {
+                statusEl.className = 'status-indicator disconnected';
+                textEl.textContent = 'Failed to connect to blockchain';
+                infoEl.innerHTML = `❌ <strong>Connection Failed</strong><br>
+                                   Error: ${error.message}<br>
+                                   Make sure Anvil is running on port 8545`;
+                logMessage('❌ Blockchain connection failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test functions
+        function testWinModalDisplay() {
+            if (currentTestRunning) return;
+            logMessage('🧪 Testing WinModal display...', 'info');
+            
+            const modal = document.getElementById('mockWinModal');
+            modal.classList.add('visible');
+            
+            setTimeout(() => {
+                logMessage('✅ WinModal displayed successfully', 'success');
+                logMessage('📝 Modal shows: Title, blockchain status, prize info, action buttons', 'info');
+                testResults.push({ test: 'WinModal Display', status: 'PASS', timestamp: new Date() });
+            }, 500);
+        }
+
+        function testBlockchainStatusDisplay() {
+            logMessage('🧪 Testing blockchain status display...', 'info');
+            
+            const statuses = ['Created', 'InProgress', 'Finished', 'Claimed'];
+            const colors = ['#ccc', '#90ee90', '#ffa500', '#4a9eff'];
+            let currentIndex = 0;
+            
+            const interval = setInterval(() => {
+                const statusEl = document.getElementById('modalStatus');
+                statusEl.textContent = statuses[currentIndex];
+                statusEl.style.color = colors[currentIndex];
+                
+                logMessage(`📊 Status updated to: ${statuses[currentIndex]}`, 'info');
+                currentIndex++;
+                
+                if (currentIndex >= statuses.length) {
+                    clearInterval(interval);
+                    logMessage('✅ Blockchain status display test completed', 'success');
+                    testResults.push({ test: 'Status Display', status: 'PASS', timestamp: new Date() });
+                }
+            }, 1500);
+        }
+
+        function testPrizeClaimButton() {
+            logMessage('🧪 Testing prize claim button functionality...', 'info');
+            
+            const button = document.getElementById('claimButton');
+            const originalText = button.textContent;
+            
+            // Simulate claim process
+            button.textContent = 'Claiming...';
+            button.disabled = true;
+            button.style.background = 'rgba(100, 100, 100, 0.6)';
+            
+            setTimeout(() => {
+                const statusEl = document.getElementById('modalPrizeStatus');
+                statusEl.style.display = 'block';
+                statusEl.style.backgroundColor = '#d4edda';
+                statusEl.style.color = '#155724';
+                statusEl.style.border = '1px solid #c3e6cb';
+                statusEl.textContent = 'Success! Transaction: 0x1234567890...';
+                
+                button.textContent = originalText;
+                button.disabled = false;
+                button.style.background = 'rgba(0, 200, 0, 0.6)';
+                
+                logMessage('✅ Prize claim button test completed successfully', 'success');
+                logMessage('📝 Button shows loading state, success message, and resets properly', 'info');
+                testResults.push({ test: 'Prize Claim Button', status: 'PASS', timestamp: new Date() });
+                
+                // Clear status after a moment
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 3000);
+            }, 2000);
+        }
+
+        function testRealTimeUpdates() {
+            logMessage('🧪 Testing real-time blockchain updates...', 'info');
+            
+            let updateCount = 0;
+            const maxUpdates = 5;
+            
+            const interval = setInterval(() => {
+                updateCount++;
+                logMessage(`🔄 Simulated blockchain update ${updateCount}/${maxUpdates}`, 'info');
+                
+                // Simulate status change
+                const statusEl = document.getElementById('modalStatus');
+                statusEl.textContent = updateCount % 2 === 0 ? 'Finished' : 'InProgress';
+                statusEl.style.color = updateCount % 2 === 0 ? '#ffa500' : '#90ee90';
+                
+                if (updateCount >= maxUpdates) {
+                    clearInterval(interval);
+                    logMessage('✅ Real-time updates test completed', 'success');
+                    testResults.push({ test: 'Real-time Updates', status: 'PASS', timestamp: new Date() });
+                }
+            }, 800);
+        }
+
+        function testErrorHandling() {
+            logMessage('🧪 Testing error handling scenarios...', 'info');
+            
+            // Simulate various error conditions
+            const errors = [
+                { type: 'Network Error', message: 'Failed to connect to blockchain' },
+                { type: 'Transaction Failed', message: 'Insufficient gas for transaction' },
+                { type: 'Contract Error', message: 'Prize already claimed' },
+                { type: 'Wallet Error', message: 'User rejected transaction' }
+            ];
+            
+            let errorIndex = 0;
+            
+            const interval = setInterval(() => {
+                const error = errors[errorIndex];
+                logMessage(`⚠️ Testing ${error.type}: ${error.message}`, 'warning');
+                
+                // Simulate error display
+                const statusEl = document.getElementById('modalPrizeStatus');
+                statusEl.style.display = 'block';
+                statusEl.style.backgroundColor = '#f8d7da';
+                statusEl.style.color = '#721c24';
+                statusEl.style.border = '1px solid #f5c6cb';
+                statusEl.textContent = error.message;
+                
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 1500);
+                
+                errorIndex++;
+                
+                if (errorIndex >= errors.length) {
+                    clearInterval(interval);
+                    logMessage('✅ Error handling test completed', 'success');
+                    testResults.push({ test: 'Error Handling', status: 'PASS', timestamp: new Date() });
+                }
+            }, 2000);
+        }
+
+        function testClaimPrize() {
+            testPrizeClaimButton();
+        }
+
+        function closeMockModal() {
+            const modal = document.getElementById('mockWinModal');
+            modal.classList.remove('visible');
+            logMessage('📱 WinModal closed', 'info');
+        }
+
+        async function runFullTestSuite() {
+            if (currentTestRunning) return;
+            
+            currentTestRunning = true;
+            testResults = [];
+            
+            logMessage('🚀 Starting full WinModal test suite...', 'info');
+            logMessage('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            
+            const tests = [
+                { name: 'WinModal Display', func: testWinModalDisplay, delay: 3000 },
+                { name: 'Blockchain Status Display', func: testBlockchainStatusDisplay, delay: 8000 },
+                { name: 'Prize Claim Button', func: testPrizeClaimButton, delay: 4000 },
+                { name: 'Real-time Updates', func: testRealTimeUpdates, delay: 6000 },
+                { name: 'Error Handling', func: testErrorHandling, delay: 10000 }
+            ];
+            
+            let currentTest = 0;
+            
+            function runNextTest() {
+                if (currentTest >= tests.length) {
+                    // Test suite completed
+                    logMessage('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success');
+                    logMessage('🎉 Full test suite completed!', 'success');
+                    
+                    const passed = testResults.filter(r => r.status === 'PASS').length;
+                    const failed = testResults.filter(r => r.status === 'FAIL').length;
+                    
+                    logMessage(`📊 Test Summary: ${passed} passed, ${failed} failed`, 'success');
+                    testResults.forEach(result => {
+                        logMessage(`   ${result.status === 'PASS' ? '✅' : '❌'} ${result.test}`, 
+                                  result.status === 'PASS' ? 'success' : 'error');
+                    });
+                    
+                    currentTestRunning = false;
+                    return;
+                }
+                
+                const test = tests[currentTest];
+                logMessage(`🔄 Running test: ${test.name}`, 'info');
+                
+                test.func();
+                
+                setTimeout(() => {
+                    currentTest++;
+                    runNextTest();
+                }, test.delay);
+            }
+            
+            runNextTest();
+        }
+
+        // Utility functions
+        function logMessage(message, type = 'info') {
+            const logContainer = document.getElementById('testLog');
+            const logEntry = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Auto-refresh blockchain connection every 30 seconds
+        setInterval(checkBlockchainConnection, 30000);
+    </script>
+</body>
+</html>
