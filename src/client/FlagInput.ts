@@ -2,6 +2,8 @@ import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderPlayerFlag } from "../core/CustomFlag";
 import { FlagSchema } from "../core/Schemas";
+import { translateText } from "./Utils";
+
 const flagKey: string = "flag";
 
 @customElement("flag-input")
@@ -74,7 +76,7 @@ export class FlagInput extends LitElement {
           class="border rounded-lg flex cursor-pointer border-black/30
           dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]
           "
-          title="Pick a flag!"
+          title=${translateText("flag_input.button_title")}
         >
           <span
             id="flag-preview"
