@@ -19,7 +19,7 @@ export class FlagInputModal extends LitElement {
 
   render() {
     return html`
-      <o-modal alwaysMaximized title="Select flag">
+      <o-modal alwaysMaximized title="Select Flag">
         <div class="flex justify-center w-full p-[1rem]">
           <input
             class="h-[2rem] border-none border border-gray-300 
