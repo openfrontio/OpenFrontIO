@@ -6,6 +6,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -25,6 +26,7 @@ import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
+import { TokenLoginModal } from "./TokenLoginModal";
 import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
@@ -37,9 +39,8 @@ import {
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
-import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
+import { discordLogin, getUserMe, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 declare global {
@@ -90,6 +91,7 @@ class Client {
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
+  private tokenLoginModal: TokenLoginModal;
 
   constructor() {}
 
@@ -141,13 +143,6 @@ class Client {
     if (!this.darkModeButton) {
       console.warn("Dark mode button element not found");
     }
-
-    const loginDiscordButton = document.getElementById(
-      "login-discord",
-    ) as OButton;
-    const logoutDiscordButton = document.getElementById(
-      "logout-discord",
-    ) as OButton;
 
     this.usernameInput = document.querySelector(
       "username-input",
@@ -221,8 +216,20 @@ class Client {
       this.patternsModal.open();
     });
 
-    loginDiscordButton.addEventListener("click", discordLogin);
+    this.tokenLoginModal = document.querySelector(
+      "token-login",
+    ) as TokenLoginModal;
+    this.tokenLoginModal instanceof TokenLoginModal;
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", {
+          detail: userMeResponse,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+
       const config = await getServerConfigFromClient();
       if (!hasAllowedFlare(userMeResponse, config)) {
         if (userMeResponse === false) {
@@ -300,10 +307,6 @@ class Client {
         return;
       } else if (userMeResponse === false) {
         // Not logged in
-        loginDiscordButton.disable = false;
-        loginDiscordButton.hidden = false;
-        loginDiscordButton.translationKey = "main.login_discord";
-        logoutDiscordButton.hidden = true;
         this.patternsModal.onUserMe(null);
       } else {
         // Authorized
@@ -311,8 +314,6 @@ class Client {
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
-        loginDiscordButton.translationKey = "main.logged_in";
-        loginDiscordButton.hidden = true;
         this.patternsModal.onUserMe(userMeResponse);
       }
     };
@@ -322,15 +323,6 @@ class Client {
       onUserMe(false);
     } else {
       // JWT appears to be valid
-      loginDiscordButton.disable = true;
-      loginDiscordButton.translationKey = "main.checking_login";
-      logoutDiscordButton.hidden = false;
-      logoutDiscordButton.addEventListener("click", () => {
-        // Log out
-        logOut();
-        onUserMe(false);
-      });
-      // Look up the discord user object.
       // TODO: Add caching
       getUserMe().then(onUserMe);
     }
@@ -416,35 +408,76 @@ class Client {
   }
 
   private handleHash() {
-    const { hash } = window.location;
-
-    const alertAndStrip = (message: string) => {
-      alert(message);
+    const strip = () =>
       history.replaceState(
         null,
         "",
         window.location.pathname + window.location.search,
       );
+
+    const alertAndStrip = (message: string) => {
+      alert(message);
+      strip();
     };
 
-    if (hash.startsWith("#")) {
-      const params = new URLSearchParams(hash.slice(1));
-      if (params.get("purchase-completed") === "true") {
-        const patternName = params.get("pattern");
-        if (patternName === null) {
-          alert("Something went wrong. Please contact support.");
-          console.error("purchase-completed=true but no pattern name");
-          return;
-        }
-        alertAndStrip(`purchase succeeded: ${patternName}`);
-        this.userSettings.setSelectedPatternName(patternName ?? undefined);
-        this.patternsModal.refresh();
-        return;
-      } else if (params.get("purchase-completed") === "false") {
+    const hash = window.location.hash;
+
+    // Decode the hash first to handle encoded characters
+    const decodedHash = decodeURIComponent(hash);
+    const params = new URLSearchParams(decodedHash.split("?")[1] || "");
+
+    // Handle different hash sections
+    if (decodedHash.startsWith("#purchase-completed")) {
+      // Parse params after the ?
+      const status = params.get("status");
+
+      if (status !== "true") {
         alertAndStrip("purchase failed");
         return;
       }
-      const lobbyId = params.get("join");
+
+      const patternName = params.get("pattern");
+      if (!patternName) {
+        alert("Something went wrong. Please contact support.");
+        console.error("purchase-completed but no pattern name");
+        return;
+      }
+
+      this.userSettings.setSelectedPatternName(patternName);
+      const token = params.get("login-token");
+
+      if (token) {
+        strip();
+        window.addEventListener("beforeunload", () => {
+          // The page refreshes after token login, so we need to save the pattern name
+          // in case it is unset during login.
+          this.userSettings.setSelectedPatternName(patternName);
+        });
+        this.tokenLoginModal.open(token);
+      } else {
+        alertAndStrip(`purchase succeeded: ${patternName}`);
+        this.patternsModal.refresh();
+      }
+      return;
+    }
+
+    if (decodedHash.startsWith("#token-login")) {
+      const token = params.get("token-login");
+
+      if (!token) {
+        alertAndStrip(
+          `login failed! got url ${window.location.href} Please try again.`,
+        );
+        return;
+      }
+
+      strip();
+      this.tokenLoginModal.open(token);
+      return;
+    }
+
+    if (decodedHash.startsWith("#join")) {
+      const lobbyId = params.get("lobby");
       if (lobbyId && ID.safeParse(lobbyId).success) {
         this.joinModal.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);

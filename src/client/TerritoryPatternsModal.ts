@@ -21,9 +21,6 @@ export class TerritoryPatternsModal extends LitElement {
 
   @state() private selectedPattern: Pattern | null;
 
-  @state() private keySequence: string[] = [];
-  @state() private showChocoPattern = false;
-
   private patterns: Map<string, Pattern> = new Map();
 
   private userSettings: UserSettings = new UserSettings();
@@ -32,11 +29,6 @@ export class TerritoryPatternsModal extends LitElement {
 
   constructor() {
     super();
-  }
-
-  disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
-    super.disconnectedCallback();
   }
 
   async onUserMe(userMeResponse: UserMeResponse | null) {
@@ -52,38 +44,6 @@ export class TerritoryPatternsModal extends LitElement {
     this.refresh();
   }
 
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.close();
-    }
-
-    const key = e.key.toLowerCase();
-    const nextSequence = [...this.keySequence, key].slice(-5);
-    this.keySequence = nextSequence;
-
-    if (nextSequence.join("") === "choco") {
-      this.triggerChocoEasterEgg();
-      this.keySequence = [];
-    }
-  };
-
-  private triggerChocoEasterEgg() {
-    console.log("🍫 Choco pattern unlocked!");
-    this.showChocoPattern = true;
-
-    const popup = document.createElement("div");
-    popup.className = "easter-egg-popup";
-    popup.textContent = "🎉 You unlocked the Choco pattern!";
-    document.body.appendChild(popup);
-
-    setTimeout(() => {
-      popup.remove();
-    }, 5000);
-
-    this.requestUpdate();
-  }
-
   createRenderRoot() {
     return this;
   }
@@ -91,8 +51,6 @@ export class TerritoryPatternsModal extends LitElement {
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
     for (const [name, pattern] of this.patterns) {
-      if (!this.showChocoPattern && name === "choco") continue;
-
       buttons.push(html`
         <pattern-button
           .pattern=${pattern}
@@ -131,13 +89,11 @@ export class TerritoryPatternsModal extends LitElement {
   public async open() {
     this.isActive = true;
     await this.refresh();
-    window.addEventListener("keydown", this.handleKeyDown);
   }
 
   public close() {
     this.isActive = false;
     this.modalEl?.close();
-    window.removeEventListener("keydown", this.handleKeyDown);
   }
 
   private selectPattern(pattern: Pattern | null) {
