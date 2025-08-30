@@ -28,19 +28,27 @@ export class PlayerExecution implements Execution {
   tick(ticks: number) {
     if (this.mg === undefined) throw new Error("Not initialized");
     if (this.config === undefined) throw new Error("Not initialized");
+
+    const { mg } = this;
     this.player.decayRelations();
-    this.player.units().forEach((u) => {
-      const tileOwner = this.mg?.owner(u.tile());
-      if (u.info().territoryBound) {
-        if (tileOwner?.isPlayer()) {
-          if (tileOwner !== this.player) {
-            this.mg?.player(tileOwner.id()).captureUnit(u);
-          }
-        } else {
-          u.delete();
-        }
+
+    const units = [...this.player.units()];
+    for (const u of units) {
+      if (!u.info().territoryBound) continue;
+
+      const tileOwner = mg.owner(u.tile());
+
+      if (!tileOwner?.isPlayer()) {
+        u.delete();
+        continue;
       }
-    });
+      if (tileOwner.smallID() === this.player.smallID()) continue;
+
+      if (u.type() === UnitType.DefensePost) {
+        u.decreaseLevel(mg.player(tileOwner.id()));
+      }
+      mg.player(tileOwner.id()).captureUnit(u);
+    }
 
     if (!this.player.isAlive()) {
       // Player has no tiles, delete any remaining units and gold
