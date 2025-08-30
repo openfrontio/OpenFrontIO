@@ -1,0 +1,159 @@
+{
+  "map": {
+    "height": 1670,
+    "num_land_tiles": 1179770,
+    "width": 1800
+  },
+  "mini_map": {
+    "height": 835,
+    "num_land_tiles": 290434,
+    "width": 900
+  },
+  "name": "Korea",
+  "nations": [
+    {
+      "coordinates": [1137, 849],
+      "flag": "kr",
+      "name": "Seoul",
+      "strength": 2
+    },
+    {
+      "coordinates": [1427, 983],
+      "flag": "kr",
+      "name": "South Korea",
+      "strength": 2
+    },
+    {
+      "coordinates": [974, 437],
+      "flag": "kp",
+      "name": "Pyongyang",
+      "strength": 2
+    },
+    {
+      "coordinates": [1123, 598],
+      "flag": "kp",
+      "name": "North Korea",
+      "strength": 2
+    },
+    {
+      "coordinates": [548, 214],
+      "flag": "cn",
+      "name": "China",
+      "strength": 2
+    },
+    {
+      "coordinates": [111, 939],
+      "flag": "sd",
+      "name": "Shandong Province",
+      "strength": 2
+    },
+    {
+      "coordinates": [1172, 1398],
+      "flag": "jp",
+      "name": "Japan",
+      "strength": 2
+    },
+    {
+      "coordinates": [1070, 870],
+      "flag": "kr",
+      "name": "Incheon",
+      "strength": 2
+    },
+    {
+      "coordinates": [1110, 1030],
+      "flag": "kr",
+      "name": "Daejeon",
+      "strength": 2
+    },
+    {
+      "coordinates": [1200, 1080],
+      "flag": "kr",
+      "name": "Daegu",
+      "strength": 2
+    },
+    {
+      "coordinates": [1260, 1140],
+      "flag": "kr",
+      "name": "Busan",
+      "strength": 2
+    },
+    {
+      "coordinates": [1040, 1140],
+      "flag": "kr",
+      "name": "Gwangju",
+      "strength": 2
+    },
+    {
+      "coordinates": [1250, 1085],
+      "flag": "kr",
+      "name": "Ulsan",
+      "strength": 2
+    },
+    {
+      "coordinates": [1000, 1420],
+      "flag": "kr",
+      "name": "Jeju",
+      "strength": 2
+    },
+    {
+      "coordinates": [1030, 760],
+      "flag": "kp",
+      "name": "Kaesong",
+      "strength": 2
+    },
+    {
+      "coordinates": [1200, 650],
+      "flag": "kp",
+      "name": "Wonsan",
+      "strength": 2
+    },
+    {
+      "coordinates": [1240, 520],
+      "flag": "kp",
+      "name": "Hamhung",
+      "strength": 2
+    },
+    {
+      "coordinates": [1290, 420],
+      "flag": "kp",
+      "name": "Chongjin",
+      "strength": 2
+    },
+    {
+      "coordinates": [870, 490],
+      "flag": "kp",
+      "name": "Sinuiju",
+      "strength": 2
+    },
+    {
+      "coordinates": [900, 560],
+      "flag": "cn",
+      "name": "Dandong",
+      "strength": 2
+    },
+    {
+      "coordinates": [850, 420],
+      "flag": "cn",
+      "name": "Yanbian",
+      "strength": 2
+    },
+    {
+      "coordinates": [1350, 370],
+      "flag": "ru",
+      "name": "Vladivostok",
+      "strength": 2
+    },
+    {
+      "coordinates": [1300, 1400],
+      "flag": "jp",
+      "name": "Fukuoka",
+      "strength": 2
+    },
+    {
+      "coordinates": [1220, 1300],
+      "flag": "jp",
+      "name": "Tsushima",
+      "strength": 2
+    }
+  ]
+}

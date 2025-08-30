@@ -1,0 +1,141 @@
+{
+  "map": {
+    "height": 1984,
+    "num_land_tiles": 1396408,
+    "width": 1996
+  },
+  "mini_map": {
+    "height": 992,
+    "num_land_tiles": 344140,
+    "width": 998
+  },
+  "name": "Taiwan Strait",
+  "nations": [
+    {
+      "coordinates": [1797, 603],
+      "flag": "tw",
+      "name": "Taipei",
+      "strength": 2
+    },
+    {
+      "coordinates": [1419, 1034],
+      "flag": "tw",
+      "name": "Changhua County",
+      "strength": 2
+    },
+    {
+      "coordinates": [1697, 992],
+      "flag": "tw",
+      "name": "Taiwan",
+      "strength": 2
+    },
+    {
+      "coordinates": [314, 178],
+      "flag": "cn",
+      "name": "China",
+      "strength": 2
+    },
+    {
+      "coordinates": [388, 730],
+      "flag": "cn",
+      "name": "Zhangzhou",
+      "strength": 2
+    },
+    {
+      "coordinates": [926, 235],
+      "flag": "cn",
+      "name": "Fuzhou",
+      "strength": 2
+    },
+    {
+      "coordinates": [530, 262],
+      "flag": "cn",
+      "name": "Beijing",
+      "strength": 2
+    },
+    {
+      "coordinates": [1750, 620],
+      "flag": "tw",
+      "name": "Taoyuan",
+      "strength": 2
+    },
+    {
+      "coordinates": [1830, 570],
+      "flag": "tw",
+      "name": "Keelung",
+      "strength": 2
+    },
+    {
+      "coordinates": [1650, 800],
+      "flag": "tw",
+      "name": "Taichung",
+      "strength": 2
+    },
+    {
+      "coordinates": [1620, 980],
+      "flag": "tw",
+      "name": "Chiayi",
+      "strength": 2
+    },
+    {
+      "coordinates": [1660, 1080],
+      "flag": "tw",
+      "name": "Tainan",
+      "strength": 2
+    },
+    {
+      "coordinates": [1735, 1330],
+      "flag": "tw",
+      "name": "Kaohsiung",
+      "strength": 2
+    },
+    {
+      "coordinates": [1720, 1400],
+      "flag": "tw",
+      "name": "Pingtung",
+      "strength": 2
+    },
+    {
+      "coordinates": [1850, 860],
+      "flag": "tw",
+      "name": "Hualien",
+      "strength": 2
+    },
+    {
+      "coordinates": [1850, 1120],
+      "flag": "tw",
+      "name": "Taitung",
+      "strength": 2
+    },
+    {
+      "coordinates": [1560, 1020],
+      "flag": "tw",
+      "name": "Kinmen",
+      "strength": 2
+    },
+    {
+      "coordinates": [1100, 320],
+      "flag": "tw",
+      "name": "Matsu",
+      "strength": 2
+    },
+    {
+      "coordinates": [100, 500],
+      "flag": "cn",
+      "name": "Xiamen",
+      "strength": 2
+    },
+    {
+      "coordinates": [1300, 900],
+      "flag": "cn",
+      "name": "Quanzhou",
+      "strength": 2
+    },
+    {
+      "coordinates": [1000, 280],
+      "flag": "cn",
+      "name": "Pingtan Island",
+      "strength": 2
+    }
+  ]
+}
