@@ -9,7 +9,6 @@ import "../../components/PatternButton";
 import { fetchPatterns, handlePurchase } from "../../Cosmetics";
 import { getUserMe } from "../../jwt";
 import { SendWinnerEvent } from "../../Transport";
-import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
 
 @customElement("win-modal")
@@ -43,7 +42,7 @@ export class WinModal extends LitElement implements Layer {
     return html`
       <div
         class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 rounded-lg z-[9999] shadow-2xl backdrop-blur-sm text-white w-[350px] max-w-[90%] md:max-w-[350px] animate-fadeIn"
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 rounded-lg z-[9999] shadow-2xl backdrop-blur-sm text-white w-[350px] max-w-[90%] md:w-[700px] md:max-w-[700px] animate-fadeIn"
           : "hidden"}"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white">
@@ -120,14 +119,27 @@ export class WinModal extends LitElement implements Layer {
       return;
     }
 
-    const pattern = purchasable[Math.floor(Math.random() * purchasable.length)];
+    // Shuffle the array and take patterns based on screen size
+    const shuffled = [...purchasable].sort(() => Math.random() - 0.5);
+    const isMobile = window.innerWidth < 768; // md breakpoint
+    const maxPatterns = isMobile ? 1 : 3;
+    const selectedPatterns = shuffled.slice(
+      0,
+      Math.min(maxPatterns, shuffled.length),
+    );
 
     this.patternContent = html`
-      <pattern-button
-        .pattern=${pattern}
-        .onSelect=${(p: Pattern | null) => {}}
-        .onPurchase=${(p: Pattern) => handlePurchase(p)}
-      ></pattern-button>
+      <div class="flex gap-4 flex-wrap justify-start">
+        ${selectedPatterns.map(
+          (pattern) => html`
+            <pattern-button
+              .pattern=${pattern}
+              .onSelect=${(p: Pattern | null) => {}}
+              .onPurchase=${(p: Pattern) => handlePurchase(p)}
+            ></pattern-button>
+          `,
+        )}
+      </div>
     `;
   }
 
@@ -146,11 +158,8 @@ export class WinModal extends LitElement implements Layer {
 
   async show() {
     await this.loadPatternContent();
-    this.eventBus.emit(new GutterAdModalEvent(true));
-    setTimeout(() => {
-      this.isVisible = true;
-      this.requestUpdate();
-    }, 1500);
+    this.isVisible = true;
+    this.requestUpdate();
     setTimeout(() => {
       this.showButtons = true;
       this.requestUpdate();
@@ -158,7 +167,6 @@ export class WinModal extends LitElement implements Layer {
   }
 
   hide() {
-    this.eventBus.emit(new GutterAdModalEvent(false));
     this.isVisible = false;
     this.showButtons = false;
     this.requestUpdate();
