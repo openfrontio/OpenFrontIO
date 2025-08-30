@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
+import { translateText } from "./Utils";
 
 @customElement("flag-input-modal")
 export class FlagInputModal extends LitElement {
@@ -22,7 +23,7 @@ export class FlagInputModal extends LitElement {
         <input
           class="h-[2rem] border-none text-center border border-gray-300 rounded-xl shadow-sm text-2xl text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
           type="text"
-          placeholder="Search..."
+          placeholder=${translateText("flag_input.search_flag")}
           @change=${this.handleSearch}
           @keyup=${this.handleSearch}
         />
