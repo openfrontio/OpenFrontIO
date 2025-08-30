@@ -227,3 +227,188 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
     expect(mockGame.addExecution).not.toHaveBeenCalled();
   });
 });
+
+describe("BotBehavior Attack Behavior", () => {
+  let game: Game;
+  let bot: Player;
+  let human: Player;
+  let botBehavior: BotBehavior;
+
+  // Helper functions for tile assignment
+  function assignAlternatingLandTiles(game: Game, players: Player[], totalTiles: number) {
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= totalTiles) return;
+      if (!game.map().isLand(tile)) return;
+      const player = players[assigned % players.length];
+      player.conquer(tile);
+      assigned++;
+    });
+  }
+
+  function assignNLandTiles(game: Game, player: Player, count: number) {
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= count) return;
+      if (!game.map().isLand(tile)) return;
+      player.conquer(tile);
+      assigned++;
+    });
+  }
+
+  beforeEach(async () => {
+    game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+      infiniteTroops: true,
+    });
+
+    const botInfo = new PlayerInfo("bot_test", PlayerType.Bot, null, "bot_test");
+    const humanInfo = new PlayerInfo("human_test", PlayerType.Human, null, "human_test");
+
+    game.addPlayer(botInfo);
+    game.addPlayer(humanInfo);
+
+    bot = game.player("bot_test");
+    human = game.player("human_test");
+
+    // Give both players some tiles and troops
+    assignAlternatingLandTiles(game, [bot, human], 10);
+
+    bot.addTroops(1000);
+    human.addTroops(1000);
+
+    const random = new PseudoRandom(42);
+    botBehavior = new BotBehavior(random, game, bot, 0.5, 0.5, 0.2);
+
+    // Skip spawn phase
+    let safety = 10_000;
+    while (game.inSpawnPhase() && safety-- > 0) {
+      game.executeNextTick();
+    }
+    expect(safety).toBeGreaterThan(0); // sanity: spawn ended
+  });
+
+  test("bot cannot attack allied player", () => {
+    // Form alliance (bot creates request to human)
+    const allianceRequest = bot.createAllianceRequest(human);
+    allianceRequest?.accept();
+
+    expect(bot.isAlliedWith(human)).toBe(true);
+    expect(bot.isFriendly(human)).toBe(true);
+
+    // Count attacks before
+    const attacksBefore = bot.outgoingAttacks().length;
+    // Ensure troop gate isn't the reason this test passes
+    bot.addTroops(50_000);
+
+    // Bot tries to attack ally (should be blocked by your isFriendly check)
+    botBehavior.sendAttack(human);
+
+    game.executeNextTick();
+
+    // Alliance should remain intact (no silent break)
+    expect(bot.isAlliedWith(human)).toBe(true);
+    expect(bot.isFriendly(human)).toBe(true);
+    expect(human.incomingAttacks()).toHaveLength(0);
+    // Should be same number of attacks (no new attack created)
+    expect(bot.outgoingAttacks()).toHaveLength(attacksBefore);
+  });
+
+  test("nation cannot attack allied player", () => {
+    // Create nation
+    const nationInfo = new PlayerInfo("nation_test", PlayerType.FakeHuman, null, "nation_test");
+    game.addPlayer(nationInfo);
+    const nation = game.player("nation_test");
+
+    // Use helper for tile assignment
+    assignAlternatingLandTiles(game, [bot, human, nation], 21); // 21 to ensure each gets 7 tiles
+
+    nation.addTroops(1000);
+
+    const nationBehavior = new BotBehavior(new PseudoRandom(42), game, nation, 0.5, 0.5, 0.2);
+
+    // Alliance between nation and human
+    const allianceRequest = nation.createAllianceRequest(human);
+    allianceRequest?.accept();
+
+    expect(nation.isAlliedWith(human)).toBe(true);
+    expect(nation.isFriendly(human)).toBe(true);
+
+    const attacksBefore = nation.outgoingAttacks().length;
+    // Ensure troop gate isn't the reason this test passes
+    nation.addTroops(50_000);
+
+    // Nation tries to attack ally (should be blocked)
+    nationBehavior.sendAttack(human);
+
+    game.executeNextTick();
+
+    expect(nation.isAlliedWith(human)).toBe(true);
+    expect(nation.isFriendly(human)).toBe(true);
+    expect(nation.outgoingAttacks()).toHaveLength(attacksBefore);
+  });
+
+  test("bot can attack unallied player", () => {
+  // Ensure no alliance exists
+    expect(bot.isAlliedWith(human)).toBe(false);
+    expect(bot.isFriendly(human)).toBe(false);
+
+    bot.addTroops(50_000); // Add a lot of troops
+
+    const attacksBefore = bot.outgoingAttacks().length;
+
+    // Bot should be able to attack non-ally
+    botBehavior.sendAttack(human);
+
+    game.executeNextTick();
+
+    // Should create new attack
+    expect(bot.outgoingAttacks().length).toBeGreaterThan(attacksBefore);
+    expect(human.incomingAttacks().length).toBeGreaterThan(0);
+    const hasHumanTarget = bot.outgoingAttacks().some((a) => a.target() === human);
+    expect(hasHumanTarget).toBe(true);
+  });
+
+  test("bot can attack other unallied bot", () => {
+    // Create another bot
+    const bot2Info = new PlayerInfo("bot2", PlayerType.Bot, null, "bot2");
+    game.addPlayer(bot2Info);
+    const bot2 = game.player("bot2");
+
+    // Give bot2 some tiles and troops
+    assignNLandTiles(game, bot2, 3);
+    bot2.addTroops(1000);
+
+    bot.addTroops(50_000); // Add lots of troops to ensure attack happens
+
+    // No alliance between bots
+    expect(bot.isAlliedWith(bot2)).toBe(false);
+    expect(bot.isFriendly(bot2)).toBe(false);
+
+    const attacksBefore = bot.outgoingAttacks().length;
+
+    // Bot should attack other bot
+    botBehavior.sendAttack(bot2);
+    game.executeNextTick();
+
+    expect(bot.outgoingAttacks().length).toBeGreaterThan(attacksBefore);
+    expect(bot2.incomingAttacks().length).toBeGreaterThan(0);
+    const hasBot2Target = bot.outgoingAttacks().some((a) => a.target() === bot2);
+    expect(hasBot2Target).toBe(true);
+  });
+
+  test("bot can attack TerraNullius (expansion)", () => {
+    const attacksBefore = bot.outgoingAttacks().length;
+
+    // Bot should be able to expand to neutral territory
+    botBehavior.sendAttack(game.terraNullius());
+
+    game.executeNextTick();
+
+    expect(bot.outgoingAttacks().length).toBeGreaterThan(attacksBefore);
+    const tn = game.terraNullius();
+    const hasTNTarget = bot.outgoingAttacks().some((a) => a.target() === tn);
+    expect(hasTNTarget).toBe(true);
+  });
+});

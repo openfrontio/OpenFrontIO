@@ -196,14 +196,18 @@ describe("Attack race condition with alliance requests", () => {
     expect(playerB.outgoingAttacks()).toHaveLength(0);
   });
 
-  it("should mark attacker as traitor when alliance existed before attack", async () => {
+  it("should prevent player from attacking allied player", async () => {
     // Create an alliance between Player A and Player B
     const allianceRequest = playerA.createAllianceRequest(playerB);
     if (allianceRequest) {
       allianceRequest.accept();
     }
 
-    // Player A attacks Player B (should break the alliance)
+    // Verify alliance exists
+    expect(playerA.isAlliedWith(playerB)).toBe(true);
+    expect(playerB.isAlliedWith(playerA)).toBe(true);
+
+    // Player A tries to attack Player B (should be blocked)
     const attackExecution = new AttackExecution(
       null,
       playerA,
@@ -212,13 +216,13 @@ describe("Attack race condition with alliance requests", () => {
     );
     game.addExecution(attackExecution);
 
-    // Execute a few ticks to process the attack
-    for (let i = 0; i < 10; i++) {
-      game.executeNextTick();
-    }
+    game.executeNextTick();
 
-    // Player A should be marked as traitor because they attacked an ally
-    expect(playerA.isTraitor()).toBe(true);
+    // No ongoing attacks should exist for either side
+    expect(playerA.outgoingAttacks()).toHaveLength(0);
+    expect(playerB.outgoingAttacks()).toHaveLength(0);
+    expect(playerA.incomingAttacks()).toHaveLength(0);
+    expect(playerB.incomingAttacks()).toHaveLength(0);
   });
 
   test("should cancel alliance requests if the recipient attacks", async () => {

@@ -49,7 +49,7 @@ export class BotBehavior {
     private readonly triggerRatio: number,
     private readonly reserveRatio: number,
     private readonly expandRatio: number,
-  ) {}
+  ) { }
 
   handleAllianceRequests() {
     for (const req of this.player.incomingAllianceRequests()) {
@@ -312,7 +312,9 @@ export class BotBehavior {
   }
 
   sendAttack(target: Player | TerraNullius) {
-    if (target.isPlayer() && this.player.isOnSameTeam(target)) return;
+    // Skip attacking friendly targets (allies or teammates) - decision to break alliances should be made by caller
+    if (target.isPlayer() && this.player.isFriendly(target)) return;
+
     const maxTroops = this.game.config().maxTroops(this.player);
     const reserveRatio = target.isPlayer()
       ? this.reserveRatio
@@ -324,7 +326,7 @@ export class BotBehavior {
       new AttackExecution(
         troops,
         this.player,
-        target.isPlayer() ? target.id() : null,
+        target.isPlayer() ? target.id() : this.game.terraNullius().id(),
       ),
     );
   }
