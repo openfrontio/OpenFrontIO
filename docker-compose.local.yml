@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  openfront-local:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-local}
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - GAME_ENV=local
+      - PORT=3000
+    volumes:
+      # Optional: mount logs for debugging
+      - ./logs:/usr/src/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/env"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

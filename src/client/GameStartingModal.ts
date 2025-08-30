@@ -14,13 +14,14 @@ export class GameStartingModal extends LitElement {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background-color: rgba(30, 30, 30, 0.7);
+      background-color: rgba(26, 26, 26, 0.95);
+      border: 2px solid rgba(74, 103, 65, 0.6);
       padding: 25px;
-      border-radius: 10px;
+      border-radius: 4px;
       z-index: 9999;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
-      color: white;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      color: #e8e8e8;
       width: 300px;
       text-align: center;
       transition:
@@ -47,14 +48,20 @@ export class GameStartingModal extends LitElement {
     .modal h2 {
       margin-bottom: 15px;
       font-size: 22px;
-      color: white;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #f0f0f0;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     .modal p {
       margin-bottom: 20px;
-      background-color: rgba(0, 0, 0, 0.3);
-      padding: 10px;
-      border-radius: 5px;
+      background-color: rgba(74, 103, 65, 0.2);
+      border: 1px solid rgba(74, 103, 65, 0.3);
+      padding: 15px;
+      border-radius: 4px;
+      font-weight: 500;
     }
 
     .button-container {
@@ -64,25 +71,32 @@ export class GameStartingModal extends LitElement {
     }
 
     .modal button {
-      padding: 12px;
+      padding: 12px 20px;
       font-size: 16px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       cursor: pointer;
-      background: rgba(255, 100, 100, 0.7);
-      color: white;
-      border: none;
-      border-radius: 5px;
+      background: linear-gradient(135deg, #a64d4d, #8b4242);
+      color: #f0f0f0;
+      border: 2px solid rgba(166, 77, 77, 0.6);
+      border-radius: 4px;
       transition:
-        background-color 0.2s ease,
+        all 0.2s ease,
         transform 0.1s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .modal button:hover {
-      background: rgba(255, 100, 100, 0.9);
+      background: linear-gradient(135deg, #8b4242, #704040);
+      border-color: rgba(166, 77, 77, 0.8);
       transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
     }
 
     .modal button:active {
       transform: translateY(1px);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
   `;
 

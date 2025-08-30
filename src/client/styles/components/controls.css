@@ -3,28 +3,30 @@
   align-items: center;
   gap: 12px;
   font-family: sans-serif;
-  color: white;
+  color: #e8e8e8;
 }
 
 .key {
   display: inline-block;
   padding: 4px 14px;
-  border-radius: 6px;
-  background-color: #000;
-  color: #fff;
+  border-radius: 4px;
+  background-color: #2a2a2a;
+  color: #e8e8e8;
   font-weight: bold;
-  box-shadow: 0 2px 0 #444;
+  border: 2px solid rgba(74, 103, 65, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
 }
 
 .plus {
   font-size: 16px;
-  color: #ccc;
+  color: #d0d0d0;
 }
 
 .mouse-shell {
   width: 28px;
   height: 45px;
-  border: 2px solid #ccc;
+  border: 2px solid #d0d0d0;
   border-radius: 50px;
   position: relative;
   background: transparent;
@@ -36,7 +38,7 @@
   left: 0;
   width: 50%;
   height: 50%;
-  background-color: #ff4d4d;
+  background-color: #a64d4d;
   border-top-left-radius: 50px;
 }
 
@@ -46,14 +48,14 @@
   right: 0;
   width: 50%;
   height: 50%;
-  background-color: #ff4d4d;
+  background-color: #a64d4d;
   border-top-right-radius: 50px;
 }
 
 .mouse-wheel {
   width: 4px;
   height: 8px;
-  background-color: #ccc;
+  background-color: #d0d0d0;
   border-radius: 2px;
   position: absolute;
   top: 8px;
@@ -62,7 +64,7 @@
 }
 
 #highlighted-wheel {
-  background-color: #ff4d4d;
+  background-color: #a64d4d;
 }
 
 .mouse-with-arrows {
@@ -76,16 +78,18 @@
   flex-direction: column;
   gap: 4px;
   font-size: 14px;
-  color: #ccc;
+  color: #d0d0d0;
 }
 
 .setting-input.keybind:hover .key,
 .setting-input.keybind:focus .key {
-  background-color: #333;
-  box-shadow: 0 2px 0 #222;
+  background-color: #3a3a3a;
+  border-color: rgba(74, 103, 65, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .setting-input.keybind.listening .key {
-  background-color: #1d4ed8; /* blue-700 */
-  box-shadow: 0 2px 0 #0f172a; /* darker blue */
+  background-color: #4a6741;
+  border-color: #4a6741;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }

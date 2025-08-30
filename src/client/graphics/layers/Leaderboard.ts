@@ -174,20 +174,54 @@ export class Leaderboard extends LitElement implements Layer {
           ? ""
           : "hidden"}"
         @contextmenu=${(e: Event) => e.preventDefault()}
+        style="
+          background: rgba(26, 26, 26, 0.9); 
+          border: 2px solid rgba(74, 103, 65, 0.3); 
+          border-radius: 4px; 
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        "
       >
         <div
-          class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
-          style="grid-template-columns: 30px 100px 70px 55px 75px;"
+          class="grid w-full text-xs md:text-xs lg:text-sm"
+          style="
+            grid-template-columns: 30px 100px 70px 55px 75px; 
+            background: rgba(74, 103, 65, 0.8);
+          "
         >
-          <div class="contents font-bold bg-gray-700/50">
-            <div class="py-1 md:py-2 text-center border-b border-slate-500">
+          <div class="contents font-bold">
+            <div 
+              class="py-1 md:py-2 text-center border-b" 
+              style="
+                border-color: rgba(74, 103, 65, 0.6); 
+                color: #f0f0f0; 
+                font-weight: 700; 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+              "
+            >
               #
             </div>
-            <div class="py-1 md:py-2 text-center border-b border-slate-500">
+            <div 
+              class="py-1 md:py-2 text-center border-b" 
+              style="
+                border-color: rgba(74, 103, 65, 0.6); 
+                color: #f0f0f0; 
+                font-weight: 700; 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+              "
+            >
               ${translateText("leaderboard.player")}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              class="py-1 md:py-2 text-center border-b cursor-pointer whitespace-nowrap"
+              style="
+                border-color: rgba(74, 103, 65, 0.6); 
+                color: #f0f0f0; 
+                font-weight: 700; 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+              "
               @click=${() => this.setSort("tiles")}
             >
               ${translateText("leaderboard.owned")}
@@ -198,7 +232,14 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              class="py-1 md:py-2 text-center border-b cursor-pointer whitespace-nowrap"
+              style="
+                border-color: rgba(74, 103, 65, 0.6); 
+                color: #f0f0f0; 
+                font-weight: 700; 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+              "
               @click=${() => this.setSort("gold")}
             >
               ${translateText("leaderboard.gold")}
@@ -209,7 +250,14 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              class="py-1 md:py-2 text-center border-b cursor-pointer whitespace-nowrap"
+              style="
+                border-color: rgba(74, 103, 65, 0.6); 
+                color: #f0f0f0; 
+                font-weight: 700; 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px;
+              "
               @click=${() => this.setSort("troops")}
             >
               ${translateText("leaderboard.troops")}
@@ -226,26 +274,50 @@ export class Leaderboard extends LitElement implements Layer {
             (p) => p.player.id(),
             (player) => html`
               <div
-                class="contents hover:bg-slate-600/60 ${player.isMyPlayer
+                class="contents cursor-pointer ${player.isMyPlayer
                   ? "font-bold"
-                  : ""} cursor-pointer"
+                  : ""}"
+                style="background: ${player.isMyPlayer ? "rgba(74, 103, 65, 0.3)" : "rgba(42, 42, 42, 0.7)"};"
                 @click=${() => this.handleRowClickPlayer(player.player)}
+                @mouseenter=${(e: MouseEvent) => {
+                  const target = e.currentTarget as HTMLElement;
+                  target.style.background = player.isMyPlayer ? "rgba(74, 103, 65, 0.5)" : "rgba(52, 52, 52, 0.8)";
+                }}
+                @mouseleave=${(e: MouseEvent) => {
+                  const target = e.currentTarget as HTMLElement;
+                  target.style.background = player.isMyPlayer
+                    ? "rgba(74, 103, 65, 0.3)"
+                    : "rgba(42, 42, 42, 0.7)";
+                }}
               >
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
+                <div 
+                  class="py-1 md:py-2 text-center border-b"
+                  style="border-color: rgba(74, 103, 65, 0.6); color: #f0f0f0; font-weight: 600;"
+                >
                   ${player.position}
                 </div>
                 <div
-                  class="py-1 md:py-2 text-center border-b border-slate-500 truncate"
+                  class="py-1 md:py-2 text-center border-b truncate"
+                  style="border-color: rgba(74, 103, 65, 0.6); color: #e6e6e6; font-weight: 500;"
                 >
                   ${player.name}
                 </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
+                <div 
+                  class="py-1 md:py-2 text-center border-b"
+                  style="border-color: rgba(74, 103, 65, 0.6); color: #e6e6e6; font-weight: 600;"
+                >
                   ${player.score}
                 </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
+                <div 
+                  class="py-1 md:py-2 text-center border-b"
+                  style="border-color: rgba(74, 103, 65, 0.6); color: #e6e6e6; font-weight: 600;"
+                >
                   ${player.gold}
                 </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
+                <div 
+                  class="py-1 md:py-2 text-center border-b"
+                  style="border-color: rgba(74, 103, 65, 0.6); color: #e6e6e6; font-weight: 600;"
+                >
                   ${player.troops}
                 </div>
               </div>
@@ -255,9 +327,26 @@ export class Leaderboard extends LitElement implements Layer {
       </div>
 
       <button
-        class="mt-1 px-1.5 py-0.5 md:px-2 md:py-0.5 text-xs md:text-xs
-        lg:text-sm border border-white/20 hover:bg-white/10 text-white mx-auto
-        block"
+        class="mt-1 px-1.5 py-0.5 md:px-2 md:py-0.5 text-xs md:text-xs lg:text-sm mx-auto block"
+        style="
+          border: 1px solid rgba(74, 103, 65, 0.6); 
+          background: rgba(74, 103, 65, 0.2); 
+          color: #f0f0f0; 
+          text-transform: uppercase; 
+          letter-spacing: 0.5px; 
+          font-weight: 600; 
+          transition: all 0.2s ease;
+        "
+        @mouseenter=${(e: MouseEvent) => {
+          const target = e.currentTarget as HTMLElement;
+          target.style.background = "rgba(74, 103, 65, 0.4)";
+          target.style.borderColor = "rgba(74, 103, 65, 0.8)";
+        }}
+        @mouseleave=${(e: MouseEvent) => {
+          const target = e.currentTarget as HTMLElement;
+          target.style.background = "rgba(74, 103, 65, 0.2)";
+          target.style.borderColor = "rgba(74, 103, 65, 0.6)";
+        }}
         @click=${() => {
           this.showTopFive = !this.showTopFive;
           this.updateLeaderboard();

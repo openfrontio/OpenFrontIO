@@ -1,0 +1,76 @@
+# Simplified Dockerfile for local development/demo
+# No nginx or cloudflare dependencies
+
+# Use an official Node runtime as the base image
+FROM node:24-slim AS base
+WORKDIR /usr/src/app
+
+# Build stage
+FROM base AS build
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT="$GIT_COMMIT"
+# Disable Husky hooks
+ENV HUSKY=0
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the client-side application
+RUN npm run build-prod
+
+# Create commit info
+RUN echo "$GIT_COMMIT" > static/commit.txt
+
+# Production stage
+FROM base AS production
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies
+ENV NPM_CONFIG_IGNORE_SCRIPTS=1
+ENV HUSKY=0
+RUN npm ci --only=production
+
+# Copy application code (excluding maps to reduce size)
+COPY --from=build /usr/src/app/src ./src
+COPY --from=build /usr/src/app/resources ./resources
+RUN rm -rf resources/maps
+
+# Copy built static files
+COPY --from=build /usr/src/app/static ./static
+
+# Copy configuration files
+COPY tsconfig.json ./
+COPY .swcrc ./
+
+# Create non-root user
+RUN groupadd -r nodeuser && useradd -r -g nodeuser nodeuser
+RUN chown -R nodeuser:nodeuser /usr/src/app
+USER nodeuser
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/api/env || exit 1
+
+# Start the application directly
+CMD ["npm", "run", "start:server"]

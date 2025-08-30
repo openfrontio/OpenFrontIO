@@ -35,13 +35,14 @@ export class WinModal extends LitElement implements Layer {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background-color: rgba(30, 30, 30, 0.7);
+      background-color: rgba(26, 26, 26, 0.95);
+      border: 2px solid rgba(74, 103, 65, 0.6);
       padding: 25px;
-      border-radius: 10px;
+      border-radius: 4px;
       z-index: 9999;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
-      color: white;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      color: #e8e8e8;
       width: 350px;
       transition:
         opacity 0.3s ease-in-out,
@@ -67,16 +68,22 @@ export class WinModal extends LitElement implements Layer {
     .win-modal h2 {
       margin: 0 0 15px 0;
       font-size: 26px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
       text-align: center;
-      color: white;
+      color: #f0f0f0;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     .win-modal p {
       margin: 0 0 20px 0;
       text-align: center;
-      background-color: rgba(0, 0, 0, 0.3);
-      padding: 10px;
-      border-radius: 5px;
+      background-color: rgba(74, 103, 65, 0.2);
+      border: 1px solid rgba(74, 103, 65, 0.3);
+      padding: 15px;
+      border-radius: 4px;
+      font-weight: 500;
     }
 
     .button-container {
@@ -89,23 +96,30 @@ export class WinModal extends LitElement implements Layer {
       flex: 1;
       padding: 12px;
       font-size: 16px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       cursor: pointer;
-      background: rgba(0, 150, 255, 0.6);
-      color: white;
-      border: none;
-      border-radius: 5px;
+      background: linear-gradient(135deg, #4a6741, #3d5536);
+      color: #f0f0f0;
+      border: 2px solid rgba(74, 103, 65, 0.6);
+      border-radius: 4px;
       transition:
-        background-color 0.2s ease,
+        all 0.2s ease,
         transform 0.1s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .win-modal button:hover {
-      background: rgba(0, 150, 255, 0.8);
+      background: linear-gradient(135deg, #3d5536, #2d4026);
+      border-color: rgba(74, 103, 65, 0.8);
       transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
     }
 
     .win-modal button:active {
       transform: translateY(1px);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
 
     @media (max-width: 768px) {
@@ -116,7 +130,7 @@ export class WinModal extends LitElement implements Layer {
       }
 
       .win-modal h2 {
-        font-size: 26px;
+        font-size: 22px;
       }
 
       .win-modal button {
@@ -160,14 +174,14 @@ export class WinModal extends LitElement implements Layer {
         target="_blank"
         rel="noopener noreferrer"
         style="
-          color: #4a9eff;
+          color: #4a6741;
           text-decoration: underline;
-          font-weight: 500;
+          font-weight: 600;
           transition: color 0.2s ease;
           font-size: 24px;
         "
-        onmouseover="this.style.color='#6db3ff'"
-        onmouseout="this.style.color='#4a9eff'"
+        onmouseover="this.style.color='#5a7751'"
+        onmouseout="this.style.color='#4a6741'"
       >
         ${translateText("win_modal.wishlist")}
       </a>

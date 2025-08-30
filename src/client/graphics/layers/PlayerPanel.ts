@@ -259,14 +259,38 @@ export class PlayerPanel extends LitElement implements Layer {
           class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[240px] w-auto px-4 py-2"
         >
           <div
-            class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md relative w-full mt-2"
+            class="p-1 lg:p-2 rounded-lg relative w-full mt-2"
+            style="
+              background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(42, 42, 42, 0.9));
+              border: 3px solid rgba(74, 103, 65, 0.7);
+              box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(74, 103, 65, 0.3);
+              backdrop-filter: blur(10px);
+            "
           >
             <!-- Close button -->
             <button
               @click=${this.handleClose}
-              class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
-                   bg-red-500 hover:bg-red-600 text-white rounded-full
-                   text-sm font-bold transition-colors"
+              class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center 
+                     text-sm font-bold transition-colors rounded-full"
+              style="
+                background: linear-gradient(135deg, rgba(139, 69, 19, 0.9), rgba(160, 82, 45, 0.8));
+                border: 2px solid rgba(139, 69, 19, 0.7);
+                color: #f0f0f0;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                font-weight: 700;
+                box-shadow: 0 2px 8px rgba(139, 69, 19, 0.4);
+              "
+              @mouseenter=${(e: MouseEvent) => {
+                const target = e.currentTarget as HTMLElement;
+                target.style.background = "linear-gradient(135deg, rgba(160, 82, 45, 0.9), rgba(139, 69, 19, 0.8))";
+                target.style.boxShadow = "0 4px 12px rgba(139, 69, 19, 0.6)";
+              }}
+              @mouseleave=${(e: MouseEvent) => {
+                const target = e.currentTarget as HTMLElement;
+                target.style.background = "linear-gradient(135deg, rgba(139, 69, 19, 0.9), rgba(160, 82, 45, 0.8))";
+                target.style.boxShadow = "0 2px 8px rgba(139, 69, 19, 0.4)";
+              }}
             >
               ✕
             </button>
@@ -275,9 +299,16 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Name section -->
               <div class="flex items-center gap-1 lg:gap-2">
                 <div
-                  class="px-4 h-8 lg:h-10 flex items-center justify-center
-                       bg-opacity-50 bg-gray-700 text-opacity-90 text-white
-                       rounded text-sm lg:text-xl w-full"
+                  class="px-4 h-8 lg:h-10 flex items-center justify-center rounded text-sm lg:text-xl w-full"
+                  style="
+                    background: linear-gradient(135deg, rgba(74, 103, 65, 0.4), rgba(42, 42, 42, 0.8));
+                    color: #f0f0f0;
+                    border: 1px solid rgba(74, 103, 65, 0.6);
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    font-weight: 700;
+                    text-shadow: 0 0 8px rgba(74, 103, 65, 0.8);
+                  "
                 >
                   ${other?.name()}
                 </div>
@@ -286,13 +317,29 @@ export class PlayerPanel extends LitElement implements Layer {
               ${country
                 ? html`
                     <div>
-                      <div class="text-white text-opacity-80 text-sm px-2">
+                      <div 
+                        class="px-2"
+                        style="
+                          color: #cccccc; 
+                          font-size: 0.875rem; 
+                          text-transform: uppercase; 
+                          letter-spacing: 0.5px; 
+                          font-weight: 600;
+                        "
+                      >
                         ${translateText("player_panel.flag")}
                       </div>
                       <div
-                        class="px-4 h-8 lg:h-10 flex items-center justify-center gap-4
-                        bg-opacity-50 bg-gray-700 text-opacity-90 text-white
-                        rounded text-sm lg:text-xl w-full"
+                        class="px-4 h-8 lg:h-10 flex items-center justify-center gap-4 rounded 
+                               text-sm lg:text-xl w-full"
+                        style="
+                          background: linear-gradient(135deg, rgba(74, 103, 65, 0.3), rgba(42, 42, 42, 0.7));
+                          color: #f0f0f0;
+                          border: 1px solid rgba(74, 103, 65, 0.5);
+                          font-weight: 600;
+                          text-transform: uppercase;
+                          letter-spacing: 0.5px;
+                        "
                       >
                         ${flagName} <img src="/flags/${flagCode}.svg" width=60 height=60>
                       </div>
@@ -303,11 +350,26 @@ export class PlayerPanel extends LitElement implements Layer {
               <div class="grid grid-cols-2 gap-2">
                 <div class="flex flex-col gap-1">
                   <!-- Gold -->
-                  <div class="text-white text-opacity-80 text-sm px-2">
+                  <div 
+                    class="px-2"
+                    style="
+                      color: #cccccc; 
+                      font-size: 0.875rem; 
+                      text-transform: uppercase; 
+                      letter-spacing: 0.5px; 
+                      font-weight: 600;
+                    "
+                  >
                     ${translateText("player_panel.gold")}
                   </div>
                   <div
-                    class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
+                    class="rounded p-2"
+                    style="
+                      background: linear-gradient(135deg, rgba(74, 103, 65, 0.3), rgba(42, 42, 42, 0.7));
+                      color: #f0f0f0;
+                      border: 1px solid rgba(74, 103, 65, 0.5);
+                      font-weight: 600;
+                    "
                     translate="no"
                   >
                     ${renderNumber(other.gold() || 0)}
@@ -315,11 +377,26 @@ export class PlayerPanel extends LitElement implements Layer {
                 </div>
                 <div class="flex flex-col gap-1">
                   <!-- Troops -->
-                  <div class="text-white text-opacity-80 text-sm px-2">
+                  <div 
+                    class="px-2"
+                    style="
+                      color: #cccccc; 
+                      font-size: 0.875rem; 
+                      text-transform: uppercase; 
+                      letter-spacing: 0.5px; 
+                      font-weight: 600;
+                    "
+                  >
                     ${translateText("player_panel.troops")}
                   </div>
                   <div
-                    class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
+                    class="rounded p-2"
+                    style="
+                      background: linear-gradient(135deg, rgba(74, 103, 65, 0.3), rgba(42, 42, 42, 0.7));
+                      color: #f0f0f0;
+                      border: 1px solid rgba(74, 103, 65, 0.5);
+                      font-weight: 600;
+                    "
                     translate="no"
                   >
                     ${renderTroops(other.troops() || 0)}
@@ -329,10 +406,27 @@ export class PlayerPanel extends LitElement implements Layer {
 
               <!-- Attitude section -->
               <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
+                <div 
+                  class="px-2"
+                  style="
+                    color: #cccccc; 
+                    font-size: 0.875rem; 
+                    text-transform: uppercase; 
+                    letter-spacing: 0.5px; 
+                    font-weight: 600;
+                  "
+                >
                   ${translateText("player_panel.traitor")}
                 </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                <div 
+                  class="rounded p-2"
+                  style="
+                    background: linear-gradient(135deg, rgba(74, 103, 65, 0.3), rgba(42, 42, 42, 0.7));
+                    color: #f0f0f0;
+                    border: 1px solid rgba(74, 103, 65, 0.5);
+                    font-weight: 600;
+                  "
+                >
                   ${other.isTraitor()
                     ? translateText("player_panel.yes")
                     : translateText("player_panel.no")}
@@ -341,10 +435,27 @@ export class PlayerPanel extends LitElement implements Layer {
 
               <!-- Betrayals -->
               <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
+                <div 
+                  class="px-2"
+                  style="
+                    color: #cccccc; 
+                    font-size: 0.875rem; 
+                    text-transform: uppercase; 
+                    letter-spacing: 0.5px; 
+                    font-weight: 600;
+                  "
+                >
                   ${translateText("player_panel.betrayals")}
                 </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                <div 
+                  class="rounded p-2"
+                  style="
+                    background: linear-gradient(135deg, rgba(74, 103, 65, 0.3), rgba(42, 42, 42, 0.7));
+                    color: #f0f0f0;
+                    border: 1px solid rgba(74, 103, 65, 0.5);
+                    font-weight: 600;
+                  "
+                >
                   ${other.data.betrayals ?? 0}
                 </div>
               </div>

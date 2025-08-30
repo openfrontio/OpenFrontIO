@@ -68,21 +68,43 @@ export class UnitDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="px-2 flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 rounded text-white"
-        style="background: ${this._selectedStructure === unitType
-          ? "#ffffff2e"
-          : "none"}"
-        @mouseenter="${() =>
-          this.eventBus?.emit(new ToggleStructureEvent(unitType))}"
-        @mouseleave="${() =>
-          this.eventBus?.emit(new ToggleStructureEvent(null))}"
+        class="px-2 flex items-center gap-2 cursor-pointer rounded"
+        style="
+          background: ${this._selectedStructure === unitType
+            ? "rgba(74, 103, 65, 0.4)"
+            : "rgba(42, 42, 42, 0.3)"};
+          color: #f0f0f0;
+          border: 1px solid ${this._selectedStructure === unitType
+            ? "rgba(74, 103, 65, 0.8)"
+            : "rgba(74, 103, 65, 0.4)"};
+          transition: all 0.2s ease;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        "
+        @mouseenter="${(e: MouseEvent) => {
+          const target = e.currentTarget as HTMLElement;
+          target.style.background = "rgba(74, 103, 65, 0.5)";
+          target.style.borderColor = "rgba(74, 103, 65, 0.9)";
+          this.eventBus?.emit(new ToggleStructureEvent(unitType));
+        }}"
+        @mouseleave="${(e: MouseEvent) => {
+          const target = e.currentTarget as HTMLElement;
+          target.style.background = this._selectedStructure === unitType
+            ? "rgba(74, 103, 65, 0.4)"
+            : "rgba(42, 42, 42, 0.3)";
+          target.style.borderColor = this._selectedStructure === unitType
+            ? "rgba(74, 103, 65, 0.8)"
+            : "rgba(74, 103, 65, 0.4)";
+          this.eventBus?.emit(new ToggleStructureEvent(null));
+        }}"
       >
         <img
           src=${icon}
           alt=${altText}
           width="20"
           height="20"
-          style="vertical-align: middle;"
+          style="vertical-align: middle; filter: drop-shadow(0 0 4px rgba(74, 103, 65, 0.6));"
         />
         ${renderNumber(number)}
       </div>
@@ -106,9 +128,13 @@ export class UnitDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100]
-        bg-gray-800/70 backdrop-blur-sm border border-slate-400 rounded-lg p-2
-        hidden lg:block"
+        class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] rounded-lg p-2 hidden lg:block"
+        style="
+          background: rgba(26, 26, 26, 0.85);
+          backdrop-filter: blur(8px);
+          border: 2px solid rgba(74, 103, 65, 0.6);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(74, 103, 65, 0.2);
+        "
       >
         <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1">
           ${this.renderUnitItem(cityIcon, this._cities, UnitType.City, "city")}
