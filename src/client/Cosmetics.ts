@@ -13,10 +13,11 @@ export async function fetchPatterns(
 
   const patterns: Map<string, Pattern> = new Map();
   const playerFlares = new Set(userMe?.player?.flares ?? []);
+  const hasAllPatterns = playerFlares.has("pattern:*");
 
   for (const name in cosmetics.patterns) {
     const patternData = cosmetics.patterns[name];
-    const hasAccess = playerFlares.has(`pattern:${name}`);
+    const hasAccess = hasAllPatterns || playerFlares.has(`pattern:${name}`);
     if (hasAccess) {
       // Remove product info because player already has access.
       patternData.product = null;
