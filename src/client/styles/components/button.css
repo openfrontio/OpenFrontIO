@@ -14,6 +14,11 @@
   @media (min-width: 1024px) {
     font-size: 18px;
   }
+
+  img {
+    display: inline-block;
+    margin-right: 1rem;
+  }
 }
 
 .c-button:hover,
@@ -54,6 +59,15 @@
     width: auto;
     margin: 0 auto;
   }
+}
+
+.c-button__text {
+  vertical-align: middle;
+}
+
+.c-button__icon {
+  display: inline-block;
+  margin-right: 1rem;
 }
 
 .dark .c-button {
