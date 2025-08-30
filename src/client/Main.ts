@@ -7,6 +7,7 @@ import "./UsernameInput";
 import "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import "./PublicLobby";
 import "./styles.css";
 import { GameRecord, GameStartInfo } from "../core/Schemas";
 import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
@@ -26,6 +27,7 @@ import { LanguageModal } from "./LanguageModal";
 import { NewsButton } from "./components/NewsButton";
 import { NewsModal } from "./NewsModal";
 import { OButton } from "./components/baseComponents/Button";
+import { PlayerInfoModal } from "./PlayerInfoModal";
 import { PublicLobby } from "./PublicLobby";
 import { SendKickPlayerIntentEvent } from "./Transport";
 import { ServerConfig } from "../core/configuration/Config";
@@ -210,6 +212,16 @@ class Client {
       flagInputModal.open();
     });
 
+    const piModal = document.querySelector(
+      "player-info-modal",
+    ) as PlayerInfoModal;
+    piModal instanceof PlayerInfoModal;
+    document
+      .getElementById("player-info-button")
+      ?.addEventListener("click", () => {
+        piModal.open();
+      });
+
     const territoryModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
@@ -309,6 +321,7 @@ class Client {
         loginDiscordButton.translationKey = "main.login_discord";
         logoutDiscordButton.hidden = true;
         territoryModal.onUserMe(null);
+        piModal.onUserMe(null);
       } else {
         // Authorized
         console.log(
@@ -318,6 +331,7 @@ class Client {
         loginDiscordButton.translationKey = "main.logged_in";
         loginDiscordButton.hidden = true;
         territoryModal.onUserMe(userMeResponse);
+        piModal.onUserMe(userMeResponse);
       }
     };
 

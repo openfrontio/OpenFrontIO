@@ -1,3 +1,4 @@
+import { PlayerIdResponse, PlayerIdResponseSchema } from "../core/ApiSchemas";
 import {
   RefreshResponseSchema,
   TokenPayload,
@@ -244,6 +245,45 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     return result.data;
   } catch (e) {
     __isLoggedIn = false;
+    return false;
+  }
+}
+
+export async function fetchPlayerById(
+  playerId: string,
+): Promise<PlayerIdResponse | false> {
+  try {
+    const base = getApiBase();
+    const token = getToken();
+    if (!token) return false;
+    const url = `${base}/player/${encodeURIComponent(playerId)}`;
+
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status !== 200) {
+      console.warn(
+        "fetchPlayerById: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const json = await res.json();
+    const parsed = PlayerIdResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchPlayerById: Zod validation failed", parsed.error);
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchPlayerById: request failed", err);
     return false;
   }
 }
