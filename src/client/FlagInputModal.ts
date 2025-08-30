@@ -18,18 +18,22 @@ export class FlagInputModal extends LitElement {
 
   render() {
     return html`
-      <o-modal title="Flag Selector Modal" alwaysMaximized>
-        <input
-          class="h-[2rem] border-none border border-gray-300
+      <o-modal alwaysMaximized title="Select flag">
+        <div class="flex justify-center w-full p-[1rem]">
+          <input
+          class="h-[2rem] border-none border border-gray-300 
           rounded-xl shadow-sm text-2xl text-center focus:outline-none
           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black
           dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
+          
 
           type="text"
           placeholder="Search..."
           @change=${this.handleSearch}
           @keyup=${this.handleSearch}
         />
+        </div>
+        
         <div
           class="flex flex-wrap justify-evenly gap-[1rem] overflow-y-auto overflow-x-hidden h-[90%]"
         >
