@@ -356,8 +356,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg
-          transition-all duration-300  text-white text-lg md:text-base
+          class="bg-gray-800/70 backdrop-blur shadow-lg rounded-tl-md rounded-bl-md
+          p-2 lg:p-3 border-t-[1px] border-l-[1px] border-b-[1px] border-slate-400
+          transition-all duration-300 text-white text-lg md:text-base
           ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
