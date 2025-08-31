@@ -94,5 +94,12 @@ RUN mkdir -p /etc/cloudflared && \
 ENV CF_CONFIG_PATH=/etc/cloudflared/config.yml
 ENV CF_CREDS_PATH=/etc/cloudflared/creds.json
 
+# Expose port 80 for HTTP traffic
+EXPOSE 80
+
+# Health check to verify the application is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost/api/env || exit 1
+
 # Use the startup script as the entrypoint
 ENTRYPOINT ["/usr/local/bin/startup.sh"]

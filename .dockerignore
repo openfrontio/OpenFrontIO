@@ -1,15 +1,81 @@
-node_modules
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Docker files
 Dockerfile*
 docker-compose*
 .dockerignore
-.git
+
+# Git
+.git/
 .gitignore
-README.md
+
+# Documentation
+README*.md
+CHANGELOG*.md
+CONTRIBUTING*.md
 LICENSE
-.vscode
-Makefile
-helm-charts
-.env
+
+# IDE and editor files
+.vscode/
+.idea/
 .editorconfig
-.idea
-coverage*
+*.swp
+*.swo
+*~
+
+# Build tools and config
+Makefile
+helm-charts/
+webpack.config.*
+vite.config.*
+tsconfig.json
+jest.config.*
+.prettierrc*
+.eslintrc*
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing and coverage
+coverage/
+.nyc_output/
+.jest/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Development scripts
+scripts/test-*
+scripts/dev-*
+
+# Local blockchain data
+blockchain-data/
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
