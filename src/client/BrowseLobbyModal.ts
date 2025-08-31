@@ -23,7 +23,6 @@ export class BrowseLobbyModal extends LitElement {
   @state() private lobbies: PublicLobbyInfo[] = [];
   @state() private isLoading = false;
   @state() private error = "";
-  @state() private refreshInterval: ReturnType<typeof setInterval> | null = null;
   @state() private joiningLobbyId = "";
   @state() private joinError = "";
 
@@ -34,10 +33,6 @@ export class BrowseLobbyModal extends LitElement {
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = null;
-    }
     super.disconnectedCallback();
   }
 
@@ -55,18 +50,10 @@ export class BrowseLobbyModal extends LitElement {
   public open() {
     this.modalEl?.open();
     this.fetchPublicLobbies();
-    // Start auto-refresh every 5 seconds
-    this.refreshInterval = setInterval(() => {
-      this.fetchPublicLobbies();
-    }, 5000);
   }
 
   public close() {
     this.modalEl?.close();
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = null;
-    }
     this.error = "";
     this.joinError = "";
     this.joiningLobbyId = "";
