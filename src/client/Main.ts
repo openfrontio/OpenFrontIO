@@ -1,3 +1,4 @@
+import "./BrowseLobbyModal";
 import "./DarkModeButton";
 import "./FlagInput";
 import "./GoogleAdElement";
@@ -18,6 +19,7 @@ import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
 import { GameType } from "../core/game/Game";
 import { HelpModal } from "./HelpModal";
+import { BrowseLobbyModal } from "./BrowseLobbyModal";
 import { HostLobbyModal } from "./HostLobbyModal";
 import { ID } from "../core/BaseSchemas";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
@@ -364,12 +366,18 @@ class Client {
       }
     });
 
-    // const browseLobbyButton = document.querySelector(
-    //   "browse-lobby-button"
-    // )
-    // if (browseLobbyButton === null) throw new Error("Missing browse-lobby-button");
-    // browseLobbyButton.addEventListener("click", () => {
-    // })
+    const browseModal = document.querySelector(
+      "browse-lobby-modal",
+    ) as BrowseLobbyModal;
+    browseModal instanceof BrowseLobbyModal;
+    const browseLobbyButton = document.getElementById("browse-lobby-button");
+    if (browseLobbyButton === null) throw new Error("Missing browse-lobby-button");
+    browseLobbyButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        browseModal.open();
+        this.publicLobby?.leaveLobby();
+      }
+    });
 
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",

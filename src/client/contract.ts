@@ -128,6 +128,42 @@ const CONTRACT_ABI = [
     "type": "error",
     "name": "GameAlreadyStarted",
     "inputs": []
+  },
+  {
+    "type": "function",
+    "name": "getAllPublicLobbies",
+    "inputs": [],
+    "outputs": [
+      { "name": "", "type": "bytes32[]", "internalType": "bytes32[]" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAllPrivateLobbies",
+    "inputs": [],
+    "outputs": [
+      { "name": "", "type": "bytes32[]", "internalType": "bytes32[]" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPublicLobbyCount",
+    "inputs": [],
+    "outputs": [
+      { "name": "", "type": "uint256", "internalType": "uint256" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPrivateLobbyCount",
+    "inputs": [],
+    "outputs": [
+      { "name": "", "type": "uint256", "internalType": "uint256" }
+    ],
+    "stateMutability": "view"
   }
 ] as const;
 
@@ -267,6 +303,18 @@ export interface LobbyInfo {
   winner: string;
   totalPrize: bigint;
   exists: boolean;
+}
+
+export interface PublicLobbyInfo {
+  lobbyId: string;
+  host: string;
+  betAmount: bigint;
+  participants: string[];
+  status: GameStatus;
+  winner: string;
+  totalPrize: bigint;
+  participantCount: number;
+  formattedBetAmount: string;
 }
 
 export async function getLobbyInfo(lobbyId: string): Promise<LobbyInfo | null> {
@@ -657,5 +705,102 @@ export async function startGame(params: StartGameParams): Promise<StartGameResul
     } else {
       throw new Error(`Failed to start game: ${error.message || 'Unknown error'}`);
     }
+  }
+}
+
+/**
+ * Get all public lobby IDs from the contract
+ */
+export async function getAllPublicLobbies(): Promise<string[]> {
+  try {
+    const result = await readContract(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'getAllPublicLobbies',
+      args: []
+    }) as `0x${string}`[];
+
+    // Convert bytes32 array to string array
+    return result.map(lobbyId => lobbyId);
+  } catch (error) {
+    console.error('Error getting public lobbies:', error);
+    return [];
+  }
+}
+
+/**
+ * Get detailed information for multiple public lobbies
+ */
+export async function getPublicLobbyDetails(lobbyIds: string[]): Promise<PublicLobbyInfo[]> {
+  const lobbyDetails: PublicLobbyInfo[] = [];
+  
+  for (const lobbyId of lobbyIds) {
+    try {
+      const lobbyInfo = await getLobbyInfo(lobbyId);
+      
+      if (lobbyInfo && lobbyInfo.exists) {
+        const publicLobbyInfo: PublicLobbyInfo = {
+          lobbyId,
+          host: lobbyInfo.host,
+          betAmount: lobbyInfo.betAmount,
+          participants: lobbyInfo.participants,
+          status: lobbyInfo.status,
+          winner: lobbyInfo.winner,
+          totalPrize: lobbyInfo.totalPrize,
+          participantCount: lobbyInfo.participants.length,
+          formattedBetAmount: formatEther(lobbyInfo.betAmount)
+        };
+        
+        lobbyDetails.push(publicLobbyInfo);
+      }
+    } catch (error) {
+      console.error(`Error getting details for lobby ${lobbyId}:`, error);
+      // Continue with other lobbies even if one fails
+    }
+  }
+  
+  return lobbyDetails;
+}
+
+/**
+ * Get all public lobbies with their details
+ */
+export async function getAllPublicLobbiesWithDetails(): Promise<PublicLobbyInfo[]> {
+  try {
+    console.log('Fetching all public lobbies...');
+    const lobbyIds = await getAllPublicLobbies();
+    
+    if (lobbyIds.length === 0) {
+      console.log('No public lobbies found');
+      return [];
+    }
+    
+    console.log(`Found ${lobbyIds.length} public lobbies, fetching details...`);
+    const lobbyDetails = await getPublicLobbyDetails(lobbyIds);
+    
+    console.log(`Retrieved details for ${lobbyDetails.length} lobbies`);
+    return lobbyDetails;
+  } catch (error) {
+    console.error('Error getting all public lobbies with details:', error);
+    return [];
+  }
+}
+
+/**
+ * Get the count of public lobbies
+ */
+export async function getPublicLobbyCount(): Promise<number> {
+  try {
+    const result = await readContract(config, {
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'getPublicLobbyCount',
+      args: []
+    }) as bigint;
+
+    return Number(result);
+  } catch (error) {
+    console.error('Error getting public lobby count:', error);
+    return 0;
   }
 }
