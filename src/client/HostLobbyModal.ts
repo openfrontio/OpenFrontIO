@@ -64,6 +64,7 @@ export class HostLobbyModal extends LitElement {
   @state() private startGameLoading = false;
   @state() private startGameError = "";
   @state() private startGameTxHash = "";
+  @state() private lobbyVisibility: "private" | "public" = "private";
 
   private playersInterval: ReturnType<typeof setTimeout> | null = null;
   // Add a new timer for debouncing bot changes
@@ -93,14 +94,13 @@ export class HostLobbyModal extends LitElement {
         <div class="lobby-id-box">
           <button class="lobby-id-button">
             <!-- Visibility toggle icon on the left -->
-            ${
-              this.lobbyIdVisible
-                ? html`<svg
+            ${this.lobbyIdVisible
+        ? html`<svg
                     class="visibility-icon"
                     @click=${() => {
-                      this.lobbyIdVisible = !this.lobbyIdVisible;
-                      this.requestUpdate();
-                    }}
+            this.lobbyIdVisible = !this.lobbyIdVisible;
+            this.requestUpdate();
+          }}
                     style="margin-right: 8px; cursor: pointer;"
                     stroke="currentColor"
                     fill="currentColor"
@@ -120,12 +120,12 @@ export class HostLobbyModal extends LitElement {
                       59.4-59.4-26.4-59.4-59.4-59.4z"
                     ></path>
                   </svg>`
-                : html`<svg
+        : html`<svg
                     class="visibility-icon"
                     @click=${() => {
-                      this.lobbyIdVisible = !this.lobbyIdVisible;
-                      this.requestUpdate();
-                    }}
+            this.lobbyIdVisible = !this.lobbyIdVisible;
+            this.requestUpdate();
+          }}
                     style="margin-right: 8px; cursor: pointer;"
                     stroke="currentColor"
                     fill="currentColor"
@@ -149,7 +149,7 @@ export class HostLobbyModal extends LitElement {
                       stroke-linecap="round"
                     ></path>
                   </svg>`
-            }
+      }
             <!-- Lobby ID (conditionally shown) -->
             <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
               ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
@@ -157,10 +157,9 @@ export class HostLobbyModal extends LitElement {
 
             <!-- Copy icon/success indicator -->
             <div @click=${this.copyToClipboard} style="margin-left: 8px; cursor: pointer;">
-              ${
-                this.copySuccess
-                  ? html`<span class="copy-success-icon">✓</span>`
-                  : html`
+              ${this.copySuccess
+        ? html`<span class="copy-success-icon">✓</span>`
+        : html`
                       <svg
                         class="clipboard-icon"
                         stroke="currentColor"
@@ -185,7 +184,7 @@ export class HostLobbyModal extends LitElement {
                         ></path>
                       </svg>
                     `
-              }
+      }
             </div>
           </button>
         </div>
@@ -207,6 +206,31 @@ export class HostLobbyModal extends LitElement {
                    font-size: 14px !important;"
           />
         </div>
+        <div class="lobby-visibility-section" style="margin-top: 1rem;">
+          <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
+            Lobby Visibility
+          </label>
+          <div class="option-cards" style="display: flex; gap: 0.5rem;">
+            <div 
+              class="option-card ${this.lobbyVisibility === "private" ? "selected" : ""}"
+              @click=${() => this.handleLobbyVisibilityChange("private")}
+              style="flex: 1; text-align: center; padding: 0.5rem; cursor: pointer; 
+                     border: 2px solid ${this.lobbyVisibility === "private" ? "#4CAF50" : "#ccc"}; 
+                     border-radius: 4px; background-color: ${this.lobbyVisibility === "private" ? "#4CAF5020" : "transparent"};"
+            >
+              Private
+            </div>
+            <div 
+              class="option-card ${this.lobbyVisibility === "public" ? "selected" : ""}"
+              @click=${() => this.handleLobbyVisibilityChange("public")}
+              style="flex: 1; text-align: center; padding: 0.5rem; cursor: pointer; 
+                     border: 2px solid ${this.lobbyVisibility === "public" ? "#4CAF50" : "#ccc"}; 
+                     border-radius: 4px; background-color: ${this.lobbyVisibility === "public" ? "#4CAF5020" : "transparent"};"
+            >
+              Public
+            </div>
+          </div>
+        </div>
         <div style="margin-top: 1rem;">
           <button
             id="create-lobby-on-chain"
@@ -219,7 +243,7 @@ export class HostLobbyModal extends LitElement {
             ${this.onChainLoading ? "Deploying..." : "Create Lobby On-Chain"}
           </button>
           ${this.onChainSuccess
-            ? html`
+        ? html`
                 <div style="margin-top: 0.5rem; padding: 0.5rem; 
                            background-color: #d4edda; border: 1px solid #c3e6cb; 
                            border-radius: 4px; color: #155724;">
@@ -230,15 +254,15 @@ export class HostLobbyModal extends LitElement {
                   </span>
                 </div>
               `
-            : this.onChainError
-            ? html`
+        : this.onChainError
+          ? html`
                 <div style="margin-top: 0.5rem; padding: 0.5rem; 
                            background-color: #f8d7da; border: 1px solid #f5c6cb; 
                            border-radius: 4px; color: #721c24;">
                   <strong>Error:</strong> ${this.onChainError}
                 </div>
               `
-            : ""}
+          : ""}
         </div>
         <div class="options-layout">
           <!-- Map Selection -->
@@ -247,7 +271,7 @@ export class HostLobbyModal extends LitElement {
             <div class="option-cards flex-col">
               <!-- Use the imported mapCategories -->
               ${Object.entries(mapCategories).map(
-                ([categoryKey, maps]) => html`
+            ([categoryKey, maps]) => html`
                   <div class="w-full mb-4">
                     <h3
                       class="text-lg font-semibold mb-2 text-center text-gray-300"
@@ -256,34 +280,33 @@ export class HostLobbyModal extends LitElement {
                     </h3>
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
-                        const mapKey = Object.keys(GameMapType).find(
-                          (key) =>
-                            GameMapType[key as keyof typeof GameMapType] ===
-                            mapValue,
-                        );
-                        return html`
+              const mapKey = Object.keys(GameMapType).find(
+                (key) =>
+                  GameMapType[key as keyof typeof GameMapType] ===
+                  mapValue,
+              );
+              return html`
                           <div
                             @click=${() => this.handleMapSelection(mapValue)}
                           >
                             <map-display
                               .mapKey=${mapKey}
                               .selected=${!this.useRandomMap &&
-                              this.selectedMap === mapValue}
+                this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey?.toLowerCase()}`,
-                              )}
+                  `map.${mapKey?.toLowerCase()}`,
+                )}
                             ></map-display>
                           </div>
                         `;
-                      })}
+            })}
                     </div>
                   </div>
                 `,
-              )}
+          )}
               <div
-                class="option-card random-map ${
-                  this.useRandomMap ? "selected" : ""
-                }"
+                class="option-card random-map ${this.useRandomMap ? "selected" : ""
+      }"
                 @click=${this.handleRandomMapToggle}
               >
                 <div class="option-image">
@@ -305,13 +328,13 @@ export class HostLobbyModal extends LitElement {
             <div class="option-title">${translateText("difficulty.difficulty")}</div>
             <div class="option-cards">
               ${Object.entries(Difficulty)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
+        .filter(([key]) => isNaN(Number(key)))
+        .map(
+          ([key, value]) => html`
                     <div
                       class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""}"
+              ? "selected"
+              : ""}"
                       @click=${() => this.handleDifficultySelection(value)}
                     >
                       <difficulty-display
@@ -319,12 +342,12 @@ export class HostLobbyModal extends LitElement {
                       ></difficulty-display>
                       <p class="option-card-title">
                         ${translateText(
-                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
-                        )}
+                `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
+              )}
                       </p>
                     </div>
                   `,
-                )}
+        )}
             </div>
           </div>
 
@@ -351,10 +374,9 @@ export class HostLobbyModal extends LitElement {
             </div>
           </div>
 
-          ${
-            this.gameMode === GameMode.FFA
-              ? ""
-              : html`
+          ${this.gameMode === GameMode.FFA
+        ? ""
+        : html`
                   <!-- Team Count Selection -->
                   <div class="options-section">
                     <div class="option-title">
@@ -362,27 +384,27 @@ export class HostLobbyModal extends LitElement {
                     </div>
                     <div class="option-cards">
                       ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
-                        (o) => html`
+          (o) => html`
                           <div
                             class="option-card ${this.teamCount === o
-                              ? "selected"
-                              : ""}"
+              ? "selected"
+              : ""}"
                             @click=${() => this.handleTeamCountSelection(o)}
                           >
                             <div class="option-card-title">
                               ${typeof o === "string"
-                                ? translateText(`public_lobby.teams_${o}`)
-                                : translateText("public_lobby.teams", {
-                                  num: o,
-                                })}
+              ? translateText(`public_lobby.teams_${o}`)
+              : translateText("public_lobby.teams", {
+                num: o,
+              })}
                             </div>
                           </div>
                         `,
-                      )}
+        )}
                     </div>
                   </div>
                 `
-          }
+      }
 
           <!-- Game Options -->
           <div class="options-section">
@@ -402,11 +424,10 @@ export class HostLobbyModal extends LitElement {
                   .value="${String(this.bots)}"
                 />
                 <div class="option-card-title">
-                  <span>${translateText("host_modal.bots")}</span>${
-                    this.bots === 0
-                      ? translateText("host_modal.bots_disabled")
-                      : this.bots
-                  }
+                  <span>${translateText("host_modal.bots")}</span>${this.bots === 0
+        ? translateText("host_modal.bots_disabled")
+        : this.bots
+      }
                 </div>
               </label>
 
@@ -518,9 +539,9 @@ export class HostLobbyModal extends LitElement {
                   style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
                 >
                    ${renderUnitTypeOptions({
-                      disabledUnits: this.disabledUnits,
-                      toggleUnit: this.toggleUnit.bind(this),
-                    })}
+        disabledUnits: this.disabledUnits,
+        toggleUnit: this.toggleUnit.bind(this),
+      })}
                   </div>
                 </div>
               </div>
@@ -531,23 +552,22 @@ export class HostLobbyModal extends LitElement {
         <div class="options-section">
           <div class="option-title">
             ${this.clients.length}
-            ${
-              this.clients.length === 1
-                ? translateText("host_modal.player")
-                : translateText("host_modal.players")
-            }
+            ${this.clients.length === 1
+        ? translateText("host_modal.player")
+        : translateText("host_modal.players")
+      }
           </div>
 
           <div class="players-list">
             ${this.clients.map(
-              (client) => html`
+        (client) => html`
                 <span class="player-tag">
                   ${client.username}
                   ${client.clientID === this.lobbyCreatorClientID
-                    ? html`<span class="host-badge"
+            ? html`<span class="host-badge"
                         >(${translateText("host_modal.host_badge")})</span
                       >`
-                    : html`
+            : html`
                         <button
                           class="remove-player-btn"
                           @click=${() => this.kickPlayer(client.clientID)}
@@ -558,18 +578,18 @@ export class HostLobbyModal extends LitElement {
                       `}
                 </span>
               `,
-            )}
+      )}
         </div>
 
         ${this.startGameError
-          ? html`
+        ? html`
               <div style="margin-top: 0.5rem; padding: 0.5rem; 
                          background-color: #f8d7da; border: 1px solid #f5c6cb; 
                          border-radius: 4px; color: #721c24;">
                 <strong>Start Game Error:</strong> ${this.startGameError}
               </div>
             `
-          : this.startGameTxHash
+        : this.startGameTxHash
           ? html`
               <div style="margin-top: 0.5rem; padding: 0.5rem; 
                          background-color: #d4edda; border: 1px solid #c3e6cb; 
@@ -589,15 +609,14 @@ export class HostLobbyModal extends LitElement {
             ?disabled=${this.clients.length < 2 || !this.onChainSuccess || this.startGameLoading}
             class="start-game-button"
           >
-            ${
-              this.startGameLoading
-                ? "Starting Game..."
-                : !this.onChainSuccess
-                ? "Deploy On-Chain First"
-                : this.clients.length === 1
-                ? translateText("host_modal.waiting")
-                : translateText("host_modal.start")
-            }
+            ${this.startGameLoading
+        ? "Starting Game..."
+        : !this.onChainSuccess
+          ? "Deploy On-Chain First"
+          : this.clients.length === 1
+            ? translateText("host_modal.waiting")
+            : translateText("host_modal.start")
+      }
           </button>
         </div>
 
@@ -617,7 +636,7 @@ export class HostLobbyModal extends LitElement {
       true,
     );
 
-    createLobby(this.lobbyCreatorClientID)
+    createLobby(this.lobbyCreatorClientID, this.lobbyVisibility)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
         // join lobby
@@ -745,6 +764,10 @@ export class HostLobbyModal extends LitElement {
     this.bettingAmount = value;
   }
 
+  private handleLobbyVisibilityChange(visibility: "private" | "public") {
+    this.lobbyVisibility = visibility;
+  }
+
   private async deployLobbyOnChain() {
     if (!this.bettingAmount || parseFloat(this.bettingAmount) <= 0) {
       this.onChainError = "Invalid betting amount";
@@ -760,6 +783,7 @@ export class HostLobbyModal extends LitElement {
       const result = await createLobbyOnChain({
         lobbyId: this.lobbyId,
         betAmount: this.bettingAmount,
+        lobbyVisibility: this.lobbyVisibility,
       });
 
       this.onChainTxHash = result.hash;
@@ -847,11 +871,9 @@ export class HostLobbyModal extends LitElement {
 
       await this.putGameConfig();
       console.log(
-        `Starting private game with map: ${
-          GameMapType[this.selectedMap as keyof typeof GameMapType]} ${
-          this.useRandomMap ? " (Randomly selected)" : ""}`,
+        `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
       );
-      
+
       const config = await getServerConfigFromClient();
       const response = await fetch(
         `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
@@ -899,6 +921,11 @@ export class HostLobbyModal extends LitElement {
     }
   }
 
+  /**
+   * pollPlayers polls the server for the current players in the lobby.
+   * Sends a GET request to the server to retrieve game information,
+   * parses the response, and updates the local list of clients.
+   */
   private async pollPlayers() {
     const config = await getServerConfigFromClient();
     fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
@@ -928,12 +955,12 @@ export class HostLobbyModal extends LitElement {
   }
 }
 
-async function createLobby(creatorClientID: string): Promise<GameInfo> {
+async function createLobby(creatorClientID: string, visibility: "private" | "public" = "private"): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
     const response = await fetch(
-      `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}`,
+      `/${config.workerPath(id)}/api/create_game/${id}?creatorClientID=${encodeURIComponent(creatorClientID)}&visibility=${encodeURIComponent(visibility)}`,
       {
         method: "POST",
         headers: {

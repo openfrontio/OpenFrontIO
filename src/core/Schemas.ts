@@ -199,7 +199,6 @@ export const GameInfoSchema = z.object({
   clients: ClientInfoSchema.array().optional(),
   gameConfig: GameConfigSchema.optional(),
   gameID: ID,
-  gameStatus: z.nativeEnum(GameStatus),
   msUntilStart: z.number().int().nonnegative().optional(),
   numClients: z.number().int().nonnegative().optional(),
 });

@@ -364,6 +364,13 @@ class Client {
       }
     });
 
+    // const browseLobbyButton = document.querySelector(
+    //   "browse-lobby-button"
+    // )
+    // if (browseLobbyButton === null) throw new Error("Missing browse-lobby-button");
+    // browseLobbyButton.addEventListener("click", () => {
+    // })
+
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
     ) as JoinPrivateLobbyModal;
