@@ -13,7 +13,7 @@ export class TrainStationExecution implements Execution {
   private readonly ticksCooldown = 10; // Minimum cooldown between two trains
   constructor(
     private readonly unit: Unit,
-    private readonly spawnTrains?: boolean, // If set, the station will spawn trains
+    private readonly spawnTrains = false, // If set, the station will spawn trains
   ) {
     this.unit.setTrainStation(true);
   }
