@@ -94,12 +94,14 @@ async function handleJoinMessage(
 
   try {
     // Parse and handle client messages
-    const parsed = ClientMessageSchema.safeParse(
-      JSON.parse(message.toString()),
-    );
+    const messageObj = JSON.parse(message.toString());
+    log.info("Received message:", JSON.stringify(messageObj, null, 2));
+    
+    const parsed = ClientMessageSchema.safeParse(messageObj);
     if (!parsed.success) {
       const error = z.prettifyError(parsed.error);
       log.warn("Error parsing client message:", error);
+      log.warn("Full validation errors:", JSON.stringify(parsed.error.issues, null, 2));
       return {
         code: 1002,
         error,

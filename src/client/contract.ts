@@ -4,7 +4,7 @@ import { writeContract, readContract, connect, getAccount, watchContractEvent } 
 import { parseEther, formatEther, type Hash, keccak256, toHex } from 'viem';
 import { injected, metaMask, walletConnect } from '@wagmi/connectors';
 
-const CONTRACT_ADDRESS = "0xd7D89Df18a91c4E81083bb850669D1417741f46A" as const;
+const CONTRACT_ADDRESS = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e" as const;
 
 const CONTRACT_ABI = [
   {
@@ -247,9 +247,40 @@ function stringToBytes32(str: string): `0x${string}` {
     return str as `0x${string}`;
   }
   
-  // Convert string to bytes32 by hashing it
-  const hash = keccak256(toHex(str));
-  return hash;
+  // Convert string directly to bytes32 by padding with zeros
+  // This preserves the original string instead of hashing it
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  
+  // bytes32 is 32 bytes, so pad with zeros if needed
+  const padded = new Uint8Array(32);
+  padded.set(bytes.slice(0, 32)); // Take max 32 bytes
+  
+  // Convert to hex string
+  const hex = Array.from(padded)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  
+  return `0x${hex}` as `0x${string}`;
+}
+
+function bytes32ToString(bytes32: `0x${string}`): string {
+  // Remove 0x prefix and convert hex to bytes
+  const hex = bytes32.slice(2);
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+  
+  // Find the end of the string (first zero byte)
+  let length = bytes.length;
+  for (let i = 0; i < bytes.length; i++) {
+    if (bytes[i] === 0) {
+      length = i;
+      break;
+    }
+  }
+  
+  // Convert back to string
+  const decoder = new TextDecoder();
+  return decoder.decode(bytes.slice(0, length));
 }
 
 export async function createLobby(params: CreateLobbyParams): Promise<CreateLobbyResult> {
@@ -720,8 +751,8 @@ export async function getAllPublicLobbies(): Promise<string[]> {
       args: []
     }) as `0x${string}`[];
 
-    // Convert bytes32 array to string array
-    return result.map(lobbyId => lobbyId);
+    // Convert bytes32 array back to original string array
+    return result.map(lobbyIdBytes32 => bytes32ToString(lobbyIdBytes32));
   } catch (error) {
     console.error('Error getting public lobbies:', error);
     return [];

@@ -1,12 +1,12 @@
 import { createConfig, http } from '@wagmi/core';
 import { hardhat, baseSepolia, localhost } from '@wagmi/core/chains';
 import { readContract, writeContract } from '@wagmi/core';
-import { type Hash, keccak256, toHex, createWalletClient, type Address } from 'viem';
+import { type Hash, createWalletClient, type Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
 // Contract configuration
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0xd7D89Df18a91c4E81083bb850669D1417741f46A" as const;
-const GAME_SERVER_PRIVATE_KEY = process.env.GAME_SERVER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // Default anvil account
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x610178dA211FEF7D417bC0e6FeD39F05609AD788" as const;
+const GAME_SERVER_PRIVATE_KEY = process.env.GAME_SERVER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // Default anvil account #0 private key
 
 // Local Anvil chain for development
 const anvil = {
@@ -261,9 +261,21 @@ function stringToBytes32(str: string): `0x${string}` {
     return str as `0x${string}`;
   }
   
-  // Convert string to bytes32 by hashing it
-  const hash = keccak256(toHex(str));
-  return hash;
+  // Convert string directly to bytes32 by padding with zeros
+  // This preserves the original string instead of hashing it
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  
+  // bytes32 is 32 bytes, so pad with zeros if needed
+  const padded = new Uint8Array(32);
+  padded.set(bytes.slice(0, 32)); // Take max 32 bytes
+  
+  // Convert to hex string
+  const hex = Array.from(padded)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  
+  return `0x${hex}` as `0x${string}`;
 }
 
 export function getContractAddress(): Address {

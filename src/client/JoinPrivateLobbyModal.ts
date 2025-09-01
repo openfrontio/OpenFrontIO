@@ -276,43 +276,18 @@ export class JoinPrivateLobbyModal extends LitElement {
       const { readContract } = await import("@wagmi/core");
       const { config } = await import("./contract");
 
-      // Convert lobby ID to bytes32
-      const { keccak256, toHex } = await import("viem");
+      // Import the contract functions that handle ID conversion properly
+      const { getLobbyInfo } = await import("./contract");
       
-      const stringToBytes32 = (str: string): `0x${string}` => {
-        if (str.startsWith('0x') && str.length === 66) {
-          return str as `0x${string}`;
-        }
-        const hash = keccak256(toHex(str));
-        return hash;
-      };
+      // Use the contract function which handles the ID conversion internally
+      const lobbyInfo = await getLobbyInfo(lobbyId);
+      
+      if (!lobbyInfo || !lobbyInfo.exists) {
+        this.message = "Lobby not found or doesn't exist on-chain.";
+        return;
+      }
 
-      const lobbyIdBytes32 = stringToBytes32(lobbyId);
-
-      // Get lobby information from the contract
-      const result = await readContract(config, {
-        address: "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const,
-        abi: [
-          {
-            "type": "function",
-            "name": "getLobby",
-            "inputs": [{ "name": "lobbyId", "type": "bytes32", "internalType": "bytes32" }],
-            "outputs": [
-              { "name": "host", "type": "address", "internalType": "address" },
-              { "name": "betAmount", "type": "uint256", "internalType": "uint256" },
-              { "name": "participants", "type": "address[]", "internalType": "address[]" },
-              { "name": "status", "type": "uint8", "internalType": "enum Openfront.GameStatus" },
-              { "name": "winner", "type": "address", "internalType": "address" },
-              { "name": "totalPrize", "type": "uint256", "internalType": "uint256" }
-            ],
-            "stateMutability": "view"
-          }
-        ] as const,
-        functionName: 'getLobby',
-        args: [lobbyIdBytes32]
-      }) as [string, bigint, string[], number, string, bigint];
-
-      const [host, betAmount, participants, status, winner, totalPrize] = result;
+      const { host, betAmount, participants, status, winner, totalPrize } = lobbyInfo;
 
       // Display lobby information
       this.lobbyHost = `${host.slice(0, 6)}...${host.slice(-4)}`;

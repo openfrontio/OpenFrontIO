@@ -1,0 +1,7 @@
+{
+  "transactions": [
+    {
+      "rpc": "http://localhost:8545"
+    }
+  ]
+}

@@ -529,7 +529,9 @@ export class GameView implements GameMap {
     }
     const playerId = this.smallIDToID.get(id);
     if (playerId === undefined) {
-      throw new Error(`small id ${id} not found`);
+      console.warn(`small id ${id} not found, treating as terra nullius. Available IDs:`, Array.from(this.smallIDToID.keys()));
+      // Return terra nullius instead of crashing - this handles disconnected players gracefully
+      return new TerraNulliusImpl();
     }
     return this.player(playerId);
   }

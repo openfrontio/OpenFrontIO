@@ -208,6 +208,7 @@ app.post(
   }),
 );
 
+
 // TODO: update this fetchLobbies to fetch from blockchain for lobbies
 async function fetchLobbies(): Promise<number> {
   const fetchPromises: Promise<GameInfo | null>[] = [];
