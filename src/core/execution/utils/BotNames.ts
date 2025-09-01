@@ -22,6 +22,7 @@ export const BOT_NAME_PREFIXES = [
   "Seleucid",
   "Ptolemaic",
   "Palmyrene",
+  "Cascadian",
   "Macedonian",
   "Carthaginian",
   "Ming",
