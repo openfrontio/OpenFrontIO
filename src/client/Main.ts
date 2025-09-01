@@ -61,6 +61,7 @@ declare global {
       };
       spaNewPage: (url: string) => void;
     };
+    ethereum?: any;
   }
 
   // Extend the global interfaces to include your custom events
@@ -81,6 +82,8 @@ export type JoinLobbyEvent = {
   gameRecord?: GameRecord;
   // Betting amount in ETH for on-chain lobbies
   bettingAmount?: string;
+  // Wallet address for blockchain integration
+  walletAddress?: string;
 };
 
 export type KickPlayerEvent = {
@@ -469,7 +472,20 @@ class Client {
 
         // Try connecting with injected wallet
         console.log("Attempting to connect with injected connector...");
-        const result = await connect(wagmiConfig, { connector: injected() });
+        
+        // Check if MetaMask or other wallet is available
+        if (typeof window.ethereum === 'undefined') {
+          throw new Error("No wallet extension found. Please install MetaMask or similar wallet.");
+        }
+        
+        // Create the injected connector
+        const connector = injected({
+          target: 'metaMask',
+        });
+        
+        console.log("Injected connector created:", connector);
+        
+        const result = await connect(wagmiConfig, { connector });
         console.log("Connection successful:", result);
 
         // Update button states
@@ -591,7 +607,7 @@ class Client {
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: getClientID(lobby.gameID),
-        walletAddress: await this.getCurrentWalletAddress(),
+        walletAddress: lobby.walletAddress || await this.getCurrentWalletAddress() || "",
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
@@ -680,7 +696,9 @@ class Client {
   private async getCurrentWalletAddress(): Promise<string | undefined> {
     try {
       const { getCurrentWalletAddress } = await import("./wallet");
-      return getCurrentWalletAddress();
+      const address = getCurrentWalletAddress();
+      console.log("Getting current wallet address:", address);
+      return address;
     } catch (error) {
       console.warn("Failed to get wallet address:", error);
       return undefined;

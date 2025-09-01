@@ -125,7 +125,7 @@ contract Openfront is ReentrancyGuard {
             totalPrize: betAmount
           });
         }
-        
+        Openfront
         // Host automatically joins as first participant
         lobbies[lobbyId].participants.push(msg.sender);
         

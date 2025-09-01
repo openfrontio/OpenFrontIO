@@ -227,6 +227,14 @@ async function handleJoinMessage(
     }
 
     // Create client
+    // Log wallet address for debugging
+    log.info("Client joining with wallet address", {
+      clientID: clientMsg.clientID,
+      username: clientMsg.username,
+      walletAddress: clientMsg.walletAddress,
+      hasWalletAddress: !!clientMsg.walletAddress
+    });
+
     const client = new Client(
       clientMsg.clientID,
       persistentId,

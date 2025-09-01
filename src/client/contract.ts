@@ -1,10 +1,9 @@
-import { createConfig, http } from '@wagmi/core';
-import { hardhat } from '@wagmi/core/chains';
 import { writeContract, readContract, connect, getAccount, watchContractEvent } from '@wagmi/core';
 import { parseEther, formatEther, type Hash, keccak256, toHex } from 'viem';
 import { injected, metaMask, walletConnect } from '@wagmi/connectors';
+import { wagmiConfig as config } from './wallet';
 
-const CONTRACT_ADDRESS = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e" as const;
+const CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" as const;
 
 const CONTRACT_ABI = [
   {
@@ -167,19 +166,7 @@ const CONTRACT_ABI = [
   }
 ] as const;
 
-export const config = createConfig({
-  chains: [hardhat],
-  connectors: [
-    injected(),
-    metaMask(),
-    walletConnect({
-      projectId: '257f8ca2cb2a54afdd340e54c8966a02'
-    }),
-  ],
-  transports: {
-    [hardhat.id]: http()
-  }
-});
+// Using the shared wagmi config from wallet.ts
 
 export function getContractAddress() {
   return CONTRACT_ADDRESS;
@@ -234,7 +221,11 @@ export interface StartGameResult {
 export async function connectWallet(): Promise<void> {
   try {
     // Try to connect with injected wallet (MetaMask, etc.)
-    await connect(config, { connector: injected() });
+    await connect(config, { 
+      connector: injected({
+        target: 'metaMask',
+      })
+    });
   } catch (error) {
     console.error('Failed to connect wallet:', error);
     throw new Error('Please connect your wallet to continue');

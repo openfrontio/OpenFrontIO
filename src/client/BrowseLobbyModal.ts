@@ -170,6 +170,7 @@ export class BrowseLobbyModal extends LitElement {
               gameID: lobby.lobbyId, // Use lobbyId directly as gameID
               clientID: clientID,
               bettingAmount: lobby.formattedBetAmount,
+              walletAddress: await this.getCurrentWalletAddress(),
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -355,6 +356,18 @@ export class BrowseLobbyModal extends LitElement {
 
   private canJoinLobby(lobby: PublicLobbyInfo): boolean {
     return lobby.status === GameStatus.Created;
+  }
+
+  private async getCurrentWalletAddress(): Promise<string | undefined> {
+    try {
+      const { getCurrentWalletAddress } = await import("./wallet");
+      const address = getCurrentWalletAddress();
+      console.log("BrowseLobbyModal: Getting current wallet address:", address);
+      return address;
+    } catch (error) {
+      console.warn("BrowseLobbyModal: Failed to get wallet address:", error);
+      return undefined;
+    }
   }
 
   render() {

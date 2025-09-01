@@ -9,6 +9,7 @@ import { Logger } from "winston";
 import { z } from "zod";
 import { declareWinner, isLobbyOnChain } from "../../../../contract";
 import type { Address } from "viem";
+import { getAddress } from "viem";
 
 export async function postJoinMessageHandler(
   gs: GameServer,
@@ -123,27 +124,72 @@ function resolveWinnerWalletAddress(
   log: Logger
 ): Address | null {
   try {
+    log.info("🔍 Starting winner address resolution", { 
+      winner: clientMsg.winner,
+      winnerType: clientMsg.winner?.[0],
+      winnerValue: clientMsg.winner?.[1] 
+    });
+
     if (!clientMsg.winner) {
-      log.warn("No winner in client message");
+      log.warn("❌ No winner in client message");
       return null;
     }
 
     if (clientMsg.winner[0] === "player") {
       // Winner is a single player - get their wallet address
       const winnerClientID = clientMsg.winner[1];
+      log.info("🔍 Looking for winner client", { winnerClientID });
+      
+      // Debug: List all clients in game server
+      const allClientsEntries = Array.from((gs as any).allClients.entries()) as Array<[string, any]>;
+      log.info("📋 All clients in game server", { 
+        totalClients: allClientsEntries.length,
+        clientIDs: allClientsEntries.map(([id, client]) => ({ 
+          id, 
+          username: client.username, 
+          hasWallet: !!client.walletAddress 
+        }))
+      });
+      
       const client = gs.getClient(winnerClientID);
       
       if (!client) {
-        log.warn("Winner client not found", { winnerClientID });
+        log.warn("❌ Winner client not found", { winnerClientID });
         return null;
       }
+      
+      log.info("✅ Winner client found", { 
+        winnerClientID, 
+        username: client.username,
+        walletAddress: client.walletAddress,
+        hasWalletAddress: !!client.walletAddress
+      });
 
       if (!client.walletAddress) {
-        log.warn("Winner client has no wallet address", { winnerClientID });
+        log.warn("❌ Winner client has no wallet address", { 
+          winnerClientID,
+          username: client.username,
+          walletAddress: client.walletAddress
+        });
         return null;
       }
 
-      return client.walletAddress as Address;
+      log.info("✅ Resolved winner wallet address", { 
+        winnerClientID, 
+        walletAddress: client.walletAddress 
+      });
+      
+      try {
+        const checksummedAddress = getAddress(client.walletAddress);
+        log.info("✅ Address checksum validated", { checksummedAddress });
+        return checksummedAddress as Address;
+      } catch (error) {
+        log.error("❌ Invalid wallet address format", { 
+          walletAddress: client.walletAddress,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        return null;
+      }
     } else if (clientMsg.winner[0] === "team") {
       // Winner is a team - need to determine which team member gets the prize
       // For now, we'll select the first team member as the winner
@@ -180,7 +226,7 @@ function resolveWinnerWalletAddress(
         totalTeamMembers: teamMembers.length,
       });
 
-      return client.walletAddress as Address;
+      return getAddress(client.walletAddress) as Address;
     }
 
     log.warn("Unknown winner type", { winner: clientMsg.winner });
@@ -209,16 +255,21 @@ async function declareWinnerOnChain(
       });
       return;
     }
+    
+    log.info("✅ Game is on-chain, proceeding with winner declaration", { gameID: lobbyId });
 
     // Resolve winner to wallet address
+    log.info("Resolving winner wallet address", { winner: clientMsg.winner });
     const winnerAddress = resolveWinnerWalletAddress(gs, clientMsg, log);
     if (!winnerAddress) {
-      log.warn("Could not resolve winner wallet address, skipping blockchain declaration", {
+      log.warn("❌ Could not resolve winner wallet address, skipping blockchain declaration", {
         gameID: lobbyId,
         winner: clientMsg.winner,
       });
       return;
     }
+    
+    log.info("✅ Winner wallet address resolved", { winnerAddress });
 
     log.info("Declaring winner on blockchain", {
       gameID: lobbyId,
@@ -227,6 +278,7 @@ async function declareWinnerOnChain(
     });
 
     // Call smart contract to declare winner
+    log.info("🔄 Calling declareWinner smart contract function...");
     const txHash = await declareWinner({
       lobbyId,
       winnerAddress,

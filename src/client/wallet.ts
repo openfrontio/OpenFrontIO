@@ -23,8 +23,18 @@ export const wagmiConfig = createConfig({
     [anvil.id]: http('http://127.0.0.1:8545'),
   },
   connectors: [
-    injected(), // MetaMask, etc.
-    walletConnect({ projectId: process.env.VITE_WALLETCONNECT_PROJECT_ID || '' })
+    injected({
+      target: 'metaMask',
+    }), // MetaMask, etc.
+    walletConnect({ 
+      projectId: process.env.VITE_WALLETCONNECT_PROJECT_ID || '',
+      metadata: {
+        name: 'OpenFrontIO',
+        description: 'OpenFrontIO Game',
+        url: 'https://openfront.io',
+        icons: ['https://openfront.io/favicon.ico']
+      }
+    })
   ],
 })
 

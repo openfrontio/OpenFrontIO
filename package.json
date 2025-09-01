@@ -3,19 +3,22 @@
   "scripts": {
     "build-dev": "webpack --config webpack.config.js --mode development",
     "build-prod": "webpack --config webpack.config.js --mode production",
+    "build": "npm run build-prod",
+    "start": "node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
     "start:client": "webpack serve --open --node-env development",
     "start:client2": "webpack serve --open --node-env development --port 9001",
     "start:server": "node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
     "start:server-dev": "cross-env GAME_ENV=dev node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
     "dev": "cross-env GAME_ENV=dev concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "tunnel": "npm run build-prod && npm run start:server",
+    "vercel-build": "npm run build-prod",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
     "perf": "npx tsx tests/perf/*.ts",
     "test:coverage": "jest --coverage",
     "format": "prettier --ignore-unknown --write .",
     "lint": "eslint",
-    "lint:fix": "eslint --fix",
-    "prepare": "husky"
+    "lint:fix": "eslint --fix"
   },
   "lint-staged": {
     "**/*": [

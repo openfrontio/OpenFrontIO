@@ -432,6 +432,7 @@ export class SinglePlayerModal extends LitElement {
         detail: {
           clientID,
           gameID,
+          walletAddress: await this.getCurrentWalletAddress(),
           gameStartInfo: {
             gameID,
             players: [

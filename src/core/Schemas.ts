@@ -525,7 +525,7 @@ export const ClientJoinMessageSchema = z.object({
   token: TokenSchema, // WARNING: PII
   type: z.literal("join"),
   username: UsernameSchema,
-  walletAddress: z.string().optional(),
+  walletAddress: z.string(),
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

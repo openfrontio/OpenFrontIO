@@ -641,13 +641,14 @@ export class HostLobbyModal extends LitElement {
         this.lobbyId = lobby.gameID;
         // join lobby
       })
-      .then(() => {
+      .then(async () => {
         this.dispatchEvent(
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
               clientID: this.lobbyCreatorClientID,
               bettingAmount: this.bettingAmount,
+              walletAddress: await this.getCurrentWalletAddress(),
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
@@ -918,6 +919,18 @@ export class HostLobbyModal extends LitElement {
       }, 2000);
     } catch (err) {
       console.error(`Failed to copy text: ${err}`);
+    }
+  }
+
+  private async getCurrentWalletAddress(): Promise<string | undefined> {
+    try {
+      const { getCurrentWalletAddress } = await import("./wallet");
+      const address = getCurrentWalletAddress();
+      console.log("HostLobbyModal: Getting current wallet address:", address);
+      return address;
+    } catch (error) {
+      console.warn("HostLobbyModal: Failed to get wallet address:", error);
+      return undefined;
     }
   }
 

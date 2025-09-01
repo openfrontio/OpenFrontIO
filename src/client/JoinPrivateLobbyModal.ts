@@ -274,7 +274,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     try {
       // Import the readContract function to get lobby details
       const { readContract } = await import("@wagmi/core");
-      const { config } = await import("./contract");
+      const { wagmiConfig } = await import("./wallet");
 
       // Import the contract functions that handle ID conversion properly
       const { getLobbyInfo } = await import("./contract");
@@ -329,6 +329,18 @@ export class JoinPrivateLobbyModal extends LitElement {
     }
   }
 
+  private async getCurrentWalletAddress(): Promise<string | undefined> {
+    try {
+      const { getCurrentWalletAddress } = await import("./wallet");
+      const address = getCurrentWalletAddress();
+      console.log("JoinPrivateLobbyModal: Getting current wallet address:", address);
+      return address;
+    } catch (error) {
+      console.warn("JoinPrivateLobbyModal: Failed to get wallet address:", error);
+      return undefined;
+    }
+  }
+
   private async proceedWithLobbyJoin(lobbyId: string): Promise<void> {
     try {
       // Check if the game exists in active lobbies
@@ -368,6 +380,7 @@ export class JoinPrivateLobbyModal extends LitElement {
             gameID: lobbyId,
             clientID: getClientID(lobbyId),
             bettingAmount: this.bettingAmount,
+            walletAddress: await this.getCurrentWalletAddress(),
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -414,6 +427,7 @@ export class JoinPrivateLobbyModal extends LitElement {
             gameRecord: archiveData.gameRecord,
             clientID: getClientID(lobbyId),
             bettingAmount: this.bettingAmount,
+            walletAddress: await this.getCurrentWalletAddress(),
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,

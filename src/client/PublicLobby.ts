@@ -185,7 +185,19 @@ export class PublicLobby extends LitElement {
     this.currLobby = null;
   }
 
-  private lobbyClicked(lobby: GameInfo) {
+  private async getCurrentWalletAddress(): Promise<string | undefined> {
+    try {
+      const { getCurrentWalletAddress } = await import("./wallet");
+      const address = getCurrentWalletAddress();
+      console.log("PublicLobby: Getting current wallet address:", address);
+      return address;
+    } catch (error) {
+      console.warn("PublicLobby: Failed to get wallet address:", error);
+      return undefined;
+    }
+  }
+
+  private async lobbyClicked(lobby: GameInfo) {
     if (this.isButtonDebounced) {
       return;
     }
@@ -206,6 +218,7 @@ export class PublicLobby extends LitElement {
           detail: {
             gameID: lobby.gameID,
             clientID: getClientID(lobby.gameID),
+            walletAddress: await this.getCurrentWalletAddress(),
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,

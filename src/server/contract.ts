@@ -1,11 +1,11 @@
 import { createConfig, http } from '@wagmi/core';
 import { hardhat, baseSepolia, localhost } from '@wagmi/core/chains';
 import { readContract, writeContract } from '@wagmi/core';
-import { type Hash, createWalletClient, type Address } from 'viem';
+import { type Hash, createWalletClient, type Address, getAddress } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
 // Contract configuration
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x610178dA211FEF7D417bC0e6FeD39F05609AD788" as const;
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" as const;
 const GAME_SERVER_PRIVATE_KEY = process.env.GAME_SERVER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // Default anvil account #0 private key
 
 // Local Anvil chain for development
@@ -104,6 +104,42 @@ const CONTRACT_ABI = [
     "inputs": [{ "name": "_gameServer", "type": "address", "internalType": "address" }],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getAllPublicLobbies",
+    "inputs": [],
+    "outputs": [
+      { "name": "", "type": "bytes32[]", "internalType": "bytes32[]" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAllPrivateLobbies",
+    "inputs": [],
+    "outputs": [
+      { "name": "", "type": "bytes32[]", "internalType": "bytes32[]" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPublicLobbyCount",
+    "inputs": [],
+    "outputs": [
+      { "name": "", "type": "uint256", "internalType": "uint256" }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getPrivateLobbyCount",
+    "inputs": [],
+    "outputs": [
+      { "name": "", "type": "uint256", "internalType": "uint256" }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "event",
@@ -376,13 +412,11 @@ export async function startGame(params: StartGameParams): Promise<Hash | null> {
       gameServerAddress: gameServerAccount.address
     });
 
-    const hash = await writeContract(config, {
+    const hash = await walletClient.writeContract({
       address: CONTRACT_ADDRESS as Address,
       abi: CONTRACT_ABI,
       functionName: 'startGame',
-      args: [lobbyIdBytes32],
-      account: gameServerAccount,
-      chain: anvil
+      args: [lobbyIdBytes32]
     });
 
     console.log('Game started successfully, transaction hash:', hash);
@@ -402,22 +436,43 @@ export async function declareWinner(params: DeclareWinnerParams): Promise<Hash |
       lobbyId,
       lobbyIdBytes32,
       winnerAddress,
-      gameServerAddress: gameServerAccount.address
+      gameServerAddress: gameServerAccount.address,
+      contractAddress: CONTRACT_ADDRESS,
+      chainId: anvil.id
+    });
+    
+    // Verify contract exists and winner address is valid
+    console.log('Verifying contract and parameters...');
+    const lobbyInfo = await getLobbyInfo(lobbyId);
+    console.log('Current lobby info:', lobbyInfo);
+
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Transaction timeout after 30 seconds')), 30000);
     });
 
-    const hash = await writeContract(config, {
+    // Use wallet client directly instead of wagmi writeContract
+    console.log('Preparing transaction call...');
+    
+    const transactionPromise = walletClient.writeContract({
       address: CONTRACT_ADDRESS as Address,
       abi: CONTRACT_ABI,
       functionName: 'declareWinner',
-      args: [lobbyIdBytes32, winnerAddress],
-      account: gameServerAccount,
-      chain: anvil
+      args: [lobbyIdBytes32, winnerAddress]
     });
+
+    const hash = await Promise.race([transactionPromise, timeoutPromise]);
 
     console.log('Winner declared successfully, transaction hash:', hash);
     return hash;
   } catch (error) {
     console.error('Error declaring winner:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      lobbyId: params.lobbyId,
+      winnerAddress: params.winnerAddress
+    });
     return null;
   }
 }
@@ -426,6 +481,28 @@ export async function declareWinner(params: DeclareWinnerParams): Promise<Hash |
 export async function isLobbyOnChain(lobbyId: string): Promise<boolean> {
   const lobbyInfo = await getLobbyInfo(lobbyId);
   return lobbyInfo !== null;
+}
+
+// Test function to verify server can communicate with contract
+export async function testServerConnection(): Promise<boolean> {
+  try {
+    console.log('Testing server connection to contract...');
+    console.log('Game server address:', gameServerAccount.address);
+    console.log('Contract address:', CONTRACT_ADDRESS);
+    
+    // Test simple read call
+    const result = await readContract(config, {
+      address: CONTRACT_ADDRESS as Address,
+      abi: CONTRACT_ABI,
+      functionName: 'getPublicLobbyCount'
+    }) as bigint;
+    
+    console.log('Public lobby count:', Number(result));
+    return true;
+  } catch (error) {
+    console.error('Server connection test failed:', error);
+    return false;
+  }
 }
 
 // Export the configuration for use in other server modules if needed
