@@ -228,6 +228,12 @@
       "strength": 1
     },
     {
+      "coordinates": [980, 770],
+      "flag": "Cascadia",
+      "name": "Cascadia",
+      "strength": 1
+    },
+    {
       "coordinates": [1716, 937],
       "flag": "South_Carolina",
       "name": "South Carolina",
