@@ -12,8 +12,12 @@ export const preprodConfig = new (class extends DefaultServerConfig {
     return "openfront.dev";
   }
   allowedFlares(): string[] | undefined {
-    return [
-      // "access:openfront.dev"
-    ];
+    return undefined;
+    // TODO: Uncomment this after testing.
+    // Allow access without login for now to test
+    // the new login flow.
+    // return [
+    //   // "access:openfront.dev"
+    // ];
   }
 })();
