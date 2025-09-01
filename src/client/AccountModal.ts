@@ -235,6 +235,8 @@ export class AccountButton extends LitElement {
   @state() private loggedInEmail: string | null = null;
   @state() private loggedInDiscord: string | null = null;
 
+  private isVisible = true;
+
   @query("account-modal") private recoveryModal: AccountModal;
 
   constructor() {
@@ -266,6 +268,10 @@ export class AccountButton extends LitElement {
   }
 
   render() {
+    if (!this.isVisible) {
+      return html``;
+    }
+
     let buttonTitle = "";
     if (this.loggedInEmail) {
       buttonTitle = translateText("account_modal.logged_in_as", {
@@ -312,5 +318,11 @@ export class AccountButton extends LitElement {
 
   private open() {
     this.recoveryModal?.open();
+  }
+
+  public close() {
+    this.isVisible = false;
+    this.recoveryModal?.close();
+    this.requestUpdate();
   }
 }
