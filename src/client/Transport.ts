@@ -301,8 +301,13 @@ export class Transport {
   ) {
     this.startPing();
     this.killExistingSocket();
-    const wsHost = window.location.host;
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    // Use environment variable for production, or window.location.host for development
+    const wsHost = (process.env.GAME_ENV === "prod" && process.env.WEBSOCKET_HOST) 
+      ? process.env.WEBSOCKET_HOST 
+      : window.location.host;
+    const wsProtocol = (wsHost === process.env.WEBSOCKET_HOST) 
+      ? "wss:" 
+      : (window.location.protocol === "https:" ? "wss:" : "ws:");
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
