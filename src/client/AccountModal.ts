@@ -184,7 +184,11 @@ export class AccountModal extends LitElement {
       });
 
       if (response.ok) {
-        alert(`Recovery email sent to: ${this.email}`);
+        alert(
+          translateText("account_modal.recovery_email_sent", {
+            email: this.email,
+          }),
+        );
         this.close();
       } else {
         console.error(
@@ -219,15 +223,10 @@ export class AccountModal extends LitElement {
   }
 
   private async handleLogout() {
-    try {
-      await logOut();
-      this.close();
-      // Refresh the page after logout to update the UI state
-      window.location.reload();
-    } catch (error) {
-      console.error("Error during logout:", error);
-      alert("Error during logout. Please try again.");
-    }
+    await logOut();
+    this.close();
+    // Refresh the page after logout to update the UI state
+    window.location.reload();
   }
 }
 

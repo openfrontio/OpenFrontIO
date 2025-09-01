@@ -142,7 +142,8 @@
   "account_modal": {
     "title": "Account",
     "logged_in_as": "Logged in as {email}",
-    "logged_in_with_discord": "Logged in with Discord"
+    "logged_in_with_discord": "Logged in with Discord",
+    "recovery_email_sent": "Recovery email sent to {email}"
   },
   "map": {
     "map": "Map",

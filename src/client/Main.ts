@@ -449,8 +449,8 @@ class Client {
       if (token) {
         strip();
         window.addEventListener("beforeunload", () => {
-          // The page refreshes after token login, so we need to save the pattern name
-          // in case it is unset during login.
+          // The page reloads after token login, so we need to save the pattern name
+          // in case it is unset during reload.
           this.userSettings.setSelectedPatternName(patternName);
         });
         this.tokenLoginModal.open(token);
@@ -466,7 +466,7 @@ class Client {
 
       if (!token) {
         alertAndStrip(
-          `login failed! got url ${window.location.href} Please try again.`,
+          `login failed! Please try again later or contact support.`,
         );
         return;
       }

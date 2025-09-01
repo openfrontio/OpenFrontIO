@@ -75,22 +75,21 @@ export async function tokenLogin(token: string): Promise<string | null> {
   const response = await fetch(
     `${getApiBase()}/login/token?login-token=${token}`,
   );
-  if (response.status === 200) {
-    const json = await response.json();
-    const { jwt, email } = json;
-    const payload = decodeJwt(jwt);
-    const result = TokenPayloadSchema.safeParse(payload);
-    if (!result.success) {
-      console.error("Invalid token", result.error, result.error.message);
-      return null;
-    }
-    clearToken();
-    localStorage.setItem("token", jwt);
-    return email;
-  } else {
+  if (response.status !== 200) {
     console.error("Token login failed", response);
     return null;
   }
+  const json = await response.json();
+  const { jwt, email } = json;
+  const payload = decodeJwt(jwt);
+  const result = TokenPayloadSchema.safeParse(payload);
+  if (!result.success) {
+    console.error("Invalid token", result.error, result.error.message);
+    return null;
+  }
+  clearToken();
+  localStorage.setItem("token", jwt);
+  return email;
 }
 
 export function getAuthHeader(): string {
