@@ -15,7 +15,7 @@ import { EventBus } from "../../../core/EventBus";
 import { Layer } from "./Layer";
 import { TileRef } from "../../../core/game/GameMap";
 import { TransformHandler } from "../TransformHandler";
-import { ref } from "lit-html/directives/ref.js";
+import { ref } from "lit/directives/ref.js";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { translateText } from "../../../client/Utils";
 
@@ -234,7 +234,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             ? player.cosmetics.flag.startsWith("!")
               ? html`<div
                   class="h-8 mr-1 aspect-[3/4] player-flag"
-                  ${ref((el) => {
+                  ${ref((el: Element | undefined) => {
                     if (el instanceof HTMLElement) {
                       requestAnimationFrame(() => {
                         renderPlayerFlag(player.cosmetics.flag, el);

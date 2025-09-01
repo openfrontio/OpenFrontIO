@@ -2,6 +2,7 @@
   "name": "openfront-client",
   "scripts": {
     "build-dev": "webpack --config webpack.config.js --mode development",
+    "prebuild-prod": "find static -name '*.hot-update.*' -delete 2>/dev/null || true",
     "build-prod": "webpack --config webpack.config.js --mode production",
     "build": "npm run build-prod",
     "start": "node --loader ts-node/esm --experimental-specifier-resolution=node src/server/Server.ts",
