@@ -1,13 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-export enum DifficultyDescription {
-  Easy = "Relaxed",
-  Medium = "Balanced",
-  Hard = "Intense",
-  Impossible = "Impossible",
-}
-
 @customElement("difficulty-display")
 export class DifficultyDisplay extends LitElement {
   @property({ type: String }) difficultyKey = "";

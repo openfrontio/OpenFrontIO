@@ -1,7 +1,6 @@
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 import {
   Cell,
-  Difficulty,
   Execution,
   Game,
   Gold,
@@ -219,43 +218,6 @@ export class FakeHumanExecution implements Execution {
     } else {
       this.maybeSendBoatAttack(enemy);
     }
-  }
-
-  private shouldAttack(other: Player): boolean {
-    if (this.player === null) throw new Error("Not initialized");
-    if (this.player.isOnSameTeam(other)) {
-      return false;
-    }
-    if (this.player.isFriendly(other)) {
-      if (this.shouldDiscourageAttack(other)) {
-        return this.random.chance(200);
-      }
-      return this.random.chance(50);
-    } else {
-      if (this.shouldDiscourageAttack(other)) {
-        return this.random.chance(4);
-      }
-      return true;
-    }
-  }
-
-  private shouldDiscourageAttack(other: Player) {
-    if (other.isTraitor()) {
-      return false;
-    }
-    if (this.mg === undefined) throw new Error("Not initialized");
-    const { difficulty } = this.mg.config().gameConfig();
-    if (
-      difficulty === Difficulty.Hard ||
-      difficulty === Difficulty.Impossible
-    ) {
-      return false;
-    }
-    if (other.type() !== PlayerType.Human) {
-      return false;
-    }
-    // Only discourage attacks on Humans who are not traitors on easy or medium difficulty.
-    return true;
   }
 
   private maybeSendEmoji(enemy: Player) {
