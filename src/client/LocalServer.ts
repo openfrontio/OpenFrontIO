@@ -16,6 +16,7 @@ import { ReplaySpeedChangeEvent } from "./InputHandler";
 import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { getPersistentID } from "./Main";
 import { z } from "zod";
+import { getApiBaseUrl } from "./ApiClient";
 
 export class LocalServer {
   // All turns from the game record on replay.
@@ -217,6 +218,7 @@ export class LocalServer {
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameStartInfo.gameID,
     );
-    navigator.sendBeacon(`/${workerPath}/api/archive_singleplayer_game`, blob);
+    const baseUrl = getApiBaseUrl();
+    navigator.sendBeacon(`${baseUrl}/${workerPath}/api/archive_singleplayer_game`, blob);
   }
 }

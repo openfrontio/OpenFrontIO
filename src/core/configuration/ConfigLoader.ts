@@ -6,6 +6,7 @@ import { GameConfig } from "../Schemas";
 import { UserSettings } from "../game/UserSettings";
 import { preprodConfig } from "./PreprodConfig";
 import { prodConfig } from "./ProdConfig";
+import { apiFetch } from "../../client/ApiClient";
 
 export let cachedSC: ServerConfig | null = null;
 
@@ -30,7 +31,7 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   if (cachedSC) {
     return cachedSC;
   }
-  const response = await fetch("/api/env");
+  const response = await apiFetch("/api/env");
 
   if (!response.ok) {
     throw new Error(

@@ -15,6 +15,7 @@ import { JoinLobbyEvent } from "./Main";
 import { translateText } from "../client/Utils";
 import { getClientID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { apiFetch } from "./ApiClient";
 
 @customElement("browse-lobby-modal")
 export class BrowseLobbyModal extends LitElement {
@@ -196,7 +197,7 @@ export class BrowseLobbyModal extends LitElement {
 
     console.log(`Checking active lobby at URL: ${url}`);
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -221,7 +222,7 @@ export class BrowseLobbyModal extends LitElement {
 
       console.log(`Checking if game has started at URL: ${url}`);
 
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });

@@ -13,6 +13,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { translateText } from "../client/Utils";
 import { isLobbyOnChain, joinLobby as joinLobbyOnChain } from "./contract";
 import { formatEther } from "viem";
+import { apiFetch } from "./ApiClient";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
@@ -362,7 +363,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     const config = await getServerConfigFromClient();
     const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -398,7 +399,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     const config = await getServerConfigFromClient();
     const archiveUrl = `/${config.workerPath(lobbyId)}/api/archived_game/${lobbyId}`;
 
-    const archiveResponse = await fetch(archiveUrl, {
+    const archiveResponse = await apiFetch(archiveUrl, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -444,7 +445,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     if (!this.lobbyIdInput?.value) return;
     const config = await getServerConfigFromClient();
 
-    fetch(
+    apiFetch(
       `/${config.workerPath(this.lobbyIdInput.value)}/api/game/${this.lobbyIdInput.value}`,
       {
         method: "GET",

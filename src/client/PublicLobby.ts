@@ -7,6 +7,7 @@ import { JoinLobbyEvent } from "./Main";
 import { getClientID } from "../core/Util";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { translateText } from "../client/Utils";
+import { apiFetch } from "./ApiClient";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
@@ -75,7 +76,7 @@ export class PublicLobby extends LitElement {
 
   async fetchLobbies(): Promise<GameInfo[]> {
     try {
-      const response = await fetch("/api/public_lobbies");
+      const response = await apiFetch("/api/public_lobbies");
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const json = await response.json();

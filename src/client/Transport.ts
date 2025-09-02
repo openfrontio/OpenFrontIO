@@ -301,13 +301,13 @@ export class Transport {
   ) {
     this.startPing();
     this.killExistingSocket();
-    // Use environment variable for production, or window.location.host for development
-    const wsHost = (process.env.GAME_ENV === "prod" && process.env.WEBSOCKET_HOST) 
-      ? process.env.WEBSOCKET_HOST 
-      : window.location.host;
-    const wsProtocol = (wsHost === process.env.WEBSOCKET_HOST) 
+    // Use WEBSOCKET_HOST if defined (for production where client and server are on different hosts)
+    // Otherwise fall back to window.location.host (for development or same-host deployments)
+    const wsHost = process.env.WEBSOCKET_HOST || window.location.host;
+    // Use wss: for secure connections when using WEBSOCKET_HOST or https
+    const wsProtocol = (process.env.WEBSOCKET_HOST || window.location.protocol === "https:") 
       ? "wss:" 
-      : (window.location.protocol === "https:" ? "wss:" : "ws:");
+      : "ws:";
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
