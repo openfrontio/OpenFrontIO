@@ -1,6 +1,6 @@
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { GameInfo, GameInfoSchema } from "../core/Schemas";
+import { ClientInfo, GameInfo, GameInfoSchema } from "../core/Schemas";
 import { LitElement, html } from "lit";
 import {
   WorkerApiArchivedGameLobbySchema,
@@ -22,16 +22,21 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private message = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
+  @state() private clients: ClientInfo[] = [];
+  @state() private lobbyCreatorClientID = "";
+  @state() private currentClientID = "";
 
   private playersInterval: ReturnType<typeof setTimeout> | null = null;
 
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
+    document.addEventListener("lobby-creator-changed", this.handleLobbyCreatorChanged as EventListener);
   }
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
+    document.removeEventListener("lobby-creator-changed", this.handleLobbyCreatorChanged as EventListener);
     super.disconnectedCallback();
   }
 
@@ -99,6 +104,16 @@ export class JoinPrivateLobbyModal extends LitElement {
               </div>`
             : ""}
         </div>
+        <!-- Show message when user becomes lobby creator -->
+        ${this.hasJoined && this.isLobbyCreator
+          ? html`
+            <div class="bg-gray-200 border border-gray-400 rounded p-4 mt-4 text-center">
+              <p class="text-gray-800 font-medium mb-2">You are now the lobby host</p>
+              <p class="text-gray-700 text-sm">Loading host controls...</p>
+            </div>
+          `
+          : ""}
+
         <div class="flex justify-center">
           ${!this.hasJoined
             ? html` <o-button
@@ -114,6 +129,218 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   createRenderRoot() {
     return this; // light DOM
+  }
+
+  private readonly handleLobbyCreatorChanged = (e: Event) => {
+    const { newCreatorID, newCreatorUsername } = (e as CustomEvent).detail;
+    console.log(`Lobby creator changed to ${newCreatorUsername} (${newCreatorID})`);
+
+    // Update the lobby creator ID
+    this.lobbyCreatorClientID = newCreatorID;
+
+    // Show notification to user
+    this.showLobbyCreatorChangeNotification(newCreatorUsername);
+
+    // Check if current user is now the lobby creator
+    if (this.currentClientID === newCreatorID) {
+      console.log("Current user is now the lobby creator!");
+      // Show additional notification for the new creator
+      setTimeout(() => {
+        this.showNewCreatorNotification();
+      }, 3500); // Show after the first notification
+
+      // Switch to the existing host lobby modal
+      setTimeout(() => {
+        this.switchToExistingHostModal();
+      }, 4000); // Switch after notifications
+    }
+
+    // Trigger re-render to update UI
+    this.requestUpdate();
+  };
+
+  private showLobbyCreatorChangeNotification(newCreatorUsername: string) {
+    // Create a temporary notification element
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300';
+    notification.textContent = `${newCreatorUsername} is now the lobby host`;
+
+    document.body.appendChild(notification);
+
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 300);
+    }, 3000);
+  }
+
+  private showNewCreatorNotification() {
+    // Create a temporary notification element for the new creator
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300';
+    notification.textContent = 'You are now the lobby host! Loading host menu...';
+
+    document.body.appendChild(notification);
+
+    // Remove notification after 4 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 300);
+    }, 4000);
+  }
+
+  private showHostInstructions() {
+    // Create a helpful instruction notification
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300 max-w-md text-center';
+    notification.innerHTML = `
+      <div class="font-semibold mb-1">You're the new lobby host!</div>
+      <div class="text-sm">Close this window and click "Create Lobby" to access admin controls</div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Remove notification after 8 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 300);
+    }, 8000);
+  }
+
+  private switchToHostModal() {
+    console.log("Switching to host modal as new lobby creator");
+
+    try {
+      // Get the host lobby modal and open it with the current lobby
+      const hostModal = document.querySelector('host-lobby-modal') as any;
+      if (hostModal) {
+        // Set the lobby ID and creator ID on the host modal
+        hostModal.lobbyId = this.lobbyIdInput.value;
+        hostModal.lobbyCreatorClientID = this.currentClientID;
+
+        console.log(`Setting host modal: lobbyId=${hostModal.lobbyId}, creatorID=${hostModal.lobbyCreatorClientID}`);
+
+        // Close the current join modal first
+        this.close();
+
+        // Small delay to ensure the join modal is closed before opening host modal
+        setTimeout(() => {
+          try {
+            // Open the host modal
+            hostModal.openExistingLobby();
+          } catch (error) {
+            console.error("Error opening host modal:", error);
+            // Fallback: just show a notification that they are now the host
+            this.showFallbackHostNotification();
+          }
+        }, 100);
+      } else {
+        console.error("Host lobby modal not found");
+        this.showFallbackHostNotification();
+      }
+    } catch (error) {
+      console.error("Error in switchToHostModal:", error);
+      this.showFallbackHostNotification();
+    }
+  }
+
+  private showFallbackHostNotification() {
+    // Create a fallback notification if modal switching fails
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300';
+    notification.textContent = 'You are now the lobby host! Please refresh the page to access admin controls.';
+
+    document.body.appendChild(notification);
+
+    // Remove notification after 6 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 300);
+    }, 6000);
+  }
+
+  private get isLobbyCreator(): boolean {
+    return !!(this.currentClientID && this.lobbyCreatorClientID &&
+              this.currentClientID === this.lobbyCreatorClientID);
+  }
+
+  private switchToExistingHostModal() {
+    console.log("Switching to existing host lobby modal");
+
+    try {
+      // Get the host lobby modal element
+      const hostModal = document.querySelector('host-lobby-modal') as any;
+      if (!hostModal) {
+        console.error("Host lobby modal not found");
+        return;
+      }
+
+      // Set the properties needed for the existing lobby
+      hostModal.lobbyId = this.lobbyIdInput.value;
+      hostModal.lobbyCreatorClientID = this.currentClientID;
+
+      console.log(`Switching to host modal with lobbyId: ${hostModal.lobbyId}, creatorID: ${hostModal.lobbyCreatorClientID}`);
+
+      // Close this modal first
+      this.close();
+
+      // Small delay to ensure clean transition
+      setTimeout(() => {
+        try {
+          // Open the existing host lobby modal
+          hostModal.openExistingLobby();
+        } catch (error) {
+          console.error("Error opening existing host modal:", error);
+        }
+      }, 200);
+
+    } catch (error) {
+      console.error("Error in switchToExistingHostModal:", error);
+    }
+  }
+
+  private async startGame() {
+    if (!this.isLobbyCreator) {
+      console.error("Only the lobby creator can start the game");
+      return;
+    }
+
+    const lobbyId = this.lobbyIdInput.value;
+    console.log(`Starting private game with lobby ID: ${lobbyId}`);
+
+    try {
+      const config = await getServerConfigFromClient();
+      const response = await fetch(
+        `${window.location.origin}/${config.workerPath(lobbyId)}/api/start_game/${lobbyId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to start game: ${response.statusText}`);
+      }
+
+      console.log("Game started successfully");
+      this.close();
+    } catch (error) {
+      console.error("Error starting game:", error);
+    }
   }
 
   public open(id = "") {
@@ -216,11 +443,14 @@ export class JoinPrivateLobbyModal extends LitElement {
       this.message = translateText("private_lobby.joined_waiting");
       this.hasJoined = true;
 
+      // Store the current client ID so we can check if we become the lobby creator
+      this.currentClientID = getClientID(lobbyId);
+
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
           detail: {
             gameID: lobbyId,
-            clientID: getClientID(lobbyId),
+            clientID: this.currentClientID,
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -295,6 +525,13 @@ export class JoinPrivateLobbyModal extends LitElement {
       .then(GameInfoSchema.parse)
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
+        this.clients = data.clients ?? [];
+
+        // Update lobby creator ID from server response
+        if (data.lobbyCreatorID && !this.lobbyCreatorClientID) {
+          this.lobbyCreatorClientID = data.lobbyCreatorID;
+          console.log(`Lobby creator ID from server: ${this.lobbyCreatorClientID}`);
+        }
       })
       .catch((error) => {
         console.error("Error polling players:", error);

@@ -91,7 +91,9 @@ export type ServerMessage =
   | ServerPingMessage
   | ServerDesyncMessage
   | ServerPrestartMessage
-  | ServerErrorMessage;
+  | ServerErrorMessage
+  | ServerLobbyCreatorChangedMessage
+  | ServerLobbyCreatorLeftMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -101,6 +103,8 @@ export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
 export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 export type ServerPrestartMessage = z.infer<typeof ServerPrestartMessageSchema>;
 export type ServerErrorMessage = z.infer<typeof ServerErrorSchema>;
+export type ServerLobbyCreatorChangedMessage = z.infer<typeof ServerLobbyCreatorChangedSchema>;
+export type ServerLobbyCreatorLeftMessage = z.infer<typeof ServerLobbyCreatorLeftSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
@@ -192,6 +196,7 @@ export const GameInfoSchema = z.object({
   clients: ClientInfoSchema.array().optional(),
   gameConfig: GameConfigSchema.optional(),
   gameID: ID,
+  lobbyCreatorID: ID.optional(),
   msUntilStart: z.number().int().nonnegative().optional(),
   numClients: z.number().int().nonnegative().optional(),
 });
@@ -467,6 +472,17 @@ export const ServerErrorSchema = z.object({
   type: z.literal("error"),
 });
 
+export const ServerLobbyCreatorChangedSchema = z.object({
+  newCreatorID: ID,
+  newCreatorUsername: UsernameSchema,
+  type: z.literal("lobby_creator_changed"),
+});
+
+export const ServerLobbyCreatorLeftSchema = z.object({
+  leftCreatorUsername: UsernameSchema,
+  type: z.literal("lobby_creator_left"),
+});
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -474,6 +490,8 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerPingMessageSchema,
   ServerDesyncSchema,
   ServerErrorSchema,
+  ServerLobbyCreatorChangedSchema,
+  ServerLobbyCreatorLeftSchema,
 ]);
 
 //

@@ -25,6 +25,7 @@ import { GameRenderer, createRenderer } from "./graphics/GameRenderer";
 import { GameView, PlayerView } from "../core/game/GameView";
 import { PlayerActions, UnitType } from "../core/game/Game";
 import {
+  LobbyCreatorChangedEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -103,6 +104,42 @@ export function joinLobby(
         terrainLoad,
         terrainMapFileLoader,
       ).then((r) => r.start());
+    }
+    if (message.type === "lobby_creator_left") {
+      console.log(`lobby: creator ${message.leftCreatorUsername} left the lobby`);
+
+      // Show notification to all players that the lobby creator left
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300';
+      notification.textContent = `${message.leftCreatorUsername} (lobby host) left the game`;
+
+      document.body.appendChild(notification);
+
+      // Remove notification after 4 seconds
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+          }
+        }, 300);
+      }, 4000);
+    }
+    if (message.type === "lobby_creator_changed") {
+      console.log(`lobby: creator changed to ${message.newCreatorUsername} (${message.newCreatorID})`);
+      // Dispatch event to notify UI components about the lobby creator change
+      eventBus.emit(new LobbyCreatorChangedEvent(
+        message.newCreatorID,
+        message.newCreatorUsername,
+      ));
+
+      // Also dispatch a DOM event for components that listen to document events
+      document.dispatchEvent(new CustomEvent("lobby-creator-changed", {
+        detail: {
+          newCreatorID: message.newCreatorID,
+          newCreatorUsername: message.newCreatorUsername,
+        }
+      }));
     }
     if (message.type === "error") {
       showErrorModal(

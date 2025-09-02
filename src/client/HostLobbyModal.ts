@@ -24,7 +24,7 @@ import { customElement, query, state } from "lit/decorators.js";
 import { DifficultyDescription } from "./components/Difficulties";
 import { JoinLobbyEvent } from "./Main";
 import { UserSettings } from "../core/game/UserSettings";
-import { generateID } from "../core/Util";
+import { generateID, getClientID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -63,10 +63,12 @@ export class HostLobbyModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
+    document.addEventListener("lobby-creator-changed", this.handleLobbyCreatorChanged as EventListener);
   }
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
+    document.removeEventListener("lobby-creator-changed", this.handleLobbyCreatorChanged as EventListener);
     super.disconnectedCallback();
   }
 
@@ -76,6 +78,37 @@ export class HostLobbyModal extends LitElement {
       this.close();
     }
   };
+
+  private readonly handleLobbyCreatorChanged = (e: Event) => {
+    const { newCreatorID, newCreatorUsername } = (e as CustomEvent).detail;
+    console.log(`Lobby creator changed to ${newCreatorUsername} (${newCreatorID})`);
+
+    // Update the lobby creator ID
+    this.lobbyCreatorClientID = newCreatorID;
+
+    // Show notification to user
+    this.showLobbyCreatorChangeNotification(newCreatorUsername);
+
+    // Trigger re-render to update UI
+    this.requestUpdate();
+  };
+
+  private showLobbyCreatorChangeNotification(newCreatorUsername: string) {
+    // Create a temporary notification element
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-opacity duration-300';
+    notification.textContent = `${newCreatorUsername} is now the lobby host`;
+
+    document.body.appendChild(notification);
+
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(notification);
+      }, 300);
+    }, 3000);
+  }
 
   render() {
     return html`
@@ -524,7 +557,9 @@ export class HostLobbyModal extends LitElement {
   }
 
   public open() {
-    this.lobbyCreatorClientID = generateID();
+    // Generate a temporary game ID to get a consistent client ID
+    const tempGameID = generateID();
+    this.lobbyCreatorClientID = getClientID(tempGameID);
     this.lobbyIdVisible = this.userSettings.get(
       "settings.lobbyIdVisibility",
       true,
@@ -533,6 +568,9 @@ export class HostLobbyModal extends LitElement {
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
+        // Update localStorage to use the real game ID with the same client ID
+        localStorage.setItem("game_id", lobby.gameID);
+        localStorage.setItem("client_id", this.lobbyCreatorClientID);
         // join lobby
       })
       .then(() => {
@@ -547,6 +585,34 @@ export class HostLobbyModal extends LitElement {
           }),
         );
       });
+    this.modalEl?.open();
+    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
+  }
+
+  public openExistingLobby() {
+    console.log(`Opening existing lobby: ${this.lobbyId} as creator: ${this.lobbyCreatorClientID}`);
+
+    this.lobbyIdVisible = this.userSettings.get(
+      "settings.lobbyIdVisibility",
+      true,
+    );
+
+    // Update localStorage to use the existing lobby ID and client ID
+    localStorage.setItem("game_id", this.lobbyId);
+    localStorage.setItem("client_id", this.lobbyCreatorClientID);
+
+    // Join the existing lobby
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: this.lobbyId,
+          clientID: this.lobbyCreatorClientID,
+        } as JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
     this.modalEl?.open();
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
   }

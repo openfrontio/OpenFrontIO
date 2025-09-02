@@ -169,6 +169,13 @@ export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
 
+export class LobbyCreatorChangedEvent implements GameEvent {
+  constructor(
+    public readonly newCreatorID: string,
+    public readonly newCreatorUsername: string,
+  ) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 

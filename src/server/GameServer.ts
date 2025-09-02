@@ -9,6 +9,7 @@ import {
   PlayerRecord,
   ServerDesyncSchema,
   ServerErrorMessage,
+  ServerLobbyCreatorChangedMessage,
   ServerPrestartMessageSchema,
   ServerStartGameMessage,
   ServerTurnMessage,
@@ -222,9 +223,34 @@ export class GameServer {
         clientID: client.clientID,
         persistentID: client.persistentID,
       });
+
+      // Check if the disconnected client was the lobby creator
+      const wasLobbyCreator = this.lobbyCreatorID === client.clientID;
+
+      this.log.info("client disconnection debug", {
+        clientID: client.clientID,
+        wasLobbyCreator,
+        lobbyCreatorID: this.lobbyCreatorID,
+        isPublic: this.isPublic(),
+        hasStarted: this._hasStarted,
+        activeClientsCount: this.activeClients.length,
+        gameType: this.isPublic() ? "public" : "private",
+        allClientIDs: this.activeClients.map(c => c.clientID),
+      });
+
       this.activeClients = this.activeClients.filter(
         (c) => c.clientID !== client.clientID,
       );
+
+      // Handle lobby creator disconnection for private lobbies
+      if (wasLobbyCreator && !this.isPublic() && !this._hasStarted) {
+        this.log.info("triggering lobby creator disconnection handler", {
+          gameID: this.id,
+          disconnectedCreator: client.clientID,
+          remainingClients: this.activeClients.length,
+        });
+        this.handleLobbyCreatorDisconnection(client.username);
+      }
     });
     client.ws.on("error", (error: Error) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
@@ -422,6 +448,56 @@ export class GameServer {
     return this.lobbyCreatorID === clientID;
   }
 
+  private handleLobbyCreatorDisconnection(leftCreatorUsername: string): void {
+    // First, notify all remaining clients that the lobby creator left
+    const creatorLeftMessage = JSON.stringify({
+      type: "lobby_creator_left",
+      leftCreatorUsername: leftCreatorUsername,
+    });
+
+    this.activeClients.forEach((client) => {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(creatorLeftMessage);
+      }
+    });
+
+    if (this.activeClients.length === 0) {
+      // No players left, lobby will be cleaned up naturally
+      this.log.info("Lobby creator disconnected, no players remaining", {
+        gameID: this.id,
+        previousCreator: this.lobbyCreatorID,
+      });
+      this.lobbyCreatorID = undefined;
+      return;
+    }
+
+    // Promote the first remaining player to lobby creator
+    const newCreator = this.activeClients[0];
+    const previousCreator = this.lobbyCreatorID;
+    this.lobbyCreatorID = newCreator.clientID;
+
+    this.log.info("Lobby creator disconnected, promoting new creator", {
+      gameID: this.id,
+      previousCreator,
+      newCreator: newCreator.clientID,
+      newCreatorUsername: newCreator.username,
+      remainingPlayers: this.activeClients.length,
+    });
+
+    // Notify all clients about the new lobby creator
+    const notificationMessage = JSON.stringify({
+      type: "lobby_creator_changed",
+      newCreatorID: newCreator.clientID,
+      newCreatorUsername: newCreator.username,
+    } satisfies ServerLobbyCreatorChangedMessage);
+
+    this.activeClients.forEach((client) => {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(notificationMessage);
+      }
+    });
+  }
+
   phase(): GamePhase {
     const now = Date.now();
     const alive: Client[] = [];
@@ -494,6 +570,7 @@ export class GameServer {
       })),
       gameConfig: this.gameConfig,
       gameID: this.id,
+      lobbyCreatorID: this.isPublic() ? undefined : this.lobbyCreatorID,
       msUntilStart: this.isPublic()
         ? this.createdAt + this.config.gameCreationRate()
         : undefined,
