@@ -23,31 +23,31 @@
     },
     {
       "source": "/test-api/:path*",
-      "destination": "http://34.11.188.165:3000/api/:path*"
+      "destination": "https://34.36.164.25/api/:path*"
     },
     {
       "source": "/test-api-80/:path*",
-      "destination": "http://34.11.188.165/api/:path*"
+      "destination": "https://34.36.164.25/api/:path*"
     },
     {
       "source": "/api/:path*",
-      "destination": "http://34.11.188.165:3000/api/:path*"
+      "destination": "https://34.36.164.25/api/:path*"
     },
     {
       "source": "/cosmetics.json",
-      "destination": "http://34.11.188.165:3000/cosmetics.json"
+      "destination": "https://34.36.164.25/cosmetics.json"
     },
     {
       "source": "/w0/:path*",
-      "destination": "http://34.11.188.165:3001/w0/:path*"
+      "destination": "https://34.36.164.25/:path*"
     },
     {
       "source": "/w1/:path*",
-      "destination": "http://34.11.188.165:3002/w1/:path*"
+      "destination": "https://34.36.164.25/:path*"
     },
     {
       "source": "/w2/:path*",
-      "destination": "http://34.11.188.165:3003/w2/:path*"
+      "destination": "https://34.36.164.25/:path*"
     },
     {
       "source": "/((?!js|images|fonts|binary|text|resources|api|w[0-2]|test-api|test-api-80).*)",

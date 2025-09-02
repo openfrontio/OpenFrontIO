@@ -302,27 +302,32 @@ export class Transport {
     this.startPing();
     this.killExistingSocket();
     
-    // Get worker path (w0, w1, or w2) and corresponding port
+    // Get worker path (w0, w1, or w2)
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
-    const workerPort = this.lobbyConfig.serverConfig.workerPort(
-      this.lobbyConfig.gameID,
-    );
     
-    // For WebSocket: use direct connection to server IP with appropriate port
-    // This bypasses Vercel since they don't support WebSocket proxying
+    // For WebSocket: use direct connection to load balancer
+    // Load balancer handles SSL/TLS and routes to appropriate worker
     const isLocalDev = window.location.hostname === "localhost";
+    const workerPort = isLocalDev 
+      ? this.lobbyConfig.serverConfig.workerPort(this.lobbyConfig.gameID)
+      : 443; // Load balancer uses standard HTTPS port
+    
     const wsHost = isLocalDev 
       ? `localhost:${workerPort}` 
-      : `${process.env.WEBSOCKET_HOST || "34.11.188.165"}:${workerPort}`;
+      : process.env.WEBSOCKET_HOST || "34.36.164.25";
     
-    // Use ws:// for non-secure WebSocket (required when site is accessed via HTTP)
-    // Note: This will only work when accessing the site via HTTP, not HTTPS
-    const wsProtocol = "ws:";
+    // Use wss:// for secure WebSocket when on HTTPS, ws:// for local dev
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     
-    // Connect directly to the server's WebSocket endpoint
-    this.socket = new WebSocket(`${wsProtocol}//${wsHost}`);
+    // Connect to load balancer with worker path
+    // Load balancer will route based on the path (w0, w1, w2)
+    const wsUrl = isLocalDev 
+      ? `${wsProtocol}//${wsHost}`
+      : `${wsProtocol}//${wsHost}/${workerPath}`;
+    
+    this.socket = new WebSocket(wsUrl);
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
