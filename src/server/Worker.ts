@@ -8,6 +8,9 @@ import { LimiterType, gatekeeper } from "./Gatekeeper";
 import { WebSocket, WebSocketServer } from "ws";
 import { archive, readGameRecord } from "./Archive";
 import express, { NextFunction, Request, Response } from "express";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const cors = require("cors");
 import { GameEnv } from "../core/configuration/Config";
 import { GameManager } from "./GameManager";
 import { GameType } from "../core/game/Game";
@@ -51,6 +54,46 @@ export async function startWorker() {
     log,
   );
   privilegeRefresher.start();
+
+  // Configure CORS
+  const corsOptions = {
+    origin: (origin: string | undefined, callback: any) => {
+      // Allow requests with no origin (like mobile apps or Postman)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // In production, allow specific origins
+      const allowedOrigins = [
+        'http://localhost:9000',
+        'http://localhost:3000',
+        'https://localhost:9000',
+        'https://localhost:3000',
+      ];
+      
+      // Add Vercel deployment URLs
+      if (origin.includes('vercel.app') || origin.includes('openfrontio')) {
+        return callback(null, true);
+      }
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        // In dev mode, allow all origins
+        if (config.env() === GameEnv.Dev) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+
+  app.use(cors(corsOptions));
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {

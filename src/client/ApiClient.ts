@@ -6,16 +6,13 @@
 
 /**
  * Get the base URL for API requests
- * Uses WEBSOCKET_HOST environment variable when available (production)
- * Falls back to current location for development or same-host deployments
+ * Always returns empty string to use relative URLs.
+ * This ensures requests go through Vercel's proxy which handles
+ * forwarding to the actual server without CORS issues.
  */
 export function getApiBaseUrl(): string {
-  if (process.env.WEBSOCKET_HOST) {
-    // In production with separate hosts, use the configured server host
-    const protocol = window.location.protocol;
-    return `${protocol}//${process.env.WEBSOCKET_HOST}`;
-  }
-  // In development or same-host deployment, use relative URLs
+  // Always use relative URLs - Vercel proxy rewrites handle the routing
+  // This avoids CORS issues since all requests appear same-origin to the browser
   return '';
 }
 
