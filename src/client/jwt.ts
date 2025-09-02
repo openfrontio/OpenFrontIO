@@ -19,7 +19,7 @@ export function getApiBase() {
   const domainname = getAudience();
   return domainname === "localhost"
     ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
-    : `https://api.${domainname}`;
+    : ""; // Use relative URLs for Vercel proxy
 }
 
 function getToken(): string | null {

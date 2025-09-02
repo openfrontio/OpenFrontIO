@@ -301,17 +301,28 @@ export class Transport {
   ) {
     this.startPing();
     this.killExistingSocket();
-    // Use WEBSOCKET_HOST if defined (for production where client and server are on different hosts)
-    // Otherwise fall back to window.location.host (for development or same-host deployments)
-    const wsHost = process.env.WEBSOCKET_HOST || window.location.host;
-    // Use wss: for secure connections when using WEBSOCKET_HOST or https
-    const wsProtocol = (process.env.WEBSOCKET_HOST || window.location.protocol === "https:") 
-      ? "wss:" 
-      : "ws:";
+    
+    // Get worker path (w0, w1, or w2) and corresponding port
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
-    this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
+    const workerPort = this.lobbyConfig.serverConfig.workerPort(
+      this.lobbyConfig.gameID,
+    );
+    
+    // For WebSocket: use direct connection to server IP with appropriate port
+    // This bypasses Vercel since they don't support WebSocket proxying
+    const isLocalDev = window.location.hostname === "localhost";
+    const wsHost = isLocalDev 
+      ? `localhost:${workerPort}` 
+      : `${process.env.WEBSOCKET_HOST || "34.11.188.165"}:${workerPort}`;
+    
+    // Use ws:// for non-secure WebSocket (required when site is accessed via HTTP)
+    // Note: This will only work when accessing the site via HTTP, not HTTPS
+    const wsProtocol = "ws:";
+    
+    // Connect directly to the server's WebSocket endpoint
+    this.socket = new WebSocket(`${wsProtocol}//${wsHost}`);
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {

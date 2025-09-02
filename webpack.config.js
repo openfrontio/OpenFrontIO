@@ -131,7 +131,7 @@ export default async (env, argv) => {
       }),
       new webpack.DefinePlugin({
         "process.env.WEBSOCKET_HOST": JSON.stringify(
-          process.env.WEBSOCKET_HOST || (isProduction ? "" : "localhost")
+          process.env.WEBSOCKET_HOST || (isProduction ? "34.11.188.165" : "localhost")
         ),
         "process.env.WEBSOCKET_URL": JSON.stringify(
           isProduction ? "" : "localhost:3000",
