@@ -3,7 +3,7 @@ import { parseEther, formatEther, type Hash, keccak256, toHex } from 'viem';
 import { injected, metaMask, walletConnect } from '@wagmi/connectors';
 import { wagmiConfig as config } from './wallet';
 
-const CONTRACT_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" as const;
+const CONTRACT_ADDRESS = "0xb49F96bb922B077769eAAb517D5B012A42DE3b1D" as const;
 
 const CONTRACT_ABI = [
   {
@@ -294,6 +294,7 @@ export async function createLobby(params: CreateLobbyParams): Promise<CreateLobb
     betAmount,
     betAmountWei: betAmountWei.toString(),
   });
+  console.log("Contract Address:", CONTRACT_ADDRESS);
 
   const hash = await writeContract(config, {
     address: CONTRACT_ADDRESS,

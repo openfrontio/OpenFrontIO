@@ -5,7 +5,7 @@ import { type Hash, createWalletClient, type Address, getAddress } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
 // Contract configuration
-const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9" as const;
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0xb49F96bb922B077769eAAb517D5B012A42DE3b1D" as const;
 const GAME_SERVER_PRIVATE_KEY = process.env.GAME_SERVER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // Default anvil account #0 private key
 
 // Local Anvil chain for development
