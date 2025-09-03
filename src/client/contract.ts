@@ -269,9 +269,19 @@ function bytes32ToString(bytes32: `0x${string}`): string {
     }
   }
   
-  // Convert back to string
-  const decoder = new TextDecoder();
-  return decoder.decode(bytes.slice(0, length));
+  // Convert back to string, handling non-printable characters
+  const decoder = new TextDecoder('utf-8', { fatal: false });
+  const decoded = decoder.decode(bytes.slice(0, length));
+  
+  // If the decoded string contains only printable ASCII, return it
+  // Otherwise, return the hex string without 0x prefix (first 16 chars for non-zero data)
+  if (/^[\x20-\x7E]*$/.test(decoded) && decoded.length > 0) {
+    return decoded;
+  } else {
+    // Return the hex representation of non-zero bytes
+    const nonZeroHex = hex.replace(/00+$/, '');
+    return nonZeroHex || hex.substring(0, 16);
+  }
 }
 
 export async function createLobby(params: CreateLobbyParams): Promise<CreateLobbyResult> {
