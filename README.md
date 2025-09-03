@@ -87,6 +87,13 @@ To run just the server with development settings:
 npm run start:server-dev
 ```
 
+## Production deployment
+
+```
+sudo docker build --build-arg GIT_COMMIT=local -t openfrontio:prod .
+sudo docker run -d --name openfrontio --restart=always -p 127.0.0.1:80:80 openfrontio:prod
+```
+
 ## 🛠️ Development Tools
 
 - **Format code**:
@@ -141,11 +148,13 @@ The main test script provides automated testing of the entire WinModal blockchai
 Before running blockchain tests, ensure:
 
 1. **Anvil is running** (local Ethereum node):
+
    ```bash
    anvil
    ```
 
 2. **Smart contract is deployed**:
+
    ```bash
    cd src/contracts
    PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 forge script script/DeployOpenfront.s.sol:DeployOpenfront --rpc-url http://localhost:8545 --broadcast
@@ -159,6 +168,7 @@ Before running blockchain tests, ensure:
 #### Individual Test Components
 
 **Blockchain Utilities:**
+
 ```bash
 # Test complete lobby state progression
 node scripts/blockchain-test-utils.js test-progression
@@ -174,6 +184,7 @@ node scripts/blockchain-test-utils.js get-lobby [lobbyId]
 ```
 
 **UI Test Generation:**
+
 ```bash
 # Generate all UI test files
 node scripts/ui-test-helper.js generate-all
@@ -204,11 +215,13 @@ The blockchain test suite validates:
 After running `node scripts/ui-test-helper.js generate-all`, you can:
 
 1. **Open the test page** in your browser:
+
    ```bash
    open scripts/winmodal-ui-test.html
    ```
 
 2. **Run automated browser tests** (requires Playwright):
+
    ```bash
    npm install playwright
    node scripts/automated-ui-test.js
@@ -222,6 +235,7 @@ After running `node scripts/ui-test-helper.js generate-all`, you can:
 #### Test Configuration
 
 All test settings are configured in `scripts/test-config.json`, including:
+
 - Contract addresses and test accounts
 - Test lobby IDs and scenarios
 - Timeout values and retry limits
@@ -271,7 +285,6 @@ How to help?
 To ensure code quality and project stability, we use a progressive contribution system:
 
 1. **New Contributors**: Limited to UI improvements and small bug fixes only
-
    - This helps you become familiar with the codebase
    - UI changes are easier to review and less likely to break core functionality
    - Small, focused PRs have a higher chance of being accepted
@@ -283,20 +296,17 @@ To ensure code quality and project stability, we use a progressive contribution 
 ### How to Contribute Successfully
 
 1. **Before Starting Work**:
-
    - Open an issue describing what you want to contribute
    - Wait for maintainer feedback before investing significant time
    - Small improvements can proceed directly to PR stage
 
 2. **Code Quality Requirements**:
-
    - All code must be well-commented and follow existing style patterns
    - New features should not break existing functionality
    - Code should be thoroughly tested before submission
    - All code changes in src/core _MUST_ be tested.
 
 3. **Pull Request Process**:
-
    - Keep PRs focused on a single feature or bug fix
    - Include screenshots for UI changes
    - Describe what testing you've performed
