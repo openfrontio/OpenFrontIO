@@ -3,7 +3,7 @@ import { parseEther, formatEther, type Hash, keccak256, toHex } from 'viem';
 import { injected, metaMask, walletConnect } from '@wagmi/connectors';
 import { wagmiConfig as config } from './wallet';
 
-const CONTRACT_ADDRESS = "0xb49F96bb922B077769eAAb517D5B012A42DE3b1D" as const;
+const CONTRACT_ADDRESS = "0x70Bd8500e9c604595c3e07e34CDddd2C019a8AD5" as const;
 
 const CONTRACT_ABI = [
   {
