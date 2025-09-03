@@ -25,7 +25,11 @@ export class PatternButton extends LitElement {
   private translatePatternName(prefix: string, patternName: string): string {
     const translation = translateText(`${prefix}.${patternName}`);
     if (translation.startsWith(prefix)) {
-      return patternName[0].toUpperCase() + patternName.substring(1);
+      return patternName
+        .split("_")
+        .filter((word) => word.length > 0)
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(" ");
     }
     return translation;
   }
