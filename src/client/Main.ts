@@ -476,8 +476,8 @@ class Client {
       return;
     }
 
-    if (decodedHash.startsWith("#join")) {
-      const lobbyId = params.get("lobby");
+    if (decodedHash.startsWith("#join=")) {
+      const lobbyId = decodedHash.substring(6); // Remove "#join="
       if (lobbyId && ID.safeParse(lobbyId).success) {
         this.joinModal.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);
