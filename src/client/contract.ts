@@ -3,7 +3,7 @@ import { parseEther, formatEther, type Hash, keccak256, toHex } from 'viem';
 import { injected, metaMask, walletConnect } from '@wagmi/connectors';
 import { wagmiConfig as config } from './wallet';
 
-const CONTRACT_ADDRESS = "0x70Bd8500e9c604595c3e07e34CDddd2C019a8AD5" as const;
+const CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as const;
 
 const CONTRACT_ABI = [
   {
@@ -735,6 +735,7 @@ export async function startGame(params: StartGameParams): Promise<StartGameResul
  * Get all public lobby IDs from the contract
  */
 export async function getAllPublicLobbies(): Promise<string[]> {
+  console.log("getAllPublicLobbies:", CONTRACT_ADDRESS);
   try {
     const result = await readContract(config, {
       address: CONTRACT_ADDRESS,
