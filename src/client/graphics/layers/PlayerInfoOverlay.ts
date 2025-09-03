@@ -190,7 +190,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return !this.game.config().isUnitDisabled(type)
       ? html`<div
           class="flex p-1 w-[calc(50%-0.13rem)] border rounded-md border-gray-500
-                         items-center gap-2 text-smopacity-80"
+                         items-center gap-2 text-sm opacity-80"
           translate="no"
         >
           <img
