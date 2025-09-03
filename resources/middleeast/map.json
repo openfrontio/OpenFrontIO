@@ -1,0 +1,153 @@
+{
+  "name": "middleeast",
+  "mapInfoState": {
+    "width": 1250,
+    "height": 1600,
+    "originalWidth": 1250,
+    "originalHeight": 1600,
+    "cropData": {
+      "isCropped": false,
+      "cropX": 0,
+      "cropY": 0,
+      "cropWidth": 0,
+      "cropHeight": 0,
+      "originalWidth": 1250,
+      "originalHeight": 1600
+    },
+    "colorMappings": []
+  },
+  "nations": [
+    {
+      "coordinates": [724, 604],
+      "name": "Iraq",
+      "strength": 1,
+      "flag": "iq"
+    },
+    {
+      "coordinates": [863, 748],
+      "name": "Kuwait",
+      "strength": 1,
+      "flag": "kw"
+    },
+    {
+      "coordinates": [892, 893],
+      "name": "Bahrain",
+      "strength": 1,
+      "flag": "bh"
+    },
+    {
+      "coordinates": [984, 1030],
+      "name": "Qatar",
+      "strength": 1,
+      "flag": "qa"
+    },
+    {
+      "coordinates": [1152, 1115],
+      "name": "United Arab Emirates",
+      "strength": 1,
+      "flag": "ae"
+    },
+    {
+      "coordinates": [1278, 1331],
+      "name": "Oman",
+      "strength": 1,
+      "flag": "om"
+    },
+    {
+      "coordinates": [852, 1470],
+      "name": "Yemen",
+      "strength": 1,
+      "flag": "ye"
+    },
+    {
+      "coordinates": [615, 997],
+      "name": "Saudi Arabia",
+      "strength": 2,
+      "flag": "sa"
+    },
+    {
+      "coordinates": [1230, 637],
+      "name": "Iran",
+      "strength": 2,
+      "flag": "ir"
+    },
+    {
+      "coordinates": [409, 265],
+      "name": "Turkey",
+      "strength": 1,
+      "flag": "tr"
+    },
+    {
+      "coordinates": [444, 507],
+      "name": "Syria",
+      "strength": 1,
+      "flag": "sy"
+    },
+    {
+      "coordinates": [264, 661],
+      "name": "Israel",
+      "strength": 1,
+      "flag": "il"
+    },
+    {
+      "coordinates": [210, 748],
+      "name": "State of Palestine",
+      "strength": 1,
+      "flag": "ps"
+    },
+    {
+      "coordinates": [411, 701],
+      "name": "Jordan",
+      "strength": 1,
+      "flag": "jo"
+    },
+    {
+      "coordinates": [94, 1009],
+      "name": "Egypt",
+      "strength": 1,
+      "flag": "eg"
+    },
+    {
+      "coordinates": [89, 1418],
+      "name": "Sudan",
+      "strength": 1,
+      "flag": "sd"
+    },
+    {
+      "coordinates": [911, 1840],
+      "name": "Somalia",
+      "strength": 1,
+      "flag": "so"
+    },
+    {
+      "coordinates": [598, 1698],
+      "name": "Djibouti",
+      "strength": 1,
+      "flag": "dj"
+    },
+    {
+      "coordinates": [425, 1487],
+      "name": "Eritrea",
+      "strength": 1,
+      "flag": "er"
+    },
+    {
+      "coordinates": [312, 1809],
+      "name": "Ethiopia",
+      "strength": 1,
+      "flag": "et"
+    },
+    {
+      "coordinates": [811, 154],
+      "name": "Azerbaijan",
+      "strength": 1,
+      "flag": "az"
+    },
+    {
+      "coordinates": [1335, 147],
+      "name": "Turkmenistan",
+      "strength": 1,
+      "flag": "tm"
+    }
+  ]
+}
