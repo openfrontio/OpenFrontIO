@@ -24,7 +24,7 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderDuration, renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
@@ -188,17 +188,15 @@ export class PlayerPanel extends LitElement implements Layer {
       const myPlayer = this.g.myPlayer();
       if (myPlayer !== null && myPlayer.isAlive()) {
         this.actions = await myPlayer.actions(this.tile);
-
         if (this.actions?.interaction?.allianceExpiresAt !== undefined) {
           const expiresAt = this.actions.interaction.allianceExpiresAt;
           const remainingTicks = expiresAt - this.g.ticks();
-
           if (remainingTicks > 0) {
             const remainingSeconds = Math.max(
               0,
               Math.floor(remainingTicks / 10),
             ); // 10 ticks per second
-            this.allianceExpiryText = this.formatDuration(remainingSeconds);
+            this.allianceExpiryText = renderDuration(remainingSeconds);
           }
         } else {
           this.allianceExpiryText = null;
@@ -206,16 +204,6 @@ export class PlayerPanel extends LitElement implements Layer {
         this.requestUpdate();
       }
     }
-  }
-
-  private formatDuration(totalSeconds: number): string {
-    if (totalSeconds <= 0) return "0s";
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    let time = "";
-    if (minutes > 0) time += `${minutes}m `;
-    time += `${seconds}s`;
-    return time.trim();
   }
 
   render() {

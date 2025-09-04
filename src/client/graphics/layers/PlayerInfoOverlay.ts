@@ -1,6 +1,14 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
+import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
+import portIcon from "../../../../resources/images/AnchorIcon.png";
+import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
+import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
+import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
@@ -12,9 +20,10 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderDuration, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
@@ -175,36 +184,80 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private displayUnitCount(
     player: PlayerView,
     type: UnitType,
+    icon: string,
     description: string,
   ) {
     return !this.game.config().isUnitDisabled(type)
-      ? html`<div class="text-sm opacity-80" translate="no">
-          ${translateText(description)}: ${player.totalUnitLevels(type)}
+      ? html`<div
+          class="flex p-1 w-[calc(50%-0.13rem)] border rounded-md border-gray-500
+                         items-center gap-2 text-smopacity-80"
+          translate="no"
+        >
+          <img
+            src=${icon}
+            width="20"
+            height="20"
+            alt="${translateText(description)}"
+            style="vertical-align: middle;"
+          />
+          ${player.totalUnitLevels(type)}
         </div>`
       : "";
+  }
+
+  private allianceExpirationText(alliance: AllianceView) {
+    const { expiresAt } = alliance;
+    const remainingTicks = expiresAt - this.game.ticks();
+    let remainingSeconds = 0;
+    if (remainingTicks > 0) {
+      remainingSeconds = Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
+    }
+    return renderDuration(remainingSeconds);
   }
 
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
+    const isAllied = myPlayer?.isAlliedWith(player);
     let relationHtml: TemplateResult | null = null;
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
 
-    if (player.type() === PlayerType.FakeHuman && myPlayer !== null) {
+    if (
+      player.type() === PlayerType.FakeHuman &&
+      myPlayer !== null &&
+      !isAllied
+    ) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
       const relationClass = this.getRelationClass(relation);
       const relationName = this.getRelationName(relation);
 
       relationHtml = html`
-        <div class="text-sm opacity-80">
-          ${translateText("player_info_overlay.attitude")}:
-          <span class="${relationClass}">${relationName}</span>
-        </div>
+        <span class="ml-auto mr-0 ${relationClass}">${relationName}</span>
       `;
+    }
+
+    if (isAllied) {
+      const alliance = myPlayer
+        ?.alliances()
+        .find((alliance) => alliance.other === player.id());
+      if (alliance !== undefined) {
+        relationHtml = html` <span
+          class="flex gap-2 ml-auto mr-0 text-sm font-bold"
+        >
+          <img
+            src=${allianceIcon}
+            alt=${translateText("player_info_overlay.alliance_timeout")}
+            width="20"
+            height="20"
+            style="vertical-align: middle;"
+          />
+          ${this.allianceExpirationText(alliance)}
+        </span>`;
+      }
     }
     let playerType = "";
     switch (player.type()) {
@@ -222,7 +275,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <button
-          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
+          class="items-center text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
           @click=${() => {
@@ -259,56 +312,80 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     ${player.team()}
                   </div>`
                 : ""}
-              <div class="text-sm opacity-80">
-                ${translateText("player_info_overlay.type")}: ${playerType}
+              <div
+                class="flex gap-2 font-bold text-yellow-400 text-sm opacity-80"
+                translate="no"
+              >
+                <img
+                  src=${goldCoinIcon}
+                  alt=${translateText("player_info_overlay.gold")}
+                  width="15"
+                  height="15"
+                  style="vertical-align: middle;"
+                />
+                ${renderNumber(player.gold())}
               </div>
+              <div class="flex text-sm">${playerType} ${relationHtml}</div>
               ${player.troops() >= 1
-                ? html`<div class="text-sm opacity-80" translate="no">
-                    ${translateText("player_info_overlay.d_troops")}:
-                    ${renderTroops(player.troops())}
+                ? html`<div
+                    class="flex gap-2 text-sm opacity-80"
+                    translate="no"
+                  >
+                    ${translateText("player_info_overlay.troops")}:
+                    <span class="ml-auto mr-0 font-bold">
+                      ${renderTroops(player.troops())}
+                    </span>
                   </div>`
                 : ""}
               ${attackingTroops >= 1
-                ? html`<div class="text-sm opacity-80" translate="no">
+                ? html`<div
+                    class="flex gap-2 text-sm opacity-80"
+                    translate="no"
+                  >
                     ${translateText("player_info_overlay.a_troops")}:
-                    ${renderTroops(attackingTroops)}
+                    <span class="ml-auto mr-0 text-red-400 font-bold">
+                      ${renderTroops(attackingTroops)}
+                    </span>
                   </div>`
                 : ""}
-              <div class="text-sm opacity-80" translate="no">
-                ${translateText("player_info_overlay.gold")}:
-                ${renderNumber(player.gold())}
+              <div class="flex flex-wrap max-w-3xl gap-1">
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.City,
+                  cityIcon,
+                  "player_info_overlay.cities",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Port,
+                  portIcon,
+                  "player_info_overlay.ports",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Factory,
+                  factoryIcon,
+                  "player_info_overlay.factories",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.MissileSilo,
+                  missileSiloIcon,
+                  "player_info_overlay.missile_launchers",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.SAMLauncher,
+                  samLauncherIcon,
+                  "player_info_overlay.sams",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Warship,
+                  warshipIcon,
+                  "player_info_overlay.warships",
+                )}
               </div>
-              ${this.displayUnitCount(
-                player,
-                UnitType.Port,
-                "player_info_overlay.ports",
-              )}
-              ${this.displayUnitCount(
-                player,
-                UnitType.City,
-                "player_info_overlay.cities",
-              )}
-              ${this.displayUnitCount(
-                player,
-                UnitType.Factory,
-                "player_info_overlay.factories",
-              )}
-              ${this.displayUnitCount(
-                player,
-                UnitType.MissileSilo,
-                "player_info_overlay.missile_launchers",
-              )}
-              ${this.displayUnitCount(
-                player,
-                UnitType.SAMLauncher,
-                "player_info_overlay.sams",
-              )}
-              ${this.displayUnitCount(
-                player,
-                UnitType.Warship,
-                "player_info_overlay.warships",
-              )}
-              ${relationHtml}
             `
           : ""}
       </div>
