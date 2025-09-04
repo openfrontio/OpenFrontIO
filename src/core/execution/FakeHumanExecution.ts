@@ -98,14 +98,15 @@ export class FakeHumanExecution implements Execution {
       /* When player is hostile starts embargo. Do not stop until neutral again */
       if (
         player.relation(other) <= Relation.Hostile &&
-        !player.hasEmbargoAgainst(other)
+        !player.hasEmbargoAgainst(other) &&
+        !player.isOnSameTeam(other)
       ) {
-        player.addEmbargo(other.id(), false);
+        player.addEmbargo(other, false);
       } else if (
         player.relation(other) >= Relation.Neutral &&
         player.hasEmbargoAgainst(other)
       ) {
-        player.stopEmbargo(other.id());
+        player.stopEmbargo(other);
       }
     });
   }
@@ -153,15 +154,9 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
-    if (
-      this.player.troops() > 100_000 &&
-      this.player.targetTroopRatio() > 0.7
-    ) {
-      this.player.setTargetTroopRatio(0.7);
-    }
-
     this.updateRelationsFromEmbargos();
     this.behavior.handleAllianceRequests();
+    this.behavior.handleAllianceExtensionRequests();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
     this.maybeAttack();
@@ -357,7 +352,7 @@ export class FakeHumanExecution implements Execution {
     const dist = euclDistFN(tile, 25, false);
     let tileValue = targets
       .filter((unit) => dist(this.mg, unit.tile()))
-      .map((unit) => {
+      .map((unit): number => {
         switch (unit.type()) {
           case UnitType.City:
             return 25_000;
@@ -425,23 +420,22 @@ export class FakeHumanExecution implements Execution {
   }
 
   private handleUnits() {
-    const player = this.player;
-    if (player === null) return;
     return (
-      this.maybeSpawnStructure(UnitType.Port, 1) ||
-      this.maybeSpawnStructure(UnitType.City, 2) ||
+      this.maybeSpawnStructure(UnitType.City) ||
+      this.maybeSpawnStructure(UnitType.Port) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, 1) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, 1)
+      this.maybeSpawnStructure(UnitType.Factory) ||
+      this.maybeSpawnStructure(UnitType.MissileSilo)
     );
   }
 
-  private maybeSpawnStructure(type: UnitType, maxNum: number): boolean {
+  private maybeSpawnStructure(type: UnitType): boolean {
     if (this.player === null) throw new Error("not initialized");
-    if (this.player.unitsOwned(type) >= maxNum) {
-      return false;
-    }
-    if (this.player.gold() < this.cost(type)) {
+    const owned = this.player.unitsOwned(type);
+    const perceivedCostMultiplier = Math.min(owned + 1, 5);
+    const realCost = this.cost(type);
+    const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
+    if (this.player.gold() < perceivedCost) {
       return false;
     }
     const tile = this.structureSpawnTile(type);
@@ -465,7 +459,97 @@ export class FakeHumanExecution implements Execution {
           )
         : Array.from(this.player.tiles());
     if (tiles.length === 0) return null;
-    return this.random.randElement(tiles);
+    const valueFunction = this.structureSpawnTileValue(type);
+    let bestTile: TileRef | null = null;
+    let bestValue = 0;
+    const sampledTiles = this.arraySampler(tiles);
+    for (const t of sampledTiles) {
+      const v = valueFunction(t);
+      if (v <= bestValue && bestTile !== null) continue;
+      if (!this.player.canBuild(type, t)) continue;
+      // Found a better tile
+      bestTile = t;
+      bestValue = v;
+    }
+    return bestTile;
+  }
+
+  private *arraySampler<T>(a: T[], sampleSize = 50): Generator<T> {
+    if (a.length <= sampleSize) {
+      // Return all elements
+      yield* a;
+    } else {
+      // Sample `sampleSize` elements
+      const remaining = new Set<T>(a);
+      while (sampleSize--) {
+        const t = this.random.randFromSet(remaining);
+        remaining.delete(t);
+        yield t;
+      }
+    }
+  }
+
+  private structureSpawnTileValue(type: UnitType): (tile: TileRef) => number {
+    if (this.player === null) throw new Error("not initialized");
+    const borderTiles = this.player.borderTiles();
+    const mg = this.mg;
+    const otherUnits = this.player.units(type);
+    // Prefer spacing structures out of atom bomb range
+    const borderSpacing = this.mg
+      .config()
+      .nukeMagnitudes(UnitType.AtomBomb).outer;
+    const structureSpacing = borderSpacing * 2;
+    switch (type) {
+      case UnitType.Port:
+        return (tile) => {
+          let w = 0;
+
+          // Prefer to be far away from other structures of the same type
+          const otherTiles: Set<TileRef> = new Set(
+            otherUnits.map((u) => u.tile()),
+          );
+          otherTiles.delete(tile);
+          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+          if (closestOther !== null) {
+            const d = mg.manhattanDist(closestOther.x, tile);
+            w += Math.min(d, structureSpacing);
+          }
+
+          return w;
+        };
+      case UnitType.City:
+      case UnitType.Factory:
+      case UnitType.MissileSilo:
+        return (tile) => {
+          let w = 0;
+
+          // Prefer higher elevations
+          w += mg.magnitude(tile);
+
+          // Prefer to be away from the border
+          const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
+          if (closestBorder !== null) {
+            const d = mg.manhattanDist(closestBorder.x, tile);
+            w += Math.min(d, borderSpacing);
+          }
+
+          // Prefer to be away from other structures of the same type
+          const otherTiles: Set<TileRef> = new Set(
+            otherUnits.map((u) => u.tile()),
+          );
+          otherTiles.delete(tile);
+          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+          if (closestOther !== null) {
+            const d = mg.manhattanDist(closestOther.x, tile);
+            w += Math.min(d, structureSpacing);
+          }
+
+          // TODO: Cities and factories should consider train range limits
+          return w;
+        };
+      default:
+        throw new Error(`Value function not implemented for ${type}`);
+    }
   }
 
   private maybeSpawnWarship(): boolean {

@@ -2,6 +2,11 @@ import { PlayerID, Unit, UnitType } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
 import { UnitView } from "./GameView";
 
+export type UnitPredicate = (value: {
+  unit: Unit | UnitView;
+  distSquared: number;
+}) => boolean;
+
 export class UnitGrid {
   private grid: Map<UnitType, Set<Unit | UnitView>>[][];
   private readonly cellSize = 100;
@@ -130,11 +135,8 @@ export class UnitGrid {
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
-    types: UnitType | UnitType[],
-    predicate?: (value: {
-      unit: Unit | UnitView;
-      distSquared: number;
-    }) => boolean,
+    types: readonly UnitType[] | UnitType,
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
@@ -162,12 +164,28 @@ export class UnitGrid {
     return nearby;
   }
 
+  private unitIsInRange(
+    unit: Unit | UnitView,
+    tile: TileRef,
+    rangeSquared: number,
+    playerId?: PlayerID,
+  ): boolean {
+    if (!unit.isActive()) {
+      return false;
+    }
+    if (playerId !== undefined && unit.owner().id() !== playerId) {
+      return false;
+    }
+    const distSquared = this.squaredDistanceFromTile(unit, tile);
+    return distSquared <= rangeSquared;
+  }
+
   // Return true if it finds an owned specific unit in range
   hasUnitNearby(
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ): boolean {
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
       tile,
@@ -179,11 +197,8 @@ export class UnitGrid {
         const unitSet = this.grid[cy][cx].get(type);
         if (unitSet === undefined) continue;
         for (const unit of unitSet) {
-          if (unit.owner().id() === playerId && unit.isActive()) {
-            const distSquared = this.squaredDistanceFromTile(unit, tile);
-            if (distSquared <= rangeSquared) {
-              return true;
-            }
+          if (this.unitIsInRange(unit, tile, rangeSquared, playerId)) {
+            return true;
           }
         }
       }

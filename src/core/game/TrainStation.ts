@@ -18,41 +18,47 @@ interface TrainStopHandler {
  * Behavior to be defined
  */
 class CityStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const level = BigInt(station.unit.level() + 1);
-    const goldBonus = (mg.config().trainGold() * level) / this.factor;
-    station.unit.owner().addGold(goldBonus, station.tile());
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+    // Share revenue with the station owner if it's not the current player
+    if (trainOwner !== stationOwner) {
+      stationOwner.addGold(goldBonus, station.tile());
+    }
+    trainOwner.addGold(goldBonus, station.tile());
   }
 }
 
 class PortStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
   constructor(private random: PseudoRandom) {}
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const level = BigInt(station.unit.level() + 1);
-    const goldBonus = (mg.config().trainGold() * level) / this.factor;
-    station.unit.owner().addGold(goldBonus, station.tile());
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+
+    trainOwner.addGold(goldBonus, station.tile());
+    // Share revenue with the station owner if it's not the current player
+    if (trainOwner !== stationOwner) {
+      stationOwner.addGold(goldBonus, station.tile());
+    }
   }
 }
 
 class FactoryStopHandler implements TrainStopHandler {
-  private factor: bigint = BigInt(2);
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
-  ): void {
-    station.unit.owner().addGold(mg.config().trainGold(), station.tile());
-  }
+  ): void {}
 }
 
 export function createTrainStopHandlers(
@@ -207,7 +213,11 @@ export class Cluster {
   availableForTrade(player: Player): Set<TrainStation> {
     const tradingStations = new Set<TrainStation>();
     for (const station of this.stations) {
-      if (station.tradeAvailable(player)) {
+      if (
+        (station.unit.type() === UnitType.City ||
+          station.unit.type() === UnitType.Port) &&
+        station.tradeAvailable(player)
+      ) {
         tradingStations.add(station);
       }
     }
@@ -221,4 +231,20 @@ export class Cluster {
   clear() {
     this.stations.clear();
   }
+}
+
+function rel(
+  player: Player,
+  other: Player,
+): "self" | "team" | "ally" | "other" {
+  if (player === other) {
+    return "self";
+  }
+  if (player.isOnSameTeam(other)) {
+    return "team";
+  }
+  if (player.isAlliedWith(other)) {
+    return "ally";
+  }
+  return "other";
 }

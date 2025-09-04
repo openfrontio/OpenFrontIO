@@ -1,7 +1,7 @@
-import { base64url } from "jose";
 import { z } from "zod";
 import quickChatData from "../../resources/QuickChat.json" with { type: "json" };
 import countries from "../client/data/countries.json" with { type: "json" };
+import { PatternSchema } from "./CosmeticSchemas";
 import {
   AllPlayers,
   Difficulty,
@@ -14,7 +14,6 @@ import {
   Trios,
   UnitType,
 } from "./game/Game";
-import { PatternDecoder } from "./PatternDecoder";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
 
@@ -35,13 +34,13 @@ export type Intent =
   | EmojiIntent
   | DonateGoldIntent
   | DonateTroopsIntent
-  | TargetTroopRatioIntent
   | BuildUnitIntent
   | EmbargoIntent
   | QuickChatIntent
   | MoveWarshipIntent
   | MarkDisconnectedIntent
   | UpgradeStructureIntent
+  | DeleteUnitIntent
   | KickPlayerIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
@@ -59,9 +58,6 @@ export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
 export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
 export type DonateTroopsIntent = z.infer<typeof DonateTroopIntentSchema>;
 export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
-export type TargetTroopRatioIntent = z.infer<
-  typeof TargetTroopRatioIntentSchema
->;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
   typeof UpgradeStructureIntentSchema
@@ -74,6 +70,7 @@ export type MarkDisconnectedIntent = z.infer<
 export type AllianceExtensionIntent = z.infer<
   typeof AllianceExtensionIntentSchema
 >;
+export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
@@ -148,6 +145,8 @@ export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
+  donateGold: z.boolean(),
+  donateTroops: z.boolean(),
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
   disableNPCs: z.boolean(),
@@ -194,7 +193,7 @@ export const ID = z
 export const AllPlayersStatsSchema = z.record(ID, PlayerStatsSchema);
 
 export const UsernameSchema = SafeString;
-const countryCodes = countries.map((c) => c.code);
+const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 export const FlagSchema = z
   .string()
   .max(128)
@@ -207,25 +206,6 @@ export const FlagSchema = z
     },
     { message: "Invalid flag: must be a valid country code or start with !" },
   );
-export const RequiredPatternSchema = z
-  .string()
-  .max(1403)
-  .base64url()
-  .refine(
-    (val) => {
-      try {
-        new PatternDecoder(val, base64url.decode);
-        return true;
-      } catch (e) {
-        console.error(JSON.stringify(e.message, null, 2));
-        return false;
-      }
-    },
-    {
-      message: "Invalid pattern",
-    },
-  );
-export const PatternSchema = RequiredPatternSchema.optional();
 
 export const QuickChatKeySchema = z.enum(
   Object.entries(quickChatData).flatMap(([category, entries]) =>
@@ -254,10 +234,6 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
 
 export const SpawnIntentSchema = BaseIntentSchema.extend({
   type: z.literal("spawn"),
-  name: UsernameSchema,
-  flag: FlagSchema,
-  pattern: PatternSchema,
-  playerType: PlayerTypeSchema,
   tile: z.number(),
 });
 
@@ -314,11 +290,6 @@ export const DonateTroopIntentSchema = BaseIntentSchema.extend({
   troops: z.number().nullable(),
 });
 
-export const TargetTroopRatioIntentSchema = BaseIntentSchema.extend({
-  type: z.literal("troop_ratio"),
-  ratio: z.number().min(0).max(1),
-});
-
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
@@ -345,6 +316,11 @@ export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
   type: z.literal("move_warship"),
   unitId: z.number(),
   tile: z.number(),
+});
+
+export const DeleteUnitIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("delete_unit"),
+  unitId: z.number(),
 });
 
 export const QuickChatIntentSchema = BaseIntentSchema.extend({
@@ -378,13 +354,13 @@ const IntentSchema = z.discriminatedUnion("type", [
   EmojiIntentSchema,
   DonateGoldIntentSchema,
   DonateTroopIntentSchema,
-  TargetTroopRatioIntentSchema,
   BuildUnitIntentSchema,
   UpgradeStructureIntentSchema,
   EmbargoIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
   AllianceExtensionIntentSchema,
+  DeleteUnitIntentSchema,
   KickPlayerIntentSchema,
 ]);
 
@@ -403,7 +379,7 @@ export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   flag: FlagSchema,
-  pattern: PatternSchema,
+  pattern: PatternSchema.optional(),
 });
 
 export const GameStartInfoSchema = z.object({
@@ -509,7 +485,7 @@ export const ClientJoinMessageSchema = z.object({
   lastTurn: z.number(), // The last turn the client saw.
   username: UsernameSchema,
   flag: FlagSchema,
-  pattern: PatternSchema,
+  patternName: z.string().optional(),
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

@@ -21,7 +21,9 @@
     "instructions": "Ohjeet",
     "how_to_play": "Kuinka pelata",
     "advertise": "Mainosta",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Tietosuojaseloste",
+    "terms_of_service": "Käyttöehdot"
   },
   "news": {
     "full_changelog": "Katso koko muutosloki",
@@ -448,6 +450,7 @@
     "gold": "Kultaa",
     "ports": "Satamia",
     "cities": "Kaupunkeja",
+    "factories": "Tehtaita",
     "missile_launchers": "Ohjussiiloja",
     "sams": "Ilmatorjuntaohjusjärjestelmiä",
     "warships": "Sota-aluksia",
@@ -573,6 +576,9 @@
       "grogu_head": "Grogun pää",
       "grogu": "Grogu"
     }
+  },
+  "spawn_ad": {
+    "loading": "Ladataan mainosta..."
   },
   "auth": {
     "login_required": "Kirjautuminen vaaditaan tälle verkkosivustolle pääsemiseen.",

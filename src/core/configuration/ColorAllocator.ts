@@ -48,7 +48,7 @@ export class ColorAllocator {
       case ColoredTeams.Bot:
         return botTeamColors;
       default:
-        throw new Error(`Unknown team color: ${team}`);
+        return [this.assignColor(team)];
     }
   }
 

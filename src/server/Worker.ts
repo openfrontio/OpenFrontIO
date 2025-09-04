@@ -2,14 +2,12 @@ import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
 import ipAnonymize from "ip-anonymize";
-import { base64url } from "jose";
 import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { COSMETICS } from "../core/CosmeticSchemas";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
@@ -25,7 +23,9 @@ import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
-import { PrivilegeChecker } from "./Privilege";
+
+import { assertNever } from "../core/Util";
+import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
@@ -34,7 +34,7 @@ const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
 
 // Worker setup
-export function startWorker() {
+export async function startWorker() {
   log.info(`Worker starting...`);
 
   const __filename = fileURLToPath(import.meta.url);
@@ -46,11 +46,15 @@ export function startWorker() {
 
   const gm = new GameManager(config, log);
 
-  const privilegeChecker = new PrivilegeChecker(COSMETICS, base64url.decode);
-
   if (config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
+
+  const privilegeRefresher = new PrivilegeRefresher(
+    config.jwtIssuer() + "/cosmetics.json",
+    log,
+  );
+  privilegeRefresher.start();
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
@@ -334,15 +338,9 @@ export function startWorker() {
             // Ignore ping
             return;
           } else if (clientMsg.type !== "join") {
-            const error = `Invalid message before join: ${JSON.stringify(clientMsg)}`;
-            log.warn(error);
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                error,
-              } satisfies ServerErrorMessage),
+            log.warn(
+              `Invalid message before join: ${JSON.stringify(clientMsg)}`,
             );
-            ws.close(1002, "ClientJoinMessageSchema");
             return;
           }
 
@@ -402,11 +400,9 @@ export function startWorker() {
           // Check if the flag is allowed
           if (clientMsg.flag !== undefined) {
             if (clientMsg.flag.startsWith("!")) {
-              const allowed = privilegeChecker.isCustomFlagAllowed(
-                clientMsg.flag,
-                roles,
-                flares,
-              );
+              const allowed = privilegeRefresher
+                .get()
+                .isCustomFlagAllowed(clientMsg.flag, flares);
               if (allowed !== true) {
                 log.warn(`Custom flag ${allowed}: ${clientMsg.flag}`);
                 ws.close(1002, `Custom flag ${allowed}`);
@@ -415,17 +411,32 @@ export function startWorker() {
             }
           }
 
+          let pattern: string | undefined;
           // Check if the pattern is allowed
-          if (clientMsg.pattern !== undefined) {
-            const allowed = privilegeChecker.isPatternAllowed(
-              clientMsg.pattern,
-              roles,
-              flares,
-            );
-            if (allowed !== true) {
-              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
-              ws.close(1002, `Pattern ${allowed}`);
-              return;
+          if (clientMsg.patternName !== undefined) {
+            const result = privilegeRefresher
+              .get()
+              .isPatternAllowed(clientMsg.patternName, flares);
+            switch (result.type) {
+              case "allowed":
+                pattern = result.pattern;
+                break;
+              case "unknown":
+                log.warn(`Pattern ${clientMsg.patternName} unknown`);
+                ws.close(
+                  1002,
+                  "Could not look up pattern, backend may be offline",
+                );
+                return;
+              case "forbidden":
+                log.warn(`Pattern ${clientMsg.patternName}: ${result.reason}`);
+                ws.close(
+                  1002,
+                  `Pattern ${clientMsg.patternName}: ${result.reason}`,
+                );
+                return;
+              default:
+                assertNever(result);
             }
           }
 
@@ -440,7 +451,7 @@ export function startWorker() {
             clientMsg.username,
             ws,
             clientMsg.flag,
-            clientMsg.pattern,
+            pattern,
           );
 
           const wasFound = gm.addClient(

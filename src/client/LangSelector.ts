@@ -24,6 +24,7 @@ import pl from "../../resources/lang/pl.json";
 import pt_BR from "../../resources/lang/pt-BR.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
+import sk from "../../resources/lang/sk.json";
 import sl from "../../resources/lang/sl.json";
 import sv_SE from "../../resources/lang/sv-SE.json";
 import tp from "../../resources/lang/tp.json";
@@ -34,8 +35,8 @@ import zh_CN from "../../resources/lang/zh-CN.json";
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
-  @state() private defaultTranslations: Record<string, string> | undefined;
-  @state() private currentLang: string = "en";
+  @state() public defaultTranslations: Record<string, string> | undefined;
+  @state() public currentLang: string = "en";
   @state() private languageList: any[] = [];
   @state() private showModal: boolean = false;
   @state() private debugMode: boolean = false;
@@ -71,10 +72,11 @@ export class LangSelector extends LitElement {
     ko,
     gl,
     sl,
+    sk,
   };
 
   createRenderRoot() {
-    return this; // Use Light DOM if you prefer this
+    return this;
   }
 
   connectedCallback() {
@@ -85,10 +87,10 @@ export class LangSelector extends LitElement {
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "t") this.debugKeyPressed = true;
+      if (e.key?.toLowerCase() === "t") this.debugKeyPressed = true;
     });
     window.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() === "t") this.debugKeyPressed = false;
+      if (e.key?.toLowerCase() === "t") this.debugKeyPressed = false;
     });
   }
 
@@ -292,7 +294,7 @@ export class LangSelector extends LitElement {
         <button
           id="lang-selector"
           @click=${this.openModal}
-          class="text-center appearance-none w-full bg-blue-100 hover:bg-blue-200 text-blue-900 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300 flex items-center gap-2 justify-center"
+          class="text-center appearance-none w-full bg-blue-100 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-gray-600 text-blue-900 dark:text-gray-100 p-3 sm:p-4 lg:p-5 font-medium text-sm sm:text-base lg:text-lg rounded-md border-none cursor-pointer transition-colors duration-300 flex items-center gap-2 justify-center"
         >
           <img
             id="lang-flag"

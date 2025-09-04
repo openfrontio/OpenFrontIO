@@ -40,6 +40,10 @@ export class UserSettings {
     return this.get("settings.specialEffects", true);
   }
 
+  structureSprites() {
+    return this.get("settings.structureSprites", true);
+  }
+
   darkMode() {
     return this.get("settings.darkMode", false);
   }
@@ -90,6 +94,10 @@ export class UserSettings {
     this.set("settings.specialEffects", !this.fxLayer());
   }
 
+  toggleStructureSprites() {
+    this.set("settings.structureSprites", !this.structureSprites());
+  }
+
   toggleTerritoryPatterns() {
     this.set("settings.territoryPatterns", !this.territoryPatterns());
   }
@@ -103,15 +111,20 @@ export class UserSettings {
     }
   }
 
-  getSelectedPattern(): string | undefined {
+  // For development only. Used for testing patterns, set in the console manually.
+  getDevOnlyPattern(): string | undefined {
+    return localStorage.getItem("dev-pattern") ?? undefined;
+  }
+
+  getSelectedPatternName(): string | undefined {
     return localStorage.getItem(PATTERN_KEY) ?? undefined;
   }
 
-  setSelectedPattern(base64: string | undefined): void {
-    if (base64 === undefined) {
+  setSelectedPatternName(patternName: string | undefined): void {
+    if (patternName === undefined) {
       localStorage.removeItem(PATTERN_KEY);
     } else {
-      localStorage.setItem(PATTERN_KEY, base64);
+      localStorage.setItem(PATTERN_KEY, patternName);
     }
   }
 }

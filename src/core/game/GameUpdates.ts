@@ -18,7 +18,7 @@ export interface GameUpdateViewData {
   tick: number;
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
-  playerNameViewData: Record<number, NameViewData>;
+  playerNameViewData: Record<string, NameViewData>;
 }
 
 export interface ErrorUpdate {
@@ -45,6 +45,7 @@ export enum GameUpdateType {
   BonusEvent,
   RailroadEvent,
   ConquestEvent,
+  EmbargoEvent,
 }
 
 export type GameUpdate =
@@ -65,13 +66,14 @@ export type GameUpdate =
   | AllianceExtensionUpdate
   | BonusEventUpdate
   | RailroadUpdate
-  | ConquestUpdate;
+  | ConquestUpdate
+  | EmbargoUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
+  player: PlayerID;
   tile: TileRef;
   gold: number;
-  workers: number;
   troops: number;
 }
 
@@ -154,10 +156,7 @@ export interface PlayerUpdate {
   isDisconnected: boolean;
   tilesOwned: number;
   gold: Gold;
-  population: number;
-  workers: number;
   troops: number;
-  targetTroopRatio: number;
   allies: number[];
   embargoes: Set<PlayerID>;
   isTraitor: boolean;
@@ -257,4 +256,11 @@ export interface UnitIncomingUpdate {
   message: string;
   messageType: MessageType;
   playerID: number;
+}
+
+export interface EmbargoUpdate {
+  type: GameUpdateType.EmbargoEvent;
+  event: "start" | "stop";
+  playerID: number;
+  embargoedID: number;
 }

@@ -1,149 +1,91 @@
 import { UserMeResponse } from "../core/ApiSchemas";
-import { COSMETICS } from "../core/CosmeticSchemas";
+import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
-import { translateText } from "./Utils";
+import { getPersistentID } from "./Main";
 
-interface StripeProduct {
-  id: string;
-  object: "product";
-  active: boolean;
-  created: number;
-  description: string | null;
-  images: string[];
-  livemode: boolean;
-  metadata: Record<string, string>;
-  name: string;
-  shippable: boolean | null;
-  type: "good" | "service";
-  updated: number;
-  url: string | null;
-  price: string;
-  price_id: string;
-}
-
-export interface Pattern {
-  name: string;
-  key: string;
-  roles: string[];
-  price?: string;
-  priceId?: string;
-  lockedReason?: string;
-  notShown?: boolean;
-}
-
-export async function patterns(
+export async function fetchPatterns(
   userMe: UserMeResponse | null,
-): Promise<Pattern[]> {
-  const patterns: Pattern[] = Object.entries(COSMETICS.patterns).map(
-    ([key, patternData]) => {
-      return {
-        name: patternData.name,
-        key,
-        roles: patternData.role_group
-          ? (COSMETICS.role_groups[patternData.role_group] ?? [])
-          : [],
-      };
-    },
-  );
+): Promise<Map<string, Pattern>> {
+  const cosmetics = await getCosmetics();
 
-  const products = await listAllProducts();
-  patterns.forEach((pattern) => {
-    addRestrictions(pattern, userMe, products);
-  });
+  if (cosmetics === undefined) {
+    return new Map();
+  }
+
+  const patterns: Map<string, Pattern> = new Map();
+  const playerFlares = new Set(userMe?.player?.flares ?? []);
+  const hasAllPatterns = playerFlares.has("pattern:*");
+
+  for (const name in cosmetics.patterns) {
+    const patternData = cosmetics.patterns[name];
+    const hasAccess = hasAllPatterns || playerFlares.has(`pattern:${name}`);
+    if (hasAccess) {
+      // Remove product info because player already has access.
+      patternData.product = null;
+      patterns.set(name, patternData);
+    } else if (patternData.product !== null) {
+      // Player doesn't have access, but product is available for purchase.
+      patterns.set(name, patternData);
+    }
+    // If player doesn't have access and product is null, don't show it.
+  }
   return patterns;
 }
 
-function addRestrictions(
-  pattern: Pattern,
-  userMe: UserMeResponse | null,
-  products: Map<string, StripeProduct>,
-) {
-  if (userMe === null) {
-    if (products.has(`pattern:${pattern.name}`)) {
-      // Purchasable (flare-gated) patterns are shown as disabled
-      pattern.lockedReason = translateText("territory_patterns.blocked.login");
-    } else {
-      // Role-gated patterns are not shown
-      pattern.notShown = true;
-    }
-    return;
-  }
-  const flares = userMe.player.flares ?? [];
-  if (
-    flares.includes("pattern:*") ||
-    flares.includes(`pattern:${pattern.name}`)
-  ) {
-    // Pattern is unlocked by flare
+export async function handlePurchase(pattern: Pattern) {
+  if (pattern.product === null) {
+    alert("This pattern is not available for purchase.");
     return;
   }
 
-  const myRoles = userMe.player.roles ?? [];
-  if (
-    pattern.roles.some((authorizedRole) => myRoles.includes(authorizedRole))
-  ) {
-    // Pattern is unlocked by role
-    return;
-  }
-
-  const product = products.get(`pattern:${pattern.name}`);
-  if (product) {
-    pattern.price = product.price;
-    pattern.priceId = product.price_id;
-    pattern.lockedReason = translateText("territory_patterns.blocked.purchase");
-    return;
-  }
-
-  // Pattern is locked by role group and not purchasable, don't show it.
-  pattern.notShown = true;
-}
-
-export async function handlePurchase(priceId: string) {
-  try {
-    const response = await fetch(
-      `${getApiBase()}/stripe/create-checkout-session`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          authorization: getAuthHeader(),
-        },
-        body: JSON.stringify({
-          priceId: priceId,
-          successUrl: `${window.location.href}purchase-success`,
-          cancelUrl: `${window.location.href}purchase-cancel`,
-        }),
+  const response = await fetch(
+    `${getApiBase()}/stripe/create-checkout-session`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        authorization: getAuthHeader(),
+        "X-Persistent-Id": getPersistentID(),
       },
+      body: JSON.stringify({
+        priceId: pattern.product.priceId,
+        hostname: window.location.origin,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    console.error(
+      `Error purchasing pattern:${response.status} ${response.statusText}`,
     );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (response.status === 401) {
+      alert("You are not logged in. Please log in to purchase a pattern.");
+    } else {
+      alert("Something went wrong. Please try again later.");
     }
-
-    const { url } = await response.json();
-
-    // Redirect to Stripe checkout
-    window.location.href = url;
-  } catch (error) {
-    console.error("Purchase error:", error);
-    alert("Something went wrong. Please try again later.");
+    return;
   }
+
+  const { url } = await response.json();
+
+  // Redirect to Stripe checkout
+  window.location.href = url;
 }
 
-// Returns a map of flare -> product
-export async function listAllProducts(): Promise<Map<string, StripeProduct>> {
+export async function getCosmetics(): Promise<Cosmetics | undefined> {
   try {
-    const response = await fetch(`${getApiBase()}/stripe/products`);
+    const response = await fetch(`${getApiBase()}/cosmetics.json`);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      console.error(`HTTP error! status: ${response.status}`);
+      return;
     }
-    const products = (await response.json()) as StripeProduct[];
-    const productMap = new Map<string, StripeProduct>();
-    products.forEach((product) => {
-      productMap.set(product.metadata.flare, product);
-    });
-    return productMap;
+    const result = CosmeticsSchema.safeParse(await response.json());
+    if (!result.success) {
+      console.error(`Invalid cosmetics: ${result.error.message}`);
+      return;
+    }
+    return result.data;
   } catch (error) {
-    console.error("Failed to fetch products:", error);
-    return new Map();
+    console.error("Error getting cosmetics:", error);
   }
 }

@@ -8,7 +8,6 @@ import {
   GameType,
   Quads,
   Trios,
-  UnitType,
 } from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
@@ -21,32 +20,32 @@ const config = getServerConfigFromServer();
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
 const frequency: Partial<Record<GameMapName, number>> = {
-  World: 3,
-  Europe: 2,
-  Africa: 2,
-  Baikal: 2,
-  Australia: 1,
-  NorthAmerica: 1,
-  Britannia: 1,
-  GatewayToTheAtlantic: 1,
-  Iceland: 1,
-  SouthAmerica: 1,
-  DeglaciatedAntarctica: 1,
-  EuropeClassic: 1,
-  Mena: 1,
-  Pangaea: 1,
-  Asia: 1,
-  Mars: 1,
-  BetweenTwoSeas: 1,
-  EastAsia: 1,
-  BlackSea: 1,
-  FaroeIslands: 1,
-  FalklandIslands: 1,
-  Halkidiki: 1,
-  StraitOfGibraltar: 1,
-  Italia: 1,
-  Yenisei: 1,
-  Pluto: 1,
+  Africa: 7,
+  Asia: 6,
+  Australia: 4,
+  Baikal: 5,
+  BetweenTwoSeas: 5,
+  BlackSea: 6,
+  Britannia: 5,
+  DeglaciatedAntarctica: 4,
+  EastAsia: 5,
+  Europe: 3,
+  EuropeClassic: 3,
+  FalklandIslands: 4,
+  FaroeIslands: 4,
+  GatewayToTheAtlantic: 5,
+  Halkidiki: 4,
+  Iceland: 4,
+  Italia: 6,
+  Mars: 3,
+  Mena: 6,
+  NorthAmerica: 5,
+  Pangaea: 5,
+  Pluto: 6,
+  SouthAmerica: 5,
+  StraitOfGibraltar: 5,
+  World: 8,
+  Yenisei: 0,
 };
 
 interface MapWithMode {
@@ -77,6 +76,8 @@ export class MapPlaylist {
 
     // Create the default public game config (from your GameManager)
     return {
+      donateGold: true,
+      donateTroops: true,
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
@@ -88,7 +89,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: 400,
-      disabledUnits: [UnitType.Train, UnitType.Factory],
+      disabledUnits: [],
     } satisfies GameConfig;
   }
 
