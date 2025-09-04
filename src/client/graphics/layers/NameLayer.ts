@@ -28,7 +28,6 @@ class RenderInfo {
   constructor(
     public player: PlayerView,
     public lastRenderCalc: number,
-    public location: Cell | null,
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
@@ -131,14 +130,14 @@ export class NameLayer implements Layer {
   }
 
   private updateElementVisibility(render: RenderInfo) {
-    if (!render.player.nameLocation() || !render.player.isAlive()) {
+    const loc = render.player.nameLocation();
+    if (!loc || !render.player.isAlive()) {
+      render.element.style.display = "none";
       return;
     }
 
     const size = this.transformHandler.scale * render.baseSize;
-    const isOnScreen = render.location
-      ? this.transformHandler.isOnScreen(render.location)
-      : false;
+    const isOnScreen = this.transformHandler.isOnScreen(new Cell(loc.x, loc.y));
 
     if (!this.isVisible || size < 7 || !isOnScreen) {
       render.element.style.display = "none";
@@ -166,7 +165,6 @@ export class NameLayer implements Layer {
             new RenderInfo(
               player,
               0,
-              null,
               0,
               "",
               this.createPlayerElement(player),
@@ -191,6 +189,13 @@ export class NameLayer implements Layer {
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
       this.lastChecked = now;
+
+      this.renders = this.renders.filter((r) => {
+        const keep = r.player.isAlive() && !!r.player.nameLocation();
+        if (!keep) r.element.remove();
+        return keep;
+      });
+
       for (const render of this.renders) {
         this.updatePlayerInfoContent(render);
       }
@@ -311,16 +316,22 @@ export class NameLayer implements Layer {
   }
 
   private updatePlayerElementTransform(render: RenderInfo) {
+    const loc = render.player.nameLocation();
+    if (!loc || !render.player.isAlive()) {
+      render.element.style.display = "none";
+      return;
+    }
+
     this.updateElementVisibility(render);
 
-    if (render.element.style.display === "none" || !render.location) {
+    if (render.element.style.display === "none") {
       return;
     }
 
     const globalScale = this.transformHandler.scale;
 
-    const scaledX = render.location.x * globalScale;
-    const scaledY = render.location.y * globalScale;
+    const scaledX = loc.x * globalScale;
+    const scaledY = loc.y * globalScale;
 
     const localSizeScale = Math.min(render.baseSize * 0.25, 3);
 
@@ -330,21 +341,10 @@ export class NameLayer implements Layer {
   }
 
   private updatePlayerInfoContent(render: RenderInfo) {
-    if (!render.player.nameLocation() || !render.player.isAlive()) {
-      this.renders = this.renders.filter((r) => r !== render);
-      render.element.remove();
-      return;
-    }
-
-    render.location = new Cell(
-      render.player.nameLocation().x,
-      render.player.nameLocation().y,
-    );
-
     // Update baseSize here, in the throttled update
     render.baseSize = Math.max(
       1,
-      Math.floor(render.player.nameLocation().size),
+      Math.floor(render.player.nameLocation()!.size),
     );
 
     // The font size is now independent of the global zoom, as scaling is handled by transform
