@@ -200,7 +200,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             alt="${translateText(description)}"
             style="vertical-align: middle;"
           />
-          ${player.totalUnitLevels(type)}
+          <span class="w-full text-right p-1"
+            >${player.totalUnitLevels(type)}</span
+          >
         </div>`
       : "";
   }
@@ -312,26 +314,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     ${player.team()}
                   </div>`
                 : ""}
-              <div
-                class="flex gap-2 font-bold text-yellow-400 text-sm opacity-80"
-                translate="no"
-              >
-                <img
-                  src=${goldCoinIcon}
-                  alt=${translateText("player_info_overlay.gold")}
-                  width="15"
-                  height="15"
-                  style="vertical-align: middle;"
-                />
-                ${renderNumber(player.gold())}
-              </div>
               <div class="flex text-sm">${playerType} ${relationHtml}</div>
               ${player.troops() >= 1
                 ? html`<div
                     class="flex gap-2 text-sm opacity-80"
                     translate="no"
                   >
-                    ${translateText("player_info_overlay.troops")}:
+                    ${translateText("player_info_overlay.troops")}
                     <span class="ml-auto mr-0 font-bold">
                       ${renderTroops(player.troops())}
                     </span>
@@ -342,12 +331,28 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                     class="flex gap-2 text-sm opacity-80"
                     translate="no"
                   >
-                    ${translateText("player_info_overlay.a_troops")}:
+                    ${translateText("player_info_overlay.a_troops")}
                     <span class="ml-auto mr-0 text-red-400 font-bold">
                       ${renderTroops(attackingTroops)}
                     </span>
                   </div>`
                 : ""}
+              <div
+                class="flex p-1 mb-1 mt-1 w-full border rounded-md border-yellow-400
+                          font-bold text-yellow-400 text-sm opacity-80"
+                translate="no"
+              >
+                <img
+                  src=${goldCoinIcon}
+                  alt=${translateText("player_info_overlay.gold")}
+                  width="15"
+                  height="15"
+                  style="vertical-align: middle;"
+                />
+                <span class="w-full text-center"
+                  >${renderNumber(player.gold())}</span
+                >
+              </div>
               <div class="flex flex-wrap max-w-3xl gap-1">
                 ${this.displayUnitCount(
                   player,
