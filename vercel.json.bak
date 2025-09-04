@@ -23,26 +23,34 @@
     },
     {
       "source": "/test-api/:path*",
-      "destination": "https://snake-generous-piglet.ngrok-free.app/api/:path*"
+      "destination": "https://34.36.164.25/api/:path*"
     },
     {
       "source": "/test-api-80/:path*",
-      "destination": "https://snake-generous-piglet.ngrok-free.app/api/:path*"
+      "destination": "https://34.36.164.25/api/:path*"
     },
     {
       "source": "/api/:path*",
-      "destination": "https://snake-generous-piglet.ngrok-free.app/api/:path*"
-    },
-    {
-      "source": "/w:idx(\\d+)/:path*",
-      "destination": "https://snake-generous-piglet.ngrok-free.app/w:idx/:path*"
+      "destination": "https://34.36.164.25/api/:path*"
     },
     {
       "source": "/cosmetics.json",
-      "destination": "https://snake-generous-piglet.ngrok-free.app/cosmetics.json"
+      "destination": "https://34.36.164.25/cosmetics.json"
     },
     {
-      "source": "/((?!js|images|fonts|binary|text|resources|api|w\\d+|test-api|test-api-80).*)",
+      "source": "/w0/:path*",
+      "destination": "https://34.36.164.25/:path*"
+    },
+    {
+      "source": "/w1/:path*",
+      "destination": "https://34.36.164.25/:path*"
+    },
+    {
+      "source": "/w2/:path*",
+      "destination": "https://34.36.164.25/:path*"
+    },
+    {
+      "source": "/((?!js|images|fonts|binary|text|resources|api|w[0-2]|test-api|test-api-80).*)",
       "destination": "/index.html"
     }
   ],
