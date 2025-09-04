@@ -1,7 +1,14 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerStatsLeaf, PlayerStatsTree } from "../../../../core/ApiSchemas";
-import { Difficulty, GameMode, GameType } from "../../../../core/game/Game";
+import {
+  Difficulty,
+  GameMode,
+  GameType,
+  isDifficulty,
+  isGameMode,
+  isGameType,
+} from "../../../../core/game/Game";
 import { PlayerStats } from "../../../../core/StatsSchemas";
 import { renderNumber, translateText } from "../../../Utils";
 import "./PlayerStatsGrid";
@@ -16,20 +23,20 @@ export class PlayerStatsTreeView extends LitElement {
 
   private get availableTypes(): GameType[] {
     if (!this.statsTree) return [];
-    return Object.keys(this.statsTree) as GameType[];
+    return Object.keys(this.statsTree).filter(isGameType);
   }
 
   private get availableModes(): GameMode[] {
     const typeNode = this.statsTree?.[this.selectedType];
     if (!typeNode) return [];
-    return Object.keys(typeNode) as GameMode[];
+    return Object.keys(typeNode).filter(isGameMode);
   }
 
   private get availableDifficulties(): Difficulty[] {
     const typeNode = this.statsTree?.[this.selectedType];
     const modeNode = typeNode?.[this.selectedMode];
     if (!modeNode) return [];
-    return Object.keys(modeNode) as Difficulty[];
+    return Object.keys(modeNode).filter(isDifficulty);
   }
 
   private labelForMode(m: GameMode) {
