@@ -75,7 +75,7 @@ export class PlayerInfoModal extends LitElement {
             : null}
           <br />
           <discord-user-header
-            .data=${this.userMeResponse?.user ?? null}
+            .data=${this.userMeResponse?.user?.discord ?? null}
           ></discord-user-header>
           <player-stats-tree-view
             .statsTree=${this.statsTree}

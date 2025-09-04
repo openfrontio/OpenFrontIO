@@ -92,6 +92,7 @@ class Client {
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
+  private playerInfoModal: PlayerInfoModal;
   private tokenLoginModal: TokenLoginModal;
 
   constructor() {}
@@ -217,14 +218,14 @@ class Client {
       this.patternsModal.open();
     });
 
-    const piModal = document.querySelector(
+    this.playerInfoModal = document.querySelector(
       "player-info-modal",
     ) as PlayerInfoModal;
-    piModal instanceof PlayerInfoModal;
+    this.playerInfoModal instanceof PlayerInfoModal;
     document
       .getElementById("player-info-button")
       ?.addEventListener("click", () => {
-        piModal.open();
+        this.playerInfoModal.open();
       });
 
     this.tokenLoginModal = document.querySelector(
@@ -319,7 +320,7 @@ class Client {
       } else if (userMeResponse === false) {
         // Not logged in
         this.patternsModal.onUserMe(null);
-        piModal.onUserMe(null);
+        this.playerInfoModal.onUserMe(null);
       } else {
         // Authorized
         console.log(
@@ -327,7 +328,7 @@ class Client {
             "Sharing this ID will allow others to view your game history and stats.",
         );
         this.patternsModal.onUserMe(userMeResponse);
-        piModal.onUserMe(userMeResponse);
+        this.playerInfoModal.onUserMe(userMeResponse);
       }
     };
 
