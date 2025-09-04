@@ -95,6 +95,14 @@ export class UserSettingModal extends LitElement {
       document.documentElement.classList.remove("dark");
     }
 
+    this.dispatchEvent(
+      new CustomEvent("dark-mode-changed", {
+        detail: { darkMode: enabled },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 

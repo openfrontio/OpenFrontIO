@@ -43,6 +43,7 @@
     "action_move_camera": "Move camera",
     "action_ratio_change": "Decrease/Increase attack ratio",
     "action_reset_gfx": "Reset graphics",
+    "action_auto_upgrade": "Auto-upgrade nearest building",
     "ui_section": "Game UI",
     "ui_leaderboard": "Leaderboard",
     "ui_your_team": "Your team:",
@@ -129,10 +130,23 @@
     "disable_nations": "Disable Nations",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
+    "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
+    "donate_troops": "Donate troops",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game"
+  },
+  "token_login_modal": {
+    "title": "Logging in...",
+    "logging_in": "Logging in...",
+    "success": "Successfully logged in as {email}!"
+  },
+  "account_modal": {
+    "title": "Account",
+    "logged_in_as": "Logged in as {email}",
+    "logged_in_with_discord": "Logged in with Discord",
+    "recovery_email_sent": "Recovery email sent to {email}"
   },
   "map": {
     "map": "Map",
@@ -210,7 +224,9 @@
     "disable_nations": "Disable Nations",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
+    "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
+    "donate_troops": "Donate troops",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -234,9 +250,9 @@
   },
   "difficulty": {
     "difficulty": "Difficulty",
-    "Relaxed": "Relaxed",
-    "Balanced": "Balanced",
-    "Intense": "Intense",
+    "Easy": "Relaxed",
+    "Medium": "Balanced",
+    "Hard": "Intense",
     "Impossible": "Impossible"
   },
   "game_mode": {
@@ -361,26 +377,31 @@
     },
     "help": {
       "troops": "Please give me troops!",
+      "troops_frontlines": "Send troops to the frontlines!",
       "gold": "Please give me gold!",
       "no_attack": "Please don't attack me!",
       "sorry_attack": "Sorry, I didn’t mean to attack.",
       "alliance": "Alliance?",
       "help_defend": "Help me defend against [P1]!",
-      "team_up": "Let’s team up against [P1]!"
+      "trade_partners": "Let's be trade partners!"
     },
     "attack": {
       "attack": "Attack [P1]!",
       "mirv": "Launch a MIRV at [P1]!",
       "focus": "Focus fire on [P1]!",
-      "finish": "Let's finish off [P1]!"
+      "finish": "Let's finish off [P1]!",
+      "build_warships": "Build Warships!"
     },
     "defend": {
       "defend": "Defend [P1]!",
+      "defend_from": "Defend from [P1]!",
       "dont_attack": "Don’t attack [P1]!",
-      "ally": "[P1] is my ally!"
+      "ally": "[P1] is my ally!",
+      "build_posts": "Build Defense Posts!"
     },
     "greet": {
       "hello": "Hello!",
+      "good_job": "Good job!",
       "good_luck": "Good luck!",
       "have_fun": "Have fun!",
       "gg": "GG!",
@@ -391,13 +412,19 @@
       "thanks": "Thanks!",
       "oops": "Oops, wrong button!",
       "trust_me": "You can trust me. Promise!",
-      "trust_broken": "I trusted you..."
+      "trust_broken": "I trusted you...",
+      "ruining_games": "You're ruining both of our games.",
+      "dont_do_that": "Don't do that!",
+      "same_team": "I'm on your side!"
     },
     "misc": {
       "go": "Let’s go!",
       "strategy": "Nice strategy!",
       "fun": "This game is fun!",
-      "pr": "When will my PR finally get merged...?"
+      "team_up": "Let’s team up against [P1]!",
+      "pr": "When will my PR finally get merged...?",
+      "build_closer": "Build closer to get trains!",
+      "coastline": "Please let me get a coastline."
     },
     "warnings": {
       "strong": "[P1] is strong.",
@@ -408,10 +435,14 @@
       "has_allies": "[P1] has many allies.",
       "no_allies": "[P1] has no allies.",
       "betrayed": "[P1] betrayed their ally!",
+      "betrayed_me": "[P1] betrayed me!",
       "getting_big": "[P1] is growing too fast!",
       "danger_base": "[P1] is unprotected!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
-      "mirv_ready": "[P1] has enough gold to launch a MIRV!"
+      "mirv_ready": "[P1] has enough gold to launch a MIRV!",
+      "snowballing": "[P1] is snowballing too fast!",
+      "cheating": "[P1] is cheating!",
+      "stop_trading": "Stop trading with [P1]!"
     }
   },
   "build_menu": {
@@ -430,6 +461,8 @@
     "not_enough_money": "Not enough money"
   },
   "win_modal": {
+    "support_openfront": "Support OpenFront!",
+    "territory_pattern": "Purchase a territory pattern to support OpenFront!",
     "died": "You died",
     "your_team": "Your team won!",
     "other_team": "{team} team has won!",
@@ -447,7 +480,13 @@
     "team": "Team",
     "owned": "Owned",
     "gold": "Gold",
-    "troops": "Troops"
+    "troops": "Troops",
+    "launchers": "Launchers",
+    "sams": "SAMs",
+    "warships": "Warships",
+    "cities": "Cities",
+    "show_control": "Show Control",
+    "show_units": "Show Units"
   },
   "player_info_overlay": {
     "type": "Type",
@@ -488,7 +527,8 @@
     "accept_alliance": "Accept",
     "reject_alliance": "Reject",
     "alliance_renewed": "Your alliance with {name} has been renewed",
-    "ignore": "Ignore"
+    "ignore": "Ignore",
+    "unit_voluntarily_deleted": "Unit voluntarily deleted"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
@@ -524,7 +564,8 @@
     "yes": "Yes",
     "no": "No",
     "none": "None",
-    "alliances": "Alliances"
+    "alliances": "Alliances",
+    "flag": "Flag"
   },
   "replay_panel": {
     "replay_speed": "Replay speed",
@@ -594,5 +635,9 @@
     "redirecting": "You are being redirected...",
     "not_authorized": "You are not authorized to access this website.",
     "contact_admin": "If you believe you are seeing this message in error, please contact the website administrator."
+  },
+  "radial_menu": {
+    "delete_unit_title": "Delete Unit",
+    "delete_unit_description": "Click to delete the nearest unit"
   }
 }

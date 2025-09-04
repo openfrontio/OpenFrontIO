@@ -13,6 +13,7 @@ import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
+import Countries from "../../data/countries.json";
 import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
@@ -232,7 +233,8 @@ export class PlayerPanel extends LitElement implements Layer {
     }
     other = other as PlayerView;
 
-    const canDonate = this.actions?.interaction?.canDonate;
+    const canDonateGold = this.actions?.interaction?.canDonateGold;
+    const canDonateTroops = this.actions?.interaction?.canDonateTroops;
     const canSendAllianceRequest =
       this.actions?.interaction?.canSendAllianceRequest;
     const canSendEmoji =
@@ -242,6 +244,14 @@ export class PlayerPanel extends LitElement implements Layer {
     const canBreakAlliance = this.actions?.interaction?.canBreakAlliance;
     const canTarget = this.actions?.interaction?.canTarget;
     const canEmbargo = this.actions?.interaction?.canEmbargo;
+
+    //flag icon in the playerPanel
+    const flagCode = other.cosmetics.flag;
+    const country =
+      typeof flagCode === "string"
+        ? Countries.find((c) => c.code === flagCode)
+        : undefined;
+    const flagName = country?.name;
 
     return html`
       <div
@@ -276,7 +286,28 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${other?.name()}
                 </div>
               </div>
-
+              <!-- Flag -->
+              ${country
+                ? html`
+                    <div>
+                      <div class="text-white text-opacity-80 text-sm px-2">
+                        ${translateText("player_panel.flag")}
+                      </div>
+                      <div
+                        class="px-4 h-8 lg:h-10 flex items-center justify-center gap-4
+                        bg-opacity-50 bg-gray-700 text-opacity-90 text-white
+                        rounded text-sm lg:text-xl w-full"
+                      >
+                        ${flagName}
+                        <img
+                          src="/flags/${flagCode}.svg"
+                          width="60"
+                          height="60"
+                        />
+                      </div>
+                    </div>
+                  `
+                : ""}
               <!-- Resources section -->
               <div class="grid grid-cols-2 gap-2">
                 <div class="flex flex-col gap-1">
@@ -421,7 +452,7 @@ export class PlayerPanel extends LitElement implements Layer {
                       <img src=${allianceIcon} alt="Alliance" class="w-6 h-6" />
                     </button>`
                   : ""}
-                ${canDonate
+                ${canDonateTroops
                   ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleDonateTroopClick(e, myPlayer, other)}
@@ -436,7 +467,7 @@ export class PlayerPanel extends LitElement implements Layer {
                       />
                     </button>`
                   : ""}
-                ${canDonate
+                ${canDonateGold
                   ? html`<button
                       @click=${(e: MouseEvent) =>
                         this.handleDonateGoldClick(e, myPlayer, other)}

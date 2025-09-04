@@ -82,7 +82,9 @@ export interface Config {
   isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
+  donateGold(): boolean;
   infiniteTroops(): boolean;
+  donateTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
@@ -119,6 +121,7 @@ export interface Config {
   shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
+  allianceRequestDuration(): Tick;
   allianceRequestCooldown(): Tick;
   temporaryEmbargoDuration(): Tick;
   targetDuration(): Tick;
@@ -126,12 +129,17 @@ export interface Config {
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
   tradeShipGold(dist: number, numPorts: number): Gold;
-  tradeShipSpawnRate(numberOfPorts: number): number;
-  trainGold(): Gold;
-  trainSpawnRate(numberOfStations: number): number;
+  tradeShipSpawnRate(
+    numTradeShips: number,
+    numPlayerPorts: number,
+    numPlayerTradeShips: number,
+  ): number;
+  trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
+  trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
   railroadMaxSize(): number;
@@ -185,6 +193,7 @@ export interface Theme {
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;
+  neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
 }

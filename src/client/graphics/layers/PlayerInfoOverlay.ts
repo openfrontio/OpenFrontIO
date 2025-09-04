@@ -66,6 +66,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private lastMouseUpdate = 0;
 
+  private showDetails = true;
+
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
       this.onMouseEvent(e),
@@ -219,10 +221,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div class="p-2">
-        <div
+        <button
           class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
+          @click=${() => {
+            this.showDetails = !this.showDetails;
+            this.requestUpdate?.();
+          }}
         >
           ${player.cosmetics.flag
             ? player.cosmetics.flag!.startsWith("!")
@@ -242,62 +248,69 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 />`
             : html``}
           ${player.name()}
-        </div>
-        ${player.team() !== null
-          ? html`<div class="text-sm opacity-80">
-              ${translateText("player_info_overlay.team")}: ${player.team()}
-            </div>`
+        </button>
+
+        <!-- Collapsible section -->
+        ${this.showDetails
+          ? html`
+              ${player.team() !== null
+                ? html`<div class="text-sm opacity-80">
+                    ${translateText("player_info_overlay.team")}:
+                    ${player.team()}
+                  </div>`
+                : ""}
+              <div class="text-sm opacity-80">
+                ${translateText("player_info_overlay.type")}: ${playerType}
+              </div>
+              ${player.troops() >= 1
+                ? html`<div class="text-sm opacity-80" translate="no">
+                    ${translateText("player_info_overlay.d_troops")}:
+                    ${renderTroops(player.troops())}
+                  </div>`
+                : ""}
+              ${attackingTroops >= 1
+                ? html`<div class="text-sm opacity-80" translate="no">
+                    ${translateText("player_info_overlay.a_troops")}:
+                    ${renderTroops(attackingTroops)}
+                  </div>`
+                : ""}
+              <div class="text-sm opacity-80" translate="no">
+                ${translateText("player_info_overlay.gold")}:
+                ${renderNumber(player.gold())}
+              </div>
+              ${this.displayUnitCount(
+                player,
+                UnitType.Port,
+                "player_info_overlay.ports",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.City,
+                "player_info_overlay.cities",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.Factory,
+                "player_info_overlay.factories",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.MissileSilo,
+                "player_info_overlay.missile_launchers",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.SAMLauncher,
+                "player_info_overlay.sams",
+              )}
+              ${this.displayUnitCount(
+                player,
+                UnitType.Warship,
+                "player_info_overlay.warships",
+              )}
+              ${relationHtml}
+            `
           : ""}
-        <div class="text-sm opacity-80">
-          ${translateText("player_info_overlay.type")}: ${playerType}
-        </div>
-        ${player.troops() >= 1
-          ? html`<div class="text-sm opacity-80" translate="no">
-              ${translateText("player_info_overlay.d_troops")}:
-              ${renderTroops(player.troops())}
-            </div>`
-          : ""}
-        ${attackingTroops >= 1
-          ? html`<div class="text-sm opacity-80" translate="no">
-              ${translateText("player_info_overlay.a_troops")}:
-              ${renderTroops(attackingTroops)}
-            </div>`
-          : ""}
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.gold")}:
-          ${renderNumber(player.gold())}
-        </div>
-        ${this.displayUnitCount(
-          player,
-          UnitType.Port,
-          "player_info_overlay.ports",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.City,
-          "player_info_overlay.cities",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.Factory,
-          "player_info_overlay.factories",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.MissileSilo,
-          "player_info_overlay.missile_launchers",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.SAMLauncher,
-          "player_info_overlay.sams",
-        )}
-        ${this.displayUnitCount(
-          player,
-          UnitType.Warship,
-          "player_info_overlay.warships",
-        )}
-        ${relationHtml}
       </div>
     `;
   }

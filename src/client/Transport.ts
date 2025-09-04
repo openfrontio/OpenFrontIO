@@ -5,7 +5,6 @@ import {
   GameType,
   Gold,
   PlayerID,
-  PlayerType,
   Tick,
   UnitType,
 } from "../core/game/Game";
@@ -133,6 +132,10 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendDeleteUnitIntentEvent implements GameEvent {
+  constructor(public readonly unitId: number) {}
+}
+
 export class CancelAttackIntentEvent implements GameEvent {
   constructor(public readonly attackID: string) {}
 }
@@ -238,6 +241,11 @@ export class Transport {
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
+
+    this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
+      this.onSendDeleteUnitIntent(e),
+    );
+
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
     );
@@ -370,7 +378,7 @@ export class Transport {
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
       flag: this.lobbyConfig.flag,
-      pattern: this.lobbyConfig.pattern,
+      patternName: this.lobbyConfig.patternName,
     } satisfies ClientJoinMessage);
   }
 
@@ -433,10 +441,6 @@ export class Transport {
     this.sendIntent({
       type: "spawn",
       clientID: this.lobbyConfig.clientID,
-      flag: this.lobbyConfig.flag,
-      pattern: this.lobbyConfig.pattern,
-      name: this.lobbyConfig.playerName,
-      playerType: PlayerType.Human,
       tile: event.tile,
     });
   }
@@ -600,6 +604,14 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
       tile: event.tile,
+    });
+  }
+
+  private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
+    this.sendIntent({
+      type: "delete_unit",
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
     });
   }
 

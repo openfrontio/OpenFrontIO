@@ -1,36 +1,43 @@
 import { UserMeResponse } from "../core/ApiSchemas";
 import { Cosmetics, CosmeticsSchema, Pattern } from "../core/CosmeticSchemas";
 import { getApiBase, getAuthHeader } from "./jwt";
+import { getPersistentID } from "./Main";
 
-export async function patterns(
+export async function fetchPatterns(
   userMe: UserMeResponse | null,
-): Promise<Pattern[]> {
+): Promise<Map<string, Pattern>> {
   const cosmetics = await getCosmetics();
 
   if (cosmetics === undefined) {
-    return [];
+    return new Map();
   }
 
-  const patterns: Pattern[] = [];
-  const playerFlares = new Set(userMe?.player.flares);
+  const patterns: Map<string, Pattern> = new Map();
+  const playerFlares = new Set(userMe?.player?.flares ?? []);
+  const hasAllPatterns = playerFlares.has("pattern:*");
 
   for (const name in cosmetics.patterns) {
     const patternData = cosmetics.patterns[name];
-    const hasAccess = playerFlares.has(`pattern:${name}`);
+    const hasAccess = hasAllPatterns || playerFlares.has(`pattern:${name}`);
     if (hasAccess) {
       // Remove product info because player already has access.
       patternData.product = null;
-      patterns.push(patternData);
+      patterns.set(name, patternData);
     } else if (patternData.product !== null) {
       // Player doesn't have access, but product is available for purchase.
-      patterns.push(patternData);
+      patterns.set(name, patternData);
     }
     // If player doesn't have access and product is null, don't show it.
   }
   return patterns;
 }
 
-export async function handlePurchase(priceId: string) {
+export async function handlePurchase(pattern: Pattern) {
+  if (pattern.product === null) {
+    alert("This pattern is not available for purchase.");
+    return;
+  }
+
   const response = await fetch(
     `${getApiBase()}/stripe/create-checkout-session`,
     {
@@ -38,12 +45,11 @@ export async function handlePurchase(priceId: string) {
       headers: {
         "Content-Type": "application/json",
         authorization: getAuthHeader(),
+        "X-Persistent-Id": getPersistentID(),
       },
       body: JSON.stringify({
-        priceId: priceId,
-
-        successUrl: `${window.location.href}purchase-success`,
-        cancelUrl: `${window.location.href}purchase-cancel`,
+        priceId: pattern.product.priceId,
+        hostname: window.location.origin,
       }),
     },
   );
@@ -66,7 +72,7 @@ export async function handlePurchase(priceId: string) {
   window.location.href = url;
 }
 
-async function getCosmetics(): Promise<Cosmetics | undefined> {
+export async function getCosmetics(): Promise<Cosmetics | undefined> {
   try {
     const response = await fetch(`${getApiBase()}/cosmetics.json`);
     if (!response.ok) {

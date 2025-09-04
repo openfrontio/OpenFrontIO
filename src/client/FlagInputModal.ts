@@ -9,7 +9,8 @@ export class FlagInputModal extends LitElement {
     close: () => void;
   };
 
-  @state() private search: string = "";
+  @state() private search = "";
+  @state() private isModalOpen = false;
 
   createRenderRoot() {
     return this;
@@ -28,40 +29,48 @@ export class FlagInputModal extends LitElement {
         <div
           class="flex flex-wrap justify-evenly gap-[1rem] overflow-y-auto overflow-x-hidden h-[90%]"
         >
-          ${Countries.filter(
-            (country) =>
-              country.name.toLowerCase().includes(this.search.toLowerCase()) ||
-              country.code.toLowerCase().includes(this.search.toLowerCase()),
-          ).map(
-            (country) => html`
-              <button
-                @click=${() => {
-                  this.setFlag(country.code);
-                  this.close();
-                }}
-                class="text-center cursor-pointer border-none bg-none opacity-70 
+          ${this.isModalOpen
+            ? Countries.filter(
+                (country) =>
+                  !country.restricted && this.includedInSearch(country),
+              ).map(
+                (country) => html`
+                  <button
+                    @click=${() => {
+                      this.setFlag(country.code);
+                      this.close();
+                    }}
+                    class="text-center cursor-pointer border-none bg-none opacity-70 
                   w-[calc(100%/2-15px)] sm:w-[calc(100%/4-15px)] 
                   md:w-[calc(100%/6-15px)] lg:w-[calc(100%/8-15px)] 
                   xl:w-[calc(100%/10-15px)] min-w-[80px]"
-              >
-                <img
-                  class="country-flag w-full h-auto"
-                  src="/flags/${country.code}.svg"
-                  @error=${(e: Event) => {
-                    const img = e.currentTarget as HTMLImageElement;
-                    const fallback = "/flags/xx.svg";
-                    if (img.src && !img.src.endsWith(fallback)) {
-                      img.src = fallback;
-                    }
-                  }}
-                />
-                <span class="country-name">${country.name}</span>
-              </button>
-            `,
-          )}
+                  >
+                    <img
+                      class="country-flag w-full h-auto"
+                      src="/flags/${country.code}.svg"
+                      @error=${(e: Event) => {
+                        const img = e.currentTarget as HTMLImageElement;
+                        const fallback = "/flags/xx.svg";
+                        if (img.src && !img.src.endsWith(fallback)) {
+                          img.src = fallback;
+                        }
+                      }}
+                    />
+                    <span class="country-name">${country.name}</span>
+                  </button>
+                `,
+              )
+            : html``}
         </div>
       </o-modal>
     `;
+  }
+
+  private includedInSearch(country: { name: string; code: string }): boolean {
+    return (
+      country.name.toLowerCase().includes(this.search.toLowerCase()) ||
+      country.code.toLowerCase().includes(this.search.toLowerCase())
+    );
   }
 
   private handleSearch(event: Event) {
@@ -80,9 +89,11 @@ export class FlagInputModal extends LitElement {
   }
 
   public open() {
+    this.isModalOpen = true;
     this.modalEl?.open();
   }
   public close() {
+    this.isModalOpen = false;
     this.modalEl?.close();
   }
 

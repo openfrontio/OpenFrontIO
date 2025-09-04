@@ -99,7 +99,9 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   private onSettingsButtonClick() {
-    this.eventBus.emit(new ShowSettingsModalEvent(true));
+    this.eventBus.emit(
+      new ShowSettingsModalEvent(true, this._isSinglePlayer, this.isPaused),
+    );
   }
 
   render() {
