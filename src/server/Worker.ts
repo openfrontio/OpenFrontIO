@@ -24,6 +24,7 @@ import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
+import { assertNever } from "../core/Util";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -410,15 +411,32 @@ export async function startWorker() {
             }
           }
 
+          let pattern: string | undefined;
           // Check if the pattern is allowed
-          if (clientMsg.pattern !== undefined) {
-            const allowed = privilegeRefresher
+          if (clientMsg.patternName !== undefined) {
+            const result = privilegeRefresher
               .get()
-              .isPatternAllowed(clientMsg.pattern, flares);
-            if (allowed !== true) {
-              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
-              ws.close(1002, `Pattern ${allowed}`);
-              return;
+              .isPatternAllowed(clientMsg.patternName, flares);
+            switch (result.type) {
+              case "allowed":
+                pattern = result.pattern;
+                break;
+              case "unknown":
+                log.warn(`Pattern ${clientMsg.patternName} unknown`);
+                ws.close(
+                  1002,
+                  "Could not look up pattern, backend may be offline",
+                );
+                return;
+              case "forbidden":
+                log.warn(`Pattern ${clientMsg.patternName}: ${result.reason}`);
+                ws.close(
+                  1002,
+                  `Pattern ${clientMsg.patternName}: ${result.reason}`,
+                );
+                return;
+              default:
+                assertNever(result);
             }
           }
 
@@ -433,7 +451,7 @@ export async function startWorker() {
             clientMsg.username,
             ws,
             clientMsg.flag,
-            clientMsg.pattern,
+            pattern,
           );
 
           const wasFound = gm.addClient(

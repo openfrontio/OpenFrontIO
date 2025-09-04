@@ -39,6 +39,8 @@ export class GameManager {
       Date.now(),
       this.config,
       {
+        donateGold: false,
+        donateTroops: false,
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         difficulty: Difficulty.Medium,

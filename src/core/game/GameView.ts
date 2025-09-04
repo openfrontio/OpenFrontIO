@@ -326,6 +326,10 @@ export class PlayerView {
     return this.data.embargoes.has(other.id());
   }
 
+  hasEmbargo(other: PlayerView): boolean {
+    return this.hasEmbargoAgainst(other) || other.hasEmbargoAgainst(this);
+  }
+
   profile(): Promise<PlayerProfile> {
     return this.game.worker.playerProfile(this.smallID());
   }
@@ -350,6 +354,10 @@ export class PlayerView {
   }
   isDisconnected(): boolean {
     return this.data.isDisconnected;
+  }
+
+  canDeleteUnit(): boolean {
+    return true;
   }
 }
 
@@ -377,13 +385,13 @@ export class GameView implements GameMap {
     private _mapData: TerrainMapData,
     private _myClientID: ClientID,
     private _gameID: GameID,
-    private _hunans: Player[],
+    private humans: Player[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
-      this._hunans.map((h) => [
+      this.humans.map((h) => [
         h.clientID,
         { flag: h.flag, pattern: h.pattern } satisfies PlayerCosmetics,
       ]),

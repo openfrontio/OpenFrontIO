@@ -66,6 +66,7 @@ interface GameEvent {
   duration?: Tick;
   focusID?: number;
   unitView?: UnitView;
+  shouldDelete?: (game: GameView) => boolean;
 }
 
 @customElement("events-display")
@@ -195,7 +196,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
     let remainingEvents = this.events.filter((event) => {
       const shouldKeep =
-        this.game.ticks() - event.createdAt < (event.duration ?? 600);
+        this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
+        !event.shouldDelete?.(this.game);
       if (!shouldKeep && event.onDelete) {
         event.onDelete();
       }
@@ -352,10 +354,8 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     let description: string = event.message;
-    if (event.params !== undefined) {
-      if (event.message.startsWith("events_display.")) {
-        description = translateText(event.message, event.params);
-      }
+    if (event.message.startsWith("events_display.")) {
+      description = translateText(event.message, event.params ?? {});
     }
 
     this.addEvent({
@@ -456,19 +456,36 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),
-      onDelete: () =>
-        this.eventBus.emit(
-          new SendAllianceReplyIntentEvent(requestor, recipient, false),
-        ),
       priority: 0,
-      duration: 150,
+      duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
+      shouldDelete: (game) => {
+        // Recipient sent a separate request, so they became allied without the recipient responding.
+        return requestor.isAlliedWith(recipient);
+      },
       focusID: update.requestorID,
     });
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
+    if (!myPlayer) {
+      return;
+    }
+    // myPlayer can deny alliances without clicking on the button
+    if (update.request.recipientID === myPlayer.smallID()) {
+      // Remove alliance requests whose requestors are the same as the reply's requestor
+      // Noop unless the request was denied through other means (e.g attacking the requestor)
+      this.events = this.events.filter(
+        (event) =>
+          !(
+            event.type === MessageType.ALLIANCE_REQUEST &&
+            event.focusID === update.request.requestorID
+          ),
+      );
+      this.requestUpdate();
+      return;
+    }
+    if (update.request.requestorID !== myPlayer.smallID()) {
       return;
     }
 

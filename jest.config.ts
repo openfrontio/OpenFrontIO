@@ -10,22 +10,9 @@ export default {
     "\\.(css|less)$": "<rootDir>/__mocks__/fileMock.js",
   },
   transform: {
-    "^.+\\.tsx?$": [
-      "ts-jest",
-      {
-        useESM: true,
-        tsconfig: {
-          target: "ES2020",
-          module: "es2022",
-          moduleResolution: "node",
-          experimentalDecorators: true,
-          types: ["jest", "node"],
-        },
-      },
-    ],
+    "^.+\\.tsx?$": ["@swc/jest"],
   },
   transformIgnorePatterns: ["node_modules/(?!(node:)/)"],
-  preset: "ts-jest/presets/default-esm",
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
     global: {

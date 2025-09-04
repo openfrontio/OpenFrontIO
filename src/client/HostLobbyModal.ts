@@ -23,7 +23,6 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -41,13 +40,15 @@ export class HostLobbyModal extends LitElement {
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
+  @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
+  @state() private donateTroops: boolean = false;
   @state() private instantBuild: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
-  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
 
@@ -238,9 +239,7 @@ export class HostLobbyModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${translateText(
-                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
-                        )}
+                        ${translateText(`difficulty.${key}`)}
                       </p>
                     </div>
                   `,
@@ -359,6 +358,38 @@ export class HostLobbyModal extends LitElement {
                   />
                   <div class="option-card-title">
                     ${translateText("host_modal.instant_build")}
+                  </div>
+                </label>
+
+                <label
+                  for="donate-gold"
+                  class="option-card ${this.donateGold ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="donate-gold"
+                    @change=${this.handleDonateGoldChange}
+                    .checked=${this.donateGold}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.donate_gold")}
+                  </div>
+                </label>
+
+                <label
+                  for="donate-troops"
+                  class="option-card ${this.donateTroops ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="donate-troops"
+                    @change=${this.handleDonateTroopsChange}
+                    .checked=${this.donateTroops}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.donate_troops")}
                   </div>
                 </label>
 
@@ -562,8 +593,18 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleDonateGoldChange(e: Event) {
+    this.donateGold = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private handleInfiniteTroopsChange(e: Event) {
     this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
+  private handleDonateTroopsChange(e: Event) {
+    this.donateTroops = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
   }
 
@@ -598,7 +639,9 @@ export class HostLobbyModal extends LitElement {
           disableNPCs: this.disableNPCs,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
+          donateGold: this.donateGold,
           infiniteTroops: this.infiniteTroops,
+          donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,

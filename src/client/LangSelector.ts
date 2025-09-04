@@ -24,6 +24,7 @@ import pl from "../../resources/lang/pl.json";
 import pt_BR from "../../resources/lang/pt-BR.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
+import sk from "../../resources/lang/sk.json";
 import sl from "../../resources/lang/sl.json";
 import sv_SE from "../../resources/lang/sv-SE.json";
 import tp from "../../resources/lang/tp.json";
@@ -34,8 +35,8 @@ import zh_CN from "../../resources/lang/zh-CN.json";
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
-  @state() private defaultTranslations: Record<string, string> | undefined;
-  @state() private currentLang: string = "en";
+  @state() public defaultTranslations: Record<string, string> | undefined;
+  @state() public currentLang: string = "en";
   @state() private languageList: any[] = [];
   @state() private showModal: boolean = false;
   @state() private debugMode: boolean = false;
@@ -71,10 +72,11 @@ export class LangSelector extends LitElement {
     ko,
     gl,
     sl,
+    sk,
   };
 
   createRenderRoot() {
-    return this; // Use Light DOM if you prefer this
+    return this;
   }
 
   connectedCallback() {
@@ -85,10 +87,10 @@ export class LangSelector extends LitElement {
 
   private setupDebugKey() {
     window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "t") this.debugKeyPressed = true;
+      if (e.key?.toLowerCase() === "t") this.debugKeyPressed = true;
     });
     window.addEventListener("keyup", (e) => {
-      if (e.key.toLowerCase() === "t") this.debugKeyPressed = false;
+      if (e.key?.toLowerCase() === "t") this.debugKeyPressed = false;
     });
   }
 

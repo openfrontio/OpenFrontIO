@@ -349,6 +349,7 @@ export interface AllianceRequest {
   requestor(): Player;
   recipient(): Player;
   createdAt(): Tick;
+  status(): "pending" | "accepted" | "rejected";
 }
 
 export interface Alliance {
@@ -362,10 +363,11 @@ export interface Alliance {
 export interface MutableAlliance extends Alliance {
   expire(): void;
   other(player: Player): Player;
-  canExtend(): boolean;
+  bothAgreedToExtend(): boolean;
   addExtensionRequest(player: Player): void;
   id(): number;
   extend(): void;
+  onlyOneAgreedToExtend(): boolean;
 }
 
 export class PlayerInfo {
@@ -486,7 +488,7 @@ export interface TerraNullius {
 export interface Embargo {
   createdAt: Tick;
   isTemporary: boolean;
-  target: PlayerID;
+  target: Player;
 }
 
 export interface Player {
@@ -587,17 +589,20 @@ export interface Player {
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void;
 
   // Donation
-  canDonate(recipient: Player): boolean;
+  canDonateGold(recipient: Player): boolean;
+  canDonateTroops(recipient: Player): boolean;
   donateTroops(recipient: Player, troops: number): boolean;
   donateGold(recipient: Player, gold: Gold): boolean;
+  canDeleteUnit(): boolean;
+  recordDeleteUnit(): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
-  addEmbargo(other: PlayerID, isTemporary: boolean): void;
+  addEmbargo(other: Player, isTemporary: boolean): void;
   getEmbargoes(): Embargo[];
-  stopEmbargo(other: PlayerID): void;
-  endTemporaryEmbargo(other: PlayerID): void;
+  stopEmbargo(other: Player): void;
+  endTemporaryEmbargo(other: Player): void;
   canTrade(other: Player): boolean;
 
   // Attacking.
@@ -663,7 +668,7 @@ export interface Game extends GameMap {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ): boolean;
   nearbyUnits(
     tile: TileRef,
@@ -738,7 +743,8 @@ export interface PlayerInteraction {
   canSendAllianceRequest: boolean;
   canBreakAlliance: boolean;
   canTarget: boolean;
-  canDonate: boolean;
+  canDonateGold: boolean;
+  canDonateTroops: boolean;
   canEmbargo: boolean;
   allianceExpiresAt?: Tick;
 }

@@ -16,11 +16,7 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import "./components/baseComponents/Button";
-import "./components/baseComponents/Modal";
-import "./components/Difficulties";
-import { DifficultyDescription } from "./components/Difficulties";
-import "./components/Maps";
+import { getCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -37,13 +33,15 @@ export class SinglePlayerModal extends LitElement {
   @state() private disableNPCs: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
+  @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
+  @state() private donateTroops: boolean = false;
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
-  @state() private disabledUnits: UnitType[] = [UnitType.Factory];
+  @state() private disabledUnits: UnitType[] = [];
 
   private userSettings: UserSettings = new UserSettings();
 
@@ -147,9 +145,7 @@ export class SinglePlayerModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${translateText(
-                          `difficulty.${DifficultyDescription[key as keyof typeof DifficultyDescription]}`,
-                        )}
+                        ${translateText(`difficulty.${key}`)}
                       </p>
                     </div>
                   `,
@@ -401,7 +397,7 @@ export class SinglePlayerModal extends LitElement {
       : this.disabledUnits.filter((u) => u !== unit);
   }
 
-  private startGame() {
+  private async startGame() {
     // If random map is selected, choose a random map now
     if (this.useRandomMap) {
       this.selectedMap = this.getRandomMap();
@@ -424,6 +420,13 @@ export class SinglePlayerModal extends LitElement {
     if (!flagInput) {
       console.warn("Flag input element not found");
     }
+    const patternName = this.userSettings.getSelectedPatternName();
+    let pattern: string | undefined = undefined;
+    if (this.userSettings.getDevOnlyPattern()) {
+      pattern = this.userSettings.getDevOnlyPattern();
+    } else if (patternName) {
+      pattern = (await getCosmetics())?.patterns[patternName]?.pattern;
+    }
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -439,7 +442,7 @@ export class SinglePlayerModal extends LitElement {
                   flagInput.getCurrentFlag() === "xx"
                     ? ""
                     : flagInput.getCurrentFlag(),
-                pattern: this.userSettings.getSelectedPattern(),
+                pattern: pattern,
               },
             ],
             config: {
@@ -451,7 +454,9 @@ export class SinglePlayerModal extends LitElement {
               disableNPCs: this.disableNPCs,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
+              donateGold: this.donateGold,
               infiniteTroops: this.infiniteTroops,
+              donateTroops: this.donateTroops,
               instantBuild: this.instantBuild,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))

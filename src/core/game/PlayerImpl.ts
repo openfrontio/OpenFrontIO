@@ -95,6 +95,8 @@ export class PlayerImpl implements Player {
 
   private relations = new Map<Player, number>();
 
+  private lastDeleteUnitTick: Tick = -1;
+
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
@@ -392,9 +394,9 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    const hasPending =
-      this.incomingAllianceRequests().some((ar) => ar.requestor() === other) ||
-      this.outgoingAllianceRequests().some((ar) => ar.recipient() === other);
+    const hasPending = this.outgoingAllianceRequests().some(
+      (ar) => ar.recipient() === other,
+    );
 
     if (hasPending) {
       return false;
@@ -551,6 +553,9 @@ export class PlayerImpl implements Player {
   }
 
   canSendEmoji(recipient: Player | typeof AllPlayers): boolean {
+    if (recipient === this) {
+      return false;
+    }
     const recipientID =
       recipient === AllPlayers ? AllPlayers : recipient.smallID();
     const prevMsgs = this.outgoingEmojis_.filter(
@@ -567,7 +572,7 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  canDonate(recipient: Player): boolean {
+  canDonateGold(recipient: Player): boolean {
     if (!this.isFriendly(recipient)) {
       return false;
     }
@@ -576,6 +581,36 @@ export class PlayerImpl implements Player {
       this.mg.config().gameConfig().gameMode === GameMode.FFA &&
       this.mg.config().gameConfig().gameType === GameType.Public
     ) {
+      return false;
+    }
+    if (this.mg.config().donateGold() === false) {
+      return false;
+    }
+    for (const donation of this.sentDonations) {
+      if (donation.recipient === recipient) {
+        if (
+          this.mg.ticks() - donation.tick <
+          this.mg.config().donateCooldown()
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  canDonateTroops(recipient: Player): boolean {
+    if (!this.isFriendly(recipient)) {
+      return false;
+    }
+    if (
+      recipient.type() === PlayerType.Human &&
+      this.mg.config().gameConfig().gameMode === GameMode.FFA &&
+      this.mg.config().gameConfig().gameType === GameType.Public
+    ) {
+      return false;
+    }
+    if (this.mg.config().donateTroops() === false) {
       return false;
     }
     for (const donation of this.sentDonations) {
@@ -632,6 +667,17 @@ export class PlayerImpl implements Player {
     return true;
   }
 
+  canDeleteUnit(): boolean {
+    return (
+      this.mg.ticks() - this.lastDeleteUnitTick >=
+      this.mg.config().deleteUnitCooldown()
+    );
+  }
+
+  recordDeleteUnit(): void {
+    this.lastDeleteUnitTick = this.mg.ticks();
+  }
+
   hasEmbargoAgainst(other: Player): boolean {
     return this.embargoes.has(other.id());
   }
@@ -642,27 +688,40 @@ export class PlayerImpl implements Player {
     return !embargo && other.id() !== this.id();
   }
 
-  addEmbargo(other: PlayerID, isTemporary: boolean): void {
-    const embargo = this.embargoes.get(other);
+  getEmbargoes(): Embargo[] {
+    return [...this.embargoes.values()];
+  }
+
+  addEmbargo(other: Player, isTemporary: boolean): void {
+    const embargo = this.embargoes.get(other.id());
     if (embargo !== undefined && !embargo.isTemporary) return;
 
-    this.embargoes.set(other, {
+    this.mg.addUpdate({
+      type: GameUpdateType.EmbargoEvent,
+      event: "start",
+      playerID: this.smallID(),
+      embargoedID: other.smallID(),
+    });
+
+    this.embargoes.set(other.id(), {
       createdAt: this.mg.ticks(),
       isTemporary: isTemporary,
       target: other,
     });
   }
 
-  getEmbargoes(): Embargo[] {
-    return [...this.embargoes.values()];
+  stopEmbargo(other: Player): void {
+    this.embargoes.delete(other.id());
+    this.mg.addUpdate({
+      type: GameUpdateType.EmbargoEvent,
+      event: "stop",
+      playerID: this.smallID(),
+      embargoedID: other.smallID(),
+    });
   }
 
-  stopEmbargo(other: PlayerID): void {
-    this.embargoes.delete(other);
-  }
-
-  endTemporaryEmbargo(other: PlayerID): void {
-    const embargo = this.embargoes.get(other);
+  endTemporaryEmbargo(other: Player): void {
+    const embargo = this.embargoes.get(other.id());
     if (embargo !== undefined && !embargo.isTemporary) return;
 
     this.stopEmbargo(other);
