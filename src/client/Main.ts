@@ -22,6 +22,7 @@ import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import { NewsModal } from "./NewsModal";
+import { PlayerInfoModal } from "./PlayerInfoModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -216,6 +217,16 @@ class Client {
       this.patternsModal.open();
     });
 
+    const piModal = document.querySelector(
+      "player-info-modal",
+    ) as PlayerInfoModal;
+    piModal instanceof PlayerInfoModal;
+    document
+      .getElementById("player-info-button")
+      ?.addEventListener("click", () => {
+        piModal.open();
+      });
+
     this.tokenLoginModal = document.querySelector(
       "token-login",
     ) as TokenLoginModal;
@@ -308,6 +319,7 @@ class Client {
       } else if (userMeResponse === false) {
         // Not logged in
         this.patternsModal.onUserMe(null);
+        piModal.onUserMe(null);
       } else {
         // Authorized
         console.log(
@@ -315,6 +327,7 @@ class Client {
             "Sharing this ID will allow others to view your game history and stats.",
         );
         this.patternsModal.onUserMe(userMeResponse);
+        piModal.onUserMe(userMeResponse);
       }
     };
 
