@@ -94,7 +94,7 @@
     "build_city": "City",
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
     "build_factory": "Factory",
-    "build_factory_desc": "Creates railroads automatically with nearby cities, ports and other factories. Trains are spawned regularly and will get you a fixed amount of gold for each building visited along the route.",
+    "build_factory_desc": "Automatically builds railroads to nearby cities, ports and other factories, and can also link up with friendly neighbors. Trains spawn regularly and give you a fixed amount of gold for each building they visit along the route, with extra gold for visiting your neighbors' buildings.",
     "build_defense": "Defense Post",
     "build_defense_desc": "Increases defenses around nearby borders, which show a checkered pattern. Attacks from enemies are slower and have more casualties.",
     "build_port": "Port",
