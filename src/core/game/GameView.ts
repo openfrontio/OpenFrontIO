@@ -7,6 +7,7 @@ import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
   EmojiMessage,
+  GameType,
   GameUpdates,
   Gold,
   NameViewData,
@@ -560,6 +561,14 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
+    if (this._config.gameConfig().gameType === GameType.Singleplayer) {
+      const hasHumanSpawned = Array.from(this._players.values()).some(
+        (player) => player.type() === PlayerType.Human && player.hasSpawned(),
+      );
+      if (hasHumanSpawned) {
+        return false;
+      }
+    }
     return this.ticks() <= this._config.numSpawnPhaseTurns();
   }
   config(): Config {

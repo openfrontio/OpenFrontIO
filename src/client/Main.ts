@@ -546,17 +546,28 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
-        // show when the game loads
-        const startingModal = document.querySelector(
-          "game-starting-modal",
-        ) as GameStartingModal;
-        startingModal instanceof GameStartingModal;
-        startingModal.show();
+        // show when the game loads (only for multiplayer games)
+        if (lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer) {
+          const startingModal = document.querySelector(
+            "game-starting-modal",
+          ) as GameStartingModal;
+          startingModal instanceof GameStartingModal;
+          startingModal.show();
+        }
       },
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
         incrementGamesPlayed();
+
+        // Hide the starting modal for single player games
+        if (lobby.gameStartInfo?.config.gameType === GameType.Singleplayer) {
+          const startingModal = document.querySelector(
+            "game-starting-modal",
+          ) as GameStartingModal;
+          startingModal instanceof GameStartingModal;
+          startingModal.hide();
+        }
 
         try {
           window.PageOS.session.newPageView();
