@@ -1035,7 +1035,7 @@ export class EventsDisplay extends LitElement implements Layer {
                                 ? this.renderButton({
                                     content: this.getEventDescription(event),
                                     onClick: () => {
-                                      event.focusID &&
+                                      if (event.focusID)
                                         this.emitGoToPlayerEvent(event.focusID);
                                     },
                                     className: "text-left",
@@ -1044,7 +1044,7 @@ export class EventsDisplay extends LitElement implements Layer {
                                   ? this.renderButton({
                                       content: this.getEventDescription(event),
                                       onClick: () => {
-                                        event.unitView &&
+                                        if (event.unitView)
                                           this.emitGoToUnitEvent(
                                             event.unitView,
                                           );
