@@ -9,7 +9,6 @@ import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import samLauncherIcon from "../../../../resources/non-commercial/svg/SamLauncherIconWhite.svg";
-import { translateText } from "../../../client/Utils";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -23,7 +22,12 @@ import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
-import { renderDuration, renderNumber, renderTroops } from "../../Utils";
+import {
+  renderDuration,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
