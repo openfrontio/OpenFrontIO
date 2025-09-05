@@ -2,6 +2,16 @@ import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
+export function renderDuration(totalSeconds: number): string {
+  if (totalSeconds <= 0) return "0s";
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  let time = "";
+  if (minutes > 0) time += `${minutes}min `;
+  time += `${seconds}s`;
+  return time.trim();
+}
+
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
