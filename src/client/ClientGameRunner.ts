@@ -11,7 +11,7 @@ import {
 import { createGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameType, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -45,6 +45,11 @@ import {
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
+import {
+  getBotIntegration,
+  initializeBotIntegration,
+} from "./bot/integration/BotIntegration";
+import "./bot/ui/BotControlPanel"; // Import to register the web component
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
@@ -205,6 +210,14 @@ export class ClientGameRunner {
     private gameView: GameView,
   ) {
     this.lastMessageTime = Date.now();
+
+    // Initialize bot integration for singleplayer games
+    if (this.lobby.gameStartInfo?.config.gameType === GameType.Singleplayer) {
+      console.log("Initializing bot for singleplayer game");
+      initializeBotIntegration(this.gameView, this.eventBus, {
+        autoStart: false, // Don't auto-start, let user control via console
+      });
+    }
   }
 
   private saveGame(update: WinUpdate) {
@@ -657,6 +670,13 @@ export class ClientGameRunner {
       this.lastMessageTime = now;
       this.transport.reconnect();
     }
+  }
+
+  /**
+   * Get bot integration instance for this game
+   */
+  public getBotIntegration() {
+    return getBotIntegration();
   }
 }
 
