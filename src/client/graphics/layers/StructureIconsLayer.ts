@@ -255,7 +255,9 @@ export class StructureIconsLayer implements Layer {
           this.potentialUpgrade.iconContainer.filters = [];
           this.potentialUpgrade.dotContainer.filters = [];
         }
-        this.ghostUnit?.container && (this.ghostUnit.container.filters = []);
+        if (this.ghostUnit?.container) {
+          this.ghostUnit.container.filters = [];
+        }
 
         if (!this.ghostUnit) return;
 
