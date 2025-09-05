@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1300,
-    "num_land_tiles": 1986092,
+    "num_land_tiles": 1987279,
     "width": 2100
   },
   "mini_map": {
     "height": 650,
-    "num_land_tiles": 489193,
+    "num_land_tiles": 489562,
     "width": 1050
   },
   "name": "Pluto",
