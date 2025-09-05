@@ -3,6 +3,7 @@ import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { BotControlPanel } from "../bot/ui/BotControlPanel";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
@@ -151,6 +152,16 @@ export function createRenderer(
   }
   gameRightSidebar.game = game;
   gameRightSidebar.eventBus = eventBus;
+
+  const botControlPanel = document.querySelector(
+    "bot-control-panel",
+  ) as BotControlPanel;
+  if (!(botControlPanel instanceof BotControlPanel)) {
+    console.log(
+      "Bot control panel not found - this is normal for multiplayer games",
+    );
+  }
+  // Bot control panel doesn't need game or eventBus as it uses getBotIntegration()
 
   const settingsModal = document.querySelector(
     "settings-modal",
