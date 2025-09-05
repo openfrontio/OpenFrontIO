@@ -4,12 +4,12 @@ import { EventBus } from "../../../core/EventBus";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-import cityIcon from "../../../../resources/non-commercial/images/buildings/cityAlt1.png";
-import factoryIcon from "../../../../resources/non-commercial/images/buildings/factoryAlt1.png";
-import shieldIcon from "../../../../resources/non-commercial/images/buildings/fortAlt3.png";
-import anchorIcon from "../../../../resources/non-commercial/images/buildings/port1.png";
-import missileSiloIcon from "../../../../resources/non-commercial/images/buildings/silo1.png";
-import SAMMissileIcon from "../../../../resources/non-commercial/images/buildings/silo4.png";
+import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
+import factoryIcon from "../../../../resources/images/buildings/factoryAlt1.png";
+import shieldIcon from "../../../../resources/images/buildings/fortAlt3.png";
+import anchorIcon from "../../../../resources/images/buildings/port1.png";
+import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
+import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";

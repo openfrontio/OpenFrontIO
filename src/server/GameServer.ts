@@ -24,7 +24,6 @@ import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
 import { Client } from "./Client";
-import { gatekeeper } from "./Gatekeeper";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -204,125 +203,119 @@ export class GameServer {
     this.allClients.set(client.clientID, client);
 
     client.ws.removeAllListeners("message");
-    client.ws.on(
-      "message",
-      gatekeeper.wsHandler(client.ip, async (message: string) => {
-        try {
-          const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-          if (!parsed.success) {
-            const error = z.prettifyError(parsed.error);
-            this.log.error("Failed to parse client message", error, {
-              clientID: client.clientID,
-            });
-            client.ws.send(
-              JSON.stringify({
-                type: "error",
-                error,
-                message,
-              } satisfies ServerErrorMessage),
-            );
-            client.ws.close(1002, "ClientMessageSchema");
-            return;
-          }
-          const clientMsg = parsed.data;
-          switch (clientMsg.type) {
-            case "intent": {
-              if (clientMsg.intent.clientID !== client.clientID) {
+    client.ws.on("message", async (message: string) => {
+      try {
+        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+        if (!parsed.success) {
+          const error = z.prettifyError(parsed.error);
+          this.log.error("Failed to parse client message", error, {
+            clientID: client.clientID,
+          });
+          client.ws.send(
+            JSON.stringify({
+              type: "error",
+              error,
+              message,
+            } satisfies ServerErrorMessage),
+          );
+          client.ws.close(1002, "ClientMessageSchema");
+          return;
+        }
+        const clientMsg = parsed.data;
+        switch (clientMsg.type) {
+          case "intent": {
+            if (clientMsg.intent.clientID !== client.clientID) {
+              this.log.warn(
+                `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
+              );
+              return;
+            }
+            switch (clientMsg.intent.type) {
+              case "mark_disconnected": {
                 this.log.warn(
-                  `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
+                  `Should not receive mark_disconnected intent from client`,
                 );
                 return;
               }
-              switch (clientMsg.intent.type) {
-                case "mark_disconnected": {
-                  this.log.warn(
-                    `Should not receive mark_disconnected intent from client`,
-                  );
-                  return;
-                }
 
-                // Handle kick_player intent via WebSocket
-                case "kick_player": {
-                  const authenticatedClientID = client.clientID;
+              // Handle kick_player intent via WebSocket
+              case "kick_player": {
+                const authenticatedClientID = client.clientID;
 
-                  // Check if the authenticated client is the lobby creator
-                  if (authenticatedClientID !== this.LobbyCreatorID) {
-                    this.log.warn(`Only lobby creator can kick players`, {
-                      clientID: authenticatedClientID,
-                      creatorID: this.LobbyCreatorID,
-                      target: clientMsg.intent.target,
-                      gameID: this.id,
-                    });
-                    return;
-                  }
-
-                  // Don't allow lobby creator to kick themselves
-                  if (authenticatedClientID === clientMsg.intent.target) {
-                    this.log.warn(`Cannot kick yourself`, {
-                      clientID: authenticatedClientID,
-                    });
-                    return;
-                  }
-
-                  // Log and execute the kick
-                  this.log.info(`Lobby creator initiated kick of player`, {
-                    creatorID: authenticatedClientID,
+                // Check if the authenticated client is the lobby creator
+                if (authenticatedClientID !== this.LobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can kick players`, {
+                    clientID: authenticatedClientID,
+                    creatorID: this.LobbyCreatorID,
                     target: clientMsg.intent.target,
                     gameID: this.id,
-                    kickMethod: "websocket",
                   });
-
-                  this.kickClient(clientMsg.intent.target);
                   return;
                 }
-                default: {
-                  this.addIntent(clientMsg.intent);
-                  break;
+
+                // Don't allow lobby creator to kick themselves
+                if (authenticatedClientID === clientMsg.intent.target) {
+                  this.log.warn(`Cannot kick yourself`, {
+                    clientID: authenticatedClientID,
+                  });
+                  return;
                 }
-              }
-              break;
-            }
-            case "ping": {
-              this.lastPingUpdate = Date.now();
-              client.lastPing = Date.now();
-              break;
-            }
-            case "hash": {
-              client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
-              break;
-            }
-            case "winner": {
-              if (
-                this.outOfSyncClients.has(client.clientID) ||
-                this.kickedClients.has(client.clientID) ||
-                this.winner !== null
-              ) {
+
+                // Log and execute the kick
+                this.log.info(`Lobby creator initiated kick of player`, {
+                  creatorID: authenticatedClientID,
+                  target: clientMsg.intent.target,
+                  gameID: this.id,
+                  kickMethod: "websocket",
+                });
+
+                this.kickClient(clientMsg.intent.target);
                 return;
               }
-              this.winner = clientMsg;
-              this.archiveGame();
-              break;
+              default: {
+                this.addIntent(clientMsg.intent);
+                break;
+              }
             }
-            default: {
-              this.log.warn(
-                `Unknown message type: ${(clientMsg as any).type}`,
-                {
-                  clientID: client.clientID,
-                },
-              );
-              break;
-            }
+            break;
           }
-        } catch (error) {
-          this.log.info(
-            `error handline websocket request in game server: ${error}`,
-            {
+          case "ping": {
+            this.lastPingUpdate = Date.now();
+            client.lastPing = Date.now();
+            break;
+          }
+          case "hash": {
+            client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+            break;
+          }
+          case "winner": {
+            if (
+              this.outOfSyncClients.has(client.clientID) ||
+              this.kickedClients.has(client.clientID) ||
+              this.winner !== null
+            ) {
+              return;
+            }
+            this.winner = clientMsg;
+            this.archiveGame();
+            break;
+          }
+          default: {
+            this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
               clientID: client.clientID,
-            },
-          );
+            });
+            break;
+          }
         }
-      }),
-    );
+      } catch (error) {
+        this.log.info(
+          `error handline websocket request in game server: ${error}`,
+          {
+            clientID: client.clientID,
+          },
+        );
+      }
+    });
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
         clientID: client.clientID,

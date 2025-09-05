@@ -1,0 +1,19 @@
+# Asset License - Creative Commons BY-SA 4.0
+
+This license applies to all non-code assets in this repository, including but not limited to:
+- Graphics, sprites, and images (*.png, *.jpg, *.svg, etc.)
+- 3D models and textures (*.obj, *.fbx, *.blend, etc.)
+- Audio files (*.mp3, *.ogg, *.wav, etc.)
+- Animation files
+- Font files
+- Level/map data files
+
+This license does NOT apply to:
+- Source code files (*.js, *.ts, *.py, etc.) - see LICENSE for code licensing
+- Configuration files that contain code
+- Scripts and shaders
+
+Attribution required: "OpenFront.io" or "OpenFront LLC"
+
+To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/
+or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
