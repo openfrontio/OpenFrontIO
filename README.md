@@ -13,18 +13,8 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 ![CI](https://github.com/openfrontio/OpenFrontIO/actions/workflows/ci.yml/badge.svg)
 [![Crowdin](https://badges.crowdin.net/openfront-mls/localized.svg)](https://crowdin.com/project/openfront-mls)
 [![CLA assistant](https://cla-assistant.io/readme/badge/openfrontio/OpenFrontIO)](https://cla-assistant.io/openfrontio/OpenFrontIO)
-
-# OpenFront - Licensing
-
-OpenFront Contributor License Agreement (CLA) can be found [here](https://gist.github.com/evanpelle/4c9e0fc2cb73b2b3b3402ca202f56672).
-This is to help us transition to AGPL, a stricter open source license. After creating a pull request you will be prompted to sign.
-
-This project uses a multi-licensing approach:
-
-- Code in the `server/` and `core/` directory is licensed under MIT
-- Client code (in the `client/` directory) is licensed under GPL v3
-
-See LICENSE file for more details.
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Assets: CC BY-SA 4.0](https://img.shields.io/badge/Assets-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
 
 ## 🌟 Features
 
