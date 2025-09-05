@@ -14,7 +14,8 @@
     "format": "prettier --ignore-unknown --write .",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "gen-maps": "cd map-generator && go run . && npm run format"
   },
   "lint-staged": {
     "**/*": [

@@ -627,6 +627,11 @@
       "grogu": "Grogu"
     }
   },
+  "flag_input": {
+    "title": "Select Flag",
+    "button_title": "Pick a flag!",
+    "search_flag": "Search..."
+  },
   "spawn_ad": {
     "loading": "Loading advertisement..."
   },
