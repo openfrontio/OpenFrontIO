@@ -40,7 +40,7 @@ export default [
     rules: {
       // Disable rules that would fail. The failures should be fixed, and the entries here removed.
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/no-unused-expressions": "error",
       "@typescript-eslint/no-unused-vars": "off",
       "no-case-declarations": "off",
     },
