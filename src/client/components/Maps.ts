@@ -36,7 +36,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Italia: "Italia",
   Yenisei: "Yenisei",
   Pluto: "Pluto",
-  Middleeast: "Middle East",
+  MiddleEast: "Middle East",
 };
 
 @customElement("map-display")
