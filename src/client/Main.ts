@@ -104,10 +104,9 @@ class Client {
     gameVersion.innerText = version;
 
     const newsModal = document.querySelector("news-modal") as NewsModal;
-    if (!newsModal) {
+    if (!newsModal || !(newsModal instanceof NewsModal)) {
       console.warn("News modal element not found");
     }
-    newsModal instanceof NewsModal;
     const newsButton = document.querySelector("news-button") as NewsButton;
     if (!newsButton) {
       console.warn("News button element not found");
@@ -166,7 +165,9 @@ class Client {
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
-    spModal instanceof SinglePlayerModal;
+    if (!spModal || !(spModal instanceof SinglePlayerModal)) {
+      console.warn("Singleplayer modal element not found");
+    }
 
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
@@ -183,7 +184,9 @@ class Client {
     // });
 
     const hlpModal = document.querySelector("help-modal") as HelpModal;
-    hlpModal instanceof HelpModal;
+    if (!hlpModal || !(hlpModal instanceof HelpModal)) {
+      console.warn("Help modal element not found");
+    }
     const helpButton = document.getElementById("help-button");
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
@@ -193,7 +196,10 @@ class Client {
     const flagInputModal = document.querySelector(
       "flag-input-modal",
     ) as FlagInputModal;
-    flagInputModal instanceof FlagInputModal;
+    if (!flagInputModal || !(flagInputModal instanceof FlagInputModal)) {
+      console.warn("Flag input modal element not found");
+    }
+
     const flgInput = document.getElementById("flag-input_");
     if (flgInput === null) throw new Error("Missing flag-input_");
     flgInput.addEventListener("click", () => {
@@ -203,10 +209,15 @@ class Client {
     this.patternsModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
+    if (
+      !this.patternsModal ||
+      !(this.patternsModal instanceof TerritoryPatternsModal)
+    ) {
+      console.warn("Territory patterns modal element not found");
+    }
     const patternButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
-    this.patternsModal instanceof TerritoryPatternsModal;
     if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
     this.patternsModal.previewButton = patternButton;
@@ -218,7 +229,12 @@ class Client {
     this.tokenLoginModal = document.querySelector(
       "token-login",
     ) as TokenLoginModal;
-    this.tokenLoginModal instanceof TokenLoginModal;
+    if (
+      !this.tokenLoginModal ||
+      !(this.tokenLoginModal instanceof TokenLoginModal)
+    ) {
+      console.warn("Token login modal element not found");
+    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       document.dispatchEvent(
@@ -329,7 +345,9 @@ class Client {
     const settingsModal = document.querySelector(
       "user-setting",
     ) as UserSettingModal;
-    settingsModal instanceof UserSettingModal;
+    if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
+      console.warn("User settings modal element not found");
+    }
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {
@@ -339,7 +357,9 @@ class Client {
     const hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
+    if (!hostModal || !(hostModal instanceof HostPrivateLobbyModal)) {
+      console.warn("Host private lobby modal element not found");
+    }
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
@@ -352,7 +372,9 @@ class Client {
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
     ) as JoinPrivateLobbyModal;
-    this.joinModal instanceof JoinPrivateLobbyModal;
+    if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
+      console.warn("Join private lobby modal element not found");
+    }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
@@ -559,8 +581,9 @@ class Client {
         const startingModal = document.querySelector(
           "game-starting-modal",
         ) as GameStartingModal;
-        startingModal instanceof GameStartingModal;
-        startingModal.show();
+        if (startingModal && startingModal instanceof GameStartingModal) {
+          startingModal.show();
+        }
       },
       () => {
         this.joinModal.close();
