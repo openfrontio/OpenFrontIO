@@ -28,10 +28,10 @@ class RenderInfo {
   constructor(
     public player: PlayerView,
     public lastRenderCalc: number,
-    public location: Cell | null,
     public fontSize: number,
     public fontColor: string,
     public element: HTMLElement,
+    public baseSize = 1,
   ) {}
 }
 
@@ -130,15 +130,14 @@ export class NameLayer implements Layer {
   }
 
   private updateElementVisibility(render: RenderInfo) {
-    if (!render.player.nameLocation() || !render.player.isAlive()) {
+    const loc = render.player.nameLocation();
+    if (!loc || !render.player.isAlive()) {
+      render.element.style.display = "none";
       return;
     }
 
-    const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
-    const size = this.transformHandler.scale * baseSize;
-    const isOnScreen = render.location
-      ? this.transformHandler.isOnScreen(render.location)
-      : false;
+    const size = this.transformHandler.scale * render.baseSize;
+    const isOnScreen = this.transformHandler.isOnScreen(new Cell(loc.x, loc.y));
 
     if (!this.isVisible || size < 7 || !isOnScreen) {
       render.element.style.display = "none";
@@ -166,10 +165,10 @@ export class NameLayer implements Layer {
             new RenderInfo(
               player,
               0,
-              null,
               0,
               "",
               this.createPlayerElement(player),
+              1,
             ),
           );
         }
@@ -185,14 +184,26 @@ export class NameLayer implements Layer {
       screenPosOld.x - window.innerWidth / 2,
       screenPosOld.y - window.innerHeight / 2,
     );
-    this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
+    this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px)`;
 
     const now = Date.now();
     if (now > this.lastChecked + this.renderCheckRate) {
       this.lastChecked = now;
+
+      this.renders = this.renders.filter((r) => {
+        const keep = r.player.isAlive() && !!r.player.nameLocation();
+        if (!keep) r.element.remove();
+        return keep;
+      });
+
       for (const render of this.renders) {
-        this.renderPlayerInfo(render);
+        this.updatePlayerInfoContent(render);
       }
+    }
+
+    // Update transforms for every element, every frame
+    for (const render of this.renders) {
+      this.updatePlayerElementTransform(render);
     }
 
     mainContex.drawImage(
@@ -304,31 +315,41 @@ export class NameLayer implements Layer {
     return element;
   }
 
-  renderPlayerInfo(render: RenderInfo) {
-    if (!render.player.nameLocation() || !render.player.isAlive()) {
-      this.renders = this.renders.filter((r) => r !== render);
-      render.element.remove();
+  private updatePlayerElementTransform(render: RenderInfo) {
+    const loc = render.player.nameLocation();
+    if (!loc || !render.player.isAlive()) {
+      render.element.style.display = "none";
       return;
     }
 
-    const oldLocation = render.location;
-    render.location = new Cell(
-      render.player.nameLocation().x,
-      render.player.nameLocation().y,
-    );
-
-    // Calculate base size and scale
-    const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
-    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
-    render.fontColor = this.theme.textColor(render.player);
-
-    // Update element visibility (handles Ctrl key, size, and screen position)
     this.updateElementVisibility(render);
 
-    // If element is hidden, don't continue with rendering
     if (render.element.style.display === "none") {
       return;
     }
+
+    const globalScale = this.transformHandler.scale;
+
+    const scaledX = loc.x * globalScale;
+    const scaledY = loc.y * globalScale;
+
+    const localSizeScale = Math.min(render.baseSize * 0.25, 3);
+
+    render.element.style.transform =
+      `translate(${scaledX}px, ${scaledY}px) translate(-50%, -50%) ` +
+      `scale(${localSizeScale * globalScale})`;
+  }
+
+  private updatePlayerInfoContent(render: RenderInfo) {
+    // Update baseSize here, in the throttled update
+    render.baseSize = Math.max(
+      1,
+      Math.floor(render.player.nameLocation()!.size),
+    );
+
+    // The font size is now independent of the global zoom, as scaling is handled by transform
+    render.fontSize = Math.max(4, Math.floor(render.baseSize * 0.4));
+    render.fontColor = this.theme.textColor(render.player);
 
     // Throttle updates
     const now = Date.now();
@@ -600,12 +621,6 @@ export class NameLayer implements Layer {
     for (const icon of icons) {
       icon.style.width = `${iconSize}px`;
       icon.style.height = `${iconSize}px`;
-    }
-
-    // Position element with scale
-    if (render.location && render.location !== oldLocation) {
-      const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
     }
   }
 
