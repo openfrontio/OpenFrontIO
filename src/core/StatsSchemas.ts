@@ -1,8 +1,12 @@
 import { z } from "zod";
 import { UnitType } from "./game/Game";
 
-export const bombUnits = ["abomb", "hbomb", "mirv", "mirvw"] as const;
-export const BombUnitSchema = z.enum(bombUnits);
+export const BombUnitSchema = z.union([
+  z.literal("abomb"),
+  z.literal("hbomb"),
+  z.literal("mirv"),
+  z.literal("mirvw"),
+]);
 export type BombUnit = z.infer<typeof BombUnitSchema>;
 export type NukeType =
   | UnitType.AtomBomb
@@ -17,8 +21,7 @@ export const unitTypeToBombUnit = {
   [UnitType.MIRVWarhead]: "mirvw",
 } as const satisfies Record<NukeType, BombUnit>;
 
-export const boatUnits = ["trade", "trans"] as const;
-export const BoatUnitSchema = z.enum(boatUnits);
+export const BoatUnitSchema = z.union([z.literal("trade"), z.literal("trans")]);
 export type BoatUnit = z.infer<typeof BoatUnitSchema>;
 export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
 
@@ -27,16 +30,15 @@ export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
 //   [UnitType.TransportShip]: "trans",
 // } as const satisfies Record<BoatUnitType, BoatUnit>;
 
-export const otherUnits = [
-  "city",
-  "defp",
-  "port",
-  "wshp",
-  "silo",
-  "saml",
-  "fact",
-] as const;
-export const OtherUnitSchema = z.enum(otherUnits);
+export const OtherUnitSchema = z.union([
+  z.literal("city"),
+  z.literal("defp"),
+  z.literal("port"),
+  z.literal("wshp"),
+  z.literal("silo"),
+  z.literal("saml"),
+  z.literal("fact"),
+]);
 export type OtherUnit = z.infer<typeof OtherUnitSchema>;
 export type OtherUnitType =
   | UnitType.City
