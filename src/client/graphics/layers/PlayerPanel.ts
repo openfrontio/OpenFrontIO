@@ -7,7 +7,6 @@ import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.s
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
-import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -24,7 +23,7 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderNumber, renderTroops, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
@@ -45,6 +44,26 @@ export class PlayerPanel extends LitElement implements Layer {
 
   @state()
   private allianceExpiryText: string | null = null;
+
+  @state() private showTroopsModal = false;
+  @state() private sendTroopsAmount = 0;
+  @state() private sendTroopsKeepThirty = true;
+  private troopsTarget: PlayerView | null = null;
+
+  private closeTroopsModal() {
+    this.showTroopsModal = false;
+  }
+
+  private confirmSendTroops() {
+    if (!this.troopsTarget) return;
+    const amount = Math.max(0, Math.floor(this.sendTroopsAmount));
+    if (amount <= 0) return;
+    this.eventBus.emit(
+      new SendDonateTroopsIntentEvent(this.troopsTarget, amount),
+    );
+    this.showTroopsModal = false;
+    this.sendTroopsAmount = 0;
+  }
 
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
@@ -83,19 +102,39 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
+  // private handleDonateTroopClick(
+  //   e: Event,
+  //   myPlayer: PlayerView,
+  //   other: PlayerView,
+  // ) {
+  //   e.stopPropagation();
+  //   this.eventBus.emit(
+  //     new SendDonateTroopsIntentEvent(
+  //       other,
+  //       myPlayer.troops() * this.uiState.attackRatio,
+  //     ),
+  //   );
+  //   this.hide();
+  // }
+
   private handleDonateTroopClick(
     e: Event,
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(
-      new SendDonateTroopsIntentEvent(
-        other,
-        myPlayer.troops() * this.uiState.attackRatio,
-      ),
-    );
-    this.hide();
+    this.troopsTarget = other;
+
+    const total = myPlayer.troops();
+    const minKeep = Math.floor(total * 0.3);
+    const maxSend = Math.max(0, total - minKeep);
+
+    this.sendTroopsKeepThirty = true; // default safe mode on
+    // default amount = 10% (clamped to maxSend)
+    const defaultAmount = Math.floor(total * 0.1);
+    this.sendTroopsAmount = Math.min(defaultAmount, maxSend);
+
+    this.showTroopsModal = true;
   }
 
   private handleDonateGoldClick(
@@ -255,7 +294,8 @@ export class PlayerPanel extends LitElement implements Layer {
 
     return html`
       <div
-        class="fixed inset-0 flex items-center justify-center z-[1001] pointer-events-none overflow-auto"
+        class="fixed inset-0 z-[1001] flex items-center justify-center overflow-auto
+       pointer-events-none bg-black/60 backdrop-blur-sm"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @wheel=${(e: MouseEvent) => e.stopPropagation()}
       >
@@ -263,257 +303,581 @@ export class PlayerPanel extends LitElement implements Layer {
           class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[240px] w-auto px-4 py-2"
         >
           <div
-            class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md relative w-full mt-2"
+            class="relative mt-2 w-full rounded-xl border border-zinc-700
+       bg-zinc-900 p-4 lg:p-5 shadow-2xl"
           >
             <!-- Close button -->
             <button
               @click=${this.handleClose}
-              class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
-                   bg-red-500 hover:bg-red-600 text-white rounded-full
-                   text-sm font-bold transition-colors"
+              class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center
+       rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
             >
               ✕
             </button>
 
             <div class="flex flex-col gap-2 min-w-[240px]">
               <!-- Name section -->
-              <div class="flex items-center gap-1 lg:gap-2">
-                <div
-                  class="px-4 h-8 lg:h-10 flex items-center justify-center
-                       bg-opacity-50 bg-gray-700 text-opacity-90 text-white
-                       rounded text-sm lg:text-xl w-full"
-                >
+              <div class="mb-1 flex items-center gap-3">
+                ${country
+                  ? html`<img
+                      src="/flags/${flagCode}.svg"
+                      alt=${flagName}
+                      class="h-10 w-10 rounded-full object-cover"
+                    />`
+                  : ""}
+                <h1 class="text-lg font-semibold truncate text-zinc-200">
                   ${other?.name()}
-                </div>
-              </div>
-              <!-- Flag -->
-              ${country
-                ? html`
-                    <div>
-                      <div class="text-white text-opacity-80 text-sm px-2">
-                        ${translateText("player_panel.flag")}
-                      </div>
-                      <div
-                        class="px-4 h-8 lg:h-10 flex items-center justify-center gap-4
-                        bg-opacity-50 bg-gray-700 text-opacity-90 text-white
-                        rounded text-sm lg:text-xl w-full"
-                      >
-                        ${flagName}
-                        <img
-                          src="/flags/${flagCode}.svg"
-                          width="60"
-                          height="60"
-                        />
-                      </div>
-                    </div>
-                  `
-                : ""}
-              <!-- Resources section -->
-              <div class="grid grid-cols-2 gap-2">
-                <div class="flex flex-col gap-1">
-                  <!-- Gold -->
-                  <div class="text-white text-opacity-80 text-sm px-2">
-                    ${translateText("player_panel.gold")}
-                  </div>
-                  <div
-                    class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
-                    translate="no"
-                  >
-                    ${renderNumber(other.gold() || 0)}
-                  </div>
-                </div>
-                <div class="flex flex-col gap-1">
-                  <!-- Troops -->
-                  <div class="text-white text-opacity-80 text-sm px-2">
-                    ${translateText("player_panel.troops")}
-                  </div>
-                  <div
-                    class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
-                    translate="no"
-                  >
-                    ${renderTroops(other.troops() || 0)}
-                  </div>
-                </div>
+                </h1>
+
+                ${this.showTroopsModal
+                  ? this.renderSendTroopsModal(myPlayer)
+                  : null}
               </div>
 
-              <!-- Attitude section -->
-              <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
-                  ${translateText("player_panel.traitor")}
+              <!-- divider -->
+              <div class="my-1 h-px bg-zinc-700/80"></div>
+
+              <!-- Resources section -->
+              <div class="mb-1 flex flex-wrap gap-2">
+                <div
+                  class="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-2.5 py-1
+                        text-sm font-medium text-zinc-200"
+                >
+                  <span>💰</span>
+                  <span translate="no">
+                    ${renderNumber(other.gold() || 0)}
+                  </span>
+                  <span class="opacity-90">
+                    ${translateText("player_panel.gold")}
+                  </span>
                 </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+
+                <div
+                  class="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-2.5 py-1
+                        text-sm font-medium text-zinc-200"
+                >
+                  <span>🛡️</span>
+                  <span translate="no">
+                    ${renderTroops(other.troops() || 0)}
+                  </span>
+                  <span class="opacity-90">
+                    ${translateText("player_panel.troops")}
+                  </span>
+                </div>
+              </div>
+              <div class="my-1 h-px bg-zinc-700/80"></div>
+
+              <!-- Trust -->
+              <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-sm">
+                <div class="font-medium text-zinc-400">Trust</div>
+                <div class="flex items-center justify-end gap-2 font-medium">
                   ${other.isTraitor()
-                    ? translateText("player_panel.yes")
-                    : translateText("player_panel.no")}
+                    ? html` <span class="text-red-400"> Traitor </span> `
+                    : html` <span class="text-emerald-400"> Stable </span> `}
                 </div>
               </div>
 
               <!-- Betrayals -->
-              <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
+              <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-sm">
+                <div class="font-medium text-zinc-400">
                   ${translateText("player_panel.betrayals")}
                 </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                <div class="text-right font-medium text-zinc-200">
                   ${other.data.betrayals ?? 0}
                 </div>
               </div>
 
               <!-- Embargo -->
-              <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
-                  ${translateText("player_panel.embargo")}
-                </div>
-                <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+              <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-sm">
+                <div class="font-medium text-zinc-400">Trading</div>
+                <div class="flex items-center justify-end gap-2 font-medium">
                   ${other.hasEmbargoAgainst(myPlayer)
-                    ? translateText("player_panel.yes")
-                    : translateText("player_panel.no")}
+                    ? html` <span class="text-red-400"> Stopped </span> `
+                    : html` <span class="text-emerald-400"> Active </span> `}
                 </div>
               </div>
 
-              <!-- Alliances -->
-              <div class="flex flex-col gap-1">
-                <div class="text-white text-opacity-80 text-sm px-2">
-                  ${translateText("player_panel.alliances")}
-                  (${other.allies().length})
+              <!-- Divider -->
+              <div class="my-1 h-px bg-zinc-700/80"></div>
+
+              <!-- Alliances (collapsible) -->
+              <div class="text-sm">
+                <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-1">
+                  <div class="font-medium text-zinc-400">
+                    ${translateText("player_panel.alliances")}
+                  </div>
+                  <div class="text-right font-medium text-zinc-200">
+                    (${other.allies().length})
+                  </div>
                 </div>
-                <div
-                  class="bg-opacity-50 bg-gray-700 rounded p-2 text-white max-w-72 max-h-20 overflow-y-auto"
-                  translate="no"
-                >
-                  ${other.allies().length > 0
-                    ? other
-                        .allies()
-                        .map((p) => p.name())
-                        .join(", ")
-                    : translateText("player_panel.none")}
-                </div>
+
+                <!-- Collapsible list -->
+                <details class="group mt-2">
+                  <summary
+                    class="flex cursor-pointer select-none items-center justify-between
+                          rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2
+                          text-zinc-200 hover:bg-zinc-800"
+                  >
+                    <span>View allies</span>
+                    <span class="transition-transform group-open:rotate-180"
+                      >▾</span
+                    >
+                  </summary>
+
+                  <div
+                    class="mt-1 rounded-lg border border-zinc-700 bg-zinc-900"
+                  >
+                    <div
+                      class="max-h-[72px] overflow-y-auto p-2 text-xs text-zinc-200"
+                      translate="no"
+                    >
+                      ${other.allies().length > 0
+                        ? other
+                            .allies()
+                            .map(
+                              (p) => html`
+                                <div class="truncate leading-6">
+                                  ${p.name()}
+                                </div>
+                              `,
+                            )
+                        : html`<div class="py-2 text-zinc-400">
+                            ${translateText("player_panel.none")}
+                          </div>`}
+                    </div>
+                  </div>
+                </details>
               </div>
 
+              <!-- Alliance expiry -->
               ${this.allianceExpiryText !== null
                 ? html`
-                    <div class="flex flex-col gap-1">
-                      <div class="text-white text-opacity-80 text-sm px-2">
+                    <div
+                      class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-sm"
+                    >
+                      <div class="font-medium text-zinc-400">
                         ${translateText("player_panel.alliance_time_remaining")}
                       </div>
-                      <div
-                        class="bg-opacity-50 bg-gray-700 rounded p-2 text-white"
-                      >
-                        ${this.allianceExpiryText}
+                      <div class="text-right font-medium">
+                        <span
+                          class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                        >
+                          ${this.allianceExpiryText}
+                        </span>
                       </div>
                     </div>
                   `
                 : ""}
 
+              <div class="my-1 h-px bg-zinc-700/80"></div>
+
               <!-- Action buttons -->
-              <div class="flex justify-center gap-2">
-                <button
-                  @click=${(e: MouseEvent) =>
-                    this.handleChat(e, myPlayer, other)}
-                  class="w-10 h-10 flex items-center justify-center
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                           text-white rounded-lg transition-colors"
-                >
-                  <img src=${chatIcon} alt="Target" class="w-6 h-6" />
-                </button>
-                ${canTarget
-                  ? html`<button
-                      @click=${(e: MouseEvent) =>
-                        this.handleTargetClick(e, other)}
-                      class="w-10 h-10 flex items-center justify-center
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                           text-white rounded-lg transition-colors"
-                    >
-                      <img src=${targetIcon} alt="Target" class="w-6 h-6" />
-                    </button>`
-                  : ""}
-                ${canBreakAlliance
-                  ? html`<button
-                      @click=${(e: MouseEvent) =>
-                        this.handleBreakAllianceClick(e, myPlayer, other)}
-                      class="w-10 h-10 flex items-center justify-center
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                           text-white rounded-lg transition-colors"
-                    >
-                      <img
-                        src=${traitorIcon}
-                        alt="Break Alliance"
-                        class="w-6 h-6"
-                      />
-                    </button>`
-                  : ""}
-                ${canSendAllianceRequest
-                  ? html`<button
-                      @click=${(e: MouseEvent) =>
-                        this.handleAllianceClick(e, myPlayer, other)}
-                      class="w-10 h-10 flex items-center justify-center
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                           text-white rounded-lg transition-colors"
-                    >
-                      <img src=${allianceIcon} alt="Alliance" class="w-6 h-6" />
-                    </button>`
-                  : ""}
-                ${canDonateTroops
-                  ? html`<button
-                      @click=${(e: MouseEvent) =>
-                        this.handleDonateTroopClick(e, myPlayer, other)}
-                      class="w-10 h-10 flex items-center justify-center
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                           text-white rounded-lg transition-colors"
-                    >
-                      <img
-                        src=${donateTroopIcon}
-                        alt="Donate"
-                        class="w-6 h-6"
-                      />
-                    </button>`
-                  : ""}
-                ${canDonateGold
-                  ? html`<button
-                      @click=${(e: MouseEvent) =>
-                        this.handleDonateGoldClick(e, myPlayer, other)}
-                      class="w-10 h-10 flex items-center justify-center
-                          bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                          text-white rounded-lg transition-colors"
-                    >
-                      <img src=${donateGoldIcon} alt="Donate" class="w-6 h-6" />
-                    </button>`
-                  : ""}
-                ${canSendEmoji
-                  ? html`<button
-                      @click=${(e: MouseEvent) =>
-                        this.handleEmojiClick(e, myPlayer, other)}
-                      class="w-10 h-10 flex items-center justify-center
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                           text-white rounded-lg transition-colors"
-                    >
-                      <img src=${emojiIcon} alt="Emoji" class="w-6 h-6" />
-                    </button>`
-                  : ""}
+              <div class="space-y-2">
+                <!-- Row 1: Chat / Target / Alliance actions -->
+                <div class="flex items-center justify-around">
+                  <!-- Chat -->
+                  <button
+                    @click=${(e: MouseEvent) =>
+                      this.handleChat(e, myPlayer, other)}
+                    class="group flex flex-col items-center gap-1 rounded-lg p-2
+                          text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                    title="Chat"
+                  >
+                    <img src=${chatIcon} alt="Chat" class="h-6 w-6" />
+                    <span class="text-[11px] font-medium">Chat</span>
+                  </button>
+
+                  <!-- Target -->
+                  ${canTarget
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleTargetClick(e, other)}
+                          class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          title="Target"
+                        >
+                          <img src=${targetIcon} alt="Target" class="h-6 w-6" />
+                          <span class="text-[11px] font-medium">Target</span>
+                        </button>
+                      `
+                    : ""}
+
+                  <!-- Break Alliance -->
+                  ${canBreakAlliance
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleBreakAllianceClick(e, myPlayer, other)}
+                          class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          title="Break Alliance"
+                        >
+                          <img
+                            src=${traitorIcon}
+                            alt="Break Alliance"
+                            class="h-6 w-6"
+                          />
+                          <span class="text-[11px] font-medium">Break</span>
+                        </button>
+                      `
+                    : ""}
+
+                  <!-- Send Alliance Request (primary/indigo) -->
+                  ${canSendAllianceRequest
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleAllianceClick(e, myPlayer, other)}
+                          class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300"
+                          title=${"Send Alliance Request"}
+                        >
+                          <img
+                            src=${allianceIcon}
+                            alt="Alliance"
+                            class="h-6 w-6"
+                          />
+                          <span class="text-[11px] font-medium">
+                            Alliance
+                          </span>
+                        </button>
+                      `
+                    : ""}
+                </div>
+
+                <!-- Row 2: Troops / Gold / Emotes / Trade toggle -->
+                <div class="flex items-center justify-around">
+                  <!-- Send Troops -->
+                  ${canDonateTroops
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleDonateTroopClick(e, myPlayer, other)}
+                          class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          title="Send Troops"
+                        >
+                          <img
+                            src=${donateTroopIcon}
+                            alt="Troops"
+                            class="h-6 w-6"
+                          />
+                          <span class="text-[11px] font-medium">Troops</span>
+                        </button>
+                      `
+                    : ""}
+
+                  <!-- Send Gold -->
+                  ${canDonateGold
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleDonateGoldClick(e, myPlayer, other)}
+                          class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          title="Send Gold"
+                        >
+                          <img
+                            src=${donateGoldIcon}
+                            alt="Gold"
+                            class="h-6 w-6"
+                          />
+                          <span class="text-[11px] font-medium">Gold</span>
+                        </button>
+                      `
+                    : ""}
+
+                  <!-- Emotes -->
+                  ${canSendEmoji
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleEmojiClick(e, myPlayer, other)}
+                          class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          title="Emotes"
+                        >
+                          <img src=${emojiIcon} alt="Emoji" class="h-6 w-6" />
+                          <span class="text-[11px] font-medium">Emotes</span>
+                        </button>
+                      `
+                    : ""}
+
+                  <!-- Trade toggle: Stop when canEmbargo, Start otherwise (only if not self) -->
+                  ${other !== myPlayer
+                    ? canEmbargo
+                      ? html`
+                          <button
+                            @click=${(e: MouseEvent) =>
+                              this.handleEmbargoClick(e, myPlayer, other)}
+                            class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                            title=${translateText
+                              ? translateText("player_panel.stop_trade")
+                              : "Stop Trade"}
+                          >
+                            <img
+                              src=${traitorIcon}
+                              alt="Stop Trade"
+                              class="h-6 w-6"
+                            />
+                            <span class="text-[11px] font-medium">
+                              ${translateText
+                                ? translateText("player_panel.stop_trade")
+                                : "Stop Trade"}
+                            </span>
+                          </button>
+                        `
+                      : html`
+                          <button
+                            @click=${(e: MouseEvent) =>
+                              this.handleStopEmbargoClick(e, myPlayer, other)}
+                            class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                            title=${translateText
+                              ? translateText("player_panel.start_trade")
+                              : "Start Trade"}
+                          >
+                            <img
+                              src=${allianceIcon}
+                              alt="Start Trade"
+                              class="h-6 w-6"
+                            />
+                            <span class="text-[11px] font-medium">
+                              ${translateText
+                                ? translateText("player_panel.start_trade")
+                                : "Start Trade"}
+                            </span>
+                          </button>
+                        `
+                    : ""}
+                </div>
               </div>
-              ${canEmbargo && other !== myPlayer
-                ? html`<button
-                    @click=${(e: MouseEvent) =>
-                      this.handleEmbargoClick(e, myPlayer, other)}
-                    class="w-100 h-10 flex items-center justify-center
-                          bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                          text-white rounded-lg transition-colors"
-                  >
-                    ${translateText("player_panel.stop_trade")}
-                  </button>`
-                : ""}
-              ${!canEmbargo && other !== myPlayer
-                ? html`<button
-                    @click=${(e: MouseEvent) =>
-                      this.handleStopEmbargoClick(e, myPlayer, other)}
-                    class="w-100 h-10 flex items-center justify-center
-                          bg-opacity-50 bg-gray-700 hover:bg-opacity-70
-                          text-white rounded-lg transition-colors"
-                  >
-                    ${translateText("player_panel.start_trade")}
-                  </button>`
-                : ""}
             </div>
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderSendTroopsModal(myPlayer: PlayerView) {
+    const total = myPlayer.troops();
+    const minKeepAbs = Math.floor(total * 0.3);
+    const maxAmount = this.sendTroopsKeepThirty
+      ? Math.max(0, total - minKeepAbs)
+      : total;
+
+    const safeAmount = Math.min(this.sendTroopsAmount, maxAmount);
+    if (safeAmount !== this.sendTroopsAmount)
+      this.sendTroopsAmount = safeAmount;
+
+    const keepAfter = total - this.sendTroopsAmount;
+    const belowMinKeep = this.sendTroopsKeepThirty && keepAfter < minKeepAbs;
+    const filledPercent =
+      maxAmount > 0 ? (this.sendTroopsAmount / maxAmount) * 100 : 0;
+
+    const setByPercent = (p: number) => {
+      const next = Math.floor((total * p) / 100);
+      this.sendTroopsAmount = Math.min(next, maxAmount);
+    };
+
+    return html`
+      <div class="fixed inset-0 z-[1100] flex items-center justify-center">
+        <div
+          class="absolute inset-0 bg-black/60"
+          @click=${() => this.closeTroopsModal()}
+        ></div>
+
+        <div
+          class="relative z-10 w-full max-w-[340px] rounded-xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl"
+        >
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-zinc-100">
+              Send Troops → ${this.troopsTarget?.name()}
+            </h2>
+            <button
+              class="rounded-md px-2 text-2xl leading-none text-zinc-400 hover:text-zinc-200"
+              @click=${() => this.closeTroopsModal()}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="mb-4 border-b border-zinc-700 pb-3 text-xs text-zinc-400">
+            Available ${renderTroops(total)} · Min keep
+            ${renderTroops(minKeepAbs)} (30%)
+          </div>
+
+          <!-- Preset chips -->
+          <div class="mb-3 flex gap-2">
+            ${[10, 25, 50, 75].map(
+              (p) => html`
+                <button
+                  class="flex-1 rounded-lg border px-3 py-2 text-sm
+                     ${Math.round(
+                    (this.sendTroopsAmount / Math.max(1, total)) * 100,
+                  ) === p
+                    ? "border-indigo-500 bg-indigo-600 text-white"
+                    : "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}"
+                  @click=${() => setByPercent(p)}
+                  title="${p}%"
+                >
+                  ${p}%
+                </button>
+              `,
+            )}
+          </div>
+
+          <!-- Number input -->
+          <div class="mb-4 flex gap-2">
+            <div class="relative w-full">
+              <input
+                type="number"
+                min="0"
+                max="${maxAmount}"
+                .value=${String(this.sendTroopsAmount)}
+                @input=${(e: Event) => {
+                  const v = Number((e.target as HTMLInputElement).value);
+                  this.sendTroopsAmount = Math.max(0, Math.min(v, maxAmount));
+                }}
+                class="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-base text-zinc-100 outline-none focus:border-purple-500"
+              />
+            </div>
+          </div>
+
+          <!-- Slider -->
+          <div class="mb-2">
+            <div class="relative px-1">
+              <input
+                type="range"
+                min="0"
+                max=${maxAmount}
+                .value=${String(this.sendTroopsAmount)}
+                @input=${(e: Event) =>
+                  (this.sendTroopsAmount = Number(
+                    (e.target as HTMLInputElement).value,
+                  ))}
+                class="w-full text-white range-purple"
+              />
+
+              <!-- Max-cap marker when keepThirty is off -->
+              ${!this.sendTroopsKeepThirty && total > 0
+                ? html`
+                    <div
+                      class="pointer-events-none absolute top-1/2 h-3 w-[3px] -translate-y-1/2 rounded-sm bg-amber-500"
+                      style="left: ${((total - minKeepAbs) / total) * 100}%"
+                      aria-hidden
+                    />
+                  `
+                : null}
+            </div>
+          </div>
+
+          <!-- Keep 30% -->
+          <label class="mb-2 flex items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              class="h-4 w-4 accent-indigo-600"
+              .checked=${this.sendTroopsKeepThirty}
+              @change=${(e: Event) => {
+                this.sendTroopsKeepThirty = (
+                  e.target as HTMLInputElement
+                ).checked;
+                // clamp to new max
+                const newMax = this.sendTroopsKeepThirty
+                  ? Math.max(0, total - minKeepAbs)
+                  : total;
+                this.sendTroopsAmount = Math.min(this.sendTroopsAmount, newMax);
+              }}
+            />
+            Auto-keep ≥30% of troops at home
+          </label>
+
+          <!-- Summary -->
+          <div class="mt-2 text-center text-sm text-zinc-200">
+            Send
+            <span class="font-semibold text-indigo-400"
+              >${renderTroops(this.sendTroopsAmount)}</span
+            >
+            · Keep
+            <span
+              class="font-semibold ${belowMinKeep
+                ? "text-amber-400"
+                : "text-emerald-400"}"
+            >
+              ${renderTroops(keepAfter)}
+            </span>
+            ${belowMinKeep
+              ? html`
+                  <div class="mt-1 text-xs font-medium text-red-400">
+                    Cannot keep less than ${renderTroops(minKeepAbs)} troops.
+                  </div>
+                `
+              : null}
+          </div>
+
+          <!-- Actions -->
+          <div class="mt-5 flex justify-end gap-2">
+            <button
+              class="min-h-10 min-w-20 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-100 hover:bg-zinc-700"
+              @click=${() => this.closeTroopsModal()}
+            >
+              Cancel
+            </button>
+            <button
+              class="min-h-10 min-w-20 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white
+                   enabled:hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              ?disabled=${this.sendTroopsAmount <= 0 ||
+              (this.sendTroopsKeepThirty && belowMinKeep)}
+              @click=${() => this.confirmSendTroops()}
+            >
+              Send
+            </button>
+          </div>
+          <style>
+            /* Make the thumb & track purple across browsers */
+            .range-purple {
+              accent-color: rgb(168 85 247); /* purple-500 fallback */
+            }
+
+            /* Chrome / Edge / Safari */
+            .range-purple::-webkit-slider-runnable-track {
+              height: 8px;
+              border-radius: 9999px;
+              background: rgb(91 33 182); /* purple-800 */
+            }
+            .range-purple::-webkit-slider-thumb {
+              -webkit-appearance: none;
+              appearance: none;
+              height: 18px;
+              width: 18px;
+              margin-top: -5px; /* center on 8px track */
+              border-radius: 9999px;
+              background: rgb(168 85 247); /* purple-500 */
+              border: 3px solid rgb(24 24 27); /* zinc-900 ring */
+            }
+
+            /* Firefox */
+            .range-purple::-moz-range-track {
+              height: 8px;
+              border-radius: 9999px;
+              background: rgb(91 33 182); /* purple-800 */
+            }
+            .range-purple::-moz-range-progress {
+              height: 8px;
+              border-radius: 9999px;
+              background: rgb(168 85 247); /* purple-500 (filled) */
+            }
+            .range-purple::-moz-range-thumb {
+              height: 18px;
+              width: 18px;
+              border-radius: 9999px;
+              background: rgb(168 85 247); /* purple-500 */
+              border: 3px solid rgb(24 24 27); /* zinc-900 ring */
+            }
+          </style>
         </div>
       </div>
     `;
