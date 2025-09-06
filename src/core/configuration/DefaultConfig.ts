@@ -51,7 +51,7 @@ const numPlayersConfig = {
   [GameMapType.Africa]: [100, 80, 50],
   [GameMapType.Europe]: [80, 50, 30],
   [GameMapType.Australia]: [50, 40, 30],
-  [GameMapType.Iceland]: [50, 40, 30],
+  [GameMapType.Iceland]: [60, 50, 40],
   [GameMapType.Britannia]: [50, 40, 30],
   [GameMapType.Asia]: [60, 50, 30],
   [GameMapType.FalklandIslands]: [80, 50, 30],
