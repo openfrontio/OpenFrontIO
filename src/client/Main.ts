@@ -483,6 +483,13 @@ class Client {
         console.log(`joining lobby ${lobbyId}`);
       }
     }
+    if (decodedHash.startsWith("#affiliate=")) {
+      const affiliateCode = decodedHash.replace("#affiliate=", "");
+      strip();
+      if (affiliateCode) {
+        this.patternsModal.open(affiliateCode);
+      }
+    }
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
