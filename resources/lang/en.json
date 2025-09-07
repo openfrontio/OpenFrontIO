@@ -272,7 +272,8 @@
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
-    "factory": "Factory"
+    "factory": "Factory",
+    "transport_ship": "Transport Ship"
   },
   "user_setting": {
     "title": "User Settings",

@@ -12,7 +12,7 @@ import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
-import { renderNumber } from "../../Utils";
+import { renderNumber, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
 @customElement("unit-display")
@@ -85,7 +85,9 @@ export class UnitDisplay extends LitElement implements Layer {
       >
         <img
           src=${icon}
-          alt=${altText}
+          alt=${translateText(
+            `unit_type.${altText.replace(/ /g, "_").toLowerCase()}`,
+          )}
           width="20"
           height="20"
           style="vertical-align: middle;"
@@ -117,7 +119,7 @@ export class UnitDisplay extends LitElement implements Layer {
       >
         <img
           src=${icon}
-          alt="transport ships"
+          alt=${translateText("unit_type.transport_ship")}
           width="20"
           height="20"
           style="vertical-align: middle;"
