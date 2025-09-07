@@ -26,7 +26,7 @@
     "terms_of_service": "Conditions d'utilisation"
   },
   "news": {
-    "full_changelog": "Voir le journal des modifications complet",
+    "see_all_releases": "Voir toutes les versions",
     "github_link": "sur Github",
     "title": "Notes de version"
   },
@@ -43,6 +43,7 @@
     "action_move_camera": "Déplacer la caméra",
     "action_ratio_change": "Diminuer/Augmenter le ratio d'attaque",
     "action_reset_gfx": "Réinitialiser les graphismes",
+    "action_auto_upgrade": "Améliorer automatiquement le bâtiment le plus proche",
     "ui_section": "IU du jeu",
     "ui_leaderboard": "Classement",
     "ui_your_team": "Votre équipe :",
@@ -51,7 +52,6 @@
     "ui_control_desc": "Le panneau de contrôle contient les éléments suivants :",
     "ui_pop": "Pop - Le nombre d'unités que vous avez, votre population max et la vitesse à laquelle vous les gagnez.",
     "ui_gold": "Or - La quantité d'or que vous avez et la vitesse à laquelle vous en gagnez.",
-    "ui_troops_workers": "Troupes et Ouvriers - Le nombre de troupes et de travailleurs alloués. Les troupes sont utilisées pour attaquer ou défendre contre les attaques. Les travailleurs sont utilisés pour générer de l'or. Vous pouvez ajuster le nombre de troupes et de travailleurs en utilisant le curseur.",
     "ui_attack_ratio": "Ratio d'attaque - La quantité de troupes qui seront utilisées lors de votre attaque. Vous pouvez ajuster le ratio d'attaque en utilisant le curseur. Avoir plus de troupes attaquantes que défensives vous fera perdre moins de troupes dans l'attaque, quand en avoir moins va augmenter les dommages infligés à vos troupes attaquantes. L'effet ne dépasse pas le ratio de 2:1.",
     "ui_events": "Panneau des événements",
     "ui_events_desc": "Le panneau des événements affiche les derniers événements, demandes et messages de chat rapide. Quelques exemples sont :",
@@ -70,6 +70,7 @@
     "radial_title": "Menu radial",
     "radial_desc": "Un clic droit (ou un appui sur mobile) ouvre le menu Radial. Faites un clic droit à l'extérieur pour le fermer. À partir du menu, vous pouvez :",
     "radial_build": "Ouvrir le menu de construction.",
+    "radial_attack": "Ouvrez le menu d'attaque.",
     "radial_info": "Ouvrir le menu d'informations.",
     "radial_boat": "Envoyer un bateau (navire de transport) pour attaquer l'endroit sélectionné. Disponible uniquement si vous avez accès à l'eau.",
     "radial_close": "Fermer le menu.",
@@ -146,6 +147,7 @@
     "africa": "Afrique",
     "asia": "Asie",
     "mars": "Mars",
+    "marsrevised": "Mars (révisé)",
     "southamerica": "Amérique du Sud",
     "britannia": "Grande-Bretagne",
     "gatewaytotheatlantic": "Porte de l'Atlantique",
@@ -162,7 +164,9 @@
     "baikal": "Lac Baïkal",
     "halkidiki": "Chalcidique",
     "straitofgibraltar": "Détroit de Gibraltar",
-    "italia": "Italie"
+    "italia": "Italie",
+    "yenisei": "Ienisseï",
+    "pluto": "Pluton"
   },
   "map_categories": {
     "continental": "Continental",
@@ -213,7 +217,8 @@
     "player": "Joueur",
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
-    "start": "Commencer la partie"
+    "start": "Commencer la partie",
+    "host_badge": "Hôte"
   },
   "team_colors": {
     "red": "Rouge",
@@ -273,9 +278,15 @@
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
     "special_effects_enabled": "Effets spéciaux activés",
     "special_effects_disabled": "Effets spéciaux désactivés",
+    "structure_sprites_label": "Sprites de structure",
+    "structure_sprites_desc": "Activer/désactiver les sprites de structure",
+    "structure_sprites_enabled": "Sprites de structure activés",
+    "structure_sprites_disabled": "Sprites de structure désactivés",
     "anonymous_names_label": "Noms masqués",
     "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
     "anonymous_names_enabled": "Noms anonymes activés",
+    "lobby_id_visibility_label": "ID du salon masqué",
+    "lobby_id_visibility_desc": "Cacher l'ID du salon lors de la création du salon privé",
     "real_names_shown": "Noms réels affichés",
     "left_click_label": "Clic gauche pour ouvrir le menu",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
@@ -284,10 +295,11 @@
     "right_click_opens_menu": "Un clic droit ouvre le menu",
     "attack_ratio_label": "⚔️ Ratio d'attaque",
     "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",
-    "troop_ratio_label": "🪖🛠️ Ratio des troupes et des ouvriers",
     "troop_ratio_desc": "Ajuster l'équilibre entre les troupes (pour le combat) et les ouvriers (pour la production d'or) (1–100%)",
     "territory_patterns_label": "🏳️ Modèles de territoire",
     "territory_patterns_desc": "Choisissez si vous voulez afficher les motifs de territoire en jeu",
+    "performance_overlay_label": "Surcouche de performances",
+    "performance_overlay_desc": "Activer/désactiver la surcouche de performances. Lorsqu'elle est activée, la surcouche de performances sera affichée. Appuyez sur Maj+D pendant le jeu pour l\"activer.",
     "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
     "easter_writing_speed_desc": "Ajuster la vitesse à laquelle vous prétendez coder (x1–x100)",
     "easter_bug_count_label": "Nombre de bugs",
@@ -478,7 +490,8 @@
     "accept_alliance": "Accepter",
     "reject_alliance": "Refuser",
     "alliance_renewed": "Votre alliance avec {name} a été renouvelée",
-    "ignore": "Ignorer"
+    "ignore": "Ignorer",
+    "unit_voluntarily_deleted": "Unité volontairement supprimée"
   },
   "unit_info_modal": {
     "structure_info": "Infos sur la structure",
@@ -497,10 +510,8 @@
     "default": "Défaut"
   },
   "control_panel": {
-    "pop": "Pop",
     "gold": "Or",
     "troops": "Troupes",
-    "workers": "Ouvriers",
     "attack_ratio": "Ratio d'attaque"
   },
   "player_panel": {
@@ -573,6 +584,7 @@
       "openfront": "OpenFront",
       "t_rex": "T-Rex",
       "embelem": "Emblème",
+      "contributor": "Contributeur·ice",
       "grogu_head": "Tête de Grogu",
       "grogu": "Grogu"
     }
@@ -585,5 +597,9 @@
     "redirecting": "Vous êtes en cours de redirection...",
     "not_authorized": "Vous n'êtes pas autorisé à accéder à ce site web.",
     "contact_admin": "Si vous pensez que vous voyez ce message par erreur, veuillez contacter l'administrateur du site."
+  },
+  "radial_menu": {
+    "delete_unit_title": "Supprimer une unité",
+    "delete_unit_description": "Cliquez pour supprimer l'unité la plus proche"
   }
 }

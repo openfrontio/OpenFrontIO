@@ -26,7 +26,7 @@
     "terms_of_service": "Pogoji storitve"
   },
   "news": {
-    "full_changelog": "Poglej celotni seznam sprememb",
+    "see_all_releases": "Poglej vse posodobitve",
     "github_link": "na GitHub",
     "title": "Zadnje posodobitve"
   },
@@ -43,6 +43,7 @@
     "action_move_camera": "Premakni kamero",
     "action_ratio_change": "Pomanjšaj/Povečaj napadalno razmerje",
     "action_reset_gfx": "Ponastavi grafične nastavitve",
+    "action_auto_upgrade": "Samodejno nadgradi najbližjo zgradbo",
     "ui_section": "Igralni uporabniški vmesnik",
     "ui_leaderboard": "Lestvica",
     "ui_your_team": "Tvoja ekipa:",
@@ -51,7 +52,6 @@
     "ui_control_desc": "Nadzorna plošča vsebuje naslednje elemente:",
     "ui_pop": "Pop - Število enot, ki jih imate, vaša največja populacija in hitrost, s katero jih pridobivate.",
     "ui_gold": "Zlato - Količina zlata, ki ga imate, in hitrost, s katero ga pridobivate.",
-    "ui_troops_workers": "Čete in delavci - Količina dodeljenih čet in delavcev. Čete se uporabljajo za napad ali obrambo pred napadi. Delavci se uporabljajo za ustvarjanje zlata. Število čet in delavcev lahko prilagodite z drsnikom.",
     "ui_attack_ratio": "Razmerje napadov - Količina enot, ki bodo uporabljene pri napadu. Razmerje napadov lahko prilagodite z drsnikom. Če imate več napadalnih enot kot obrambnih enot, boste v napadu izgubili manj enot, če pa jih imate manj, boste povečali škodo, ki jo bodo napadalne enote utrpele. Učinek ne presega razmerja 2:1.",
     "ui_events": "Panel dogodkov",
     "ui_events_desc": "V zavihku Dogodki so prikazani najnovejši dogodki, zahteve in sporočila hitrega klepeta. Nekaj primerov:",
@@ -70,6 +70,7 @@
     "radial_title": "Radialni meni",
     "radial_desc": "Z desnim klikom (ali dotikom na mobilni napravi) odprete radialni meni. Z desnim klikom zunaj njega ga zaprete. V meniju lahko:",
     "radial_build": "Odprite meni Zgradb.",
+    "radial_attack": "Odpri meni napada.",
     "radial_info": "Odpri meni Informacije.",
     "radial_boat": "Pošljite čoln (transportno ladjo) v napad na izbrano lokacijo. Na voljo le, če imate dostop do vode.",
     "radial_close": "Zapri meni.",
@@ -146,6 +147,7 @@
     "africa": "Afrika",
     "asia": "Azija",
     "mars": "Mars",
+    "marsrevised": "Mars (Ponovno obiskan)",
     "southamerica": "Južna Amerika",
     "britannia": "Britanija",
     "gatewaytotheatlantic": "Vrata do Atlantika",
@@ -162,7 +164,9 @@
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Gibraltarska ožina",
-    "italia": "Italija"
+    "italia": "Italija",
+    "yenisei": "Jenisej",
+    "pluto": "Pluto"
   },
   "map_categories": {
     "continental": "Celinska",
@@ -213,7 +217,8 @@
     "player": "Igralec",
     "players": "Igralci",
     "waiting": "Čakanje na igralce...",
-    "start": "Začni igro"
+    "start": "Začni igro",
+    "host_badge": "Gostitelj"
   },
   "team_colors": {
     "red": "Rdeča",
@@ -273,9 +278,15 @@
     "special_effects_desc": "Preklopi specialne efekte. Onemogoči da izboljšaš zmogljivost",
     "special_effects_enabled": "Specialni efekti aktivirani",
     "special_effects_disabled": "Specialni efekti onemogočeni",
+    "structure_sprites_label": "Zgradbe",
+    "structure_sprites_desc": "Preklopi način zgradb",
+    "structure_sprites_enabled": "Zgradbe prižgane",
+    "structure_sprites_disabled": "Zgradbe ugasnjene",
     "anonymous_names_label": "Skrita imena",
     "anonymous_names_desc": "Skrij prava imena igralcev z naključnimi na zaslonu.",
     "anonymous_names_enabled": "Omogočena anonimna imena",
+    "lobby_id_visibility_label": "Skrite ID sobe",
+    "lobby_id_visibility_desc": "Skrij ID sobe ko ustvarjate privatno sobo",
     "real_names_shown": "Omogočena prava imena",
     "left_click_label": "Levi klik za odprtje menija",
     "left_click_desc": "Ko je VKLOPLJEN, levi klik odpre meni, gumb za napad. Ko je IZKLOPLJEN, levi klik napada neposredno.",
@@ -284,10 +295,11 @@
     "right_click_opens_menu": "Desni klik odpre meni",
     "attack_ratio_label": "⚔️ Napadalno razmerje",
     "attack_ratio_desc": "Kolikšen odstotek vaših vojakov poslati v napad (1–100 %)",
-    "troop_ratio_label": "🪖🛠️ Razmerje med vojaki in delavci",
     "troop_ratio_desc": "Prilagodite ravnovesje med četami (za boj) in delavci (za proizvodnjo zlata) (1–100 %)",
     "territory_patterns_label": "🏳️ Teritorialni vzorci",
     "territory_patterns_desc": "Izberite, ali želite v igri prikazati vzorce ozemlja",
+    "performance_overlay_label": "Prekrivni sloj zmogljivosti",
+    "performance_overlay_desc": "Preklopi prekrivni sloj zmogljivosti. Ko je omogočen, bo prikazan prekrivni sloj zmogljivosti. Med igro pritisnite shift-D za preklop.",
     "easter_writing_speed_label": "Množitelj hitrosti pisanja",
     "easter_writing_speed_desc": "Prilagodite hitrost pretvarjanja, da programirate (x1–x100)",
     "easter_bug_count_label": "Število hroščev",
@@ -478,7 +490,8 @@
     "accept_alliance": "Sprejmi",
     "reject_alliance": "Zavrni",
     "alliance_renewed": "Vaše zavezništvo z {name} je bilo obnovljeno",
-    "ignore": "Prezri"
+    "ignore": "Prezri",
+    "unit_voluntarily_deleted": "Enota je bila prostovoljno odstranjena"
   },
   "unit_info_modal": {
     "structure_info": "Informacije o strukturi",
@@ -497,10 +510,8 @@
     "default": "Privzeto"
   },
   "control_panel": {
-    "pop": "Pop",
     "gold": "Zlato",
     "troops": "Enote",
-    "workers": "Delavci",
     "attack_ratio": "Napadalno razmerje"
   },
   "player_panel": {
@@ -573,6 +584,7 @@
       "openfront": "OpenFront",
       "t_rex": "T-Rex",
       "embelem": "Grb",
+      "contributor": "Podpornik",
       "grogu_head": "Groguva glava",
       "grogu": "Grogu"
     }
@@ -585,5 +597,9 @@
     "redirecting": "Preusmerjeni ste...",
     "not_authorized": "Nimate dovoljenja za dostop do tega spletnega mesta.",
     "contact_admin": "Če menite, da se vam je to sporočilo prikazalo pomotoma, se obrnite na skrbnika spletnega mesta."
+  },
+  "radial_menu": {
+    "delete_unit_title": "Pobriši enoto",
+    "delete_unit_description": "Pritisni za odstranitev najbližjih enot"
   }
 }
