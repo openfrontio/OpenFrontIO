@@ -477,7 +477,7 @@
     "alliance_accepted": "elfogadva",
     "alliance_rejected": "elutasítva",
     "duration_second": "1 másodperc",
-    "betrayal_description": "Szövetség megszegve a következő játékossal: {name}, így ÁRULÓ lettél ({malusPercent}% védelmi büntetés {durationText}-re)”",
+    "betrayal_description": "Szövetség megszegve a következő játékossal: {name}, így ÁRULÓ lettél ({malusPercent}% védelmi büntetés {durationText}-re)",
     "duration_seconds_plural": "{seconds} másodperc",
     "betrayed_you": "{name} felbontotta a szövetségét veled",
     "about_to_expire": "A szövetséged hamarosan lejár a következő játékossal: {name}!",
