@@ -21,6 +21,8 @@ export class PublicLobby extends LitElement {
   private isDragging: boolean = false;
   private startX: number = 0;
   private currentX: number = 0;
+  private dragOffset: number = 0;
+  private hasDragged: boolean = false;
 
   createRenderRoot() {
     return this;
@@ -45,7 +47,14 @@ export class PublicLobby extends LitElement {
 
   private async fetchAndUpdateLobbies(): Promise<void> {
     try {
+      const previousLobbies = [...this.lobbies];
       this.lobbies = await this.fetchLobbies();
+
+      // If we have a selected lobby, try to follow it in the carousel
+      if (this.currLobby) {
+        this.followSelectedLobby(previousLobbies);
+      }
+
       this.lobbies.forEach((l) => {
         // Store the start time on first fetch because endpoint is cached, causing
         // the time to appear irregular.
@@ -123,14 +132,20 @@ export class PublicLobby extends LitElement {
         <div class="relative overflow-hidden rounded-xl flex-1">
           <!-- Lobby Display -->
           <div
-            class="flex transition-transform duration-300 ease-in-out"
-            style="transform: translateX(-${this.currentLobbyIndex * 100}%)"
+            class="flex ${this.isDragging
+              ? ""
+              : "transition-transform duration-300 ease-in-out"}"
+            style="transform: translateX(calc(-${this.currentLobbyIndex *
+            100}% + ${this.dragOffset}px))"
             @mousedown=${this.handleMouseDown}
             @touchstart=${this.handleTouchStart}
           >
             ${lobbiesToShow.map(
               (lobby, index) =>
-                html`<div class="w-full flex-shrink-0">
+                html`<div
+                  class="w-full flex-shrink-0"
+                  @click=${(e: Event) => this.handleLobbyClick(e, lobby)}
+                >
                   ${this.renderLobby(lobby, index)}
                 </div>`,
             )}
@@ -196,15 +211,10 @@ export class PublicLobby extends LitElement {
     const isCurrentLobby = this.currLobby?.gameID === lobby.gameID;
 
     return html`
-      <button
-        @click=${() => this.lobbyClicked(lobby)}
-        ?disabled=${this.isButtonDebounced}
+      <div
         class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${isCurrentLobby
           ? "bg-gradient-to-r from-green-600 to-green-500"
-          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
-          .isButtonDebounced
-          ? "opacity-70 cursor-not-allowed"
-          : ""}"
+          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 cursor-pointer select-none"
       >
         ${mapImageSrc
           ? html`<img
@@ -255,14 +265,38 @@ export class PublicLobby extends LitElement {
             <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
           </div>
         </div>
-      </button>
+      </div>
     `;
   }
 
   leaveLobby() {
     this.isLobbyHighlighted = false;
-
     this.currLobby = null;
+  }
+
+  private followSelectedLobby(previousLobbies: GameInfo[]) {
+    if (!this.currLobby) return;
+
+    const previousIndex = previousLobbies.findIndex(
+      (lobby) => lobby.gameID === this.currLobby!.gameID,
+    );
+    const newIndex = this.lobbies.findIndex(
+      (lobby) => lobby.gameID === this.currLobby!.gameID,
+    );
+
+    if (newIndex !== -1) {
+      const wasShowingSelectedLobby = this.currentLobbyIndex === previousIndex;
+      const lobbyMovedPosition =
+        previousIndex !== newIndex && previousIndex !== -1;
+
+      if (wasShowingSelectedLobby && lobbyMovedPosition) {
+        const maxIndex = Math.min(this.lobbies.length - 1, 2); // Max 3 lobbies
+        this.currentLobbyIndex = Math.min(newIndex, maxIndex);
+      }
+    } else {
+      this.currLobby = null;
+      this.isLobbyHighlighted = false;
+    }
   }
 
   private nextLobby() {
@@ -285,12 +319,21 @@ export class PublicLobby extends LitElement {
 
   private handleMouseDown(e: MouseEvent) {
     this.isDragging = true;
+    this.hasDragged = false;
     this.startX = e.clientX;
     this.currentX = e.clientX;
+    this.dragOffset = 0;
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!this.isDragging) return;
       this.currentX = e.clientX;
+      this.dragOffset = this.currentX - this.startX;
+
+      if (Math.abs(this.dragOffset) > 5) {
+        this.hasDragged = true;
+      }
+
+      this.requestUpdate();
     };
 
     const handleMouseUp = () => {
@@ -328,8 +371,8 @@ export class PublicLobby extends LitElement {
   }
 
   private handleDragEnd() {
-    const deltaX = this.currentX - this.startX;
-    const threshold = 50; // Minimum drag distance to trigger navigation
+    const deltaX = this.dragOffset;
+    const threshold = 50;
 
     if (Math.abs(deltaX) > threshold) {
       if (deltaX > 0) {
@@ -340,6 +383,23 @@ export class PublicLobby extends LitElement {
     }
 
     this.isDragging = false;
+    this.dragOffset = 0;
+    this.requestUpdate();
+
+    // Reset hasDragged after a short delay to prevent accidental clicks
+    setTimeout(() => {
+      this.hasDragged = false;
+    }, 100);
+  }
+
+  private handleLobbyClick(e: Event, lobby: GameInfo) {
+    if (this.hasDragged) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    this.lobbyClicked(lobby);
   }
 
   private lobbyClicked(lobby: GameInfo) {
@@ -355,28 +415,17 @@ export class PublicLobby extends LitElement {
       this.isButtonDebounced = false;
     }, this.debounceDelay);
 
-    if (this.currLobby === null) {
-      this.isLobbyHighlighted = true;
-      this.currLobby = lobby;
-      this.dispatchEvent(
-        new CustomEvent("join-lobby", {
-          detail: {
-            gameID: lobby.gameID,
-            clientID: generateID(),
-          } as JoinLobbyEvent,
-          bubbles: true,
-          composed: true,
-        }),
-      );
-    } else {
-      this.dispatchEvent(
-        new CustomEvent("leave-lobby", {
-          detail: { lobby: this.currLobby },
-          bubbles: true,
-          composed: true,
-        }),
-      );
-      this.leaveLobby();
-    }
+    this.isLobbyHighlighted = true;
+    this.currLobby = lobby;
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: lobby.gameID,
+          clientID: generateID(),
+        } as JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 }
