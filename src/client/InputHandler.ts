@@ -1,5 +1,6 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
@@ -94,6 +95,15 @@ export class ShowEmojiMenuEvent implements GameEvent {
 export class DoBoatAttackEvent implements GameEvent {}
 
 export class DoGroundAttackEvent implements GameEvent {}
+
+// Display a transient target marker at a tile (client-side visual only)
+// Optionally includes the chosen spawn tile for better binding to the created boat
+export class ShowTargetEvent implements GameEvent {
+  constructor(
+    public readonly tile: TileRef,
+    public readonly spawn: TileRef | null = null,
+  ) {}
+}
 
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}

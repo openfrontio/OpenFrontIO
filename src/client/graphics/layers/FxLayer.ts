@@ -1,5 +1,7 @@
 import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
 import {
   BonusEventUpdate,
   ConquestUpdate,
@@ -7,12 +9,14 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { ShowTargetEvent } from "../../InputHandler";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
+import { TargetFx } from "../fx/TargetFx";
 import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
@@ -27,9 +31,34 @@ export class FxLayer implements Layer {
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
+  private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
+  private pendingBoatTargets: {
+    tile: TileRef;
+    spawn: TileRef | null;
+    fx: TargetFx;
+    createdAt: number;
+  }[] = [];
 
-  constructor(private game: GameView) {
+  constructor(
+    private game: GameView,
+    private eventBus?: EventBus,
+  ) {
     this.theme = this.game.config().theme();
+    if (this.eventBus) {
+      this.eventBus.on(ShowTargetEvent, (e: ShowTargetEvent) => {
+        const x = this.game.x(e.tile);
+        const y = this.game.y(e.tile);
+        // persistent until boat finishes
+        const fx = new TargetFx(x, y, 0, 12, true);
+        this.allFx.push(fx);
+        this.pendingBoatTargets.push({
+          tile: e.tile,
+          spawn: (e as any).spawn ?? null,
+          fx,
+          createdAt: Date.now(),
+        });
+      });
+    }
   }
 
   shouldTransform(): boolean {
@@ -37,6 +66,7 @@ export class FxLayer implements Layer {
   }
 
   tick() {
+    this.manageBoatTargetFx();
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -63,6 +93,61 @@ export class FxLayer implements Layer {
         if (update === undefined) return;
         this.onConquestEvent(update);
       });
+  }
+
+  private manageBoatTargetFx() {
+    const my = this.game.myPlayer();
+    if (!my) return;
+
+    // Bind pending markers to newly created boats heading to that tile
+    if (this.pendingBoatTargets.length > 0) {
+      const boats = my
+        .units()
+        .filter((u) => u.type() === UnitType.TransportShip && u.isActive());
+      for (let i = this.pendingBoatTargets.length - 1; i >= 0; i--) {
+        const pending = this.pendingBoatTargets[i];
+        // Prefer matching by spawn tile if known; fall back to target tile proximity
+        const match = boats.find((b) => {
+          if (this.boatTargetFxByUnitId.has(b.id())) return false;
+          const t = b.targetTile();
+          if (pending.spawn !== null) {
+            // If the newly spawned boat's current tile equals provided spawn, it's our guy
+            if (b.tile && b.tile() === pending.spawn) return true;
+          }
+          if (t === undefined) return false;
+          return (
+            t === pending.tile || this.game.manhattanDist(t, pending.tile) <= 1
+          );
+        });
+        if (match) {
+          this.boatTargetFxByUnitId.set(match.id(), pending.fx);
+          this.pendingBoatTargets.splice(i, 1);
+          continue;
+        }
+        // Expire unbound targets after a timeout to avoid stuck markers if no boat spawns
+        const maxWaitMs = 8000; // 8 seconds
+        if (Date.now() - pending.createdAt > maxWaitMs) {
+          (pending.fx as any).end?.();
+          this.pendingBoatTargets.splice(i, 1);
+        }
+      }
+    }
+
+    // End markers for boats that arrived or retreated
+    for (const [unitId, fx] of Array.from(
+      this.boatTargetFxByUnitId.entries(),
+    )) {
+      const unit = this.game.unit(unitId);
+      if (
+        !unit ||
+        !unit.isActive() ||
+        unit.reachedTarget() ||
+        unit.retreating()
+      ) {
+        (fx as any).end?.();
+        this.boatTargetFxByUnitId.delete(unitId);
+      }
+    }
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {
@@ -92,6 +177,11 @@ export class FxLayer implements Layer {
   addTextFx(text: string, x: number, y: number) {
     const textFx = new TextFx(text, x, y, 1000, 20);
     this.allFx.push(textFx);
+  }
+
+  addTargetFx(x: number, y: number) {
+    const fx = new TargetFx(x, y, 1200, 12);
+    this.allFx.push(fx);
   }
 
   onUnitEvent(unit: UnitView) {
