@@ -41,13 +41,15 @@ export type Intent =
   | MarkDisconnectedIntent
   | UpgradeStructureIntent
   | DeleteUnitIntent
-  | KickPlayerIntent;
+  | KickPlayerIntent
+  | CancelBombIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
 export type BoatAttackIntent = z.infer<typeof BoatAttackIntentSchema>;
 export type CancelBoatIntent = z.infer<typeof CancelBoatIntentSchema>;
+export type CancelBombIntent = z.infer<typeof CancelBombIntentSchema>;
 export type AllianceRequestIntent = z.infer<typeof AllianceRequestIntentSchema>;
 export type AllianceRequestReplyIntent = z.infer<
   typeof AllianceRequestReplyIntentSchema
@@ -312,6 +314,11 @@ export const CancelBoatIntentSchema = BaseIntentSchema.extend({
   unitID: z.number(),
 });
 
+export const CancelBombIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("cancel_bomb"),
+  unitID: z.number(),
+});
+
 export const MoveWarshipIntentSchema = BaseIntentSchema.extend({
   type: z.literal("move_warship"),
   unitId: z.number(),
@@ -347,6 +354,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   MarkDisconnectedIntentSchema,
   BoatAttackIntentSchema,
   CancelBoatIntentSchema,
+  CancelBombIntentSchema,
   AllianceRequestIntentSchema,
   AllianceRequestReplyIntentSchema,
   BreakAllianceIntentSchema,

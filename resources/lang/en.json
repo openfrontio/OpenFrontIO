@@ -528,7 +528,10 @@
     "reject_alliance": "Reject",
     "alliance_renewed": "Your alliance with {name} has been renewed",
     "ignore": "Ignore",
-    "unit_voluntarily_deleted": "Unit voluntarily deleted"
+    "unit_voluntarily_deleted": "Unit voluntarily deleted",
+    "nuke_cancelled": "{name} cancelled their Atom Bomb",
+    "hydrogen_bomb_cancelled": "{name} cancelled their Hydrogen Bomb",
+    "mirv_cancelled": "{name} cancelled their MIRV"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
@@ -644,5 +647,9 @@
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
+  },
+  "nuke_tracker": {
+    "click_to_cancel": "Click to cancel",
+    "cannot_cancel": "Cannot cancel"
   }
 }

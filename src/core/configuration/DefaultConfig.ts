@@ -944,4 +944,8 @@ export class DefaultConfig implements Config {
   allianceExtensionPromptOffset(): number {
     return 300; // 30 seconds before expiration
   }
+
+  cancelNukeUntilPercentage(): number {
+    return 90; // nukes can be canceled until 90% of the way to the target
+  }
 }

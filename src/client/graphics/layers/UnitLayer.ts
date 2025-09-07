@@ -4,13 +4,18 @@ import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
   MouseUpEvent,
   UnitSelectionEvent,
 } from "../../InputHandler";
-import { MoveWarshipIntentEvent } from "../../Transport";
+import {
+  ClearFlightPathHighlightEvent,
+  HighlightFlightPathEvent,
+  MoveWarshipIntentEvent,
+} from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -34,6 +39,11 @@ export class UnitLayer implements Layer {
   private unitTrailContext: CanvasRenderingContext2D;
 
   private unitToTrail = new Map<UnitView, TileRef[]>();
+
+  // Predicted extension of a nuke's flight path when hovering a tracker icon
+  private predictedPathTiles: Set<TileRef> = new Set();
+  // Track which unit the current predicted path belongs to so we can clear it on cancel/destroy
+  private predictedPathUnitId: number | null = null;
 
   private theme: Theme;
 
@@ -74,6 +84,13 @@ export class UnitLayer implements Layer {
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternativeViewEvent(e));
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
+    // Track hover events from the bomb tracker to highlight full predicted path
+    this.eventBus.on(HighlightFlightPathEvent, (e) =>
+      this.onHighlightFlightPath(e),
+    );
+    this.eventBus.on(ClearFlightPathHighlightEvent, () =>
+      this.clearPredictedPath(),
+    );
     this.redraw();
 
     loadAllSprites();
@@ -416,6 +433,10 @@ export class UnitLayer implements Layer {
     this.drawSprite(unit);
     if (!unit.isActive()) {
       this.clearTrail(unit);
+      // If this nuke was being previewed, clear its predicted path as well
+      if (this.predictedPathUnitId === unit.id()) {
+        this.clearPredictedPath();
+      }
     }
   }
 
@@ -558,5 +579,139 @@ export class UnitLayer implements Layer {
         this.context.restore();
       }
     }
+  }
+
+  private static readonly PATH_HIGHLIGHT_ALPHA = 220;
+  private static readonly PATH_HIGHLIGHT_THICKNESS = 2;
+
+  /**
+   * Find a bomb (nuke) unit by id across AtomBomb, HydrogenBomb, MIRV.
+   */
+  private findBombUnit(unitID: number): UnitView | null {
+    const bombTypes = [UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV];
+    for (const type of bombTypes) {
+      for (const unit of this.game.units(type)) {
+        if (unit.id() === unitID) {
+          return unit;
+        }
+      }
+    }
+    return null;
+  }
+
+  private onHighlightFlightPath(event: HighlightFlightPathEvent) {
+    const unit = this.findBombUnit(event.unitID);
+    if (!unit) return;
+
+    // Require originTile from update payload; if missing, log, clear any existing highlight, and bail.
+    const updatePayload = (unit as any).data as
+      | { originTile?: TileRef }
+      | undefined;
+    const originTile = updatePayload?.originTile;
+    const targetTile = unit.targetTile?.();
+
+    if (!originTile) {
+      console.error(
+        "[UnitLayer] Missing originTile for nuke highlight; skipping draw and clearing highlight.",
+        {
+          unitId: unit.id(),
+          unitType: unit.type(),
+          currentTile: unit.tile?.() ?? null,
+          targetTile: targetTile ?? null,
+          dataKeys: updatePayload ? Object.keys(updatePayload) : [],
+        },
+      );
+      this.clearPredictedPath();
+      return;
+    }
+
+    if (!targetTile) {
+      // No target means we cannot compute the curve; clear and bail silently
+      this.clearPredictedPath();
+      return;
+    }
+
+    this.clearPredictedPath();
+    this.predictedPathUnitId = unit.id();
+
+    // Use the shared ParabolaPathFinder so preview matches server pathing
+    const rel = this.relationship(unit);
+    const previewColor = colord({ r: 255, g: 0, b: 0 }); // Red
+
+    const pf = new ParabolaPathFinder(this.game);
+
+    // Dense sampling for continuous curve in preview
+    // A dotted line could be achieved with higher values, if you prefer.
+    const increment = 1;
+
+    // Arc for nukes and MIRV; warheads would be false (but not previewed here yet)
+    const isArcing = unit.type() !== UnitType.MIRVWarhead;
+
+    pf.computeControlPoints(originTile, targetTile, increment, isArcing);
+    const tiles = pf.allTiles();
+
+    for (const tile of tiles) {
+      const x = this.game.x(tile);
+      const y = this.game.y(tile);
+      if (!this.game.isValidCoord(x, y)) continue;
+
+      // 2px thickness using a 2x2 block
+      for (let dx = 0; dx < UnitLayer.PATH_HIGHLIGHT_THICKNESS; dx++) {
+        for (let dy = 0; dy < UnitLayer.PATH_HIGHLIGHT_THICKNESS; dy++) {
+          const px = x + dx;
+          const py = y + dy;
+          if (!this.game.isValidCoord(px, py)) continue;
+          const t = this.game.ref(px, py);
+          if (!t) continue;
+          this.predictedPathTiles.add(t);
+          this.paintCell(
+            px,
+            py,
+            rel,
+            previewColor,
+            UnitLayer.PATH_HIGHLIGHT_ALPHA,
+            this.unitTrailContext,
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Clear the predicted path pixels and restore any underlying unit trails.
+   */
+  private clearPredictedPath() {
+    if (this.predictedPathTiles.size === 0) return;
+
+    // Cache set for fast membership checks
+    const cleared = new Set(this.predictedPathTiles);
+
+    // First clear predicted pixels
+    for (const tile of cleared) {
+      const x = this.game.x(tile);
+      const y = this.game.y(tile);
+      this.clearCell(x, y, this.unitTrailContext);
+    }
+
+    // Repaint overlapping existing trails so we don't leave gaps
+    for (const [other, trail] of this.unitToTrail) {
+      const relOther = this.relationship(other);
+      const colorOther = this.theme.territoryColor(other.owner());
+      for (const t of trail) {
+        if (cleared.has(t)) {
+          this.paintCell(
+            this.game.x(t),
+            this.game.y(t),
+            relOther,
+            colorOther,
+            150,
+            this.unitTrailContext,
+          );
+        }
+      }
+    }
+
+    this.predictedPathTiles.clear();
+    this.predictedPathUnitId = null;
   }
 }

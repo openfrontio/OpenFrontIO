@@ -63,6 +63,27 @@ export class FxLayer implements Layer {
         if (update === undefined) return;
         this.onConquestEvent(update);
       });
+
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.MidAirExplosion]?.forEach((update) => {
+        const x = this.game.x(update.tile);
+        const y = this.game.y(update.tile);
+
+        const fx: FxType = (() => {
+          switch (update.bombType) {
+            case UnitType.MIRV:
+              return FxType.Nuke;
+            case UnitType.AtomBomb:
+            case UnitType.HydrogenBomb:
+            default:
+              return FxType.MiniExplosion;
+          }
+        })();
+
+        const explosion = new SpriteFx(this.animatedSpriteLoader, x, y, fx);
+        this.allFx.push(explosion);
+      });
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {

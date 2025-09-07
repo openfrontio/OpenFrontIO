@@ -46,6 +46,7 @@ export enum GameUpdateType {
   RailroadEvent,
   ConquestEvent,
   EmbargoEvent,
+  MidAirExplosion,
 }
 
 export type GameUpdate =
@@ -67,7 +68,8 @@ export type GameUpdate =
   | BonusEventUpdate
   | RailroadUpdate
   | ConquestUpdate
-  | EmbargoUpdate;
+  | EmbargoUpdate
+  | MidAirExplosionUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -132,6 +134,8 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
+  // True launch tile (silo) for nukes
+  originTile?: TileRef;
 }
 
 export interface AttackUpdate {
@@ -242,6 +246,12 @@ export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
   winner: Winner;
+}
+
+export interface MidAirExplosionUpdate {
+  type: GameUpdateType.MidAirExplosion;
+  tile: TileRef;
+  bombType: UnitType;
 }
 
 export interface HashUpdate {

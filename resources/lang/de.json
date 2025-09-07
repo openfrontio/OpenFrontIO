@@ -441,7 +441,10 @@
     "renew_alliance": "Verlängerung beantragen",
     "focus": "Fokus",
     "alliance_renewed": "Deine Allianz mit {name} wurde erneuert",
-    "ignore": "Ignorieren"
+    "ignore": "Ignorieren",
+    "nuke_cancelled": "{name} hat seine Atombombe abgebrochen",
+    "hydrogen_bomb_cancelled": "{name} hat seine Wasserstoffbombe abgebrochen",
+    "mirv_cancelled": "{name} hat sein MIRV abgebrochen"
   },
   "unit_info_modal": {
     "structure_info": "Gebäudeinformation",
@@ -538,5 +541,9 @@
       "grogu_head": "Grogu Kopf",
       "grogu": "Grogu"
     }
+  },
+  "nuke_tracker": {
+    "click_to_cancel": "Zum Abbrechen klicken",
+    "cannot_cancel": "Kann nicht abgebrochen werden"
   }
 }

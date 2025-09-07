@@ -144,6 +144,16 @@ export class CancelBoatIntentEvent implements GameEvent {
   constructor(public readonly unitID: number) {}
 }
 
+export class CancelBombIntentEvent implements GameEvent {
+  constructor(public readonly unitID: number) {}
+}
+
+export class HighlightFlightPathEvent implements GameEvent {
+  constructor(public readonly unitID: number) {}
+}
+
+export class ClearFlightPathHighlightEvent implements GameEvent {}
+
 export class SendWinnerEvent implements GameEvent {
   constructor(
     public readonly winner: Winner,
@@ -236,6 +246,9 @@ export class Transport {
     );
     this.eventBus.on(CancelBoatIntentEvent, (e) =>
       this.onCancelBoatIntentEvent(e),
+    );
+    this.eventBus.on(CancelBombIntentEvent, (e) =>
+      this.onCancelBombIntentEvent(e),
     );
 
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
@@ -593,6 +606,14 @@ export class Transport {
   private onCancelBoatIntentEvent(event: CancelBoatIntentEvent) {
     this.sendIntent({
       type: "cancel_boat",
+      clientID: this.lobbyConfig.clientID,
+      unitID: event.unitID,
+    });
+  }
+
+  private onCancelBombIntentEvent(event: CancelBombIntentEvent) {
+    this.sendIntent({
+      type: "cancel_bomb",
       clientID: this.lobbyConfig.clientID,
       unitID: event.unitID,
     });
