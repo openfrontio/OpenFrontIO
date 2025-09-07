@@ -56,13 +56,20 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private confirmSendTroops() {
     if (!this.troopsTarget) return;
+
+    const myPlayer = this.g.myPlayer();
+    if (!myPlayer) return;
+
     const amount = Math.max(0, Math.floor(this.sendTroopsAmount));
+    if (amount <= 0 || amount > myPlayer.troops()) return;
+
     if (amount <= 0) return;
     this.eventBus.emit(
       new SendDonateTroopsIntentEvent(this.troopsTarget, amount),
     );
     this.showTroopsModal = false;
     this.sendTroopsAmount = 0;
+    this.troopsTarget = null;
   }
 
   public show(actions: PlayerActions, tile: TileRef) {
