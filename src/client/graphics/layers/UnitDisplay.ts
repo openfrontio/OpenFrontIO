@@ -1,6 +1,8 @@
 import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import portIcon from "../../../../resources/images/AnchorIcon.png";
+import battleshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
+import boatIcon from "../../../../resources/images/BoatIconWhite.png";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
@@ -24,6 +26,8 @@ export class UnitDisplay extends LitElement implements Layer {
   private _port = 0;
   private _defensePost = 0;
   private _samLauncher = 0;
+  private _transportShips = 0;
+  private _warships = 0;
   private allDisabled = false;
 
   createRenderRoot() {
@@ -38,7 +42,9 @@ export class UnitDisplay extends LitElement implements Layer {
       config.isUnitDisabled(UnitType.Port) &&
       config.isUnitDisabled(UnitType.DefensePost) &&
       config.isUnitDisabled(UnitType.MissileSilo) &&
-      config.isUnitDisabled(UnitType.SAMLauncher);
+      config.isUnitDisabled(UnitType.SAMLauncher) &&
+      config.isUnitDisabled(UnitType.TransportShip) &&
+      config.isUnitDisabled(UnitType.Warship);
     this.requestUpdate();
   }
 
@@ -51,6 +57,8 @@ export class UnitDisplay extends LitElement implements Layer {
     this._defensePost = player.totalUnitLevels(UnitType.DefensePost);
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
+    this._transportShips = player.totalUnitLevels(UnitType.TransportShip);
+    this._warships = player.totalUnitLevels(UnitType.Warship);
     this.requestUpdate();
   }
 
@@ -87,6 +95,38 @@ export class UnitDisplay extends LitElement implements Layer {
     `;
   }
 
+  // Specialized renderer for transport ships to show current/max
+  private renderTransportItem(icon: string) {
+    const unitType = UnitType.TransportShip;
+    if (this.game.config().isUnitDisabled(unitType)) {
+      return html``;
+    }
+    const current = this._transportShips;
+    const max = this.game.config().boatMaxNumber();
+    return html`
+      <div
+        class="px-2 flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 rounded text-white"
+        style="background: ${this._selectedStructure === unitType
+          ? "#ffffff2e"
+          : "none"}"
+        @mouseenter="${() =>
+          this.eventBus.emit(new ToggleStructureEvent(unitType))}"
+        @mouseleave="${() =>
+          this.eventBus.emit(new ToggleStructureEvent(null))}"
+        title="Transports: ${max - current}/${max}"
+      >
+        <img
+          src=${icon}
+          alt="transport ships"
+          width="20"
+          height="20"
+          style="vertical-align: middle;"
+        />
+        ${renderNumber(max - current)} / ${renderNumber(max)}
+      </div>
+    `;
+  }
+
   render() {
     const myPlayer = this.game?.myPlayer();
     if (
@@ -106,33 +146,52 @@ export class UnitDisplay extends LitElement implements Layer {
       <div
         class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] bg-gray-800/70 backdrop-blur-sm border border-slate-400 rounded-lg p-2 hidden lg:block"
       >
-        <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1">
-          ${this.renderUnitItem(cityIcon, this._cities, UnitType.City, "city")}
-          ${this.renderUnitItem(
-            factoryIcon,
-            this._factories,
-            UnitType.Factory,
-            "factory",
-          )}
-          ${this.renderUnitItem(portIcon, this._port, UnitType.Port, "port")}
-          ${this.renderUnitItem(
-            defensePostIcon,
-            this._defensePost,
-            UnitType.DefensePost,
-            "defense post",
-          )}
-          ${this.renderUnitItem(
-            missileSiloIcon,
-            this._missileSilo,
-            UnitType.MissileSilo,
-            "missile silo",
-          )}
-          ${this.renderUnitItem(
-            samLauncherIcon,
-            this._samLauncher,
-            UnitType.SAMLauncher,
-            "SAM launcher",
-          )}
+        <div class="flex flex-col gap-2">
+          <!-- Structures box (no port) -->
+          <div class="grid grid-flow-col auto-cols-max gap-1 items-center">
+            ${this.renderUnitItem(
+              cityIcon,
+              this._cities,
+              UnitType.City,
+              "city",
+            )}
+            ${this.renderUnitItem(
+              factoryIcon,
+              this._factories,
+              UnitType.Factory,
+              "factory",
+            )}
+            ${this.renderUnitItem(
+              defensePostIcon,
+              this._defensePost,
+              UnitType.DefensePost,
+              "defense post",
+            )}
+            ${this.renderUnitItem(
+              missileSiloIcon,
+              this._missileSilo,
+              UnitType.MissileSilo,
+              "missile silo",
+            )}
+            ${this.renderUnitItem(
+              samLauncherIcon,
+              this._samLauncher,
+              UnitType.SAMLauncher,
+              "SAM launcher",
+            )}
+          </div>
+
+          <!-- Naval box: Port + Transport + Warship -->
+          <div class="grid grid-flow-col auto-cols-max gap-1 items-center">
+            ${this.renderUnitItem(portIcon, this._port, UnitType.Port, "port")}
+            ${this.renderTransportItem(boatIcon)}
+            ${this.renderUnitItem(
+              battleshipIcon,
+              this._warships,
+              UnitType.Warship,
+              "warship",
+            )}
+          </div>
         </div>
       </div>
     `;
