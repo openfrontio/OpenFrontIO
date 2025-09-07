@@ -62,22 +62,39 @@ export class UnitDisplay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  /**
+   * Renders a unit item. If a limit is provided (current/max) it will render
+   * the remaining/maximum style used by transports (e.g. "2 / 5").
+   *
+   * To display limits for other units, pass the `limit` object. Example:
+   * renderUnitItem(..., { current: owned, max: allowed })
+   */
   private renderUnitItem(
     icon: string,
     number: number,
     unitType: UnitType,
-    altText: string,
+    unitKey: string,
+    limit?: { current: number; max: number },
   ) {
     if (this.game.config().isUnitDisabled(unitType)) {
       return html``;
     }
 
+    const hasLimit =
+      !!limit &&
+      typeof limit.current === "number" &&
+      typeof limit.max === "number";
+    const label = translateText(`unit_type.${unitKey}`);
+
     return html`
       <div
         class="px-2 flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 rounded text-white"
         style="background: ${this._selectedStructure === unitType
           ? "#ffffff2e"
           : "none"}"
+        title="${label}${hasLimit
+          ? `: ${limit!.max - limit!.current}/${limit!.max}`
+          : `: ${number}`}"
         @mouseenter="${() =>
           this.eventBus.emit(new ToggleStructureEvent(unitType))}"
         @mouseleave="${() =>
@@ -85,49 +102,22 @@ export class UnitDisplay extends LitElement implements Layer {
       >
         <img
           src=${icon}
-          alt=${translateText(
-            `unit_type.${altText.replace(/ /g, "_").toLowerCase()}`,
-          )}
+          alt=${label}
           width="20"
           height="20"
           style="vertical-align: middle;"
         />
-        ${renderNumber(number)}
+        ${hasLimit
+          ? html`${renderNumber(limit!.max - limit!.current)} /
+            ${renderNumber(limit!.max)}`
+          : renderNumber(number)}
       </div>
     `;
   }
 
-  // Specialized renderer for transport ships to show current/max
-  private renderTransportItem(icon: string) {
-    const unitType = UnitType.TransportShip;
-    if (this.game.config().isUnitDisabled(unitType)) {
-      return html``;
-    }
-    const current = this._transportShips;
-    const max = this.game.config().boatMaxNumber();
-    return html`
-      <div
-        class="px-2 flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 rounded text-white"
-        style="background: ${this._selectedStructure === unitType
-          ? "#ffffff2e"
-          : "none"}"
-        @mouseenter="${() =>
-          this.eventBus.emit(new ToggleStructureEvent(unitType))}"
-        @mouseleave="${() =>
-          this.eventBus.emit(new ToggleStructureEvent(null))}"
-        title="Transports: ${max - current}/${max}"
-      >
-        <img
-          src=${icon}
-          alt=${translateText("unit_type.transport_ship")}
-          width="20"
-          height="20"
-          style="vertical-align: middle;"
-        />
-        ${renderNumber(max - current)} / ${renderNumber(max)}
-      </div>
-    `;
-  }
+  // Note: transport-specific limit display is handled by passing a `limit`
+  // object to `renderUnitItem` (see usage below). If other units ever have
+  // similar limits (e.g. factory build slots), pass a limit object there too.
 
   render() {
     const myPlayer = this.game?.myPlayer();
@@ -167,26 +157,36 @@ export class UnitDisplay extends LitElement implements Layer {
               defensePostIcon,
               this._defensePost,
               UnitType.DefensePost,
-              "defense post",
+              "defense_post",
             )}
             ${this.renderUnitItem(
               missileSiloIcon,
               this._missileSilo,
               UnitType.MissileSilo,
-              "missile silo",
+              "missile_silo",
             )}
             ${this.renderUnitItem(
               samLauncherIcon,
               this._samLauncher,
               UnitType.SAMLauncher,
-              "SAM launcher",
+              "sam_launcher",
             )}
           </div>
 
           <!-- Naval box: Port + Transport + Warship -->
           <div class="grid grid-flow-col auto-cols-max gap-1 items-center">
             ${this.renderUnitItem(portIcon, this._port, UnitType.Port, "port")}
-            ${this.renderTransportItem(boatIcon)}
+            ${(() => {
+              const current = this._transportShips;
+              const max = this.game.config().boatMaxNumber();
+              return this.renderUnitItem(
+                boatIcon,
+                current,
+                UnitType.TransportShip,
+                "transport_ship",
+                { current, max },
+              );
+            })()}
             ${this.renderUnitItem(
               battleshipIcon,
               this._warships,
