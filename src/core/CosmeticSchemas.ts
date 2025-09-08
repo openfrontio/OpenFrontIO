@@ -44,6 +44,7 @@ export const PatternSchema = z
 export const PatternInfoSchema = z.object({
   name: PatternNameSchema,
   pattern: PatternSchema,
+  affiliateCode: z.string().nullable(),
   product: ProductSchema.nullable(),
 });
 
