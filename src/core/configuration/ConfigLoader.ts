@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { Config, GameEnv, ServerConfig } from "./Config";
@@ -7,20 +6,21 @@ import { DevConfig, DevServerConfig } from "./DevConfig";
 import { preprodConfig } from "./PreprodConfig";
 import { prodConfig } from "./ProdConfig";
 
-export let cachedSC: ServerConfig = null;
+export let cachedSC: ServerConfig | null = null;
 
 export async function getConfig(
   gameConfig: GameConfig,
-  userSettings: UserSettings | null = null,
+  userSettings: UserSettings | null,
+  isReplay: boolean = false,
 ): Promise<Config> {
   const sc = await getServerConfigFromClient();
   switch (sc.env()) {
     case GameEnv.Dev:
-      return new DevConfig(sc, gameConfig, userSettings);
+      return new DevConfig(sc, gameConfig, userSettings, isReplay);
     case GameEnv.Preprod:
     case GameEnv.Prod:
-      consolex.log("using prod config");
-      return new DefaultConfig(sc, gameConfig, userSettings);
+      console.log("using prod config");
+      return new DefaultConfig(sc, gameConfig, userSettings, isReplay);
     default:
       throw Error(`unsupported server configuration: ${process.env.GAME_ENV}`);
   }
@@ -44,19 +44,19 @@ export async function getServerConfigFromClient(): Promise<ServerConfig> {
   return cachedSC;
 }
 export function getServerConfigFromServer(): ServerConfig {
-  const gameEnv = process.env.GAME_ENV;
+  const gameEnv = process.env.GAME_ENV ?? "dev";
   return getServerConfig(gameEnv);
 }
 export function getServerConfig(gameEnv: string) {
   switch (gameEnv) {
     case "dev":
-      consolex.log("using dev server config");
+      console.log("using dev server config");
       return new DevServerConfig();
     case "staging":
-      consolex.log("using preprod server config");
+      console.log("using preprod server config");
       return preprodConfig;
     case "prod":
-      consolex.log("using prod server config");
+      console.log("using prod server config");
       return prodConfig;
     default:
       throw Error(`unsupported server configuration: ${gameEnv}`);

@@ -4,6 +4,7 @@ import {
   PlayerID,
   PlayerProfile,
 } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
@@ -18,7 +19,11 @@ export type WorkerMessageType =
   | "player_profile"
   | "player_profile_result"
   | "player_border_tiles"
-  | "player_border_tiles_result";
+  | "player_border_tiles_result"
+  | "attack_average_position"
+  | "attack_average_position_result"
+  | "transport_ship_spawn"
+  | "transport_ship_spawn_result";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -84,6 +89,29 @@ export interface PlayerBorderTilesResultMessage extends BaseWorkerMessage {
   result: PlayerBorderTiles;
 }
 
+export interface AttackAveragePositionMessage extends BaseWorkerMessage {
+  type: "attack_average_position";
+  playerID: number;
+  attackID: string;
+}
+
+export interface AttackAveragePositionResultMessage extends BaseWorkerMessage {
+  type: "attack_average_position_result";
+  x: number | null;
+  y: number | null;
+}
+
+export interface TransportShipSpawnMessage extends BaseWorkerMessage {
+  type: "transport_ship_spawn";
+  playerID: PlayerID;
+  targetTile: TileRef;
+}
+
+export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
+  type: "transport_ship_spawn_result";
+  result: TileRef | false;
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | HeartbeatMessage
@@ -91,7 +119,9 @@ export type MainThreadMessage =
   | TurnMessage
   | PlayerActionsMessage
   | PlayerProfileMessage
-  | PlayerBorderTilesMessage;
+  | PlayerBorderTilesMessage
+  | AttackAveragePositionMessage
+  | TransportShipSpawnMessage;
 
 // Message send from worker
 export type WorkerMessage =
@@ -99,4 +129,6 @@ export type WorkerMessage =
   | GameUpdateMessage
   | PlayerActionsResultMessage
   | PlayerProfileResultMessage
-  | PlayerBorderTilesResultMessage;
+  | PlayerBorderTilesResultMessage
+  | AttackAveragePositionResultMessage
+  | TransportShipSpawnResultMessage;

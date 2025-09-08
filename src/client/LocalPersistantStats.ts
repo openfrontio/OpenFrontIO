@@ -1,9 +1,9 @@
-import { consolex } from "../core/Consolex";
 import { GameConfig, GameID, GameRecord } from "../core/Schemas";
+import { replacer } from "../core/Util";
 
 export interface LocalStatsData {
   [key: GameID]: {
-    lobby: GameConfig;
+    lobby: Partial<GameConfig>;
     // Only once the game is over
     gameRecord?: GameRecord;
   };
@@ -19,15 +19,15 @@ function getStats(): LocalStatsData {
 function save(stats: LocalStatsData) {
   // To execute asynchronously
   setTimeout(
-    () => localStorage.setItem("game-records", JSON.stringify(stats)),
+    () => localStorage.setItem("game-records", JSON.stringify(stats, replacer)),
     0,
   );
 }
 
 // The user can quit the game anytime so better save the lobby as soon as the
 // game starts.
-export function startGame(id: GameID, lobby: GameConfig) {
-  if (typeof localStorage === "undefined") {
+export function startGame(id: GameID, lobby: Partial<GameConfig>) {
+  if (localStorage === undefined) {
     return;
   }
 
@@ -42,15 +42,15 @@ export function startTime() {
 }
 
 export function endGame(gameRecord: GameRecord) {
-  if (typeof localStorage === "undefined") {
+  if (localStorage === undefined) {
     return;
   }
 
   const stats = getStats();
-  const gameStat = stats[gameRecord.id];
+  const gameStat = stats[gameRecord.info.gameID];
 
   if (!gameStat) {
-    consolex.log("LocalPersistantStats: game not found");
+    console.log("LocalPersistantStats: game not found");
     return;
   }
 

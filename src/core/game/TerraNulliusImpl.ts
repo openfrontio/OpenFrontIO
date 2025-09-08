@@ -1,5 +1,5 @@
 import { ClientID } from "../Schemas";
-import { PlayerID, TerraNullius } from "./Game";
+import { TerraNullius } from "./Game";
 
 export class TerraNulliusImpl implements TerraNullius {
   constructor() {}
@@ -10,7 +10,7 @@ export class TerraNulliusImpl implements TerraNullius {
     return "TERRA_NULLIUS_CLIENT_ID";
   }
 
-  id(): PlayerID {
+  id() {
     return null;
   }
 

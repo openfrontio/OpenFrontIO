@@ -5,7 +5,7 @@ export type TileUpdate = bigint;
 
 export interface GameMap {
   ref(x: number, y: number): TileRef;
-
+  isValidRef(ref: TileRef): boolean;
   x(ref: TileRef): number;
   y(ref: TileRef): number;
   cell(ref: TileRef): Cell;
@@ -58,15 +58,18 @@ export class GameMapImpl implements GameMap {
   private readonly width_: number;
   private readonly height_: number;
 
+  // Lookup tables (LUTs) contain pre-computed values to avoid performing division at runtime
+  private readonly refToX: number[];
+  private readonly refToY: number[];
+  private readonly yToRef: number[];
+
   // Terrain bits (Uint8Array)
   private static readonly IS_LAND_BIT = 7;
   private static readonly SHORELINE_BIT = 6;
   private static readonly OCEAN_BIT = 5;
-  private static readonly MAGNITUDE_OFFSET = 4; // Uses bits 3-7 (5 bits)
   private static readonly MAGNITUDE_MASK = 0x1f; // 11111 in binary
 
   // State bits (Uint16Array)
-  private static readonly PLAYER_ID_OFFSET = 0; // Uses bits 0-11 (12 bits)
   private static readonly PLAYER_ID_MASK = 0xfff;
   private static readonly FALLOUT_BIT = 13;
   private static readonly DEFENSE_BONUS_BIT = 14;
@@ -87,6 +90,19 @@ export class GameMapImpl implements GameMap {
     this.height_ = height;
     this.terrain = terrainData;
     this.state = new Uint16Array(width * height);
+    // Precompute the LUTs
+    let ref = 0;
+    this.refToX = new Array(width * height);
+    this.refToY = new Array(width * height);
+    this.yToRef = new Array(height);
+    for (let y = 0; y < height; y++) {
+      this.yToRef[y] = ref;
+      for (let x = 0; x < width; x++) {
+        this.refToX[ref] = x;
+        this.refToY[ref] = y;
+        ref++;
+      }
+    }
   }
   numTilesWithFallout(): number {
     return this._numTilesWithFallout;
@@ -96,15 +112,19 @@ export class GameMapImpl implements GameMap {
     if (!this.isValidCoord(x, y)) {
       throw new Error(`Invalid coordinates: ${x},${y}`);
     }
-    return y * this.width_ + x;
+    return this.yToRef[y] + x;
+  }
+
+  isValidRef(ref: TileRef): boolean {
+    return ref >= 0 && ref < this.refToX.length;
   }
 
   x(ref: TileRef): number {
-    return ref % this.width_;
+    return this.refToX[ref];
   }
 
   y(ref: TileRef): number {
-    return Math.floor(ref / this.width_);
+    return this.refToY[ref];
   }
 
   cell(ref: TileRef): Cell {
@@ -154,7 +174,7 @@ export class GameMapImpl implements GameMap {
   }
 
   hasOwner(ref: TileRef): boolean {
-    return this.ownerID(ref) != 0;
+    return this.ownerID(ref) !== 0;
   }
 
   setOwnerID(ref: TileRef, playerId: number): void {
@@ -189,12 +209,14 @@ export class GameMapImpl implements GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean {
     const x = this.x(ref);
     const y = this.y(ref);
-    return x == 0 || x == this.width() - 1 || y == 0 || y == this.height() - 1;
+    return (
+      x === 0 || x === this.width() - 1 || y === 0 || y === this.height() - 1
+    );
   }
 
   isBorder(ref: TileRef): boolean {
     return this.neighbors(ref).some(
-      (tr) => this.ownerID(tr) != this.ownerID(ref),
+      (tr) => this.ownerID(tr) !== this.ownerID(ref),
     );
   }
 
@@ -240,24 +262,19 @@ export class GameMapImpl implements GameMap {
   neighbors(ref: TileRef): TileRef[] {
     const neighbors: TileRef[] = [];
     const w = this.width_;
+    const x = this.refToX[ref];
 
     if (ref >= w) neighbors.push(ref - w);
     if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
-    if (ref % w !== 0) neighbors.push(ref - 1);
-    if (ref % w !== w - 1) neighbors.push(ref + 1);
-
-    for (const n of neighbors) {
-      this.ref(this.x(n), this.y(n));
-    }
+    if (x !== 0) neighbors.push(ref - 1);
+    if (x !== w - 1) neighbors.push(ref + 1);
 
     return neighbors;
   }
 
   forEachTile(fn: (tile: TileRef) => void): void {
-    for (let x = 0; x < this.width_; x++) {
-      for (let y = 0; y < this.height_; y++) {
-        fn(this.ref(x, y));
-      }
+    for (let ref: TileRef = 0; ref < this.width_ * this.height_; ref++) {
+      fn(ref);
     }
   }
 
@@ -277,9 +294,14 @@ export class GameMapImpl implements GameMap {
   ): Set<TileRef> {
     const seen = new Set<TileRef>();
     const q: TileRef[] = [];
-    q.push(tile);
+    if (filter(this, tile)) {
+      seen.add(tile);
+      q.push(tile);
+    }
+
     while (q.length > 0) {
       const curr = q.pop();
+      if (curr === undefined) continue;
       for (const n of this.neighbors(curr)) {
         if (!seen.has(n) && filter(this, n)) {
           seen.add(n);
@@ -375,6 +397,39 @@ export function rectDistFN(
       const dx = Math.abs(gm.x(n) - rootX);
       const dy = Math.abs(gm.y(n) - rootY);
       return dx <= dist && dy <= dist;
+    };
+  }
+}
+
+function isInIsometricTile(
+  center: { x: number; y: number },
+  tile: { x: number; y: number },
+  yOffset: number,
+  distance: number,
+): boolean {
+  const dx = Math.abs(tile.x - center.x);
+  const dy = Math.abs(tile.y - (center.y + yOffset));
+  return dx + dy * 2 <= distance + 1;
+}
+
+export function isometricDistFN(
+  root: TileRef,
+  dist: number,
+  center: boolean = false,
+): (gm: GameMap, tile: TileRef) => boolean {
+  if (!center) {
+    return (gm: GameMap, n: TileRef) => gm.manhattanDist(root, n) <= dist;
+  } else {
+    return (gm: GameMap, n: TileRef) => {
+      const rootX = gm.x(root) - 0.5;
+      const rootY = gm.y(root) - 0.5;
+
+      return isInIsometricTile(
+        { x: rootX, y: rootY },
+        { x: gm.x(n), y: gm.y(n) },
+        0,
+        dist,
+      );
     };
   }
 }

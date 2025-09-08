@@ -1,62 +1,38 @@
-import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { consolex } from "../Consolex";
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  PlayerID,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
-import { TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
 
-  private player: Player;
   private config: Config;
   private lastCalc = 0;
   private mg: Game;
   private active = true;
 
-  constructor(private playerID: PlayerID) {}
+  constructor(private player: Player) {}
 
   activeDuringSpawnPhase(): boolean {
     return false;
   }
 
   init(mg: Game, ticks: number) {
-    if (!mg.hasPlayer(this.playerID)) {
-      console.warn(`PlayerExecution: player ${this.playerID} not found`);
-      this.active = false;
-      return;
-    }
     this.mg = mg;
     this.config = mg.config();
-    this.player = mg.player(this.playerID);
     this.lastCalc =
       ticks + (simpleHash(this.player.name()) % this.ticksPerClusterCalc);
   }
 
   tick(ticks: number) {
     this.player.decayRelations();
-    const hasPort = this.player.units(UnitType.Port).length > 0;
     this.player.units().forEach((u) => {
-      if (u.health() <= 0) {
-        u.delete();
-        return;
-      }
-      if (hasPort && u.type() == UnitType.Warship) {
-        u.modifyHealth(1);
-      }
-      const tileOwner = this.mg.owner(u.tile());
+      const tileOwner = this.mg!.owner(u.tile());
       if (u.info().territoryBound) {
         if (tileOwner.isPlayer()) {
-          if (tileOwner != this.player) {
-            this.mg.player(tileOwner.id()).captureUnit(u);
+          if (tileOwner !== this.player) {
+            this.mg!.player(tileOwner.id()).captureUnit(u);
           }
         } else {
           u.delete();
@@ -65,12 +41,15 @@ export class PlayerExecution implements Execution {
     });
 
     if (!this.player.isAlive()) {
+      // Player has no tiles, delete any remaining units and gold
+      const gold = this.player.gold();
+      this.player.removeGold(gold);
       this.player.units().forEach((u) => {
         if (
-          u.type() != UnitType.AtomBomb &&
-          u.type() != UnitType.HydrogenBomb &&
-          u.type() != UnitType.MIRVWarhead &&
-          u.type() != UnitType.MIRV
+          u.type() !== UnitType.AtomBomb &&
+          u.type() !== UnitType.HydrogenBomb &&
+          u.type() !== UnitType.MIRVWarhead &&
+          u.type() !== UnitType.MIRV
         ) {
           u.delete();
         }
@@ -79,21 +58,29 @@ export class PlayerExecution implements Execution {
       return;
     }
 
-    const popInc = this.config.populationIncreaseRate(this.player);
-    this.player.addWorkers(popInc * (1 - this.player.targetTroopRatio()));
-    this.player.addTroops(popInc * this.player.targetTroopRatio());
-    this.player.addGold(this.config.goldAdditionRate(this.player));
-    const adjustRate = this.config.troopAdjustmentRate(this.player);
-    this.player.addTroops(adjustRate);
-    this.player.removeWorkers(adjustRate);
+    const troopInc = this.config.troopIncreaseRate(this.player);
+    this.player.addTroops(troopInc);
+    const goldFromWorkers = this.config.goldAdditionRate(this.player);
+    this.player.addGold(goldFromWorkers);
+
+    // Record stats
+    this.mg.stats().goldWork(this.player, goldFromWorkers);
 
     const alliances = Array.from(this.player.alliances());
     for (const alliance of alliances) {
-      if (
-        this.mg.ticks() - alliance.createdAt() >
-        this.mg.config().allianceDuration()
-      ) {
+      if (alliance.expiresAt() <= this.mg.ticks()) {
         alliance.expire();
+      }
+    }
+
+    const embargoes = this.player.getEmbargoes();
+    for (const embargo of embargoes) {
+      if (
+        embargo.isTemporary &&
+        this.mg.ticks() - embargo.createdAt >
+          this.mg.config().temporaryEmbargoDuration()
+      ) {
+        this.player.stopEmbargo(embargo.target);
       }
     }
 
@@ -104,7 +91,7 @@ export class PlayerExecution implements Execution {
         this.removeClusters();
         const end = performance.now();
         if (end - start > 1000) {
-          consolex.log(`player ${this.player.name()}, took ${end - start}ms`);
+          console.log(`player ${this.player.name()}, took ${end - start}ms`);
         }
       }
     }
@@ -115,6 +102,7 @@ export class PlayerExecution implements Execution {
     clusters.sort((a, b) => b.size - a.size);
 
     const main = clusters.shift();
+    if (main === undefined) throw new Error("No clusters");
     this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
     const surroundedBy = this.surroundedBySamePlayer(main);
     if (surroundedBy && !this.player.isFriendly(surroundedBy)) {
@@ -138,19 +126,19 @@ export class PlayerExecution implements Execution {
       if (
         isOceanShore ||
         this.mg.isOnEdgeOfMap(tile) ||
-        this.mg.neighbors(tile).some((n) => !this.mg.hasOwner(n))
+        this.mg.neighbors(tile).some((n) => !this.mg?.hasOwner(n))
       ) {
         return false;
       }
       this.mg
         .neighbors(tile)
-        .filter((n) => this.mg.ownerID(n) != this.player.smallID())
-        .forEach((p) => enemies.add(this.mg.ownerID(p)));
-      if (enemies.size != 1) {
+        .filter((n) => this.mg?.ownerID(n) !== this.player?.smallID())
+        .forEach((p) => this.mg && enemies.add(this.mg.ownerID(p)));
+      if (enemies.size !== 1) {
         return false;
       }
     }
-    if (enemies.size != 1) {
+    if (enemies.size !== 1) {
       return false;
     }
     const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
@@ -170,10 +158,14 @@ export class PlayerExecution implements Execution {
       }
       this.mg
         .neighbors(tr)
-        .filter((n) => this.mg.ownerID(n) != this.player.smallID())
+        .filter(
+          (n) =>
+            this.mg?.owner(n).isPlayer() &&
+            this.mg?.ownerID(n) !== this.player?.smallID(),
+        )
         .forEach((n) => enemyTiles.add(n));
     }
-    if (enemyTiles.size == 0) {
+    if (enemyTiles.size === 0) {
       return false;
     }
     const enemyBox = calculateBoundingBox(this.mg, enemyTiles);
@@ -184,7 +176,7 @@ export class PlayerExecution implements Execution {
   private removeCluster(cluster: Set<TileRef>) {
     if (
       Array.from(cluster).some(
-        (t) => this.mg.ownerID(t) != this.player.smallID(),
+        (t) => this.mg?.ownerID(t) !== this.player?.smallID(),
       )
     ) {
       // Other removeCluster operations could change tile owners,
@@ -193,26 +185,21 @@ export class PlayerExecution implements Execution {
     }
 
     const capturing = this.getCapturingPlayer(cluster);
-    if (capturing == null) {
+    if (capturing === null) {
       return;
     }
 
     const firstTile = cluster.values().next().value;
-    const filter = (_, t: TileRef): boolean =>
-      this.mg.ownerID(t) == this.player.smallID();
+    if (!firstTile) {
+      return;
+    }
+
+    const filter = (_: GameMap, t: TileRef): boolean =>
+      this.mg?.ownerID(t) === this.player?.smallID();
     const tiles = this.mg.bfs(firstTile, filter);
 
-    if (this.player.numTilesOwned() == tiles.size) {
-      const gold = this.player.gold();
-      this.mg.displayMessage(
-        `Conquered ${this.player.displayName()} received ${renderNumber(
-          gold,
-        )} gold`,
-        MessageType.SUCCESS,
-        capturing.id(),
-      );
-      capturing.addGold(gold);
-      this.player.removeGold(gold);
+    if (this.player.numTilesOwned() === tiles.size) {
+      this.mg.conquerPlayer(capturing, this.player);
     }
 
     for (const tile of tiles) {
@@ -224,7 +211,7 @@ export class PlayerExecution implements Execution {
     const neighborsIDs = new Set<number>();
     for (const t of cluster) {
       for (const neighbor of this.mg.neighbors(t)) {
-        if (this.mg.ownerID(neighbor) != this.player.smallID()) {
+        if (this.mg.ownerID(neighbor) !== this.player.smallID()) {
           neighborsIDs.add(this.mg.ownerID(neighbor));
         }
       }
@@ -234,11 +221,11 @@ export class PlayerExecution implements Execution {
     let largestTroopCount: number = 0;
     for (const id of neighborsIDs) {
       const neighbor = this.mg.playerBySmallID(id);
-      if (!neighbor.isPlayer()) {
+      if (!neighbor.isPlayer() || this.player.isFriendly(neighbor)) {
         continue;
       }
       for (const attack of neighbor.outgoingAttacks()) {
-        if (attack.target() == this.player) {
+        if (attack.target() === this.player) {
           if (attack.troops() > largestTroopCount) {
             largestTroopCount = attack.troops();
             largestNeighborAttack = neighbor;
@@ -246,7 +233,7 @@ export class PlayerExecution implements Execution {
         }
       }
     }
-    if (largestNeighborAttack != null) {
+    if (largestNeighborAttack !== null) {
       return largestNeighborAttack;
     }
 
@@ -259,7 +246,7 @@ export class PlayerExecution implements Execution {
     if (!capturing.isPlayer()) {
       return null;
     }
-    return capturing as Player;
+    return capturing;
   }
 
   private calculateClusters(): Set<TileRef>[] {
@@ -276,6 +263,7 @@ export class PlayerExecution implements Execution {
       seen.add(tile);
       while (queue.length > 0) {
         const curr = queue.shift();
+        if (curr === undefined) throw new Error("curr is undefined");
         cluster.add(curr);
 
         const neighbors = (this.mg as GameImpl).neighborsWithDiag(curr);
@@ -292,6 +280,9 @@ export class PlayerExecution implements Execution {
   }
 
   owner(): Player {
+    if (this.player === null) {
+      throw new Error("Not initialized");
+    }
     return this.player;
   }
 

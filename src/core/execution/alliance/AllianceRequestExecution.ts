@@ -1,51 +1,65 @@
-import { consolex } from "../../Consolex";
-import { Execution, Game, Player, PlayerID } from "../../game/Game";
+import {
+  AllianceRequest,
+  Execution,
+  Game,
+  Player,
+  PlayerID,
+} from "../../game/Game";
 
 export class AllianceRequestExecution implements Execution {
+  private req: AllianceRequest | null = null;
   private active = true;
-  private mg: Game = null;
-  private requestor: Player;
-  private recipient: Player;
+  private mg: Game;
 
   constructor(
-    private requestorID: PlayerID,
+    private requestor: Player,
     private recipientID: PlayerID,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this.requestorID)) {
-      console.warn(
-        `AllianceRequestExecution requester ${this.requestorID} not found`,
-      );
-      this.active = false;
-      return;
-    }
+    this.mg = mg;
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(
         `AllianceRequestExecution recipient ${this.recipientID} not found`,
       );
-      this.active = false;
       return;
     }
 
-    this.mg = mg;
-    this.requestor = mg.player(this.requestorID);
-    this.recipient = mg.player(this.recipientID);
+    const recipient = mg.player(this.recipientID);
+
+    if (!this.requestor.canSendAllianceRequest(recipient)) {
+      console.warn("cannot send alliance request");
+      this.active = false;
+    } else {
+      const incoming = recipient
+        .outgoingAllianceRequests()
+        .find((r) => r.recipient() === this.requestor);
+      if (incoming) {
+        // If the recipient already has pending alliance request,
+        // then accept it instead of creating a new one.
+        this.active = false;
+        incoming.accept();
+      } else {
+        this.req = this.requestor.createAllianceRequest(recipient);
+      }
+    }
   }
 
   tick(ticks: number): void {
-    if (this.requestor.isFriendly(this.recipient)) {
-      consolex.warn("already allied");
-    } else if (!this.requestor.canSendAllianceRequest(this.recipient)) {
-      consolex.warn("recent or pending alliance request");
-    } else {
-      this.requestor.createAllianceRequest(this.recipient);
+    if (
+      this.req?.status() === "accepted" ||
+      this.req?.status() === "rejected"
+    ) {
+      this.active = false;
+      return;
     }
-    this.active = false;
-  }
-
-  owner(): Player {
-    return null;
+    if (
+      this.mg.ticks() - (this.req?.createdAt() ?? 0) >
+      this.mg.config().allianceRequestDuration()
+    ) {
+      this.req?.reject();
+      this.active = false;
+    }
   }
 
   isActive(): boolean {

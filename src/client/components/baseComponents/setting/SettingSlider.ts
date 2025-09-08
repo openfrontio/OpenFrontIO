@@ -30,7 +30,7 @@ export class SettingSlider extends LitElement {
 
   private handleSliderChange(e: Event) {
     const detail = (e as CustomEvent)?.detail;
-    if (!detail || typeof detail.value === "undefined") {
+    if (!detail || detail.value === undefined) {
       console.warn("Invalid slider change event", e);
       return;
     }

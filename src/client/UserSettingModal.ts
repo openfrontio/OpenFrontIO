@@ -1,6 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
+import "./components/baseComponents/setting/SettingKeybind";
+import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
@@ -9,7 +12,8 @@ import "./components/baseComponents/setting/SettingToggle";
 export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
 
-  @state() private darkMode: boolean = this.userSettings.darkMode();
+  @state() private settingsMode: "basic" | "keybinds" = "basic";
+  @state() private keybinds: Record<string, string> = {};
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
@@ -17,6 +21,15 @@ export class UserSettingModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     window.addEventListener("keydown", this.handleKeyDown);
+
+    const savedKeybinds = localStorage.getItem("settings.keybinds");
+    if (savedKeybinds) {
+      try {
+        this.keybinds = JSON.parse(savedKeybinds);
+      } catch (e) {
+        console.warn("Invalid keybinds JSON:", e);
+      }
+    }
   }
 
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -37,6 +50,11 @@ export class UserSettingModal extends LitElement {
 
   private handleKeyDown = (e: KeyboardEvent) => {
     if (!this.modalEl?.isModalOpen || this.showEasterEggSettings) return;
+
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
 
     const key = e.key.toLowerCase();
     const nextSequence = [...this.keySequence, key].slice(-4);
@@ -77,6 +95,14 @@ export class UserSettingModal extends LitElement {
       document.documentElement.classList.remove("dark");
     }
 
+    this.dispatchEvent(
+      new CustomEvent("dark-mode-changed", {
+        detail: { darkMode: enabled },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
@@ -87,6 +113,50 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.emojis", enabled);
 
     console.log("🤡 Emojis:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleAlertFrame(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.alertFrame", enabled);
+
+    console.log("🚨 Alert frame:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleFxLayer(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.specialEffects", enabled);
+
+    console.log("💥 Special effects:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleStructureSprites(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.structureSprites", enabled);
+
+    console.log("🏠 Structure sprites:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleAnonymousNames(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.anonymousNames", enabled);
+
+    console.log("🙈 Anonymous Names:", enabled ? "ON" : "OFF");
+  }
+
+  private toggleLobbyIdVisibility(e: CustomEvent<{ checked: boolean }>) {
+    const hideIds = e.detail?.checked;
+    if (typeof hideIds !== "boolean") return;
+
+    this.userSettings.set("settings.lobbyIdVisibility", !hideIds); // Invert because checked=hide
+    console.log("👁️ Hidden Lobby IDs:", hideIds ? "ON" : "OFF");
   }
 
   private toggleLeftClickOpensMenu(e: CustomEvent<{ checked: boolean }>) {
@@ -119,96 +189,79 @@ export class UserSettingModal extends LitElement {
     }
   }
 
+  private toggleTerritoryPatterns(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.territoryPatterns", enabled);
+
+    console.log("🏳️ Territory Patterns:", enabled ? "ON" : "OFF");
+  }
+
+  private togglePerformanceOverlay(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.set("settings.performanceOverlay", enabled);
+  }
+
+  private handleKeybindChange(
+    e: CustomEvent<{ action: string; value: string }>,
+  ) {
+    const { action, value } = e.detail;
+    const prevValue = this.keybinds[action] ?? "";
+
+    const values = Object.entries(this.keybinds)
+      .filter(([k]) => k !== action)
+      .map(([, v]) => v);
+    if (values.includes(value) && value !== "Null") {
+      const popup = document.createElement("div");
+      popup.className = "setting-popup";
+      popup.textContent = `The key "${value}" is already assigned to another action.`;
+      document.body.appendChild(popup);
+      const element = this.renderRoot.querySelector(
+        `setting-keybind[action="${action}"]`,
+      ) as SettingKeybind;
+      if (element) {
+        element.value = prevValue;
+        element.requestUpdate();
+      }
+      return;
+    }
+    this.keybinds = { ...this.keybinds, [action]: value };
+    localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
+  }
+
   render() {
     return html`
-      <o-modal title="User Settings">
+      <o-modal title="${translateText("user_setting.title")}">
         <div class="modal-overlay">
           <div class="modal-content user-setting-modal">
+            <div class="flex mb-4 w-full justify-center">
+              <button
+                class="w-1/2 text-center px-3 py-1 rounded-l 
+      ${this.settingsMode === "basic"
+                  ? "bg-white/10 text-white"
+                  : "bg-transparent text-gray-400"}"
+                @click=${() => (this.settingsMode = "basic")}
+              >
+                ${translateText("user_setting.tab_basic")}
+              </button>
+              <button
+                class="w-1/2 text-center px-3 py-1 rounded-r 
+      ${this.settingsMode === "keybinds"
+                  ? "bg-white/10 text-white"
+                  : "bg-transparent text-gray-400"}"
+                @click=${() => (this.settingsMode = "keybinds")}
+              >
+                ${translateText("user_setting.tab_keybinds")}
+              </button>
+            </div>
+
             <div class="settings-list">
-              <setting-toggle
-                label="🌙 Dark Mode"
-                description="Toggle the site’s appearance between light and dark themes"
-                id="dark-mode-toggle"
-                .checked=${this.userSettings.darkMode()}
-                @change=${(e: CustomEvent<{ checked: boolean }>) =>
-                  this.toggleDarkMode(e)}
-              ></setting-toggle>
-
-              <setting-toggle
-                label="😊 Emojis"
-                description="Toggle whether emojis are shown in game"
-                id="emoji-toggle"
-                .checked=${this.userSettings.emojis()}
-                @change=${this.toggleEmojis}
-              ></setting-toggle>
-
-              <setting-toggle
-                label="🖱️ Left Click to Open Menu"
-                description="When ON, left-click opens menu and sword button attacks. When OFF, right-click attacks directly."
-                id="left-click-toggle"
-                .checked=${this.userSettings.leftClickOpensMenu()}
-                @change=${this.toggleLeftClickOpensMenu}
-              ></setting-toggle>
-
-              <setting-slider
-                label="⚔️ Attack Ratio"
-                description="What percentage of your troops to send in an attack (1–100%)"
-                min="1"
-                max="100"
-                .value=${Number(
-                  localStorage.getItem("settings.attackRatio") ?? "0.2",
-                ) * 100}
-                @change=${this.sliderAttackRatio}
-              ></setting-slider>
-
-              <setting-slider
-                label="🪖🛠️ Troops and Workers Ratio"
-                description="Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)"
-                min="1"
-                max="100"
-                .value=${Number(
-                  localStorage.getItem("settings.troopRatio") ?? "0.95",
-                ) * 100}
-                @change=${this.sliderTroopRatio}
-              ></setting-slider>
-
-              ${this.showEasterEggSettings
-                ? html`
-                    <setting-slider
-                      label="Writing Speed Multiplier"
-                      description="Adjust how fast you pretend to code (x1–x100)"
-                      min="0"
-                      max="100"
-                      value="40"
-                      easter="true"
-                      @change=${(e: CustomEvent) => {
-                        const value = e.detail?.value;
-                        if (typeof value !== "undefined") {
-                          console.log("Changed:", value);
-                        } else {
-                          console.warn("Slider event missing detail.value", e);
-                        }
-                      }}
-                    ></setting-slider>
-
-                    <setting-number
-                      label="Bug Count"
-                      description="How many bugs you're okay with (0–1000, emotionally)"
-                      value="100"
-                      min="0"
-                      max="1000"
-                      easter="true"
-                      @change=${(e: CustomEvent) => {
-                        const value = e.detail?.value;
-                        if (typeof value !== "undefined") {
-                          console.log("Changed:", value);
-                        } else {
-                          console.warn("Slider event missing detail.value", e);
-                        }
-                      }}
-                    ></setting-number>
-                  `
-                : null}
+              ${this.settingsMode === "basic"
+                ? this.renderBasicSettings()
+                : this.renderKeybindSettings()}
             </div>
           </div>
         </div>
@@ -216,7 +269,290 @@ export class UserSettingModal extends LitElement {
     `;
   }
 
+  private renderBasicSettings() {
+    return html`
+      <!-- 🌙 Dark Mode -->
+      <setting-toggle
+        label="${translateText("user_setting.dark_mode_label")}"
+        description="${translateText("user_setting.dark_mode_desc")}"
+        id="dark-mode-toggle"
+        .checked=${this.userSettings.darkMode()}
+        @change=${(e: CustomEvent<{ checked: boolean }>) =>
+          this.toggleDarkMode(e)}
+      ></setting-toggle>
+
+      <!-- 😊 Emojis -->
+      <setting-toggle
+        label="${translateText("user_setting.emojis_label")}"
+        description="${translateText("user_setting.emojis_desc")}"
+        id="emoji-toggle"
+        .checked=${this.userSettings.emojis()}
+        @change=${this.toggleEmojis}
+      ></setting-toggle>
+
+      <!-- 🚨 Alert frame -->
+      <setting-toggle
+        label="${translateText("user_setting.alert_frame_label")}"
+        description="${translateText("user_setting.alert_frame_desc")}"
+        id="alert-frame-toggle"
+        .checked=${this.userSettings.alertFrame()}
+        @change=${this.toggleAlertFrame}
+      ></setting-toggle>
+
+      <!-- 💥 Special effects -->
+      <setting-toggle
+        label="${translateText("user_setting.special_effects_label")}"
+        description="${translateText("user_setting.special_effects_desc")}"
+        id="special-effect-toggle"
+        .checked=${this.userSettings.fxLayer()}
+        @change=${this.toggleFxLayer}
+      ></setting-toggle>
+
+      <!-- 🏠 Structure Sprites -->
+      <setting-toggle
+        label="${translateText("user_setting.structure_sprites_label")}"
+        description="${translateText("user_setting.structure_sprites_desc")}"
+        id="structure_sprites-toggle"
+        .checked=${this.userSettings.structureSprites()}
+        @change=${this.toggleStructureSprites}
+      ></setting-toggle>
+
+      <!-- 🖱️ Left Click Menu -->
+      <setting-toggle
+        label="${translateText("user_setting.left_click_label")}"
+        description="${translateText("user_setting.left_click_desc")}"
+        id="left-click-toggle"
+        .checked=${this.userSettings.leftClickOpensMenu()}
+        @change=${this.toggleLeftClickOpensMenu}
+      ></setting-toggle>
+
+      <!-- 🙈 Anonymous Names -->
+      <setting-toggle
+        label="${translateText("user_setting.anonymous_names_label")}"
+        description="${translateText("user_setting.anonymous_names_desc")}"
+        id="anonymous-names-toggle"
+        .checked=${this.userSettings.anonymousNames()}
+        @change=${this.toggleAnonymousNames}
+      ></setting-toggle>
+
+      <!-- 👁️ Hidden Lobby IDs -->
+      <setting-toggle
+        label="${translateText("user_setting.lobby_id_visibility_label")}"
+        description="${translateText("user_setting.lobby_id_visibility_desc")}"
+        id="lobby-id-visibility-toggle"
+        .checked=${!this.userSettings.get("settings.lobbyIdVisibility", true)}
+        @change=${this.toggleLobbyIdVisibility}
+      ></setting-toggle>
+
+      <!-- 🏳️ Territory Patterns -->
+      <setting-toggle
+        label="${translateText("user_setting.territory_patterns_label")}"
+        description="${translateText("user_setting.territory_patterns_desc")}"
+        id="territory-patterns-toggle"
+        .checked=${this.userSettings.territoryPatterns()}
+        @change=${this.toggleTerritoryPatterns}
+      ></setting-toggle>
+
+      <!-- 📱 Performance Overlay -->
+      <setting-toggle
+        label="${translateText("user_setting.performance_overlay_label")}"
+        description="${translateText("user_setting.performance_overlay_desc")}"
+        id="performance-overlay-toggle"
+        .checked=${this.userSettings.performanceOverlay()}
+        @change=${this.togglePerformanceOverlay}
+      ></setting-toggle>
+
+      <!-- ⚔️ Attack Ratio -->
+      <setting-slider
+        label="${translateText("user_setting.attack_ratio_label")}"
+        description="${translateText("user_setting.attack_ratio_desc")}"
+        min="1"
+        max="100"
+        .value=${Number(localStorage.getItem("settings.attackRatio") ?? "0.2") *
+        100}
+        @change=${this.sliderAttackRatio}
+      ></setting-slider>
+
+      ${this.showEasterEggSettings
+        ? html`
+            <setting-slider
+              label="${translateText(
+                "user_setting.easter_writing_speed_label",
+              )}"
+              description="${translateText(
+                "user_setting.easter_writing_speed_desc",
+              )}"
+              min="0"
+              max="100"
+              value="40"
+              easter="true"
+              @change=${(e: CustomEvent) => {
+                const value = e.detail?.value;
+                if (value !== undefined) {
+                  console.log("Changed:", value);
+                } else {
+                  console.warn("Slider event missing detail.value", e);
+                }
+              }}
+            ></setting-slider>
+
+            <setting-number
+              label="${translateText("user_setting.easter_bug_count_label")}"
+              description="${translateText(
+                "user_setting.easter_bug_count_desc",
+              )}"
+              value="100"
+              min="0"
+              max="1000"
+              easter="true"
+              @change=${(e: CustomEvent) => {
+                const value = e.detail?.value;
+                if (value !== undefined) {
+                  console.log("Changed:", value);
+                } else {
+                  console.warn("Slider event missing detail.value", e);
+                }
+              }}
+            ></setting-number>
+          `
+        : null}
+    `;
+  }
+
+  private renderKeybindSettings() {
+    return html`
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.view_options")}
+      </div>
+
+      <setting-keybind
+        action="toggleView"
+        label=${translateText("user_setting.toggle_view")}
+        description=${translateText("user_setting.toggle_view_desc")}
+        defaultKey="Space"
+        .value=${this.keybinds["toggleView"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.attack_ratio_controls")}
+      </div>
+
+      <setting-keybind
+        action="attackRatioDown"
+        label=${translateText("user_setting.attack_ratio_down")}
+        description=${translateText("user_setting.attack_ratio_down_desc")}
+        defaultKey="Digit1"
+        .value=${this.keybinds["attackRatioDown"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="attackRatioUp"
+        label=${translateText("user_setting.attack_ratio_up")}
+        description=${translateText("user_setting.attack_ratio_up_desc")}
+        defaultKey="Digit2"
+        .value=${this.keybinds["attackRatioUp"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.attack_keybinds")}
+      </div>
+
+      <setting-keybind
+        action="boatAttack"
+        label=${translateText("user_setting.boat_attack")}
+        description=${translateText("user_setting.boat_attack_desc")}
+        defaultKey="KeyB"
+        .value=${this.keybinds["boatAttack"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="groundAttack"
+        label=${translateText("user_setting.ground_attack")}
+        description=${translateText("user_setting.ground_attack_desc")}
+        defaultKey="KeyG"
+        .value=${this.keybinds["groundAttack"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.zoom_controls")}
+      </div>
+
+      <setting-keybind
+        action="zoomOut"
+        label=${translateText("user_setting.zoom_out")}
+        description=${translateText("user_setting.zoom_out_desc")}
+        defaultKey="KeyQ"
+        .value=${this.keybinds["zoomOut"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomIn"
+        label=${translateText("user_setting.zoom_in")}
+        description=${translateText("user_setting.zoom_in_desc")}
+        defaultKey="KeyE"
+        .value=${this.keybinds["zoomIn"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.camera_movement")}
+      </div>
+
+      <setting-keybind
+        action="centerCamera"
+        label=${translateText("user_setting.center_camera")}
+        description=${translateText("user_setting.center_camera_desc")}
+        defaultKey="KeyC"
+        .value=${this.keybinds["centerCamera"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveUp"
+        label=${translateText("user_setting.move_up")}
+        description=${translateText("user_setting.move_up_desc")}
+        defaultKey="KeyW"
+        .value=${this.keybinds["moveUp"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveLeft"
+        label=${translateText("user_setting.move_left")}
+        description=${translateText("user_setting.move_left_desc")}
+        defaultKey="KeyA"
+        .value=${this.keybinds["moveLeft"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveDown"
+        label=${translateText("user_setting.move_down")}
+        description=${translateText("user_setting.move_down_desc")}
+        defaultKey="KeyS"
+        .value=${this.keybinds["moveDown"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveRight"
+        label=${translateText("user_setting.move_right")}
+        description=${translateText("user_setting.move_right_desc")}
+        defaultKey="KeyD"
+        .value=${this.keybinds["moveRight"] ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+    `;
+  }
+
   public open() {
+    this.requestUpdate();
     this.modalEl?.open();
   }
 

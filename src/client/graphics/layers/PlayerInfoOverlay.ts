@@ -1,5 +1,15 @@
-import { LitElement, html } from "lit";
+import { LitElement, TemplateResult, html } from "lit";
+import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
+import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
+import portIcon from "../../../../resources/images/AnchorIcon.png";
+import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
+import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
+import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
   PlayerProfile,
@@ -9,12 +19,18 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ClientID } from "../../../core/Schemas";
-import { MouseMoveEvent } from "../../InputHandler";
-import { renderNumber, renderTroops } from "../../Utils";
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
+import {
+  renderDuration,
+  renderNumber,
+  renderTroops,
+  translateText,
+} from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { CloseRadialMenuEvent } from "./RadialMenu";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -41,9 +57,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
 
-  @property({ type: String })
-  public clientID!: ClientID;
-
   @property({ type: Object })
   public eventBus!: EventBus;
 
@@ -66,10 +79,16 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private lastMouseUpdate = 0;
 
+  private showDetails = true;
+
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
       this.onMouseEvent(e),
     );
+    this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
+      this.maybeShow(e.x, e.y),
+    );
+    this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
     this._isActive = true;
   }
 
@@ -136,13 +155,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private myPlayer(): PlayerView | null {
-    if (!this.game) {
-      return null;
-    }
-    return this.game.playerByClientID(this.clientID);
-  }
-
   private getRelationClass(relation: Relation): string {
     switch (relation) {
       case Relation.Hostile:
@@ -158,90 +170,241 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
   }
 
+  private getRelationName(relation: Relation): string {
+    switch (relation) {
+      case Relation.Hostile:
+        return translateText("relation.hostile");
+      case Relation.Distrustful:
+        return translateText("relation.distrustful");
+      case Relation.Neutral:
+        return translateText("relation.neutral");
+      case Relation.Friendly:
+        return translateText("relation.friendly");
+      default:
+        return translateText("relation.default");
+    }
+  }
+
+  private displayUnitCount(
+    player: PlayerView,
+    type: UnitType,
+    icon: string,
+    description: string,
+  ) {
+    return !this.game.config().isUnitDisabled(type)
+      ? html`<div
+          class="flex p-1 w-[calc(50%-0.13rem)] border rounded-md border-gray-500
+                         items-center gap-2 text-sm opacity-80"
+          translate="no"
+        >
+          <img
+            src=${icon}
+            width="20"
+            height="20"
+            alt="${translateText(description)}"
+            style="vertical-align: middle;"
+          />
+          <span class="w-full text-right p-1"
+            >${player.totalUnitLevels(type)}</span
+          >
+        </div>`
+      : "";
+  }
+
+  private allianceExpirationText(alliance: AllianceView) {
+    const { expiresAt } = alliance;
+    const remainingTicks = expiresAt - this.game.ticks();
+    let remainingSeconds = 0;
+    if (remainingTicks > 0) {
+      remainingSeconds = Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
+    }
+    return renderDuration(remainingSeconds);
+  }
+
   private renderPlayerInfo(player: PlayerView) {
-    const myPlayer = this.myPlayer();
+    const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
-    let relationHtml = null;
+    const isAllied = myPlayer?.isAlliedWith(player);
+    let relationHtml: TemplateResult | null = null;
     const attackingTroops = player
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
 
-    if (player.type() == PlayerType.FakeHuman && myPlayer != null) {
+    if (
+      player.type() === PlayerType.FakeHuman &&
+      myPlayer !== null &&
+      !isAllied
+    ) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
       const relationClass = this.getRelationClass(relation);
-      const relationName = Relation[relation];
+      const relationName = this.getRelationName(relation);
 
       relationHtml = html`
-        <div class="text-sm opacity-80">
-          Attitude: <span class="${relationClass}">${relationName}</span>
-        </div>
+        <span class="ml-auto mr-0 ${relationClass}">${relationName}</span>
       `;
+    }
+
+    if (isAllied) {
+      const alliance = myPlayer
+        ?.alliances()
+        .find((alliance) => alliance.other === player.id());
+      if (alliance !== undefined) {
+        relationHtml = html` <span
+          class="flex gap-2 ml-auto mr-0 text-sm font-bold"
+        >
+          <img
+            src=${allianceIcon}
+            alt=${translateText("player_info_overlay.alliance_timeout")}
+            width="20"
+            height="20"
+            style="vertical-align: middle;"
+          />
+          ${this.allianceExpirationText(alliance)}
+        </span>`;
+      }
     }
     let playerType = "";
     switch (player.type()) {
       case PlayerType.Bot:
-        playerType = "Bot";
+        playerType = translateText("player_info_overlay.bot");
         break;
       case PlayerType.FakeHuman:
-        playerType = "Nation";
+        playerType = translateText("player_info_overlay.nation");
         break;
       case PlayerType.Human:
-        playerType = "Player";
+        playerType = translateText("player_info_overlay.player");
         break;
     }
 
     return html`
       <div class="p-2">
-        <div
-          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex ${isFriendly
+        <button
+          class="items-center text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
+          @click=${() => {
+            this.showDetails = !this.showDetails;
+            this.requestUpdate?.();
+          }}
         >
-          ${player.flag()
-            ? html`<img
-                class="h-8 mr-1 aspect-[3/4]"
-                src=${"/flags/" + player.flag() + ".svg"}
-              />`
-            : ""}
+          ${player.cosmetics.flag
+            ? player.cosmetics.flag!.startsWith("!")
+              ? html`<div
+                  class="h-8 mr-1 aspect-[3/4] player-flag"
+                  ${ref((el) => {
+                    if (el instanceof HTMLElement) {
+                      requestAnimationFrame(() => {
+                        renderPlayerFlag(player.cosmetics.flag!, el);
+                      });
+                    }
+                  })}
+                ></div>`
+              : html`<img
+                  class="h-8 mr-1 aspect-[3/4]"
+                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
+                />`
+            : html``}
           ${player.name()}
-        </div>
-        <div class="text-sm opacity-80">Type: ${playerType}</div>
-        ${player.troops() >= 1
-          ? html`<div class="text-sm opacity-80" translate="no">
-              Defending troops: ${renderTroops(player.troops())}
-            </div>`
+        </button>
+
+        <!-- Collapsible section -->
+        ${this.showDetails
+          ? html`
+              ${player.team() !== null
+                ? html`<div class="text-sm opacity-80">
+                    ${translateText("player_info_overlay.team")}:
+                    ${player.team()}
+                  </div>`
+                : ""}
+              <div class="flex text-sm">${playerType} ${relationHtml}</div>
+              ${player.troops() >= 1
+                ? html`<div
+                    class="flex gap-2 text-sm opacity-80"
+                    translate="no"
+                  >
+                    ${translateText("player_info_overlay.troops")}
+                    <span class="ml-auto mr-0 font-bold">
+                      ${renderTroops(player.troops())}
+                    </span>
+                  </div>`
+                : ""}
+              ${attackingTroops >= 1
+                ? html`<div
+                    class="flex gap-2 text-sm opacity-80"
+                    translate="no"
+                  >
+                    ${translateText("player_info_overlay.a_troops")}
+                    <span class="ml-auto mr-0 text-red-400 font-bold">
+                      ${renderTroops(attackingTroops)}
+                    </span>
+                  </div>`
+                : ""}
+              <div
+                class="flex p-1 mb-1 mt-1 w-full border rounded-md border-yellow-400
+                          font-bold text-yellow-400 text-sm opacity-80"
+                translate="no"
+              >
+                <img
+                  src=${goldCoinIcon}
+                  alt=${translateText("player_info_overlay.gold")}
+                  width="15"
+                  height="15"
+                  style="vertical-align: middle;"
+                />
+                <span class="w-full text-center"
+                  >${renderNumber(player.gold())}</span
+                >
+              </div>
+              <div class="flex flex-wrap max-w-3xl gap-1">
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.City,
+                  cityIcon,
+                  "player_info_overlay.cities",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Port,
+                  portIcon,
+                  "player_info_overlay.ports",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Factory,
+                  factoryIcon,
+                  "player_info_overlay.factories",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.MissileSilo,
+                  missileSiloIcon,
+                  "player_info_overlay.missile_launchers",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.SAMLauncher,
+                  samLauncherIcon,
+                  "player_info_overlay.sams",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Warship,
+                  warshipIcon,
+                  "player_info_overlay.warships",
+                )}
+              </div>
+            `
           : ""}
-        ${attackingTroops >= 1
-          ? html`<div class="text-sm opacity-80" translate="no">
-              Attacking troops: ${renderTroops(attackingTroops)}
-            </div>`
-          : ""}
-        <div class="text-sm opacity-80" translate="no">
-          Gold: ${renderNumber(player.gold())}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          Ports: ${player.units(UnitType.Port).length}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          Cities: ${player.units(UnitType.City).length}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          Missile launchers: ${player.units(UnitType.MissileSilo).length}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          SAMs: ${player.units(UnitType.SAMLauncher).length}
-        </div>
-        ${relationHtml}
       </div>
     `;
   }
 
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
-      (unit.owner() == this.myPlayer() ||
-        this.myPlayer()?.isFriendly(unit.owner())) ??
+      (unit.owner() === this.game.myPlayer() ||
+        this.game.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
     return html`
@@ -253,7 +416,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           <div class="text-sm opacity-80">${unit.type()}</div>
           ${unit.hasHealth()
             ? html`
-                <div class="text-sm opacity-80">Health: ${unit.health()}</div>
+                <div class="text-sm opacity-80">
+                  ${translateText("player_info_overlay.health")}:
+                  ${unit.health()}
+                </div>
               `
             : ""}
         </div>
@@ -272,14 +438,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex w-full z-50 flex-col"
-        @contextmenu=${(e) => e.preventDefault()}
+        class="block lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
+        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-opacity-60 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
-          ${this.player != null ? this.renderPlayerInfo(this.player) : ""}
-          ${this.unit != null ? this.renderUnitInfo(this.unit) : ""}
+          ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
+          ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
       </div>
     `;

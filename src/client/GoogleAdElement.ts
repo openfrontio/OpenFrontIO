@@ -87,7 +87,7 @@ export class GoogleAdElement extends LitElement {
 const isElectron = () => {
   // Renderer process
   if (
-    typeof window !== "undefined" &&
+    window !== undefined &&
     typeof window.process === "object" &&
     // @ts-expect-error hidden
     window.process.type === "renderer"
@@ -97,7 +97,7 @@ const isElectron = () => {
 
   // Main process
   if (
-    typeof process !== "undefined" &&
+    process !== undefined &&
     typeof process.versions === "object" &&
     !!process.versions.electron
   ) {

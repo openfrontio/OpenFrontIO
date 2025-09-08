@@ -1,117 +1,164 @@
-import { GameMapType, GameMode } from "../core/game/Game";
+import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
+import {
+  Difficulty,
+  Duos,
+  GameMapName,
+  GameMapType,
+  GameMode,
+  GameType,
+  Quads,
+  Trios,
+} from "../core/game/Game";
 import { PseudoRandom } from "../core/PseudoRandom";
+import { GameConfig, TeamCountConfig } from "../core/Schemas";
+import { logger } from "./Logger";
 
-enum PlaylistType {
-  BigMaps,
-  SmallMaps,
+const log = logger.child({});
+
+const config = getServerConfigFromServer();
+
+// How many times each map should appear in the playlist.
+// Note: The Partial should eventually be removed for better type safety.
+const frequency: Partial<Record<GameMapName, number>> = {
+  Africa: 7,
+  Asia: 6,
+  Australia: 4,
+  Baikal: 5,
+  BetweenTwoSeas: 5,
+  BlackSea: 6,
+  Britannia: 5,
+  DeglaciatedAntarctica: 4,
+  EastAsia: 5,
+  Europe: 3,
+  EuropeClassic: 3,
+  FalklandIslands: 4,
+  FaroeIslands: 4,
+  GatewayToTheAtlantic: 5,
+  Halkidiki: 4,
+  Iceland: 4,
+  Italia: 6,
+  Mars: 3,
+  Mena: 6,
+  NorthAmerica: 5,
+  Pangaea: 5,
+  Pluto: 6,
+  SouthAmerica: 5,
+  StraitOfGibraltar: 5,
+  World: 8,
+  Yenisei: 0,
+};
+
+interface MapWithMode {
+  map: GameMapType;
+  mode: GameMode;
 }
 
-const random = new PseudoRandom(123);
+const TEAM_COUNTS = [
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  Duos,
+  Trios,
+  Quads,
+] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
-  private gameModeRotation = [GameMode.FFA, GameMode.FFA, GameMode.Team];
-  private currentGameModeIndex = 0;
+  private mapsPlaylist: MapWithMode[] = [];
 
-  private mapsPlaylistBig: GameMapType[] = [];
-  private mapsPlaylistSmall: GameMapType[] = [];
-  private currentPlaylistCounter = 0;
+  public gameConfig(): GameConfig {
+    const { map, mode } = this.getNextMap();
 
-  // Get the next map in rotation
-  public getNextMap(): GameMapType {
-    const playlistType: PlaylistType = this.getNextPlaylistType();
-    const mapsPlaylist: GameMapType[] = this.getNextMapsPlayList(playlistType);
-    return mapsPlaylist.shift()!;
+    const playerTeams =
+      mode === GameMode.Team ? this.getTeamCount() : undefined;
+
+    // Create the default public game config (from your GameManager)
+    return {
+      donateGold: true,
+      donateTroops: true,
+      gameMap: map,
+      maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
+      gameType: GameType.Public,
+      difficulty: Difficulty.Medium,
+      infiniteGold: false,
+      infiniteTroops: false,
+      instantBuild: false,
+      disableNPCs: mode === GameMode.Team,
+      gameMode: mode,
+      playerTeams,
+      bots: 400,
+      disabledUnits: [],
+    } satisfies GameConfig;
   }
 
-  public getNextGameMode(): GameMode {
-    const nextGameMode = this.gameModeRotation[this.currentGameModeIndex];
-    this.currentGameModeIndex =
-      (this.currentGameModeIndex + 1) % this.gameModeRotation.length;
-    return nextGameMode;
+  private getTeamCount(): TeamCountConfig {
+    return TEAM_COUNTS[Math.floor(Math.random() * TEAM_COUNTS.length)];
   }
 
-  private getNextMapsPlayList(playlistType: PlaylistType): GameMapType[] {
-    switch (playlistType) {
-      case PlaylistType.BigMaps:
-        if (!(this.mapsPlaylistBig.length > 0)) {
-          this.fillMapsPlaylist(playlistType, this.mapsPlaylistBig);
+  private getNextMap(): MapWithMode {
+    if (this.mapsPlaylist.length === 0) {
+      const numAttempts = 10000;
+      for (let i = 0; i < numAttempts; i++) {
+        if (this.shuffleMapsPlaylist()) {
+          log.info(`Generated map playlist in ${i} attempts`);
+          return this.mapsPlaylist.shift()!;
         }
-        return this.mapsPlaylistBig;
-
-      case PlaylistType.SmallMaps:
-        if (!(this.mapsPlaylistSmall.length > 0)) {
-          this.fillMapsPlaylist(playlistType, this.mapsPlaylistSmall);
-        }
-        return this.mapsPlaylistSmall;
+      }
+      log.error("Failed to generate a valid map playlist");
     }
+    // Even if it failed, playlist will be partially populated.
+    return this.mapsPlaylist.shift()!;
   }
 
-  private fillMapsPlaylist(
-    playlistType: PlaylistType,
-    mapsPlaylist: GameMapType[],
-  ): void {
-    const frequency = this.getFrequency(playlistType);
-    Object.keys(GameMapType).forEach((key) => {
-      let count = parseInt(frequency[key]);
-      while (count > 0) {
-        mapsPlaylist.push(GameMapType[key]);
-        count--;
+  private shuffleMapsPlaylist(): boolean {
+    const maps: GameMapType[] = [];
+    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
+      for (let i = 0; i < (frequency[key] ?? 0); i++) {
+        maps.push(GameMapType[key]);
       }
     });
-    while (!this.allNonConsecutive(mapsPlaylist)) {
-      random.shuffleArray(mapsPlaylist);
-    }
-  }
 
-  // Specifically controls how the playlists rotate.
-  private getNextPlaylistType(): PlaylistType {
-    switch (this.currentPlaylistCounter) {
-      case 0:
-      case 1:
-        this.currentPlaylistCounter++;
-        return PlaylistType.BigMaps;
-      case 2:
-        this.currentPlaylistCounter = 0;
-        return PlaylistType.SmallMaps;
-    }
-  }
+    const rand = new PseudoRandom(Date.now());
 
-  private getFrequency(playlistType: PlaylistType) {
-    switch (playlistType) {
-      // Big Maps are those larger than ~2.5 mil pixels
-      case PlaylistType.BigMaps:
-        return {
-          Europe: 3,
-          NorthAmerica: 2,
-          Africa: 2,
-          Britannia: 1,
-          GatewayToTheAtlantic: 2,
-          Australia: 1,
-          Iceland: 1,
-          SouthAmerica: 3,
-          KnownWorld: 2,
-        };
-      case PlaylistType.SmallMaps:
-        return {
-          World: 1,
-          Mena: 2,
-          Pangaea: 1,
-          Asia: 1,
-          Mars: 1,
-          BetweenTwoSeas: 3,
-          Japan: 3,
-          BlackSea: 1,
-        };
-    }
-  }
+    const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
+    const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
+    const team: GameMapType[] = rand.shuffleArray([...maps]);
 
-  // Check for consecutive duplicates in the maps array
-  private allNonConsecutive(maps: GameMapType[]): boolean {
-    for (let i = 0; i < maps.length - 1; i++) {
-      if (maps[i] === maps[i + 1]) {
+    this.mapsPlaylist = [];
+    for (let i = 0; i < maps.length; i++) {
+      if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
+        return false;
+      }
+      if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
+        return false;
+      }
+      if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {
         return false;
       }
     }
     return true;
+  }
+
+  private addNextMap(
+    playlist: MapWithMode[],
+    nextEls: GameMapType[],
+    mode: GameMode,
+  ): boolean {
+    const nonConsecutiveNum = 5;
+    const lastEls = playlist
+      .slice(playlist.length - nonConsecutiveNum)
+      .map((m) => m.map);
+    for (let i = 0; i < nextEls.length; i++) {
+      const next = nextEls[i];
+      if (lastEls.includes(next)) {
+        continue;
+      }
+      nextEls.splice(i, 1);
+      playlist.push({ map: next, mode: mode });
+      return true;
+    }
+    return false;
   }
 }

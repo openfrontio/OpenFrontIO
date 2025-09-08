@@ -20,12 +20,17 @@ export class SpawnExecution implements Execution {
   tick(ticks: number) {
     this.active = false;
 
+    if (!this.mg.isValidRef(this.tile)) {
+      console.warn(`SpawnExecution: tile ${this.tile} not valid`);
+      return;
+    }
+
     if (!this.mg.inSpawnPhase()) {
       this.active = false;
       return;
     }
 
-    let player: Player = null;
+    let player: Player | null = null;
     if (this.mg.hasPlayer(this.playerInfo.id)) {
       player = this.mg.player(this.playerInfo.id);
     } else {
@@ -38,17 +43,14 @@ export class SpawnExecution implements Execution {
     });
 
     if (!player.hasSpawned()) {
-      this.mg.addExecution(new PlayerExecution(player.id()));
-      if (player.type() == PlayerType.Bot) {
+      this.mg.addExecution(new PlayerExecution(player));
+      if (player.type() === PlayerType.Bot) {
         this.mg.addExecution(new BotExecution(player));
       }
     }
     player.setHasSpawned(true);
   }
 
-  owner(): Player {
-    return null;
-  }
   isActive(): boolean {
     return this.active;
   }

@@ -1,6 +1,6 @@
+import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
-import { consolex } from "../Consolex";
-import { AllPlayersStats, ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
 import { AllianceRequestImpl } from "./AllianceRequestImpl";
@@ -8,20 +8,25 @@ import {
   Alliance,
   AllianceRequest,
   Cell,
+  ColoredTeams,
+  Duos,
   EmojiMessage,
   Execution,
   Game,
   GameMode,
   GameUpdates,
   MessageType,
+  MutableAlliance,
   Nation,
   Player,
   PlayerID,
   PlayerInfo,
   PlayerType,
+  Quads,
   Team,
   TerrainType,
   TerraNullius,
+  Trios,
   Unit,
   UnitInfo,
   UnitType,
@@ -29,22 +34,23 @@ import {
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
+import { RailNetwork } from "./RailNetwork";
+import { createRailNetwork } from "./RailNetworkImpl";
 import { Stats } from "./Stats";
 import { StatsImpl } from "./StatsImpl";
 import { assignTeams } from "./TeamAssignment";
-import { NationMap } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid } from "./UnitGrid";
-import { UnitImpl } from "./UnitImpl";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
 
 export function createGame(
   humans: PlayerInfo[],
+  nations: Nation[],
   gameMap: GameMap,
   miniGameMap: GameMap,
-  nationMap: NationMap,
   config: Config,
 ): Game {
-  return new GameImpl(humans, gameMap, miniGameMap, nationMap, config);
+  const stats = new StatsImpl();
+  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
 }
 
 export type CellString = string;
@@ -54,10 +60,8 @@ export class GameImpl implements Game {
 
   private unInitExecs: Execution[] = [];
 
-  private nations_: Nation[] = [];
-
   _players: Map<PlayerID, PlayerImpl> = new Map<PlayerID, PlayerImpl>();
-  _playersBySmallID = [];
+  _playersBySmallID: Player[] = [];
 
   private execs: Execution[] = [];
   private _width: number;
@@ -73,53 +77,80 @@ export class GameImpl implements Game {
   private updates: GameUpdates = createGameUpdatesMap();
   private unitGrid: UnitGrid;
 
-  private _stats: StatsImpl = new StatsImpl();
+  private playerTeams: Team[];
+  private botTeam: Team = ColoredTeams.Bot;
+  private _railNetwork: RailNetwork = createRailNetwork(this);
 
-  private playerTeams: Team[] = [Team.Red, Team.Blue];
-  private botTeam: Team = Team.Bot;
+  // Used to assign unique IDs to each new alliance
+  private nextAllianceID: number = 0;
 
   constructor(
     private _humans: PlayerInfo[],
+    private _nations: Nation[],
     private _map: GameMap,
     private miniGameMap: GameMap,
-    nationMap: NationMap,
     private _config: Config,
+    private _stats: Stats,
   ) {
-    this.addHumans();
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
-    this.nations_ = nationMap.nations.map(
-      (n) =>
-        new Nation(
-          n.flag || "",
-          n.name,
-          new Cell(n.coordinates[0], n.coordinates[1]),
-          n.strength,
-        ),
-    );
     this.unitGrid = new UnitGrid(this._map);
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
-      const numPlayerTeams = _config.numPlayerTeams();
-      if (numPlayerTeams < 2) throw new Error("Too few teams!");
-      if (numPlayerTeams >= 3) this.playerTeams.push(Team.Teal);
-      if (numPlayerTeams >= 4) this.playerTeams.push(Team.Purple);
-      if (numPlayerTeams >= 5) this.playerTeams.push(Team.Yellow);
-      if (numPlayerTeams >= 6) this.playerTeams.push(Team.Orange);
-      if (numPlayerTeams >= 7) this.playerTeams.push(Team.Green);
-      if (numPlayerTeams >= 8) throw new Error("Too many teams!");
+      this.populateTeams();
+    }
+    this.addPlayers();
+  }
+
+  private populateTeams() {
+    let numPlayerTeams = this._config.playerTeams();
+    if (typeof numPlayerTeams !== "number") {
+      const players = this._humans.length + this._nations.length;
+      switch (numPlayerTeams) {
+        case Duos:
+          numPlayerTeams = Math.ceil(players / 2);
+          break;
+        case Trios:
+          numPlayerTeams = Math.ceil(players / 3);
+          break;
+        case Quads:
+          numPlayerTeams = Math.ceil(players / 4);
+          break;
+        default:
+          throw new Error(`Unknown TeamCountConfig ${numPlayerTeams}`);
+      }
+    }
+    if (numPlayerTeams < 2) {
+      throw new Error(`Too few teams: ${numPlayerTeams}`);
+    } else if (numPlayerTeams < 8) {
+      this.playerTeams = [ColoredTeams.Red, ColoredTeams.Blue];
+      if (numPlayerTeams >= 3) this.playerTeams.push(ColoredTeams.Yellow);
+      if (numPlayerTeams >= 4) this.playerTeams.push(ColoredTeams.Green);
+      if (numPlayerTeams >= 5) this.playerTeams.push(ColoredTeams.Purple);
+      if (numPlayerTeams >= 6) this.playerTeams.push(ColoredTeams.Orange);
+      if (numPlayerTeams >= 7) this.playerTeams.push(ColoredTeams.Teal);
+    } else {
+      this.playerTeams = [];
+      for (let i = 1; i <= numPlayerTeams; i++) {
+        this.playerTeams.push(`Team ${i}`);
+      }
     }
   }
 
-  private addHumans() {
-    if (this.config().gameConfig().gameMode != GameMode.Team) {
+  private addPlayers() {
+    if (this.config().gameConfig().gameMode !== GameMode.Team) {
       this._humans.forEach((p) => this.addPlayer(p));
+      this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
     }
-    const playerToTeam = assignTeams(this._humans, this.playerTeams);
+    const allPlayers = [
+      ...this._humans,
+      ...this._nations.map((n) => n.playerInfo),
+    ];
+    const playerToTeam = assignTeams(allPlayers, this.playerTeams);
     for (const [playerInfo, team] of playerToTeam.entries()) {
-      if (team == "kicked") {
+      if (team === "kicked") {
         console.warn(`Player ${playerInfo.name} was kicked from team`);
         continue;
       }
@@ -134,8 +165,13 @@ export class GameImpl implements Game {
   owner(ref: TileRef): Player | TerraNullius {
     return this.playerBySmallID(this.ownerID(ref));
   }
+
+  alliances(): MutableAlliance[] {
+    return this.alliances_;
+  }
+
   playerBySmallID(id: number): Player | TerraNullius {
-    if (id == 0) {
+    if (id === 0) {
       return this.terraNullius();
     }
     return this._playersBySmallID[id - 1];
@@ -171,36 +207,49 @@ export class GameImpl implements Game {
     });
   }
 
-  units(...types: UnitType[]): UnitImpl[] {
+  units(...types: UnitType[]): Unit[] {
     return Array.from(this._players.values()).flatMap((p) => p.units(...types));
   }
+
+  unitCount(type: UnitType): number {
+    let total = 0;
+    for (const player of this._players.values()) {
+      total += player.unitCount(type);
+    }
+    return total;
+  }
+
   unitInfo(type: UnitType): UnitInfo {
     return this.config().unitInfo(type);
   }
+
   nations(): Nation[] {
-    return this.nations_;
+    return this._nations;
   }
 
-  createAllianceRequest(requestor: Player, recipient: Player): AllianceRequest {
+  createAllianceRequest(
+    requestor: Player,
+    recipient: Player,
+  ): AllianceRequest | null {
     if (requestor.isAlliedWith(recipient)) {
-      consolex.log("cannot request alliance, already allied");
-      return;
+      console.log("cannot request alliance, already allied");
+      return null;
     }
     if (
       recipient
         .incomingAllianceRequests()
-        .find((ar) => ar.requestor() == requestor) != null
+        .find((ar) => ar.requestor() === requestor) !== undefined
     ) {
-      consolex.log(`duplicate alliance request from ${requestor.name()}`);
-      return;
+      console.log(`duplicate alliance request from ${requestor.name()}`);
+      return null;
     }
     const correspondingReq = requestor
       .incomingAllianceRequests()
-      .find((ar) => ar.requestor() == recipient);
-    if (correspondingReq != null) {
-      consolex.log(`got corresponding alliance requests, accepting`);
+      .find((ar) => ar.requestor() === recipient);
+    if (correspondingReq !== undefined) {
+      console.log(`got corresponding alliance requests, accepting`);
       correspondingReq.accept();
-      return;
+      return null;
     }
     const ar = new AllianceRequestImpl(requestor, recipient, this._ticks, this);
     this.allianceRequests.push(ar);
@@ -209,17 +258,39 @@ export class GameImpl implements Game {
   }
 
   acceptAllianceRequest(request: AllianceRequestImpl) {
-    this.allianceRequests = this.allianceRequests.filter((ar) => ar != request);
+    this.allianceRequests = this.allianceRequests.filter(
+      (ar) => ar !== request,
+    );
+
+    const requestor = request.requestor();
+    const recipient = request.recipient();
+
+    const existing = requestor.allianceWith(recipient);
+    if (existing) {
+      throw new Error(
+        `cannot accept alliance request, already allied with ${recipient.name()}`,
+      );
+    }
+
+    // Create and register the new alliance
     const alliance = new AllianceImpl(
       this,
-      request.requestor() as PlayerImpl,
-      request.recipient() as PlayerImpl,
+      requestor as PlayerImpl,
+      recipient as PlayerImpl,
       this._ticks,
+      this.nextAllianceID++,
     );
     this.alliances_.push(alliance);
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
+
+    // Automatically remove embargoes only if they were automatically created
+    if (requestor.hasEmbargoAgainst(recipient))
+      requestor.endTemporaryEmbargo(recipient);
+    if (recipient.hasEmbargoAgainst(requestor))
+      recipient.endTemporaryEmbargo(requestor);
+
     this.addUpdate({
       type: GameUpdateType.AllianceRequestReply,
       request: request.toUpdate(),
@@ -228,7 +299,9 @@ export class GameImpl implements Game {
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
-    this.allianceRequests = this.allianceRequests.filter((ar) => ar != request);
+    this.allianceRequests = this.allianceRequests.filter(
+      (ar) => ar !== request,
+    );
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
       request,
     );
@@ -258,8 +331,8 @@ export class GameImpl implements Game {
     this.updates = createGameUpdatesMap();
     this.execs.forEach((e) => {
       if (
-        e.isActive() &&
-        (!this.inSpawnPhase() || e.activeDuringSpawnPhase())
+        (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
+        e.isActive()
       ) {
         e.tick(this._ticks);
       }
@@ -283,7 +356,7 @@ export class GameImpl implements Game {
       // Players change each to so always add them
       this.addUpdate(player.toUpdate());
     }
-    if (this.ticks() % 10 == 0) {
+    if (this.ticks() % 10 === 0) {
       this.addUpdate({
         type: GameUpdateType.Hash,
         tick: this.ticks(),
@@ -353,7 +426,7 @@ export class GameImpl implements Game {
     return this.player(id);
   }
 
-  addPlayer(playerInfo: PlayerInfo, team: Team = null): Player {
+  addPlayer(playerInfo: PlayerInfo, team: Team | null = null): Player {
     const player = new PlayerImpl(
       this,
       this.nextPlayerID,
@@ -368,26 +441,27 @@ export class GameImpl implements Game {
   }
 
   private maybeAssignTeam(player: PlayerInfo): Team | null {
-    if (this._config.gameConfig().gameMode != GameMode.Team) {
+    if (this._config.gameConfig().gameMode !== GameMode.Team) {
       return null;
     }
-    if (player.playerType == PlayerType.Bot) {
+    if (player.playerType === PlayerType.Bot) {
       return this.botTeam;
     }
     const rand = simpleHash(player.id);
     return this.playerTeams[rand % this.playerTeams.length];
   }
 
-  player(id: PlayerID | null): Player {
-    if (!this._players.has(id)) {
+  player(id: PlayerID): Player {
+    const player = this._players.get(id);
+    if (player === undefined) {
       throw new Error(`Player with id ${id} not found`);
     }
-    return this._players.get(id);
+    return player;
   }
 
   playerByClientID(id: ClientID): Player | null {
     for (const [, player] of this._players) {
-      if (player.clientID() == id) {
+      if (player.clientID() === id) {
         return player;
       }
     }
@@ -489,7 +563,7 @@ export class GameImpl implements Game {
       return false;
     }
     for (const neighbor of this.neighbors(tile)) {
-      const bordersEnemy = this.owner(tile) != this.owner(neighbor);
+      const bordersEnemy = this.owner(tile) !== this.owner(neighbor);
       if (bordersEnemy) {
         return true;
       }
@@ -506,8 +580,8 @@ export class GameImpl implements Game {
   }
 
   public breakAlliance(breaker: Player, alliance: Alliance) {
-    let other: Player = null;
-    if (alliance.requestor() == breaker) {
+    let other: Player;
+    if (alliance.requestor() === breaker) {
       other = alliance.recipient();
     } else {
       other = alliance.requestor();
@@ -517,18 +591,18 @@ export class GameImpl implements Game {
         `${breaker} not allied with ${other}, cannot break alliance`,
       );
     }
-    if (!other.isTraitor()) {
-      (breaker as PlayerImpl).isTraitor_ = true;
+    if (!other.isTraitor() && !other.isDisconnected()) {
+      breaker.markTraitor();
     }
 
     const breakerSet = new Set(breaker.alliances());
     const alliances = other.alliances().filter((a) => breakerSet.has(a));
-    if (alliances.length != 1) {
+    if (alliances.length !== 1) {
       throw new Error(
         `must have exactly one alliance, have ${alliances.length}`,
       );
     }
-    this.alliances_ = this.alliances_.filter((a) => a != alliances[0]);
+    this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
     this.addUpdate({
       type: GameUpdateType.BrokeAlliance,
       traitorID: breaker.smallID(),
@@ -542,12 +616,12 @@ export class GameImpl implements Game {
       .requestor()
       .alliances()
       .filter((a) => p1Set.has(a));
-    if (alliances.length != 1) {
+    if (alliances.length !== 1) {
       throw new Error(
         `cannot expire alliance: must have exactly one alliance, have ${alliances.length}`,
       );
     }
-    this.alliances_ = this.alliances_.filter((a) => a != alliances[0]);
+    this.alliances_ = this.alliances_.filter((a) => a !== alliances[0]);
     this.addUpdate({
       type: GameUpdateType.AllianceExpired,
       player1ID: alliance.requestor().smallID(),
@@ -565,14 +639,33 @@ export class GameImpl implements Game {
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void {
     this.addUpdate({
       type: GameUpdateType.Win,
-      winner: typeof winner === "string" ? winner : winner.smallID(),
-      winnerType: typeof winner === "string" ? "team" : "player",
+      winner: this.makeWinner(winner),
       allPlayersStats,
     });
   }
 
+  private makeWinner(winner: string | Player): Winner | undefined {
+    if (typeof winner === "string") {
+      return [
+        "team",
+        winner,
+        ...this.players()
+          .filter((p) => p.team() === winner && p.clientID() !== null)
+          .map((p) => p.clientID()!),
+      ];
+    } else {
+      const clientId = winner.clientID();
+      if (clientId === null) return;
+      return [
+        "player",
+        clientId,
+        // TODO: Assists (vote for peace)
+      ];
+    }
+  }
+
   teams(): Team[] {
-    if (this._config.gameConfig().gameMode != GameMode.Team) {
+    if (this._config.gameConfig().gameMode !== GameMode.Team) {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];
@@ -582,15 +675,59 @@ export class GameImpl implements Game {
     message: string,
     type: MessageType,
     playerID: PlayerID | null,
+    goldAmount?: bigint,
+    params?: Record<string, string | number>,
   ): void {
-    let id = null;
-    if (playerID != null) {
+    let id: number | null = null;
+    if (playerID !== null) {
       id = this.player(playerID).smallID();
     }
     this.addUpdate({
       type: GameUpdateType.DisplayEvent,
       messageType: type,
       message: message,
+      playerID: id,
+      goldAmount: goldAmount,
+      params: params,
+    });
+  }
+
+  displayChat(
+    message: string,
+    category: string,
+    target: PlayerID | undefined,
+    playerID: PlayerID | null,
+    isFrom: boolean,
+    recipient: string,
+  ): void {
+    let id: number | null = null;
+    if (playerID !== null) {
+      id = this.player(playerID).smallID();
+    }
+    this.addUpdate({
+      type: GameUpdateType.DisplayChatEvent,
+      key: message,
+      category: category,
+      target: target,
+      playerID: id,
+      isFrom,
+      recipient: recipient,
+    });
+  }
+
+  displayIncomingUnit(
+    unitID: number,
+    message: string,
+    type: MessageType,
+    playerID: PlayerID,
+  ): void {
+    const id = this.player(playerID).smallID();
+
+    this.addUpdate({
+      type: GameUpdateType.UnitIncoming,
+      unitID: unitID,
+      message: message,
+      messageType: type,
       playerID: id,
     });
   }
@@ -600,14 +737,35 @@ export class GameImpl implements Game {
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    if (u.hasTrainStation()) {
+      this._railNetwork.removeStation(u);
+    }
+  }
+  updateUnitTile(u: Unit) {
+    this.unitGrid.updateUnitCell(u);
+  }
+
+  hasUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    type: UnitType,
+    playerId?: PlayerID,
+  ) {
+    return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
   }
 
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit; distSquared: number }> {
-    return this.unitGrid.nearbyUnits(tile, searchRange, types) as Array<{
+    return this.unitGrid.nearbyUnits(
+      tile,
+      searchRange,
+      types,
+      predicate,
+    ) as Array<{
       unit: Unit;
       distSquared: number;
     }>;
@@ -615,6 +773,9 @@ export class GameImpl implements Game {
 
   ref(x: number, y: number): TileRef {
     return this._map.ref(x, y);
+  }
+  isValidRef(ref: TileRef): boolean {
+    return this._map.isValidRef(ref);
   }
   x(ref: TileRef): number {
     return this._map.x(ref);
@@ -711,6 +872,31 @@ export class GameImpl implements Game {
   }
   stats(): Stats {
     return this._stats;
+  }
+  railNetwork(): RailNetwork {
+    return this._railNetwork;
+  }
+  conquerPlayer(conqueror: Player, conquered: Player) {
+    const gold = conquered.gold();
+    this.displayMessage(
+      `Conquered ${conquered.displayName()} received ${renderNumber(
+        gold,
+      )} gold`,
+      MessageType.CONQUERED_PLAYER,
+      conqueror.id(),
+      gold,
+    );
+    conqueror.addGold(gold);
+    conquered.removeGold(gold);
+    this.addUpdate({
+      type: GameUpdateType.ConquestEvent,
+      conquerorId: conqueror.id(),
+      conqueredId: conquered.id(),
+      gold,
+    });
+
+    // Record stats
+    this.stats().goldWar(conqueror, conquered, gold);
   }
 }
 

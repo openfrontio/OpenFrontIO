@@ -11,6 +11,21 @@ export class DarkModeButton extends LitElement {
     return this;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("dark-mode-changed", this.handleDarkModeChanged);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("dark-mode-changed", this.handleDarkModeChanged);
+  }
+
+  private handleDarkModeChanged = (e: Event) => {
+    const event = e as CustomEvent<{ darkMode: boolean }>;
+    this.darkMode = event.detail.darkMode;
+  };
+
   toggleDarkMode() {
     this.userSettings.toggleDarkMode();
     this.darkMode = this.userSettings.darkMode();
@@ -20,7 +35,7 @@ export class DarkModeButton extends LitElement {
     return html`
       <button
         title="Toggle Dark Mode"
-        class="absolute top-0 right-0 md:top-[10px] md:right-[10px] border-none bg-none cursor-pointer text-2xl"
+        class="absolute top-0 left-0 md:top-[10px] md:left-[10px] border-none bg-none cursor-pointer text-2xl"
         @click=${() => this.toggleDarkMode()}
       >
         ${this.darkMode ? "☀️" : "🌙"}

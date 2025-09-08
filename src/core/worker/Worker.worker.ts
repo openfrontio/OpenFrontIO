@@ -1,18 +1,27 @@
+import version from "../../../resources/version.txt";
 import { createGameRunner, GameRunner } from "../GameRunner";
-import { GameUpdateViewData } from "../game/GameUpdates";
+import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
+import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
+  AttackAveragePositionResultMessage,
   InitializedMessage,
   MainThreadMessage,
   PlayerActionsResultMessage,
   PlayerBorderTilesResultMessage,
   PlayerProfileResultMessage,
+  TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "./WorkerMessages";
 
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
+const mapLoader = new FetchGameMapLoader(`/maps`, version);
 
-function gameUpdate(gu: GameUpdateViewData) {
+function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
+  // skip if ErrorUpdate
+  if (!("updates" in gu)) {
+    return;
+  }
   sendMessage({
     type: "game_update",
     gameUpdate: gu,
@@ -28,13 +37,14 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
   switch (message.type) {
     case "heartbeat":
-      (await gameRunner).executeNextTick();
+      (await gameRunner)?.executeNextTick();
       break;
     case "init":
       try {
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
+          mapLoader,
           gameUpdate,
         ).then((gr) => {
           sendMessage({
@@ -118,6 +128,46 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       } catch (error) {
         console.error("Failed to get border tiles:", error);
         throw error;
+      }
+      break;
+    case "attack_average_position":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const averagePosition = (await gameRunner).attackAveragePosition(
+          message.playerID,
+          message.attackID,
+        );
+        sendMessage({
+          type: "attack_average_position_result",
+          id: message.id,
+          x: averagePosition ? averagePosition.x : null,
+          y: averagePosition ? averagePosition.y : null,
+        } as AttackAveragePositionResultMessage);
+      } catch (error) {
+        console.error("Failed to get attack average position:", error);
+        throw error;
+      }
+      break;
+    case "transport_ship_spawn":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const spawnTile = (await gameRunner).bestTransportShipSpawn(
+          message.playerID,
+          message.targetTile,
+        );
+        sendMessage({
+          type: "transport_ship_spawn_result",
+          id: message.id,
+          result: spawnTile,
+        } as TransportShipSpawnResultMessage);
+      } catch (error) {
+        console.error("Failed to spawn transport ship:", error);
       }
       break;
     default:

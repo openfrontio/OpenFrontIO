@@ -1,6 +1,16 @@
 {
+  "lang": {
+    "en": "Polish",
+    "native": "Polski",
+    "svg": "pl",
+    "lang_code": "pl"
+  },
   "main": {
+    "title": "OpenFront (ALPHA)",
     "join_discord": "Dołącz do Discord'a!",
+    "login_discord": "Zaloguj się przez Discorda",
+    "logged_in": "Zalogowano!",
+    "log_out": "Wyloguj się",
     "create_lobby": "Utwórz lobby",
     "join_lobby": "Dołącz do lobby",
     "single_player": "Gra jednoosobowa",
@@ -15,6 +25,7 @@
     "action_alt_view": "Alternatywny widok (teren/państwa)",
     "action_attack_altclick": "Atak (gdy lewy przycisk myszy jest ustawiony na otwieranie menu).",
     "action_build": "Otwórz menu budowy",
+    "action_emote": "Otwórz menu emoji",
     "action_center": "Wyśrodkuj kamerę na graczu",
     "action_zoom": "Oddal/Przybliż",
     "action_move_camera": "Przesuń kamerę",
@@ -77,8 +88,7 @@
     "icon_crown": "Korona — Jest to gracz numer 1 w rankingu",
     "icon_traitor": "Skrzyżowane miecze — Zdrajca. Ten gracz atakował sojusznika.",
     "icon_ally": "Uścisk dłoni — Sojusznik. Ten gracz jest twoim sojusznikiem.",
-    "info_enemy_panel": "Panel informacji o wrogu",
-    "action_emote": "Otwórz menu emoji"
+    "info_enemy_panel": "Panel informacji o wrogu"
   },
   "single_modal": {
     "title": "Gra jednoosobowa",
@@ -91,9 +101,11 @@
     "infinite_gold": "Nieskończone złoto",
     "infinite_troops": "Nieskończone wojsko",
     "disable_nukes": "Wyłącz broń nuklearną",
+    "enables_title": "Włącz ustawienia",
     "start": "Rozpocznij Grę"
   },
   "map": {
+    "map": "Mapa",
     "world": "Świat",
     "europe": "Europa",
     "mena": "MENA",
@@ -110,10 +122,18 @@
     "random": "Losowe",
     "iceland": "Islandia",
     "pangaea": "Pangea",
-    "map": "Mapa",
     "betweentwoseas": "Między dwoma morzami",
-    "japan": "Japonia i sąsiedzi",
-    "knownworld": "Znany Świat"
+    "knownworld": "Znany Świat",
+    "faroeislands": "Wyspy Owcze",
+    "deglaciatedantarctica": "Zdeglacjowana Antarktyka",
+    "europeclassic": "Europa (klasyczna)",
+    "falklandislands": "Falklandy",
+    "baikal": "Bajkał"
+  },
+  "map_categories": {
+    "continental": "Kontynentalny",
+    "regional": "Lokalny",
+    "fantasy": "Pozostałe"
   },
   "private_lobby": {
     "title": "Dołącz do prywatnego Lobby",
@@ -128,7 +148,8 @@
   },
   "public_lobby": {
     "join": "Dołącz do następnej gry",
-    "waiting": "oczekujący gracze"
+    "waiting": "oczekujący gracze",
+    "teams": "{num} drużyn"
   },
   "username": {
     "enter_username": "Wprowadź swoją nazwę użytkownika",
@@ -139,6 +160,8 @@
   },
   "host_modal": {
     "title": "Prywatne lobby",
+    "mode": "Tryb",
+    "team_count": "Liczba drużyn",
     "options_title": "Opcje",
     "bots": "Boty: ",
     "bots_disabled": "Wyłączone",
@@ -146,29 +169,22 @@
     "instant_build": "Natychmiastowa budowa",
     "infinite_gold": "Nieskończone złoto",
     "infinite_troops": "Nieskończone wojsko",
-    "disable_nukes": "Wyłącz broń nuklearną",
+    "enables_title": "Włącz ustawienia",
     "player": "Gracz",
     "players": "Gracze",
     "waiting": "Oczekiwanie na graczy...",
-    "start": "Rozpocznij grę",
-    "mode": "Tryb"
-  },
-  "difficulty": {
-    "Relaxed": "Zrelaksowany",
-    "Balanced": "Zbalansowany",
-    "Intense": "Intensywny",
-    "Impossible": "Niemożliwy",
-    "difficulty": "Poziom trudności"
+    "start": "Rozpocznij grę"
   },
   "game_starting_modal": {
     "title": "Gra się rozpoczyna...",
     "desc": "Przygotowanie do uruchomienia lobby. Proszę czekać."
   },
-  "lang": {
-    "en": "Polish",
-    "native": "Polski",
-    "svg": "pl",
-    "lang_code": "pl"
+  "difficulty": {
+    "difficulty": "Poziom trudności",
+    "Relaxed": "Zrelaksowany",
+    "Balanced": "Zbalansowany",
+    "Intense": "Intensywny",
+    "Impossible": "Niemożliwy"
   },
   "game_mode": {
     "ffa": "Każdy na Każdego",
@@ -176,5 +192,131 @@
   },
   "select_lang": {
     "title": "Wybierz język"
+  },
+  "unit_type": {
+    "city": "Miasto",
+    "defense_post": "Punkt Obronny",
+    "port": "Port",
+    "warship": "Okręt wojenny",
+    "missile_silo": "Silos rakietowy",
+    "sam_launcher": "Wyrzutnia SAM",
+    "atom_bomb": "Bomba atomowa",
+    "hydrogen_bomb": "Bomba wodorowa",
+    "mirv": "MIRV"
+  },
+  "user_setting": {
+    "title": "Ustawienia użytkownika",
+    "tab_basic": "Podstawowe ustawienia",
+    "tab_keybinds": "Skróty klawiszowe",
+    "dark_mode_label": "🌙 Tryb ciemny",
+    "dark_mode_desc": "Przełącz wygląd strony pomiędzy jasnym a ciemnym trybem",
+    "emojis_label": "😊 Emotki",
+    "emojis_desc": "Przełącz, czy emotki mają być wyświetlane w grze",
+    "anonymous_names_label": "🥷 Ukryte Nazwy",
+    "anonymous_names_desc": "Ukryj prawdziwe nazwy graczy, zastępując je losowymi na swoim ekranie.",
+    "left_click_label": "Kliknij lewym przyciskiem myszy aby otworzyć Menu",
+    "left_click_desc": "Gdy WŁĄCZONE, lewy przycisk myszy otwiera menu, a przycisk z mieczem atakuje. Gdy WYŁĄCZONE, lewy przycisk myszy atakuje bezpośrednio.",
+    "attack_ratio_label": "⚔️ Współczynnik ataku",
+    "attack_ratio_desc": "Jaki procent swoich żołnierzy chcesz wysłać do ataku (1–100%)",
+    "troop_ratio_label": "🛠️ Stosunek żołnierzy do pracowników",
+    "troop_ratio_desc": "Dostosuj balans między żołnierzami (do walki) a pracownikami (do produkcji złota) (1–100%)",
+    "easter_writing_speed_label": "Mnożnik prędkości pisania",
+    "easter_writing_speed_desc": "Dostosuj, jak szybko udajesz, że programujesz (x1–x100)",
+    "easter_bug_count_label": "Liczba błędów",
+    "easter_bug_count_desc": "Ile błędów jesteś w stanie zaakceptować (0–1000)",
+    "view_options": "Opcje widoku",
+    "toggle_view": "Przełącz widok",
+    "toggle_view_desc": "Alternatywny widok (teren/państwa)",
+    "zoom_controls": "Sterowanie przybliżeniem",
+    "zoom_out": "Oddal",
+    "zoom_out_desc": "Oddal mapę",
+    "zoom_in": "Przybliż",
+    "zoom_in_desc": "Przybliż mapę",
+    "camera_movement": "Ruch kamery",
+    "center_camera": "Wyśrodkuj kamerę",
+    "center_camera_desc": "Wyśrodkowuje kamerę na graczu",
+    "move_up": "Przesuń kamerę w górę",
+    "move_up_desc": "Przesuwa kamerę w górę",
+    "move_left": "Przesuń kamerę w lewo",
+    "move_left_desc": "Przesuwa kamerę w lewo",
+    "move_down": "Przesuń kamerę w dół",
+    "move_down_desc": "Przesuwa kamerę w dół",
+    "move_right": "Przesuń kamerę w prawo",
+    "move_right_desc": "Przesuwa kamerę w prawo",
+    "reset": "Zresetuj",
+    "unbind": "Odbinduj"
+  },
+  "chat": {
+    "title": "Szybka rozmowa",
+    "to": "Wysłano {user}: {msg}",
+    "from": "Od {user}: {msg}",
+    "category": "Kategoria",
+    "phrase": "Fraza",
+    "player": "Gracz",
+    "send": "Wyślij",
+    "search": "Wyszukaj gracza...",
+    "build": "Utwórz wiadomość...",
+    "cat": {
+      "help": "Pomoc",
+      "attack": "Atak",
+      "defend": "Obrona",
+      "greet": "Pozdrowienia",
+      "misc": "Różne",
+      "warnings": "Ostrzeżenia"
+    },
+    "help": {
+      "troops": "Proszę, daj mi żołnierzy!",
+      "gold": "Proszę, daj mi złoto!",
+      "no_attack": "Proszę, nie atakuj mnie!",
+      "sorry_attack": "Przepraszam, nie chciałem zaatakować.",
+      "alliance": "Sojusz?",
+      "help_defend": "Pomóż mi bronić się przed [P1]!",
+      "team_up": "Zespólmy się przeciwko [P1]!"
+    },
+    "attack": {
+      "attack": "Zaatakuj [P1]!",
+      "mirv": "Wystrzel MIRV w [P1]!",
+      "focus": "Skup atak na [P1]!",
+      "finish": "Wykończmy [P1]!"
+    },
+    "defend": {
+      "defend": "Broń [P1]!",
+      "dont_attack": "Nie atakuj [P1]!",
+      "ally": "[P1] jest moim sojusznikiem!"
+    },
+    "greet": {
+      "hello": "Cześć!",
+      "good_luck": "Powodzenia!",
+      "have_fun": "Miłej zabawy!",
+      "gg": "GG!",
+      "nice_to_meet": "Miło Cię poznać!",
+      "well_played": "Dobrze rozegrane!",
+      "hi_again": "Witaj ponownie!",
+      "bye": "Pa pa!",
+      "thanks": "Dzięki!",
+      "oops": "Ups, zły przycisk!",
+      "trust_me": "Możesz mi zaufać. Obiecuję!",
+      "trust_broken": "Ufałem ci..."
+    },
+    "misc": {
+      "go": "Chodźmy!",
+      "strategy": "Dobra strategia!",
+      "fun": "Ta gra jest świetna!",
+      "pr": "Kiedy w końcu mój PR zostanie połączony...?"
+    },
+    "warnings": {
+      "strong": "[P1] jest silny.",
+      "weak": "[P1] jest słaby.",
+      "mirv_soon": "[P1] może wkrótce uruchomić MIRV!",
+      "number1_warning": "Gracz nr 1 wkrótce wygra, chyba że się połączymy!",
+      "stalemate": "Zróbmy sojusz. To impas, oboje przegramy.",
+      "has_allies": "[P1] ma wielu sojuszników.",
+      "no_allies": "[P1] nie ma żadnych sojuszników.",
+      "betrayed": "[P1] zdradził swojego sojusznika!",
+      "getting_big": "[P1] zbyt szybko rośnie!",
+      "danger_base": "[P1] jest niezabezpieczony",
+      "saving_for_mirv": "[P1] oszczędza, aby uruchomić MIRV.",
+      "mirv_ready": "[P1] ma wystarczającą ilość złota, aby uruchomić MIRV!"
+    }
   }
 }

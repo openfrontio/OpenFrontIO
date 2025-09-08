@@ -1,8 +1,17 @@
 import { EventBus, GameEvent } from "../core/EventBus";
+import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
+import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class MouseOverEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
@@ -63,6 +72,12 @@ export class CloseViewEvent implements GameEvent {}
 
 export class RefreshGraphicsEvent implements GameEvent {}
 
+export class TogglePerformanceOverlayEvent implements GameEvent {}
+
+export class ToggleStructureEvent implements GameEvent {
+  constructor(public readonly structureType: UnitType | null) {}
+}
+
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -76,12 +91,27 @@ export class ShowEmojiMenuEvent implements GameEvent {
   ) {}
 }
 
+export class DoBoatAttackEvent implements GameEvent {}
+
+export class DoGroundAttackEvent implements GameEvent {}
+
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
 
+export class ReplaySpeedChangeEvent implements GameEvent {
+  constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) {}
+}
+
 export class CenterCameraEvent implements GameEvent {
   constructor() {}
+}
+
+export class AutoUpgradeEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
 }
 
 export class InputHandler {
@@ -99,8 +129,9 @@ export class InputHandler {
 
   private alternateView = false;
 
-  private moveInterval: NodeJS.Timeout = null;
+  private moveInterval: NodeJS.Timeout | null = null;
   private activeKeys = new Set<string>();
+  private keybinds: Record<string, string> = {};
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
@@ -113,68 +144,118 @@ export class InputHandler {
   ) {}
 
   initialize() {
+    this.keybinds = {
+      toggleView: "Space",
+      centerCamera: "KeyC",
+      moveUp: "KeyW",
+      moveDown: "KeyS",
+      moveLeft: "KeyA",
+      moveRight: "KeyD",
+      zoomOut: "KeyQ",
+      zoomIn: "KeyE",
+      attackRatioDown: "Digit1",
+      attackRatioUp: "Digit2",
+      boatAttack: "KeyB",
+      groundAttack: "KeyG",
+      modifierKey: "ControlLeft",
+      altKey: "AltLeft",
+      ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
+    };
+
+    // Mac users might have different keybinds
+    const isMac = /Mac/.test(navigator.userAgent);
+    if (isMac) {
+      this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
+    }
+
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
     this.canvas.addEventListener(
       "wheel",
       (e) => {
-        this.onScroll(e);
+        if (!this.onTrackpadPan(e)) {
+          this.onScroll(e);
+        }
         this.onShiftScroll(e);
         e.preventDefault();
       },
-      {
-        passive: false,
-      },
+      { passive: false },
     );
     window.addEventListener("pointermove", this.onPointerMove.bind(this));
-    this.canvas.addEventListener("contextmenu", (e: MouseEvent) => {
-      this.onContextMenu(e);
-    });
+    this.canvas.addEventListener("contextmenu", (e) => this.onContextMenu(e));
     window.addEventListener("mousemove", (e) => {
-      if (e.movementX == 0 && e.movementY == 0) {
-        return;
+      if (e.movementX || e.movementY) {
+        this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
-      this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
+    });
+
+    this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
+      passive: false,
+    });
+    this.canvas.addEventListener("touchmove", (e) => this.onTouchMove(e), {
+      passive: false,
+    });
+    this.canvas.addEventListener("touchend", (e) => this.onTouchEnd(e), {
+      passive: false,
     });
     this.pointers.clear();
 
-    // Initialize the combined movement interval
     this.moveInterval = setInterval(() => {
       let deltaX = 0;
       let deltaY = 0;
 
-      // Handle both WASD and arrow keys
-      if (this.activeKeys.has("KeyW") || this.activeKeys.has("ArrowUp"))
+      // Skip if shift is held down
+      if (
+        this.activeKeys.has("ShiftLeft") ||
+        this.activeKeys.has("ShiftRight")
+      ) {
+        return;
+      }
+
+      if (
+        this.activeKeys.has(this.keybinds.moveUp) ||
+        this.activeKeys.has("ArrowUp")
+      )
         deltaY += this.PAN_SPEED;
-      if (this.activeKeys.has("KeyS") || this.activeKeys.has("ArrowDown"))
+      if (
+        this.activeKeys.has(this.keybinds.moveDown) ||
+        this.activeKeys.has("ArrowDown")
+      )
         deltaY -= this.PAN_SPEED;
-      if (this.activeKeys.has("KeyA") || this.activeKeys.has("ArrowLeft"))
+      if (
+        this.activeKeys.has(this.keybinds.moveLeft) ||
+        this.activeKeys.has("ArrowLeft")
+      )
         deltaX += this.PAN_SPEED;
-      if (this.activeKeys.has("KeyD") || this.activeKeys.has("ArrowRight"))
+      if (
+        this.activeKeys.has(this.keybinds.moveRight) ||
+        this.activeKeys.has("ArrowRight")
+      )
         deltaX -= this.PAN_SPEED;
 
-      if (deltaX !== 0 || deltaY !== 0) {
+      if (deltaX || deltaY) {
         this.eventBus.emit(new DragEvent(deltaX, deltaY));
       }
 
-      // Handle zooming
-      const screenCenterX = window.innerWidth / 2;
-      const screenCenterY = window.innerHeight / 2;
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
 
-      if (this.activeKeys.has("Minus") || this.activeKeys.has("KeyQ")) {
-        this.eventBus.emit(
-          new ZoomEvent(screenCenterX, screenCenterY, this.ZOOM_SPEED),
-        );
+      if (
+        this.activeKeys.has(this.keybinds.zoomOut) ||
+        this.activeKeys.has("Minus")
+      ) {
+        this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
-      if (this.activeKeys.has("Equal") || this.activeKeys.has("KeyE")) {
-        this.eventBus.emit(
-          new ZoomEvent(screenCenterX, screenCenterY, -this.ZOOM_SPEED),
-        );
+      if (
+        this.activeKeys.has(this.keybinds.zoomIn) ||
+        this.activeKeys.has("Equal")
+      ) {
+        this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
     }, 1);
 
     window.addEventListener("keydown", (e) => {
-      if (e.code === "Space") {
+      if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         if (!this.alternateView) {
           this.alternateView = true;
@@ -187,86 +268,88 @@ export class InputHandler {
         this.eventBus.emit(new CloseViewEvent());
       }
 
-      // Add all movement keys to activeKeys
       if (
         [
-          "KeyW",
-          "KeyA",
-          "KeyS",
-          "KeyD",
+          this.keybinds.moveUp,
+          this.keybinds.moveDown,
+          this.keybinds.moveLeft,
+          this.keybinds.moveRight,
+          this.keybinds.zoomOut,
+          this.keybinds.zoomIn,
           "ArrowUp",
           "ArrowLeft",
           "ArrowDown",
           "ArrowRight",
           "Minus",
           "Equal",
-          "KeyE",
-          "KeyQ",
-          "Digit1",
-          "Digit2",
-          "KeyC",
+          this.keybinds.attackRatioDown,
+          this.keybinds.attackRatioUp,
+          this.keybinds.centerCamera,
           "ControlLeft",
           "ControlRight",
+          "ShiftLeft",
+          "ShiftRight",
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
       }
     });
-
     window.addEventListener("keyup", (e) => {
-      if (e.code === "Space") {
+      if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         this.alternateView = false;
         this.eventBus.emit(new AlternateViewEvent(false));
       }
+
       if (e.key.toLowerCase() === "r" && e.altKey && !e.ctrlKey) {
         e.preventDefault();
         this.eventBus.emit(new RefreshGraphicsEvent());
       }
 
-      if (e.code === "Digit1") {
+      if (e.code === this.keybinds.boatAttack) {
+        e.preventDefault();
+        this.eventBus.emit(new DoBoatAttackEvent());
+      }
+
+      if (e.code === this.keybinds.groundAttack) {
+        e.preventDefault();
+        this.eventBus.emit(new DoGroundAttackEvent());
+      }
+
+      if (e.code === this.keybinds.attackRatioDown) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(-10));
       }
 
-      if (e.code === "Digit2") {
+      if (e.code === this.keybinds.attackRatioUp) {
         e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(10));
       }
 
-      if (e.code === "KeyC") {
+      if (e.code === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
       }
 
-      // Remove all movement keys from activeKeys
-      if (
-        [
-          "KeyW",
-          "KeyA",
-          "KeyS",
-          "KeyD",
-          "ArrowUp",
-          "ArrowLeft",
-          "ArrowDown",
-          "ArrowRight",
-          "Minus",
-          "Equal",
-          "KeyE",
-          "KeyQ",
-          "Digit1",
-          "Digit2",
-          "KeyC",
-          "ControlLeft",
-          "ControlRight",
-        ].includes(e.code)
-      ) {
-        this.activeKeys.delete(e.code);
+      // Shift-D to toggle performance overlay
+      console.log(e.code, e.shiftKey, e.ctrlKey, e.altKey, e.metaKey);
+      if (e.code === "KeyD" && e.shiftKey) {
+        e.preventDefault();
+        console.log("TogglePerformanceOverlayEvent");
+        this.eventBus.emit(new TogglePerformanceOverlayEvent());
       }
+
+      this.activeKeys.delete(e.code);
     });
   }
 
   private onPointerDown(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
@@ -288,17 +371,22 @@ export class InputHandler {
   }
 
   onPointerUp(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
     this.pointerDown = false;
     this.pointers.clear();
 
-    if (event.ctrlKey) {
+    if (this.isModifierKeyPressed(event)) {
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
-    if (event.altKey) {
+    if (this.isAltKeyPressed(event)) {
       this.eventBus.emit(new ShowEmojiMenuEvent(event.clientX, event.clientY));
       return;
     }
@@ -307,7 +395,7 @@ export class InputHandler {
       Math.abs(event.x - this.lastPointerDownX) +
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
-      if (event.pointerType == "touch") {
+      if (event.pointerType === "touch") {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
         event.preventDefault();
         return;
@@ -333,12 +421,39 @@ export class InputHandler {
 
   private onShiftScroll(event: WheelEvent) {
     if (event.shiftKey) {
-      const ratio = event.deltaY > 0 ? -10 : 10;
+      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+      const ratio = scrollValue > 0 ? -10 : 10;
       this.eventBus.emit(new AttackRatioEvent(ratio));
     }
   }
 
+  private onTrackpadPan(event: WheelEvent): boolean {
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      return false;
+    }
+
+    const isTrackpadPan = event.deltaMode === 0 && event.deltaX !== 0;
+
+    if (!isTrackpadPan) {
+      return false;
+    }
+
+    const panSensitivity = 1.0;
+    const deltaX = -event.deltaX * panSensitivity;
+    const deltaY = -event.deltaY * panSensitivity;
+
+    if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
+      this.eventBus.emit(new DragEvent(deltaX, deltaY));
+    }
+    return true;
+  }
+
   private onPointerMove(event: PointerEvent) {
+    if (event.button === 1) {
+      event.preventDefault();
+      return;
+    }
+
     if (event.button > 0) {
       return;
     }
@@ -346,6 +461,7 @@ export class InputHandler {
     this.pointers.set(event.pointerId, event);
 
     if (!this.pointerDown) {
+      this.eventBus.emit(new MouseOverEvent(event.clientX, event.clientY));
       return;
     }
 
@@ -376,6 +492,47 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
+  private onTouchStart(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      // Solve screen jittering problem
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      this.lastPointerX = (touch1.clientX + touch2.clientX) / 2;
+      this.lastPointerY = (touch1.clientY + touch2.clientY) / 2;
+    }
+  }
+
+  private onTouchMove(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const centerX = (touch1.clientX + touch2.clientX) / 2;
+      const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+      if (this.lastPointerX !== 0 && this.lastPointerY !== 0) {
+        const deltaX = centerX - this.lastPointerX;
+        const deltaY = centerY - this.lastPointerY;
+
+        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+          this.eventBus.emit(new DragEvent(deltaX, deltaY));
+        }
+      }
+
+      this.lastPointerX = centerX;
+      this.lastPointerY = centerY;
+    }
+  }
+
+  private onTouchEnd(event: TouchEvent) {
+    if (event.touches.length < 2) {
+      this.lastPointerX = 0;
+      this.lastPointerY = 0;
+    }
+  }
+
   private getPinchDistance(): number {
     const pointerEvents = Array.from(this.pointers.values());
     const dx = pointerEvents[0].clientX - pointerEvents[1].clientX;
@@ -392,7 +549,27 @@ export class InputHandler {
   }
 
   destroy() {
-    clearInterval(this.moveInterval);
+    if (this.moveInterval !== null) {
+      clearInterval(this.moveInterval);
+    }
     this.activeKeys.clear();
+  }
+
+  isModifierKeyPressed(event: PointerEvent): boolean {
+    return (
+      (this.keybinds.modifierKey === "AltLeft" && event.altKey) ||
+      (this.keybinds.modifierKey === "ControlLeft" && event.ctrlKey) ||
+      (this.keybinds.modifierKey === "ShiftLeft" && event.shiftKey) ||
+      (this.keybinds.modifierKey === "MetaLeft" && event.metaKey)
+    );
+  }
+
+  isAltKeyPressed(event: PointerEvent): boolean {
+    return (
+      (this.keybinds.altKey === "AltLeft" && event.altKey) ||
+      (this.keybinds.altKey === "ControlLeft" && event.ctrlKey) ||
+      (this.keybinds.altKey === "ShiftLeft" && event.shiftKey) ||
+      (this.keybinds.altKey === "MetaLeft" && event.metaKey)
+    );
   }
 }

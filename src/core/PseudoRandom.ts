@@ -1,59 +1,76 @@
+import seedrandom from "seedrandom";
+
 export class PseudoRandom {
-  private m: number = 0x80000000; // 2**31
-  private a: number = 1103515245;
-  private c: number = 12345;
-  private state: number;
+  private rng: seedrandom.PRNG;
+
+  private static readonly POW36_8 = Math.pow(36, 8); // Pre-compute 36^8
 
   constructor(seed: number) {
-    this.state = seed % this.m;
+    this.rng = seedrandom(String(seed));
   }
 
-  /**
-   * Generates the next pseudorandom number.
-   * @returns A number between 0 (inclusive) and 1 (exclusive).
-   */
+  // Generates the next pseudorandom number between 0 and 1.
   next(): number {
-    this.state = (this.a * this.state + this.c) % this.m;
-    return this.state / this.m;
+    return this.rng();
   }
 
-  /**
-   * Generates a random integer between min (inclusive) and max (exclusive).
-   */
+  // Generates a random integer between min (inclusive) and max (exclusive).
   nextInt(min: number, max: number): number {
-    return Math.floor(this.next() * (max - min) + min);
+    return Math.floor(this.rng() * (max - min)) + min;
   }
 
-  /**
-   * Generates a random float between min (inclusive) and max (exclusive).
-   */
+  // Generates a random float between min (inclusive) and max (exclusive).
   nextFloat(min: number, max: number): number {
-    return this.next() * (max - min) + min;
+    return this.rng() * (max - min) + min;
   }
 
+  // Generates a random ID (8 characters, alphanumeric).
   nextID(): string {
-    return this.nextInt(0, Math.pow(36, 8)) // 36^8 possibilities
-      .toString(36) // Convert to base36 (0-9 and a-z)
-      .padStart(8, "0"); // Ensure 8 chars by padding with zeros
+    return Math.floor(this.rng() * PseudoRandom.POW36_8)
+      .toString(36)
+      .padStart(8, "0");
   }
 
+  // Selects a random element from an array.
   randElement<T>(arr: T[]): T {
-    if (arr.length == 0) {
+    if (arr.length === 0) {
       throw new Error("array must not be empty");
     }
-    return arr[this.nextInt(0, arr.length)];
+    return arr[Math.floor(this.rng() * arr.length)];
   }
 
-  chance(odds: number): boolean {
-    return this.nextInt(0, odds) == 0;
-  }
-
-  shuffleArray(array: any[]) {
-    for (let i = array.length - 1; i >= 0; i--) {
-      const j = Math.floor(this.nextInt(0, i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
+  // Selects a random element from a set.
+  randFromSet<T>(set: Set<T>): T {
+    const size = set.size;
+    if (size === 0) {
+      throw new Error("set must not be empty");
     }
 
-    return array;
+    const index = this.nextInt(0, size);
+    let i = 0;
+    for (const item of set) {
+      if (i === index) {
+        return item;
+      }
+      i++;
+    }
+
+    // This should never happen
+    throw new Error("Unexpected error selecting element from set");
+  }
+
+  // Returns true with probability 1/odds.
+  chance(odds: number): boolean {
+    return Math.floor(this.rng() * odds) === 0;
+  }
+
+  // Returns a shuffled copy of the array using Fisher-Yates algorithm.
+  shuffleArray<T>(array: T[]): T[] {
+    const result = [...array];
+    for (let i = result.length - 1; i >= 0; i--) {
+      const j = Math.floor(this.rng() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
   }
 }

@@ -16,7 +16,7 @@ export class GameManager {
   }
 
   public game(id: GameID): GameServer | null {
-    return this.games.get(id);
+    return this.games.get(id) ?? null;
   }
 
   addClient(client: Client, gameID: GameID, lastTurn: number): boolean {
@@ -28,20 +28,33 @@ export class GameManager {
     return false;
   }
 
-  createGame(id: GameID, gameConfig: GameConfig | undefined) {
-    const game = new GameServer(id, this.log, Date.now(), this.config, {
-      gameMap: GameMapType.World,
-      gameType: GameType.Private,
-      difficulty: Difficulty.Medium,
-      disableNPCs: false,
-      disableNukes: false,
-      infiniteGold: false,
-      infiniteTroops: false,
-      instantBuild: false,
-      gameMode: GameMode.FFA,
-      bots: 400,
-      ...gameConfig,
-    });
+  createGame(
+    id: GameID,
+    gameConfig: GameConfig | undefined,
+    creatorClientID?: string,
+  ) {
+    const game = new GameServer(
+      id,
+      this.log,
+      Date.now(),
+      this.config,
+      {
+        donateGold: false,
+        donateTroops: false,
+        gameMap: GameMapType.World,
+        gameType: GameType.Private,
+        difficulty: Difficulty.Medium,
+        disableNPCs: false,
+        infiniteGold: false,
+        infiniteTroops: false,
+        instantBuild: false,
+        gameMode: GameMode.FFA,
+        bots: 400,
+        disabledUnits: [],
+        ...gameConfig,
+      },
+      creatorClientID,
+    );
     this.games.set(id, game);
     return game;
   }
@@ -62,7 +75,7 @@ export class GameManager {
     const active = new Map<GameID, GameServer>();
     for (const [id, game] of this.games) {
       const phase = game.phase();
-      if (phase == GamePhase.Active) {
+      if (phase === GamePhase.Active) {
         if (!game.hasStarted()) {
           // Prestart tells clients to start loading the game.
           game.prestart();
@@ -77,7 +90,7 @@ export class GameManager {
         }
       }
 
-      if (phase == GamePhase.Finished) {
+      if (phase === GamePhase.Finished) {
         try {
           game.end();
         } catch (error) {

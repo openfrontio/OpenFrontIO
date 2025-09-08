@@ -1,9 +1,10 @@
 import { Colord } from "colord";
-import { GameConfig, GameID } from "../Schemas";
+import { JWK } from "jose";
 import {
   Difficulty,
   Game,
   GameMapType,
+  GameMode,
   Gold,
   Player,
   PlayerInfo,
@@ -16,6 +17,8 @@ import {
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import { NukeType } from "../StatsSchemas";
 
 export enum GameEnv {
   Dev,
@@ -26,15 +29,17 @@ export enum GameEnv {
 export interface ServerConfig {
   turnIntervalMs(): number;
   gameCreationRate(): number;
-  lobbyMaxPlayers(map: GameMapType): number;
-  discordRedirectURI(): string;
+  lobbyMaxPlayers(
+    map: GameMapType,
+    mode: GameMode,
+    numPlayerTeams: TeamCountConfig | undefined,
+  ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;
   workerPort(gameID: GameID): number;
   workerPortByIndex(workerID: number): number;
   env(): GameEnv;
-  region(): string;
   adminToken(): string;
   adminHeader(): string;
   // Only available on the server
@@ -43,6 +48,20 @@ export interface ServerConfig {
   r2Endpoint(): string;
   r2AccessKey(): string;
   r2SecretKey(): string;
+  otelEndpoint(): string;
+  otelAuthHeader(): string;
+  otelEnabled(): boolean;
+  jwtAudience(): string;
+  jwtIssuer(): string;
+  jwkPublicKey(): Promise<JWK>;
+  domain(): string;
+  subdomain(): string;
+  cloudflareAccountId(): string;
+  cloudflareApiToken(): string;
+  cloudflareConfigPath(): string;
+  cloudflareCredsPath(): string;
+  stripePublishableKey(): string;
+  allowedFlares(): string[] | undefined;
 }
 
 export interface NukeMagnitude {
@@ -52,6 +71,7 @@ export interface NukeMagnitude {
 
 export interface Config {
   samHittingChance(): number;
+  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -59,19 +79,20 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
-  disableNukes(): boolean;
+  isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
+  donateGold(): boolean;
   infiniteTroops(): boolean;
+  donateTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
-  numPlayerTeams(): number;
+  playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;
-  populationIncreaseRate(player: Player | PlayerView): number;
-  goldAdditionRate(player: Player | PlayerView): number;
-  troopAdjustmentRate(player: Player): number;
+  troopIncreaseRate(player: Player | PlayerView): number;
+  goldAdditionRate(player: Player | PlayerView): Gold;
   attackTilesPerTick(
     attckTroops: number,
     attacker: Player,
@@ -94,43 +115,76 @@ export interface Config {
   // When computing likelihood of trading for any given port, the X closest port
   // are twice more likely to be selected. X is determined below.
   proximityBonusPortsNb(totalPorts: number): number;
-  maxPopulation(player: Player | PlayerView): number;
-  cityPopulationIncrease(): number;
+  maxTroops(player: Player | PlayerView): number;
+  cityTroopIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
-  warshipShellLifetime(): number;
+  shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
+  allianceRequestDuration(): Tick;
   allianceRequestCooldown(): Tick;
+  temporaryEmbargoDuration(): Tick;
   targetDuration(): Tick;
   targetCooldown(): Tick;
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
-  tradeShipGold(dist: number): Gold;
-  tradeShipSpawnRate(numberOfPorts: number): number;
+  tradeShipGold(dist: number, numPorts: number): Gold;
+  tradeShipSpawnRate(
+    numTradeShips: number,
+    numPlayerPorts: number,
+    numPlayerTradeShips: number,
+  ): number;
+  trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
+  trainSpawnRate(numPlayerFactories: number): number;
+  trainStationMinRange(): number;
+  trainStationMaxRange(): number;
+  railroadMaxSize(): number;
+  safeFromPiratesCooldownMax(): number;
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
   defensePostDefenseBonus(): number;
+  defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
+  warshipPatrolRange(): number;
+  warshipShellAttackRate(): number;
+  warshipTargettingRange(): number;
+  defensePostShellAttackRate(): number;
+  defensePostTargettingRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
+  // Number of tiles destroyed to break an alliance
+  nukeAllianceBreakThreshold(): number;
   defaultNukeSpeed(): number;
-  nukeDeathFactor(humans: number, tilesOwned: number): number;
+  defaultNukeTargetableRange(): number;
+  defaultSamMissileSpeed(): number;
+  defaultSamRange(): number;
+  nukeDeathFactor(
+    nukeType: NukeType,
+    humans: number,
+    tilesOwned: number,
+    maxTroops: number,
+  ): number;
+  structureMinDist(): number;
+  isReplay(): boolean;
+  allianceExtensionPromptOffset(): number;
 }
 
 export interface Theme {
   teamColor(team: Team): Colord;
   territoryColor(playerInfo: PlayerView): Colord;
   specialBuildingColor(playerInfo: PlayerView): Colord;
+  railroadColor(playerInfo: PlayerView): Colord;
   borderColor(playerInfo: PlayerView): Colord;
-  defendedBorderColor(playerInfo: PlayerView): Colord;
+  defendedBorderColors(playerInfo: PlayerView): { light: Colord; dark: Colord };
   focusedBorderColor(): Colord;
-  focusedDefendedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;
@@ -139,6 +193,7 @@ export interface Theme {
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;
+  neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
 }

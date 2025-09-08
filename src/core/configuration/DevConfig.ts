@@ -5,9 +5,6 @@ import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
-  r2Bucket(): string {
-    return "openfront-staging";
-  }
   adminToken(): string {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }
@@ -20,24 +17,41 @@ export class DevServerConfig extends DefaultServerConfig {
     return 5 * 1000;
   }
 
-  lobbyMaxPlayers(): number {
-    return Math.random() < 0.5 ? 2 : 3;
+  samWarheadHittingChance(): number {
+    return 1;
   }
 
-  discordRedirectURI(): string {
-    return "http://localhost:3000/auth/callback";
+  samHittingChance(): number {
+    return 1;
   }
+
   numWorkers(): number {
     return 2;
+  }
+  jwtAudience(): string {
+    return "localhost";
   }
   gitCommit(): string {
     return "DEV";
   }
+
+  domain(): string {
+    return "localhost";
+  }
+
+  subdomain(): string {
+    return "";
+  }
 }
 
 export class DevConfig extends DefaultConfig {
-  constructor(sc: ServerConfig, gc: GameConfig, us: UserSettings) {
-    super(sc, gc, us);
+  constructor(
+    sc: ServerConfig,
+    gc: GameConfig,
+    us: UserSettings | null,
+    isReplay: boolean,
+  ) {
+    super(sc, gc, us, isReplay);
   }
 
   // numSpawnPhaseTurns(): number {
@@ -58,10 +72,6 @@ export class DevConfig extends DefaultConfig {
 
   // percentageTilesOwnedToWin(): number {
   //     return 1
-  // }
-
-  // populationIncreaseRate(player: Player): number {
-  //     return this.maxPopulation(player)
   // }
 
   // boatMaxDistance(): number {

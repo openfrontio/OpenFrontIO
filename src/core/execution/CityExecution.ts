@@ -1,51 +1,38 @@
-import { consolex } from "../Consolex";
-import {
-  Execution,
-  Game,
-  Player,
-  PlayerID,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { TrainStationExecution } from "./TrainStationExecution";
 
 export class CityExecution implements Execution {
-  private player: Player;
   private mg: Game;
-  private city: Unit;
+  private city: Unit | null = null;
   private active: boolean = true;
 
   constructor(
-    private ownerId: PlayerID,
+    private player: Player,
     private tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    if (!mg.hasPlayer(this.ownerId)) {
-      console.warn(`CityExecution: player ${this.ownerId} not found`);
-      this.active = false;
-      return;
-    }
-    this.player = mg.player(this.ownerId);
   }
 
   tick(ticks: number): void {
-    if (this.city == null) {
+    if (this.city === null) {
       const spawnTile = this.player.canBuild(UnitType.City, this.tile);
-      if (spawnTile == false) {
-        consolex.warn("cannot build city");
+      if (spawnTile === false) {
+        console.warn("cannot build city");
         this.active = false;
         return;
       }
-      this.city = this.player.buildUnit(UnitType.City, 0, spawnTile);
+      this.city = this.player.buildUnit(UnitType.City, spawnTile, {});
+      this.createStation();
     }
     if (!this.city.isActive()) {
       this.active = false;
       return;
     }
 
-    if (this.player != this.city.owner()) {
+    if (this.player !== this.city.owner()) {
       this.player = this.city.owner();
     }
   }
@@ -56,5 +43,18 @@ export class CityExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  createStation(): void {
+    if (this.city !== null) {
+      const nearbyFactory = this.mg.hasUnitNearby(
+        this.city.tile()!,
+        this.mg.config().trainStationMaxRange(),
+        UnitType.Factory,
+      );
+      if (nearbyFactory) {
+        this.mg.addExecution(new TrainStationExecution(this.city));
+      }
+    }
   }
 }

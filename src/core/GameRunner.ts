@@ -4,10 +4,12 @@ import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
-  BuildableUnit,
+  Attack,
+  Cell,
   Game,
   GameUpdates,
   NameViewData,
+  Nation,
   Player,
   PlayerActions,
   PlayerBorderTiles,
@@ -15,46 +17,64 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
-  UnitType,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
+import { TileRef } from "./game/GameMap";
+import { GameMapLoader } from "./game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
 } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
+import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
-import { sanitize } from "./Util";
+import { sanitize, simpleHash } from "./Util";
 import { fixProfaneUsername } from "./validations/username";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
   clientID: ClientID,
-  callBack: (gu: GameUpdateViewData) => void,
+  mapLoader: GameMapLoader,
+  callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
-  const gameMap = await loadGameMap(gameStart.config.gameMap);
-  const game = createGame(
-    gameStart.players.map(
-      (p) =>
-        new PlayerInfo(
-          p.flag,
-          p.clientID == clientID
-            ? sanitize(p.username)
-            : fixProfaneUsername(sanitize(p.username)),
-          PlayerType.Human,
-          p.clientID,
-          p.playerID,
-        ),
-    ),
+  const gameMap = await loadGameMap(gameStart.config.gameMap, mapLoader);
+  const random = new PseudoRandom(simpleHash(gameStart.gameID));
+
+  const humans = gameStart.players.map(
+    (p) =>
+      new PlayerInfo(
+        p.clientID === clientID
+          ? sanitize(p.username)
+          : fixProfaneUsername(sanitize(p.username)),
+        PlayerType.Human,
+        p.clientID,
+        random.nextID(),
+      ),
+  );
+
+  const nations = gameStart.config.disableNPCs
+    ? []
+    : gameMap.manifest.nations.map(
+        (n) =>
+          new Nation(
+            new Cell(n.coordinates[0], n.coordinates[1]),
+            n.strength,
+            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+          ),
+      );
+
+  const game: Game = createGame(
+    humans,
+    nations,
     gameMap.gameMap,
     gameMap.miniGameMap,
-    gameMap.nationMap,
     config,
   );
+
   const gr = new GameRunner(
-    game as Game,
+    game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
   );
@@ -116,23 +136,25 @@ export class GameRunner {
           errMsg: error.message,
           stack: error.stack,
         } as ErrorUpdate);
-        return;
+      } else {
+        console.error("Game tick error:", error);
       }
+      return;
     }
 
-    if (this.game.inSpawnPhase() && this.game.ticks() % 2 == 0) {
+    if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
       this.game
         .players()
         .filter(
           (p) =>
-            p.type() == PlayerType.Human || p.type() == PlayerType.FakeHuman,
+            p.type() === PlayerType.Human || p.type() === PlayerType.FakeHuman,
         )
         .forEach(
           (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
         );
     }
 
-    if (this.game.ticks() < 3 || this.game.ticks() % 30 == 0) {
+    if (this.game.ticks() < 3 || this.game.ticks() % 30 === 0) {
       this.game.players().forEach((p) => {
         this.playerViewData[p.id()] = placeName(this.game, p);
       });
@@ -159,15 +181,8 @@ export class GameRunner {
     const player = this.game.player(playerID);
     const tile = this.game.ref(x, y);
     const actions = {
-      canBoat: player.canBoat(tile),
       canAttack: player.canAttack(tile),
-      buildableUnits: Object.values(UnitType).map((u) => {
-        return {
-          type: u,
-          canBuild: player.canBuild(u, tile) != false,
-          cost: this.game.config().unitInfo(u).cost(player),
-        } as BuildableUnit;
-      }),
+      buildableUnits: player.buildableUnits(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 
@@ -179,13 +194,19 @@ export class GameRunner {
         canTarget: player.canTarget(other),
         canSendAllianceRequest: player.canSendAllianceRequest(other),
         canBreakAlliance: player.isAlliedWith(other),
-        canDonate: player.canDonate(other),
+        canDonateGold: player.canDonateGold(other),
+        canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
       };
+      const alliance = player.allianceWith(other as Player);
+      if (alliance) {
+        actions.interaction.allianceExpiresAt = alliance.expiresAt();
+      }
     }
 
     return actions;
   }
+
   public playerProfile(playerID: number): PlayerProfile {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
@@ -201,5 +222,36 @@ export class GameRunner {
     return {
       borderTiles: player.borderTiles(),
     } as PlayerBorderTiles;
+  }
+
+  public attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Cell | null {
+    const player = this.game.playerBySmallID(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+
+    const condition = (a: Attack) => a.id() === attackID;
+    const attack =
+      player.outgoingAttacks().find(condition) ??
+      player.incomingAttacks().find(condition);
+    if (attack === undefined) {
+      return null;
+    }
+
+    return attack.averagePosition();
+  }
+
+  public bestTransportShipSpawn(
+    playerID: PlayerID,
+    targetTile: TileRef,
+  ): TileRef | false {
+    const player = this.game.player(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+    return player.bestTransportShipSpawn(targetTile);
   }
 }

@@ -29,7 +29,9 @@ export class TerrainLayer implements Layer {
 
   redraw(): void {
     this.canvas = document.createElement("canvas");
-    this.context = this.canvas.getContext("2d");
+    const context = this.canvas.getContext("2d");
+    if (context === null) throw new Error("2d context not supported");
+    this.context = context;
 
     this.imageData = this.context.getImageData(
       0,

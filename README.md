@@ -1,5 +1,3 @@
-# OpenFrontIO
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="resources/images/OpenFrontLogoDark.svg">
@@ -8,19 +6,15 @@
   </picture>
 </p>
 
-![Prettier Check](https://github.com/openfrontio/OpenFrontIO/actions/workflows/prettier.yml/badge.svg)
-[![Crowdin](https://badges.crowdin.net/openfront-mls/localized.svg)](https://crowdin.com/project/openfront-mls)
-
-OpenFront is an online real-time strategy game focused on territorial control and alliance building. Players compete to expand their territory, build structures, and form strategic alliances in various maps based on real-world geography.
+[OpenFront.io](https://openfront.io/) is an online real-time strategy game focused on territorial control and alliance building. Players compete to expand their territory, build structures, and form strategic alliances in various maps based on real-world geography.
 
 This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
-# OpenFront - Licensing
-
-This project uses a dual-licensing approach:
-
-- Code in the `server/` and `core/` directory is licensed under MIT
-- Client code (in the `client/` directory) is licensed under GPL v3
+![CI](https://github.com/openfrontio/OpenFrontIO/actions/workflows/ci.yml/badge.svg)
+[![Crowdin](https://badges.crowdin.net/openfront-mls/localized.svg)](https://crowdin.com/project/openfront-mls)
+[![CLA assistant](https://cla-assistant.io/readme/badge/openfrontio/OpenFrontIO)](https://cla-assistant.io/openfrontio/OpenFrontIO)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Assets: CC BY-SA 4.0](https://img.shields.io/badge/Assets-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
 
 ## 🌟 Features
 
@@ -97,8 +91,14 @@ npm run start:server-dev
   ```
 
 - **Lint and fix code**:
+
   ```bash
   npm run lint:fix
+  ```
+
+- **Testing**
+  ```bash
+  npm test
   ```
 
 ## 🏗️ Project Structure
@@ -116,21 +116,23 @@ This project is licensed under the terms found in the [LICENSE](LICENSE) file.
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+1. Request to join the development [Discord](https://discord.gg/K9zernJB5z).
 1. Fork the repository
-2. Create your feature branch (`git checkout -b amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin amazing-feature`)
-5. Open a Pull Request
+1. Create your feature branch (`git checkout -b amazing-feature`)
+1. Commit your changes (`git commit -m 'Add some amazing feature'`)
+1. Push to the branch (`git push origin amazing-feature`)
+1. Open a Pull Request
 
 ## 🌐 Translation
 
 Translators are welcome! Please feel free to help translate into your language.
 How to help?
 
+1. Request to join the dev [Discord](https://discord.gg/K9zernJB5z) (in the application form, say you want to help translate)
 1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
-2. Login if you already have an account/ Sign up if you don't have one
-3. Select the language you want to translate in/ If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
-4. Translate the strings
+1. Login if you already have an account/ Sign up if you don't have one
+1. Select the language you want to translate in/ If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
+1. Translate the strings
 
 ### Project Governance
 

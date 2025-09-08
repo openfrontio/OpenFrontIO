@@ -1,29 +1,23 @@
 import { Colord, colord } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
-import { simpleHash } from "../Util";
 import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
-import {
-  blue,
-  botColor,
-  botColors,
-  green,
-  humanColors,
-  orange,
-  purple,
-  red,
-  teal,
-  territoryColors,
-  yellow,
-} from "./Colors";
+import { ColorAllocator } from "./ColorAllocator";
+import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Config";
 
-export const pastelThemeDark = new (class implements Theme {
+type ColorCache = Map<string, Colord>;
+
+export class PastelThemeDark implements Theme {
+  private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
+  private humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private botColorAllocator = new ColorAllocator(botColors, botColors);
+  private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
+  private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
   private background = colord({ r: 0, g: 0, b: 0 });
-  private land = colord({ r: 194, g: 193, b: 148 });
   private shore = colord({ r: 134, g: 133, b: 88 });
   private falloutColors = [
     colord({ r: 120, g: 255, b: 71 }), // Original color
@@ -37,47 +31,31 @@ export const pastelThemeDark = new (class implements Theme {
 
   private _selfColor = colord({ r: 0, g: 255, b: 0 });
   private _allyColor = colord({ r: 255, g: 255, b: 0 });
+  private _neutralColor = colord({ r: 128, g: 128, b: 128 });
   private _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
 
   teamColor(team: Team): Colord {
-    switch (team) {
-      case Team.Blue:
-        return blue;
-      case Team.Red:
-        return red;
-      case Team.Teal:
-        return teal;
-      case Team.Purple:
-        return purple;
-      case Team.Yellow:
-        return yellow;
-      case Team.Orange:
-        return orange;
-      case Team.Green:
-        return green;
-      case Team.Bot:
-        return botColor;
-    }
-    throw new Error(`Missing color for ${team}`);
+    return this.teamColorAllocator.assignTeamColor(team);
   }
 
   territoryColor(player: PlayerView): Colord {
-    if (player.team() !== null) {
-      return this.teamColor(player.team());
+    const team = player.team();
+    if (team !== null) {
+      return this.teamColorAllocator.assignTeamPlayerColor(team, player.id());
     }
-    if (player.info().playerType == PlayerType.Human) {
-      return humanColors[simpleHash(player.id()) % humanColors.length];
+    if (player.type() === PlayerType.Human) {
+      return this.humanColorAllocator.assignColor(player.id());
     }
-    if (player.info().playerType == PlayerType.Bot) {
-      return botColors[simpleHash(player.id()) % botColors.length];
+    if (player.type() === PlayerType.Bot) {
+      return this.botColorAllocator.assignColor(player.id());
     }
-    return territoryColors[simpleHash(player.id()) % territoryColors.length];
+    return this.nationColorAllocator.assignColor(player.id());
   }
 
   textColor(player: PlayerView): string {
-    return player.info().playerType == PlayerType.Human ? "#ffffff" : "#e6e6e6";
+    return player.type() === PlayerType.Human ? "#ffffff" : "#e6e6e6";
   }
 
   specialBuildingColor(player: PlayerView): Colord {
@@ -89,28 +67,40 @@ export const pastelThemeDark = new (class implements Theme {
     });
   }
 
-  borderColor(player: PlayerView): Colord {
+  railroadColor(player: PlayerView): Colord {
     const tc = this.territoryColor(player).rgba;
-    return colord({
+    const color = colord({
+      r: Math.max(tc.r - 10, 0),
+      g: Math.max(tc.g - 10, 0),
+      b: Math.max(tc.b - 10, 0),
+    });
+    return color;
+  }
+
+  borderColor(player: PlayerView): Colord {
+    if (this.borderColorCache.has(player.id())) {
+      return this.borderColorCache.get(player.id())!;
+    }
+    const tc = this.territoryColor(player).rgba;
+    const color = colord({
       r: Math.max(tc.r - 40, 0),
       g: Math.max(tc.g - 40, 0),
       b: Math.max(tc.b - 40, 0),
     });
+
+    this.borderColorCache.set(player.id(), color);
+    return color;
   }
-  defendedBorderColor(player: PlayerView): Colord {
-    const bc = this.borderColor(player).rgba;
-    return colord({
-      r: Math.max(bc.r - 40, 0),
-      g: Math.max(bc.g - 40, 0),
-      b: Math.max(bc.b - 40, 0),
-    });
+
+  defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
+    return {
+      light: this.territoryColor(player).darken(0.2),
+      dark: this.territoryColor(player).darken(0.4),
+    };
   }
 
   focusedBorderColor(): Colord {
     return colord({ r: 255, g: 255, b: 255 });
-  }
-  focusedDefendedBorderColor(): Colord {
-    return colord({ r: 215, g: 215, b: 215 });
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
@@ -172,6 +162,9 @@ export const pastelThemeDark = new (class implements Theme {
   allyColor(): Colord {
     return this._allyColor;
   }
+  neutralColor(): Colord {
+    return this._neutralColor;
+  }
   enemyColor(): Colord {
     return this._enemyColor;
   }
@@ -179,4 +172,4 @@ export const pastelThemeDark = new (class implements Theme {
   spawnHighlightColor(): Colord {
     return this._spawnHighlightColor;
   }
-})();
+}
