@@ -373,9 +373,9 @@ export class Transport {
     } satisfies ClientJoinMessage);
   }
 
-  leaveGame(saveFullGame: boolean = false) {
+  leaveGame() {
     if (this.isLocal) {
-      this.localServer.endGame(saveFullGame);
+      this.localServer.endGame();
       return;
     }
     this.stopPing();

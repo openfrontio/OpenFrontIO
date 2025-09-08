@@ -271,7 +271,7 @@ export class ClientGameRunner {
           this.lobby.clientID,
         );
         console.error(gu.stack);
-        this.stop(true);
+        this.stop();
         return;
       }
       this.transport.turnComplete();
@@ -361,12 +361,12 @@ export class ClientGameRunner {
     this.transport.connect(onconnect, onmessage);
   }
 
-  public stop(saveFullGame: boolean = false) {
+  public stop() {
     if (!this.isActive) return;
 
     this.isActive = false;
     this.worker.cleanup();
-    this.transport.leaveGame(saveFullGame);
+    this.transport.leaveGame();
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;

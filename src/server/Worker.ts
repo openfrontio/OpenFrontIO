@@ -1,3 +1,4 @@
+import compression from "compression";
 import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
@@ -81,6 +82,7 @@ export async function startWorker() {
   });
 
   app.set("trust proxy", 3);
+  app.use(compression());
   app.use(express.json());
   app.use(express.static(path.join(__dirname, "../../out")));
   app.use(
@@ -247,18 +249,36 @@ export async function startWorker() {
   });
 
   app.post("/api/archive_singleplayer_game", async (req, res) => {
-    const result = GameRecordSchema.safeParse(req.body);
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      log.info(error);
-      return res.status(400).json({ error });
-    }
+    try {
+      const record = req.body;
 
-    const gameRecord: GameRecord = result.data;
-    archive(gameRecord);
-    res.json({
-      success: true,
-    });
+      const result = GameRecordSchema.safeParse(record);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        log.info(error);
+        return res.status(400).json({ error });
+      }
+      if (result.data.info.config.gameType !== GameType.Singleplayer) {
+        log.warn(
+          `cannot archive singleplayer with game type ${result.data.info.config.gameType}`,
+        );
+        return res.status(400).json({ error: "Invalid game" });
+      }
+
+      if (result.data.info.players.length !== 1) {
+        log.warn(`cannot archive singleplayer game multiple players`);
+        return res.status(400).json({ error: "Invalid game" });
+      }
+
+      const gameRecord: GameRecord = result.data;
+      archive(gameRecord);
+      res.json({
+        success: true,
+      });
+    } catch (error) {
+      log.error("Error processing archive request:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 
   app.post("/api/kick_player/:gameID/:clientID", async (req, res) => {

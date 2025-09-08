@@ -103,8 +103,10 @@ export class LocalServer {
     }
     if (clientMsg.type === "hash") {
       if (!this.lobbyConfig.gameRecord) {
-        // If we are playing a singleplayer then store hash.
-        this.turns[clientMsg.turnNumber].hash = clientMsg.hash;
+        if (clientMsg.turnNumber % 100 === 0) {
+          // Only store hash every 100 turns to keep the data size down.
+          this.turns[clientMsg.turnNumber].hash = clientMsg.hash;
+        }
         return;
       }
       // If we are replaying a game then verify hash.
@@ -169,7 +171,7 @@ export class LocalServer {
     });
   }
 
-  public endGame(saveFullGame: boolean = false) {
+  public endGame() {
     console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
     if (this.isReplay) {
@@ -196,23 +198,65 @@ export class LocalServer {
       this.winner?.winner,
       this.lobbyConfig.serverConfig,
     );
-    if (!saveFullGame) {
-      // Clear turns because beacon only supports up to 64kb
-      record.turns = [];
-    }
-    // For unload events, sendBeacon is the only reliable method
+
     const result = GameRecordSchema.safeParse(record);
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Error parsing game record", error);
       return;
     }
-    const blob = new Blob([JSON.stringify(result.data, replacer)], {
-      type: "application/json",
-    });
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameStartInfo.gameID,
     );
-    navigator.sendBeacon(`/${workerPath}/api/archive_singleplayer_game`, blob);
+
+    const jsonString = JSON.stringify(result.data, replacer);
+
+    compress(jsonString)
+      .then((compressedData) => {
+        return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Encoding": "gzip",
+          },
+          body: compressedData,
+          keepalive: true, // Ensures request completes even if page unloads
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to archive singleplayer game:", error);
+      });
   }
+}
+
+async function compress(data: string): Promise<Uint8Array> {
+  const stream = new CompressionStream("gzip");
+  const writer = stream.writable.getWriter();
+  const reader = stream.readable.getReader();
+
+  // Write the data to the compression stream
+  writer.write(new TextEncoder().encode(data));
+  writer.close();
+
+  // Read the compressed data
+  const chunks: Uint8Array[] = [];
+  let done = false;
+  while (!done) {
+    const { value, done: readerDone } = await reader.read();
+    done = readerDone;
+    if (value) {
+      chunks.push(value);
+    }
+  }
+
+  // Combine all chunks into a single Uint8Array
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const compressedData = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    compressedData.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return compressedData;
 }
