@@ -85,8 +85,9 @@ export class OModal extends LitElement {
     return html`
       ${this.isModalOpen
         ? html`
-            <aside class="c-modal">
+            <aside class="c-modal" @click=${this.close}>
               <div
+                @click=${(e: Event) => e.stopPropagation()}
                 class="c-modal__wrapper ${this.alwaysMaximized
                   ? "always-maximized"
                   : ""}"
