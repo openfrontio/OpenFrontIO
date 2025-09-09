@@ -104,7 +104,7 @@ export class LocalServer {
     if (clientMsg.type === "hash") {
       if (!this.lobbyConfig.gameRecord) {
         if (clientMsg.turnNumber % 100 === 0) {
-          // Only store hash every 100 turns to keep the data size down.
+          // In singleplayer, only store hash every 100 turns to reduce size of game record.
           this.turns[clientMsg.turnNumber].hash = clientMsg.hash;
         }
         return;
