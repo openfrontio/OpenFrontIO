@@ -11,7 +11,11 @@ import {
   ServerStartGameMessage,
   Turn,
 } from "../core/Schemas";
-import { createGameRecord, decompressGameRecord, replacer } from "../core/Util";
+import {
+  createPartialGameRecord,
+  decompressGameRecord,
+  replacer,
+} from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
 import { getPersistentID } from "./Main";
@@ -188,7 +192,7 @@ export class LocalServer {
     if (this.lobbyConfig.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
-    const record = createGameRecord(
+    const record = createPartialGameRecord(
       this.lobbyConfig.gameStartInfo.gameID,
       this.lobbyConfig.gameStartInfo.config,
       players,
@@ -196,7 +200,6 @@ export class LocalServer {
       this.startedAt,
       Date.now(),
       this.winner?.winner,
-      this.lobbyConfig.serverConfig,
     );
 
     const result = GameRecordSchema.safeParse(record);

@@ -8,7 +8,7 @@ import {
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
+import { createPartialGameRecord } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { PlayerActions, UnitType } from "../core/game/Game";
@@ -221,7 +221,7 @@ export class ClientGameRunner {
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
-    const record = createGameRecord(
+    const record = createPartialGameRecord(
       this.lobby.gameStartInfo.gameID,
       this.lobby.gameStartInfo.config,
       players,
@@ -230,7 +230,6 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       update.winner,
-      this.lobby.serverConfig,
     );
     endGame(record);
   }

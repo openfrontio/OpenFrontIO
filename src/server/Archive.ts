@@ -1,5 +1,11 @@
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameID, GameRecord, GameRecordSchema, ID } from "../core/Schemas";
+import {
+  GameID,
+  GameRecord,
+  GameRecordSchema,
+  ID,
+  PartialGameRecord,
+} from "../core/Schemas";
 import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
@@ -61,4 +67,15 @@ export async function readGameRecord(
     });
     return null;
   }
+}
+
+export function finalizeGameRecord(
+  clientRecord: PartialGameRecord,
+): GameRecord {
+  return {
+    ...clientRecord,
+    gitCommit: config.gitCommit(),
+    subdomain: config.subdomain(),
+    domain: config.domain(),
+  };
 }

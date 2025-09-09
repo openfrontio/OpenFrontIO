@@ -2,6 +2,8 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
+import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -19,10 +21,8 @@ import {
   ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
-import { archive } from "./Archive";
+import { createPartialGameRecord } from "../core/Util";
+import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -680,15 +680,16 @@ export class GameServer {
       },
     );
     archive(
-      createGameRecord(
-        this.id,
-        this.gameStartInfo.config,
-        playerRecords,
-        this.turns,
-        this._startTime ?? 0,
-        Date.now(),
-        this.winner?.winner,
-        this.config,
+      finalizeGameRecord(
+        createPartialGameRecord(
+          this.id,
+          this.gameStartInfo.config,
+          playerRecords,
+          this.turns,
+          this._startTime ?? 0,
+          Date.now(),
+          this.winner?.winner,
+        ),
       ),
     );
   }

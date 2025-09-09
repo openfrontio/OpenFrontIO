@@ -6,12 +6,12 @@ import {
   GameConfig,
   GameID,
   GameRecord,
+  PartialGameRecord,
   PlayerRecord,
   Turn,
   Winner,
 } from "./Schemas";
 
-import { ServerConfig } from "./configuration/Config";
 import {
   BOT_NAME_PREFIXES,
   BOT_NAME_SUFFIXES,
@@ -150,7 +150,7 @@ export function onlyImages(html: string) {
   });
 }
 
-export function createGameRecord(
+export function createPartialGameRecord(
   gameID: GameID,
   config: GameConfig,
   // username does not need to be set.
@@ -159,18 +159,13 @@ export function createGameRecord(
   start: number,
   end: number,
   winner: Winner,
-  serverConfig: ServerConfig,
-): GameRecord {
+): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
-  const version = "v0.0.2";
-  const gitCommit = serverConfig.gitCommit();
-  const subdomain = serverConfig.subdomain();
-  const domain = serverConfig.domain();
   const num_turns = allTurns.length;
   const turns = allTurns.filter(
     (t) => t.intents.length !== 0 || t.hash !== undefined,
   );
-  const record: GameRecord = {
+  const record: PartialGameRecord = {
     info: {
       gameID,
       config,
@@ -181,10 +176,7 @@ export function createGameRecord(
       num_turns,
       winner,
     },
-    version,
-    gitCommit,
-    subdomain,
-    domain,
+    version: "v0.0.2",
     turns,
   };
   return record;

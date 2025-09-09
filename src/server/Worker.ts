@@ -12,13 +12,12 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
-  GameRecord,
-  GameRecordSchema,
   ID,
+  PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
-import { archive, readGameRecord } from "./Archive";
+import { archive, finalizeGameRecord, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
@@ -252,13 +251,13 @@ export async function startWorker() {
     try {
       const record = req.body;
 
-      const result = GameRecordSchema.safeParse(record);
+      const result = PartialGameRecordSchema.safeParse(record);
       if (!result.success) {
         const error = z.prettifyError(result.error);
         log.info(error);
         return res.status(400).json({ error });
       }
-      const gameRecord: GameRecord = result.data;
+      const gameRecord = result.data;
 
       if (gameRecord.info.config.gameType !== GameType.Singleplayer) {
         log.warn(
@@ -277,7 +276,7 @@ export async function startWorker() {
         return res.status(400).json({ error: "Invalid request" });
       }
 
-      archive(gameRecord);
+      archive(finalizeGameRecord(gameRecord));
       res.json({
         success: true,
       });
