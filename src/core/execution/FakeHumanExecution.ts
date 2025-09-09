@@ -162,6 +162,11 @@ export class FakeHumanExecution implements Execution {
     this.maybeAttack();
   }
 
+  private maybeConsiderBetrayal(target: Player): boolean {
+    //TODO implement betrayal logic
+    return true;
+  }
+
   private maybeAttack() {
     if (this.player === null || this.behavior === null) {
       throw new Error("not initialized");
@@ -209,7 +214,16 @@ export class FakeHumanExecution implements Execution {
     const toAttack = this.random.chance(2)
       ? enemies[0]
       : this.random.randElement(enemies);
-    if (this.shouldAttack(toAttack)) {
+
+    // First consider betrayal, then normal attack logic
+    if (
+      this.player.isAlliedWith(toAttack) &&
+      this.maybeConsiderBetrayal(toAttack)
+    ) {
+      // Alliance was broken if we got here
+      this.behavior.sendAttack(toAttack);
+      return;
+    } else if (this.shouldAttack(toAttack)) {
       this.behavior.sendAttack(toAttack);
       return;
     }
@@ -229,9 +243,16 @@ export class FakeHumanExecution implements Execution {
 
   private shouldAttack(other: Player): boolean {
     if (this.player === null) throw new Error("not initialized");
+
     if (this.player.isOnSameTeam(other)) {
       return false;
     }
+
+    // Consider betrayal for allies
+    if (this.player.isAlliedWith(other)) {
+      return this.maybeConsiderBetrayal(other);
+    }
+
     if (this.player.isFriendly(other)) {
       if (this.shouldDiscourageAttack(other)) {
         return this.random.chance(200);
@@ -397,7 +418,7 @@ export class FakeHumanExecution implements Execution {
 
   private maybeSendBoatAttack(other: Player) {
     if (this.player === null) throw new Error("not initialized");
-    if (this.player.isOnSameTeam(other)) return;
+    if (this.player.isFriendly(other)) return;
     const closest = closestTwoTiles(
       this.mg,
       Array.from(this.player.borderTiles()).filter((t) =>
