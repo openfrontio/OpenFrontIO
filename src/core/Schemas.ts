@@ -492,7 +492,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 //
 
 export const PlayerRecordSchema = PlayerSchema.extend({
-  persistentID: PersistentIdSchema, // WARNING: PII
+  persistentID: PersistentIdSchema.nullable(), // WARNING: PII
   stats: PlayerStatsSchema,
 });
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
@@ -512,16 +512,30 @@ const GitCommitSchema = z
   .regex(/^[0-9a-fA-F]{40}$/)
   .or(z.literal("DEV"));
 
-export const AnalyticsRecordSchema = z.object({
+export const PartialAnalyticsRecordSchema = z.object({
   info: GameEndInfoSchema,
   version: z.literal("v0.0.2"),
+});
+export type ClientAnalyticsRecord = z.infer<
+  typeof PartialAnalyticsRecordSchema
+>;
+
+export const AnalyticsRecordSchema = PartialAnalyticsRecordSchema.extend({
   gitCommit: GitCommitSchema,
   subdomain: z.string(),
   domain: z.string(),
 });
+
 export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 
 export const GameRecordSchema = AnalyticsRecordSchema.extend({
   turns: TurnSchema.array(),
 });
+
+export const PartialGameRecordSchema = PartialAnalyticsRecordSchema.extend({
+  turns: TurnSchema.array(),
+});
+
+export type PartialGameRecord = z.infer<typeof PartialGameRecordSchema>;
+
 export type GameRecord = z.infer<typeof GameRecordSchema>;

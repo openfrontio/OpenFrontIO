@@ -1,5 +1,12 @@
+import z from "zod";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameID, GameRecord, GameRecordSchema, ID } from "../core/Schemas";
+import {
+  GameID,
+  GameRecord,
+  GameRecordSchema,
+  ID,
+  PartialGameRecord,
+} from "../core/Schemas";
 import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
@@ -8,7 +15,13 @@ const log = logger.child({ component: "Archive" });
 
 export async function archive(gameRecord: GameRecord) {
   try {
-    gameRecord.gitCommit = config.gitCommit();
+    const parsed = GameRecordSchema.safeParse(gameRecord);
+    if (!parsed.success) {
+      log.error(`invalid game record: ${z.prettifyError(parsed.error)}`, {
+        gameID: gameRecord.info.gameID,
+      });
+      return;
+    }
     const url = `${config.jwtIssuer()}/game/${gameRecord.info.gameID}`;
     const response = await fetch(url, {
       method: "POST",
@@ -61,4 +74,15 @@ export async function readGameRecord(
     });
     return null;
   }
+}
+
+export function finalizeGameRecord(
+  clientRecord: PartialGameRecord,
+): GameRecord {
+  return {
+    ...clientRecord,
+    gitCommit: config.gitCommit(),
+    subdomain: config.subdomain(),
+    domain: config.domain(),
+  };
 }
