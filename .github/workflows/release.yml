@@ -77,6 +77,7 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
@@ -133,6 +134,7 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
@@ -189,6 +191,7 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
@@ -245,6 +248,7 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
