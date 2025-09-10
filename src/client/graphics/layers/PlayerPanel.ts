@@ -45,32 +45,8 @@ export class PlayerPanel extends LitElement implements Layer {
   @state()
   private allianceExpiryText: string | null = null;
 
-  @state() private showTroopsModal = false;
-  @state() private sendTroopsAmount = 0;
-  @state() private sendTroopsKeepThirty = true;
-  private troopsTarget: PlayerView | null = null;
-
-  private closeTroopsModal() {
-    this.showTroopsModal = false;
-  }
-
-  private confirmSendTroops() {
-    if (!this.troopsTarget) return;
-
-    const myPlayer = this.g.myPlayer();
-    if (!myPlayer) return;
-
-    const amount = Math.max(0, Math.floor(this.sendTroopsAmount));
-    if (amount <= 0 || amount > myPlayer.troops()) return;
-
-    if (amount <= 0) return;
-    this.eventBus.emit(
-      new SendDonateTroopsIntentEvent(this.troopsTarget, amount),
-    );
-    this.showTroopsModal = false;
-    this.sendTroopsAmount = 0;
-    this.troopsTarget = null;
-  }
+  @state()
+  private allianceExpirySeconds: number | null = null;
 
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
@@ -109,39 +85,19 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
-  // private handleDonateTroopClick(
-  //   e: Event,
-  //   myPlayer: PlayerView,
-  //   other: PlayerView,
-  // ) {
-  //   e.stopPropagation();
-  //   this.eventBus.emit(
-  //     new SendDonateTroopsIntentEvent(
-  //       other,
-  //       myPlayer.troops() * this.uiState.attackRatio,
-  //     ),
-  //   );
-  //   this.hide();
-  // }
-
   private handleDonateTroopClick(
     e: Event,
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.troopsTarget = other;
-
-    const total = myPlayer.troops();
-    const minKeep = Math.floor(total * 0.3);
-    const maxSend = Math.max(0, total - minKeep);
-
-    this.sendTroopsKeepThirty = true; // default safe mode on
-    // default amount = 10% (clamped to maxSend)
-    const defaultAmount = Math.floor(total * 0.1);
-    this.sendTroopsAmount = Math.min(defaultAmount, maxSend);
-
-    this.showTroopsModal = true;
+    this.eventBus.emit(
+      new SendDonateTroopsIntentEvent(
+        other,
+        myPlayer.troops() * this.uiState.attackRatio,
+      ),
+    );
+    this.hide();
   }
 
   private handleDonateGoldClick(
@@ -244,14 +200,24 @@ export class PlayerPanel extends LitElement implements Layer {
               0,
               Math.floor(remainingTicks / 10),
             ); // 10 ticks per second
+            this.allianceExpirySeconds = remainingSeconds;
             this.allianceExpiryText = this.formatDuration(remainingSeconds);
           }
         } else {
+          this.allianceExpirySeconds = null;
           this.allianceExpiryText = null;
         }
         this.requestUpdate();
       }
     }
+  }
+
+  private getExpiryColorClass(seconds: number | null): string {
+    if (seconds === null) return "text-white";
+
+    if (seconds <= 30) return "text-red-400"; // Last 30 seconds: Red
+    if (seconds <= 60) return "text-yellow-400"; // Last 60 seconds: Yellow
+    return "text-emerald-400"; // More than 60 seconds: Green
   }
 
   private formatDuration(totalSeconds: number): string {
@@ -335,10 +301,6 @@ export class PlayerPanel extends LitElement implements Layer {
                 <h1 class="text-lg font-semibold truncate text-zinc-200">
                   ${other?.name()}
                 </h1>
-
-                ${this.showTroopsModal
-                  ? this.renderSendTroopsModal(myPlayer)
-                  : null}
               </div>
 
               <!-- divider -->
@@ -376,11 +338,21 @@ export class PlayerPanel extends LitElement implements Layer {
 
               <!-- Trust -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-sm">
-                <div class="font-medium text-zinc-400">Trust</div>
+                <div class="font-medium text-zinc-400">
+                  ${translateText("player_panel.trust")}
+                </div>
                 <div class="flex items-center justify-end gap-2 font-medium">
                   ${other.isTraitor()
-                    ? html` <span class="text-red-400"> Traitor </span> `
-                    : html` <span class="text-emerald-400"> Stable </span> `}
+                    ? html`
+                        <span class="text-red-400">
+                          ${translateText("player_panel.traitor")}
+                        </span>
+                      `
+                    : html`
+                        <span class="text-emerald-400">
+                          ${translateText("player_panel.stable")}
+                        </span>
+                      `}
                 </div>
               </div>
 
@@ -396,11 +368,21 @@ export class PlayerPanel extends LitElement implements Layer {
 
               <!-- Embargo -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-sm">
-                <div class="font-medium text-zinc-400">Trading</div>
+                <div class="font-medium text-zinc-400">
+                  ${translateText("player_panel.trading")}
+                </div>
                 <div class="flex items-center justify-end gap-2 font-medium">
                   ${other.hasEmbargoAgainst(myPlayer)
-                    ? html` <span class="text-red-400"> Stopped </span> `
-                    : html` <span class="text-emerald-400"> Active </span> `}
+                    ? html`
+                        <span class="text-red-400">
+                          ${translateText("player_panel.stopped")}
+                        </span>
+                      `
+                    : html`
+                        <span class="text-emerald-400">
+                          ${translateText("player_panel.active")}
+                        </span>
+                      `}
                 </div>
               </div>
 
@@ -425,7 +407,7 @@ export class PlayerPanel extends LitElement implements Layer {
                           rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2
                           text-zinc-200 hover:bg-zinc-800"
                   >
-                    <span>View allies</span>
+                    <span>${translateText("player_panel.view_allies")}</span>
                     <span class="transition-transform group-open:rotate-180"
                       >▾</span
                     >
@@ -467,7 +449,9 @@ export class PlayerPanel extends LitElement implements Layer {
                       </div>
                       <div class="text-right font-medium">
                         <span
-                          class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                          class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${this.getExpiryColorClass(
+                            this.allianceExpirySeconds,
+                          )}"
                         >
                           ${this.allianceExpiryText}
                         </span>
@@ -488,12 +472,31 @@ export class PlayerPanel extends LitElement implements Layer {
                       this.handleChat(e, myPlayer, other)}
                     class="group flex flex-col items-center gap-1 rounded-lg p-2
                           text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                    title="Chat"
+                    title="${translateText("player_panel.chat")}"
                   >
                     <img src=${chatIcon} alt="Chat" class="h-6 w-6" />
-                    <span class="text-[11px] font-medium">Chat</span>
+                    <span class="text-[11px] font-medium"
+                      >${translateText("player_panel.chat")}</span
+                    >
                   </button>
 
+                  <!-- Emotes -->
+                  ${canSendEmoji
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleEmojiClick(e, myPlayer, other)}
+                          class="group flex flex-col items-center gap-1 rounded-lg p-2
+                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          title="${translateText("player_panel.emotes")}"
+                        >
+                          <img src=${emojiIcon} alt="Emoji" class="h-6 w-6" />
+                          <span class="text-[11px] font-medium"
+                            >${translateText("player_panel.emotes")}</span
+                          >
+                        </button>
+                      `
+                    : ""}
                   <!-- Target -->
                   ${canTarget
                     ? html`
@@ -502,10 +505,12 @@ export class PlayerPanel extends LitElement implements Layer {
                             this.handleTargetClick(e, other)}
                           class="group flex flex-col items-center gap-1 rounded-lg p-2
                             text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                          title="Target"
+                          title="${translateText("player_panel.target")}"
                         >
                           <img src=${targetIcon} alt="Target" class="h-6 w-6" />
-                          <span class="text-[11px] font-medium">Target</span>
+                          <span class="text-[11px] font-medium"
+                            >${translateText("player_panel.target")}</span
+                          >
                         </button>
                       `
                     : ""}
@@ -518,14 +523,18 @@ export class PlayerPanel extends LitElement implements Layer {
                             this.handleBreakAllianceClick(e, myPlayer, other)}
                           class="group flex flex-col items-center gap-1 rounded-lg p-2
                             text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                          title="Break Alliance"
+                          title="${translateText(
+                            "player_panel.break_alliance",
+                          )}"
                         >
                           <img
                             src=${traitorIcon}
                             alt="Break Alliance"
                             class="h-6 w-6"
                           />
-                          <span class="text-[11px] font-medium">Break</span>
+                          <span class="text-[11px] font-medium"
+                            >${translateText("player_panel.break")}</span
+                          >
                         </button>
                       `
                     : ""}
@@ -538,7 +547,7 @@ export class PlayerPanel extends LitElement implements Layer {
                             this.handleAllianceClick(e, myPlayer, other)}
                           class="group flex flex-col items-center gap-1 rounded-lg p-2
                             text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300"
-                          title=${"Send Alliance Request"}
+                          title="${translateText("player_panel.alliance")}"
                         >
                           <img
                             src=${allianceIcon}
@@ -546,7 +555,7 @@ export class PlayerPanel extends LitElement implements Layer {
                             class="h-6 w-6"
                           />
                           <span class="text-[11px] font-medium">
-                            Alliance
+                            ${translateText("player_panel.send_alliance")}
                           </span>
                         </button>
                       `
@@ -563,14 +572,16 @@ export class PlayerPanel extends LitElement implements Layer {
                             this.handleDonateTroopClick(e, myPlayer, other)}
                           class="group flex flex-col items-center gap-1 rounded-lg p-2
                             text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                          title="Send Troops"
+                          title="${translateText("player_panel.send_troops")}"
                         >
                           <img
                             src=${donateTroopIcon}
                             alt="Troops"
                             class="h-6 w-6"
                           />
-                          <span class="text-[11px] font-medium">Troops</span>
+                          <span class="text-[11px] font-medium"
+                            >${translateText("player_panel.troops")}</span
+                          >
                         </button>
                       `
                     : ""}
@@ -583,30 +594,16 @@ export class PlayerPanel extends LitElement implements Layer {
                             this.handleDonateGoldClick(e, myPlayer, other)}
                           class="group flex flex-col items-center gap-1 rounded-lg p-2
                             text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                          title="Send Gold"
+                          title="${translateText("player_panel.send_gold")}"
                         >
                           <img
                             src=${donateGoldIcon}
                             alt="Gold"
                             class="h-6 w-6"
                           />
-                          <span class="text-[11px] font-medium">Gold</span>
-                        </button>
-                      `
-                    : ""}
-
-                  <!-- Emotes -->
-                  ${canSendEmoji
-                    ? html`
-                        <button
-                          @click=${(e: MouseEvent) =>
-                            this.handleEmojiClick(e, myPlayer, other)}
-                          class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                          title="Emotes"
-                        >
-                          <img src=${emojiIcon} alt="Emoji" class="h-6 w-6" />
-                          <span class="text-[11px] font-medium">Emotes</span>
+                          <span class="text-[11px] font-medium"
+                            >${translateText("player_panel.gold")}</span
+                          >
                         </button>
                       `
                     : ""}
@@ -620,9 +617,7 @@ export class PlayerPanel extends LitElement implements Layer {
                               this.handleEmbargoClick(e, myPlayer, other)}
                             class="group flex flex-col items-center gap-1 rounded-lg p-2
                             text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                            title=${translateText
-                              ? translateText("player_panel.stop_trade")
-                              : "Stop Trade"}
+                            title="${translateText("player_panel.stop_trade")}"
                           >
                             <img
                               src=${traitorIcon}
@@ -630,9 +625,7 @@ export class PlayerPanel extends LitElement implements Layer {
                               class="h-6 w-6"
                             />
                             <span class="text-[11px] font-medium">
-                              ${translateText
-                                ? translateText("player_panel.stop_trade")
-                                : "Stop Trade"}
+                              ${translateText("player_panel.stop_trade")}
                             </span>
                           </button>
                         `
@@ -642,9 +635,7 @@ export class PlayerPanel extends LitElement implements Layer {
                               this.handleStopEmbargoClick(e, myPlayer, other)}
                             class="group flex flex-col items-center gap-1 rounded-lg p-2
                             text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
-                            title=${translateText
-                              ? translateText("player_panel.start_trade")
-                              : "Start Trade"}
+                            title=${translateText("player_panel.start_trade")}
                           >
                             <img
                               src=${allianceIcon}
@@ -652,9 +643,7 @@ export class PlayerPanel extends LitElement implements Layer {
                               class="h-6 w-6"
                             />
                             <span class="text-[11px] font-medium">
-                              ${translateText
-                                ? translateText("player_panel.start_trade")
-                                : "Start Trade"}
+                              ${translateText("player_panel.start_trade")}
                             </span>
                           </button>
                         `
@@ -663,228 +652,6 @@ export class PlayerPanel extends LitElement implements Layer {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderSendTroopsModal(myPlayer: PlayerView) {
-    const total = myPlayer.troops();
-    const minKeepAbs = Math.floor(total * 0.3);
-    const maxAmount = this.sendTroopsKeepThirty
-      ? Math.max(0, total - minKeepAbs)
-      : total;
-
-    const safeAmount = Math.min(this.sendTroopsAmount, maxAmount);
-    if (safeAmount !== this.sendTroopsAmount)
-      this.sendTroopsAmount = safeAmount;
-
-    const keepAfter = total - this.sendTroopsAmount;
-    const belowMinKeep = this.sendTroopsKeepThirty && keepAfter < minKeepAbs;
-    const filledPercent =
-      maxAmount > 0 ? (this.sendTroopsAmount / maxAmount) * 100 : 0;
-
-    const setByPercent = (p: number) => {
-      const next = Math.floor((total * p) / 100);
-      this.sendTroopsAmount = Math.min(next, maxAmount);
-    };
-
-    return html`
-      <div class="fixed inset-0 z-[1100] flex items-center justify-center">
-        <div
-          class="absolute inset-0 bg-black/60"
-          @click=${() => this.closeTroopsModal()}
-        ></div>
-
-        <div
-          class="relative z-10 w-full max-w-[340px] rounded-xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl"
-        >
-          <div class="mb-3 flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-zinc-100">
-              Send Troops → ${this.troopsTarget?.name()}
-            </h2>
-            <button
-              class="rounded-md px-2 text-2xl leading-none text-zinc-400 hover:text-zinc-200"
-              @click=${() => this.closeTroopsModal()}
-              aria-label="Close"
-            >
-              ×
-            </button>
-          </div>
-
-          <div class="mb-4 border-b border-zinc-700 pb-3 text-xs text-zinc-400">
-            Available ${renderTroops(total)} · Min keep
-            ${renderTroops(minKeepAbs)} (30%)
-          </div>
-
-          <!-- Preset chips -->
-          <div class="mb-3 flex gap-2">
-            ${[10, 25, 50, 75].map(
-              (p) => html`
-                <button
-                  class="flex-1 rounded-lg border px-3 py-2 text-sm
-                     ${Math.round(
-                    (this.sendTroopsAmount / Math.max(1, total)) * 100,
-                  ) === p
-                    ? "border-indigo-500 bg-indigo-600 text-white"
-                    : "border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700"}"
-                  @click=${() => setByPercent(p)}
-                  title="${p}%"
-                >
-                  ${p}%
-                </button>
-              `,
-            )}
-          </div>
-
-          <!-- Number input -->
-          <div class="mb-4 flex gap-2">
-            <div class="relative w-full">
-              <input
-                type="number"
-                min="0"
-                max="${maxAmount}"
-                .value=${String(this.sendTroopsAmount)}
-                @input=${(e: Event) => {
-                  const v = Number((e.target as HTMLInputElement).value);
-                  this.sendTroopsAmount = Math.max(0, Math.min(v, maxAmount));
-                }}
-                class="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-base text-zinc-100 outline-none focus:border-purple-500"
-              />
-            </div>
-          </div>
-
-          <!-- Slider -->
-          <div class="mb-2">
-            <div class="relative px-1">
-              <input
-                type="range"
-                min="0"
-                max=${maxAmount}
-                .value=${String(this.sendTroopsAmount)}
-                @input=${(e: Event) =>
-                  (this.sendTroopsAmount = Number(
-                    (e.target as HTMLInputElement).value,
-                  ))}
-                class="w-full text-white range-purple"
-              />
-
-              <!-- Max-cap marker when keepThirty is off -->
-              ${!this.sendTroopsKeepThirty && total > 0
-                ? html`
-                    <div
-                      class="pointer-events-none absolute top-1/2 h-3 w-[3px] -translate-y-1/2 rounded-sm bg-amber-500"
-                      style="left: ${((total - minKeepAbs) / total) * 100}%"
-                      aria-hidden
-                    />
-                  `
-                : null}
-            </div>
-          </div>
-
-          <!-- Keep 30% -->
-          <label class="mb-2 flex items-center gap-2 text-sm text-zinc-300">
-            <input
-              type="checkbox"
-              class="h-4 w-4 accent-indigo-600"
-              .checked=${this.sendTroopsKeepThirty}
-              @change=${(e: Event) => {
-                this.sendTroopsKeepThirty = (
-                  e.target as HTMLInputElement
-                ).checked;
-                // clamp to new max
-                const newMax = this.sendTroopsKeepThirty
-                  ? Math.max(0, total - minKeepAbs)
-                  : total;
-                this.sendTroopsAmount = Math.min(this.sendTroopsAmount, newMax);
-              }}
-            />
-            Auto-keep ≥30% of troops at home
-          </label>
-
-          <!-- Summary -->
-          <div class="mt-2 text-center text-sm text-zinc-200">
-            Send
-            <span class="font-semibold text-indigo-400"
-              >${renderTroops(this.sendTroopsAmount)}</span
-            >
-            · Keep
-            <span
-              class="font-semibold ${belowMinKeep
-                ? "text-amber-400"
-                : "text-emerald-400"}"
-            >
-              ${renderTroops(keepAfter)}
-            </span>
-            ${belowMinKeep
-              ? html`
-                  <div class="mt-1 text-xs font-medium text-red-400">
-                    Cannot keep less than ${renderTroops(minKeepAbs)} troops.
-                  </div>
-                `
-              : null}
-          </div>
-
-          <!-- Actions -->
-          <div class="mt-5 flex justify-end gap-2">
-            <button
-              class="min-h-10 min-w-20 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-100 hover:bg-zinc-700"
-              @click=${() => this.closeTroopsModal()}
-            >
-              Cancel
-            </button>
-            <button
-              class="min-h-10 min-w-20 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white
-                   enabled:hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-              ?disabled=${this.sendTroopsAmount <= 0 ||
-              (this.sendTroopsKeepThirty && belowMinKeep)}
-              @click=${() => this.confirmSendTroops()}
-            >
-              Send
-            </button>
-          </div>
-          <style>
-            /* Make the thumb & track purple across browsers */
-            .range-purple {
-              accent-color: rgb(168 85 247); /* purple-500 fallback */
-            }
-
-            /* Chrome / Edge / Safari */
-            .range-purple::-webkit-slider-runnable-track {
-              height: 8px;
-              border-radius: 9999px;
-              background: rgb(91 33 182); /* purple-800 */
-            }
-            .range-purple::-webkit-slider-thumb {
-              -webkit-appearance: none;
-              appearance: none;
-              height: 18px;
-              width: 18px;
-              margin-top: -5px; /* center on 8px track */
-              border-radius: 9999px;
-              background: rgb(168 85 247); /* purple-500 */
-              border: 3px solid rgb(24 24 27); /* zinc-900 ring */
-            }
-
-            /* Firefox */
-            .range-purple::-moz-range-track {
-              height: 8px;
-              border-radius: 9999px;
-              background: rgb(91 33 182); /* purple-800 */
-            }
-            .range-purple::-moz-range-progress {
-              height: 8px;
-              border-radius: 9999px;
-              background: rgb(168 85 247); /* purple-500 (filled) */
-            }
-            .range-purple::-moz-range-thumb {
-              height: 18px;
-              width: 18px;
-              border-radius: 9999px;
-              background: rgb(168 85 247); /* purple-500 */
-              border: 3px solid rgb(24 24 27); /* zinc-900 ring */
-            }
-          </style>
         </div>
       </div>
     `;
