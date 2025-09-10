@@ -4,7 +4,6 @@ import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
@@ -490,6 +489,9 @@ class Client {
         this.patternsModal.open(affiliateCode);
       }
     }
+    if (decodedHash.startsWith("#refresh")) {
+      window.location.href = "/";
+    }
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
@@ -575,9 +577,11 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
-        if (lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer) {
-          history.pushState(null, "", `#join=${lobby.gameID}`);
+        // Ensure there's a homepage entry in history before adding the lobby entry
+        if (window.location.hash === "" || window.location.hash === "#") {
+          history.pushState(null, "", window.location.origin + "#refresh");
         }
+        history.pushState(null, "", `#join=${lobby.gameID}`);
       },
     );
   }
