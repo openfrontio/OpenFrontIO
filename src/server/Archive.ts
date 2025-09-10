@@ -7,6 +7,7 @@ import {
   ID,
   PartialGameRecord,
 } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { logger } from "./Logger";
 
 const config = getServerConfigFromServer();
@@ -25,7 +26,7 @@ export async function archive(gameRecord: GameRecord) {
     const url = `${config.jwtIssuer()}/game/${gameRecord.info.gameID}`;
     const response = await fetch(url, {
       method: "POST",
-      body: JSON.stringify(gameRecord),
+      body: JSON.stringify(gameRecord, replacer),
       headers: {
         "Content-Type": "application/json",
         "x-api-key": config.apiKey(),

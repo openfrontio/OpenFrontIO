@@ -16,6 +16,7 @@ import {
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord, readGameRecord } from "./Archive";
 import { Client } from "./Client";
@@ -340,7 +341,9 @@ export async function startWorker() {
           // Ignore ping
           return;
         } else if (clientMsg.type !== "join") {
-          log.warn(`Invalid message before join: ${JSON.stringify(clientMsg)}`);
+          log.warn(
+            `Invalid message before join: ${JSON.stringify(clientMsg, replacer)}`,
+          );
           return;
         }
 
