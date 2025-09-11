@@ -66,15 +66,16 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    // ALLIANCE CHECK
-    if (this.target.isPlayer() && this._owner.isFriendly(this.target)) {
-      console.warn(
-        `${this._owner.displayName()} cannot attack ${this.target.displayName()} ` +
-          "because they are friendly (allied or same team)",
-      );
-
-      this.active = false;
-      return;
+    // ALLIANCE CHECK — block attacks on friendly (ally or same team)
+    if (this.target.isPlayer()) {
+      const targetPlayer = this.target as Player;
+      if (this._owner.isFriendly(targetPlayer)) {
+        console.warn(
+          `${this._owner.displayName()} cannot attack ${targetPlayer.displayName()} because they are friendly (allied or same team)`,
+        );
+        this.active = false;
+        return;
+      }
     }
 
     if (this.target && this.target.isPlayer()) {

@@ -75,6 +75,10 @@ export class BotExecution implements Execution {
           if (alliance !== null) {
             this.bot.breakAlliance(alliance);
           }
+          // Don't attack friendly players
+          if (this.bot.isFriendly(toAttack)) {
+            return;
+          }
         }
 
         this.behavior.sendAttack(toAttack);

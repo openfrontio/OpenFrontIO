@@ -176,12 +176,13 @@ describe("Attack race condition with alliance requests", () => {
       playerA.id(),
       null,
     );
-    game.addExecution(counterAttackExecution);
 
     // Player B accepts the alliance request
     if (allianceRequest) {
       allianceRequest.accept();
     }
+
+    game.addExecution(counterAttackExecution);
 
     // Execute a few ticks to process the attacks
     for (let i = 0; i < 5; i++) {
@@ -191,6 +192,8 @@ describe("Attack race condition with alliance requests", () => {
     // Player A should not be marked as traitor because the alliance was formed after the attack started
     expect(playerA.isTraitor()).toBe(false);
 
+    expect(playerA.isAlliedWith(playerB)).toBe(true);
+    expect(playerB.isAlliedWith(playerA)).toBe(true);
     // The attacks should have retreated due to the alliance being formed
     expect(playerA.outgoingAttacks()).toHaveLength(0);
     expect(playerB.outgoingAttacks()).toHaveLength(0);

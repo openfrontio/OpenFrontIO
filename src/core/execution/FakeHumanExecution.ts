@@ -163,8 +163,13 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeConsiderBetrayal(target: Player): boolean {
-    //TODO implement betrayal logic
-    return true;
+    if (this.player === null) throw new Error("not initialized");
+    const alliance = this.player.allianceWith(target);
+    if (!alliance) return false;
+    // Break first; traitor state is handled elsewhere by game rules/tests.
+    this.player.breakAlliance(alliance);
+    // Proceed only when no longer friendly (e.g., not allied or same team).
+    return !this.player.isFriendly(target);
   }
 
   private maybeAttack() {
@@ -216,13 +221,12 @@ export class FakeHumanExecution implements Execution {
       : this.random.randElement(enemies);
 
     // First consider betrayal, then normal attack logic
-    if (
-      this.player.isAlliedWith(toAttack) &&
-      this.maybeConsiderBetrayal(toAttack)
-    ) {
-      // Alliance was broken if we got here
-      this.behavior.sendAttack(toAttack);
-      return;
+    if (this.player.isAlliedWith(toAttack)) {
+      const canProceed = this.maybeConsiderBetrayal(toAttack);
+      if (canProceed && !this.player.isFriendly(toAttack)) {
+        this.behavior.sendAttack(toAttack);
+        return;
+      }
     } else if (this.shouldAttack(toAttack)) {
       this.behavior.sendAttack(toAttack);
       return;
@@ -250,7 +254,9 @@ export class FakeHumanExecution implements Execution {
 
     // Consider betrayal for allies
     if (this.player.isAlliedWith(other)) {
-      return this.maybeConsiderBetrayal(other);
+      return (
+        this.maybeConsiderBetrayal(other) && !this.player.isFriendly(other)
+      );
     }
 
     if (this.player.isFriendly(other)) {
