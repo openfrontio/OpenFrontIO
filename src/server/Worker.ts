@@ -7,7 +7,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
@@ -18,7 +17,7 @@ import {
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
-import { archive, finalizeGameRecord, readGameRecord } from "./Archive";
+import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
@@ -210,42 +209,6 @@ export async function startWorker() {
       return res.status(404).json({ error: "Game not found" });
     }
     res.json(game.gameInfo());
-  });
-
-  app.get("/api/archived_game/:id", async (req, res) => {
-    const gameRecord = await readGameRecord(req.params.id);
-
-    if (!gameRecord) {
-      return res.status(404).json({
-        success: false,
-        error: "Game not found",
-        exists: false,
-      });
-    }
-
-    if (
-      config.env() !== GameEnv.Dev &&
-      gameRecord.gitCommit !== config.gitCommit()
-    ) {
-      log.warn(
-        `git commit mismatch for game ${req.params.id}, expected ${config.gitCommit()}, got ${gameRecord.gitCommit}`,
-      );
-      return res.status(409).json({
-        success: false,
-        error: "Version mismatch",
-        exists: true,
-        details: {
-          expectedCommit: config.gitCommit(),
-          actualCommit: gameRecord.gitCommit,
-        },
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      exists: true,
-      gameRecord: gameRecord,
-    });
   });
 
   app.post("/api/archive_singleplayer_game", async (req, res) => {

@@ -1,12 +1,13 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { GameInfo, GameRecord } from "../core/Schemas";
+import { GameInfo, GameRecordSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import { getApiBase } from "./jwt";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -179,10 +180,19 @@ export class JoinPrivateLobbyModal extends LitElement {
       if (gameExists) return;
 
       // If not active, check archived games
-      const archivedGame = await this.checkArchivedGame(lobbyId);
-      if (archivedGame) return;
-
-      this.message = `${translateText("private_lobby.not_found")}`;
+      switch (await this.checkArchivedGame(lobbyId)) {
+        case "success":
+          return;
+        case "not_found":
+          this.message = `${translateText("private_lobby.not_found")}`;
+          return;
+        case "version_mismatch":
+          this.message = `${translateText("private_lobby.version_mismatch")}`;
+          return;
+        case "error":
+          this.message = `${translateText("private_lobby.error")}`;
+          return;
+      }
     } catch (error) {
       console.error("Error checking lobby existence:", error);
       this.message = `${translateText("private_lobby.error")}`;
@@ -222,49 +232,70 @@ export class JoinPrivateLobbyModal extends LitElement {
     return false;
   }
 
-  private async checkArchivedGame(lobbyId: string): Promise<boolean> {
-    const config = await getServerConfigFromClient();
-    const archiveUrl = `/${config.workerPath(lobbyId)}/api/archived_game/${lobbyId}`;
-
-    const archiveResponse = await fetch(archiveUrl, {
+  private async checkArchivedGame(
+    lobbyId: string,
+  ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
+    const archivePromise = fetch(`${getApiBase()}/game/${lobbyId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    const gitCommitPromise = fetch(`/commit.txt`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
 
-    const archiveData = await archiveResponse.json();
+    const [archiveResponse, gitCommitResponse] = await Promise.all([
+      archivePromise,
+      gitCommitPromise,
+    ]);
 
-    if (
-      archiveData.success === false &&
-      archiveData.error === "Version mismatch"
-    ) {
+    if (archiveResponse.status === 404) {
+      return "not_found";
+    }
+    if (archiveResponse.status !== 200) {
+      return "error";
+    }
+
+    const archiveData = await archiveResponse.json();
+    const parsed = GameRecordSchema.safeParse(archiveData);
+    if (!parsed.success) {
+      return "version_mismatch";
+    }
+
+    let myGitCommit = "";
+    if (gitCommitResponse.status === 404) {
+      // commit.txt is not found when running locally
+      myGitCommit = "DEV";
+    } else if (gitCommitResponse.status === 200) {
+      myGitCommit = await gitCommitResponse.text();
+    } else {
+      console.error("Error getting git commit:", gitCommitResponse.status);
+      return "error";
+    }
+
+    // Allow DEV to join games created with a different version for debugging.
+    if (myGitCommit !== "DEV" && parsed.data.gitCommit !== myGitCommit) {
       console.warn(
         `Git commit hash mismatch for game ${lobbyId}`,
         archiveData.details,
       );
-      this.message =
-        "This game was created with a different version. Cannot join.";
-      return true;
+      return "version_mismatch";
     }
 
-    if (archiveData.exists) {
-      const gameRecord = archiveData.gameRecord as GameRecord;
-
-      this.dispatchEvent(
-        new CustomEvent("join-lobby", {
-          detail: {
-            gameID: lobbyId,
-            gameRecord: gameRecord,
-            clientID: generateID(),
-          } as JoinLobbyEvent,
-          bubbles: true,
-          composed: true,
-        }),
-      );
-
-      return true;
-    }
-
-    return false;
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: lobbyId,
+          gameRecord: parsed.data,
+          clientID: generateID(),
+        } as JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    return "success";
   }
 
   private async pollPlayers() {
