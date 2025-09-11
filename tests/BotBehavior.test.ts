@@ -337,37 +337,6 @@ describe("BotBehavior Attack Behavior", () => {
     expect(bot.outgoingAttacks()).toHaveLength(attacksBefore);
   });
 
-  // test("bot can attack after breaking alliance", async () => {
-  //   // Form alliance (bot creates request to human)
-  //   const allianceRequest = bot.createAllianceRequest(human);
-  //   allianceRequest?.accept();
-
-  //   // Verify alliance is formed
-  //   expect(bot.isAlliedWith(human)).toBe(true);
-
-  //   const alliance = bot.allianceWith(human);
-  //   expect(alliance).toBeTruthy();
-  //   human.breakAlliance(alliance!);
-
-  //   // Verify alliance is broken
-  //   expect(bot.isAlliedWith(human)).toBe(false);
-
-  //   // Add troops to ensure bot has enough to attack
-  //   bot.addTroops(10000);
-
-  //   // Attempt attack (should succeed now)
-  //   botBehavior.sendAttack(human);
-
-  //   // Execute a few ticks to process the attacks
-  //   for (let i = 0; i < 5; i++) {
-  //     game.executeNextTick();
-  //   }
-
-  //   // Verify attack was processed
-  //   expect(human.incomingAttacks().length).toBeGreaterThan(0);
-  //   expect(bot.outgoingAttacks().length).toBeGreaterThan(0);
-  // });
-
   test("nation cannot attack allied player", () => {
     // Create nation
     const nationInfo = new PlayerInfo(
