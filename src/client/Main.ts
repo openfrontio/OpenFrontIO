@@ -22,6 +22,7 @@ import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import { NewsModal } from "./NewsModal";
+import { PlayerInfoModal } from "./PlayerInfoModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
@@ -91,6 +92,7 @@ class Client {
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
+  private playerInfoModal: PlayerInfoModal;
   private tokenLoginModal: TokenLoginModal;
 
   constructor() {}
@@ -216,6 +218,16 @@ class Client {
       this.patternsModal.open();
     });
 
+    this.playerInfoModal = document.querySelector(
+      "player-info-modal",
+    ) as PlayerInfoModal;
+    this.playerInfoModal instanceof PlayerInfoModal;
+    document
+      .getElementById("player-info-button")
+      ?.addEventListener("click", () => {
+        this.playerInfoModal.open();
+      });
+
     this.tokenLoginModal = document.querySelector(
       "token-login",
     ) as TokenLoginModal;
@@ -308,6 +320,7 @@ class Client {
       } else if (userMeResponse === false) {
         // Not logged in
         this.patternsModal.onUserMe(null);
+        this.playerInfoModal.onUserMe(null);
       } else {
         // Authorized
         console.log(
@@ -315,6 +328,7 @@ class Client {
             "Sharing this ID will allow others to view your game history and stats.",
         );
         this.patternsModal.onUserMe(userMeResponse);
+        this.playerInfoModal.onUserMe(userMeResponse);
       }
     };
 
