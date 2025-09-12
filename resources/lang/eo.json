@@ -26,7 +26,7 @@
     "terms_of_service": "Uzokondiĉoj"
   },
   "news": {
-    "full_changelog": "Vidi la plenan ŝanĝprotokolon",
+    "see_all_releases": "Vidi ĉiujn eldonojn",
     "github_link": "ĉe GitHub",
     "title": "Eldonnotoj"
   },
@@ -43,6 +43,7 @@
     "action_move_camera": "Moviĝi kameraon",
     "action_ratio_change": "Malgrandigi/Pligrandigi la atakan kvocienton",
     "action_reset_gfx": "Restarigi la grafismoj",
+    "action_auto_upgrade": "Aŭtomate ĝisdatigi la plej proksiman konstruaĵon",
     "ui_section": "Ludo uzantinterfaco",
     "ui_leaderboard": "Ĉampionejo",
     "ui_your_team": "Via teamo:",
@@ -51,7 +52,6 @@
     "ui_control_desc": "La kontrolpanelo enhavas la sekvajn elementojn:",
     "ui_pop": "Pop - La nombro de trupunoj kiujn vi havas, via maksimuma populacio kaj la procento kun kiu vi ricevas ilin.",
     "ui_gold": "La kvanto da oro kiun vi havas kaj la procento kun kiu vi ricevas ilin.",
-    "ui_troops_workers": "Trupoj kaj Laboristoj - La nombro da soldatoj kaj laboristoj asignitaj. Trupoj kutimas ataki aŭ defendi. Laboristoj kutimas generi oron. Vi povas ĝustigi la nombron da trupoj kaj laboristoj uzante la glitilon.",
     "ui_attack_ratio": "Ataka kvociento - La nombro da uzaj soldatoj kiam vi atakas. Vi povas ĝustigi la atakan kvocienton uzante la glitilon. Havi pli da atakaj trupoj ol la defendaj trupoj malpliigos la perdojn dum atako, dum havi malpli multe pliigos la damaĝon ricevitajn de viaj atakaj trupoj. La efiko ne superas rilatumon de 2:1.",
     "ui_events": "Eventa panelo",
     "ui_events_desc": "La eventa panelo montras la plej lastajn eventojn, petojn kaj mesaĝojn de Rapida Babilejo. Jen kelkaj ekzemploj:",
@@ -70,6 +70,7 @@
     "radial_title": "Radia menuo",
     "radial_desc": "Dekstra alklako (aŭ tuŝo sur poŝtelefono) malfermas la radian menuon. Dekstra alklako ekster la menuo fermas ĝin. El la menuo vi povas:",
     "radial_build": "Malfermi la konstrumenuon.",
+    "radial_attack": "Malfermi la atakmenuon.",
     "radial_info": "Malfermi la informmenuon.",
     "radial_boat": "Sendi boaton (transporta ŝipon) por ataki ĉe la elektita loko. Havebla nur se vi havas aliron al akvo.",
     "radial_close": "Fermi la menuon.",
@@ -146,6 +147,7 @@
     "africa": "Afriko",
     "asia": "Azio",
     "mars": "Marso",
+    "marsrevised": "Marso (reviziita)",
     "southamerica": "Sudameriko",
     "britannia": "Granda Britio",
     "gatewaytotheatlantic": "Pordo al Atlantiko",
@@ -162,7 +164,9 @@
     "baikal": "Bajkalo",
     "halkidiki": "Ĥalkidiko",
     "straitofgibraltar": "Ĝibraltara Markolo",
-    "italia": "Italio"
+    "italia": "Italio",
+    "yenisei": "Jenisejo",
+    "pluto": "Plutono"
   },
   "map_categories": {
     "continental": "Kontinenta",
@@ -213,7 +217,8 @@
     "player": "Ludanto",
     "players": "Ludantoj",
     "waiting": "Atendante ludantojn...",
-    "start": "Komenci la ludon"
+    "start": "Komenci la ludon",
+    "host_badge": "Gastiganto"
   },
   "team_colors": {
     "red": "Ruĝa",
@@ -273,9 +278,15 @@
     "special_effects_desc": "Baskuli specialajn efektojn. Malaktivigu por plibonigi funkciadon",
     "special_effects_enabled": "Specialefektoj ebligitaj",
     "special_effects_disabled": "Specialefektoj malebligitaj",
+    "structure_sprites_label": "Bildetoj de konstruaĵoj",
+    "structure_sprites_desc": "Baskuligi la bildetojn de konstruaĵoj",
+    "structure_sprites_enabled": "Bildetoj de konstruaĵoj ŝaltitaj",
+    "structure_sprites_disabled": "Bildetoj de konstruaĵoj malŝaltitaj",
     "anonymous_names_label": "Maskitaj Nomoj",
     "anonymous_names_desc": "Kaŝi verajn uzantnomojn kun hazardaj sur via ekrano.",
     "anonymous_names_enabled": "Anonimaj nomoj estas ebligitaj",
+    "lobby_id_visibility_label": "Kaŝitaj ludejoj-identigiloj",
+    "lobby_id_visibility_desc": "Kaŝi ludejan identigilon en kreado de privata ludejo",
     "real_names_shown": "Veraj nomoj estas montritaj",
     "left_click_label": "Maldekstra alklako por malfermi menuon",
     "left_click_desc": "Kiam aktiviga, maldekstra alklako malfermas menuon kaj glava atakbutono. Kiam malaktiviga, maldekstra alklako atakas direkten.",
@@ -284,10 +295,11 @@
     "right_click_opens_menu": "Dekstra alklako malfermas menuon",
     "attack_ratio_label": "⚔️ Atakkvociento",
     "attack_ratio_desc": "Kian procenton de viaj trupoj sendi en atako (1–100%)",
-    "troop_ratio_label": "🪖🛠️ Trupoj kaj Laboristoj kvociento",
     "troop_ratio_desc": "Alĝustigu la ekvilibron inter soldatoj (por batalo) kaj laboristoj (por orproduktado) (1–100%)",
     "territory_patterns_label": "🏳️ Teritoriaj Ŝablonoj",
     "territory_patterns_desc": "Elektu ĉu montri teritoriajn ŝablonajn dezajnojn en la ludo",
+    "performance_overlay_label": "Efikeco Supermetaĵo",
+    "performance_overlay_desc": "Ŝalti la efikecon supermetaĵon. Kiam ebligita, la efikeco supermetaĵo estos montrata. Premu la Majuskligan klavon\n+ D dum la ludo por ŝalti.",
     "easter_writing_speed_label": "Rapidskriba multiganto",
     "easter_writing_speed_desc": "Alĝustigu kiom rapide vi ŝajnigas kodi (x1–x100)",
     "easter_bug_count_label": "Nombro da cimoj",
@@ -478,7 +490,8 @@
     "accept_alliance": "Akcepti",
     "reject_alliance": "Rifuzi",
     "alliance_renewed": "Via alianco kun {name} estis renovigita",
-    "ignore": "Ignori"
+    "ignore": "Ignori",
+    "unit_voluntarily_deleted": "Trupuno libervole forigita"
   },
   "unit_info_modal": {
     "structure_info": "Informoj pri strukturo",
@@ -497,10 +510,8 @@
     "default": "Defaŭlta"
   },
   "control_panel": {
-    "pop": "Pop",
     "gold": "Oro",
     "troops": "Trupoj",
-    "workers": "Laboristoj",
     "attack_ratio": "Atakkvociento"
   },
   "player_panel": {
@@ -573,6 +584,7 @@
       "openfront": "OpenFront",
       "t_rex": "Tiranosaŭro",
       "embelem": "Emblemo",
+      "contributor": "Kontribuanto",
       "grogu_head": "Grogu Kapo",
       "grogu": "Grogu"
     }
@@ -585,5 +597,9 @@
     "redirecting": "Vi estas redirektata...",
     "not_authorized": "Vi ne rajtas aliri ĉi tiun retejon.",
     "contact_admin": "Se vi kredas, ke vi vidas ĉi tiun mesaĝon erare, bonvolu kontakti la retejan administranton."
+  },
+  "radial_menu": {
+    "delete_unit_title": "Forigi trupunon",
+    "delete_unit_description": "Alklaku por forigi la plej proksiman trupunon"
   }
 }

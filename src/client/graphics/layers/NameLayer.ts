@@ -139,8 +139,14 @@ export class NameLayer implements Layer {
     const isOnScreen = render.location
       ? this.transformHandler.isOnScreen(render.location)
       : false;
+    const maxZoomScale = 17;
 
-    if (!this.isVisible || size < 7 || !isOnScreen) {
+    if (
+      !this.isVisible ||
+      size < 7 ||
+      (this.transformHandler.scale > maxZoomScale && size > 100) ||
+      !isOnScreen
+    ) {
       render.element.style.display = "none";
     } else {
       render.element.style.display = "flex";
