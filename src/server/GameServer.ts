@@ -408,10 +408,11 @@ export class GameServer {
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
 
-    this.endTurnIntervalID = setInterval(
-      () => this.endTurn(),
-      this.config.turnIntervalMs(),
-    );
+    const turnInterval =
+      this.gameConfig.gameType === GameType.Singleplayer
+        ? 10
+        : this.config.turnIntervalMs();
+    this.endTurnIntervalID = setInterval(() => this.endTurn(), turnInterval);
     this.activeClients.forEach((c) => {
       this.log.info("sending start message", {
         clientID: c.clientID,
