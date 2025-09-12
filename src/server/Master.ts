@@ -7,7 +7,6 @@ import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { gatekeeper, LimiterType } from "./Gatekeeper";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 
@@ -142,62 +141,53 @@ export async function startMaster() {
   });
 }
 
-app.get(
-  "/api/env",
-  gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    const envConfig = {
-      game_env: process.env.GAME_ENV,
-    };
-    if (!envConfig.game_env) return res.sendStatus(500);
-    res.json(envConfig);
-  }),
-);
+app.get("/api/env", async (req, res) => {
+  const envConfig = {
+    game_env: process.env.GAME_ENV,
+  };
+  if (!envConfig.game_env) return res.sendStatus(500);
+  res.json(envConfig);
+});
 
 // Add lobbies endpoint to list public games for this worker
-app.get(
-  "/api/public_lobbies",
-  gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    res.send(publicLobbiesJsonStr);
-  }),
-);
+app.get("/api/public_lobbies", async (req, res) => {
+  res.send(publicLobbiesJsonStr);
+});
 
-app.post(
-  "/api/kick_player/:gameID/:clientID",
-  gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-    if (req.headers[config.adminHeader()] !== config.adminToken()) {
-      res.status(401).send("Unauthorized");
-      return;
-    }
+app.post("/api/kick_player/:gameID/:clientID", async (req, res) => {
+  if (req.headers[config.adminHeader()] !== config.adminToken()) {
+    res.status(401).send("Unauthorized");
+    return;
+  }
 
-    const { gameID, clientID } = req.params;
+  const { gameID, clientID } = req.params;
 
-    if (!ID.safeParse(gameID).success || !ID.safeParse(clientID).success) {
-      res.sendStatus(400);
-      return;
-    }
+  if (!ID.safeParse(gameID).success || !ID.safeParse(clientID).success) {
+    res.sendStatus(400);
+    return;
+  }
 
-    try {
-      const response = await fetch(
-        `http://localhost:${config.workerPort(gameID)}/api/kick_player/${gameID}/${clientID}`,
-        {
-          method: "POST",
-          headers: {
-            [config.adminHeader()]: config.adminToken(),
-          },
+  try {
+    const response = await fetch(
+      `http://localhost:${config.workerPort(gameID)}/api/kick_player/${gameID}/${clientID}`,
+      {
+        method: "POST",
+        headers: {
+          [config.adminHeader()]: config.adminToken(),
         },
-      );
+      },
+    );
 
-      if (!response.ok) {
-        throw new Error(`Failed to kick player: ${response.statusText}`);
-      }
-
-      res.status(200).send("Player kicked successfully");
-    } catch (error) {
-      log.error(`Error kicking player from game ${gameID}:`, error);
-      res.status(500).send("Failed to kick player");
+    if (!response.ok) {
+      throw new Error(`Failed to kick player: ${response.statusText}`);
     }
-  }),
-);
+
+    res.status(200).send("Player kicked successfully");
+  } catch (error) {
+    log.error(`Error kicking player from game ${gameID}:`, error);
+    res.status(500).send("Failed to kick player");
+  }
+});
 
 async function fetchLobbies(): Promise<number> {
   const fetchPromises: Promise<GameInfo | null>[] = [];

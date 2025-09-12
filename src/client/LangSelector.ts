@@ -16,12 +16,14 @@ import fr from "../../resources/lang/fr.json";
 import gl from "../../resources/lang/gl.json";
 import he from "../../resources/lang/he.json";
 import hi from "../../resources/lang/hi.json";
+import hu from "../../resources/lang/hu.json";
 import it from "../../resources/lang/it.json";
 import ja from "../../resources/lang/ja.json";
 import ko from "../../resources/lang/ko.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
 import pt_BR from "../../resources/lang/pt-BR.json";
+import pt_PT from "../../resources/lang/pt-PT.json";
 import ru from "../../resources/lang/ru.json";
 import sh from "../../resources/lang/sh.json";
 import sk from "../../resources/lang/sk.json";
@@ -54,9 +56,11 @@ export class LangSelector extends LitElement {
     fr,
     it,
     hi,
+    hu,
     ja,
     nl,
     pl,
+    "pt-PT": pt_PT,
     "pt-BR": pt_BR,
     ru,
     sh,

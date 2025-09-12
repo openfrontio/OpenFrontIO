@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { renderDuration, translateText } from "../client/Utils";
 import { GameMapType, GameMode } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -104,9 +104,7 @@ export class PublicLobby extends LitElement {
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
 
     // Format time to show minutes and seconds
-    const minutes = Math.floor(timeRemaining / 60);
-    const seconds = timeRemaining % 60;
-    const timeDisplay = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    const timeDisplay = renderDuration(timeRemaining);
 
     const teamCount =
       lobby.gameConfig.gameMode === GameMode.Team

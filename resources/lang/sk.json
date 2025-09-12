@@ -26,7 +26,7 @@
     "terms_of_service": "Podmienky používania"
   },
   "news": {
-    "full_changelog": "Pozri si celý zoznam zmien",
+    "see_all_releases": "Zobraziť všetky vydania",
     "github_link": "na GitHube",
     "title": "Zoznam zmien"
   },
@@ -43,6 +43,7 @@
     "action_move_camera": "Pohnúť pohľadom",
     "action_ratio_change": "Znížiť/Zvýšiť pomer útoku",
     "action_reset_gfx": "Obnoviť grafické nastavenia",
+    "action_auto_upgrade": "Automaticky vylepšiť najbližšiu budovu",
     "ui_section": "Herné rozhranie",
     "ui_leaderboard": "Rebríček",
     "ui_your_team": "Tvoj tím:",
@@ -51,7 +52,6 @@
     "ui_control_desc": "Ovládací panel obsahuje nasledovné prvky:",
     "ui_pop": "Pop – Počet jednotiek, ktoré máš, tvoja maximálna populácia, a rýchlosť, ktorou ich získavaš.",
     "ui_gold": "Zlato – Počet zlata, ktoré máš, a rýchlosť, ktorou ho získavaš.",
-    "ui_troops_workers": "Vojská a robotníci – Počet pridelených vojsk a robotníkov. Vojská sa používajú na útočenie alebo obranu proti útokom. Robotníci sa používajú na tvorbu zlata. Môžeš upraviť pomer vojsk a robotníkov použitím posuvníka.",
     "ui_attack_ratio": "Pomer útoku – Počet vojsk, ktoré použiješ pri útoku. Pomer útoku môžeš upraviť použitím posuvníka. Čím viac útočiacich vojsk máš, tým menej ich pri útoku stratíš, zatiaľčo čím menej ich použiješ, tým rýchlejšie utrpia straty. Tento efekt neplatí nad pomer 2:1.",
     "ui_events": "Panel udalostí",
     "ui_events_desc": "Panel udalostí zobrazuje najnovšie udalosti, žiadosti a správy rýchleho chatu. Napríklad:",
@@ -70,6 +70,7 @@
     "radial_title": "Kruhová ponuka",
     "radial_desc": "Pravým ťuknutím (alebo ťuknutím na mobile) otvorí kruhovú ponuku. Pravé ťuknutie mimo ho zatvorí. Z ponuky môžeš:",
     "radial_build": "Otvoriť ponuku stavby.",
+    "radial_attack": "Otvoriť ponuku útoku.",
     "radial_info": "Otvoriť ponuku informácií.",
     "radial_boat": "Poslať (prepravnú) loď na zaútočenie na vybranú pozíciu. Dostupné len ak máš prístup k vode.",
     "radial_close": "Zatvoriť ponuku.",
@@ -146,6 +147,7 @@
     "africa": "Afrika",
     "asia": "Ázia",
     "mars": "Mars",
+    "marsrevised": "Mars (zrevidovaný)",
     "southamerica": "Južná Amerika",
     "britannia": "Británia",
     "gatewaytotheatlantic": "Brána do Atlantiku",
@@ -162,7 +164,9 @@
     "baikal": "Bajkal",
     "halkidiki": "Chalkidiki",
     "straitofgibraltar": "Gibraltársky prieliv",
-    "italia": "Itália"
+    "italia": "Itália",
+    "yenisei": "Jenisej",
+    "pluto": "Pluto"
   },
   "map_categories": {
     "continental": "Kontinentálna",
@@ -213,7 +217,8 @@
     "player": "Hráč",
     "players": "Hráči",
     "waiting": "Čakanie na hráčov…",
-    "start": "Spustiť hru"
+    "start": "Spustiť hru",
+    "host_badge": "Domáci"
   },
   "team_colors": {
     "red": "Červená",
@@ -273,9 +278,15 @@
     "special_effects_desc": "Prepni špeciálne efekty. Vypni pre zlepšenie výkonu",
     "special_effects_enabled": "Špeciálne efekty zapnuté",
     "special_effects_disabled": "Špeciálne efekty vypnuté",
+    "structure_sprites_label": "Ikony budov",
+    "structure_sprites_desc": "Prepnúť ikony budov",
+    "structure_sprites_enabled": "Ikony budov povolené",
+    "structure_sprites_disabled": "Ikony budov zakázané",
     "anonymous_names_label": "Skryté mená",
     "anonymous_names_desc": "Skry ozajstné mená hráčov na obrazovke náhodnými.",
     "anonymous_names_enabled": "Anonýmne mená povolené",
+    "lobby_id_visibility_label": "ID skrytých miestností",
+    "lobby_id_visibility_desc": "Skryť ID miestnosti pri tvorbe súkromnej miestnosti",
     "real_names_shown": "Ukázané ozajstné mená",
     "left_click_label": "Ťukni ľavým tlačidlom na otvorenie ponuky",
     "left_click_desc": "Keď je toto zapnuté, ľavé ťuknutie otvorí ponuku a útočí sa cez tlačidlo mečov. Keď je toto vypnuté, ľavé ťuknutie útočí priamo.",
@@ -284,10 +295,11 @@
     "right_click_opens_menu": "Pravé ťuknutie otvorí ponuku",
     "attack_ratio_label": "⚔️ Pomer útoku",
     "attack_ratio_desc": "Percento tvojich vojsk na odoslanie do útoku (1 až 100%)",
-    "troop_ratio_label": "🪖🛠️ Pomer vojsk a robotníkov",
     "troop_ratio_desc": "Upraví pomer medzi vojskami (na boj) a robotníkmi (na tvorbu zlata) (1 až 100%)",
     "territory_patterns_label": "🏳️ Územné vzorce",
     "territory_patterns_desc": "Vyber, či zobrazovať dizajny vzorcov území v hre",
+    "performance_overlay_label": "Zobrazenie výkonu",
+    "performance_overlay_desc": "Prepne zobrazenie výkonu. Ťukni Shift + D počas hry na prepnutie.",
     "easter_writing_speed_label": "Znásobovač rýchlosti písania",
     "easter_writing_speed_desc": "Upraví, ako rýchlo predstieraš, že kóduješ (x1 až x100)",
     "easter_bug_count_label": "Počet chýb",
@@ -478,10 +490,11 @@
     "accept_alliance": "Prijať",
     "reject_alliance": "Odmietnuť",
     "alliance_renewed": "Tvoje spojenectvo s {name} bola obnovená",
-    "ignore": "Ignorovať"
+    "ignore": "Ignorovať",
+    "unit_voluntarily_deleted": "Jednotka dobrovoľne vymazaná"
   },
   "unit_info_modal": {
-    "structure_info": "Informácie o štruktúre",
+    "structure_info": "Informácie o budove",
     "unit_type_unknown": "Neznáme",
     "close": "Zavrieť",
     "cooldown": "Obnovenie",
@@ -497,10 +510,8 @@
     "default": "Základný"
   },
   "control_panel": {
-    "pop": "Populácia",
     "gold": "Zlato",
     "troops": "Vojská",
-    "workers": "Robotníci",
     "attack_ratio": "Pomer útoku"
   },
   "player_panel": {
@@ -573,6 +584,7 @@
       "openfront": "OpenFront",
       "t_rex": "T-rex",
       "embelem": "Odznak",
+      "contributor": "Prispievateľ",
       "grogu_head": "Hlava Grogu",
       "grogu": "Grogu"
     }
@@ -585,5 +597,9 @@
     "redirecting": "Práve si presmerovaná/ý...",
     "not_authorized": "Nemáš oprávnenie na prístup k tejto stránke.",
     "contact_admin": "Ak si myslíš, že túto správu vidíš omylom, prosím kontaktuj administrátora webstránky."
+  },
+  "radial_menu": {
+    "delete_unit_title": "Vymazať jednotku",
+    "delete_unit_description": "Ťukni na vymazanie najbližšej jednotky"
   }
 }

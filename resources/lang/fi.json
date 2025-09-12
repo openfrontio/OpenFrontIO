@@ -26,7 +26,7 @@
     "terms_of_service": "Käyttöehdot"
   },
   "news": {
-    "full_changelog": "Katso koko muutosloki",
+    "see_all_releases": "Katso kaikki julkaisut",
     "github_link": "GitHubissa",
     "title": "Päivitystiedot"
   },
@@ -43,6 +43,7 @@
     "action_move_camera": "Liikuta kameraa",
     "action_ratio_change": "Vähennä/Lisää hyökkäyksen osuutta",
     "action_reset_gfx": "Palauta grafiikat",
+    "action_auto_upgrade": "Päivitä lähin rakennus automaattisesti",
     "ui_section": "Pelin käyttöliittymä",
     "ui_leaderboard": "Pistetaulukko",
     "ui_your_team": "Tiimisi: ",
@@ -51,7 +52,6 @@
     "ui_control_desc": "Ohjauspaneeli sisältää seuraavat toiminnot:",
     "ui_pop": "Asukasluku - Asukkaiden määrä, enimmäisasukaslukusi ja vauhti, jolla saat asukkaita lisää.",
     "ui_gold": "Kulta - Kullan määrä ja kullan saantinopeus.",
-    "ui_troops_workers": "Sotilaat ja työntekijät - Kohdennettujen sotilaiden ja työntekijöiden määrä. Joukkoja käytetään hyökkäämiseen tai puolustamiseen. Työntekijöitä käytetään kullan tuottamiseen. Voit säädellä joukkojen ja työntekijöiden määrää liukusäätimellä.",
     "ui_attack_ratio": "Hyökkäyksen osuus - Määrä joukkoja, jota käytetään hyökätessäsi. Voit säätää osuutta liukusäätimellä. Jos sinulla on enemmän hyökkääviä joukkoja kuin puolustavia joukkoja, menetät vähemmän joukkoja hyökkäyksessä. Jos sinulla on vähemmän hyökkääviä joukkoja kuin puolustavia joukkoja, hyökkäävät joukot vahingoittuvat enemmän. Tämä ilmiö ei ylitä suhdetta 2:1.",
     "ui_events": "Tapahtumapaneeli",
     "ui_events_desc": "Tapahtumapaneelista näkee uusimmat tapahtumat, kutsut ja pikaviestit. Esimerkiksi:",
@@ -70,6 +70,7 @@
     "radial_title": "Ympyrävalikko",
     "radial_desc": "Napsauttamalla hiiren oikeaa painiketta (tai koskettamalla mobiililaitteella) avataan ympyrävalikko. Napsauttamalla hiiren oikeaa painiketta sen ulkopuolella suljet sen. Ympyrävalikosta näet:",
     "radial_build": "Avaa rakennusvalikko.",
+    "radial_attack": "Avaa hyökkäysvalikko",
     "radial_info": "Avaa tietopaneeli.",
     "radial_boat": "Lähetä vene (kuljetusalus) hyökkäämään valittuun sihaintiin. Saatavilla vain, jos sinulla on pääsy vesistöön.",
     "radial_close": "Sulje valikko.",
@@ -146,6 +147,7 @@
     "africa": "Afrikka",
     "asia": "Aasia",
     "mars": "Mars",
+    "marsrevised": "Mars (tarkistettu)",
     "southamerica": "Etelä-Amerikka",
     "britannia": "Britannia",
     "gatewaytotheatlantic": "Portti Atlantille",
@@ -162,7 +164,9 @@
     "baikal": "Baikal",
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Gibraltarinsalmi",
-    "italia": "Italia"
+    "italia": "Italia",
+    "yenisei": "Yenisei",
+    "pluto": "Pluto"
   },
   "map_categories": {
     "continental": "Mantereet",
@@ -213,7 +217,8 @@
     "player": "Pelaaja",
     "players": "pelaajaa",
     "waiting": "Odotetaan pelaajia...",
-    "start": "Aloita peli"
+    "start": "Aloita peli",
+    "host_badge": "Isäntä"
   },
   "team_colors": {
     "red": "Punainen",
@@ -273,9 +278,15 @@
     "special_effects_desc": "Valitse, ovatko erikoistehosteet päällä. Poista ne käytöstä parantaaksesi suorituskykyä",
     "special_effects_enabled": "Erikoistehosteet käytössä",
     "special_effects_disabled": "Erikoistehosteet poistettu käytöstä",
+    "structure_sprites_label": "Rakennuskuvitukset",
+    "structure_sprites_desc": "Säädä rakennuskuvituksia päälle/pois",
+    "structure_sprites_enabled": "Rakennuskuvitukset päällä",
+    "structure_sprites_disabled": "Rakennuskuvitukset pois käytöstä",
     "anonymous_names_label": "Piilotetut nimet",
     "anonymous_names_desc": "Korvaa pelaajien oikeat nimet satunnaisilla nimillä.",
     "anonymous_names_enabled": "Anonyymit nimet käytössä",
+    "lobby_id_visibility_label": "Piiloitetut aulojen tunnukset",
+    "lobby_id_visibility_desc": "Piilota aulan tunnus yksityisen aulan luomisessa",
     "real_names_shown": "Todelliset nimet näytetään",
     "left_click_label": "Hiiren vasen nappi valikon avaamiseen",
     "left_click_desc": "Kun päällä, hiiren vasen nappi avaa valikon, mistä voit hyökätä painamalla miekkaa. Kun pois päältä, vasen nappi hyökkää suoraan.",
@@ -284,10 +295,11 @@
     "right_click_opens_menu": "Hiiren oikea nappi avaa valikon",
     "attack_ratio_label": "⚔️ Hyökkäyksen osuus",
     "attack_ratio_desc": "Mikä osuus joukoistasi lähetetään hyökkäykseen (1–100%)",
-    "troop_ratio_label": "🪖🛠️ Joukkojen ja työntekijöiden suhde",
     "troop_ratio_desc": "Säädä joukkojen (sotia varten) ja työntekijöiden (tekevät kultaa) määrää (1 - 100%)",
     "territory_patterns_label": "Aluekuviot",
     "territory_patterns_desc": "Valitse näkyvätkö aluekuviot pelissä",
+    "performance_overlay_label": "Suorituskykypeittokuva",
+    "performance_overlay_desc": "Säädä suorituskykypeittokuvaa päälle tai pois. Kun päällä, suorituspeittokuva näytetään. Paina shift-D pelin aikana näyttääksesi tai piiloittaaksesi sen.",
     "easter_writing_speed_label": "Kirjoittamisen nopeuskerroin",
     "easter_writing_speed_desc": "Säädä kuinka nopeasti teeskentelet koodaavasi (x1–x100)",
     "easter_bug_count_label": "Vikojen määrä",
@@ -478,7 +490,8 @@
     "accept_alliance": "Hyväksy",
     "reject_alliance": "Hylkää",
     "alliance_renewed": "Liittosi pelaajan {name} kanssa sai jatkoa",
-    "ignore": "Sivuuta"
+    "ignore": "Sivuuta",
+    "unit_voluntarily_deleted": "Yksikkö poistettu vapaaehtoisesti"
   },
   "unit_info_modal": {
     "structure_info": "Rakennuksen tiedot",
@@ -497,10 +510,8 @@
     "default": "Oletus"
   },
   "control_panel": {
-    "pop": "Asukasluku",
     "gold": "Kultaa",
     "troops": "Joukkoja",
-    "workers": "Työntekijöitä",
     "attack_ratio": "Hyökkäyksen osuus"
   },
   "player_panel": {
@@ -573,6 +584,7 @@
       "openfront": "OpenFront",
       "t_rex": "T-Rex",
       "embelem": "Tunnus",
+      "contributor": "Avustaja",
       "grogu_head": "Grogun pää",
       "grogu": "Grogu"
     }
@@ -585,5 +597,9 @@
     "redirecting": "Sinut uudelleenohjataan...",
     "not_authorized": "Sinulla ei ole oikeutta käyttää tätä verkkosivustoa.",
     "contact_admin": "Jos uskot näkeväsi tämän viestin virheenä, ota yhteyttä sivuston ylläpitoon."
+  },
+  "radial_menu": {
+    "delete_unit_title": "Poista yksikkö",
+    "delete_unit_description": "Napsauta poistaaksesi lähimmän yksikön"
   }
 }

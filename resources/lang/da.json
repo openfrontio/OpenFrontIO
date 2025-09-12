@@ -26,7 +26,7 @@
     "terms_of_service": "Servicevilkår"
   },
   "news": {
-    "full_changelog": "Vis hele ændringsloggen",
+    "see_all_releases": "Se alle udgivelser",
     "github_link": "på GitHub",
     "title": "Udgivelsesnoter"
   },
@@ -43,6 +43,7 @@
     "action_move_camera": "Flyt kamera",
     "action_ratio_change": "Reducer/Øg angrebsforhold",
     "action_reset_gfx": "Nulstil grafik",
+    "action_auto_upgrade": "Opgrader automatisk nærmeste bygning",
     "ui_section": "Spilgrænseflade",
     "ui_leaderboard": "Rangliste",
     "ui_your_team": "Dit hold:",
@@ -51,7 +52,6 @@
     "ui_control_desc": "Kontrolpanelet indeholder følgende elementer:",
     "ui_pop": "Befolkning — Antal enheder, maksimal befolkning og tilvækst.",
     "ui_gold": "Guld — Din beholdning og hvor hurtigt du tjener det.",
-    "ui_troops_workers": "Tropper og arbejdere — Antallet af tildelte tropper og arbejdere. Tropper bruges til at angribe eller forsvare mod angreb. Arbejdere bruges til at generere guld. Du kan justere antallet af tropper og arbejdere med skyderen.",
     "ui_attack_ratio": "Angrebsforhold — Antallet af tropper, der bruges, når du angriber. Du kan justere angrebsforholdet med skyderen. Hvis du har flere angribende tropper end forsvarende, vil du tabe færre tropper under angrebet, mens færre angribende tropper øger skaden på dine tropper. Effekten gælder kun op til forholdet 2:1.",
     "ui_events": "Begivenhedspanel",
     "ui_events_desc": "Begivenhedspanelet viser de seneste begivenheder, anmodninger og Hurtig Chat-beskeder. Nogle eksempler er:",
@@ -70,6 +70,7 @@
     "radial_title": "Hjulmenu",
     "radial_desc": "Højreklik (eller tryk på mobilen) åbner hjulmenuen. Højreklik udenfor for at lukke den. Fra menuen kan du:",
     "radial_build": "Åbn Bygge-menu.",
+    "radial_attack": "Åbn angrebsmenuen.",
     "radial_info": "Åbn Infomenuen.",
     "radial_boat": "Send en båd (transportskibet) til at angribe på det valgte sted. Kun tilgængelig, hvis du har adgang til vand.",
     "radial_close": "Luk menuen.",
@@ -146,6 +147,7 @@
     "africa": "Afrika",
     "asia": "Asien",
     "mars": "Mars",
+    "marsrevised": "Mars (opdateret)",
     "southamerica": "Sydamerika",
     "britannia": "Storbritannien",
     "gatewaytotheatlantic": "Porten til Atlanterhavet",
@@ -162,7 +164,9 @@
     "baikal": "Baikalsøen",
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Gibraltarstrædet",
-    "italia": "Italien"
+    "italia": "Italien",
+    "yenisei": "Yenisei",
+    "pluto": "Pluto"
   },
   "map_categories": {
     "continental": "Kontinental",
@@ -213,7 +217,8 @@
     "player": "Spiller",
     "players": "Spillere",
     "waiting": "Venter på spillerne...",
-    "start": "Start spil"
+    "start": "Start spil",
+    "host_badge": "Vært"
   },
   "team_colors": {
     "red": "Rød",
@@ -273,9 +278,15 @@
     "special_effects_desc": "Slå specialeffekter til eller fra. Deaktivér for at forbedre ydeevnen",
     "special_effects_enabled": "Specialeffekter aktiveret",
     "special_effects_disabled": "Specialeffekter deaktiveret",
+    "structure_sprites_label": "Bygningssprites",
+    "structure_sprites_desc": "Slå bygningssprites til/fra",
+    "structure_sprites_enabled": "Bygningssprites aktiveret",
+    "structure_sprites_disabled": "Bygningssprites deaktiveret",
     "anonymous_names_label": "Skjulte Navne",
     "anonymous_names_desc": "Skjul rigtige spillernavne med tilfældige navne på din skærm.",
     "anonymous_names_enabled": "Anonyme navne er aktiveret",
+    "lobby_id_visibility_label": "Skjulte lobby-ID'er",
+    "lobby_id_visibility_desc": "Skjul lobby-ID ved oprettelse af privat lobby",
     "real_names_shown": "Rigtige navne vist",
     "left_click_label": "Venstreklik for at Åbne Menuen",
     "left_click_desc": "Når den er TIL, åbner venstreklik menuen, og sværdknappen angriber. Når den er FRA, angriber venstreklik direkte.",
@@ -284,10 +295,11 @@
     "right_click_opens_menu": "Højreklik åbner menu",
     "attack_ratio_label": "⚔️ Angrebsforhold",
     "attack_ratio_desc": "Hvor stor en procentdel af dine tropper skal sendes i et angreb (1–100%)",
-    "troop_ratio_label": "🪖🛠️ Forholdet mellem tropper og arbejdere",
     "troop_ratio_desc": "Juster balancen mellem tropper (til kamp) og arbejdere (til guldproduktion) (1–100%)",
     "territory_patterns_label": "🏳️ Territoriummønstre",
     "territory_patterns_desc": "Vælg, om territoriemønstre skal vises i spillet",
+    "performance_overlay_label": "Ydelsesoverlay",
+    "performance_overlay_desc": "Slå ydelsesoverlay til eller fra. Når det er aktiveret, vises ydelsesoverlayet. Tryk på shift-D under spillet for at skifte.",
     "easter_writing_speed_label": "Skrivehastigheds-multiplikator",
     "easter_writing_speed_desc": "Juster, hvor hurtigt du simulerer at kode (x1–x100)",
     "easter_bug_count_label": "Fejlantal",
@@ -478,7 +490,8 @@
     "accept_alliance": "Acceptér",
     "reject_alliance": "Afvis",
     "alliance_renewed": "Din alliance med {name} er blevet fornyet",
-    "ignore": "Ignorér"
+    "ignore": "Ignorér",
+    "unit_voluntarily_deleted": "Enhed slettet frivilligt"
   },
   "unit_info_modal": {
     "structure_info": "Strukturinfo",
@@ -497,10 +510,8 @@
     "default": "Standard"
   },
   "control_panel": {
-    "pop": "Befolkning",
     "gold": "Guld",
     "troops": "Tropper",
-    "workers": "Arbejdere",
     "attack_ratio": "Angrebsforhold"
   },
   "player_panel": {
@@ -573,6 +584,7 @@
       "openfront": "OpenFront",
       "t_rex": "T-Rex",
       "embelem": "Emblem",
+      "contributor": "Bidragyder",
       "grogu_head": "Grogu Hoved",
       "grogu": "Grogu"
     }
@@ -585,5 +597,9 @@
     "redirecting": "Du bliver omdirigeret...",
     "not_authorized": "Du har ikke adgang til denne hjemmeside.",
     "contact_admin": "Hvis du mener, at du ser denne besked ved en fejl, bedes du kontakte hjemmesidens administrator."
+  },
+  "radial_menu": {
+    "delete_unit_title": "Slet Enhed",
+    "delete_unit_description": "Tryk for at slette den nærmeste enhed"
   }
 }
