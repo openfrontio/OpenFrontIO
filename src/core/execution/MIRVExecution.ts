@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameUpdateType } from "../game/GameUpdates";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
@@ -32,6 +33,8 @@ export class MirvExecution implements Execution {
   private separateDst: TileRef;
 
   private speed: number = -1;
+
+  private cancelled = false;
 
   constructor(
     private player: Player,
@@ -83,6 +86,13 @@ export class MirvExecution implements Execution {
         MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
       );
+    }
+
+    // Check if MIRV was cancelled
+    if (this.cancelled) {
+      this.createMidAirExplosion();
+      this.active = false;
+      return;
     }
 
     const result = this.pathFinder.nextTile(this.speed);
@@ -186,5 +196,65 @@ export class MirvExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  public cancel(): boolean {
+    if (!this.nuke || this.cancelled) {
+      return false;
+    }
+
+    // Check if MIRV can be cancelled (configurable flight path rule)
+    if (!this.canCancel()) {
+      return false;
+    }
+
+    this.cancelled = true;
+    return true;
+  }
+
+  public canCancel(): boolean {
+    if (!this.nuke || !this.pathFinder) {
+      return false;
+    }
+
+    const currentIndex = this.pathFinder.currentIndex();
+    const totalLength = this.pathFinder.allTiles().length;
+    const progressPercentage = (currentIndex / totalLength) * 100;
+
+    return progressPercentage <= this.mg.config().cancelNukeUntilPercentage();
+  }
+
+  public isCancelled(): boolean {
+    return this.cancelled;
+  }
+
+  public getNuke(): Unit | null {
+    return this.nuke;
+  }
+
+  private createMidAirExplosion(): void {
+    if (!this.nuke) return;
+
+    const currentTile = this.nuke.tile();
+    this.mg.addUpdate({
+      type: GameUpdateType.MidAirExplosion,
+      tile: currentTile,
+      bombType: UnitType.MIRV,
+    });
+
+    // Display cancellation message. Client will hide it for the owner using ownerID.
+    this.mg.displayMessage(
+      "events_display.mirv_cancelled",
+      MessageType.MIRV_CANCELLED,
+      null,
+      undefined,
+      {
+        name: this.player.name(),
+        ownerID: this.player.smallID(),
+      },
+    );
+
+    // Delete the MIRV without separating into warheads
+    this.nuke.delete(true, this.player);
   }
 }

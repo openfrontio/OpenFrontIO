@@ -1,5 +1,7 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
+import { MirvExecution } from "../execution/MIRVExecution";
+import { NukeExecution } from "../execution/NukeExecution";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -897,6 +899,16 @@ export class GameImpl implements Game {
 
     // Record stats
     this.stats().goldWar(conqueror, conquered, gold);
+  }
+
+  findExecutionForUnit(unit: Unit): Execution | null {
+    return (
+      this.executions().find(
+        (e) =>
+          (e instanceof NukeExecution || e instanceof MirvExecution) &&
+          e.getNuke() === unit,
+      ) ?? null
+    );
   }
 }
 

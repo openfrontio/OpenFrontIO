@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameUpdateType } from "../game/GameUpdates";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
@@ -22,6 +23,7 @@ export class NukeExecution implements Execution {
   private nuke: Unit | null = null;
   private tilesToDestroyCache: Set<TileRef> | undefined;
   private pathFinder: ParabolaPathFinder;
+  private cancelled = false;
 
   constructor(
     private nukeType: NukeType,
@@ -149,9 +151,11 @@ export class NukeExecution implements Execution {
       return;
     }
 
-    // make the nuke unactive if it was intercepted
-    if (!this.nuke.isActive()) {
-      console.log(`Nuke destroyed before reaching target`);
+    // make the nuke unactive if it was intercepted or cancelled
+    if (!this.nuke.isActive() || this.cancelled) {
+      if (this.cancelled) {
+        this.createMidAirExplosion();
+      }
       this.active = false;
       return;
     }
@@ -176,6 +180,69 @@ export class NukeExecution implements Execution {
 
   public getNuke(): Unit | null {
     return this.nuke;
+  }
+
+  public cancel(): boolean {
+    if (!this.nuke || this.cancelled) {
+      return false;
+    }
+
+    // Check if bomb can be cancelled (configurable flight path rule)
+    if (!this.canCancel()) {
+      return false;
+    }
+
+    this.cancelled = true;
+    return true;
+  }
+
+  public canCancel(): boolean {
+    if (!this.nuke || !this.pathFinder) {
+      return false;
+    }
+
+    const currentIndex = this.pathFinder.currentIndex();
+    const totalLength = this.pathFinder.allTiles().length;
+    const progressPercentage = (currentIndex / totalLength) * 100;
+
+    return progressPercentage <= this.mg.config().cancelNukeUntilPercentage();
+  }
+
+  public isCancelled(): boolean {
+    return this.cancelled;
+  }
+
+  private createMidAirExplosion(): void {
+    if (!this.nuke) return;
+
+    const currentTile = this.nuke.tile();
+    this.mg.addUpdate({
+      type: GameUpdateType.MidAirExplosion,
+      tile: currentTile,
+      bombType: this.nuke.type(),
+    });
+
+    // Display cancellation message (localized). Client will hide it for the owner using ownerID.
+    const key =
+      this.nukeType === UnitType.AtomBomb
+        ? "events_display.nuke_cancelled"
+        : "events_display.hydrogen_bomb_cancelled";
+
+    this.mg.displayMessage(
+      key,
+      this.nukeType === UnitType.AtomBomb
+        ? MessageType.NUKE_CANCELLED
+        : MessageType.HYDROGEN_BOMB_CANCELLED,
+      null,
+      undefined,
+      {
+        name: this.player.name(),
+        ownerID: this.player.smallID(),
+      },
+    );
+
+    // Delete the bomb without causing damage
+    this.nuke.delete(true, this.player);
   }
 
   private getTrajectory(target: TileRef): TrajectoryTile[] {

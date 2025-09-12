@@ -175,6 +175,7 @@ export interface Config {
   structureMinDist(): number;
   isReplay(): boolean;
   allianceExtensionPromptOffset(): number;
+  cancelNukeUntilPercentage(): number;
 }
 
 export interface Theme {

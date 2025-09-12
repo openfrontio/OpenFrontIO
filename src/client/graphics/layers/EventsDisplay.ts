@@ -47,6 +47,7 @@ import {
 } from "./Leaderboard";
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
+import "./NukeTrackerPanel";
 
 interface GameEvent {
   description: string;
@@ -328,6 +329,18 @@ export class EventsDisplay extends LitElement implements Layer {
       (!myPlayer || myPlayer.smallID() !== event.playerID)
     ) {
       return;
+    }
+
+    // Hide bomb-cancelled messages for the owner who performed the cancel action
+    if (
+      event.messageType === MessageType.NUKE_CANCELLED ||
+      event.messageType === MessageType.HYDROGEN_BOMB_CANCELLED ||
+      event.messageType === MessageType.MIRV_CANCELLED
+    ) {
+      const ownerID = event.params?.ownerID as number | undefined;
+      if (ownerID !== undefined && myPlayer && myPlayer.smallID() === ownerID) {
+        return;
+      }
     }
 
     if (event.goldAmount !== undefined) {
@@ -688,6 +701,25 @@ export class EventsDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       unitView: unitView,
     });
+
+    // Handle bomb cancellation events
+    if (
+      event.messageType === MessageType.NUKE_CANCELLED ||
+      event.messageType === MessageType.MIRV_CANCELLED
+    ) {
+      const msg =
+        event.messageType === MessageType.NUKE_CANCELLED
+          ? // TODO: Translate
+            "Bomb cancelled mid-flight"
+          : "MIRV warhead cancelled mid-flight";
+
+      this.addEvent({
+        description: msg,
+        type: event.messageType,
+        highlight: true,
+        createdAt: this.game.ticks(),
+      });
+    }
   }
 
   private getEventDescription(
@@ -925,14 +957,26 @@ export class EventsDisplay extends LitElement implements Layer {
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
+              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-[1100] sm:w-96 backdrop-blur pointer-events-auto"
             >
+              <!-- Vertical Bomb Tracker Column positioned just left of the panel, bottom-left anchored -->
+              <div
+                class="absolute bottom-0 right-full mr-2 z-[1100] pointer-events-auto"
+              >
+                <nuke-tracker-panel
+                  .eventBus=${this.eventBus}
+                  .game=${this.game}
+                  .tickCount=${this.game.ticks()}
+                  layout="vertical"
+                ></nuke-tracker-panel>
+              </div>
               <!-- Button Bar -->
               <div
                 class="w-full p-2 lg:p-3 rounded-t-none md:rounded-t-md bg-gray-800/70"
               >
                 <div class="flex justify-between items-center">
-                  <div class="flex gap-4">
+                  <div class="flex items-center gap-3">
+                    <!-- Inline bomb tracker removed (moved to vertical column left of panel) -->
                     ${this.renderButton({
                       content: html`<img
                         src="${swordIcon}"
@@ -991,6 +1035,8 @@ export class EventsDisplay extends LitElement implements Layer {
                     })}
                   </div>
                   <div class="flex items-center gap-3">
+                    <!-- Right-side inline bomb tracker removed (moved to vertical column left of panel) -->
+
                     ${this.latestGoldAmount !== null
                       ? html`<span
                           class="text-green-400 font-semibold transition-all duration-300 ${this

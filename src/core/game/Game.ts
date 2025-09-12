@@ -677,6 +677,10 @@ export interface Game extends GameMap {
     predicate?: UnitPredicate,
   ): Array<{ unit: Unit; distSquared: number }>;
 
+  findExecutionForUnit(unit: Unit): Execution | null;
+
+  removeExecution(exec: Execution): void;
+
   addExecution(...exec: Execution[]): void;
   displayMessage(
     message: string,
@@ -782,6 +786,9 @@ export enum MessageType {
   RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
   RENEW_ALLIANCE,
+  NUKE_CANCELLED,
+  HYDROGEN_BOMB_CANCELLED,
+  MIRV_CANCELLED,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -807,6 +814,9 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.CAPTURED_ENEMY_UNIT]: MessageCategory.ATTACK,
   [MessageType.UNIT_CAPTURED_BY_ENEMY]: MessageCategory.ATTACK,
   [MessageType.UNIT_DESTROYED]: MessageCategory.ATTACK,
+  [MessageType.NUKE_CANCELLED]: MessageCategory.ATTACK,
+  [MessageType.HYDROGEN_BOMB_CANCELLED]: MessageCategory.ATTACK,
+  [MessageType.MIRV_CANCELLED]: MessageCategory.ATTACK,
   [MessageType.ALLIANCE_ACCEPTED]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_REJECTED]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_REQUEST]: MessageCategory.ALLIANCE,

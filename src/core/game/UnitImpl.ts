@@ -21,6 +21,7 @@ export class UnitImpl implements Unit {
   private _targetUnit: Unit | undefined;
   private _health: bigint;
   private _lastTile: TileRef;
+  private readonly _originTile: TileRef;
   private _retreating: boolean = false;
   private _targetedBySAM = false;
   private _reachedTarget = false;
@@ -49,6 +50,7 @@ export class UnitImpl implements Unit {
     params: AllUnitParams = {},
   ) {
     this._lastTile = _tile;
+    this._originTile = _tile;
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._targetTile =
       "targetTile" in params ? (params.targetTile ?? undefined) : undefined;
@@ -137,6 +139,14 @@ export class UnitImpl implements Unit {
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
+      originTile:
+        // Include originTile only for nukes and warheads for now
+        this._type === UnitType.AtomBomb ||
+        this._type === UnitType.HydrogenBomb ||
+        this._type === UnitType.MIRV ||
+        this._type === UnitType.MIRVWarhead
+          ? this._originTile
+          : undefined,
     };
   }
 

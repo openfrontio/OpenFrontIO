@@ -192,6 +192,12 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.NAVAL_INVASION_INBOUND:
     case MessageType.RENEW_ALLIANCE:
       return severityColors["warn"];
+
+    case MessageType.NUKE_CANCELLED:
+    case MessageType.HYDROGEN_BOMB_CANCELLED:
+    case MessageType.MIRV_CANCELLED:
+      return severityColors["warn"];
+
     case MessageType.CHAT:
     case MessageType.ALLIANCE_REQUEST:
       return severityColors["info"];
