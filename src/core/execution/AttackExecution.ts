@@ -229,7 +229,6 @@ export class AttackExecution implements Execution {
 
     if (targetPlayer && this._owner.isFriendly(targetPlayer)) {
       // In this case a new alliance was created AFTER the attack started.
-      // We should retreat to avoid the attacker becoming a traitor.
       this.retreat();
       return;
     }
