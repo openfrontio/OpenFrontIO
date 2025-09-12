@@ -313,7 +313,10 @@ export class PlayerPanel extends LitElement implements Layer {
                         text-sm font-medium text-zinc-200"
                 >
                   <span>💰</span>
-                  <span translate="no">
+                  <span
+                    translate="no"
+                    class="inline-block min-w-[35px] text-right"
+                  >
                     ${renderNumber(other.gold() || 0)}
                   </span>
                   <span class="opacity-90">
@@ -326,7 +329,10 @@ export class PlayerPanel extends LitElement implements Layer {
                         text-sm font-medium text-zinc-200"
                 >
                   <span>🛡️</span>
-                  <span translate="no">
+                  <span
+                    translate="no"
+                    class="inline-block min-w-[35px] text-right"
+                  >
                     ${renderTroops(other.troops() || 0)}
                   </span>
                   <span class="opacity-90">
@@ -389,9 +395,9 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Divider -->
               <div class="my-1 h-px bg-zinc-700/80"></div>
 
-              <!-- Alliances (collapsible) -->
+              <!-- Alliances -->
               <div class="text-sm">
-                <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-1">
+                <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-1 mb-2">
                   <div class="font-medium text-zinc-400">
                     ${translateText("player_panel.alliances")}
                   </div>
@@ -400,42 +406,24 @@ export class PlayerPanel extends LitElement implements Layer {
                   </div>
                 </div>
 
-                <!-- Collapsible list -->
-                <details class="group mt-2">
-                  <summary
-                    class="flex cursor-pointer select-none items-center justify-between
-                          rounded-lg border border-zinc-700 bg-zinc-800/50 px-3 py-2
-                          text-zinc-200 hover:bg-zinc-800"
-                  >
-                    <span>${translateText("player_panel.view_allies")}</span>
-                    <span class="transition-transform group-open:rotate-180"
-                      >▾</span
-                    >
-                  </summary>
-
+                <div class="mt-1 rounded-lg border border-zinc-700 bg-zinc-900">
                   <div
-                    class="mt-1 rounded-lg border border-zinc-700 bg-zinc-900"
+                    class="max-h-[72px] overflow-y-auto p-2 text-xs text-zinc-200"
+                    translate="no"
                   >
-                    <div
-                      class="max-h-[72px] overflow-y-auto p-2 text-xs text-zinc-200"
-                      translate="no"
-                    >
-                      ${other.allies().length > 0
-                        ? other
-                            .allies()
-                            .map(
-                              (p) => html`
-                                <div class="truncate leading-6">
-                                  ${p.name()}
-                                </div>
-                              `,
-                            )
-                        : html`<div class="py-2 text-zinc-400">
-                            ${translateText("player_panel.none")}
-                          </div>`}
-                    </div>
+                    ${other.allies().length > 0
+                      ? other
+                          .allies()
+                          .map(
+                            (p) => html`
+                              <div class="truncate leading-6">${p.name()}</div>
+                            `,
+                          )
+                      : html`<div class="py-2 text-zinc-400">
+                          ${translateText("player_panel.none")}
+                        </div>`}
                   </div>
-                </details>
+                </div>
               </div>
 
               <!-- Alliance expiry -->
