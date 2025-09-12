@@ -70,15 +70,10 @@ export class BotExecution implements Execution {
       const odds = this.bot.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
         // Check and break alliance before attacking if needed
-        if (this.bot.isAlliedWith(toAttack)) {
-          const alliance = this.bot.allianceWith(toAttack);
-          if (alliance !== null) {
-            this.bot.breakAlliance(alliance);
-          }
-          // Don't attack friendly players
-          if (this.bot.isFriendly(toAttack)) {
-            return;
-          }
+        const alliance = this.bot.allianceWith(toAttack);
+
+        if (alliance !== null) {
+          this.bot.breakAlliance(alliance);
         }
 
         this.behavior.sendAttack(toAttack);
