@@ -2,6 +2,7 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerActions, PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerView } from "../../../core/game/GameView";
+import { ShowTargetEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
@@ -46,6 +47,8 @@ export class PlayerActionHandler {
     targetTile: TileRef,
     spawnTile: TileRef | null,
   ) {
+    // Show visual target marker when initiating a naval invasion via radial menu
+    this.eventBus.emit(new ShowTargetEvent(targetTile, spawnTile));
     this.eventBus.emit(
       new SendBoatAttackIntentEvent(
         targetId,

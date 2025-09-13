@@ -32,6 +32,7 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  ShowTargetEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
@@ -577,6 +578,10 @@ export class ClientGameRunner {
     if (!this.myPlayer) return;
 
     this.myPlayer.bestTransportShipSpawn(tile).then((spawn: number | false) => {
+      // show a transient target marker at the clicked tile, include spawn tile if known
+      this.eventBus.emit(
+        new ShowTargetEvent(tile, spawn === false ? null : spawn),
+      );
       if (this.myPlayer === null) throw new Error("not initialized");
       this.eventBus.emit(
         new SendBoatAttackIntentEvent(
