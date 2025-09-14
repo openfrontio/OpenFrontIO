@@ -181,6 +181,15 @@ export class InputHandler {
       groundAttack: "KeyG",
       modifierKey: "ControlLeft",
       altKey: "AltLeft",
+      buildCity: "Digit1",
+      buildFactory: "Digit2",
+      buildPort: "Digit3",
+      buildDefensePost: "Digit4",
+      buildMissileSilo: "Digit5",
+      buildSamLauncher: "Digit6",
+      buildAtomBomb: "Digit7",
+      buildHydrogenBomb: "Digit8",
+      buildWarship: "Digit9",
       ...saved,
     };
 
