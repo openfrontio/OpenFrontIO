@@ -17,7 +17,6 @@ export class MoveWarshipExecution implements Execution {
       .units(UnitType.Warship)
       .find((u) => u.id() === this.unitId);
     if (!warship) {
-      console.warn("MoveWarshipExecution: warship not found");
       return;
     }
     if (!warship.isActive()) {

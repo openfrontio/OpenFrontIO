@@ -242,9 +242,14 @@ describe("Warship", () => {
       game.ref(coastX + 5, 15),
     );
 
+    const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
+
     // Verify that no error is thrown.
     exec.init(game, 0);
 
     expect(exec.isActive()).toBe(false);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+
+    consoleWarnSpy.mockRestore();
   });
 });
