@@ -223,20 +223,19 @@ export class PlayerPanel extends LitElement implements Layer {
     return "text-emerald-400"; // More than 60 seconds: Green
   }
 
-  private formatDuration(totalSeconds: number): string {
-    if (totalSeconds <= 0) return "0s";
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    let time = "";
-    if (minutes > 0) time += `${minutes}m `;
-    time += `${seconds}s`;
-    return time.trim();
-  }
-
   render() {
     if (!this.isVisible) {
       return html``;
     }
+    const btnBase =
+      "w-full flex flex-col items-center rounded-lg px-2 py-2 border border-white/15 bg-white/5 shadow-sm transition-colors";
+    const btnNormal = `${btnBase} text-zinc-200/80 hover:bg-white/10 hover:text-white`;
+    const btnRed = `${btnBase} text-red-400 hover:bg-red-500/10 hover:text-red-300`;
+    const btnGreen = `${btnBase} text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300`;
+    const btnIndigo = `${btnBase} text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300`;
+    const iconSize = "h-5 w-5";
+    const textSize = "text-[11px] font-medium";
+
     const myPlayer = this.g.myPlayer();
     if (myPlayer === null) return;
     if (this.tile === null) return;
@@ -310,15 +309,15 @@ export class PlayerPanel extends LitElement implements Layer {
               <div class="my-1 h-px bg-zinc-700/80"></div>
 
               <!-- Resources section -->
-              <div class="mb-1 flex flex-wrap gap-2">
+              <div class="mb-1 flex justify-between gap-2">
                 <div
-                  class="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-2.5 py-1
+                  class="inline-flex items-center gap-0.5 rounded-full bg-zinc-800 px-2.5 py-1
                         text-sm font-medium text-zinc-200"
                 >
                   <span>💰</span>
                   <span
                     translate="no"
-                    class="inline-block min-w-[35px] text-right"
+                    class="inline-block w-[40px] text-right font-mono"
                   >
                     ${renderNumber(other.gold() || 0)}
                   </span>
@@ -334,7 +333,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   <span>🛡️</span>
                   <span
                     translate="no"
-                    class="inline-block min-w-[35px] text-right"
+                    class="inline-block w-[40px] text-right font-mono"
                   >
                     ${renderTroops(other.troops() || 0)}
                   </span>
@@ -454,19 +453,17 @@ export class PlayerPanel extends LitElement implements Layer {
               <div class="my-1 h-px bg-zinc-700/80"></div>
 
               <!-- Action buttons -->
-              <div class="space-y-2">
-                <!-- Row 1: Chat / Target / Alliance actions -->
-                <div class="flex items-center justify-around">
+              <div class="flex flex-col gap-2">
+                <div class="grid auto-cols-fr grid-flow-col gap-1">
                   <!-- Chat -->
                   <button
                     @click=${(e: MouseEvent) =>
                       this.handleChat(e, myPlayer, other)}
-                    class="group flex flex-col items-center gap-1 rounded-lg p-2
-                          text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                    class="${btnNormal}"
                     title="${translateText("player_panel.chat")}"
                   >
-                    <img src=${chatIcon} alt="Chat" class="h-6 w-6" />
-                    <span class="text-[11px] font-medium"
+                    <img src=${chatIcon} alt="Chat" class="${iconSize}" />
+                    <span class="${textSize}"
                       >${translateText("player_panel.chat")}</span
                     >
                   </button>
@@ -477,100 +474,56 @@ export class PlayerPanel extends LitElement implements Layer {
                         <button
                           @click=${(e: MouseEvent) =>
                             this.handleEmojiClick(e, myPlayer, other)}
-                          class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          class="${btnNormal}"
                           title="${translateText("player_panel.emotes")}"
                         >
-                          <img src=${emojiIcon} alt="Emoji" class="h-6 w-6" />
-                          <span class="text-[11px] font-medium"
+                          <img
+                            src=${emojiIcon}
+                            alt="Emoji"
+                            class="${iconSize}"
+                          />
+                          <span class="${textSize}"
                             >${translateText("player_panel.emotes")}</span
                           >
                         </button>
                       `
                     : ""}
+
                   <!-- Target -->
                   ${canTarget
                     ? html`
                         <button
                           @click=${(e: MouseEvent) =>
                             this.handleTargetClick(e, other)}
-                          class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          class="${btnNormal}"
                           title="${translateText("player_panel.target")}"
                         >
-                          <img src=${targetIcon} alt="Target" class="h-6 w-6" />
-                          <span class="text-[11px] font-medium"
+                          <img
+                            src=${targetIcon}
+                            alt="Target"
+                            class="${iconSize}"
+                          />
+                          <span class="${textSize}"
                             >${translateText("player_panel.target")}</span
                           >
                         </button>
                       `
                     : ""}
-
-                  <!-- Break Alliance -->
-                  ${canBreakAlliance
-                    ? html`
-                        <button
-                          @click=${(e: MouseEvent) =>
-                            this.handleBreakAllianceClick(e, myPlayer, other)}
-                          class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                          title="${translateText(
-                            "player_panel.break_alliance",
-                          )}"
-                        >
-                          <img
-                            src=${traitorIcon}
-                            alt="Break Alliance"
-                            class="h-6 w-6"
-                          />
-                          <span class="text-[11px] font-medium"
-                            >${translateText("player_panel.break")}</span
-                          >
-                        </button>
-                      `
-                    : ""}
-
-                  <!-- Send Alliance Request (primary/indigo) -->
-                  ${canSendAllianceRequest
-                    ? html`
-                        <button
-                          @click=${(e: MouseEvent) =>
-                            this.handleAllianceClick(e, myPlayer, other)}
-                          class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300"
-                          title="${translateText("player_panel.alliance")}"
-                        >
-                          <img
-                            src=${allianceIcon}
-                            alt="Alliance"
-                            class="h-6 w-6"
-                          />
-                          <span class="text-[11px] font-medium">
-                            ${translateText("player_panel.send_alliance")}
-                          </span>
-                        </button>
-                      `
-                    : ""}
-                </div>
-
-                <!-- Row 2: Troops / Gold / Emotes / Trade toggle -->
-                <div class="flex items-center justify-around">
                   <!-- Send Troops -->
                   ${canDonateTroops
                     ? html`
                         <button
                           @click=${(e: MouseEvent) =>
                             this.handleDonateTroopClick(e, myPlayer, other)}
-                          class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          class="${btnNormal}"
                           title="${translateText("player_panel.send_troops")}"
                         >
                           <img
                             src=${donateTroopIcon}
                             alt="Troops"
-                            class="h-6 w-6"
+                            class="${iconSize}"
                           />
-                          <span class="text-[11px] font-medium"
+                          <span class="${textSize}"
                             >${translateText("player_panel.troops")}</span
                           >
                         </button>
@@ -583,39 +536,39 @@ export class PlayerPanel extends LitElement implements Layer {
                         <button
                           @click=${(e: MouseEvent) =>
                             this.handleDonateGoldClick(e, myPlayer, other)}
-                          class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                          class="${btnNormal}"
                           title="${translateText("player_panel.send_gold")}"
                         >
                           <img
                             src=${donateGoldIcon}
                             alt="Gold"
-                            class="h-6 w-6"
+                            class="${iconSize}"
                           />
-                          <span class="text-[11px] font-medium"
+                          <span class="${textSize}"
                             >${translateText("player_panel.gold")}</span
                           >
                         </button>
                       `
                     : ""}
+                </div>
 
-                  <!-- Trade toggle: Stop when canEmbargo, Start otherwise (only if not self) -->
+                <div class="grid auto-cols-fr grid-flow-col gap-1">
+                  <!-- Trade toggle -->
                   ${other !== myPlayer
                     ? canEmbargo
                       ? html`
                           <button
                             @click=${(e: MouseEvent) =>
                               this.handleEmbargoClick(e, myPlayer, other)}
-                            class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                            class="${btnRed}"
                             title="${translateText("player_panel.stop_trade")}"
                           >
                             <img
                               src=${traitorIcon}
                               alt="Stop Trade"
-                              class="h-6 w-6"
+                              class="${iconSize}"
                             />
-                            <span class="text-[11px] font-medium">
+                            <span class="${textSize}">
                               ${translateText("player_panel.stop_trade")}
                             </span>
                           </button>
@@ -624,20 +577,63 @@ export class PlayerPanel extends LitElement implements Layer {
                           <button
                             @click=${(e: MouseEvent) =>
                               this.handleStopEmbargoClick(e, myPlayer, other)}
-                            class="group flex flex-col items-center gap-1 rounded-lg p-2
-                            text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300"
+                            class="${btnGreen}"
                             title=${translateText("player_panel.start_trade")}
                           >
                             <img
                               src=${allianceIcon}
                               alt="Start Trade"
-                              class="h-6 w-6"
+                              class="${iconSize}"
                             />
-                            <span class="text-[11px] font-medium">
+                            <span class="${textSize}">
                               ${translateText("player_panel.start_trade")}
                             </span>
                           </button>
                         `
+                    : ""}
+
+                  <!-- Break Alliance -->
+                  ${canBreakAlliance
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleBreakAllianceClick(e, myPlayer, other)}
+                          class="${btnRed}"
+                          title="${translateText(
+                            "player_panel.break_alliance",
+                          )}"
+                        >
+                          <img
+                            src=${traitorIcon}
+                            alt="Break Alliance"
+                            class="${iconSize}"
+                          />
+                          <span class="${textSize}"
+                            >${translateText("player_panel.break")}</span
+                          >
+                        </button>
+                      `
+                    : ""}
+
+                  <!-- Send Alliance Request -->
+                  ${canSendAllianceRequest
+                    ? html`
+                        <button
+                          @click=${(e: MouseEvent) =>
+                            this.handleAllianceClick(e, myPlayer, other)}
+                          class="${btnIndigo}"
+                          title="${translateText("player_panel.alliance")}"
+                        >
+                          <img
+                            src=${allianceIcon}
+                            alt="Alliance"
+                            class="${iconSize}"
+                          />
+                          <span class="${textSize}">
+                            ${translateText("player_panel.send_alliance")}
+                          </span>
+                        </button>
+                      `
                     : ""}
                 </div>
               </div>
