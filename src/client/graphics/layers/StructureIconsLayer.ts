@@ -1,22 +1,40 @@
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
 import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
-import anchorIcon from "../../../../resources/images/AnchorIcon.png";
-import cityIcon from "../../../../resources/images/CityIcon.png";
-import factoryIcon from "../../../../resources/images/FactoryUnit.png";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
-import SAMMissileIcon from "../../../../resources/images/SamLauncherUnit.png";
-import shieldIcon from "../../../../resources/images/ShieldIcon.png";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerID, UnitType } from "../../../core/game/Game";
+import {
+  BuildableUnit,
+  Cell,
+  PlayerActions,
+  PlayerID,
+  UnitType,
+} from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { ToggleStructureEvent } from "../../InputHandler";
+import { GameView, UnitView } from "../../../core/game/GameView";
+import {
+  GhostStructureEvent,
+  MouseMoveEvent,
+  MouseUpEvent,
+  ToggleStructureEvent as ToggleStructuresEvent,
+} from "../../InputHandler";
+import {
+  BuildUnitIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-
-type ShapeType = "triangle" | "square" | "pentagon" | "octagon" | "circle";
+import {
+  DOTS_ZOOM_THRESHOLD,
+  ICON_SCALE_FACTOR_ZOOMED_IN,
+  ICON_SCALE_FACTOR_ZOOMED_OUT,
+  ICON_SIZE,
+  LEVEL_SCALE_FACTOR,
+  OFFSET_ZOOM_Y,
+  SpriteFactory,
+  STRUCTURE_SHAPES,
+  ZOOM_THRESHOLD,
+} from "./StructureDrawingUtils";
 
 class StructureRenderInfo {
   public isOnScreen: boolean = false;
@@ -31,60 +49,34 @@ class StructureRenderInfo {
   ) {}
 }
 
-const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
-  [UnitType.City]: "circle",
-  [UnitType.Port]: "pentagon",
-  [UnitType.Factory]: "circle",
-  [UnitType.DefensePost]: "octagon",
-  [UnitType.SAMLauncher]: "square",
-  [UnitType.MissileSilo]: "triangle",
-};
-const LEVEL_SCALE_FACTOR = 3;
-const ICON_SCALE_FACTOR_ZOOMED_IN = 3.5;
-const ICON_SCALE_FACTOR_ZOOMED_OUT = 1.4;
-const DOTS_ZOOM_THRESHOLD = 0.5;
-const ZOOM_THRESHOLD = 4.3;
-const ICON_SIZE = {
-  circle: 28,
-  octagon: 28,
-  pentagon: 30,
-  square: 28,
-  triangle: 28,
-};
-const OFFSET_ZOOM_Y = 4; // offset for the y position of the level over the sprite
-
 export class StructureIconsLayer implements Layer {
+  private ghostUnit: {
+    container: PIXI.Container;
+    range: PIXI.Container | null;
+    buildableUnit: BuildableUnit;
+  } | null = null;
   private pixicanvas: HTMLCanvasElement;
   private iconsStage: PIXI.Container;
+  private ghostStage: PIXI.Container;
   private levelsStage: PIXI.Container;
+  private rootStage: PIXI.Container = new PIXI.Container();
+  public playerActions: PlayerActions | null = null;
   private dotsStage: PIXI.Container;
-  private shouldRedraw: boolean = true;
-  private textureCache: Map<string, PIXI.Texture> = new Map();
-  private theme: Theme;
+  private readonly theme: Theme;
   private renderer: PIXI.Renderer;
   private renders: StructureRenderInfo[] = [];
-  private seenUnits: Set<UnitView> = new Set();
-  private structures: Map<
-    UnitType,
-    { visible: boolean; iconPath: string; image: HTMLImageElement | null }
-  > = new Map([
-    [UnitType.City, { visible: true, iconPath: cityIcon, image: null }],
-    [UnitType.Factory, { visible: true, iconPath: factoryIcon, image: null }],
-    [
-      UnitType.DefensePost,
-      { visible: true, iconPath: shieldIcon, image: null },
-    ],
-    [UnitType.Port, { visible: true, iconPath: anchorIcon, image: null }],
-    [
-      UnitType.MissileSilo,
-      { visible: true, iconPath: missileSiloIcon, image: null },
-    ],
-    [
-      UnitType.SAMLauncher,
-      { visible: true, iconPath: SAMMissileIcon, image: null },
-    ],
-  ]);
+  private readonly seenUnits: Set<UnitView> = new Set();
+  private readonly mousePos = { x: 0, y: 0 };
   private renderSprites = true;
+  private factory: SpriteFactory;
+  private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
+    [UnitType.City, { visible: true }],
+    [UnitType.Factory, { visible: true }],
+    [UnitType.DefensePost, { visible: true }],
+    [UnitType.Port, { visible: true }],
+    [UnitType.MissileSilo, { visible: true }],
+    [UnitType.SAMLauncher, { visible: true }],
+  ]);
 
   constructor(
     private game: GameView,
@@ -92,7 +84,12 @@ export class StructureIconsLayer implements Layer {
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
-    this.structures.forEach((u, unitType) => this.loadIcon(u, unitType));
+    this.factory = new SpriteFactory(
+      this.theme,
+      game,
+      transformHandler,
+      this.renderSprites,
+    );
   }
 
   async setupRenderer() {
@@ -110,6 +107,10 @@ export class StructureIconsLayer implements Layer {
     this.iconsStage.position.set(0, 0);
     this.iconsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
+    this.ghostStage = new PIXI.Container();
+    this.ghostStage.position.set(0, 0);
+    this.ghostStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
+
     this.levelsStage = new PIXI.Container();
     this.levelsStage.position.set(0, 0);
     this.levelsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
@@ -117,6 +118,15 @@ export class StructureIconsLayer implements Layer {
     this.dotsStage = new PIXI.Container();
     this.dotsStage.position.set(0, 0);
     this.dotsStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
+
+    this.rootStage.addChild(
+      this.dotsStage,
+      this.iconsStage,
+      this.levelsStage,
+      this.ghostStage,
+    );
+    this.rootStage.position.set(0, 0);
+    this.rootStage.setSize(this.pixicanvas.width, this.pixicanvas.height);
 
     await this.renderer.init({
       canvas: this.pixicanvas,
@@ -130,36 +140,208 @@ export class StructureIconsLayer implements Layer {
     });
   }
 
-  private loadIcon(
-    unitInfo: {
-      iconPath: string;
-      image: HTMLImageElement | null;
-    },
-    unitType: UnitType,
-  ) {
-    const image = new Image();
-    image.src = unitInfo.iconPath;
-    image.onload = () => {
-      unitInfo.image = image;
-    };
-    image.onerror = () => {
-      console.error(
-        `Failed to load icon for ${unitType}: ${unitInfo.iconPath}`,
-      );
-    };
-  }
-
   shouldTransform(): boolean {
     return false;
   }
 
+  private createStructure(e: MouseUpEvent) {
+    console.log("createStructure", this.ghostUnit);
+    if (
+      !this.ghostUnit ||
+      !(
+        this.ghostUnit.buildableUnit.canBuild !== false ||
+        this.ghostUnit.buildableUnit.canUpgrade !== false
+      )
+    ) {
+      console.log("no ghost unit or cannot build/upgrade");
+      this.removeGhostStructure();
+      return;
+    }
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) return;
+    const x = e.x - rect.left;
+    const y = e.y - rect.top;
+    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
+      this.eventBus.emit(
+        new SendUpgradeStructureIntentEvent(
+          this.ghostUnit.buildableUnit.canUpgrade,
+          this.ghostUnit.buildableUnit.type,
+        ),
+      );
+    } else if (this.ghostUnit.buildableUnit.canBuild) {
+      this.eventBus.emit(
+        new BuildUnitIntentEvent(
+          this.ghostUnit.buildableUnit.type,
+          this.game.ref(tile.x, tile.y),
+        ),
+      );
+    }
+    this.removeGhostStructure();
+  }
+
   async init() {
-    this.eventBus.on(ToggleStructureEvent, (e) =>
-      this.toggleStructure(e.structureType),
+    this.eventBus.on(ToggleStructuresEvent, (e) =>
+      this.toggleStructures(e.structureTypes),
     );
+    this.eventBus.on(GhostStructureEvent, (e) => {
+      if (this.game.inSpawnPhase()) {
+        return;
+      }
+      console.log("GhostStructureEvent", e.structureType);
+      this.createGhostStructure(e.structureType);
+    });
+    this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
+
+    this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
+
     window.addEventListener("resize", () => this.resizeCanvas());
     await this.setupRenderer();
     this.redraw();
+  }
+
+  private moveGhost(e: MouseMoveEvent) {
+    this.mousePos.x = e.x;
+    this.mousePos.y = e.y;
+
+    if (!this.ghostUnit) return;
+
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) return;
+
+    const localX = e.x - rect.left;
+    const localY = e.y - rect.top;
+
+    const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
+    if (!this.game.isValidCoord(tile.x, tile.y)) return;
+
+    this.game
+      ?.myPlayer()
+      ?.actions(this.game.ref(tile.x, tile.y))
+      .then((actions) => {
+        if (!this.ghostUnit) return;
+
+        const match = actions.buildableUnits.find(
+          (u) => u.type === this.ghostUnit!.buildableUnit.type,
+        );
+        if (match) {
+          this.ghostUnit.buildableUnit = match;
+        }
+
+        const unit = this.ghostUnit.buildableUnit;
+
+        for (const r of this.renders) {
+          r.iconContainer.filters = [];
+          r.dotContainer.filters = [];
+        }
+        if (unit.canUpgrade) {
+          const renderUpgradable = this.renders.find(
+            (r) => r.unit.id() === unit.canUpgrade,
+          );
+          if (renderUpgradable) {
+            renderUpgradable.iconContainer.filters = [
+              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
+            ];
+            renderUpgradable.dotContainer.filters = [
+              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
+            ];
+          }
+        } else if (unit.canBuild === false) {
+          unit.canBuild = false;
+          this.ghostUnit.container.filters = [
+            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
+          ];
+        } else {
+          this.ghostUnit.container.filters = [];
+        }
+      });
+
+    this.ghostUnit.container.position.set(localX, localY);
+    this.ghostUnit.range?.position.set(localX, localY);
+  }
+
+  public createGhostStructure(type: UnitType | null) {
+    const player = this.game.myPlayer();
+    if (!player) return;
+    if (this.ghostUnit) {
+      const currentType = this.ghostUnit.buildableUnit.type;
+      this.removeGhostStructure();
+      if (type === currentType) {
+        return;
+      }
+    }
+    if (type === null) {
+      return;
+    }
+    let tile = this.transformHandler.screenToWorldCoordinates(
+      this.mousePos.x,
+      this.mousePos.y,
+    );
+    if (!this.game.isValidCoord(tile.x, tile.y)) {
+      tile = new Cell(1, 1);
+    }
+    this.game
+      ?.myPlayer()
+      ?.actions(this.game.ref(tile.x, tile.y))
+      .then((actions) => {
+        for (const u of actions.buildableUnits) {
+          if (u.type === type) {
+            this.ghostUnit = {
+              container: this.factory.createGhostContainer(
+                player,
+                this.ghostStage,
+                this.mousePos,
+                type,
+              ),
+              range: this.createRange(type),
+              buildableUnit: u,
+            };
+            return;
+          }
+        }
+      });
+  }
+
+  private createRange(type: UnitType): PIXI.Container | null {
+    if (this.ghostStage === undefined) throw new Error("Not initialized");
+    const parentContainer = new PIXI.Container();
+    const circle = new PIXI.Graphics();
+    let radius = 0;
+    switch (type) {
+      case UnitType.SAMLauncher:
+        radius = this.game.config().defaultSamRange();
+        break;
+      case UnitType.Factory:
+        radius = this.game.config().trainStationMaxRange();
+        break;
+      case UnitType.DefensePost:
+        radius = this.game.config().defensePostRange();
+        break;
+      case UnitType.AtomBomb:
+        radius = this.game.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+        break;
+      case UnitType.HydrogenBomb:
+        radius = this.game.config().nukeMagnitudes(UnitType.HydrogenBomb).outer;
+        break;
+      default:
+        return null;
+    }
+    circle
+      .circle(0, 0, radius)
+      .stroke({ width: 1, color: 0xffffff, alpha: 0.2 });
+    parentContainer.addChild(circle);
+    parentContainer.position.set(this.mousePos.x, this.mousePos.y);
+    parentContainer.scale.set(this.transformHandler.scale);
+    this.ghostStage.addChild(parentContainer);
+    return parentContainer;
+  }
+
+  public removeGhostStructure() {
+    if (this.ghostUnit) {
+      this.ghostUnit.container.destroy();
+      this.ghostUnit.range?.destroy();
+      this.ghostUnit = null;
+    }
   }
 
   resizeCanvas() {
@@ -167,7 +349,6 @@ export class StructureIconsLayer implements Layer {
       this.pixicanvas.width = window.innerWidth;
       this.pixicanvas.height = window.innerHeight;
       this.renderer.resize(innerWidth, innerHeight, 1);
-      this.shouldRedraw = true;
     }
   }
 
@@ -188,15 +369,15 @@ export class StructureIconsLayer implements Layer {
       this.game.config().userSettings()?.structureSprites() ?? true;
   }
 
-  private toggleStructure(toggleStructureType: UnitType | null): void {
+  private toggleStructures(toggleStructureType: UnitType[] | null): void {
     for (const [structureType, infos] of this.structures) {
       infos.visible =
-        structureType === toggleStructureType || toggleStructureType === null;
+        toggleStructureType?.indexOf(structureType) !== -1 ||
+        toggleStructureType === null;
     }
     for (const render of this.renders) {
       this.modifyVisibility(render);
     }
-    this.shouldRedraw = true;
   }
 
   private findRenderByUnit(
@@ -225,7 +406,6 @@ export class StructureIconsLayer implements Layer {
     const render = this.findRenderByUnit(unitView);
     if (render) {
       this.deleteStructure(render);
-      this.shouldRedraw = true;
     }
   }
 
@@ -274,7 +454,6 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer = this.createIconSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
-      this.shouldRedraw = true;
     }
   }
 
@@ -286,7 +465,6 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer = this.createIconSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
-      this.shouldRedraw = true;
     }
   }
 
@@ -300,7 +478,6 @@ export class StructureIconsLayer implements Layer {
       render.levelContainer = this.createLevelSprite(unit);
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
-      this.shouldRedraw = true;
     }
   }
 
@@ -318,292 +495,25 @@ export class StructureIconsLayer implements Layer {
         this.computeNewLocation(render);
       }
     }
-
-    if (this.transformHandler.hasChanged() || this.shouldRedraw) {
-      if (this.transformHandler.scale > ZOOM_THRESHOLD && this.renderSprites) {
-        this.renderer.render(this.levelsStage);
-      } else if (this.transformHandler.scale > DOTS_ZOOM_THRESHOLD) {
-        this.renderer.render(this.iconsStage);
-      } else {
-        this.renderer.render(this.dotsStage);
-      }
-      this.shouldRedraw = false;
-    }
-    mainContext.drawImage(this.renderer.canvas, 0, 0);
-  }
-
-  private createTexture(unit: UnitView, renderIcon: boolean): PIXI.Texture {
-    const isConstruction = unit.type() === UnitType.Construction;
-    const constructionType = unit.constructionType();
-    if (isConstruction && constructionType === undefined) {
-      console.warn(
-        `Unit ${unit.id()} is a construction but has no construction type.`,
-      );
-      return PIXI.Texture.EMPTY;
-    }
-    const structureType = isConstruction ? constructionType! : unit.type();
-    const cacheKey = isConstruction
-      ? `construction-${structureType}` + (renderIcon ? "-icon" : "")
-      : `${this.theme.territoryColor(unit.owner()).toRgbString()}-${structureType}` +
-        (renderIcon ? "-icon" : "");
-    if (this.textureCache.has(cacheKey)) {
-      return this.textureCache.get(cacheKey)!;
-    }
-
-    const shape = STRUCTURE_SHAPES[structureType];
-    const texture = shape
-      ? this.createIcon(
-          unit.owner(),
-          structureType,
-          isConstruction,
-          shape,
-          renderIcon,
-        )
-      : PIXI.Texture.EMPTY;
-
-    this.textureCache.set(cacheKey, texture);
-    return texture;
-  }
-
-  private createIcon(
-    owner: PlayerView,
-    structureType: UnitType,
-    isConstruction: boolean,
-    shape: ShapeType,
-    renderIcon: boolean,
-  ): PIXI.Texture {
-    const structureCanvas = document.createElement("canvas");
-    let iconSize = ICON_SIZE[shape];
-    if (!renderIcon) {
-      iconSize /= 2.5;
-    }
-    structureCanvas.width = Math.ceil(iconSize);
-    structureCanvas.height = Math.ceil(iconSize);
-    const context = structureCanvas.getContext("2d")!;
-
-    let borderColor: string;
-    if (isConstruction) {
-      context.fillStyle = "rgb(198, 198, 198)";
-      borderColor = "rgb(128, 127, 127)";
-    } else {
-      context.fillStyle = this.theme
-        .territoryColor(owner)
-        .lighten(0.13)
-        .alpha(renderIcon ? 0.65 : 1)
-        .toRgbString();
-      const darken = this.theme.borderColor(owner).isLight() ? 0.17 : 0.15;
-      borderColor = this.theme.borderColor(owner).darken(darken).toRgbString();
-    }
-
-    context.strokeStyle = borderColor;
-    context.lineWidth = 1;
-    const halfIconSize = iconSize / 2;
-    switch (shape) {
-      case "triangle":
-        context.beginPath();
-        context.moveTo(halfIconSize, 1); // Top
-        context.lineTo(iconSize - 1, iconSize - 1); // Bottom right
-        context.lineTo(0, iconSize - 1); // Bottom left
-        context.closePath();
-        context.fill();
-        context.stroke();
-        break;
-
-      case "square":
-        context.fillRect(1, 1, iconSize - 2, iconSize - 2);
-        context.strokeRect(1, 1, iconSize - 3, iconSize - 3);
-        break;
-
-      case "octagon":
-        {
-          const cx = halfIconSize;
-          const cy = halfIconSize;
-          const r = halfIconSize - 1;
-          const step = (Math.PI * 2) / 8;
-
-          context.beginPath();
-          for (let i = 0; i < 8; i++) {
-            const angle = step * i - Math.PI / 8; // slight rotation for flat top
-            const x = cx + r * Math.cos(angle);
-            const y = cy + r * Math.sin(angle);
-            if (i === 0) {
-              context.moveTo(x, y);
-            } else {
-              context.lineTo(x, y);
-            }
-          }
-          context.closePath();
-          context.fill();
-          context.stroke();
-        }
-        break;
-      case "pentagon":
-        {
-          const cx = halfIconSize;
-          const cy = halfIconSize;
-          const r = halfIconSize - 1;
-          const step = (Math.PI * 2) / 5;
-
-          context.beginPath();
-          for (let i = 0; i < 5; i++) {
-            const angle = step * i - Math.PI / 2; // rotate to have flat base or point up
-            const x = cx + r * Math.cos(angle);
-            const y = cy + r * Math.sin(angle);
-            if (i === 0) {
-              context.moveTo(x, y);
-            } else {
-              context.lineTo(x, y);
-            }
-          }
-          context.closePath();
-          context.fill();
-          context.stroke();
-        }
-        break;
-      case "circle":
-        context.beginPath();
-        context.arc(
-          halfIconSize,
-          halfIconSize,
-          halfIconSize - 1,
-          0,
-          Math.PI * 2,
-        );
-        context.fill();
-        context.stroke();
-        break;
-
-      default:
-        throw new Error(`Unknown shape: ${shape}`);
-    }
-
-    const structureInfo = this.structures.get(structureType);
-    if (!structureInfo?.image) {
-      console.warn(`Image not loaded for unit type: ${structureType}`);
-      return PIXI.Texture.from(structureCanvas);
-    }
-
-    if (renderIcon) {
-      const SHAPE_OFFSETS = {
-        triangle: [6, 11],
-        square: [5, 5],
-        octagon: [6, 6],
-        pentagon: [7, 7],
-        circle: [6, 6],
-      };
-      const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
-      context.drawImage(
-        this.getImageColored(structureInfo.image, borderColor),
-        offsetX,
-        offsetY,
-      );
-    }
-    return PIXI.Texture.from(structureCanvas);
-  }
-
-  private createLevelSprite(unit: UnitView): PIXI.Container {
-    return this.createUnitContainer(unit, {
-      type: "level",
-      stage: this.levelsStage,
-    });
-  }
-
-  private createDotSprite(unit: UnitView): PIXI.Container {
-    return this.createUnitContainer(unit, {
-      type: "dot",
-      stage: this.dotsStage,
-    });
-  }
-
-  private createIconSprite(unit: UnitView): PIXI.Container {
-    return this.createUnitContainer(unit, {
-      type: "icon",
-      stage: this.iconsStage,
-    });
-  }
-
-  private createUnitContainer(
-    unit: UnitView,
-    options: { type?: "icon" | "dot" | "level"; stage: PIXI.Container },
-  ): PIXI.Container {
-    const parentContainer = new PIXI.Container();
-    const tile = unit.tile();
-    const worldPos = new Cell(this.game.x(tile), this.game.y(tile));
-    const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
-
-    const { type, stage } = options;
     const scale = this.transformHandler.scale;
-    const spritesEnabled = this.game
-      .config()
-      .userSettings()
-      ?.structureSprites?.();
 
-    // Add sprite if needed
-    if (type === "icon" || type === "dot") {
-      const texture = this.createTexture(unit, type === "icon");
-      const sprite = new PIXI.Sprite(texture);
-      sprite.anchor.set(0.5);
-      parentContainer.addChild(sprite);
-    }
+    this.dotsStage!.visible = scale <= DOTS_ZOOM_THRESHOLD;
+    this.iconsStage!.visible =
+      scale > DOTS_ZOOM_THRESHOLD &&
+      (scale <= ZOOM_THRESHOLD || !this.renderSprites);
+    this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
 
-    // Add level text if needed
-    if ((type === "icon" || type === "level") && unit.level() > 1) {
-      const text = new PIXI.BitmapText({
-        text: unit.level().toString(),
-        style: {
-          fontFamily: "round_6x6_modified",
-          fontSize: 14,
-        },
-      });
-      text.anchor.set(0.5);
-
-      const unitType =
-        unit.type() === UnitType.Construction
-          ? unit.constructionType()
-          : unit.type();
-      const shape = STRUCTURE_SHAPES[unitType!];
-      if (shape !== undefined) {
-        text.position.y = Math.round(-ICON_SIZE[shape] / 2 - 2);
-      }
-      parentContainer.addChild(text);
-    }
-
-    // Positioning
-    const posX = Math.round(screenPos.x);
-    let posY = Math.round(screenPos.y);
-    if (type === "level" && scale >= ZOOM_THRESHOLD && spritesEnabled) {
-      posY = Math.round(screenPos.y - scale * OFFSET_ZOOM_Y);
-    }
-    parentContainer.position.set(posX, posY);
-
-    // Scaling
-    if (type === "icon") {
+    if (this.ghostUnit) {
       const s =
-        scale >= ZOOM_THRESHOLD && !spritesEnabled
+        scale >= ZOOM_THRESHOLD
           ? Math.max(1, scale / ICON_SCALE_FACTOR_ZOOMED_IN)
           : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
-      parentContainer.scale.set(s);
-    } else if (type === "level") {
-      parentContainer.scale.set(Math.max(1, scale / LEVEL_SCALE_FACTOR));
+      this.ghostUnit.container.scale.set(s);
+      this.ghostUnit.range?.scale.set(this.transformHandler.scale);
     }
 
-    stage.addChild(parentContainer);
-    return parentContainer;
-  }
-
-  private getImageColored(
-    image: HTMLImageElement,
-    color: string,
-  ): HTMLCanvasElement {
-    const imageCanvas = document.createElement("canvas");
-    imageCanvas.width = image.width;
-    imageCanvas.height = image.height;
-    const ctx = imageCanvas.getContext("2d")!;
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
-    ctx.globalCompositeOperation = "destination-in";
-    ctx.drawImage(image, 0, 0);
-    return imageCanvas;
+    this.renderer.render(this.rootStage);
+    mainContext.drawImage(this.renderer.canvas, 0, 0);
   }
 
   private computeNewLocation(render: StructureRenderInfo) {
@@ -682,7 +592,27 @@ export class StructureIconsLayer implements Layer {
     this.renders.push(render);
     this.computeNewLocation(render);
     this.modifyVisibility(render);
-    this.shouldRedraw = true;
+  }
+
+  private createLevelSprite(unit: UnitView): PIXI.Container {
+    return this.factory.createUnitContainer(unit, {
+      type: "level",
+      stage: this.levelsStage,
+    });
+  }
+
+  private createDotSprite(unit: UnitView): PIXI.Container {
+    return this.factory.createUnitContainer(unit, {
+      type: "dot",
+      stage: this.dotsStage,
+    });
+  }
+
+  private createIconSprite(unit: UnitView): PIXI.Container {
+    return this.factory.createUnitContainer(unit, {
+      type: "icon",
+      stage: this.iconsStage,
+    });
   }
 
   private deleteStructure(render: StructureRenderInfo) {

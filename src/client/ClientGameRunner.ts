@@ -29,6 +29,7 @@ import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
+  GhostStructureEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -37,6 +38,7 @@ import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  BuildUnitIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -183,17 +185,23 @@ async function createClientGame(
   );
 }
 
+enum BuildState {
+  Idle,
+  Ghost, // player has a ghost structure selected
+  Building, // actively building/upgrading/placing something
+}
+
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
 
   private turnsSeen = 0;
   private hasJoined = false;
-
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private buildState: BuildState = BuildState.Idle;
 
   constructor(
     private lobby: LobbyConfig,
@@ -248,6 +256,19 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
+
+    this.eventBus.on(GhostStructureEvent, (e) => {
+      this.buildState = e.structureType ? BuildState.Ghost : BuildState.Idle;
+    });
+
+    this.eventBus.on(BuildUnitIntentEvent, () => {
+      this.buildState = BuildState.Building;
+    });
+
+    this.eventBus.on(SendUpgradeStructureIntentEvent, () => {
+      this.buildState = BuildState.Building;
+    });
+
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
     this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
@@ -407,15 +428,19 @@ export class ClientGameRunner {
     }
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
-      if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
-      } else if (this.canBoatAttack(actions, tile)) {
-        this.sendBoatAttackIntent(tile);
+      if (this.buildState === BuildState.Idle) {
+        if (actions.canAttack) {
+          this.eventBus.emit(
+            new SendAttackIntentEvent(
+              this.gameView.owner(tile).id(),
+              this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            ),
+          );
+        } else if (this.canBoatAttack(actions, tile)) {
+          this.sendBoatAttackIntent(tile);
+        }
+      } else if (this.buildState === BuildState.Building) {
+        this.buildState = BuildState.Idle; // building finished
       }
 
       const owner = this.gameView.owner(tile);

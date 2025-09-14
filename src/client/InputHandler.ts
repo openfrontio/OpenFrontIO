@@ -2,6 +2,10 @@ import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
+import {
+  BuildUnitIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "./Transport";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -75,7 +79,7 @@ export class RefreshGraphicsEvent implements GameEvent {}
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
 export class ToggleStructureEvent implements GameEvent {
-  constructor(public readonly structureType: UnitType | null) {}
+  constructor(public readonly structureTypes: UnitType[] | null) {}
 }
 
 export class ShowBuildMenuEvent implements GameEvent {
@@ -107,6 +111,10 @@ export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }
 
+export class GhostStructureEvent implements GameEvent {
+  constructor(public readonly structureType: UnitType | null) {}
+}
+
 export class AutoUpgradeEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -136,7 +144,9 @@ export class InputHandler {
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
+
+  private ghostStructure = false;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -144,6 +154,18 @@ export class InputHandler {
   ) {}
 
   initialize() {
+    const savedRaw = JSON.parse(
+      localStorage.getItem("settings.keybinds") ?? "{}",
+    );
+
+    // flatten { key: {key, value} } → { key: value }
+    const saved = Object.fromEntries(
+      Object.entries(savedRaw).map(([k, v]: [string, { value: string }]) => [
+        k,
+        v.value,
+      ]),
+    );
+
     this.keybinds = {
       toggleView: "Space",
       centerCamera: "KeyC",
@@ -153,13 +175,13 @@ export class InputHandler {
       moveRight: "KeyD",
       zoomOut: "KeyQ",
       zoomIn: "KeyE",
-      attackRatioDown: "Digit1",
-      attackRatioUp: "Digit2",
+      attackRatioDown: "KeyT",
+      attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
       modifierKey: "ControlLeft",
       altKey: "AltLeft",
-      ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
+      ...saved,
     };
 
     // Mac users might have different keybinds
@@ -187,6 +209,18 @@ export class InputHandler {
       if (e.movementX || e.movementY) {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
+    });
+
+    this.eventBus.on(GhostStructureEvent, (e) => {
+      this.ghostStructure = e.structureType !== null;
+    });
+
+    this.eventBus.on(BuildUnitIntentEvent, (e) => {
+      this.ghostStructure = false;
+    });
+
+    this.eventBus.on(SendUpgradeStructureIntentEvent, (e) => {
+      this.ghostStructure = false;
     });
 
     this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
@@ -266,6 +300,7 @@ export class InputHandler {
       if (e.code === "Escape") {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
+        this.eventBus.emit(new GhostStructureEvent(null));
       }
 
       if (
@@ -329,6 +364,51 @@ export class InputHandler {
       if (e.code === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
+      }
+
+      if (e.code === this.keybinds.buildCity) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.City));
+      }
+
+      if (e.code === this.keybinds.buildFactory) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.Factory));
+      }
+
+      if (e.code === this.keybinds.buildPort) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.Port));
+      }
+
+      if (e.code === this.keybinds.buildDefensePost) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.DefensePost));
+      }
+
+      if (e.code === this.keybinds.buildMissileSilo) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.MissileSilo));
+      }
+
+      if (e.code === this.keybinds.buildSamLauncher) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.SAMLauncher));
+      }
+
+      if (e.code === this.keybinds.buildAtomBomb) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.AtomBomb));
+      }
+
+      if (e.code === this.keybinds.buildHydrogenBomb) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.HydrogenBomb));
+      }
+
+      if (e.code === this.keybinds.buildWarship) {
+        e.preventDefault();
+        this.eventBus.emit(new GhostStructureEvent(UnitType.Warship));
       }
 
       // Shift-D to toggle performance overlay
@@ -489,6 +569,10 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    if (this.ghostStructure) {
+      this.eventBus.emit(new GhostStructureEvent(null));
+      return;
+    }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
