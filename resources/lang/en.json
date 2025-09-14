@@ -647,6 +647,10 @@
     "delete_unit_description": "Click to delete the nearest unit"
   },
   "player_modal": {
-    "title": "Player Info"
+    "title": "Player Info",
+    "open_button": "Player Info",
+    "error": {
+      "load": "Failed to load player data."
+    }
   }
 }
