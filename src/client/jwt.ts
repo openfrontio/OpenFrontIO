@@ -1,8 +1,8 @@
 import { decodeJwt } from "jose";
 import { z } from "zod";
 import {
-  PlayerIdResponse,
-  PlayerIdResponseSchema,
+  PlayerProfile,
+  PlayerProfileSchema,
   RefreshResponseSchema,
   TokenPayload,
   TokenPayloadSchema,
@@ -273,7 +273,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
 
 export async function fetchPlayerById(
   playerId: string,
-): Promise<PlayerIdResponse | false> {
+): Promise<PlayerProfile | false> {
   try {
     const base = getApiBase();
     const token = getToken();
@@ -297,7 +297,7 @@ export async function fetchPlayerById(
     }
 
     const json = await res.json();
-    const parsed = PlayerIdResponseSchema.safeParse(json);
+    const parsed = PlayerProfileSchema.safeParse(json);
     if (!parsed.success) {
       console.warn("fetchPlayerById: Zod validation failed", parsed.error);
       return false;

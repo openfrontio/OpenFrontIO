@@ -83,10 +83,11 @@ export const PlayerGameSchema = z.object({
 });
 export type PlayerGame = z.infer<typeof PlayerGameSchema>;
 
-export const PlayerIdResponseSchema = z.object({
+
+export const PlayerProfileSchema = z.object({
   createdAt: z.iso.datetime(),
   user: DiscordUserSchema.optional(),
   games: PlayerGameSchema.array(),
   stats: PlayerStatsTreeSchema,
 });
-export type PlayerIdResponse = z.infer<typeof PlayerIdResponseSchema>;
+export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
