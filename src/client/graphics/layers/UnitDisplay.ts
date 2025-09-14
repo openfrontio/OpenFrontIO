@@ -86,16 +86,16 @@ export class UnitDisplay extends LitElement implements Layer {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
         return (
-          this.cost(item) < (player?.gold() ?? 0n) &&
+          this.cost(item) <= (player?.gold() ?? 0n) &&
           (player?.units(UnitType.MissileSilo).length ?? 0) > 0
         );
       case UnitType.Warship:
         return (
-          this.cost(item) < (player?.gold() ?? 0n) &&
+          this.cost(item) <= (player?.gold() ?? 0n) &&
           (player?.units(UnitType.Port).length ?? 0) > 0
         );
       default:
-        return this.cost(item) < (player?.gold() ?? 0n);
+        return this.cost(item) <= (player?.gold() ?? 0n);
     }
   }
 

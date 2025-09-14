@@ -77,6 +77,7 @@ export class StructureIconsLayer implements Layer {
     [UnitType.MissileSilo, { visible: true }],
     [UnitType.SAMLauncher, { visible: true }],
   ]);
+  private lastGhostQueryAt: number;
 
   constructor(
     private game: GameView,
@@ -205,12 +206,19 @@ export class StructureIconsLayer implements Layer {
     this.mousePos.y = e.y;
 
     if (!this.ghostUnit) return;
-
     const rect = this.transformHandler.boundingRect();
     if (!rect) return;
 
     const localX = e.x - rect.left;
     const localY = e.y - rect.top;
+
+    const now = performance.now();
+    if (now - this.lastGhostQueryAt < 50) {
+      this.ghostUnit.container.position.set(localX, localY);
+      this.ghostUnit.range?.position.set(localX, localY);
+      return;
+    }
+    this.lastGhostQueryAt = now;
 
     const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
     if (!this.game.isValidCoord(tile.x, tile.y)) return;
