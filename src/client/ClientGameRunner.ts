@@ -440,7 +440,7 @@ export class ClientGameRunner {
           this.sendBoatAttackIntent(tile);
         }
       } else if (this.buildState === BuildState.Building) {
-        this.buildState = BuildState.Idle; // building finished
+        this.buildState = BuildState.Idle;
       }
 
       const owner = this.gameView.owner(tile);
