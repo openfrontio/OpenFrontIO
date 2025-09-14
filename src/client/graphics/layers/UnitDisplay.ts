@@ -142,42 +142,42 @@ export class UnitDisplay extends LitElement implements Layer {
               this._cities,
               UnitType.City,
               "city",
-              this.keybinds["buildCity"].key ?? "1",
+              this.keybinds["buildCity"]?.key ?? "1",
             )}
             ${this.renderUnitItem(
               factoryIcon,
               this._factories,
               UnitType.Factory,
               "factory",
-              this.keybinds["buildFactory"].key ?? "2",
+              this.keybinds["buildFactory"]?.key ?? "2",
             )}
             ${this.renderUnitItem(
               portIcon,
               this._port,
               UnitType.Port,
               "port",
-              this.keybinds["buildPort"].key ?? "3",
+              this.keybinds["buildPort"]?.key ?? "3",
             )}
             ${this.renderUnitItem(
               defensePostIcon,
               this._defensePost,
               UnitType.DefensePost,
               "defense_post",
-              this.keybinds["buildDefensePost"].key ?? "4",
+              this.keybinds["buildDefensePost"]?.key ?? "4",
             )}
             ${this.renderUnitItem(
               missileSiloIcon,
               this._missileSilo,
               UnitType.MissileSilo,
               "missile_silo",
-              this.keybinds["buildMissileSilo"].key ?? "5",
+              this.keybinds["buildMissileSilo"]?.key ?? "5",
             )}
             ${this.renderUnitItem(
               samLauncherIcon,
               this._samLauncher,
               UnitType.SAMLauncher,
               "sam_launcher",
-              this.keybinds["buildSamLauncher"].key ?? "6",
+              this.keybinds["buildSamLauncher"]?.key ?? "6",
             )}
           </div>
         </div>
@@ -188,21 +188,21 @@ export class UnitDisplay extends LitElement implements Layer {
               null,
               UnitType.AtomBomb,
               "atom_bomb",
-              this.keybinds["buildAtomBomb"].key ?? "7",
+              this.keybinds["buildAtomBomb"]?.key ?? "7",
             )}
             ${this.renderUnitItem(
               hydrogenBombIcon,
               null,
               UnitType.HydrogenBomb,
               "hydrogen_bomb",
-              this.keybinds["buildHydrogenBomb"].key ?? "8",
+              this.keybinds["buildHydrogenBomb"]?.key ?? "8",
             )}
             ${this.renderUnitItem(
               warshipIcon,
               this._warships,
               UnitType.Warship,
               "warship",
-              this.keybinds["buildWarship"].key ?? "9",
+              this.keybinds["buildWarship"]?.key ?? "9",
             )}
           </div>
         </div>
