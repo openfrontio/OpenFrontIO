@@ -93,7 +93,7 @@ export const BOT_NAME_PREFIXES = [
   "Dutch",
   "Russian",
   "German",
-  "Italian",
+  "italian",
   "Swedish",
   "Norwegian",
   "Danish",
