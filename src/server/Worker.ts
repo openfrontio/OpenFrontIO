@@ -23,7 +23,6 @@ import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
-import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { verifyTurnstileToken } from "./Turnstile";
@@ -417,7 +416,7 @@ export async function startWorker() {
           return;
         }
 
-        if (config.env() !== GameEnv.Dev) {
+        if (config.env() !== "Dev") {
           const turnstileResult = await verifyTurnstileToken(
             ip,
             clientMsg.turnstileToken,

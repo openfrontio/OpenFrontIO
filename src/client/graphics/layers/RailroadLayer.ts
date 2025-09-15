@@ -47,7 +47,8 @@ export class RailroadLayer implements Layer {
 
   tick() {
     const updates = this.game.updatesSinceLastTick();
-    const railUpdates = updates !== null ? updates["RailroadEvent"] : [];
+    const railUpdates: readonly RailroadUpdate[] =
+      updates?.["RailroadEvent"] ?? [];
     for (const rail of railUpdates) {
       this.handleRailroadRendering(rail);
     }

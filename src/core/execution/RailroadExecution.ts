@@ -25,7 +25,7 @@ export class RailroadExecution implements Execution {
     this.railTiles.push({
       tile: tiles[0],
       railType:
-        tiles.length > 0
+        tiles.length > 1
           ? this.computeExtremityDirection(tiles[0], tiles[1])
           : "VERTICAL",
     });
@@ -40,7 +40,7 @@ export class RailroadExecution implements Execution {
     this.railTiles.push({
       tile: tiles[tiles.length - 1],
       railType:
-        tiles.length > 0
+        tiles.length > 1
           ? this.computeExtremityDirection(
               tiles[tiles.length - 1],
               tiles[tiles.length - 2],

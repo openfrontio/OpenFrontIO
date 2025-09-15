@@ -6,7 +6,7 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { ServerConfig } from "../core/configuration/Config";
 import { PersistentIdSchema } from "../core/Schemas";
 
 type TokenVerificationResult =
@@ -22,7 +22,7 @@ export async function verifyClientToken(
   config: ServerConfig,
 ): Promise<TokenVerificationResult> {
   if (PersistentIdSchema.safeParse(token).success) {
-    if (config.env() === GameEnv.Dev) {
+    if (config.env() === "Dev") {
       return { type: "success", persistentId: token, claims: null };
     } else {
       return {

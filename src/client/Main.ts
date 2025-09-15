@@ -3,7 +3,6 @@ import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
@@ -627,7 +626,7 @@ class Client {
   ): Promise<string | null> {
     const config = await getServerConfigFromClient();
     if (
-      config.env() === GameEnv.Dev ||
+      config.env() === "Dev" ||
       lobby.gameStartInfo?.config.gameType === "Singleplayer"
     ) {
       return null;
