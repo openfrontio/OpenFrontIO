@@ -220,7 +220,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private getExpiryColorClass(seconds: number | null): string {
-    if (seconds === null) return "text-white";
+    if (seconds === null) return "text-white"; // Default color
 
     if (seconds <= 30) return "text-red-400"; // Last 30 seconds: Red
     if (seconds <= 60) return "text-yellow-400"; // Last 60 seconds: Yellow
