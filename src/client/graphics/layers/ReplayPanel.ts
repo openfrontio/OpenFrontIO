@@ -78,7 +78,7 @@ export class ReplayPanel extends LitElement implements Layer {
             : translateText("replay_panel.game_speed")}
         </label>
         <div class="grid grid-cols-2 gap-1">
-          ${ReplaySpeedMultiplierSchema.options.map(([option]) =>
+          ${ReplaySpeedMultiplierSchema.options.map((option) =>
             this.renderSpeedButton(
               option as ReplaySpeedMultiplier,
               ReplaySpeedLabels[option],
