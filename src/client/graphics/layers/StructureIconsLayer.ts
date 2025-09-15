@@ -254,6 +254,7 @@ export class StructureIconsLayer implements Layer {
               new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
             ];
           }
+          this.ghostUnit.container.filters = [];
         } else if (unit.canBuild === false) {
           unit.canBuild = false;
           this.ghostUnit.container.filters = [
