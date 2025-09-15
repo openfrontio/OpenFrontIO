@@ -110,6 +110,14 @@ export const GameMapTypeSchema = z.enum([
   "Manicouagan",
 ]);
 export type GameMapType = z.infer<typeof GameMapTypeSchema>;
+// Normalize to lowercase and remove spaces/parentheses for paths/keys
+export const generateMapSlug = (
+  map: GameMapType | undefined | null,
+): string => {
+  if (!map) return "";
+
+  return map.toLowerCase().replace(/[\s()]+/g, "");
+};
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [

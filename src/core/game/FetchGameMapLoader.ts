@@ -1,4 +1,4 @@
-import { GameMapType, GameMapTypeSchema } from "./Game";
+import { GameMapType, GameMapTypeSchema, generateMapSlug } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 
 export class FetchGameMapLoader implements GameMapLoader {
@@ -20,7 +20,7 @@ export class FetchGameMapLoader implements GameMapLoader {
     const key = GameMapTypeSchema.options.find(
       (option) => (option as GameMapType) === map,
     );
-    const fileName = key?.toLowerCase().replace(/ /g, "");
+    const fileName = generateMapSlug(key);
 
     if (!fileName) {
       throw new Error(`Unknown map: ${map}`);

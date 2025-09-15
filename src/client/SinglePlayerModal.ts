@@ -15,6 +15,7 @@ import {
   Trios,
   UnitType,
   UnitTypeSchema,
+  generateMapSlug,
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -103,7 +104,7 @@ export class SinglePlayerModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey?.toLowerCase().replace(/\s+/g, "")}`,
+                                `map.${generateMapSlug(mapKey)}`,
                               )}
                             ></map-display>
                           </div>
