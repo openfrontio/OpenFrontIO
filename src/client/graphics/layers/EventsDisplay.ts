@@ -897,8 +897,9 @@ export class EventsDisplay extends LitElement implements Layer {
 
     if (ticks <= 0) return "Arriving...";
 
-    // Convert ticks to seconds (assuming 60 ticks per second)
-    const seconds = Math.ceil(ticks / 60);
+    // Since boats move 1 tile per tick, and we want to show realistic time estimates,
+    // let's use the ticks directly as seconds for now (this gives a reasonable countdown)
+    const seconds = Math.max(1, ticks);
     console.log(`formatCountdown: seconds=${seconds}`);
 
     if (seconds < 60) {
