@@ -16,7 +16,6 @@ import {
   Tick,
   UnitType,
 } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
 import {
   AllianceExpiredUpdate,
   AllianceRequestReplyUpdate,
@@ -231,18 +230,6 @@ export class EventsDisplay extends LitElement implements Layer {
     const newOutgoingBoats = myPlayer
       .units()
       .filter((u) => u.type() === UnitType.TransportShip);
-
-    // Debug logging for boat tracking
-    if (newOutgoingBoats.length !== this.outgoingBoats.length) {
-      console.log(
-        `Boat count changed: ${this.outgoingBoats.length} -> ${newOutgoingBoats.length}`,
-      );
-      newOutgoingBoats.forEach((boat) => {
-        console.log(
-          `New boat ${boat.id()}: createdAt=${boat.createdAt()}, active=${boat.isActive()}`,
-        );
-      });
-    }
 
     this.outgoingBoats = newOutgoingBoats;
 
@@ -843,14 +830,8 @@ export class EventsDisplay extends LitElement implements Layer {
     const createdAt = boat.createdAt();
     const ticksTraveled = currentTick - createdAt;
 
-    // Debug logging
-    console.log(
-      `Boat ${boat.id()}: ticksTraveled=${ticksTraveled}, currentTick=${currentTick}, createdAt=${createdAt}, retreating=${boat.retreating()}`,
-    );
-
     // Check if boat has been traveling too long (it should have arrived)
     if (ticksTraveled > 300) {
-      console.log(`Boat ${boat.id()}: timeout after ${ticksTraveled} ticks`);
       return 0; // Show "Arriving..." for boats that should have arrived
     }
 
@@ -858,14 +839,10 @@ export class EventsDisplay extends LitElement implements Layer {
     const estimatedArrivalTick = this.getEstimatedArrivalTick(boat);
     if (estimatedArrivalTick !== undefined) {
       const remaining = Math.max(0, estimatedArrivalTick - currentTick);
-      console.log(
-        `Boat ${boat.id()}: server estimated arrival=${estimatedArrivalTick}, remaining=${remaining}`,
-      );
       return remaining;
     }
 
     // Fallback to client-side estimation if server data not available
-    console.log(`Boat ${boat.id()}: using fallback estimation`);
     return this.calculateFallbackCountdown(boat, ticksTraveled);
   }
 
@@ -892,98 +869,12 @@ export class EventsDisplay extends LitElement implements Layer {
     return Math.max(0, estimatedTotalTime - ticksTraveled);
   }
 
-  private calculateBoatDestination(boat: UnitView): TileRef | null {
-    // This replicates the server-side logic from targetTransportTile()
-    const currentTile = boat.tile();
-    const ownerID = this.game.ownerID(currentTile);
-    const targetPlayer = this.game.playerBySmallID(ownerID);
-
-    if (!targetPlayer) {
-      return null;
-    }
-
-    if (targetPlayer.isPlayer()) {
-      // For now, use a simplified approach since borderTiles() is async
-      // We'll estimate the destination based on the current tile and typical patterns
-      const currentX = this.game.x(currentTile);
-      const currentY = this.game.y(currentTile);
-
-      // Search for shore tiles in a reasonable radius
-      const searchRadius = 100;
-      let closestShore: TileRef | null = null;
-      let closestDistance = Infinity;
-
-      for (let dx = -searchRadius; dx <= searchRadius; dx++) {
-        for (let dy = -searchRadius; dy <= searchRadius; dy++) {
-          const testTile = this.game.ref(currentX + dx, currentY + dy);
-          if (this.game.isShore(testTile)) {
-            const distance = this.game.manhattanDist(currentTile, testTile);
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closestShore = testTile;
-            }
-          }
-        }
-      }
-
-      return closestShore;
-    } else {
-      // For TerraNullius, find closest shore within 50 tiles
-      const maxDistance = 50;
-      let closestShore: TileRef | null = null;
-      let closestDistance = Infinity;
-
-      // Search in a radius around the current tile
-      const searchRadius = Math.min(maxDistance, 100);
-      for (let dx = -searchRadius; dx <= searchRadius; dx++) {
-        for (let dy = -searchRadius; dy <= searchRadius; dy++) {
-          const testTile = this.game.ref(
-            this.game.x(currentTile) + dx,
-            this.game.y(currentTile) + dy,
-          );
-          if (this.game.isShore(testTile)) {
-            const distance = this.game.manhattanDist(currentTile, testTile);
-            if (distance < closestDistance && distance <= maxDistance) {
-              closestDistance = distance;
-              closestShore = testTile;
-            }
-          }
-        }
-      }
-
-      return closestShore;
-    }
-  }
-
-  private getBoatStartingPosition(boat: UnitView): TileRef {
-    // For now, we'll use the boat's current position as a fallback
-    // In a more sophisticated implementation, we could track the starting position
-    // or calculate it based on the boat's movement pattern
-    return boat.tile();
-  }
-
-  private calculateDistanceTraveled(boat: UnitView): number {
-    // Calculate total distance traveled by the boat
-    // This is a simplified version - we could track the full path if needed
-    const currentTile = boat.tile();
-    const createdAt = boat.createdAt();
-    const currentTick = this.game.ticks();
-    const ticksTraveled = currentTick - createdAt;
-
-    // Boats move 1 tile per tick, so distance traveled = ticks traveled
-    // This is an approximation - the actual path might be longer due to pathfinding
-    return ticksTraveled;
-  }
-
   private formatCountdown(ticks: number): string {
-    console.log(`formatCountdown: ticks=${ticks}`);
-
     if (ticks <= 0) return "Arriving...";
 
     // Since boats move 1 tile per tick, and we want to show realistic time estimates,
     // let's use the ticks directly as seconds for now (this gives a reasonable countdown)
     const seconds = Math.max(1, ticks);
-    console.log(`formatCountdown: seconds=${seconds}`);
 
     if (seconds < 60) {
       return `${seconds}s`;
