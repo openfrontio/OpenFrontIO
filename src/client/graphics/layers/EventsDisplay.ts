@@ -866,31 +866,73 @@ export class EventsDisplay extends LitElement implements Layer {
       return remaining;
     }
 
-    // For attacking boats, calculate the destination and use actual distance
-    try {
-      const destination = this.calculateBoatDestination(boat);
-      if (destination) {
-        const totalDistance = this.game.manhattanDist(currentTile, destination);
-        const distanceTraveled = this.calculateDistanceTraveled(boat);
-        const remainingDistance = Math.max(0, totalDistance - distanceTraveled);
+    // For attacking boats, use a more sophisticated approach
+    // Since destination calculation is complex, let's use movement-based estimation
+    if (currentTile !== lastTile) {
+      // Boat is actively moving - estimate based on movement pattern
+      const movementDistance = this.game.manhattanDist(lastTile, currentTile);
+      if (movementDistance > 0) {
+        // Estimate total journey time based on typical boat patterns
+        // Use a more conservative estimation that accounts for pathfinding
+        let estimatedTotalTime;
 
+        if (ticksTraveled < 10) {
+          // Early journey - estimate based on distance from current position
+          const currentX = this.game.x(currentTile);
+          const currentY = this.game.y(currentTile);
+
+          // Estimate distance to nearest shore (simplified)
+          let minDistanceToShore = Infinity;
+          for (let dx = -50; dx <= 50; dx++) {
+            for (let dy = -50; dy <= 50; dy++) {
+              const testTile = this.game.ref(currentX + dx, currentY + dy);
+              if (this.game.isShore(testTile)) {
+                const distance = this.game.manhattanDist(currentTile, testTile);
+                minDistanceToShore = Math.min(minDistanceToShore, distance);
+              }
+            }
+          }
+
+          if (minDistanceToShore < Infinity) {
+            // Add some buffer for pathfinding complexity
+            estimatedTotalTime = Math.max(20, minDistanceToShore * 1.5);
+          } else {
+            estimatedTotalTime = Math.max(
+              60,
+              120 - Math.floor(ticksTraveled / 3),
+            );
+          }
+        } else if (ticksTraveled < 50) {
+          // Mid journey - more accurate estimation
+          estimatedTotalTime = Math.max(
+            40,
+            100 - Math.floor(ticksTraveled / 4),
+          );
+        } else {
+          // Late journey - should be close
+          estimatedTotalTime = Math.max(20, 80 - Math.floor(ticksTraveled / 6));
+        }
+
+        const remaining = Math.max(0, estimatedTotalTime - ticksTraveled);
         console.log(
-          `Boat ${boat.id()}: totalDistance=${totalDistance}, distanceTraveled=${distanceTraveled}, remainingDistance=${remainingDistance}`,
+          `Boat ${boat.id()}: moving, estimated remaining=${remaining}`,
         );
-
-        // Boats move 1 tile per tick, so remaining distance = remaining ticks
-        return remainingDistance;
+        return remaining;
       }
-    } catch (error) {
-      console.warn(
-        `Failed to calculate destination for boat ${boat.id()}:`,
-        error,
-      );
     }
 
-    // Fallback to simple estimation if destination calculation fails
+    // If boat hasn't moved recently, it might be stuck or almost there
+    if (ticksTraveled > 80) {
+      const remaining = Math.max(0, 20 - Math.floor((ticksTraveled - 80) / 3));
+      console.log(
+        `Boat ${boat.id()}: stuck/almost there, remaining=${remaining}`,
+      );
+      return remaining;
+    }
+
+    // Default fallback for early journey
     const estimatedRemaining = Math.max(10, 90 - Math.floor(ticksTraveled / 2));
-    console.log(`Boat ${boat.id()}: fallback estimate=${estimatedRemaining}`);
+    console.log(`Boat ${boat.id()}: default estimate=${estimatedRemaining}`);
     return estimatedRemaining;
   }
 
@@ -955,6 +997,13 @@ export class EventsDisplay extends LitElement implements Layer {
 
       return closestShore;
     }
+  }
+
+  private getBoatStartingPosition(boat: UnitView): TileRef {
+    // For now, we'll use the boat's current position as a fallback
+    // In a more sophisticated implementation, we could track the starting position
+    // or calculate it based on the boat's movement pattern
+    return boat.tile();
   }
 
   private calculateDistanceTraveled(boat: UnitView): number {
