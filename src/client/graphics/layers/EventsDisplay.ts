@@ -855,14 +855,6 @@ export class EventsDisplay extends LitElement implements Layer {
     const currentTick = this.game.ticks();
     const ticksTraveled = currentTick - createdAt;
 
-    // Debug logging (remove in production)
-    if (ticksTraveled % 60 === 0) {
-      // Log every second
-      console.log(
-        `Boat ${boat.id()}: ticksTraveled=${ticksTraveled}, currentTile=${currentTile}, lastTile=${lastTile}, retreating=${boat.retreating()}`,
-      );
-    }
-
     // If boat just started, give a conservative estimate
     if (ticksTraveled < 10) {
       return Math.max(30, 60 - ticksTraveled); // At least 30 ticks, decreasing as it travels
