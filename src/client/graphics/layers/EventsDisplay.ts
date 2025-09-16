@@ -833,15 +833,12 @@ export class EventsDisplay extends LitElement implements Layer {
       // For retreating boats, estimate based on distance to nearest friendly shore
       const myPlayer = this.game.myPlayer();
       if (myPlayer) {
-        const friendlyTiles = myPlayer.borderTiles();
-        if (friendlyTiles.length > 0) {
-          const nearestFriendly = friendlyTiles.reduce((closest, tile) => {
-            const currentDist = this.game.manhattanDist(currentTile, tile);
-            const closestDist = this.game.manhattanDist(currentTile, closest);
-            return currentDist < closestDist ? tile : closest;
-          });
-          return this.game.manhattanDist(currentTile, nearestFriendly);
-        }
+        // Use a simple fallback for retreating boats since borderTiles() is async
+        // Estimate based on typical retreat distance
+        const createdAt = boat.createdAt();
+        const currentTick = this.game.ticks();
+        const ticksTraveled = currentTick - createdAt;
+        return Math.max(10, 30 - Math.floor(ticksTraveled / 3));
       }
     }
 
