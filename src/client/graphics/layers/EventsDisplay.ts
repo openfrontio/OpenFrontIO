@@ -838,7 +838,6 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private calculateBoatCountdown(boat: UnitView): number {
-    // Boats move 1 tile per tick (ticksPerMove = 1)
     const currentTile = boat.tile();
     const lastTile = boat.lastTile();
     const createdAt = boat.createdAt();
@@ -852,58 +851,66 @@ export class EventsDisplay extends LitElement implements Layer {
 
     // Check if boat has been traveling too long (it should have arrived)
     if (ticksTraveled > 300) {
-      // 5 minutes max - something is wrong
       console.log(`Boat ${boat.id()}: timeout after ${ticksTraveled} ticks`);
       return 0; // Show "Arriving..." for boats that should have arrived
     }
 
-    // For retreating boats, estimate based on distance to nearest friendly territory
+    // For retreating boats, use a simple linear countdown
     if (boat.retreating()) {
-      // Use a simple estimation for retreating boats
-      // Most retreats are shorter distances
-      const estimatedRetreatDistance = Math.max(
-        10,
-        30 - Math.floor(ticksTraveled / 2),
-      );
-      console.log(
-        `Boat ${boat.id()}: retreat estimated=${estimatedRetreatDistance}`,
-      );
-      return estimatedRetreatDistance;
+      // Retreats are typically shorter - estimate 30-60 seconds
+      const maxRetreatTime = 45;
+      const remaining = Math.max(0, maxRetreatTime - ticksTraveled);
+      console.log(`Boat ${boat.id()}: retreat remaining=${remaining}`);
+      return remaining;
     }
 
-    // For attacking boats, try to estimate based on movement pattern
+    // For attacking boats, use a more sophisticated estimation
+    // Based on the observation that boats typically take 60-120 seconds to reach their destination
+
+    // If boat is actively moving, estimate based on movement speed
     if (currentTile !== lastTile) {
-      // Boat is actively moving - estimate based on recent movement
       const movementDistance = this.game.manhattanDist(lastTile, currentTile);
       if (movementDistance > 0) {
-        // Estimate remaining distance based on typical boat journey patterns
-        // Use a more sophisticated estimation based on how long it's been traveling
-        const estimatedTotalDistance = Math.min(
-          200,
-          Math.max(50, ticksTraveled * 1.5),
-        );
-        const estimatedRemaining = Math.max(
-          1,
-          estimatedTotalDistance - ticksTraveled,
-        );
+        // Boat moved 1 tile in 1 tick, so it's moving at 1 tile per tick
+        // Estimate total journey time based on typical patterns
+        let estimatedTotalTime;
+
+        if (ticksTraveled < 20) {
+          // Early in journey - estimate longer time
+          estimatedTotalTime = Math.max(
+            80,
+            120 - Math.floor(ticksTraveled / 3),
+          );
+        } else if (ticksTraveled < 60) {
+          // Mid journey - more accurate estimation
+          estimatedTotalTime = Math.max(
+            60,
+            100 - Math.floor(ticksTraveled / 4),
+          );
+        } else {
+          // Late journey - should be close
+          estimatedTotalTime = Math.max(30, 80 - Math.floor(ticksTraveled / 6));
+        }
+
+        const remaining = Math.max(0, estimatedTotalTime - ticksTraveled);
         console.log(
-          `Boat ${boat.id()}: moving, estimated remaining=${estimatedRemaining}`,
+          `Boat ${boat.id()}: moving, estimated remaining=${remaining}`,
         );
-        return estimatedRemaining;
+        return remaining;
       }
     }
 
     // If boat hasn't moved recently, it might be stuck or almost there
-    if (ticksTraveled > 100) {
-      const remaining = Math.max(1, 20 - Math.floor((ticksTraveled - 100) / 5));
+    if (ticksTraveled > 80) {
+      const remaining = Math.max(0, 20 - Math.floor((ticksTraveled - 80) / 3));
       console.log(
         `Boat ${boat.id()}: stuck/almost there, remaining=${remaining}`,
       );
       return remaining;
     }
 
-    // Default fallback - give a reasonable estimate based on travel time
-    const estimatedRemaining = Math.max(5, 80 - Math.floor(ticksTraveled / 2));
+    // Default fallback for early journey
+    const estimatedRemaining = Math.max(10, 90 - Math.floor(ticksTraveled / 2));
     console.log(`Boat ${boat.id()}: default estimate=${estimatedRemaining}`);
     return estimatedRemaining;
   }
