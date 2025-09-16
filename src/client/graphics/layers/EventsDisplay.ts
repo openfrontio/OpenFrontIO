@@ -839,35 +839,73 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private calculateBoatCountdown(boat: UnitView): number {
     // Boats move 1 tile per tick (ticksPerMove = 1)
+    const currentTile = boat.tile();
+    const lastTile = boat.lastTile();
     const createdAt = boat.createdAt();
     const currentTick = this.game.ticks();
     const ticksTraveled = currentTick - createdAt;
 
     // Debug logging
     console.log(
-      `Boat ${boat.id()}: ticksTraveled=${ticksTraveled}, currentTick=${currentTick}, createdAt=${createdAt}, retreating=${boat.retreating()}`,
+      `Boat ${boat.id()}: ticksTraveled=${ticksTraveled}, currentTick=${currentTick}, createdAt=${createdAt}, retreating=${boat.retreating()}, currentTile=${currentTile}, lastTile=${lastTile}`,
     );
 
     // Check if boat has been traveling too long (it should have arrived)
-    if (ticksTraveled > 120) {
-      // 2 minutes max
+    if (ticksTraveled > 300) {
+      // 5 minutes max - something is wrong
+      console.log(`Boat ${boat.id()}: timeout after ${ticksTraveled} ticks`);
       return 0; // Show "Arriving..." for boats that should have arrived
     }
 
-    // Simple, predictable countdown logic
+    // For retreating boats, estimate based on distance to nearest friendly territory
     if (boat.retreating()) {
-      // For retreating boats, use a shorter countdown
-      const maxRetreatTime = 30; // 30 seconds max for retreat
-      const remaining = Math.max(0, maxRetreatTime - ticksTraveled);
-      console.log(`Boat ${boat.id()}: retreat remaining=${remaining}`);
-      return remaining;
-    } else {
-      // For attacking boats, use a longer countdown
-      const maxAttackTime = 60; // 60 seconds max for attack
-      const remaining = Math.max(0, maxAttackTime - ticksTraveled);
-      console.log(`Boat ${boat.id()}: attack remaining=${remaining}`);
+      // Use a simple estimation for retreating boats
+      // Most retreats are shorter distances
+      const estimatedRetreatDistance = Math.max(
+        10,
+        30 - Math.floor(ticksTraveled / 2),
+      );
+      console.log(
+        `Boat ${boat.id()}: retreat estimated=${estimatedRetreatDistance}`,
+      );
+      return estimatedRetreatDistance;
+    }
+
+    // For attacking boats, try to estimate based on movement pattern
+    if (currentTile !== lastTile) {
+      // Boat is actively moving - estimate based on recent movement
+      const movementDistance = this.game.manhattanDist(lastTile, currentTile);
+      if (movementDistance > 0) {
+        // Estimate remaining distance based on typical boat journey patterns
+        // Use a more sophisticated estimation based on how long it's been traveling
+        const estimatedTotalDistance = Math.min(
+          200,
+          Math.max(50, ticksTraveled * 1.5),
+        );
+        const estimatedRemaining = Math.max(
+          1,
+          estimatedTotalDistance - ticksTraveled,
+        );
+        console.log(
+          `Boat ${boat.id()}: moving, estimated remaining=${estimatedRemaining}`,
+        );
+        return estimatedRemaining;
+      }
+    }
+
+    // If boat hasn't moved recently, it might be stuck or almost there
+    if (ticksTraveled > 100) {
+      const remaining = Math.max(1, 20 - Math.floor((ticksTraveled - 100) / 5));
+      console.log(
+        `Boat ${boat.id()}: stuck/almost there, remaining=${remaining}`,
+      );
       return remaining;
     }
+
+    // Default fallback - give a reasonable estimate based on travel time
+    const estimatedRemaining = Math.max(5, 80 - Math.floor(ticksTraveled / 2));
+    console.log(`Boat ${boat.id()}: default estimate=${estimatedRemaining}`);
+    return estimatedRemaining;
   }
 
   private formatCountdown(ticks: number): string {
