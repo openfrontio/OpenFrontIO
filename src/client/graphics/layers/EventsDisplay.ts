@@ -852,9 +852,16 @@ export class EventsDisplay extends LitElement implements Layer {
     const currentTick = this.game.ticks();
     const ticksTraveled = currentTick - createdAt;
 
+    // Debug logging
+    console.log(
+      `Boat ${boat.id()}: ticksTraveled=${ticksTraveled}, currentTick=${currentTick}, createdAt=${createdAt}, retreating=${boat.retreating()}`,
+    );
+
     // If boat just started, give a conservative estimate
     if (ticksTraveled < 10) {
-      return Math.max(30, 60 - ticksTraveled); // At least 30 ticks, decreasing as it travels
+      const estimate = Math.max(30, 60 - ticksTraveled);
+      console.log(`Boat ${boat.id()}: early estimate=${estimate}`);
+      return estimate; // At least 30 ticks, decreasing as it travels
     }
 
     // If boat has been traveling for a while, estimate based on movement
@@ -886,10 +893,13 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private formatCountdown(ticks: number): string {
+    console.log(`formatCountdown: ticks=${ticks}`);
+
     if (ticks <= 0) return "Arriving...";
 
     // Convert ticks to seconds (assuming 60 ticks per second)
     const seconds = Math.ceil(ticks / 60);
+    console.log(`formatCountdown: seconds=${seconds}`);
 
     if (seconds < 60) {
       return `${seconds}s`;
