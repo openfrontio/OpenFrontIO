@@ -844,7 +844,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private formatCountdown(ticks: number): string {
     if (ticks === -1) {
-      return "Calculating..."; // Show while A* path is being computed
+      return translateText("events_display.boat_countdown.calculating");
     }
 
     if (ticks <= 0) {

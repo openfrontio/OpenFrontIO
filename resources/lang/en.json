@@ -518,6 +518,7 @@
     "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
     "boat_countdown": {
       "arriving": "Arriving...",
+      "calculating": "Calculating...",
       "seconds": "{seconds}s",
       "minutes_seconds": "{minutes}m {seconds}s"
     },

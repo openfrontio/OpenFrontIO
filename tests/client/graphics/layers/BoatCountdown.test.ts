@@ -6,6 +6,8 @@
 jest.mock("../../../../src/client/Utils", () => ({
   translateText: jest.fn((key: string, vars?: any) => {
     if (key === "events_display.boat_countdown.arriving") return "Arriving...";
+    if (key === "events_display.boat_countdown.calculating")
+      return "Calculating...";
     return key;
   }),
   renderDuration: jest.fn((totalSeconds: number) => {

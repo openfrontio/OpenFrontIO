@@ -172,27 +172,27 @@ export class TransportShipExecution implements Execution {
 
     // Only calculate estimated arrival tick if A* path has been computed
     if (this.pathComputed) {
-      // Periodically update the path estimate every 30 seconds (300 ticks) for better accuracy
-      if (this.lastPathUpdateTick && ticks - this.lastPathUpdateTick >= 300) {
-        const remainingPathLength = this.pathFinder.getPathLength();
-        if (remainingPathLength > 0) {
-          // Calculate how many tiles we've traveled since journey start
-          const ticksTraveled = ticks - this.journeyStartTick!;
-          const newTotalPathLength = remainingPathLength + ticksTraveled;
-          this.totalPathLength = newTotalPathLength;
+      // Refresh ETA every ~30s (300 ticks) for better accuracy
+      const REFRESH_PERIOD_TICKS = 300;
+      if (
+        this.lastPathUpdateTick !== null &&
+        ticks - this.lastPathUpdateTick >= REFRESH_PERIOD_TICKS
+      ) {
+        const remainingTiles = this.pathFinder.getPathLength();
+        if (remainingTiles > 0 && this.journeyStartTick !== null) {
+          // Convert ticks to tiles using the ship's movement rate
+          const movesMade = Math.floor(
+            (ticks - this.journeyStartTick) / this.ticksPerMove,
+          );
+          this.totalPathLength = remainingTiles + movesMade; // Both in tiles
           this.lastPathUpdateTick = ticks;
         }
       }
 
       this.updateEstimatedArrivalTick(ticks);
     } else {
-      // Fallback: if A* path is taking too long, use simple estimation
-      // Use a simple counter instead of trying to access createdAt on Unit
-      if (!this.fallbackTicks) {
-        this.fallbackTicks = 0;
-      }
+      // Fallback: if A* is slow, set an ETA once after ~10s
       this.fallbackTicks++;
-
       if (this.fallbackTicks === 100) {
         // After 10 seconds, fall back to simple estimation (only once)
         this.useFallbackEstimation(ticks);
@@ -207,6 +207,12 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
+      // Reset ETA bookkeeping so we recompute for the new path
+      this.pathComputed = false;
+      this.totalPathLength = null;
+      this.journeyStartTick = null;
+      this.lastPathUpdateTick = null;
+      this.fallbackTicks = 0;
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
