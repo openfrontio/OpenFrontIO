@@ -870,18 +870,24 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private formatCountdown(ticks: number): string {
-    if (ticks <= 0) return "Arriving...";
+    if (ticks <= 0)
+      return this.translateText("events_display.boat_countdown.arriving");
 
     // Since boats move 1 tile per tick, and we want to show realistic time estimates,
     // let's use the ticks directly as seconds for now (this gives a reasonable countdown)
     const seconds = Math.max(1, ticks);
 
     if (seconds < 60) {
-      return `${seconds}s`;
+      return this.translateText("events_display.boat_countdown.seconds", {
+        seconds,
+      });
     } else {
       const minutes = Math.floor(seconds / 60);
       const remainingSeconds = seconds % 60;
-      return `${minutes}m ${remainingSeconds}s`;
+      return this.translateText(
+        "events_display.boat_countdown.minutes_seconds",
+        { minutes, seconds: remainingSeconds },
+      );
     }
   }
 
