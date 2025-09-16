@@ -855,64 +855,108 @@ export class EventsDisplay extends LitElement implements Layer {
       return 0; // Show "Arriving..." for boats that should have arrived
     }
 
-    // For retreating boats, use a simple linear countdown
+    // For retreating boats, calculate distance to source
     if (boat.retreating()) {
-      // Retreats are typically shorter - estimate 30-60 seconds
+      // For retreating boats, we need to find the source tile
+      // This is more complex, so let's use a simple estimation for now
       const maxRetreatTime = 45;
       const remaining = Math.max(0, maxRetreatTime - ticksTraveled);
       console.log(`Boat ${boat.id()}: retreat remaining=${remaining}`);
       return remaining;
     }
 
-    // For attacking boats, use a more sophisticated estimation
-    // Based on the observation that boats typically take 60-120 seconds to reach their destination
+    // For attacking boats, calculate the destination and use actual distance
+    try {
+      const destination = this.calculateBoatDestination(boat);
+      if (destination) {
+        const totalDistance = this.game.manhattanDist(currentTile, destination);
+        const distanceTraveled = this.calculateDistanceTraveled(boat);
+        const remainingDistance = Math.max(0, totalDistance - distanceTraveled);
 
-    // If boat is actively moving, estimate based on movement speed
-    if (currentTile !== lastTile) {
-      const movementDistance = this.game.manhattanDist(lastTile, currentTile);
-      if (movementDistance > 0) {
-        // Boat moved 1 tile in 1 tick, so it's moving at 1 tile per tick
-        // Estimate total journey time based on typical patterns
-        let estimatedTotalTime;
-
-        if (ticksTraveled < 20) {
-          // Early in journey - estimate longer time
-          estimatedTotalTime = Math.max(
-            80,
-            120 - Math.floor(ticksTraveled / 3),
-          );
-        } else if (ticksTraveled < 60) {
-          // Mid journey - more accurate estimation
-          estimatedTotalTime = Math.max(
-            60,
-            100 - Math.floor(ticksTraveled / 4),
-          );
-        } else {
-          // Late journey - should be close
-          estimatedTotalTime = Math.max(30, 80 - Math.floor(ticksTraveled / 6));
-        }
-
-        const remaining = Math.max(0, estimatedTotalTime - ticksTraveled);
         console.log(
-          `Boat ${boat.id()}: moving, estimated remaining=${remaining}`,
+          `Boat ${boat.id()}: totalDistance=${totalDistance}, distanceTraveled=${distanceTraveled}, remainingDistance=${remainingDistance}`,
         );
-        return remaining;
+
+        // Boats move 1 tile per tick, so remaining distance = remaining ticks
+        return remainingDistance;
       }
-    }
-
-    // If boat hasn't moved recently, it might be stuck or almost there
-    if (ticksTraveled > 80) {
-      const remaining = Math.max(0, 20 - Math.floor((ticksTraveled - 80) / 3));
-      console.log(
-        `Boat ${boat.id()}: stuck/almost there, remaining=${remaining}`,
+    } catch (error) {
+      console.warn(
+        `Failed to calculate destination for boat ${boat.id()}:`,
+        error,
       );
-      return remaining;
     }
 
-    // Default fallback for early journey
+    // Fallback to simple estimation if destination calculation fails
     const estimatedRemaining = Math.max(10, 90 - Math.floor(ticksTraveled / 2));
-    console.log(`Boat ${boat.id()}: default estimate=${estimatedRemaining}`);
+    console.log(`Boat ${boat.id()}: fallback estimate=${estimatedRemaining}`);
     return estimatedRemaining;
+  }
+
+  private calculateBoatDestination(boat: UnitView): TileRef | null {
+    // This replicates the server-side logic from targetTransportTile()
+    const currentTile = boat.tile();
+    const ownerID = this.game.ownerID(currentTile);
+    const targetPlayer = this.game.playerBySmallID(ownerID);
+
+    if (!targetPlayer) {
+      return null;
+    }
+
+    if (targetPlayer.isPlayer()) {
+      // Find closest shore tile from the target player
+      const shoreTiles = Array.from(targetPlayer.borderTiles()).filter((t) =>
+        this.game.isShore(t),
+      );
+      if (shoreTiles.length === 0) {
+        return null;
+      }
+
+      return shoreTiles.reduce((closest, current) => {
+        const closestDistance = this.game.manhattanDist(currentTile, closest);
+        const currentDistance = this.game.manhattanDist(currentTile, current);
+        return currentDistance < closestDistance ? current : closest;
+      });
+    } else {
+      // For TerraNullius, find closest shore within 50 tiles
+      // This is a simplified version - the full logic is more complex
+      const maxDistance = 50;
+      let closestShore: TileRef | null = null;
+      let closestDistance = Infinity;
+
+      // Search in a radius around the current tile
+      const searchRadius = Math.min(maxDistance, 100);
+      for (let dx = -searchRadius; dx <= searchRadius; dx++) {
+        for (let dy = -searchRadius; dy <= searchRadius; dy++) {
+          const testTile = this.game.ref(
+            this.game.x(currentTile) + dx,
+            this.game.y(currentTile) + dy,
+          );
+          if (this.game.isShore(testTile)) {
+            const distance = this.game.manhattanDist(currentTile, testTile);
+            if (distance < closestDistance && distance <= maxDistance) {
+              closestDistance = distance;
+              closestShore = testTile;
+            }
+          }
+        }
+      }
+
+      return closestShore;
+    }
+  }
+
+  private calculateDistanceTraveled(boat: UnitView): number {
+    // Calculate total distance traveled by the boat
+    // This is a simplified version - we could track the full path if needed
+    const currentTile = boat.tile();
+    const createdAt = boat.createdAt();
+    const currentTick = this.game.ticks();
+    const ticksTraveled = currentTick - createdAt;
+
+    // Boats move 1 tile per tick, so distance traveled = ticks traveled
+    // This is an approximation - the actual path might be longer due to pathfinding
+    return ticksTraveled;
   }
 
   private formatCountdown(ticks: number): string {
