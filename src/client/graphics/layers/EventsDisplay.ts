@@ -16,6 +16,7 @@ import {
   Tick,
   UnitType,
 } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
 import {
   AllianceExpiredUpdate,
   AllianceRequestReplyUpdate,
@@ -904,22 +905,32 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     if (targetPlayer.isPlayer()) {
-      // Find closest shore tile from the target player
-      const shoreTiles = Array.from(targetPlayer.borderTiles()).filter((t) =>
-        this.game.isShore(t),
-      );
-      if (shoreTiles.length === 0) {
-        return null;
+      // For now, use a simplified approach since borderTiles() is async
+      // We'll estimate the destination based on the current tile and typical patterns
+      const currentX = this.game.x(currentTile);
+      const currentY = this.game.y(currentTile);
+
+      // Search for shore tiles in a reasonable radius
+      const searchRadius = 100;
+      let closestShore: TileRef | null = null;
+      let closestDistance = Infinity;
+
+      for (let dx = -searchRadius; dx <= searchRadius; dx++) {
+        for (let dy = -searchRadius; dy <= searchRadius; dy++) {
+          const testTile = this.game.ref(currentX + dx, currentY + dy);
+          if (this.game.isShore(testTile)) {
+            const distance = this.game.manhattanDist(currentTile, testTile);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestShore = testTile;
+            }
+          }
+        }
       }
 
-      return shoreTiles.reduce((closest, current) => {
-        const closestDistance = this.game.manhattanDist(currentTile, closest);
-        const currentDistance = this.game.manhattanDist(currentTile, current);
-        return currentDistance < closestDistance ? current : closest;
-      });
+      return closestShore;
     } else {
       // For TerraNullius, find closest shore within 50 tiles
-      // This is a simplified version - the full logic is more complex
       const maxDistance = 50;
       let closestShore: TileRef | null = null;
       let closestDistance = Infinity;
