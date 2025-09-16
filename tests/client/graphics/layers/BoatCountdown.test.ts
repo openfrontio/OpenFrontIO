@@ -2,45 +2,49 @@
  * @jest-environment jsdom
  */
 
-// Mock the translateText function
+// Mock the translateText and renderDuration functions
 jest.mock("../../../../src/client/Utils", () => ({
   translateText: jest.fn((key: string, vars?: any) => {
     if (key === "events_display.boat_countdown.arriving") return "Arriving...";
-    if (key === "events_display.boat_countdown.seconds")
-      return `${vars?.seconds}s`;
-    if (key === "events_display.boat_countdown.minutes_seconds")
-      return `${vars?.minutes}m ${vars?.seconds}s`;
     return key;
+  }),
+  renderDuration: jest.fn((totalSeconds: number) => {
+    if (totalSeconds <= 0) return "0s";
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    let time = "";
+    if (minutes > 0) time += `${minutes}min `;
+    time += `${seconds}s`;
+    return time.trim();
   }),
 }));
 
-// Import the translateText function to test it
-import { translateText } from "../../../../src/client/Utils";
+// Import the functions to test them
+import { renderDuration, translateText } from "../../../../src/client/Utils";
 
 describe("Boat Countdown Logic", () => {
-  // Test the formatCountdown logic directly
+  // Test the formatCountdown logic directly (matches the actual implementation)
   const formatCountdown = (ticks: number): string => {
-    if (ticks <= 0)
-      return translateText("events_display.boat_countdown.arriving");
-
-    const seconds = Math.max(1, ticks);
-
-    if (seconds < 60) {
-      return translateText("events_display.boat_countdown.seconds", {
-        seconds,
-      });
-    } else {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return translateText("events_display.boat_countdown.minutes_seconds", {
-        minutes,
-        seconds: remainingSeconds,
-      });
+    if (ticks === -1) {
+      return "Calculating..."; // Show while A* path is being computed
     }
+
+    if (ticks <= 0) {
+      return translateText("events_display.boat_countdown.arriving");
+    }
+
+    // Convert ticks to seconds (10 ticks per second) and use existing formatter
+    const seconds = Math.max(1, Math.ceil(ticks / 10));
+    return renderDuration(seconds);
   };
 
   describe("formatCountdown", () => {
-    it("should return 'Arriving...' for zero or negative ticks", () => {
+    it("should return 'Calculating...' for -1 ticks", () => {
+      const result = formatCountdown(-1);
+      expect(result).toBe("Calculating...");
+    });
+
+    it("should return 'Arriving...' for zero or negative ticks (except -1)", () => {
       const result1 = formatCountdown(0);
       const result2 = formatCountdown(-5);
 
@@ -48,28 +52,22 @@ describe("Boat Countdown Logic", () => {
       expect(result2).toBe("Arriving...");
     });
 
-    it("should format seconds correctly for values under 60", () => {
-      const result1 = formatCountdown(30);
-      const result2 = formatCountdown(45);
+    it("should convert ticks to seconds and use renderDuration for positive ticks", () => {
+      const result1 = formatCountdown(30); // 3 seconds
+      const result2 = formatCountdown(90); // 9 seconds
+      const result3 = formatCountdown(600); // 60 seconds
 
-      expect(result1).toBe("30s");
-      expect(result2).toBe("45s");
-    });
-
-    it("should format minutes and seconds correctly for values over 60", () => {
-      const result1 = formatCountdown(90);
-      const result2 = formatCountdown(125);
-
-      expect(result1).toBe("1m 30s");
-      expect(result2).toBe("2m 5s");
+      expect(renderDuration).toHaveBeenCalledWith(3);
+      expect(renderDuration).toHaveBeenCalledWith(9);
+      expect(renderDuration).toHaveBeenCalledWith(60);
     });
 
     it("should handle edge cases correctly", () => {
-      const result1 = formatCountdown(60);
-      const result2 = formatCountdown(1);
+      const result1 = formatCountdown(1); // 1 tick = 1 second
+      const result2 = formatCountdown(10); // 10 ticks = 1 second
 
-      expect(result1).toBe("1m 0s");
-      expect(result2).toBe("1s");
+      expect(renderDuration).toHaveBeenCalledWith(1);
+      expect(renderDuration).toHaveBeenCalledWith(1);
     });
   });
 
@@ -87,7 +85,7 @@ describe("Boat Countdown Logic", () => {
       );
     });
 
-    it("should call translateText with correct keys for seconds", () => {
+    it("should not call translateText for positive ticks (uses renderDuration)", () => {
       const mockTranslateText = translateText as jest.MockedFunction<
         typeof translateText
       >;
@@ -95,27 +93,24 @@ describe("Boat Countdown Logic", () => {
 
       formatCountdown(30);
 
-      expect(mockTranslateText).toHaveBeenCalledWith(
-        "events_display.boat_countdown.seconds",
-        { seconds: 30 },
-      );
+      expect(mockTranslateText).not.toHaveBeenCalled();
     });
+  });
 
-    it("should call translateText with correct keys for minutes and seconds", () => {
-      const mockTranslateText = translateText as jest.MockedFunction<
-        typeof translateText
+  describe("renderDuration integration", () => {
+    it("should call renderDuration with correct seconds for positive ticks", () => {
+      const mockRenderDuration = renderDuration as jest.MockedFunction<
+        typeof renderDuration
       >;
-      mockTranslateText.mockClear();
+      mockRenderDuration.mockClear();
 
-      formatCountdown(90);
+      formatCountdown(30); // 3 seconds
+      formatCountdown(90); // 9 seconds
+      formatCountdown(600); // 60 seconds
 
-      expect(mockTranslateText).toHaveBeenCalledWith(
-        "events_display.boat_countdown.minutes_seconds",
-        {
-          minutes: 1,
-          seconds: 30,
-        },
-      );
+      expect(mockRenderDuration).toHaveBeenCalledWith(3);
+      expect(mockRenderDuration).toHaveBeenCalledWith(9);
+      expect(mockRenderDuration).toHaveBeenCalledWith(60);
     });
   });
 });

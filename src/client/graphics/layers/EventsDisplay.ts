@@ -39,7 +39,7 @@ import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderDuration, renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
@@ -830,65 +830,30 @@ export class EventsDisplay extends LitElement implements Layer {
     const createdAt = boat.createdAt();
     const ticksTraveled = currentTick - createdAt;
 
-    // Check if boat has been traveling too long (it should have arrived)
-    if (ticksTraveled > 300) {
-      return 0; // Show "Arriving..." for boats that should have arrived
-    }
-
     // Try to use server-provided estimated arrival tick if available
-    const estimatedArrivalTick = this.getEstimatedArrivalTick(boat);
+    const estimatedArrivalTick = boat.estimatedArrivalTick();
+
     if (estimatedArrivalTick !== undefined) {
       const remaining = Math.max(0, estimatedArrivalTick - currentTick);
       return remaining;
     }
 
-    // Fallback to client-side estimation if server data not available
-    return this.calculateFallbackCountdown(boat, ticksTraveled);
-  }
-
-  private getEstimatedArrivalTick(boat: UnitView): number | undefined {
-    // Access the estimatedArrivalTick from the UnitView
-    return boat.estimatedArrivalTick();
-  }
-
-  private calculateFallbackCountdown(
-    boat: UnitView,
-    ticksTraveled: number,
-  ): number {
-    // Simple fallback estimation
-    if (boat.retreating()) {
-      const maxRetreatTime = 45;
-      return Math.max(0, maxRetreatTime - ticksTraveled);
-    }
-
-    // For attacking boats, use a simple time-based estimation
-    const estimatedTotalTime = Math.max(
-      60,
-      120 - Math.floor(ticksTraveled / 3),
-    );
-    return Math.max(0, estimatedTotalTime - ticksTraveled);
+    // If no server estimate available, show "Calculating..." status
+    return -1; // Special value to indicate "Calculating..." status
   }
 
   private formatCountdown(ticks: number): string {
-    if (ticks <= 0)
-      return translateText("events_display.boat_countdown.arriving");
-
-    // Since boats move 1 tile per tick, and we want to show realistic time estimates,
-    // let's use the ticks directly as seconds for now (this gives a reasonable countdown)
-    const seconds = Math.max(1, ticks);
-
-    if (seconds < 60) {
-      return translateText("events_display.boat_countdown.seconds", {
-        seconds,
-      });
-    } else {
-      const minutes = Math.floor(seconds / 60);
-      const remainingSeconds = seconds % 60;
-      return translateText("events_display.boat_countdown.minutes_seconds", {
-        minutes,
-        seconds: remainingSeconds,
-      });
+    if (ticks === -1) {
+      return "Calculating..."; // Show while A* path is being computed
     }
+
+    if (ticks <= 0) {
+      return translateText("events_display.boat_countdown.arriving");
+    }
+
+    // Convert ticks to seconds (10 ticks per second) and use existing formatter
+    const seconds = Math.max(1, Math.ceil(ticks / 10));
+    return renderDuration(seconds);
   }
 
   private renderBoats() {
