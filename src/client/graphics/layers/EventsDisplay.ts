@@ -839,15 +839,13 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private calculateBoatCountdown(boat: UnitView): number {
-    const currentTile = boat.tile();
-    const lastTile = boat.lastTile();
-    const createdAt = boat.createdAt();
     const currentTick = this.game.ticks();
+    const createdAt = boat.createdAt();
     const ticksTraveled = currentTick - createdAt;
 
     // Debug logging
     console.log(
-      `Boat ${boat.id()}: ticksTraveled=${ticksTraveled}, currentTick=${currentTick}, createdAt=${createdAt}, retreating=${boat.retreating()}, currentTile=${currentTile}, lastTile=${lastTile}`,
+      `Boat ${boat.id()}: ticksTraveled=${ticksTraveled}, currentTick=${currentTick}, createdAt=${createdAt}, retreating=${boat.retreating()}`,
     );
 
     // Check if boat has been traveling too long (it should have arrived)
@@ -856,84 +854,44 @@ export class EventsDisplay extends LitElement implements Layer {
       return 0; // Show "Arriving..." for boats that should have arrived
     }
 
-    // For retreating boats, calculate distance to source
-    if (boat.retreating()) {
-      // For retreating boats, we need to find the source tile
-      // This is more complex, so let's use a simple estimation for now
-      const maxRetreatTime = 45;
-      const remaining = Math.max(0, maxRetreatTime - ticksTraveled);
-      console.log(`Boat ${boat.id()}: retreat remaining=${remaining}`);
-      return remaining;
-    }
-
-    // For attacking boats, use a more sophisticated approach
-    // Since destination calculation is complex, let's use movement-based estimation
-    if (currentTile !== lastTile) {
-      // Boat is actively moving - estimate based on movement pattern
-      const movementDistance = this.game.manhattanDist(lastTile, currentTile);
-      if (movementDistance > 0) {
-        // Estimate total journey time based on typical boat patterns
-        // Use a more conservative estimation that accounts for pathfinding
-        let estimatedTotalTime;
-
-        if (ticksTraveled < 10) {
-          // Early journey - estimate based on distance from current position
-          const currentX = this.game.x(currentTile);
-          const currentY = this.game.y(currentTile);
-
-          // Estimate distance to nearest shore (simplified)
-          let minDistanceToShore = Infinity;
-          for (let dx = -50; dx <= 50; dx++) {
-            for (let dy = -50; dy <= 50; dy++) {
-              const testTile = this.game.ref(currentX + dx, currentY + dy);
-              if (this.game.isShore(testTile)) {
-                const distance = this.game.manhattanDist(currentTile, testTile);
-                minDistanceToShore = Math.min(minDistanceToShore, distance);
-              }
-            }
-          }
-
-          if (minDistanceToShore < Infinity) {
-            // Add some buffer for pathfinding complexity
-            estimatedTotalTime = Math.max(20, minDistanceToShore * 1.5);
-          } else {
-            estimatedTotalTime = Math.max(
-              60,
-              120 - Math.floor(ticksTraveled / 3),
-            );
-          }
-        } else if (ticksTraveled < 50) {
-          // Mid journey - more accurate estimation
-          estimatedTotalTime = Math.max(
-            40,
-            100 - Math.floor(ticksTraveled / 4),
-          );
-        } else {
-          // Late journey - should be close
-          estimatedTotalTime = Math.max(20, 80 - Math.floor(ticksTraveled / 6));
-        }
-
-        const remaining = Math.max(0, estimatedTotalTime - ticksTraveled);
-        console.log(
-          `Boat ${boat.id()}: moving, estimated remaining=${remaining}`,
-        );
-        return remaining;
-      }
-    }
-
-    // If boat hasn't moved recently, it might be stuck or almost there
-    if (ticksTraveled > 80) {
-      const remaining = Math.max(0, 20 - Math.floor((ticksTraveled - 80) / 3));
+    // Try to use server-provided estimated arrival tick if available
+    const estimatedArrivalTick = this.getEstimatedArrivalTick(boat);
+    if (estimatedArrivalTick !== undefined) {
+      const remaining = Math.max(0, estimatedArrivalTick - currentTick);
       console.log(
-        `Boat ${boat.id()}: stuck/almost there, remaining=${remaining}`,
+        `Boat ${boat.id()}: server estimated arrival=${estimatedArrivalTick}, remaining=${remaining}`,
       );
       return remaining;
     }
 
-    // Default fallback for early journey
-    const estimatedRemaining = Math.max(10, 90 - Math.floor(ticksTraveled / 2));
-    console.log(`Boat ${boat.id()}: default estimate=${estimatedRemaining}`);
-    return estimatedRemaining;
+    // Fallback to client-side estimation if server data not available
+    console.log(`Boat ${boat.id()}: using fallback estimation`);
+    return this.calculateFallbackCountdown(boat, ticksTraveled);
+  }
+
+  private getEstimatedArrivalTick(boat: UnitView): number | undefined {
+    // This would access the estimatedArrivalTick from the UnitUpdate
+    // For now, return undefined to indicate we need to implement this
+    // The actual implementation would access boat.data.estimatedArrivalTick
+    return undefined;
+  }
+
+  private calculateFallbackCountdown(
+    boat: UnitView,
+    ticksTraveled: number,
+  ): number {
+    // Simple fallback estimation
+    if (boat.retreating()) {
+      const maxRetreatTime = 45;
+      return Math.max(0, maxRetreatTime - ticksTraveled);
+    }
+
+    // For attacking boats, use a simple time-based estimation
+    const estimatedTotalTime = Math.max(
+      60,
+      120 - Math.floor(ticksTraveled / 3),
+    );
+    return Math.max(0, estimatedTotalTime - ticksTraveled);
   }
 
   private calculateBoatDestination(boat: UnitView): TileRef | null {

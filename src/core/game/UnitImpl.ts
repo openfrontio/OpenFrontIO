@@ -132,6 +132,10 @@ export class UnitImpl implements Unit {
       constructionType: this._constructionType,
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
+      estimatedArrivalTick:
+        this._type === UnitType.TransportShip
+          ? this.calculateEstimatedArrivalTick()
+          : undefined,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
@@ -410,5 +414,16 @@ export class UnitImpl implements Unit {
       this._loaded = loaded;
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  private calculateEstimatedArrivalTick(): number | undefined {
+    if (this._type !== UnitType.TransportShip) {
+      return undefined;
+    }
+
+    // For transport ships, we need to get the destination from the execution
+    // This is a simplified calculation - in practice, we'd need access to the execution
+    // For now, return undefined to indicate we need to implement this properly
+    return undefined;
   }
 }
