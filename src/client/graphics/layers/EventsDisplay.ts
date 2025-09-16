@@ -823,17 +823,69 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
+  private calculateBoatCountdown(boat: UnitView): number {
+    // Boats move 1 tile per tick (ticksPerMove = 1)
+    // Calculate remaining distance using Manhattan distance as a rough estimate
+    const currentTile = boat.tile();
+    const lastTile = boat.lastTile();
+
+    // If the boat has a target tile, use that for more accurate calculation
+    const targetTile = boat.targetTile();
+    if (targetTile) {
+      const remainingDistance = this.game.manhattanDist(
+        currentTile,
+        targetTile,
+      );
+      return remainingDistance; // Returns ticks remaining
+    }
+
+    // Fallback: estimate based on recent movement
+    if (currentTile !== lastTile) {
+      // Boat is moving, estimate based on distance from last position
+      const distance = this.game.manhattanDist(lastTile, currentTile);
+      if (distance > 0) {
+        // Estimate remaining distance based on current movement direction
+        const estimatedRemaining = Math.max(1, distance * 2); // Conservative estimate
+        return estimatedRemaining;
+      }
+    }
+
+    // Default fallback
+    return 0;
+  }
+
+  private formatCountdown(ticks: number): string {
+    if (ticks <= 0) return "Arriving...";
+
+    // Convert ticks to seconds (assuming 60 ticks per second)
+    const seconds = Math.ceil(ticks / 60);
+
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+  }
+
   private renderBoats() {
     return html`
       ${this.outgoingBoats.length > 0
         ? html`
             <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingBoats.map(
-                (boat) => html`
+              ${this.outgoingBoats.map((boat) => {
+                const countdown = this.calculateBoatCountdown(boat);
+                const countdownText = this.formatCountdown(countdown);
+
+                return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
                       content: html`${translateText("events_display.boat")}:
-                      ${renderTroops(boat.troops())}`,
+                        ${renderTroops(boat.troops())}
+                        <span class="text-yellow-400 ml-1"
+                          >(${countdownText})</span
+                        >`,
                       onClick: () => this.emitGoToUnitEvent(boat),
                       className: "text-left text-blue-400",
                       translate: false,
@@ -851,8 +903,8 @@ export class EventsDisplay extends LitElement implements Layer {
                           )}...)</span
                         >`}
                   </div>
-                `,
-              )}
+                `;
+              })}
             </div>
           `
         : ""}
