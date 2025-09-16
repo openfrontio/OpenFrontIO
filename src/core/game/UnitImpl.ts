@@ -32,6 +32,7 @@ export class UnitImpl implements Unit {
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
   private _patrolTile: TileRef | undefined;
+  private _estimatedArrivalTick: number | undefined;
   private _level: number = 1;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
@@ -416,14 +417,23 @@ export class UnitImpl implements Unit {
     }
   }
 
+  setEstimatedArrivalTick(tick: number): void {
+    if (this._estimatedArrivalTick !== tick) {
+      this._estimatedArrivalTick = tick;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  estimatedArrivalTick(): number | undefined {
+    return this._estimatedArrivalTick;
+  }
+
   private calculateEstimatedArrivalTick(): number | undefined {
     if (this._type !== UnitType.TransportShip) {
       return undefined;
     }
 
-    // For transport ships, we need to get the destination from the execution
-    // This is a simplified calculation - in practice, we'd need access to the execution
-    // For now, return undefined to indicate we need to implement this properly
-    return undefined;
+    // Return the stored estimated arrival tick if available
+    return this._estimatedArrivalTick;
   }
 }

@@ -162,6 +162,10 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
+
+    // Calculate and update estimated arrival tick
+    this.updateEstimatedArrivalTick(ticks);
+
     if (ticks - this.lastMove < this.ticksPerMove) {
       return;
     }
@@ -228,5 +232,24 @@ export class TransportShipExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  private updateEstimatedArrivalTick(currentTick: number): void {
+    if (this.dst === null) {
+      return;
+    }
+
+    const currentTile = this.boat.tile();
+    const distance = this.mg.manhattanDist(currentTile, this.dst);
+
+    // Calculate estimated arrival tick based on remaining distance
+    // Boats move 1 tile per tick (ticksPerMove = 1)
+    const estimatedArrivalTick = currentTick + distance;
+
+    // Store the estimated arrival tick on the boat
+    // We'll need to add this method to Unit interface
+    if (this.boat.setEstimatedArrivalTick) {
+      this.boat.setEstimatedArrivalTick(estimatedArrivalTick);
+    }
   }
 }

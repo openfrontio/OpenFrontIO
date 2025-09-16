@@ -870,10 +870,8 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private getEstimatedArrivalTick(boat: UnitView): number | undefined {
-    // This would access the estimatedArrivalTick from the UnitUpdate
-    // For now, return undefined to indicate we need to implement this
-    // The actual implementation would access boat.data.estimatedArrivalTick
-    return undefined;
+    // Access the estimatedArrivalTick from the UnitView
+    return boat.estimatedArrivalTick();
   }
 
   private calculateFallbackCountdown(

@@ -102,6 +102,13 @@ export class UnitView {
     }
     return this.data.retreating;
   }
+
+  estimatedArrivalTick(): number | undefined {
+    if (this.type() !== UnitType.TransportShip) {
+      return undefined;
+    }
+    return this.data.estimatedArrivalTick;
+  }
   tile(): TileRef {
     return this.data.pos;
   }
