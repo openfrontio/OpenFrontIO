@@ -825,33 +825,75 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private calculateBoatCountdown(boat: UnitView): number {
     // Boats move 1 tile per tick (ticksPerMove = 1)
-    // Calculate remaining distance using Manhattan distance as a rough estimate
     const currentTile = boat.tile();
     const lastTile = boat.lastTile();
 
-    // If the boat has a target tile, use that for more accurate calculation
-    const targetTile = boat.targetTile();
-    if (targetTile) {
-      const remainingDistance = this.game.manhattanDist(
-        currentTile,
-        targetTile,
-      );
-      return remainingDistance; // Returns ticks remaining
+    // Check if boat is retreating - if so, estimate based on distance to nearest friendly territory
+    if (boat.retreating()) {
+      // For retreating boats, estimate based on distance to nearest friendly shore
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer) {
+        const friendlyTiles = myPlayer.borderTiles();
+        if (friendlyTiles.length > 0) {
+          const nearestFriendly = friendlyTiles.reduce((closest, tile) => {
+            const currentDist = this.game.manhattanDist(currentTile, tile);
+            const closestDist = this.game.manhattanDist(currentTile, closest);
+            return currentDist < closestDist ? tile : closest;
+          });
+          return this.game.manhattanDist(currentTile, nearestFriendly);
+        }
+      }
     }
 
-    // Fallback: estimate based on recent movement
+    // For attacking boats, use a more sophisticated estimation
+    // Since we can't get the exact destination, we'll estimate based on:
+    // 1. How long the boat has been traveling
+    // 2. Recent movement patterns
+    // 3. Distance to nearest enemy territory
+
+    const createdAt = boat.createdAt();
+    const currentTick = this.game.ticks();
+    const ticksTraveled = currentTick - createdAt;
+
+    // Debug logging (remove in production)
+    if (ticksTraveled % 60 === 0) {
+      // Log every second
+      console.log(
+        `Boat ${boat.id()}: ticksTraveled=${ticksTraveled}, currentTile=${currentTile}, lastTile=${lastTile}, retreating=${boat.retreating()}`,
+      );
+    }
+
+    // If boat just started, give a conservative estimate
+    if (ticksTraveled < 10) {
+      return Math.max(30, 60 - ticksTraveled); // At least 30 ticks, decreasing as it travels
+    }
+
+    // If boat has been traveling for a while, estimate based on movement
     if (currentTile !== lastTile) {
-      // Boat is moving, estimate based on distance from last position
-      const distance = this.game.manhattanDist(lastTile, currentTile);
-      if (distance > 0) {
-        // Estimate remaining distance based on current movement direction
-        const estimatedRemaining = Math.max(1, distance * 2); // Conservative estimate
+      // Boat is actively moving
+      const movementDistance = this.game.manhattanDist(lastTile, currentTile);
+      if (movementDistance > 0) {
+        // Estimate remaining time based on typical boat journey length
+        // Most boat journeys are between 20-100 tiles
+        const estimatedTotalJourney = Math.min(
+          100,
+          Math.max(20, ticksTraveled * 2),
+        );
+        const estimatedRemaining = Math.max(
+          5,
+          estimatedTotalJourney - ticksTraveled,
+        );
         return estimatedRemaining;
       }
     }
 
-    // Default fallback
-    return 0;
+    // If boat hasn't moved recently, it might be stuck or almost there
+    if (ticksTraveled > 50) {
+      return Math.max(1, 10 - (ticksTraveled - 50)); // Decreasing countdown
+    }
+
+    // Default fallback - give a reasonable estimate
+    return Math.max(5, 30 - Math.floor(ticksTraveled / 2));
   }
 
   private formatCountdown(ticks: number): string {
