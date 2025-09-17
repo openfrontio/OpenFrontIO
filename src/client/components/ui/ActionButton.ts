@@ -1,14 +1,19 @@
 import { html, TemplateResult } from "lit";
 
+export type ButtonVariant = "normal" | "red" | "green" | "indigo";
 export interface ActionButtonProps {
   onClick: (e: MouseEvent) => void;
-  type?: "normal" | "red" | "green" | "indigo";
+  type?: ButtonVariant;
   icon: string;
   iconAlt: string;
   title: string;
   label: string;
   disabled?: boolean;
 }
+
+const ICON_SIZE = "h-5 w-5 shrink-0 transition-transform group-hover:scale-110";
+const TEXT_SIZE =
+  "text-[12px] sm:text-[13px] leading-4 font-medium tracking-tight";
 
 const getButtonStyles = () => {
   const btnBase =
@@ -25,10 +30,6 @@ const getButtonStyles = () => {
     indigo: `${btnBase} text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 focus-visible:ring-indigo-400/30`,
   };
 };
-
-const iconSize = "h-5 w-5 shrink-0 transition-transform group-hover:scale-110";
-const textSize =
-  "text-[10px] sm:text-[11px] leading-4 font-medium tracking-tight";
 
 export const actionButton = (props: ActionButtonProps): TemplateResult => {
   const {
@@ -50,8 +51,8 @@ export const actionButton = (props: ActionButtonProps): TemplateResult => {
       title="${title}"
       ?disabled=${disabled}
     >
-      <img src=${icon} alt=${iconAlt} class="${iconSize}" />
-      <span class="${textSize}">${label}</span>
+      <img src=${icon} alt=${iconAlt} class="${ICON_SIZE}" />
+      <span class="${TEXT_SIZE}">${label}</span>
     </button>
   `;
 };

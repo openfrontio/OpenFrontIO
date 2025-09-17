@@ -1,13 +1,14 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
+export type DividerSpacing = "sm" | "md" | "lg";
 @customElement("ui-divider")
 export class Divider extends LitElement {
   @property({ type: String })
-  spacing: "sm" | "md" | "lg" = "md";
+  spacing: DividerSpacing = "md";
 
   @property({ type: String })
-  color: string = "";
+  color: string = "bg-zinc-700/80";
 
   createRenderRoot() {
     return this;

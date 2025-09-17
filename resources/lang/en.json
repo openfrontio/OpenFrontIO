@@ -565,14 +565,13 @@
     "alliance_time_remaining": "Alliance Expires In",
     "embargo": "Stopped trading with you",
     "nuke": "Nukes sent by them to you",
-    "start_trade": "Start trading",
-    "stop_trade": "Stop trading",
+    "start_trade": "Start Trading",
+    "stop_trade": "Stop Trading",
     "yes": "Yes",
     "no": "No",
     "none": "None",
     "alliances": "Alliances",
     "flag": "Flag",
-    "view_allies": "View allies",
     "chat": "Chat",
     "target": "Target",
     "break": "Break",
@@ -586,7 +585,7 @@
   "replay_panel": {
     "replay_speed": "Replay speed",
     "game_speed": "Game speed",
-    "fastest_game_speed": "max"
+    "fastest_game_speed": "Max"
   },
   "error_modal": {
     "crashed": "Game crashed!",
