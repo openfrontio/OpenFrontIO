@@ -555,7 +555,7 @@
   "player_panel": {
     "gold": "Gold",
     "troops": "Troops",
-    "betrayals": "Number of betrayals",
+    "betrayals": "Betrayals",
     "traitor": "Traitor",
     "stable": "Stable",
     "trust": "Trust",
@@ -578,7 +578,7 @@
     "break": "Break",
     "break_alliance": "Break Alliance",
     "alliance": "Alliance",
-    "send_alliance": "Alliance",
+    "send_alliance": "Send Alliance",
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
     "emotes": "Emotes"

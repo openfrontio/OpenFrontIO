@@ -310,12 +310,12 @@ export class PlayerPanel extends LitElement implements Layer {
               <div class="mb-1 flex justify-between gap-2">
                 <div
                   class="inline-flex items-center gap-0.5 rounded-full bg-zinc-800 px-2.5 py-1
-                        text-sm font-medium text-zinc-200"
+                  text-sm font-medium text-zinc-200"
                 >
                   <span>💰</span>
                   <span
                     translate="no"
-                    class="inline-block w-[40px] text-right font-mono"
+                    class="inline-block w-[40px] text-right"
                   >
                     ${renderNumber(other.gold() || 0)}
                   </span>
@@ -326,12 +326,12 @@ export class PlayerPanel extends LitElement implements Layer {
 
                 <div
                   class="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-2.5 py-1
-                        text-sm font-medium text-zinc-200"
+                  text-sm font-medium text-zinc-200"
                 >
                   <span>🛡️</span>
                   <span
                     translate="no"
-                    class="inline-block w-[40px] text-right font-mono"
+                    class="inline-block w-[40px] text-right"
                   >
                     ${renderTroops(other.troops() || 0)}
                   </span>
