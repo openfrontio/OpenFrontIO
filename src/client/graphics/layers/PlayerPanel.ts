@@ -37,6 +37,7 @@ import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
+import "./SendTroopsModal";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -47,6 +48,10 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
+
+  private troopsTarget: PlayerView | null = null;
+  @state()
+  private showTroopsModal = false;
 
   @state()
   public isVisible: boolean = false;
@@ -99,14 +104,8 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    e.stopPropagation();
-    this.eventBus.emit(
-      new SendDonateTroopsIntentEvent(
-        other,
-        myPlayer.troops() * this.uiState.attackRatio,
-      ),
-    );
-    this.hide();
+    this.troopsTarget = other;
+    this.showTroopsModal = true;
   }
 
   private handleDonateGoldClick(
@@ -118,6 +117,30 @@ export class PlayerPanel extends LitElement implements Layer {
     this.eventBus.emit(new SendDonateGoldIntentEvent(other, null));
     this.hide();
   }
+
+  private handleConfirmSendTroops = (
+    e: CustomEvent<{ amount: number; closePanel?: boolean }>,
+  ) => {
+    const amount = Math.floor(Math.max(0, e.detail?.amount ?? 0));
+    const myPlayer = this.g.myPlayer();
+    if (!this.troopsTarget || !myPlayer) return;
+    if (amount <= 0 || amount > myPlayer.troops()) return;
+
+    this.eventBus.emit(
+      new SendDonateTroopsIntentEvent(this.troopsTarget, amount),
+    );
+    this.handleCloseTroopsModal();
+
+    // Close the PlayerPanel if requested
+    if (e.detail?.closePanel) {
+      this.hide();
+    }
+  };
+
+  private handleCloseTroopsModal = () => {
+    this.showTroopsModal = false;
+    this.troopsTarget = null;
+  };
 
   private handleEmbargoClick(
     e: Event,
@@ -301,6 +324,19 @@ export class PlayerPanel extends LitElement implements Layer {
                   ${other?.name()}
                 </h1>
               </div>
+
+              ${this.showTroopsModal && this.troopsTarget
+                ? html`
+                    <send-troops-modal
+                      .myPlayer=${this.g.myPlayer()}
+                      .troopsTarget=${this.troopsTarget}
+                      .open=${this.showTroopsModal}
+                      .total=${myPlayer.troops()}
+                      @confirm=${this.handleConfirmSendTroops}
+                      @close=${this.handleCloseTroopsModal}
+                    ></send-troops-modal>
+                  `
+                : ""}
 
               <!-- Divider -->
               <ui-divider></ui-divider>
