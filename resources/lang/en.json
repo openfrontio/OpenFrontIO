@@ -272,14 +272,7 @@
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
-    "factory": "Factory",
-    "transport_ship": "Transport Ship",
-    "shell": "Shell",
-    "sam_missile": "SAM Missile",
-    "trade_ship": "Trade Ship",
-    "mirv_warhead": "MIRV Warhead",
-    "construction": "Construction",
-    "train": "Train"
+    "factory": "Factory"
   },
   "user_setting": {
     "title": "User Settings",
