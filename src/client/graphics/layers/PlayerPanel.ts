@@ -273,8 +273,8 @@ export class PlayerPanel extends LitElement implements Layer {
           class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[240px] w-auto px-4 py-2"
         >
           <div
-            class="relative mt-2 w-full rounded-xl border border-zinc-700
-       bg-zinc-900 p-4 lg:p-5 shadow-2xl"
+            class="relative mt-2 w-full order border-white/10  bg-zinc-900/95
+       backdrop-blur-sm p-5 shadow-2xl ring-1 ring-white/5 rounded-xl"
           >
             <!-- Close button -->
             <button
@@ -285,25 +285,25 @@ export class PlayerPanel extends LitElement implements Layer {
               ✕
             </button>
 
-            <div class="flex flex-col gap-2 min-w-[240px]">
+            <div
+              class="flex flex-col gap-2 font-sans antialiased text-[13px] text-zinc-200"
+            >
               <!-- Name section -->
-              <div class="mb-1 flex items-center gap-3">
-                ${
-                  country
-                    ? html`<img
-                        src="/flags/${flagCode}.svg"
-                        alt=${flagName}
-                        class="h-10 w-10 rounded-full object-cover"
-                      />`
-                    : ""
-                }
-                <h1 class="text-2xl font-semibold tracking-tight truncate text-zinc-200">
+              <div class="mb-1 flex items-center gap-2.5">
+                ${country
+                  ? html`<img
+                      src="/flags/${flagCode}.svg"
+                      alt=${flagName}
+                      class="h-10 w-10 rounded-full object-cover"
+                    />`
+                  : ""}
+                <h1 class="text-xl font-semibold tracking-[-0.01em] truncate">
                   ${other?.name()}
                 </h1>
               </div>
 
               <!-- Divider -->
-              <ui-divider></ui-divider
+              <ui-divider></ui-divider>
 
               <!-- Resources section -->
               <div class="mb-1 flex justify-between gap-2">
@@ -312,10 +312,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   text-base font-medium text-zinc-200"
                 >
                   <span class="mr-0.5">💰</span>
-                  <span
-                    translate="no"
-                    class="inline-block w-[45px] text-right"
-                  >
+                  <span translate="no" class="inline-block w-[45px] text-right">
                     ${renderNumber(other.gold() || 0)}
                   </span>
                   <span class="opacity-90">
@@ -328,10 +325,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   text-base font-medium text-zinc-200"
                 >
                   <span class="mr-0.5">🛡️</span>
-                  <span
-                    translate="no"
-                    class="inline-block w-[45px] text-right"
-                  >
+                  <span translate="no" class="inline-block w-[45px] text-right">
                     ${renderTroops(other.troops() || 0)}
                   </span>
                   <span class="opacity-90">
@@ -345,32 +339,28 @@ export class PlayerPanel extends LitElement implements Layer {
 
               <!-- Trust -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
-
                 <div class="flex items-center gap-2 font-medium text-zinc-400">
                   <span aria-hidden="true">🤝</span>
                   <span>${translateText("player_panel.trust")}</span>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 font-medium">
-                  ${
-                    other.isTraitor()
-                      ? html`
-                          <span class="text-red-400">
-                            ${translateText("player_panel.traitor")}
-                          </span>
-                        `
-                      : html`
-                          <span class="text-emerald-400">
-                            ${translateText("player_panel.stable")}
-                          </span>
-                        `
-                  }
+                  ${other.isTraitor()
+                    ? html`
+                        <span class="text-red-400">
+                          ${translateText("player_panel.traitor")}
+                        </span>
+                      `
+                    : html`
+                        <span class="text-emerald-400">
+                          ${translateText("player_panel.stable")}
+                        </span>
+                      `}
                 </div>
               </div>
 
               <!-- Betrayals -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
-
                 <div class="flex items-center gap-2 font-medium text-zinc-400">
                   <span aria-hidden="true">⚠️</span>
                   <span>${translateText("player_panel.betrayals")}</span>
@@ -383,26 +373,23 @@ export class PlayerPanel extends LitElement implements Layer {
 
               <!-- Embargo -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
-
                 <div class="flex items-center gap-2 font-medium text-zinc-400">
                   <span aria-hidden="true">⚓</span>
                   <span>${translateText("player_panel.trading")}</span>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 font-medium">
-                  ${
-                    other.hasEmbargoAgainst(myPlayer)
-                      ? html`
-                          <span class="text-red-400">
-                            ${translateText("player_panel.stopped")}
-                          </span>
-                        `
-                      : html`
-                          <span class="text-emerald-400">
-                            ${translateText("player_panel.active")}
-                          </span>
-                        `
-                  }
+                  ${other.hasEmbargoAgainst(myPlayer)
+                    ? html`
+                        <span class="text-red-400">
+                          ${translateText("player_panel.stopped")}
+                        </span>
+                      `
+                    : html`
+                        <span class="text-emerald-400">
+                          ${translateText("player_panel.active")}
+                        </span>
+                      `}
                 </div>
               </div>
 
@@ -425,50 +412,42 @@ export class PlayerPanel extends LitElement implements Layer {
                     class="max-h-[72px] overflow-y-auto p-2 text-sm text-zinc-200"
                     translate="no"
                   >
-                    ${
-                      other.allies().length > 0
-                        ? other
-                            .allies()
-                            .map(
-                              (p) => html`
-                                <div class="truncate leading-6">
-                                  ${p.name()}
-                                </div>
-                              `,
-                            )
-                        : html`<div class="py-2 text-zinc-400">
-                            ${translateText("player_panel.none")}
-                          </div>`
-                    }
+                    ${other.allies().length > 0
+                      ? other
+                          .allies()
+                          .map(
+                            (p) => html`
+                              <div class="truncate leading-6">${p.name()}</div>
+                            `,
+                          )
+                      : html`<div class="py-2 text-zinc-400">
+                          ${translateText("player_panel.none")}
+                        </div>`}
                   </div>
                 </div>
               </div>
 
               <!-- Alliance expiry -->
-              ${
-                this.allianceExpiryText !== null
-                  ? html`
-                      <div
-                        class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base"
-                      >
-                        <div class="font-medium text-zinc-400">
-                          ${translateText(
-                            "player_panel.alliance_time_remaining",
-                          )}
-                        </div>
-                        <div class="text-right font-medium">
-                          <span
-                            class="inline-flex items-center rounded-full px-2 py-0.5 text-sm font-semibold ${this.getExpiryColorClass(
-                              this.allianceExpirySeconds,
-                            )}"
-                          >
-                            ${this.allianceExpiryText}
-                          </span>
-                        </div>
+              ${this.allianceExpiryText !== null
+                ? html`
+                    <div
+                      class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base"
+                    >
+                      <div class="font-medium text-zinc-400">
+                        ${translateText("player_panel.alliance_time_remaining")}
                       </div>
-                    `
-                  : ""
-              }
+                      <div class="text-right font-medium">
+                        <span
+                          class="inline-flex items-center rounded-full px-2 py-0.5 text-sm font-semibold ${this.getExpiryColorClass(
+                            this.allianceExpirySeconds,
+                          )}"
+                        >
+                          ${this.allianceExpiryText}
+                        </span>
+                      </div>
+                    </div>
+                  `
+                : ""}
 
               <!-- Divider -->
               <ui-divider></ui-divider>
@@ -476,7 +455,6 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Action buttons -->
               <div class="flex flex-col gap-2">
                 <div class="grid auto-cols-fr grid-flow-col gap-1">
-
                   <!-- Chat -->
                   ${actionButton({
                     onClick: (e: MouseEvent) =>
@@ -488,121 +466,107 @@ export class PlayerPanel extends LitElement implements Layer {
                   })}
 
                   <!-- Emotes -->
-                  ${
-                    canSendEmoji
-                      ? actionButton({
-                          onClick: (e: MouseEvent) =>
-                            this.handleEmojiClick(e, myPlayer, other),
-                          icon: emojiIcon,
-                          iconAlt: "Emoji",
-                          title: translateText("player_panel.emotes"),
-                          label: translateText("player_panel.emotes"),
-                          type: "normal",
-                        })
-                      : ""
-                  }
+                  ${canSendEmoji
+                    ? actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleEmojiClick(e, myPlayer, other),
+                        icon: emojiIcon,
+                        iconAlt: "Emoji",
+                        title: translateText("player_panel.emotes"),
+                        label: translateText("player_panel.emotes"),
+                        type: "normal",
+                      })
+                    : ""}
 
                   <!-- Target -->
-                  ${
-                    canTarget
-                      ? actionButton({
-                          onClick: (e: MouseEvent) =>
-                            this.handleTargetClick(e, other),
-                          icon: targetIcon,
-                          iconAlt: "Target",
-                          title: translateText("player_panel.target"),
-                          label: translateText("player_panel.target"),
-                          type: "normal",
-                        })
-                      : ""
-                  }
+                  ${canTarget
+                    ? actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleTargetClick(e, other),
+                        icon: targetIcon,
+                        iconAlt: "Target",
+                        title: translateText("player_panel.target"),
+                        label: translateText("player_panel.target"),
+                        type: "normal",
+                      })
+                    : ""}
 
                   <!-- Send Troops -->
-                  ${
-                    canDonateTroops
-                      ? actionButton({
-                          onClick: (e: MouseEvent) =>
-                            this.handleDonateTroopClick(e, myPlayer, other),
-                          icon: donateTroopIcon,
-                          iconAlt: "Troops",
-                          title: translateText("player_panel.send_troops"),
-                          label: translateText("player_panel.troops"),
-                          type: "normal",
-                        })
-                      : ""
-                  }
+                  ${canDonateTroops
+                    ? actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleDonateTroopClick(e, myPlayer, other),
+                        icon: donateTroopIcon,
+                        iconAlt: "Troops",
+                        title: translateText("player_panel.send_troops"),
+                        label: translateText("player_panel.troops"),
+                        type: "normal",
+                      })
+                    : ""}
 
                   <!-- Send Gold -->
-                  ${
-                    canDonateGold
-                      ? actionButton({
-                          onClick: (e: MouseEvent) =>
-                            this.handleDonateGoldClick(e, myPlayer, other),
-                          icon: donateGoldIcon,
-                          iconAlt: "Gold",
-                          title: translateText("player_panel.send_gold"),
-                          label: translateText("player_panel.gold"),
-                          type: "normal",
-                        })
-                      : ""
-                  }
+                  ${canDonateGold
+                    ? actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleDonateGoldClick(e, myPlayer, other),
+                        icon: donateGoldIcon,
+                        iconAlt: "Gold",
+                        title: translateText("player_panel.send_gold"),
+                        label: translateText("player_panel.gold"),
+                        type: "normal",
+                      })
+                    : ""}
                 </div>
 
                 <div class="grid auto-cols-fr grid-flow-col gap-1">
                   <!-- Trade toggle -->
-                  ${
-                    other !== myPlayer
-                      ? canEmbargo
-                        ? actionButton({
-                            onClick: (e: MouseEvent) =>
-                              this.handleEmbargoClick(e, myPlayer, other),
-                            icon: stopTradingIcon,
-                            iconAlt: "Stop Trading",
-                            title: translateText("player_panel.stop_trade"),
-                            label: translateText("player_panel.stop_trade"),
-                            type: "red",
-                          })
-                        : actionButton({
-                            onClick: (e: MouseEvent) =>
-                              this.handleStopEmbargoClick(e, myPlayer, other),
-                            icon: startTradingIcon,
-                            iconAlt: "Start Trading",
-                            title: translateText("player_panel.start_trade"),
-                            label: translateText("player_panel.start_trade"),
-                            type: "green",
-                          })
-                      : ""
-                  }
-
-                  <!-- Break Alliance -->
-                  ${
-                    canBreakAlliance
+                  ${other !== myPlayer
+                    ? canEmbargo
                       ? actionButton({
                           onClick: (e: MouseEvent) =>
-                            this.handleBreakAllianceClick(e, myPlayer, other),
-                          icon: traitorIcon,
-                          iconAlt: "Break Alliance",
-                          title: translateText("player_panel.break_alliance"),
-                          label: translateText("player_panel.break_alliance"),
+                            this.handleEmbargoClick(e, myPlayer, other),
+                          icon: stopTradingIcon,
+                          iconAlt: "Stop Trading",
+                          title: translateText("player_panel.stop_trade"),
+                          label: translateText("player_panel.stop_trade"),
                           type: "red",
                         })
-                      : ""
-                  }
+                      : actionButton({
+                          onClick: (e: MouseEvent) =>
+                            this.handleStopEmbargoClick(e, myPlayer, other),
+                          icon: startTradingIcon,
+                          iconAlt: "Start Trading",
+                          title: translateText("player_panel.start_trade"),
+                          label: translateText("player_panel.start_trade"),
+                          type: "green",
+                        })
+                    : ""}
+
+                  <!-- Break Alliance -->
+                  ${canBreakAlliance
+                    ? actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleBreakAllianceClick(e, myPlayer, other),
+                        icon: traitorIcon,
+                        iconAlt: "Break Alliance",
+                        title: translateText("player_panel.break_alliance"),
+                        label: translateText("player_panel.break_alliance"),
+                        type: "red",
+                      })
+                    : ""}
 
                   <!-- Send Alliance Request -->
-                  ${
-                    canSendAllianceRequest
-                      ? actionButton({
-                          onClick: (e: MouseEvent) =>
-                            this.handleAllianceClick(e, myPlayer, other),
-                          icon: allianceIcon,
-                          iconAlt: "Alliance",
-                          title: translateText("player_panel.send_alliance"),
-                          label: translateText("player_panel.send_alliance"),
-                          type: "indigo",
-                        })
-                      : ""
-                  }
+                  ${canSendAllianceRequest
+                    ? actionButton({
+                        onClick: (e: MouseEvent) =>
+                          this.handleAllianceClick(e, myPlayer, other),
+                        icon: allianceIcon,
+                        iconAlt: "Alliance",
+                        title: translateText("player_panel.send_alliance"),
+                        label: translateText("player_panel.send_alliance"),
+                        type: "indigo",
+                      })
+                    : ""}
                 </div>
               </div>
             </div>

@@ -15,16 +15,19 @@ export class Divider extends LitElement {
   }
 
   render() {
-    const spacingClasses = {
+    const spacingClasses: Record<DividerSpacing, string> = {
       sm: "my-0.5",
       md: "my-1",
       lg: "my-2",
-    };
+    } as const;
+    const spacing = spacingClasses[this.spacing] ?? spacingClasses.md;
 
     const colorClass = this.color || "bg-zinc-700/80";
 
     return html`<div
-      class="${spacingClasses[this.spacing]} h-px ${colorClass}"
+      role="separator"
+      aria-hidden="true"
+      class="${spacing} h-px ${colorClass}"
     ></div>`;
   }
 }
