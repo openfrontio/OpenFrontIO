@@ -37,21 +37,21 @@ print_header() {
 # Check command line arguments
 if [ $# -ne 4 ]; then
     echo "Error: Please specify environment, host, version tag, and subdomain"
-    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
+    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
     exit 1
 fi
 
 # Validate first argument (environment)
 if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
+    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
     exit 1
 fi
 
 # Validate second argument (host)
-if [ "$2" != "eu" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
-    echo "Error: Second argument must be either 'eu', 'nbg1', 'staging', or 'masters'"
-    echo "Usage: $0 [prod|staging] [eu|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
+if [ "$2" != "falk1" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
+    echo "Error: Second argument must be either 'falk1', 'nbg1', 'staging', or 'masters'"
+    echo "Usage: $0 [prod|staging] [falk1|nbg1|staging|masters] [version_tag] [subdomain] [--enable_basic_auth]"
     exit 1
 fi
 
@@ -97,8 +97,8 @@ elif [ "$HOST" == "masters" ]; then
     print_header "DEPLOYING TO MASTERS HOST"
     SERVER_HOST=$SERVER_HOST_MASTERS
 else
-    print_header "DEPLOYING TO EU HOST"
-    SERVER_HOST=$SERVER_HOST_EU
+    print_header "DEPLOYING TO FALK1 HOST"
+    SERVER_HOST=$SERVER_HOST_FALK1
 fi
 
 # Check required environment variables
@@ -176,6 +176,7 @@ R2_ACCESS_KEY=$R2_ACCESS_KEY
 R2_SECRET_KEY=$R2_SECRET_KEY
 R2_BUCKET=$R2_BUCKET
 CF_API_TOKEN=$CF_API_TOKEN
+API_KEY=$API_KEY
 DOMAIN=$DOMAIN
 SUBDOMAIN=$SUBDOMAIN
 OTEL_USERNAME=$OTEL_USERNAME

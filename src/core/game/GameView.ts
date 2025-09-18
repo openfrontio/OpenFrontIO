@@ -447,6 +447,9 @@ export class GameView implements GameMap {
         );
       }
     });
+
+    this._myPlayer ??= this.playerByClientID(this._myClientID);
+
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
       unit.lastPos = unit.lastPos.slice(-1);
@@ -507,7 +510,6 @@ export class GameView implements GameMap {
   }
 
   myPlayer(): PlayerView | null {
-    this._myPlayer ??= this.playerByClientID(this._myClientID);
     return this._myPlayer;
   }
 

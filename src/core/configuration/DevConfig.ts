@@ -9,6 +9,10 @@ export class DevServerConfig extends DefaultServerConfig {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }
 
+  apiKey(): string {
+    return "WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION";
+  }
+
   env(): GameEnv {
     return GameEnv.Dev;
   }
