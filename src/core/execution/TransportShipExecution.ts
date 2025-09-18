@@ -32,11 +32,8 @@ export class TransportShipExecution implements Execution {
   private boat: Unit;
 
   private pathFinder: PathFinder;
-  private totalPathLength: number | null = null; // Store the total A* path length when computed
-  private pathComputed: boolean = false; // Track if A* path has been computed
-  private fallbackTicks: number = 0; // Counter for fallback estimation
+  private pathLength: number | null = null; // Store the total A* path length when computed
   private journeyStartTick: number | null = null; // Track when the journey started
-  private lastPathUpdateTick: number | null = null; // Track when we last updated the path estimate
 
   constructor(
     private attacker: Player,
@@ -170,34 +167,9 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
-    // Only calculate estimated arrival tick if A* path has been computed
-    if (this.pathComputed) {
-      // Refresh ETA every ~30s (300 ticks) for better accuracy
-      const REFRESH_PERIOD_TICKS = 300;
-      if (
-        this.lastPathUpdateTick !== null &&
-        ticks - this.lastPathUpdateTick >= REFRESH_PERIOD_TICKS
-      ) {
-        const remainingTiles = this.pathFinder.getPathLength();
-        if (remainingTiles > 0 && this.journeyStartTick !== null) {
-          // Convert ticks to tiles using the ship's movement rate
-          const movesMade = Math.floor(
-            (ticks - this.journeyStartTick) / this.ticksPerMove,
-          );
-          this.totalPathLength = remainingTiles + movesMade; // Both in tiles
-          this.lastPathUpdateTick = ticks;
-        }
-      }
-
+    // Calculate estimated arrival tick if we have a path length
+    if (this.pathLength !== null) {
       this.updateEstimatedArrivalTick(ticks);
-    } else {
-      // Fallback: if A* is slow, set an ETA once after ~10s
-      this.fallbackTicks++;
-      if (this.fallbackTicks === 100) {
-        // After 10 seconds, fall back to simple estimation (only once)
-        this.useFallbackEstimation(ticks);
-        this.pathComputed = true; // Mark as computed to prevent further fallback calls
-      }
     }
 
     if (ticks - this.lastMove < this.ticksPerMove) {
@@ -207,35 +179,25 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
-      // Reset ETA bookkeeping so we recompute for the new path
-      this.pathComputed = false;
-      this.totalPathLength = null;
+      // Reset path length so we recompute for the new path
+      this.pathLength = null;
       this.journeyStartTick = null;
-      this.lastPathUpdateTick = null;
-      this.fallbackTicks = 0;
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
 
     // Store the total path length when A* path is first completed
-    // We need to detect completion when we get NextTile after Pending, but we need to account
-    // for the fact that the pathfinder has already consumed some tiles
-    if (result.type === PathFindResultType.NextTile && !this.pathComputed) {
+    if (
+      result.type === PathFindResultType.NextTile &&
+      this.pathLength === null
+    ) {
       // Get the current remaining path length from the pathfinder
       const remainingPathLength = this.pathFinder.getPathLength();
 
       if (remainingPathLength > 0) {
         // The pathfinder has already consumed 1 tile (the current one), so add it back
-        this.totalPathLength = remainingPathLength + 1;
-        this.pathComputed = true;
+        this.pathLength = remainingPathLength + 1;
         this.journeyStartTick = ticks; // Record when the journey started
-        this.lastPathUpdateTick = ticks; // Record when we last updated the path
-
-        // Now calculate the initial estimate
-        this.updateEstimatedArrivalTick(ticks);
-      } else {
-        this.useFallbackEstimation(ticks);
-        this.pathComputed = true;
       }
     }
 
@@ -298,46 +260,20 @@ export class TransportShipExecution implements Execution {
   }
 
   private updateEstimatedArrivalTick(currentTick: number): void {
-    if (this.dst === null) {
+    if (
+      this.dst === null ||
+      this.pathLength === null ||
+      this.journeyStartTick === null
+    ) {
       return;
     }
 
-    // Only calculate if A* path has been computed
-    if (!this.pathComputed || this.totalPathLength === null) {
-      // Don't set any estimate while path is being calculated
-      return;
-    }
-
-    // Calculate how many ticks have passed since we started the journey
-    const ticksTraveled = currentTick - (this.journeyStartTick ?? currentTick);
+    // Calculate how many ticks have passed since the journey started
+    const ticksTraveled = currentTick - this.journeyStartTick;
 
     // Estimate remaining time based on total path length minus time already traveled
-    const remainingTiles = Math.max(0, this.totalPathLength - ticksTraveled);
+    const remainingTiles = Math.max(0, this.pathLength - ticksTraveled);
     const estimatedArrivalTick = currentTick + remainingTiles;
-
-    // Store the estimated arrival tick on the boat
-    if (this.boat.setEstimatedArrivalTick) {
-      this.boat.setEstimatedArrivalTick(estimatedArrivalTick);
-    }
-  }
-
-  private useFallbackEstimation(currentTick: number): void {
-    if (this.dst === null || this.src === null) {
-      return;
-    }
-
-    // Try to get the current path length from the pathfinder as fallback
-    const currentPathLength = this.pathFinder.getPathLength();
-    if (currentPathLength > 0) {
-      this.totalPathLength = currentPathLength;
-      this.journeyStartTick = currentTick;
-      this.lastPathUpdateTick = currentTick;
-    } else {
-      // If no A* path available, wait for it to complete rather than using inaccurate distance estimates
-      return; // Don't set any estimate, keep showing "Calculating..."
-    }
-
-    const estimatedArrivalTick = currentTick + this.totalPathLength;
 
     // Store the estimated arrival tick on the boat
     if (this.boat.setEstimatedArrivalTick) {

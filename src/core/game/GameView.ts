@@ -104,9 +104,6 @@ export class UnitView {
   }
 
   estimatedArrivalTick(): number | undefined {
-    if (this.type() !== UnitType.TransportShip) {
-      return undefined;
-    }
     return this.data.estimatedArrivalTick;
   }
   tile(): TileRef {

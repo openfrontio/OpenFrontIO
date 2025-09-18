@@ -133,10 +133,7 @@ export class UnitImpl implements Unit {
       constructionType: this._constructionType,
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
-      estimatedArrivalTick:
-        this._type === UnitType.TransportShip
-          ? this.calculateEstimatedArrivalTick()
-          : undefined,
+      estimatedArrivalTick: this.calculateEstimatedArrivalTick(),
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
@@ -418,10 +415,8 @@ export class UnitImpl implements Unit {
   }
 
   setEstimatedArrivalTick(tick: number): void {
-    if (this._estimatedArrivalTick !== tick) {
-      this._estimatedArrivalTick = tick;
-      this.mg.addUpdate(this.toUpdate());
-    }
+    this._estimatedArrivalTick = tick;
+    this.mg.addUpdate(this.toUpdate());
   }
 
   estimatedArrivalTick(): number | undefined {
@@ -429,11 +424,6 @@ export class UnitImpl implements Unit {
   }
 
   private calculateEstimatedArrivalTick(): number | undefined {
-    if (this._type !== UnitType.TransportShip) {
-      return undefined;
-    }
-
-    // Return the stored estimated arrival tick if available
     return this._estimatedArrivalTick;
   }
 }

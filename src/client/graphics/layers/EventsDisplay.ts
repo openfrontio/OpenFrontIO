@@ -847,12 +847,14 @@ export class EventsDisplay extends LitElement implements Layer {
       return translateText("events_display.boat_countdown.calculating");
     }
 
-    if (ticks <= 0) {
+    // Convert ticks to seconds (10 ticks per second) and use existing formatter
+    // Use Math.floor to avoid flickering between "Arriving..." and "1s"
+    const seconds = Math.max(0, Math.floor(ticks / 10));
+
+    if (seconds <= 0) {
       return translateText("events_display.boat_countdown.arriving");
     }
 
-    // Convert ticks to seconds (10 ticks per second) and use existing formatter
-    const seconds = Math.max(1, Math.ceil(ticks / 10));
     return renderDuration(seconds);
   }
 
