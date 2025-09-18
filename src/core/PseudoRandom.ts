@@ -36,7 +36,7 @@ export class PseudoRandom {
     if (arr.length === 0) {
       throw new Error("array must not be empty");
     }
-    return arr[Math.floor(this.rng() * arr.length)];
+    return arr[this.nextInt(0, arr.length)];
   }
 
   // Selects a random element from a set.
@@ -61,14 +61,14 @@ export class PseudoRandom {
 
   // Returns true with probability 1/odds.
   chance(odds: number): boolean {
-    return Math.floor(this.rng() * odds) === 0;
+    return this.nextInt(0, odds) === 0;
   }
 
   // Returns a shuffled copy of the array using Fisher-Yates algorithm.
   shuffleArray<T>(array: T[]): T[] {
     const result = [...array];
-    for (let i = result.length - 1; i >= 0; i--) {
-      const j = Math.floor(this.rng() * (i + 1));
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = this.nextInt(0, i + 1);
       [result[i], result[j]] = [result[j], result[i]];
     }
     return result;
