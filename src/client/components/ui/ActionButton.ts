@@ -13,7 +13,7 @@ export interface ActionButtonProps {
 
 const ICON_SIZE = "h-5 w-5 shrink-0 transition-transform group-hover:scale-110";
 const TEXT_SIZE =
-  "text-[12px] sm:text-[13px] leading-4 font-medium tracking-tight";
+  "text-[13px] sm:text-[14px] leading-5 font-semibold tracking-tight";
 
 const getButtonStyles = () => {
   const btnBase =
@@ -24,7 +24,7 @@ const getButtonStyles = () => {
     "active:translate-y-[1px]";
 
   return {
-    normal: `${btnBase} text-zinc-200/80 hover:bg-white/10 hover:text-white`,
+    normal: `${btnBase} text-white/90 hover:bg-white/10 hover:text-white`,
     red: `${btnBase} text-red-400 hover:bg-red-500/10 hover:text-red-300 focus-visible:ring-red-400/30`,
     green: `${btnBase} text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 focus-visible:ring-emerald-400/30`,
     indigo: `${btnBase} text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 focus-visible:ring-indigo-400/30`,
