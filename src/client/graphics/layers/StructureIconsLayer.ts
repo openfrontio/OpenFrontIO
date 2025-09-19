@@ -344,7 +344,7 @@ export class StructureIconsLayer implements Layer {
     const structureType = isConstruction ? constructionType! : unit.type();
     const cacheKey = isConstruction
       ? `construction-${structureType}` + (renderIcon ? "-icon" : "")
-      : `${this.theme.territoryColor(unit.owner()).toRgbString()}-${structureType}` +
+      : `${unit.owner().territoryColor().toRgbString()}-${structureType}` +
         (renderIcon ? "-icon" : "");
     if (this.textureCache.has(cacheKey)) {
       return this.textureCache.get(cacheKey)!;
@@ -386,13 +386,13 @@ export class StructureIconsLayer implements Layer {
       context.fillStyle = "rgb(198, 198, 198)";
       borderColor = "rgb(128, 127, 127)";
     } else {
-      context.fillStyle = this.theme
-        .territoryColor(owner)
+      context.fillStyle = owner
+        .territoryColor()
         .lighten(0.13)
         .alpha(renderIcon ? 0.65 : 1)
         .toRgbString();
-      const darken = this.theme.borderColor(owner).isLight() ? 0.17 : 0.15;
-      borderColor = this.theme.borderColor(owner).darken(darken).toRgbString();
+      const darken = owner.borderColor().isLight() ? 0.17 : 0.15;
+      borderColor = owner.borderColor().darken(darken).toRgbString();
     }
 
     context.strokeStyle = borderColor;

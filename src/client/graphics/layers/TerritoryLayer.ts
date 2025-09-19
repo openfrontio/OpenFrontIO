@@ -12,7 +12,6 @@ import {
   AlternateViewEvent,
   DragEvent,
   MouseOverEvent,
-  RefreshGraphicsEvent,
 } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -74,11 +73,6 @@ export class TerritoryLayer implements Layer {
   }
 
   tick() {
-    const prev = this.cachedTerritoryPatternsEnabled;
-    this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
-    if (prev !== undefined && prev !== this.cachedTerritoryPatternsEnabled) {
-      this.eventBus.emit(new RefreshGraphicsEvent());
-    }
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
@@ -432,53 +426,24 @@ export class TerritoryLayer implements Layer {
         const alternativeColor = this.alternateViewColor(owner);
         this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
       }
-      if (
-        this.game.hasUnitNearby(
-          tile,
-          this.game.config().defensePostRange(),
-          UnitType.DefensePost,
-          owner.id(),
-        )
-      ) {
-        const borderColors = this.theme.defendedBorderColors(owner);
-        const x = this.game.x(tile);
-        const y = this.game.y(tile);
-        const lightTile =
-          (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
-        const borderColor = lightTile ? borderColors.light : borderColors.dark;
-        this.paintTile(this.imageData, tile, borderColor, 255);
-      } else {
-        const useBorderColor = playerIsFocused
-          ? this.theme.focusedBorderColor()
-          : this.theme.borderColor(owner);
-        this.paintTile(this.imageData, tile, useBorderColor, 255);
-      }
-    } else {
-      // Interior tiles
-      const pattern = owner.cosmetics.pattern;
-      const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
+      const isDefended = this.game.hasUnitNearby(
+        tile,
+        this.game.config().defensePostRange(),
+        UnitType.DefensePost,
+        owner.id(),
+      );
 
+      this.paintTile(
+        this.imageData,
+        tile,
+        owner.borderColor(tile, isDefended),
+        255,
+      );
+    } else {
       // Alternative view only shows borders.
       this.clearAlternativeTile(tile);
 
-      if (pattern === undefined || patternsEnabled === false) {
-        this.paintTile(
-          this.imageData,
-          tile,
-          this.theme.territoryColor(owner),
-          150,
-        );
-      } else {
-        const x = this.game.x(tile);
-        const y = this.game.y(tile);
-        const baseColor = this.theme.territoryColor(owner);
-
-        const decoder = owner.patternDecoder();
-        const color = decoder?.isSet(x, y)
-          ? baseColor.darken(0.125)
-          : baseColor;
-        this.paintTile(this.imageData, tile, color, 150);
-      }
+      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
     }
   }
 

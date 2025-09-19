@@ -177,11 +177,12 @@ export interface Config {
 
 export interface Theme {
   teamColor(team: Team): Colord;
+  // Don't call directly, use PlayerView
   territoryColor(playerInfo: PlayerView): Colord;
-  specialBuildingColor(playerInfo: PlayerView): Colord;
-  railroadColor(playerInfo: PlayerView): Colord;
+  // Don't call directly, use PlayerView
   borderColor(playerInfo: PlayerView): Colord;
-  defendedBorderColors(playerInfo: PlayerView): { light: Colord; dark: Colord };
+  // Don't call directly, use PlayerView
+  defendedBorderColors(territoryColor: Colord): { light: Colord; dark: Colord };
   focusedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;

@@ -368,8 +368,11 @@ export class Transport {
       lastTurn: numTurns,
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
-      flag: this.lobbyConfig.flag,
-      patternName: this.lobbyConfig.patternName,
+      cosmetics: {
+        flag: this.lobbyConfig.flag,
+        patternName: this.lobbyConfig.pattern?.name,
+        patternColorPaletteName: this.lobbyConfig.pattern?.colorPalette?.name,
+      },
     } satisfies ClientJoinMessage);
   }
 

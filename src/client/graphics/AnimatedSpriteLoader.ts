@@ -188,8 +188,8 @@ export class AnimatedSpriteLoader {
     const baseImage = this.animatedSpriteImageMap.get(fxType);
     const config = ANIMATED_SPRITE_CONFIG[fxType];
     if (!baseImage || !config) return null;
-    const territoryColor = theme.territoryColor(owner);
-    const borderColor = theme.borderColor(owner);
+    const territoryColor = owner.territoryColor();
+    const borderColor = owner.borderColor();
     const spawnHighlightColor = theme.spawnHighlightColor();
     const key = `${fxType}-${owner.id()}`;
     let coloredCanvas: HTMLCanvasElement;

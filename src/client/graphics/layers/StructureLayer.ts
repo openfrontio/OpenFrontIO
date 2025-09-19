@@ -190,7 +190,7 @@ export class StructureLayer implements Layer {
         new Cell(this.game.x(tile), this.game.y(tile)),
         unit.type() === UnitType.Construction
           ? underConstructionColor
-          : this.theme.territoryColor(unit.owner()),
+          : unit.owner().territoryColor(),
         130,
       );
     }
@@ -203,7 +203,7 @@ export class StructureLayer implements Layer {
 
     const config = this.unitConfigs[unitType];
     let icon: HTMLImageElement | undefined;
-    let borderColor = this.theme.borderColor(unit.owner());
+    let borderColor = unit.owner().borderColor();
 
     // Handle cooldown states and special icons
     if (unit.type() === UnitType.Construction) {
@@ -244,7 +244,7 @@ export class StructureLayer implements Layer {
     height: number,
     unit: UnitView,
   ) {
-    let color = this.theme.borderColor(unit.owner());
+    let color = unit.owner().borderColor();
     if (unit.type() === UnitType.Construction) {
       color = underConstructionColor;
     }
