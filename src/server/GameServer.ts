@@ -675,6 +675,7 @@ export class GameServer {
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
+          cosmetics: player.cosmetics,
         } satisfies PlayerRecord;
       },
     );
