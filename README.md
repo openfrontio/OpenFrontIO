@@ -76,6 +76,22 @@ To run just the server with development settings:
 npm run start:server-dev
 ```
 
+### Connecting to staging or production backends
+
+Sometimes it's useful to connect to production servers when replaying a game, testing user profiles, purchases, or login flow.
+
+To connect to staging api servers:
+
+```bash
+npm run dev:staging
+```
+
+To connect to production api servers:
+
+```bash
+npm run dev:prod
+```
+
 ## 🛠️ Development Tools
 
 - **Format code**:
