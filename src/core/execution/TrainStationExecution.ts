@@ -25,7 +25,10 @@ export class TrainStationExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     if (this.spawnTrains) {
-      this.random = new PseudoRandom(mg.ticks());
+      const unitTile = this.unit.tile();
+      this.random = mg.createRandom(
+        `trainstation_${mg.x(unitTile)}_${mg.y(unitTile)}`,
+      );
     }
   }
 

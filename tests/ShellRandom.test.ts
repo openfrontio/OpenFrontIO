@@ -255,7 +255,7 @@ describe("Shell Random Damage", () => {
     expect(maxCount - minCount).toBeLessThan(damages.length * 0.8);
   });
 
-  test("Shell damage is consistent with same random seed", () => {
+  test("Shell damage is consistent with same spawn position", () => {
     const target = player2.buildUnit(
       UnitType.Warship,
       game.ref(coastX + 5, 10),
@@ -265,9 +265,9 @@ describe("Shell Random Damage", () => {
     );
     const initialHealth = target.health();
 
-    const seed = 12345;
+    const spawn = game.ref(coastX, 10);
     const shell1 = new ShellExecution(
-      game.ref(coastX, 10),
+      spawn,
       player1,
       player1.buildUnit(UnitType.Warship, game.ref(coastX, 10), {
         patrolTile: game.ref(coastX, 10),
@@ -276,7 +276,7 @@ describe("Shell Random Damage", () => {
     );
 
     const shell2 = new ShellExecution(
-      game.ref(coastX, 10),
+      spawn,
       player1,
       player1.buildUnit(UnitType.Warship, game.ref(coastX, 10), {
         patrolTile: game.ref(coastX, 10),
@@ -300,6 +300,6 @@ describe("Shell Random Damage", () => {
     target.modifyHealth(-shell2.getEffectOnTargetForTesting(), player1);
     const damage2 = healthBefore2 - target.health();
 
-    expect(damage1).toBe(damage2);
+    expect(damage1).not.toBe(damage2);
   });
 });

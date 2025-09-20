@@ -18,7 +18,7 @@ export class PortExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.random = new PseudoRandom(mg.ticks());
+    this.random = mg.createRandom(`port_${mg.x(this.tile)}_${mg.y(this.tile)}`);
     this.checkOffset = mg.ticks() % 10;
   }
 

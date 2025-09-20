@@ -1,5 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
+import { PseudoRandom } from "../PseudoRandom";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -84,6 +85,9 @@ export class GameImpl implements Game {
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
 
+  private randomCounter: number = 0;
+  private gameSeed: number;
+
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -96,6 +100,9 @@ export class GameImpl implements Game {
     this._width = _map.width();
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
+    this.gameSeed = simpleHash(
+      `game_${Date.now()}_${this._width}_${this._height}`,
+    );
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
@@ -897,6 +904,13 @@ export class GameImpl implements Game {
 
     // Record stats
     this.stats().goldWar(conqueror, conquered, gold);
+  }
+
+  createRandom(uniqueId: string): PseudoRandom {
+    const seed = simpleHash(
+      `${this.gameSeed}_${this.randomCounter++}_${uniqueId}`,
+    );
+    return new PseudoRandom(seed);
   }
 }
 

@@ -1,4 +1,5 @@
 import { Config } from "../configuration/Config";
+import { PseudoRandom } from "../PseudoRandom";
 import { AllPlayersStats, ClientID } from "../Schemas";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -711,6 +712,8 @@ export interface Game extends GameMap {
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
+
+  createRandom(uniqueId: string): PseudoRandom;
 }
 
 export interface PlayerActions {
