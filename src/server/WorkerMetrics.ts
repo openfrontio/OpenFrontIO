@@ -20,7 +20,7 @@ export function initWorkerMetrics(gameManager: GameManager): void {
   // Configure auth headers
   const headers: Record<string, string> = {};
   if (config.otelEnabled()) {
-    headers["Authorization"] = config.otelAuthHeader();
+    headers["Authorization"] = "Basic " + config.otelAuthHeader();
   }
 
   // Create metrics exporter

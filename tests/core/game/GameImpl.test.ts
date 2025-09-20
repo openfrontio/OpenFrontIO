@@ -79,6 +79,12 @@ describe("GameImpl", () => {
     game.executeNextTick();
     game.executeNextTick();
 
+    // STEP 1: First betray (manually break alliance)
+    const alliance = attacker.allianceWith(defender);
+    expect(alliance).toBeTruthy();
+    attacker.breakAlliance(alliance!);
+
+    // STEP 2: Then attack after betrayal
     game.addExecution(new AttackExecution(100, attacker, defender.id()));
 
     do {
@@ -86,6 +92,7 @@ describe("GameImpl", () => {
     } while (attacker.outgoingAttacks().length > 0);
 
     expect(attacker.isTraitor()).toBe(false);
+    expect(attacker.allianceWith(defender)).toBeFalsy();
   });
 
   test("Do become traitor when betraying active player", async () => {
@@ -110,6 +117,13 @@ describe("GameImpl", () => {
     game.executeNextTick();
     game.executeNextTick();
 
+    // First betray (manually break alliance)
+    const alliance = attacker.allianceWith(defender);
+    expect(alliance).toBeTruthy();
+    attacker.breakAlliance(alliance!);
+
+    game.executeNextTick();
+
     game.addExecution(new AttackExecution(100, attacker, defender.id()));
 
     do {
@@ -117,5 +131,6 @@ describe("GameImpl", () => {
     } while (attacker.outgoingAttacks().length > 0);
 
     expect(attacker.isTraitor()).toBe(true);
+    expect(attacker.allianceWith(defender)).toBeFalsy();
   });
 });

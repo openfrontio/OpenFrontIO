@@ -1,0 +1,189 @@
+{
+  "map": {
+    "height": 1000,
+    "num_land_tiles": 420336,
+    "width": 1000
+  },
+  "mini_map": {
+    "height": 500,
+    "num_land_tiles": 102357,
+    "width": 500
+  },
+  "name": "Pangaea",
+  "nations": [
+    {
+      "coordinates": [389, 800],
+      "flag": "za",
+      "name": "South Africa",
+      "strength": 2
+    },
+    {
+      "coordinates": [500, 780],
+      "flag": "mg",
+      "name": "Madagascar",
+      "strength": 1
+    },
+    {
+      "coordinates": [515, 600],
+      "flag": "eg",
+      "name": "Egypt",
+      "strength": 2
+    },
+    {
+      "coordinates": [180, 420],
+      "flag": "us",
+      "name": "United States",
+      "strength": 3
+    },
+    {
+      "coordinates": [200, 310],
+      "flag": "ca",
+      "name": "Canada",
+      "strength": 2
+    },
+    {
+      "coordinates": [150, 460],
+      "flag": "mx",
+      "name": "Mexico",
+      "strength": 1
+    },
+    {
+      "coordinates": [160, 600],
+      "flag": "co",
+      "name": "Colombia",
+      "strength": 1
+    },
+    {
+      "coordinates": [280, 800],
+      "flag": "ar",
+      "name": "Argentina",
+      "strength": 1
+    },
+    {
+      "coordinates": [250, 600],
+      "flag": "br",
+      "name": "Brazil",
+      "strength": 1
+    },
+    {
+      "coordinates": [470, 890],
+      "flag": "aq",
+      "name": "Antarctica",
+      "strength": 3
+    },
+    {
+      "coordinates": [400, 340],
+      "flag": "gl",
+      "name": "Greenland",
+      "strength": 2
+    },
+    {
+      "coordinates": [550, 440],
+      "flag": "es",
+      "name": "Spain",
+      "strength": 1
+    },
+    {
+      "coordinates": [550, 450],
+      "flag": "fr",
+      "name": "France",
+      "strength": 2
+    },
+    {
+      "coordinates": [510, 380],
+      "flag": "de",
+      "name": "Germany",
+      "strength": 1
+    },
+    {
+      "coordinates": [480, 365],
+      "flag": "se",
+      "name": "Sweden",
+      "strength": 1
+    },
+    {
+      "coordinates": [605, 370],
+      "flag": "tr",
+      "name": "Turkey",
+      "strength": 1
+    },
+    {
+      "coordinates": [480, 335],
+      "flag": "fi",
+      "name": "Finland",
+      "strength": 1
+    },
+    {
+      "coordinates": [570, 340],
+      "flag": "ua",
+      "name": "Ukraine",
+      "strength": 1
+    },
+    {
+      "coordinates": [570, 290],
+      "flag": "ru",
+      "name": "Russia",
+      "strength": 3
+    },
+    {
+      "coordinates": [490, 150],
+      "flag": "mn",
+      "name": "Mongolia",
+      "strength": 1
+    },
+    {
+      "coordinates": [550, 70],
+      "flag": "cn",
+      "name": "China",
+      "strength": 3
+    },
+    {
+      "coordinates": [620, 650],
+      "flag": "in",
+      "name": "India",
+      "strength": 2
+    },
+    {
+      "coordinates": [545, 200],
+      "flag": "kz",
+      "name": "Kazakhstan",
+      "strength": 1
+    },
+    {
+      "coordinates": [600, 600],
+      "flag": "sa",
+      "name": "Saudi Arabia",
+      "strength": 1
+    },
+    {
+      "coordinates": [680, 830],
+      "flag": "au",
+      "name": "Australia",
+      "strength": 2
+    },
+    {
+      "coordinates": [540, 650],
+      "flag": "et",
+      "name": "Ethiopia",
+      "strength": 1
+    },
+    {
+      "coordinates": [400, 500],
+      "flag": "td",
+      "name": "Chad",
+      "strength": 1
+    },
+    {
+      "coordinates": [420, 25],
+      "flag": "jp",
+      "name": "Japan",
+      "strength": 1
+    },
+    {
+      "coordinates": [480, 410],
+      "flag": "gb",
+      "name": "United Kingdom",
+      "strength": 2
+    }
+  ]
+}
