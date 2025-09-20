@@ -1,3 +1,5 @@
+import { extend } from "colord";
+import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
 import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
@@ -15,6 +17,8 @@ import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+
+extend([a11yPlugin]);
 
 type ShapeType = "triangle" | "square" | "pentagon" | "octagon" | "circle";
 
@@ -381,18 +385,23 @@ export class StructureIconsLayer implements Layer {
     structureCanvas.height = Math.ceil(iconSize);
     const context = structureCanvas.getContext("2d")!;
 
+    const tc = owner.territoryColor();
+    const bc = owner.borderColor();
+
+    const darker = bc.luminance() < tc.luminance() ? bc : tc;
+    const lighter = bc.luminance() < tc.luminance() ? tc : bc;
+
     let borderColor: string;
     if (isConstruction) {
       context.fillStyle = "rgb(198, 198, 198)";
       borderColor = "rgb(128, 127, 127)";
     } else {
-      context.fillStyle = owner
-        .territoryColor()
+      context.fillStyle = lighter
         .lighten(0.13)
         .alpha(renderIcon ? 0.65 : 1)
         .toRgbString();
-      const darken = owner.borderColor().isLight() ? 0.17 : 0.15;
-      borderColor = owner.borderColor().darken(darken).toRgbString();
+      const darken = darker.isLight() ? 0.17 : 0.15;
+      borderColor = darker.darken(darken).toRgbString();
     }
 
     context.strokeStyle = borderColor;
