@@ -106,11 +106,12 @@ class SendTroopsModal extends LitElement {
           </div>
 
           <div class="mb-4 border-b border-zinc-700 pb-3 text-xs text-zinc-400">
-            Available ${renderTroops(this.total)} in ${this.myPlayer.name()}
+            Available ${renderTroops(this.total)} · Min keep
+            ${renderTroops(minKeepAbs)} (30%)
           </div>
 
           <!-- Preset chips -->
-          <div class="mb-3 flex gap-2">
+          <div class="mb-3 grid grid-cols-4 gap-2">
             ${[10, 25, 50, 75].map(
               (p) => html`
                 <button
@@ -134,17 +135,15 @@ class SendTroopsModal extends LitElement {
               <input
                 type="number"
                 min="0"
-                step="100"
-                max="${maxAmount}"
-                .value=${String(this.sendTroopsAmount)}
+                max="${maxAmount / 10}"
+                .value=${String(Math.floor(this.sendTroopsAmount / 10))}
                 @input=${(e: Event) => {
                   const v = parseInt(
                     (e.target as HTMLInputElement).value || "0",
-                    10,
                   );
-                  setByAmount(Number.isFinite(v) ? v : 0);
+                  setByAmount(Number.isFinite(v) ? v * 10 : 0);
                 }}
-                class="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-base text-zinc-100 outline-none focus:border-purple-500"
+                class="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-base text-zinc-100 outline-none focus:border-purple-500 no-spinners"
                 aria-label="Troops to send"
               />
             </div>
@@ -211,12 +210,6 @@ class SendTroopsModal extends LitElement {
             >
               ${renderTroops(this.total - this.sendTroopsAmount)}
             </span>
-            ${belowMinKeep
-              ? html` <div class="mt-1 text-xs font-medium text-red-400">
-                  You’re sending more than 70% (advisory). Consider keeping ≥
-                  ${renderTroops(minKeepAbs)}.
-                </div>`
-              : null}
           </div>
 
           <!-- Actions -->
@@ -240,6 +233,17 @@ class SendTroopsModal extends LitElement {
 
           <!-- Slider styling -->
           <style>
+            /* Remove number input spinners */
+            .no-spinners::-webkit-outer-spin-button,
+            .no-spinners::-webkit-inner-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
+
+            .no-spinners[type="number"] {
+              -moz-appearance: textfield;
+            }
+
             /* Webkit */
             .range-x {
               -webkit-appearance: none;
