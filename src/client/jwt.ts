@@ -1,6 +1,8 @@
 import { decodeJwt } from "jose";
 import { z } from "zod";
 import {
+  PlayerProfile,
+  PlayerProfileSchema,
   RefreshResponseSchema,
   TokenPayload,
   TokenPayloadSchema,
@@ -17,9 +19,16 @@ function getAudience() {
 
 export function getApiBase() {
   const domainname = getAudience();
-  return domainname === "localhost"
-    ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
-    : `https://api.${domainname}`;
+
+  if (domainname === "localhost") {
+    const apiDomain = process?.env?.API_DOMAIN;
+    if (apiDomain) {
+      return `https://${apiDomain}`;
+    }
+    return localStorage.getItem("apiHost") ?? "http://localhost:8787";
+  }
+
+  return `https://api.${domainname}`;
 }
 
 function getToken(): string | null {
@@ -159,7 +168,8 @@ function _isLoggedIn(): IsLoggedInResponse {
       logOut();
       return false;
     }
-    if (aud !== getAudience()) {
+    const myAud = getAudience();
+    if (myAud !== "localhost" && aud !== myAud) {
       // JWT was not issued for this website
       console.error(
         'unexpected "aud" claim value',
@@ -265,6 +275,45 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     return result.data;
   } catch (e) {
     __isLoggedIn = false;
+    return false;
+  }
+}
+
+export async function fetchPlayerById(
+  playerId: string,
+): Promise<PlayerProfile | false> {
+  try {
+    const base = getApiBase();
+    const token = getToken();
+    if (!token) return false;
+    const url = `${base}/player/${encodeURIComponent(playerId)}`;
+
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status !== 200) {
+      console.warn(
+        "fetchPlayerById: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const json = await res.json();
+    const parsed = PlayerProfileSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchPlayerById: Zod validation failed", parsed.error);
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchPlayerById: request failed", err);
     return false;
   }
 }

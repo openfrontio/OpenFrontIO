@@ -1,0 +1,22 @@
+name: 🧼 Stale PR Check
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/stale@8f717f0dfca33b78d3c933452e42558e4456c8e7
+        with:
+          days-before-close: 14
+          days-before-stale: 14
+          exempt-draft-pr: true
+          exempt-pr-assignees: evanpelle
+          stale-pr-label: "stale"
+          stale-pr-message: "This pull request is stale because it has been open for 14 days with no activity. If you want to keep this pull request open, add a comment or update the branch."
+          start-date: 2025-09-03T00:00:00+00:00

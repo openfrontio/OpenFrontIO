@@ -27,6 +27,8 @@ export class TerritoryPatternsModal extends LitElement {
 
   private isActive = false;
 
+  private affiliateCode: string | null = null;
+
   constructor() {
     super();
   }
@@ -51,6 +53,17 @@ export class TerritoryPatternsModal extends LitElement {
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
     for (const [name, pattern] of this.patterns) {
+      if (this.affiliateCode === null) {
+        if (pattern.affiliateCode !== null && pattern.product !== null) {
+          // Patterns with affiliate code are not for sale by default.
+          continue;
+        }
+      } else {
+        if (pattern.affiliateCode !== this.affiliateCode) {
+          continue;
+        }
+      }
+
       buttons.push(html`
         <pattern-button
           .pattern=${pattern}
@@ -65,10 +78,14 @@ export class TerritoryPatternsModal extends LitElement {
         class="flex flex-wrap gap-4 p-2"
         style="justify-content: center; align-items: flex-start;"
       >
-        <pattern-button
-          .pattern=${null}
-          .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
-        ></pattern-button>
+        ${this.affiliateCode === null
+          ? html`
+              <pattern-button
+                .pattern=${null}
+                .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
+              ></pattern-button>
+            `
+          : html``}
         ${buttons}
       </div>
     `;
@@ -86,13 +103,15 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
-  public async open() {
+  public async open(affiliateCode?: string) {
     this.isActive = true;
+    this.affiliateCode = affiliateCode ?? null;
     await this.refresh();
   }
 
   public close() {
     this.isActive = false;
+    this.affiliateCode = null;
     this.modalEl?.close();
   }
 

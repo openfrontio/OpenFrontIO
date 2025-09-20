@@ -1,0 +1,149 @@
+{
+  "name": "Americas",
+  "nations": [
+    {
+      "coordinates": [438, 58],
+      "name": "Cuba",
+      "strength": 1,
+      "flag": "cu"
+    },
+    {
+      "coordinates": [686, 133],
+      "name": "Dominican Republic",
+      "strength": 1,
+      "flag": "do"
+    },
+    {
+      "coordinates": [601, 128],
+      "name": "Haiti",
+      "strength": 1,
+      "flag": "ht"
+    },
+    {
+      "coordinates": [112, 209],
+      "name": "Belize",
+      "strength": 1,
+      "flag": "bz"
+    },
+    {
+      "coordinates": [71, 282],
+      "name": "Guatemala",
+      "strength": 1,
+      "flag": "gt"
+    },
+    {
+      "coordinates": [214, 249],
+      "name": "Honduras",
+      "strength": 1,
+      "flag": "hn"
+    },
+    {
+      "coordinates": [238, 326],
+      "name": "Nicaragua",
+      "strength": 1,
+      "flag": "ni"
+    },
+    {
+      "coordinates": [375, 436],
+      "name": "Panama",
+      "strength": 3,
+      "flag": "pa"
+    },
+    {
+      "coordinates": [740, 1180],
+      "name": "Bolivia",
+      "strength": 1,
+      "flag": "bo"
+    },
+    {
+      "coordinates": [849, 1770],
+      "name": "Argentina",
+      "strength": 2,
+      "flag": "ar"
+    },
+    {
+      "coordinates": [1394, 1309],
+      "name": "Brazil",
+      "strength": 2,
+      "flag": "br"
+    },
+    {
+      "coordinates": [691, 1371],
+      "name": "Chile",
+      "strength": 2,
+      "flag": "cl"
+    },
+    {
+      "coordinates": [527, 503],
+      "name": "Colombia",
+      "strength": 2,
+      "flag": "co"
+    },
+    {
+      "coordinates": [384, 746],
+      "name": "Ecuador",
+      "strength": 1,
+      "flag": "ec"
+    },
+    {
+      "coordinates": [933, 423],
+      "name": "French Guyana",
+      "strength": 1,
+      "flag": "gf"
+    },
+    {
+      "coordinates": [800, 410],
+      "name": "Guyana",
+      "strength": 1,
+      "flag": "gy"
+    },
+    {
+      "coordinates": [541, 1092],
+      "name": "Peru",
+      "strength": 2,
+      "flag": "pe"
+    },
+    {
+      "coordinates": [960, 1496],
+      "name": "Paraguay",
+      "strength": 1,
+      "flag": "py"
+    },
+    {
+      "coordinates": [890, 610],
+      "name": "Suriname",
+      "strength": 1,
+      "flag": "sr"
+    },
+    {
+      "coordinates": [1091, 1635],
+      "name": "Uruguay",
+      "strength": 1,
+      "flag": "uy"
+    },
+    {
+      "coordinates": [678, 904],
+      "name": "Venezuela",
+      "strength": 2,
+      "flag": "ve"
+    },
+    {
+      "coordinates": [1270, 1035],
+      "name": "The Biggest Snakes",
+      "strength": 3,
+      "flag": "Aztec Empire"
+    },
+    {
+      "coordinates": [894, 693],
+      "name": "Normal Capybaras",
+      "strength": 3,
+      "flag": ""
+    },
+    {
+      "coordinates": [884, 832],
+      "name": "Just Otters",
+      "strength": 3,
+      "flag": ""
+    }
+  ]
+}

@@ -94,11 +94,11 @@
     "build_city": "City",
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
     "build_factory": "Factory",
-    "build_factory_desc": "Creates railroads automatically with nearby structures, and spawns trains sporadically.",
+    "build_factory_desc": "Automatically builds railroads to nearby cities, ports and other factories, and can also link up with friendly neighbors. Trains spawn regularly and give you a fixed amount of gold for each building they visit along the route, with extra gold for visiting your neighbors' buildings.",
     "build_defense": "Defense Post",
     "build_defense_desc": "Increases defenses around nearby borders, which show a checkered pattern. Attacks from enemies are slower and have more casualties.",
     "build_port": "Port",
-    "build_port_desc": "Can only be built near water. Allows building Warships. Automatically sends trade ships between ports of your country and other countries (except when trade is stopped), giving gold to both sides. Trade stops automatically when you attack or are attacked by a player. It resumes after 5 minutes or if you become allies. You can manually toggle trading with \"Stop trading\" or \"Start trading\".",
+    "build_port_desc": "Can only be built near water. Allows building Warships. Automatically sends trade ships between ports of your country and other countries (except when trade is stopped), giving gold to both sides. Trade with a player stops automatically when you attack or are attacked by a player. It resumes after 5 minutes or if you become allies. You can manually toggle trading with \"Stop trading\" or \"Start trading\".",
     "build_warship": "Warship",
     "build_warship_desc": "Patrols in an area, capturing enemy trade ships and destroying their Boats (transport ships) and Warships. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them (see action Attack under Hotkeys) and then attack-clicking the new area you want them to move to.",
     "build_silo": "Missile Silo",
@@ -196,8 +196,9 @@
     "join_lobby": "Join Lobby",
     "checking": "Checking lobby...",
     "not_found": "Lobby not found. Please check the ID and try again.",
-    "error": "An error occurred. Please try again.",
-    "joined_waiting": "Joined successfully! Waiting for game to start..."
+    "error": "An error occurred. Please try again or contact support.",
+    "joined_waiting": "Joined successfully! Waiting for game to start...",
+    "version_mismatch": "This game was created with a different version. Cannot join."
   },
   "public_lobby": {
     "join": "Join next Game",
@@ -494,7 +495,8 @@
     "nation": "Nation",
     "player": "Player",
     "team": "Team",
-    "d_troops": "Defending troops",
+    "alliance_timeout": "Alliance ends in",
+    "troops": "Troops",
     "a_troops": "Attacking troops",
     "gold": "Gold",
     "ports": "Ports",
@@ -626,6 +628,11 @@
       "grogu_head": "Grogu Head",
       "grogu": "Grogu"
     }
+  },
+  "flag_input": {
+    "title": "Select Flag",
+    "button_title": "Pick a flag!",
+    "search_flag": "Search..."
   },
   "spawn_ad": {
     "loading": "Loading advertisement..."
