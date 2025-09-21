@@ -153,6 +153,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return process.env.R2_BUCKET ?? "";
   }
 
+  apiKey(): string {
+    return process.env.API_KEY ?? "";
+  }
+
   adminHeader(): string {
     return "x-admin-key";
   }

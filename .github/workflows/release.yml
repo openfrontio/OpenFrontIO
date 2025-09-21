@@ -77,6 +77,7 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
+          API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
@@ -108,13 +109,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
@@ -133,11 +134,12 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
-          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          API_KEY: ${{ secrets.API_KEY }}
+          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod nbg1 "${IMAGE_ID}" beta
+          ./deploy.sh prod falk1 "${IMAGE_ID}" beta
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: beta.${{ vars.DOMAIN }}
@@ -164,13 +166,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
@@ -189,11 +191,12 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
-          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          API_KEY: ${{ secrets.API_KEY }}
+          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod nbg1 "${IMAGE_ID}" blue
+          ./deploy.sh prod falk1 "${IMAGE_ID}" blue
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: blue.${{ vars.DOMAIN }}
@@ -220,13 +223,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: 🔑 Create SSH private key
         env:
-          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euxo pipefail
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
-          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
+          test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
@@ -245,11 +248,12 @@ jobs:
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
-          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
+          API_KEY: ${{ secrets.API_KEY }}
+          SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
           SSH_KEY: ~/.ssh/id_rsa
         run: |
           set -euxo pipefail
-          ./deploy.sh prod nbg1 "${IMAGE_ID}" green
+          ./deploy.sh prod falk1 "${IMAGE_ID}" green
       - name: ⏳ Wait for deployment to start
         env:
           FQDN: green.${{ vars.DOMAIN }}

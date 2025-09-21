@@ -2,6 +2,8 @@ import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
+import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -19,10 +21,8 @@ import {
   ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
-import { archive } from "./Archive";
+import { createPartialGameRecord } from "../core/Util";
+import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -63,6 +63,11 @@ export class GameServer {
   private outOfSyncClients: Set<ClientID> = new Set();
 
   private websockets: Set<WebSocket> = new Set();
+
+  private winnerVotes: Map<
+    string,
+    { winner: ClientSendWinnerMessage; ips: Set<string> }
+  > = new Map();
 
   constructor(
     public readonly id: string,
@@ -190,6 +195,7 @@ export class GameServer {
       }
 
       client.lastPing = existing.lastPing;
+      client.reportedWinner = existing.reportedWinner;
 
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
@@ -289,15 +295,7 @@ export class GameServer {
             break;
           }
           case "winner": {
-            if (
-              this.outOfSyncClients.has(client.clientID) ||
-              this.kickedClients.has(client.clientID) ||
-              this.winner !== null
-            ) {
-              return;
-            }
-            this.winner = clientMsg;
-            this.archiveGame();
+            this.handleWinner(client, clientMsg);
             break;
           }
           default: {
@@ -688,15 +686,16 @@ export class GameServer {
       },
     );
     archive(
-      createGameRecord(
-        this.id,
-        this.gameStartInfo.config,
-        playerRecords,
-        this.turns,
-        this._startTime ?? 0,
-        Date.now(),
-        this.winner?.winner,
-        this.config,
+      finalizeGameRecord(
+        createPartialGameRecord(
+          this.id,
+          this.gameStartInfo.config,
+          playerRecords,
+          this.turns,
+          this._startTime ?? 0,
+          Date.now(),
+          this.winner?.winner,
+        ),
       ),
     );
   }
@@ -798,5 +797,49 @@ export class GameServer {
       mostCommonHash,
       outOfSyncClients,
     };
+  }
+
+  private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
+    if (
+      this.outOfSyncClients.has(client.clientID) ||
+      this.kickedClients.has(client.clientID) ||
+      this.winner !== null ||
+      client.reportedWinner !== null
+    ) {
+      return;
+    }
+    client.reportedWinner = clientMsg.winner;
+
+    // Add client vote
+    const winnerKey = JSON.stringify(clientMsg.winner);
+    if (!this.winnerVotes.has(winnerKey)) {
+      this.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg });
+    }
+    const potentialWinner = this.winnerVotes.get(winnerKey)!;
+    potentialWinner.ips.add(client.ip);
+
+    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
+
+    const ratio = `${potentialWinner.ips.size}/${activeUniqueIPs.size}`;
+    this.log.info(
+      `recieved winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
+      {
+        clientID: client.clientID,
+      },
+    );
+
+    if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
+      return;
+    }
+
+    // Vote succeeded
+    this.winner = potentialWinner.winner;
+    this.log.info(
+      `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
+      {
+        winnerKey: winnerKey,
+      },
+    );
+    this.archiveGame();
   }
 }

@@ -19,9 +19,16 @@ function getAudience() {
 
 export function getApiBase() {
   const domainname = getAudience();
-  return domainname === "localhost"
-    ? (localStorage.getItem("apiHost") ?? "http://localhost:8787")
-    : `https://api.${domainname}`;
+
+  if (domainname === "localhost") {
+    const apiDomain = process?.env?.API_DOMAIN;
+    if (apiDomain) {
+      return `https://${apiDomain}`;
+    }
+    return localStorage.getItem("apiHost") ?? "http://localhost:8787";
+  }
+
+  return `https://api.${domainname}`;
 }
 
 function getToken(): string | null {
@@ -161,7 +168,8 @@ function _isLoggedIn(): IsLoggedInResponse {
       logOut();
       return false;
     }
-    if (aud !== getAudience()) {
+    const myAud = getAudience();
+    if (myAud !== "localhost" && aud !== myAud) {
       // JWT was not issued for this website
       console.error(
         'unexpected "aud" claim value',
