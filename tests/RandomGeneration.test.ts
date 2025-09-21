@@ -85,6 +85,93 @@ describe("RandomGeneration", () => {
 
       expect(values.size).toBeGreaterThan(90);
     });
+
+    it("should handle empty string ID", () => {
+      const random1 = game.createRandom("");
+      const random2 = game.createRandom("");
+
+      expect(random1.next()).toBe(random2.next());
+      expect(() => game.createRandom("")).not.toThrow();
+    });
+
+    it("should work with zero game seed", async () => {
+      const mapBinPath = path.join(__dirname, "testdata/maps/plains/map.bin");
+      const miniMapBinPath = path.join(
+        __dirname,
+        "testdata/maps/plains/mini_map.bin",
+      );
+      const manifestPath = path.join(
+        __dirname,
+        "testdata/maps/plains/manifest.json",
+      );
+
+      const mapBinBuffer = fs.readFileSync(mapBinPath);
+      const miniMapBinBuffer = fs.readFileSync(miniMapBinPath);
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+
+      const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
+      const miniGameMap = await genTerrainFromBin(
+        manifest.mini_map,
+        miniMapBinBuffer,
+      );
+
+      const serverConfig = new TestServerConfig();
+      const gameConfig: GameConfig = {
+        gameMap: GameMapType.Asia,
+        gameMode: GameMode.FFA,
+        gameType: GameType.Singleplayer,
+        difficulty: Difficulty.Medium,
+        disableNPCs: false,
+        donateGold: false,
+        donateTroops: false,
+        bots: 0,
+        infiniteGold: false,
+        infiniteTroops: false,
+        instantBuild: false,
+      };
+      const config = new TestConfig(
+        serverConfig,
+        gameConfig,
+        new UserSettings(),
+        false,
+      );
+
+      const humans = [
+        new PlayerInfo("player1", PlayerType.Human, null, "player1"),
+      ];
+
+      const zeroSeedGame = createGame(
+        humans,
+        [],
+        gameMap,
+        miniGameMap,
+        config,
+        0,
+      );
+
+      const random1 = zeroSeedGame.createRandom("test1");
+      const random2 = zeroSeedGame.createRandom("test2");
+
+      expect(random1.next()).not.toBe(random2.next());
+    });
+
+    it("should minimize hash collisions in realistic scenarios", () => {
+      const testIds: string[] = [];
+      for (let x = 0; x < 50; x++) {
+        for (let y = 0; y < 50; y++) {
+          testIds.push(`port_${x}_${y}_player1`);
+          testIds.push(`warship_${x}_${y}_player2`);
+        }
+      }
+
+      const randoms = testIds.map((id) => game.createRandom(id));
+      const values = randoms.map((r) => r.next());
+      const uniqueValues = new Set(values);
+
+      const collisionRate = (values.length - uniqueValues.size) / values.length;
+      expect(collisionRate).toBeLessThan(0.02);
+      expect(uniqueValues.size).toBeGreaterThan(values.length * 0.98);
+    });
   });
 
   describe("Execution integration", () => {
