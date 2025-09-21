@@ -298,7 +298,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     />`
                   : ""}
                 <h1
-                  class="text-3xl font-bold tracking-[-0.01em] truncate text-zinc-200"
+                  class="text-2xl font-bold tracking-[-0.01em] truncate text-zinc-200"
                 >
                   ${other?.name()}
                 </h1>
@@ -389,12 +389,12 @@ export class PlayerPanel extends LitElement implements Layer {
                 <div class="flex items-center justify-end gap-2 font-semibold">
                   ${other.hasEmbargoAgainst(myPlayer)
                     ? html`
-                        <span class="text-red-400">
+                        <span class="text-[#f59e0b]">
                           ${translateText("player_panel.stopped")}
                         </span>
                       `
                     : html`
-                        <span class="text-emerald-400">
+                        <span class="text-[#38bdf8]">
                           ${translateText("player_panel.active")}
                         </span>
                       `}
