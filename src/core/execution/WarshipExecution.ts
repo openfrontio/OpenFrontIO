@@ -32,7 +32,7 @@ export class WarshipExecution implements Execution {
       this.warship = this.input;
       const warshipTile = this.warship.tile();
       this.random = mg.createRandom(
-        `warship_${mg.x(warshipTile)}_${mg.y(warshipTile)}`,
+        `warship_${mg.x(warshipTile)}_${mg.y(warshipTile)}_${this.warship.id()}`,
       );
     } else {
       const spawn = this.input.owner.canBuild(
@@ -50,7 +50,9 @@ export class WarshipExecution implements Execution {
         spawn,
         this.input,
       );
-      this.random = mg.createRandom(`warship_${mg.x(spawn)}_${mg.y(spawn)}`);
+      this.random = mg.createRandom(
+        `warship_${mg.x(spawn)}_${mg.y(spawn)}_${this.input.owner.id()}_${mg.x(this.input.patrolTile)}_${mg.y(this.input.patrolTile)}`,
+      );
     }
   }
 

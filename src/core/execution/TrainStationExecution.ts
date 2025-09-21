@@ -27,7 +27,7 @@ export class TrainStationExecution implements Execution {
     if (this.spawnTrains) {
       const unitTile = this.unit.tile();
       this.random = mg.createRandom(
-        `trainstation_${mg.x(unitTile)}_${mg.y(unitTile)}`,
+        `trainstation_${mg.x(unitTile)}_${mg.y(unitTile)}_${this.unit.id()}`,
       );
     }
   }

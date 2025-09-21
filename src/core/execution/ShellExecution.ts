@@ -20,7 +20,7 @@ export class ShellExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     const random = mg.createRandom(
-      `shell_${mg.x(this.spawn)}_${mg.y(this.spawn)}`,
+      `shell_${mg.x(this.spawn)}_${mg.y(this.spawn)}_${this.ownerUnit.id()}_${this.target.id()}`,
     );
     this.pathFinder = new AirPathFinder(mg, random);
     this.mg = mg;

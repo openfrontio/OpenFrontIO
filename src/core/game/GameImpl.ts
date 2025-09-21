@@ -94,7 +94,6 @@ export class GameImpl implements Game {
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
 
-  private randomCounter: number = 0;
   private gameSeed: number;
 
   constructor(
@@ -915,9 +914,7 @@ export class GameImpl implements Game {
   }
 
   createRandom(uniqueId: string): PseudoRandom {
-    const seed = simpleHash(
-      `${this.gameSeed}_${this.randomCounter++}_${uniqueId}`,
-    );
+    const seed = simpleHash(`${this.gameSeed}_${uniqueId}`);
     return new PseudoRandom(seed);
   }
 }

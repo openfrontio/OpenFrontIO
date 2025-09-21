@@ -37,14 +37,14 @@ describe("RandomGeneration", () => {
       expect(value1).not.toBe(value2);
     });
 
-    it("should generate different seeds for same ID called multiple times", () => {
+    it("should generate same seeds for same ID called multiple times", () => {
       const random1 = game.createRandom("test");
       const random2 = game.createRandom("test");
 
       const value1 = random1.next();
       const value2 = random2.next();
 
-      expect(value1).not.toBe(value2);
+      expect(value1).toBe(value2);
     });
 
     it("should generate consistent random sequences for the same seed", () => {
