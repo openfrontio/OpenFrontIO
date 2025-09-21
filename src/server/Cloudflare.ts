@@ -237,7 +237,20 @@ export class Cloudflare {
   public async startCloudflared() {
     const cloudflared = spawn(
       "cloudflared",
-      ["tunnel", "--config", this.configPath, "--loglevel", "error", "run"],
+      [
+        "tunnel",
+        "--config",
+        this.configPath,
+        "--loglevel",
+        "error",
+        "--protocol",
+        "http2",
+        "--retries",
+        "15",
+        "--no-autoupdate",
+        "run",
+      ],
+
       {
         detached: true,
         stdio: ["ignore", "pipe", "pipe"],
