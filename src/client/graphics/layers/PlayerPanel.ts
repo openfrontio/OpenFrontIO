@@ -548,7 +548,7 @@ export class PlayerPanel extends LitElement implements Layer {
                           iconAlt: "Start Trading",
                           title: translateText("player_panel.start_trade"),
                           label: translateText("player_panel.start_trade"),
-                          type: "green",
+                          type: "sky",
                         })
                     : ""}
 
