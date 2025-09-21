@@ -398,7 +398,7 @@ export class ClientGameRunner {
   }
 
   private inputEvent(event: MouseUpEvent) {
-    if (!this.isActive) {
+    if (!this.isActive || this.buildState === BuildState.Ghost) {
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
@@ -428,19 +428,15 @@ export class ClientGameRunner {
     }
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
-      if (this.buildState === BuildState.Idle) {
-        if (actions.canAttack) {
-          this.eventBus.emit(
-            new SendAttackIntentEvent(
-              this.gameView.owner(tile).id(),
-              this.myPlayer.troops() * this.renderer.uiState.attackRatio,
-            ),
-          );
-        } else if (this.canBoatAttack(actions, tile)) {
-          this.sendBoatAttackIntent(tile);
-        }
-      } else if (this.buildState === BuildState.Building) {
-        this.buildState = BuildState.Idle;
+      if (actions.canAttack) {
+        this.eventBus.emit(
+          new SendAttackIntentEvent(
+            this.gameView.owner(tile).id(),
+            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+          ),
+        );
+      } else if (this.canBoatAttack(actions, tile)) {
+        this.sendBoatAttackIntent(tile);
       }
 
       const owner = this.gameView.owner(tile);

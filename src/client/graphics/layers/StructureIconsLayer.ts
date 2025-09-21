@@ -145,17 +145,93 @@ export class StructureIconsLayer implements Layer {
     return false;
   }
 
+  async init() {
+    this.eventBus.on(ToggleStructuresEvent, (e) =>
+      this.toggleStructures(e.structureTypes),
+    );
+    this.eventBus.on(GhostStructureEvent, (e) => {
+      if (this.game.inSpawnPhase()) {
+        return;
+      }
+      this.createGhostStructure(e.structureType);
+    });
+    this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
+
+    this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
+
+    window.addEventListener("resize", () => this.resizeCanvas());
+    await this.setupRenderer();
+    this.redraw();
+  }
+
+  resizeCanvas() {
+    if (this.renderer) {
+      this.pixicanvas.width = window.innerWidth;
+      this.pixicanvas.height = window.innerHeight;
+      this.renderer.resize(innerWidth, innerHeight, 1);
+    }
+  }
+
+  tick() {
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.forEach((unitView) => {
+        if (unitView === undefined) return;
+
+        if (unitView.isActive()) {
+          this.handleActiveUnit(unitView);
+        } else if (this.seenUnits.has(unitView)) {
+          this.handleInactiveUnit(unitView);
+        }
+      });
+    this.renderSprites =
+      this.game.config().userSettings()?.structureSprites() ?? true;
+  }
+
+  redraw() {
+    this.resizeCanvas();
+  }
+
+  renderLayer(mainContext: CanvasRenderingContext2D) {
+    if (!this.renderer) {
+      return;
+    }
+
+    if (this.transformHandler.hasChanged()) {
+      for (const render of this.renders) {
+        this.computeNewLocation(render);
+      }
+    }
+    const scale = this.transformHandler.scale;
+
+    this.dotsStage!.visible = scale <= DOTS_ZOOM_THRESHOLD;
+    this.iconsStage!.visible =
+      scale > DOTS_ZOOM_THRESHOLD &&
+      (scale <= ZOOM_THRESHOLD || !this.renderSprites);
+    this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
+
+    if (this.ghostUnit) {
+      const s =
+        scale >= ZOOM_THRESHOLD
+          ? Math.max(1, scale / ICON_SCALE_FACTOR_ZOOMED_IN)
+          : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
+      this.ghostUnit.container.scale.set(s);
+      this.ghostUnit.range?.scale.set(this.transformHandler.scale);
+    }
+
+    this.renderer.render(this.rootStage);
+    mainContext.drawImage(this.renderer.canvas, 0, 0);
+  }
+
   private createStructure(e: MouseUpEvent) {
-    console.log("createStructure", this.ghostUnit);
+    if (!this.ghostUnit) return;
     if (
-      !this.ghostUnit ||
-      !(
-        this.ghostUnit.buildableUnit.canBuild !== false ||
-        this.ghostUnit.buildableUnit.canUpgrade !== false
-      )
+      this.ghostUnit.buildableUnit.canBuild === false &&
+      this.ghostUnit.buildableUnit.canUpgrade === false
     ) {
-      console.log("no ghost unit or cannot build/upgrade");
       this.removeGhostStructure();
+      this.eventBus.emit(new GhostStructureEvent(null));
       return;
     }
     const rect = this.transformHandler.boundingRect();
@@ -179,26 +255,6 @@ export class StructureIconsLayer implements Layer {
       );
     }
     this.removeGhostStructure();
-  }
-
-  async init() {
-    this.eventBus.on(ToggleStructuresEvent, (e) =>
-      this.toggleStructures(e.structureTypes),
-    );
-    this.eventBus.on(GhostStructureEvent, (e) => {
-      if (this.game.inSpawnPhase()) {
-        return;
-      }
-      console.log("GhostStructureEvent", e.structureType);
-      this.createGhostStructure(e.structureType);
-    });
-    this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
-
-    this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
-
-    window.addEventListener("resize", () => this.resizeCanvas());
-    await this.setupRenderer();
-    this.redraw();
   }
 
   private moveGhost(e: MouseMoveEvent) {
@@ -269,12 +325,13 @@ export class StructureIconsLayer implements Layer {
     this.ghostUnit.range?.position.set(localX, localY);
   }
 
-  public createGhostStructure(type: UnitType | null) {
+  private createGhostStructure(type: UnitType | null) {
     const player = this.game.myPlayer();
     if (!player) return;
     if (this.ghostUnit) {
       const currentType = this.ghostUnit.buildableUnit.type;
       this.removeGhostStructure();
+      this.eventBus.emit(new GhostStructureEvent(null));
       if (type === currentType) {
         return;
       }
@@ -302,7 +359,11 @@ export class StructureIconsLayer implements Layer {
                 this.mousePos,
                 type,
               ),
-              range: this.createRange(type),
+              range: this.factory.createRange(
+                type,
+                this.ghostStage,
+                this.mousePos,
+              ),
               buildableUnit: u,
             };
             return;
@@ -311,71 +372,12 @@ export class StructureIconsLayer implements Layer {
       });
   }
 
-  private createRange(type: UnitType): PIXI.Container | null {
-    if (this.ghostStage === undefined) throw new Error("Not initialized");
-    const parentContainer = new PIXI.Container();
-    const circle = new PIXI.Graphics();
-    let radius = 0;
-    switch (type) {
-      case UnitType.SAMLauncher:
-        radius = this.game.config().defaultSamRange();
-        break;
-      case UnitType.Factory:
-        radius = this.game.config().trainStationMaxRange();
-        break;
-      case UnitType.DefensePost:
-        radius = this.game.config().defensePostRange();
-        break;
-      case UnitType.AtomBomb:
-        radius = this.game.config().nukeMagnitudes(UnitType.AtomBomb).outer;
-        break;
-      case UnitType.HydrogenBomb:
-        radius = this.game.config().nukeMagnitudes(UnitType.HydrogenBomb).outer;
-        break;
-      default:
-        return null;
-    }
-    circle
-      .circle(0, 0, radius)
-      .stroke({ width: 1, color: 0xffffff, alpha: 0.2 });
-    parentContainer.addChild(circle);
-    parentContainer.position.set(this.mousePos.x, this.mousePos.y);
-    parentContainer.scale.set(this.transformHandler.scale);
-    this.ghostStage.addChild(parentContainer);
-    return parentContainer;
-  }
-
-  public removeGhostStructure() {
+  private removeGhostStructure() {
     if (this.ghostUnit) {
       this.ghostUnit.container.destroy();
       this.ghostUnit.range?.destroy();
       this.ghostUnit = null;
     }
-  }
-
-  resizeCanvas() {
-    if (this.renderer) {
-      this.pixicanvas.width = window.innerWidth;
-      this.pixicanvas.height = window.innerHeight;
-      this.renderer.resize(innerWidth, innerHeight, 1);
-    }
-  }
-
-  public tick() {
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
-      ?.forEach((unitView) => {
-        if (unitView === undefined) return;
-
-        if (unitView.isActive()) {
-          this.handleActiveUnit(unitView);
-        } else if (this.seenUnits.has(unitView)) {
-          this.handleInactiveUnit(unitView);
-        }
-      });
-    this.renderSprites =
-      this.game.config().userSettings()?.structureSprites() ?? true;
   }
 
   private toggleStructures(toggleStructureType: UnitType[] | null): void {
@@ -488,41 +490,6 @@ export class StructureIconsLayer implements Layer {
       render.dotContainer = this.createDotSprite(unit);
       this.modifyVisibility(render);
     }
-  }
-
-  redraw() {
-    this.resizeCanvas();
-  }
-
-  renderLayer(mainContext: CanvasRenderingContext2D) {
-    if (!this.renderer) {
-      return;
-    }
-
-    if (this.transformHandler.hasChanged()) {
-      for (const render of this.renders) {
-        this.computeNewLocation(render);
-      }
-    }
-    const scale = this.transformHandler.scale;
-
-    this.dotsStage!.visible = scale <= DOTS_ZOOM_THRESHOLD;
-    this.iconsStage!.visible =
-      scale > DOTS_ZOOM_THRESHOLD &&
-      (scale <= ZOOM_THRESHOLD || !this.renderSprites);
-    this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
-
-    if (this.ghostUnit) {
-      const s =
-        scale >= ZOOM_THRESHOLD
-          ? Math.max(1, scale / ICON_SCALE_FACTOR_ZOOMED_IN)
-          : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
-      this.ghostUnit.container.scale.set(s);
-      this.ghostUnit.range?.scale.set(this.transformHandler.scale);
-    }
-
-    this.renderer.render(this.rootStage);
-    mainContext.drawImage(this.renderer.canvas, 0, 0);
   }
 
   private computeNewLocation(render: StructureRenderInfo) {

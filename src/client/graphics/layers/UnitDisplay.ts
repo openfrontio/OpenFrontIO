@@ -59,14 +59,19 @@ export class UnitDisplay extends LitElement implements Layer {
       config.isUnitDisabled(UnitType.Port) &&
       config.isUnitDisabled(UnitType.DefensePost) &&
       config.isUnitDisabled(UnitType.MissileSilo) &&
-      config.isUnitDisabled(UnitType.SAMLauncher);
-    this.eventBus.on(
-      GhostStructureEvent,
-      (e) =>
-        (this._selectedStructure =
-          this._selectedStructure === e.structureType ? null : e.structureType),
-    );
-    this.eventBus.on(MouseUpEvent, (e) => (this._selectedStructure = null));
+      config.isUnitDisabled(UnitType.SAMLauncher) &&
+      config.isUnitDisabled(UnitType.Warship) &&
+      config.isUnitDisabled(UnitType.AtomBomb) &&
+      config.isUnitDisabled(UnitType.HydrogenBomb);
+    this.eventBus.on(GhostStructureEvent, (e) => {
+      this._selectedStructure =
+        this._selectedStructure === e.structureType ? null : e.structureType;
+      this.requestUpdate();
+    });
+    this.eventBus.on(MouseUpEvent, () => {
+      this._selectedStructure = null;
+      this.requestUpdate();
+    });
     this.requestUpdate();
   }
 
@@ -260,18 +265,14 @@ export class UnitDisplay extends LitElement implements Layer {
         <div
           class="${this.canBuild(unitType)
             ? ""
-            : "opacity-40"} border border-slate-500 rounded pr-2 pb-1 flex items-center gap-2 cursor-pointer hover:bg-slate-700/20 rounded text-white ${selected
-            ? "bg-slate-400/20"
-            : ""}"
+            : "opacity-40"} border border-slate-500 rounded pr-2 pb-1 flex items-center gap-2 cursor-pointer 
+             ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
+             rounded text-white ${selected ? "bg-slate-400/20" : ""}"
           @click=${() => {
             if (selected) {
-              this._selectedStructure = null;
               this.eventBus?.emit(new GhostStructureEvent(null));
             } else if (this.canBuild(unitType)) {
-              this._selectedStructure = unitType;
-              this.eventBus?.emit(
-                new GhostStructureEvent(this._selectedStructure),
-              );
+              this.eventBus?.emit(new GhostStructureEvent(unitType));
             }
             this.requestUpdate();
           }}
