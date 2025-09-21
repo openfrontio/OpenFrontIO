@@ -49,9 +49,18 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
+  seed: number,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    config,
+    stats,
+    seed,
+  );
 }
 
 export type CellString = string;
@@ -95,14 +104,13 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
+    seed: number,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
-    this.gameSeed = simpleHash(
-      `game_${Date.now()}_${this._width}_${this._height}`,
-    );
+    this.gameSeed = seed;
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();

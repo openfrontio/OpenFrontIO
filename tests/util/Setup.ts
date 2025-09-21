@@ -16,6 +16,7 @@ import {
 } from "../../src/core/game/TerrainMapLoader";
 import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
+import { simpleHash } from "../../src/core/Util";
 import { TestConfig } from "./TestConfig";
 import { TestServerConfig } from "./TestServerConfig";
 
@@ -77,7 +78,8 @@ export async function setup(
     false,
   );
 
-  return createGame(humans, [], gameMap, miniGameMap, config);
+  const testSeed = simpleHash(`test_${mapName}`);
+  return createGame(humans, [], gameMap, miniGameMap, config, testSeed);
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {
