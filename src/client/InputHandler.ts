@@ -154,17 +154,26 @@ export class InputHandler {
   ) {}
 
   initialize() {
-    const savedRaw = JSON.parse(
-      localStorage.getItem("settings.keybinds") ?? "{}",
-    );
-
-    // flatten { key: {key, value} } → { key: value }
-    const saved = Object.fromEntries(
-      Object.entries(savedRaw).map(([k, v]: [string, { value: string }]) => [
-        k,
-        v.value,
-      ]),
-    );
+    let saved: Record<string, string> = {};
+    try {
+      const parsed = JSON.parse(
+        localStorage.getItem("settings.keybinds") ?? "{}",
+      );
+      // flatten { key: {key, value} } → { key: value } and accept legacy string values
+      saved = Object.fromEntries(
+        Object.entries(parsed)
+          .map(([k, v]) => {
+            if (v && typeof v === "object" && "value" in (v as any)) {
+              return [k, (v as any).value as string];
+            }
+            if (typeof v === "string") return [k, v];
+            return [k, undefined];
+          })
+          .filter(([, v]) => typeof v === "string" && v !== "Null"),
+      ) as Record<string, string>;
+    } catch (e) {
+      console.warn("Invalid keybinds JSON:", e);
+    }
 
     this.keybinds = {
       toggleView: "Space",
@@ -219,18 +228,9 @@ export class InputHandler {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
     });
-
-    this.eventBus.on(GhostStructureEvent, (e) => {
-      this.ghostStructure = e.structureType !== null;
-    });
-
-    this.eventBus.on(BuildUnitIntentEvent, (e) => {
-      this.ghostStructure = false;
-    });
-
-    this.eventBus.on(SendUpgradeStructureIntentEvent, (e) => {
-      this.ghostStructure = false;
-    });
+    this.eventBus.on(GhostStructureEvent, this.onGhostStructure);
+    this.eventBus.on(BuildUnitIntentEvent, this.onBuildUnitIntent);
+    this.eventBus.on(SendUpgradeStructureIntentEvent, this.onSendUpgradeIntent);
 
     this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
       passive: false,
@@ -576,6 +576,16 @@ export class InputHandler {
     }
   }
 
+  private onGhostStructure = (e: GhostStructureEvent) => {
+    this.ghostStructure = e.structureType !== null;
+  };
+  private onBuildUnitIntent = (_e: BuildUnitIntentEvent) => {
+    this.ghostStructure = false;
+  };
+  private onSendUpgradeIntent = (_e: SendUpgradeStructureIntentEvent) => {
+    this.ghostStructure = false;
+  };
+
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
     if (this.ghostStructure) {
@@ -646,6 +656,12 @@ export class InputHandler {
       clearInterval(this.moveInterval);
     }
     this.activeKeys.clear();
+    this.eventBus.off(GhostStructureEvent, this.onGhostStructure);
+    this.eventBus.off(BuildUnitIntentEvent, this.onBuildUnitIntent);
+    this.eventBus.off(
+      SendUpgradeStructureIntentEvent,
+      this.onSendUpgradeIntent,
+    );
   }
 
   isModifierKeyPressed(event: PointerEvent): boolean {

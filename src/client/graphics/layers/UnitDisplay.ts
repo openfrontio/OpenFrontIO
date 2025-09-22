@@ -63,15 +63,8 @@ export class UnitDisplay extends LitElement implements Layer {
       config.isUnitDisabled(UnitType.Warship) &&
       config.isUnitDisabled(UnitType.AtomBomb) &&
       config.isUnitDisabled(UnitType.HydrogenBomb);
-    this.eventBus.on(GhostStructureEvent, (e) => {
-      this._selectedStructure =
-        this._selectedStructure === e.structureType ? null : e.structureType;
-      this.requestUpdate();
-    });
-    this.eventBus.on(MouseUpEvent, () => {
-      this._selectedStructure = null;
-      this.requestUpdate();
-    });
+    this.eventBus.on(GhostStructureEvent, this._ghostHandler);
+    this.eventBus.on(MouseUpEvent, this._mouseUpHandler);
     this.requestUpdate();
   }
 
@@ -120,6 +113,23 @@ export class UnitDisplay extends LitElement implements Layer {
     this._factories = player.totalUnitLevels(UnitType.Factory);
     this._warships = player.totalUnitLevels(UnitType.Warship);
     this.requestUpdate();
+  }
+
+  private _ghostHandler = (e: GhostStructureEvent) => {
+    this._selectedStructure =
+      this._selectedStructure === e.structureType ? null : e.structureType;
+    this.requestUpdate();
+  };
+
+  private _mouseUpHandler = (_: MouseUpEvent) => {
+    this._selectedStructure = null;
+    this.requestUpdate();
+  };
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.eventBus?.off(GhostStructureEvent, this._ghostHandler as any);
+    this.eventBus?.off(MouseUpEvent, this._mouseUpHandler as any);
   }
 
   render() {
