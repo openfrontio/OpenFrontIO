@@ -189,12 +189,6 @@ async function createClientGame(
   );
 }
 
-enum BuildState {
-  Idle,
-  Ghost, // player has a ghost structure selected
-  Building, // actively building/upgrading/placing something
-}
-
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
@@ -205,7 +199,7 @@ export class ClientGameRunner {
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
-  private buildState: BuildState = BuildState.Idle;
+  private hasGhost = false;
 
   constructor(
     private lobby: LobbyConfig,
@@ -261,15 +255,15 @@ export class ClientGameRunner {
     }, 20000);
 
     this.eventBus.on(GhostStructureEvent, (e) => {
-      this.buildState = e.structureType ? BuildState.Ghost : BuildState.Idle;
+      this.hasGhost = e.structureType !== null;
     });
 
     this.eventBus.on(BuildUnitIntentEvent, () => {
-      this.buildState = BuildState.Building;
+      this.hasGhost = false;
     });
 
     this.eventBus.on(SendUpgradeStructureIntentEvent, () => {
-      this.buildState = BuildState.Building;
+      this.hasGhost = false;
     });
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
@@ -401,7 +395,7 @@ export class ClientGameRunner {
   }
 
   private inputEvent(event: MouseUpEvent) {
-    if (!this.isActive || this.buildState === BuildState.Ghost) {
+    if (!this.isActive || this.hasGhost) {
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
