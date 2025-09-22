@@ -99,9 +99,7 @@ export class SpriteFactory {
   private invalidateTextureCache(unitType: UnitType) {
     for (const key of Array.from(this.textureCache.keys())) {
       if (
-        key.endsWith(`-${unitType}`) ||
         key.endsWith(`-${unitType}-icon`) ||
-        key === `construction-${unitType}` ||
         key === `construction-${unitType}-icon`
       ) {
         this.textureCache.delete(key);
