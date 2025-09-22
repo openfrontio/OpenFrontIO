@@ -175,7 +175,10 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
-      this.boat.setTargetTile(this.dst);
+
+      if (this.boat.targetTile() !== this.dst) {
+        this.boat.setTargetTile(this.dst);
+      }
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
