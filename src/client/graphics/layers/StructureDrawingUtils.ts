@@ -87,12 +87,26 @@ export class SpriteFactory {
     image.src = unitInfo.iconPath;
     image.onload = () => {
       unitInfo.image = image;
+      this.invalidateTextureCache(unitType);
     };
     image.onerror = () => {
       console.error(
         `Failed to load icon for ${unitType}: ${unitInfo.iconPath}`,
       );
     };
+  }
+
+  private invalidateTextureCache(unitType: UnitType) {
+    for (const key of Array.from(this.textureCache.keys())) {
+      if (
+        key.endsWith(`-${unitType}`) ||
+        key.endsWith(`-${unitType}-icon`) ||
+        key === `construction-${unitType}` ||
+        key === `construction-${unitType}-icon`
+      ) {
+        this.textureCache.delete(key);
+      }
+    }
   }
 
   createGhostContainer(
