@@ -46,6 +46,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -241,6 +242,7 @@ export class ClientGameRunner {
   }
 
   public start() {
+    SoundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -368,6 +370,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
+    SoundManager.stopBackgroundMusic();
     if (!this.isActive) return;
 
     this.isActive = false;
