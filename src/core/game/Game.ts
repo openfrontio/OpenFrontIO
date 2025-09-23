@@ -37,6 +37,14 @@ export enum Difficulty {
   Hard = "Hard",
   Impossible = "Impossible",
 }
+export function isDifficulty(difficulty: unknown): difficulty is Difficulty {
+  return (
+    difficulty === Difficulty.Easy ||
+    difficulty === Difficulty.Medium ||
+    difficulty === Difficulty.Hard ||
+    difficulty === Difficulty.Impossible
+  );
+}
 
 export type Team = string;
 
@@ -132,10 +140,20 @@ export enum GameType {
   Public = "Public",
   Private = "Private",
 }
+export function isGameType(type: unknown): type is GameType {
+  return (
+    type === GameType.Singleplayer ||
+    type === GameType.Public ||
+    type === GameType.Private
+  );
+}
 
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
+}
+export function isGameMode(mode: unknown): mode is GameMode {
+  return mode === GameMode.FFA || mode === GameMode.Team;
 }
 
 export enum GameMapSize {
