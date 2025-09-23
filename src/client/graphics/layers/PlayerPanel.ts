@@ -41,6 +41,7 @@ import "./SendTroopsModal";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
+  static attackBarMode: boolean = false;
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
@@ -105,7 +106,27 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     this.troopsTarget = other;
+
+    if (PlayerPanel.attackBarMode) {
+      const total = myPlayer?.troops() ?? 0;
+      if (total <= 0) {
+        this.hide();
+        return;
+      }
+
+      const ratioRaw = this.uiState?.attackRatio ?? 1; // 0..1 expected
+      const ratio = Number.isFinite(ratioRaw)
+        ? Math.min(Math.max(ratioRaw, 0), 1)
+        : 1;
+      const amount = Math.max(1, Math.min(total, Math.floor(total * ratio)));
+
+      this.eventBus.emit(new SendDonateTroopsIntentEvent(other, amount));
+      this.hide();
+      return;
+    }
+
     this.showTroopsModal = true;
+    this.requestUpdate();
   }
 
   private handleDonateGoldClick(
@@ -122,8 +143,11 @@ export class PlayerPanel extends LitElement implements Layer {
     e: CustomEvent<{ amount: number; closePanel?: boolean }>,
   ) => {
     const amount = Math.floor(Math.max(0, e.detail?.amount ?? 0));
+
     const myPlayer = this.g.myPlayer();
+
     if (!this.troopsTarget || !myPlayer) return;
+
     if (amount <= 0 || amount > myPlayer.troops()) return;
 
     this.eventBus.emit(
@@ -332,8 +356,14 @@ export class PlayerPanel extends LitElement implements Layer {
                       .troopsTarget=${this.troopsTarget}
                       .open=${this.showTroopsModal}
                       .total=${myPlayer.troops()}
+                      .uiState=${this.uiState}
+                      .attackBarMode=${PlayerPanel.attackBarMode}
                       @confirm=${this.handleConfirmSendTroops}
                       @close=${this.handleCloseTroopsModal}
+                      @attackBarModeChange=${(e: CustomEvent) => {
+                        PlayerPanel.attackBarMode = !!e.detail.enabled;
+                        this.requestUpdate();
+                      }}
                     ></send-troops-modal>
                   `
                 : ""}
