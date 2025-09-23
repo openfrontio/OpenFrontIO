@@ -661,6 +661,8 @@
     "captured": "Captured",
     "lost": "Lost",
     "hits": "Hits",
+    "launched": "Launched",
+    "landed": "Landed",
     "sent": "Sent",
     "arrived": "Arrived",
     "attack": "Attack",
@@ -684,7 +686,8 @@
       "trans": "Transport Ship",
       "abomb": "Atom Bomb",
       "hbomb": "Hydrogen Bomb",
-      "mirv": "MIRV"
+      "mirv": "MIRV",
+      "mirvw": "MIRV Warhead"
     }
   }
 }

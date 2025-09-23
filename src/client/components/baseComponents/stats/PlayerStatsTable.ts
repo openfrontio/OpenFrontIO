@@ -121,10 +121,10 @@ export class PlayerStatsTable extends LitElement {
                 ${translateText("player_stats_table.weapon")}
               </th>
               <th class="text-center" style="width:20%">
-                ${translateText("player_stats_table.built")}
+                ${translateText("player_stats_table.launched")}
               </th>
               <th class="text-center" style="width:20%">
-                ${translateText("player_stats_table.destroyed")}
+                ${translateText("player_stats_table.landed")}
               </th>
               <th class="text-center" style="width:20%">
                 ${translateText("player_stats_table.hits")}
