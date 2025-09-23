@@ -31,6 +31,9 @@ export class WinModal extends LitElement implements Layer {
   @state()
   private patternContent: TemplateResult | null = null;
 
+  @state()
+  private rewardedAdAvailable = false;
+
   private _title: string;
 
   // Override to prevent shadow DOM creation
@@ -40,6 +43,102 @@ export class WinModal extends LitElement implements Layer {
 
   constructor() {
     super();
+    this.setupRewardedAdEventListeners();
+  }
+
+  private setupRewardedAdEventListeners() {
+    // Listen for rewarded ad lifecycle events
+    window.addEventListener(
+      "rewardedAdVideoRewardReady",
+      this.onRewardedAdReady.bind(this),
+    );
+    window.addEventListener(
+      "userAcceptsRewardedAd",
+      this.onUserAcceptsRewardedAd.bind(this),
+    );
+    window.addEventListener(
+      "rewardedAdCompleted",
+      this.onRewardedAdCompleted.bind(this),
+    );
+    window.addEventListener(
+      "rewardedAdRewardGranted",
+      this.onRewardedAdRewardGranted.bind(this),
+    );
+    window.addEventListener(
+      "rewardedCloseButtonTriggered",
+      this.onRewardedAdClosed.bind(this),
+    );
+    window.addEventListener(
+      "userClosedWithRewardCanResolve",
+      this.onUserClosedWithReward.bind(this),
+    );
+    window.addEventListener(
+      "rejectAdCloseCta",
+      this.onRejectAdClose.bind(this),
+    );
+  }
+
+  private onRewardedAdReady() {
+    console.log("🎥 Rewarded ad is ready to play!");
+    this.rewardedAdAvailable = true;
+    this.requestUpdate();
+  }
+
+  private onUserAcceptsRewardedAd() {
+    console.log("👆 User clicked to begin watching an ad");
+  }
+
+  private onRewardedAdCompleted() {
+    console.log("✅ Ad was watched in full");
+  }
+
+  private onRewardedAdRewardGranted() {
+    console.log("🎁 User watched enough to earn a reward");
+  }
+
+  private onRewardedAdClosed() {
+    console.log("❌ User closed the ad early");
+  }
+
+  private onUserClosedWithReward() {
+    console.log("🎁 User closed the ad after qualifying for the reward");
+  }
+
+  private onRejectAdClose() {
+    console.log("❌ User closed the call-to-action prompt");
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    // Clean up event listeners
+    window.removeEventListener(
+      "rewardedAdVideoRewardReady",
+      this.onRewardedAdReady.bind(this),
+    );
+    window.removeEventListener(
+      "userAcceptsRewardedAd",
+      this.onUserAcceptsRewardedAd.bind(this),
+    );
+    window.removeEventListener(
+      "rewardedAdCompleted",
+      this.onRewardedAdCompleted.bind(this),
+    );
+    window.removeEventListener(
+      "rewardedAdRewardGranted",
+      this.onRewardedAdRewardGranted.bind(this),
+    );
+    window.removeEventListener(
+      "rewardedCloseButtonTriggered",
+      this.onRewardedAdClosed.bind(this),
+    );
+    window.removeEventListener(
+      "userClosedWithRewardCanResolve",
+      this.onUserClosedWithReward.bind(this),
+    );
+    window.removeEventListener(
+      "rejectAdCloseCta",
+      this.onRejectAdClose.bind(this),
+    );
   }
 
   render() {
@@ -53,6 +152,18 @@ export class WinModal extends LitElement implements Layer {
           ${this._title || ""}
         </h2>
         ${this.innerHtml()}
+        <div class="mb-4">
+          <button
+            @click=${this._handleRewardedAd}
+            class="w-full px-4 py-3 text-base cursor-pointer ${this
+              .rewardedAdAvailable
+              ? "bg-gradient-to-r from-purple-500/80 to-pink-500/80 hover:from-purple-500 hover:to-pink-500"
+              : "bg-gray-500/60 cursor-not-allowed"} text-white border-0 rounded transition-all duration-200 hover:-translate-y-px active:translate-y-px font-semibold"
+            ?disabled=${!this.rewardedAdAvailable}
+          >
+            ${this.rewardedAdAvailable ? "Rewarded Ad" : "Loading Ad..."}
+          </button>
+        </div>
         <div
           class="${this.showButtons
             ? "flex justify-between gap-2.5"
@@ -93,7 +204,11 @@ export class WinModal extends LitElement implements Layer {
   }
 
   innerHtml() {
-    return this.renderPatternButton();
+    return html`<div
+        id="rewarded-ad-container"
+        class="w-full h-full flex items-center justify-center"
+      ></div>
+      ${this.renderPatternButton()}`;
   }
 
   renderPatternButton() {
@@ -186,7 +301,9 @@ export class WinModal extends LitElement implements Layer {
   }
 
   async show() {
+    this.loadAds();
     await this.loadPatternContent();
+    this.initializeRewardedAd();
     this.isVisible = true;
     this.requestUpdate();
     setTimeout(() => {
@@ -195,10 +312,119 @@ export class WinModal extends LitElement implements Layer {
     }, 3000);
   }
 
+  private initializeRewardedAd() {
+    if (!window.ramp) {
+      console.warn("Playwire RAMP not available for rewarded ads");
+      return;
+    }
+
+    // For out-of-the-box approach, we don't need complex initialization
+    // Just enable the button after a short delay to allow RAMP to load
+    setTimeout(() => {
+      console.log("🎬 Enabling rewarded ad button");
+      this.rewardedAdAvailable = true;
+      this.requestUpdate();
+    }, 2000);
+  }
+
   hide() {
     this.isVisible = false;
     this.showButtons = false;
     this.requestUpdate();
+  }
+
+  private loadAds() {
+    if (!window.ramp) {
+      console.warn("Playwire RAMP not available");
+      return;
+    }
+
+    window.ramp.que.push(() => {
+      window.ramp.spaAddAds([
+        {
+          type: "rewarded_ad_video",
+          selectorId: "rewarded-ad-container",
+        },
+      ]);
+      console.log("Playwire ad loaded:", "rewarded_ad_video");
+    });
+  }
+
+  private _handleRewardedAd() {
+    console.log("🎯 Rewarded Ad button clicked");
+
+    if (!window.ramp) {
+      console.warn("Playwire RAMP not available");
+      return;
+    }
+
+    // Disable button during playback
+    this.rewardedAdAvailable = false;
+    this.requestUpdate();
+
+    const modalConfig = {
+      title: "Earn a reward!",
+      confirmButtonText: "Watch the Video!",
+      backgroundOverlay: true,
+      backgroundColor: "",
+      confirmButtonColor: undefined,
+      titleColor: undefined,
+      logoSrc: "",
+      nameLogoSrc: "",
+    };
+
+    const confirmModalConfig = {
+      title: "Thank you for watching",
+      subTitle: "You have earned 2 coins!",
+      closeButtonText: "",
+      backgroundOverlay: false,
+      backgroundColor: "",
+      subTitleTextColor: "#FF0000",
+      buttonColor: undefined,
+      titleColor: "#FF0000",
+      logoSrc: "",
+    };
+
+    console.log(
+      "window.ramp methods:",
+      Object.getOwnPropertyNames(window.ramp),
+    );
+    window.ramp
+      .showRewardedVideoModal(modalConfig, confirmModalConfig)
+      .then(() => console.log("✅ Reward granted"))
+      .then(() => window.ramp.showRewardedVideoConfirmationModal())
+      .catch((error) => console.error("❌ Rewarded video error:", error));
+  }
+
+  private grantReward() {
+    // Implement your reward logic here
+    // This could be:
+    // - Adding coins to the player's account
+    // - Unlocking special patterns
+    // - Giving extra lives
+    // - Any other in-game benefit
+
+    console.log("🎁 Player earned a reward!");
+    // Show Playwire confirmation modal if available
+    try {
+      if (window.ramp.showRewardedVideoConfirmationModal) {
+        window.ramp.showRewardedVideoConfirmationModal();
+      } else if (window.ramp.showRewardedVideoConfirmModal) {
+        window.ramp.showRewardedVideoConfirmModal();
+      }
+    } catch (e) {
+      // no-op
+    }
+
+    // Re-enable button after flow
+    this.rewardedAdAvailable = true;
+    this.requestUpdate();
+  }
+
+  private showRewardError() {
+    // Show user-friendly error message
+    console.log("❌ Unable to show ad at this time. Please try again later.");
+    // You could show a toast notification or modal here
   }
 
   private _handleExit() {

@@ -59,6 +59,39 @@ declare global {
         slots?: any;
       };
       spaNewPage: (url: string) => void;
+      // Rewarded Ad methods
+      manuallyCreateRewardUi: (config: {
+        skipConfirmation?: boolean;
+        watchAdId?: string;
+        closeId?: string;
+      }) => Promise<void>;
+      showRewardedVideoModal: (
+        ctaSettings?: {
+          logoSrc?: string;
+          nameLogoSrc?: string;
+          title?: string;
+          backgroundOverlay?: boolean;
+          backgroundColor?: string;
+          titleColor?: string;
+          confirmButtonText?: string;
+          confirmButtonColor?: string;
+        },
+        confirmSettings?: {
+          logoSrc?: string;
+          title?: string;
+          subTitle?: string;
+          closeButtonText?: string;
+          backgroundOverlay?: boolean;
+          backgroundColor?: string;
+          buttonColor?: string;
+          subTitleTextColor?: string;
+          titleColor?: string;
+        },
+      ) => Promise<void>;
+      // Some Playwire builds expose Confirm vs Confirmation naming
+      showRewardedVideoConfirmationModal: () => void;
+      showRewardedVideoConfirmModal?: () => void;
+      requestAd: (adType: string) => Promise<void>;
     };
   }
 
@@ -572,6 +605,7 @@ class Client {
 
         try {
           window.PageOS.session.newPageView();
+          // window.ramp.spaNewPage(window.location.origin);
         } catch (e) {
           console.error("Error calling newPageView", e);
         }
@@ -584,7 +618,7 @@ class Client {
         if (window.location.hash === "" || window.location.hash === "#") {
           history.pushState(null, "", window.location.origin + "#refresh");
         }
-        history.pushState(null, "", `#join=${lobby.gameID}`);
+        history.pushState(null, "", `#google_sample_tag=1`);
       },
     );
   }
