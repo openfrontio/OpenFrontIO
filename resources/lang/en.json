@@ -647,5 +647,18 @@
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
+  },
+  "game_list": {
+    "recent_games": "Recent Games",
+    "game_id": "Game ID",
+    "mode": "Mode",
+    "mode_ffa": "Free-for-All",
+    "mode_team": "Team",
+    "view": "View",
+    "details": "Details",
+    "started": "Started",
+    "map": "Map",
+    "difficulty": "Difficulty",
+    "type": "Type"
   }
 }
