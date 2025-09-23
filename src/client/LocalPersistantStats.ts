@@ -1,11 +1,11 @@
-import { GameConfig, GameID, GameRecord } from "../core/Schemas";
+import { GameConfig, GameID, PartialGameRecord } from "../core/Schemas";
 import { replacer } from "../core/Util";
 
 export interface LocalStatsData {
   [key: GameID]: {
     lobby: Partial<GameConfig>;
     // Only once the game is over
-    gameRecord?: GameRecord;
+    gameRecord?: PartialGameRecord;
   };
 }
 
@@ -41,7 +41,7 @@ export function startTime() {
   return _startTime;
 }
 
-export function endGame(gameRecord: GameRecord) {
+export function endGame(gameRecord: PartialGameRecord) {
   if (localStorage === undefined) {
     return;
   }

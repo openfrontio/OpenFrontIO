@@ -178,7 +178,8 @@
     "straitofgibraltar": "Strait of Gibraltar",
     "italia": "Italia",
     "yenisei": "Yenisei",
-    "pluto": "Pluto"
+    "pluto": "Pluto",
+    "montreal": "Montreal"
   },
   "map_categories": {
     "continental": "Continental",
@@ -196,8 +197,9 @@
     "join_lobby": "Join Lobby",
     "checking": "Checking lobby...",
     "not_found": "Lobby not found. Please check the ID and try again.",
-    "error": "An error occurred. Please try again.",
-    "joined_waiting": "Joined successfully! Waiting for game to start..."
+    "error": "An error occurred. Please try again or contact support.",
+    "joined_waiting": "Joined successfully! Waiting for game to start...",
+    "version_mismatch": "This game was created with a different version. Cannot join."
   },
   "public_lobby": {
     "join": "Join next Game",
