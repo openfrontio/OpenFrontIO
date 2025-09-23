@@ -5,7 +5,7 @@ import darkModeIcon from "../../../../resources/images/DarkModeIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
-import musicIcon from "../../../../resources/images/Megaphone.svg";
+import musicIcon from "../../../../resources/images/music.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
@@ -213,7 +213,7 @@ export class SettingsModal extends LitElement implements Layer {
                   max="100"
                   .value=${this.userSettings.backgroundMusicVolume() * 100}
                   @input=${this.onVolumeChange}
-                  class="w-full"
+                  class="w-full border border-slate-500 rounded-lg"
                 />
               </div>
               <div class="text-sm text-slate-400">
