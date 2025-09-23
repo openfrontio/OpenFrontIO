@@ -647,5 +647,8 @@
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Avatar"
   }
 }
