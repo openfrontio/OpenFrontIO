@@ -103,7 +103,7 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
-    seed: number,
+    private seed: number,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
@@ -913,9 +913,9 @@ export class GameImpl implements Game {
     this.stats().goldWar(conqueror, conquered, gold);
   }
 
-  createRandom(uniqueId: string): PseudoRandom {
-    const seed = simpleHash(`${this.gameSeed}_${uniqueId}`);
-    return new PseudoRandom(seed);
+  createRandom(seed: string): PseudoRandom {
+    const hashedSeed = simpleHash(`${this.gameSeed}_${seed}`);
+    return new PseudoRandom(hashedSeed);
   }
 }
 

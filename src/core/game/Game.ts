@@ -715,7 +715,7 @@ export interface Game extends GameMap {
   railNetwork(): RailNetwork;
   conquerPlayer(conqueror: Player, conquered: Player): void;
 
-  createRandom(uniqueId: string): PseudoRandom;
+  createRandom(seed: string): PseudoRandom;
 }
 
 export interface PlayerActions {
