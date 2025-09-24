@@ -72,6 +72,8 @@ export class PlayerPanel extends LitElement implements Layer {
 
   public hide() {
     this.isVisible = false;
+    this.showTroopsModal = false;
+    this.troopsTarget = null;
     this.requestUpdate();
   }
 
