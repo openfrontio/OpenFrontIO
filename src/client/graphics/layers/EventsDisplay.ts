@@ -92,6 +92,7 @@ export class EventsDisplay extends LitElement implements Layer {
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
     [MessageCategory.ATTACK, false],
+    [MessageCategory.NUKE, false],
     [MessageCategory.TRADE, false],
     [MessageCategory.ALLIANCE, false],
     [MessageCategory.CHAT, false],
