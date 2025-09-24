@@ -130,9 +130,7 @@
     "disable_nations": "Disable Nations",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
-    "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
-    "donate_troops": "Donate troops",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game"
@@ -689,5 +687,18 @@
       "mirv": "MIRV",
       "mirvw": "MIRV Warhead"
     }
+  },
+  "game_list": {
+    "recent_games": "Recent Games",
+    "game_id": "Game ID",
+    "mode": "Mode",
+    "mode_ffa": "Free-for-All",
+    "mode_team": "Team",
+    "view": "View",
+    "details": "Details",
+    "started": "Started",
+    "map": "Map",
+    "difficulty": "Difficulty",
+    "type": "Type"
   }
 }
