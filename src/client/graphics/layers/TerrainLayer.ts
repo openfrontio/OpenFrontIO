@@ -29,19 +29,19 @@ export class TerrainLayer implements Layer {
 
   redraw(): void {
     this.canvas = document.createElement("canvas");
+    this.canvas.width = this.game.width();
+    this.canvas.height = this.game.height();
+
     const context = this.canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
 
-    this.imageData = this.context.getImageData(
-      0,
-      0,
-      this.game.width(),
-      this.game.height(),
+    this.imageData = this.context.createImageData(
+      this.canvas.width,
+      this.canvas.height,
     );
+
     this.initImageData();
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
     this.context.putImageData(this.imageData, 0, 0);
   }
 

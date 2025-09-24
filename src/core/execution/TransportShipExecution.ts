@@ -133,6 +133,12 @@ export class TransportShipExecution implements Execution {
       troops: this.startTroops,
     });
 
+    if (this.dst !== null) {
+      this.boat.setTargetTile(this.dst);
+    } else {
+      this.boat.setTargetTile(undefined);
+    }
+
     // Notify the target player about the incoming naval invasion
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
@@ -169,6 +175,10 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
+
+      if (this.boat.targetTile() !== this.dst) {
+        this.boat.setTargetTile(this.dst);
+      }
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
