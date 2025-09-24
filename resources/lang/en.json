@@ -584,6 +584,20 @@
     "send_gold": "Send Gold",
     "emotes": "Emojis"
   },
+  "send_troops_modal": {
+    "title": "Send Troops",
+    "available": "Available",
+    "min_keep": "Min keep",
+    "min_keep_pct": "(30%)",
+    "preset_max": "Max",
+    "summary_send": "Send",
+    "summary_keep": "Keep",
+    "toggle_attack_bar_mode": "Use attack bar to send troops",
+    "warning_attackbar": "Once enabled, you can't open this modal directly. You'll only send troops via the attack bar.",
+    "aria_slider": "Troops slider",
+    "cancel": "Cancel",
+    "send": "Send"
+  },
   "replay_panel": {
     "replay_speed": "Replay speed",
     "game_speed": "Game speed",

@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { PlayerView } from "../../../core/game/GameView";
-import { renderTroops } from "../../Utils";
+import { renderTroops, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 
 @customElement("send-troops-modal")
@@ -39,6 +39,14 @@ class SendTroopsModal extends LitElement {
   }
 
   updated(changed: Map<string, unknown>) {
+    if (changed.has("open") && this.open) {
+      // focus dialog after render
+      queueMicrotask(() => {
+        const dlg = this.querySelector('[role="dialog"]') as HTMLElement | null;
+        dlg?.focus();
+      });
+    }
+
     if (changed.has("total") || changed.has("selectedPercent")) {
       const maxAllowed = this.total;
       if (this.selectedPercent !== null) {
@@ -117,10 +125,7 @@ class SendTroopsModal extends LitElement {
     const belowMinKeep = keepAfter < minKeepAbs;
 
     return html`
-      <div
-        class="fixed inset-0 z-[1100] flex items-center justify-center p-4"
-        @keydown=${this.handleKeydown}
-      >
+      <div class="fixed inset-0 z-[1100] flex items-center justify-center p-4">
         <div
           class="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl"
           @click=${() => this.closeTroopsModal()}
@@ -132,6 +137,7 @@ class SendTroopsModal extends LitElement {
           aria-labelledby="send-troops-title"
           class="relative z-10 w-full max-w-[540px] focus:outline-none"
           tabindex="0"
+          @keydown=${this.handleKeydown}
         >
           <div
             class="rounded-2xl bg-zinc-900 p-5 shadow-2xl ring-1 ring-white/10 max-h-[90vh]"
@@ -142,7 +148,8 @@ class SendTroopsModal extends LitElement {
                 id="send-troops-title"
                 class="text-lg font-semibold tracking-tight text-zinc-100"
               >
-                Send Troops → ${this.troopsTarget?.name()}
+                ${translateText("send_troops_modal.title")} →
+                ${this.troopsTarget?.name()}
               </h2>
               <button
                 class="rounded-md px-2 text-2xl leading-none text-zinc-400 hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-white/20"
@@ -156,11 +163,11 @@ class SendTroopsModal extends LitElement {
             <div
               class="mb-4 pb-3 text-xs text-zinc-400 border-b border-white/10"
             >
-              Available
+              ${translateText("send_troops_modal.available")}
               <span class="font-medium font-mono text-zinc-200"
                 >${renderTroops(this.total)}</span
               >
-              · Min keep
+              · ${translateText("send_troops_modal.min_keep")}
               <span class="font-medium font-mono text-zinc-200"
                 >${renderTroops(minKeepAbs)}</span
               >
@@ -173,11 +180,11 @@ class SendTroopsModal extends LitElement {
                 const val = p === "Max" ? 100 : p;
                 return html` <button
                   class="rounded-lg px-3 py-2 text-sm ring-1 transition
-                  ${percent === val
+                  ${(this.selectedPercent ?? percent) === val
                     ? "bg-indigo-600 text-white ring-indigo-400/40"
                     : "bg-zinc-800/60 text-zinc-300 ring-white/10 hover:bg-zinc-800 hover:text-white"}"
                   @click=${() => setByPercent(val)}
-                  ?aria-pressed=${percent === val}
+                  ?aria-pressed=${(this.selectedPercent ?? percent) === val}
                   title="${val}%"
                 >
                   ${p === "Max" ? "Max" : `${p}%`}
@@ -201,16 +208,16 @@ class SendTroopsModal extends LitElement {
                       this.total > 0 ? Math.round((val / this.total) * 100) : 0;
                   }}
                   class="w-full appearance-none bg-transparent range-x focus:outline-none"
-                  aria-label="Troops slider"
+                  aria-label="${translateText("send_troops_modal.aria_slider")}"
                   aria-valuemin="0"
                   aria-valuemax=${maxAmount}
                   aria-valuenow=${this.sendTroopsAmount}
                   style="
-              --percent:${percent}%;
-              --fill: rgb(168 85 247);
-              --track: rgba(255,255,255,.22);
-              --thumb-ring: rgb(24 24 27);
-                "
+                  --percent:${percent}%;
+                  --fill: rgb(168 85 247);
+                  --track: rgba(255,255,255,.22);
+                  --thumb-ring: rgb(24 24 27);
+                  "
                 />
 
                 <div
@@ -239,11 +246,11 @@ class SendTroopsModal extends LitElement {
 
             <!-- Summary -->
             <div class="mt-2 text-center text-sm text-zinc-200">
-              Send
+              ${translateText("send_troops_modal.summary_send")}
               <span class="font-semibold text-indigo-400 font-mono"
                 >${renderTroops(this.sendTroopsAmount)}</span
               >
-              · Keep
+              · ${translateText("send_troops_modal.summary_keep")}
               <span
                 class="font-semibold font-mono ${belowMinKeep
                   ? "text-amber-400"
@@ -268,7 +275,11 @@ class SendTroopsModal extends LitElement {
                   ).checked;
                 }}
               />
-              <span>Use attack bar to send troops</span>
+              <span
+                >${translateText(
+                  "send_troops_modal.toggle_attack_bar_mode",
+                )}</span
+              >
             </label>
 
             <!-- Warning -->
@@ -280,8 +291,7 @@ class SendTroopsModal extends LitElement {
                     aria-live="polite"
                     class="mt-[10px] bg-[rgba(255,90,103,0.08)] border border-[var(--danger)] text-[#ffc9ce] py-2.5 px-3 rounded-[10px] text-[13px]"
                   >
-                    ⚠ Once enabled, you can't open this modal directly. You'll
-                    only send troops via the attack bar.
+                    ⚠ ${translateText("send_troops_modal.warning_attackbar")}
                   </div>
                 `
               : null}
@@ -295,7 +305,7 @@ class SendTroopsModal extends LitElement {
                     focus-visible:ring-2 focus-visible:ring-white/20"
                 @click=${() => this.closeTroopsModal()}
               >
-                Cancel
+                ${translateText("send_troops_modal.cancel")}
               </button>
               <button
                 class="h-10 min-w-24 rounded-lg px-3 text-sm font-semibold text-white
@@ -306,7 +316,7 @@ class SendTroopsModal extends LitElement {
                 this.sendTroopsAmount > this.total}
                 @click=${() => this.confirmSendTroops()}
               >
-                Send
+                ${translateText("send_troops_modal.send")}
               </button>
             </div>
 

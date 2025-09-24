@@ -107,8 +107,6 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    this.troopsTarget = other;
-
     if (PlayerPanel.attackBarMode) {
       const total = myPlayer?.troops() ?? 0;
       if (total <= 0) {
@@ -127,6 +125,8 @@ export class PlayerPanel extends LitElement implements Layer {
       return;
     }
 
+    e.stopPropagation();
+    this.troopsTarget = other;
     this.showTroopsModal = true;
     this.requestUpdate();
   }
@@ -322,7 +322,7 @@ export class PlayerPanel extends LitElement implements Layer {
           class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[240px] w-auto px-4 py-2"
         >
           <div
-            class="relative mt-2 w-full order border-white/10  bg-zinc-900/95
+            class="relative mt-2 w-full border border-white/10  bg-zinc-900/95
        backdrop-blur-sm p-5 shadow-2xl ring-1 ring-white/5 rounded-xl"
           >
             <!-- Close button -->
