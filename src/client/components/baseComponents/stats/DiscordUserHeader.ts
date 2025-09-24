@@ -54,9 +54,7 @@ export class DiscordUserHeader extends LitElement {
   }
 
   private get discordDisplayName(): string {
-    const u = this._data;
-    if (!u) return "";
-    return u.username ?? "";
+    return this._data?.username ?? "";
   }
 
   render() {
