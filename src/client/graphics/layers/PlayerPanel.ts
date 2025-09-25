@@ -274,7 +274,7 @@ export class PlayerPanel extends LitElement implements Layer {
         >
           <div
             class="relative mt-2 w-full order border-white/10  bg-zinc-900/95
-       backdrop-blur-sm p-5 shadow-2xl ring-1 ring-white/5 rounded-xl"
+                  backdrop-blur-sm p-5 shadow-2xl ring-1 ring-zinc-800 rounded-xl text-zinc-200"
           >
             <!-- Close button -->
             <button
@@ -286,7 +286,7 @@ export class PlayerPanel extends LitElement implements Layer {
             </button>
 
             <div
-              class="flex flex-col gap-2 font-sans antialiased text-[14px] text-white leading-relaxed"
+              class="flex flex-col gap-2 font-sans antialiased text-[14px] text-zinc-200 leading-relaxed"
             >
               <!-- Name section -->
               <div class="mb-1 flex items-center gap-2.5">
@@ -298,7 +298,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     />`
                   : ""}
                 <h1
-                  class="text-2xl font-bold tracking-[-0.01em] truncate text-zinc-200"
+                  class="text-2xl font-bold tracking-[-0.01em] truncate text-zinc-50"
                 >
                   ${other?.name()}
                 </h1>
@@ -311,10 +311,13 @@ export class PlayerPanel extends LitElement implements Layer {
               <div class="mb-1 flex justify-between gap-2">
                 <div
                   class="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1
-                  text-lg font-semibold text-zinc-200"
+                  text-lg font-semibold text-zinc-100"
                 >
                   <span class="mr-0.5">💰</span>
-                  <span translate="no" class="inline-block w-[45px] text-right">
+                  <span
+                    translate="no"
+                    class="inline-block w-[45px] text-right text-zinc-50"
+                  >
                     ${renderNumber(other.gold() || 0)}
                   </span>
                   <span class="opacity-95">
@@ -324,10 +327,13 @@ export class PlayerPanel extends LitElement implements Layer {
 
                 <div
                   class="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1
-                  text-lg font-semibold text-zinc-200"
+                  text-lg font-semibold text-zinc-100"
                 >
                   <span class="mr-0.5">🛡️</span>
-                  <span translate="no" class="inline-block w-[45px] text-right">
+                  <span
+                    translate="no"
+                    class="inline-block w-[45px] text-right text-zinc-50"
+                  >
                     ${renderTroops(other.troops() || 0)}
                   </span>
                   <span class="opacity-95">
@@ -342,7 +348,7 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Trust -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
                 <div
-                  class="flex items-center gap-2 font-semibold text-zinc-400 leading-snug"
+                  class="flex items-center gap-2 font-semibold text-zinc-300 leading-snug"
                 >
                   <span aria-hidden="true">🤝</span>
                   <span>${translateText("player_panel.trust")}</span>
@@ -366,7 +372,7 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Betrayals -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
                 <div
-                  class="flex items-center gap-2 font-semibold text-zinc-400 leading-snug"
+                  class="flex items-center gap-2 font-semibold text-zinc-300 leading-snug"
                 >
                   <span aria-hidden="true">⚠️</span>
                   <span>${translateText("player_panel.betrayals")}</span>
@@ -380,7 +386,7 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Embargo -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
                 <div
-                  class="flex items-center gap-2 font-semibold text-zinc-400 leading-snug"
+                  class="flex items-center gap-2 font-semibold text-zinc-300 leading-snug"
                 >
                   <span aria-hidden="true">⚓</span>
                   <span>${translateText("player_panel.trading")}</span>
@@ -407,7 +413,7 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Alliances -->
               <div class="text-base">
                 <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-1 mb-2">
-                  <div class="font-semibold text-zinc-400 text-base">
+                  <div class="font-semibold text-zinc-300 text-base">
                     ${translateText("player_panel.alliances")}
                   </div>
                   <div class="text-right font-semibold text-zinc-200 text-base">
@@ -417,7 +423,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
                 <div class="mt-1 rounded-lg border border-zinc-700 bg-zinc-900">
                   <div
-                    class="max-h-[72px] overflow-y-auto p-2 text-zinc-200 text-baseleading-relaxed"
+                    class="max-h-[72px] overflow-y-auto p-2 text-zinc-200 text-base leading-relaxed"
                     translate="no"
                   >
                     ${other.allies().length > 0
@@ -430,7 +436,7 @@ export class PlayerPanel extends LitElement implements Layer {
                               </div>
                             `,
                           )
-                      : html`<div class="py-2 text-gray-300">
+                      : html`<div class="py-2 text-zinc-300">
                           ${translateText("player_panel.none")}
                         </div>`}
                   </div>
