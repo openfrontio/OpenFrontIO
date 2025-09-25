@@ -395,10 +395,22 @@ export const PlayerPatternSchema = z.object({
   patternData: PatternDataSchema,
   colorPalette: ColorPaletteSchema.optional(),
 });
+
+export const PlayerColorSchema = z.object({
+  color: z
+    .string()
+    .regex(
+      /^#[0-9A-Fa-f]{6}$/,
+      "Color must be a valid hex code (e.g., #FF0000)",
+    ),
+});
+
 export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
+  color: PlayerColorSchema.optional(),
 });
+
 export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
