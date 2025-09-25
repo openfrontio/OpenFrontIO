@@ -7,7 +7,8 @@ export interface GameMapLoader {
 
 export interface MapData {
   mapBin: () => Promise<Uint8Array>;
-  miniMapBin: () => Promise<Uint8Array>;
+  map4xBin: () => Promise<Uint8Array>;
+  map16xBin: () => Promise<Uint8Array>;
   manifest: () => Promise<MapManifest>;
   webpPath: () => Promise<string>;
 }

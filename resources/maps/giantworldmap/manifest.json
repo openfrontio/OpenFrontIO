@@ -2,12 +2,17 @@
   "map": {
     "height": 1948,
     "num_land_tiles": 2333974,
-    "width": 4110
+    "width": 4108
   },
-  "mini_map": {
+  "map16x": {
+    "height": 487,
+    "num_land_tiles": 132885,
+    "width": 1027
+  },
+  "map4x": {
     "height": 974,
     "num_land_tiles": 564737,
-    "width": 2055
+    "width": 2054
   },
   "name": "Giant_World_Map",
   "nations": [

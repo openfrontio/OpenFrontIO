@@ -131,6 +131,7 @@
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
+    "compact_map": "Mini Map",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game"
@@ -227,6 +228,7 @@
     "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
+    "compact_map": "Mini Map",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
