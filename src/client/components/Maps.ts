@@ -11,6 +11,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Europe: "Europe",
   EuropeClassic: "Europe Classic",
   Mena: "MENA",
+  MiddleEast: "Middle East",
   NorthAmerica: "North America",
   Oceania: "Oceania",
   BlackSea: "Black Sea",
