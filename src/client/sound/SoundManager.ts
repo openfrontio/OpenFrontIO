@@ -1,7 +1,7 @@
 import { Howl, Howler } from "howler";
-import Evan from "../../../resources/sounds/music/evan.mp3";
-import Openfront from "../../../resources/sounds/music/openfront.mp3";
-import WAR from "../../../resources/sounds/music/war.mp3";
+import evan from "../../../resources/sounds/music/evan.mp3";
+import openfront from "../../../resources/sounds/music/openfront.mp3";
+import war from "../../../resources/sounds/music/war.mp3";
 
 class SoundManager {
   private backgroundMusic: Howl[] = [];
@@ -9,13 +9,13 @@ class SoundManager {
 
   constructor() {
     this.backgroundMusic = [
-      new Howl({ src: [Evan], loop: false, onend: this.playNext.bind(this) }),
+      new Howl({ src: [evan], loop: false, onend: this.playNext.bind(this) }),
       new Howl({
-        src: [Openfront],
+        src: [openfront],
         loop: false,
         onend: this.playNext.bind(this),
       }),
-      new Howl({ src: [WAR], loop: false, onend: this.playNext.bind(this) }),
+      new Howl({ src: [war], loop: false, onend: this.playNext.bind(this) }),
     ];
     this.setBackgroundMusicVolume(0);
   }
