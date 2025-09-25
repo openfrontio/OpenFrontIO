@@ -585,7 +585,7 @@
     "emotes": "Emojis"
   },
   "send_troops_modal": {
-    "title": "Send Troops",
+    "title": "Send Troops → {name}",
     "available": "Available",
     "min_keep": "Min keep",
     "min_keep_pct": "(30%)",

@@ -41,7 +41,6 @@ import "./SendTroopsModal";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
-  static attackBarMode: boolean = false;
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
@@ -107,24 +106,6 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    if (PlayerPanel.attackBarMode) {
-      const total = myPlayer?.troops() ?? 0;
-      if (total <= 0) {
-        this.hide();
-        return;
-      }
-
-      const ratioRaw = this.uiState?.attackRatio ?? 1; // 0..1 expected
-      const ratio = Number.isFinite(ratioRaw)
-        ? Math.min(Math.max(ratioRaw, 0), 1)
-        : 1;
-      const amount = Math.max(1, Math.min(total, Math.floor(total * ratio)));
-
-      this.eventBus.emit(new SendDonateTroopsIntentEvent(other, amount));
-      this.hide();
-      return;
-    }
-
     e.stopPropagation();
     this.troopsTarget = other;
     this.showTroopsModal = true;
@@ -359,13 +340,8 @@ export class PlayerPanel extends LitElement implements Layer {
                       .open=${this.showTroopsModal}
                       .total=${myPlayer.troops()}
                       .uiState=${this.uiState}
-                      .attackBarMode=${PlayerPanel.attackBarMode}
                       @confirm=${this.handleConfirmSendTroops}
                       @close=${this.handleCloseTroopsModal}
-                      @attackBarModeChange=${(e: CustomEvent) => {
-                        PlayerPanel.attackBarMode = !!e.detail.enabled;
-                        this.requestUpdate();
-                      }}
                     ></send-troops-modal>
                   `
                 : ""}
