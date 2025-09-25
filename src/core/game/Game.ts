@@ -138,6 +138,11 @@ export enum GameMode {
   Team = "Team",
 }
 
+export enum GameMapSize {
+  Compact = "Compact",
+  Normal = "Normal",
+}
+
 export interface UnitInfo {
   cost: (player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
