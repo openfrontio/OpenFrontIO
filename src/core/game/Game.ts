@@ -109,7 +109,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.BetweenTwoSeas,
     GameMapType.Iceland,
     GameMapType.EastAsia,
-    GameMapType.Middle East,
+    GameMapType.MiddleEast,
     GameMapType.Mena,
     GameMapType.Australia,
     GameMapType.FaroeIslands,
