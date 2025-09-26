@@ -710,6 +710,7 @@
     "public": "Public",
     "private": "Private",
     "singleplayer": "Single Player",
+    "mode": "Mode",
     "stats_wins": "Wins",
     "stats_losses": "Losses",
     "stats_wlr": "Win:Loss Ratio",
