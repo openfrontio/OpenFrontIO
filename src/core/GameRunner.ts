@@ -69,12 +69,14 @@ export async function createGameRunner(
           ),
       );
 
+  const gameSeed = simpleHash(gameStart.gameID);
   const game: Game = createGame(
     humans,
     nations,
     gameMap.gameMap,
     gameMap.miniGameMap,
     config,
+    gameSeed,
   );
 
   const gr = new GameRunner(

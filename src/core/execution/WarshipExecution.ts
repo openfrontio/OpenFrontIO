@@ -28,9 +28,12 @@ export class WarshipExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     this.pathfinder = PathFinder.Mini(mg, 10_000, true, 100);
-    this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
+      const warshipTile = this.warship.tile();
+      this.random = mg.createRandom(
+        `warship_${mg.x(warshipTile)}_${mg.y(warshipTile)}_${this.warship.id()}`,
+      );
     } else {
       const spawn = this.input.owner.canBuild(
         UnitType.Warship,
@@ -46,6 +49,9 @@ export class WarshipExecution implements Execution {
         UnitType.Warship,
         spawn,
         this.input,
+      );
+      this.random = mg.createRandom(
+        `warship_${mg.x(spawn)}_${mg.y(spawn)}_${this.input.owner.id()}_${mg.x(this.input.patrolTile)}_${mg.y(this.input.patrolTile)}`,
       );
     }
   }

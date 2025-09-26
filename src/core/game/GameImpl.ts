@@ -1,5 +1,6 @@
 import { renderNumber } from "../../client/Utils";
 import { Config } from "../configuration/Config";
+import { PseudoRandom } from "../PseudoRandom";
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceImpl } from "./AllianceImpl";
@@ -48,9 +49,18 @@ export function createGame(
   gameMap: GameMap,
   miniGameMap: GameMap,
   config: Config,
+  seed: number,
 ): Game {
   const stats = new StatsImpl();
-  return new GameImpl(humans, nations, gameMap, miniGameMap, config, stats);
+  return new GameImpl(
+    humans,
+    nations,
+    gameMap,
+    miniGameMap,
+    config,
+    stats,
+    seed,
+  );
 }
 
 export type CellString = string;
@@ -84,6 +94,8 @@ export class GameImpl implements Game {
   // Used to assign unique IDs to each new alliance
   private nextAllianceID: number = 0;
 
+  private gameSeed: number;
+
   constructor(
     private _humans: PlayerInfo[],
     private _nations: Nation[],
@@ -91,11 +103,13 @@ export class GameImpl implements Game {
     private miniGameMap: GameMap,
     private _config: Config,
     private _stats: Stats,
+    private seed: number,
   ) {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
+    this.gameSeed = seed;
 
     if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
@@ -897,6 +911,11 @@ export class GameImpl implements Game {
 
     // Record stats
     this.stats().goldWar(conqueror, conquered, gold);
+  }
+
+  createRandom(seed: string): PseudoRandom {
+    const hashedSeed = simpleHash(`${this.gameSeed}_${seed}`);
+    return new PseudoRandom(hashedSeed);
   }
 }
 

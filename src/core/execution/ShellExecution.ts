@@ -19,9 +19,12 @@ export class ShellExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
+    const random = mg.createRandom(
+      `${this.spawn}_${this.ownerUnit.id()}_${this.target.id()}`,
+    );
+    this.pathFinder = new AirPathFinder(mg, random);
     this.mg = mg;
-    this.random = new PseudoRandom(mg.ticks());
+    this.random = random;
   }
 
   tick(ticks: number): void {
