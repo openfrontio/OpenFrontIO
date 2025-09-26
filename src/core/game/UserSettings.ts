@@ -1,3 +1,6 @@
+import { Cosmetics } from "../CosmeticSchemas";
+import { PlayerPattern } from "../Schemas";
+
 const PATTERN_KEY = "territoryPattern";
 
 export class UserSettings {
@@ -126,12 +129,36 @@ export class UserSettings {
   }
 
   // For development only. Used for testing patterns, set in the console manually.
-  getDevOnlyPattern(): string | undefined {
-    return localStorage.getItem("dev-pattern") ?? undefined;
+  getDevOnlyPattern(): PlayerPattern | undefined {
+    const data = localStorage.getItem("dev-pattern") ?? undefined;
+    if (data === undefined) return undefined;
+    return {
+      name: "dev-pattern",
+      patternData: data,
+      colorPalette: {
+        name: "dev-color-palette",
+        primaryColor: localStorage.getItem("dev-primary") ?? "#ffffff",
+        secondaryColor: localStorage.getItem("dev-secondary") ?? "#000000",
+      },
+    } satisfies PlayerPattern;
   }
 
-  getSelectedPatternName(): string | undefined {
-    return localStorage.getItem(PATTERN_KEY) ?? undefined;
+  getSelectedPatternName(cosmetics: Cosmetics | null): PlayerPattern | null {
+    if (cosmetics === null) return null;
+    let data = localStorage.getItem(PATTERN_KEY) ?? null;
+    if (data === null) return null;
+    const patternPrefix = "pattern:";
+    if (data.startsWith(patternPrefix)) {
+      data = data.slice(patternPrefix.length);
+    }
+    const [patternName, colorPalette] = data.split(":");
+    const pattern = cosmetics.patterns[patternName];
+    if (pattern === undefined) return null;
+    return {
+      name: patternName,
+      patternData: pattern.pattern,
+      colorPalette: cosmetics.colorPalettes?.[colorPalette],
+    } satisfies PlayerPattern;
   }
 
   setSelectedPatternName(patternName: string | undefined): void {

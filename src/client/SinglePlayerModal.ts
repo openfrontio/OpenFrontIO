@@ -17,7 +17,11 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { getCosmetics } from "./Cosmetics";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
+import "./components/Difficulties";
+import "./components/Maps";
+import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -439,13 +443,12 @@ export class SinglePlayerModal extends LitElement {
     if (!flagInput) {
       console.warn("Flag input element not found");
     }
-    const patternName = this.userSettings.getSelectedPatternName();
-    let pattern: string | undefined = undefined;
-    if (this.userSettings.getDevOnlyPattern()) {
-      pattern = this.userSettings.getDevOnlyPattern();
-    } else if (patternName) {
-      pattern = (await getCosmetics())?.patterns[patternName]?.pattern;
-    }
+    const cosmetics = await fetchCosmetics();
+    let selectedPattern = this.userSettings.getSelectedPatternName(cosmetics);
+    selectedPattern ??= cosmetics
+      ? (this.userSettings.getDevOnlyPattern() ?? null)
+      : null;
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -457,11 +460,13 @@ export class SinglePlayerModal extends LitElement {
               {
                 clientID,
                 username: usernameInput.getCurrentUsername(),
-                flag:
-                  flagInput.getCurrentFlag() === "xx"
-                    ? ""
-                    : flagInput.getCurrentFlag(),
-                pattern: pattern,
+                cosmetics: {
+                  flag:
+                    flagInput.getCurrentFlag() === "xx"
+                      ? ""
+                      : flagInput.getCurrentFlag(),
+                  pattern: selectedPattern ?? undefined,
+                },
               },
             ],
             config: {

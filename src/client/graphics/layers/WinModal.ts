@@ -1,12 +1,16 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
-import { Pattern } from "../../../core/CosmeticSchemas";
+import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import "../../components/PatternButton";
-import { fetchPatterns, handlePurchase } from "../../Cosmetics";
+import {
+  fetchCosmetics,
+  handlePurchase,
+  patternRelationship,
+} from "../../Cosmetics";
 import { getUserMe } from "../../jwt";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
@@ -108,19 +112,41 @@ export class WinModal extends LitElement implements Layer {
 
   async loadPatternContent() {
     const me = await getUserMe();
-    const patterns = await fetchPatterns(me !== false ? me : null);
+    const patterns = await fetchCosmetics();
 
-    const purchasable = Array.from(patterns.values()).filter(
-      (p) => p.product !== null,
-    );
+    const purchasablePatterns: {
+      pattern: Pattern;
+      colorPalette: ColorPalette;
+    }[] = [];
 
-    if (purchasable.length === 0) {
+    for (const pattern of Object.values(patterns?.patterns ?? {})) {
+      for (const colorPalette of pattern.colorPalettes ?? []) {
+        if (
+          patternRelationship(
+            pattern,
+            colorPalette,
+            me !== false ? me : null,
+            null,
+          ) === "purchasable"
+        ) {
+          const palette = patterns?.colorPalettes?.[colorPalette.name];
+          if (palette) {
+            purchasablePatterns.push({
+              pattern,
+              colorPalette: palette,
+            });
+          }
+        }
+      }
+    }
+
+    if (purchasablePatterns.length === 0) {
       this.patternContent = html``;
       return;
     }
 
     // Shuffle the array and take patterns based on screen size
-    const shuffled = [...purchasable].sort(() => Math.random() - 0.5);
+    const shuffled = [...purchasablePatterns].sort(() => Math.random() - 0.5);
     const isMobile = window.innerWidth < 768; // md breakpoint
     const maxPatterns = isMobile ? 1 : 3;
     const selectedPatterns = shuffled.slice(
@@ -131,11 +157,14 @@ export class WinModal extends LitElement implements Layer {
     this.patternContent = html`
       <div class="flex gap-4 flex-wrap justify-start">
         ${selectedPatterns.map(
-          (pattern) => html`
+          ({ pattern, colorPalette }) => html`
             <pattern-button
               .pattern=${pattern}
+              .colorPalette=${colorPalette}
+              .requiresPurchase=${true}
               .onSelect=${(p: Pattern | null) => {}}
-              .onPurchase=${(p: Pattern) => handlePurchase(p)}
+              .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
+                handlePurchase(p, colorPalette)}
             ></pattern-button>
           `,
         )}

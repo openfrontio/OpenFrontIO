@@ -1,7 +1,9 @@
+import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { Config } from "../configuration/Config";
+import { ColorPalette } from "../CosmeticSchemas";
 import { PatternDecoder } from "../PatternDecoder";
-import { ClientID, GameID, Player } from "../Schemas";
+import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
@@ -38,11 +40,6 @@ import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
-
-interface PlayerCosmetics {
-  pattern?: string | undefined;
-  flag?: string | undefined;
-}
 
 export class UnitView {
   public _wasUpdated = true;
@@ -181,6 +178,10 @@ export class PlayerView {
   public anonymousName: string | null = null;
   private decoder?: PatternDecoder;
 
+  private _territoryColor: Colord;
+  private _borderColor: Colord;
+  private _defendedBorderColors: { light: Colord; dark: Colord };
+
   constructor(
     private game: GameView,
     public data: PlayerUpdate,
@@ -195,14 +196,72 @@ export class PlayerView {
         this.data.playerType,
       );
     }
+
+    const pattern = this.cosmetics.pattern;
+    if (pattern) {
+      const territoryColor = this.game.config().theme().territoryColor(this);
+      pattern.colorPalette ??= {
+        name: "",
+        primaryColor: territoryColor.toHex(),
+        secondaryColor: territoryColor.darken(0.125).toHex(),
+      } satisfies ColorPalette;
+    }
+
+    if (
+      this.team() === null &&
+      this.cosmetics.pattern?.colorPalette?.primaryColor !== undefined
+    ) {
+      this._territoryColor = colord(
+        this.cosmetics.pattern.colorPalette.primaryColor,
+      );
+    } else {
+      this._territoryColor = this.game.config().theme().territoryColor(this);
+    }
+
+    if (this.cosmetics.pattern?.colorPalette?.secondaryColor !== undefined) {
+      this._borderColor = colord(
+        this.cosmetics.pattern.colorPalette.secondaryColor,
+      );
+    } else if (this.game.myClientID() === this.data.clientID) {
+      this._borderColor = this.game.config().theme().focusedBorderColor();
+    } else {
+      this._borderColor = this.game.config().theme().borderColor(this);
+    }
+
+    this._defendedBorderColors = this.game
+      .config()
+      .theme()
+      .defendedBorderColors(this._borderColor);
+
     this.decoder =
       this.cosmetics.pattern === undefined
         ? undefined
         : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
   }
 
-  patternDecoder(): PatternDecoder | undefined {
-    return this.decoder;
+  territoryColor(tile?: TileRef): Colord {
+    if (tile === undefined || this.decoder === undefined) {
+      return this._territoryColor;
+    }
+    const isPrimary = this.decoder.isPrimary(
+      this.game.x(tile),
+      this.game.y(tile),
+    );
+    return isPrimary ? this._territoryColor : this._borderColor;
+  }
+
+  borderColor(tile?: TileRef, isDefended: boolean = false): Colord {
+    if (tile === undefined || !isDefended) {
+      return this._borderColor;
+    }
+
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    const lightTile =
+      (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
+    return lightTile
+      ? this._defendedBorderColors.light
+      : this._defendedBorderColors.dark;
   }
 
   async actions(tile: TileRef): Promise<PlayerActions> {
@@ -391,16 +450,13 @@ export class GameView implements GameMap {
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
-      this.humans.map((h) => [
-        h.clientID,
-        { flag: h.flag, pattern: h.pattern } satisfies PlayerCosmetics,
-      ]),
+      this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {
         flag: nation.flag,
-      });
+      } satisfies PlayerCosmetics);
     }
   }
 

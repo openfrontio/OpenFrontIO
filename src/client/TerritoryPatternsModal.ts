@@ -2,12 +2,17 @@ import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Pattern } from "../core/CosmeticSchemas";
+import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
+import { PlayerPattern } from "../core/Schemas";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { renderPatternPreview } from "./components/PatternButton";
-import { fetchPatterns, handlePurchase } from "./Cosmetics";
+import {
+  fetchCosmetics,
+  handlePurchase,
+  patternRelationship,
+} from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -19,15 +24,17 @@ export class TerritoryPatternsModal extends LitElement {
 
   public previewButton: HTMLElement | null = null;
 
-  @state() private selectedPattern: Pattern | null;
+  @state() private selectedPattern: PlayerPattern | null;
 
-  private patterns: Map<string, Pattern> = new Map();
+  private cosmetics: Cosmetics | null = null;
 
   private userSettings: UserSettings = new UserSettings();
 
   private isActive = false;
 
   private affiliateCode: string | null = null;
+
+  private userMeResponse: UserMeResponse | null = null;
 
   constructor() {
     super();
@@ -38,11 +45,12 @@ export class TerritoryPatternsModal extends LitElement {
       this.userSettings.setSelectedPatternName(undefined);
       this.selectedPattern = null;
     }
-    this.patterns = await fetchPatterns(userMeResponse);
-    const storedPatternName = this.userSettings.getSelectedPatternName();
-    if (storedPatternName) {
-      this.selectedPattern = this.patterns.get(storedPatternName) ?? null;
-    }
+    this.userMeResponse = userMeResponse;
+    this.cosmetics = await fetchCosmetics();
+    this.selectedPattern =
+      this.cosmetics !== null
+        ? this.userSettings.getSelectedPatternName(this.cosmetics)
+        : null;
     this.refresh();
   }
 
@@ -52,25 +60,31 @@ export class TerritoryPatternsModal extends LitElement {
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const [name, pattern] of this.patterns) {
-      if (this.affiliateCode === null) {
-        if (pattern.affiliateCode !== null && pattern.product !== null) {
-          // Patterns with affiliate code are not for sale by default.
+    for (const pattern of Object.values(this.cosmetics?.patterns ?? {})) {
+      const colorPalettes = [...(pattern.colorPalettes ?? []), null];
+      for (const colorPalette of colorPalettes) {
+        const rel = patternRelationship(
+          pattern,
+          colorPalette,
+          this.userMeResponse,
+          this.affiliateCode,
+        );
+        if (rel === "blocked") {
           continue;
         }
-      } else {
-        if (pattern.affiliateCode !== this.affiliateCode) {
-          continue;
-        }
+        buttons.push(html`
+          <pattern-button
+            .pattern=${pattern}
+            .colorPalette=${this.cosmetics?.colorPalettes?.[
+              colorPalette?.name ?? ""
+            ] ?? null}
+            .requiresPurchase=${rel === "purchasable"}
+            .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
+            .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
+              handlePurchase(p, colorPalette)}
+          ></pattern-button>
+        `);
       }
-
-      buttons.push(html`
-        <pattern-button
-          .pattern=${pattern}
-          .onSelect=${(p: Pattern | null) => this.selectPattern(p)}
-          .onPurchase=${(p: Pattern) => handlePurchase(p)}
-        ></pattern-button>
-      `);
     }
 
     return html`
@@ -115,19 +129,24 @@ export class TerritoryPatternsModal extends LitElement {
     this.modalEl?.close();
   }
 
-  private selectPattern(pattern: Pattern | null) {
-    this.userSettings.setSelectedPatternName(pattern?.name);
+  private selectPattern(pattern: PlayerPattern | null) {
+    if (pattern === null) {
+      this.userSettings.setSelectedPatternName(undefined);
+    } else {
+      const name =
+        pattern.colorPalette?.name === undefined
+          ? pattern.name
+          : `${pattern.name}:${pattern.colorPalette.name}`;
+
+      this.userSettings.setSelectedPatternName(`pattern:${name}`);
+    }
     this.selectedPattern = pattern;
     this.refresh();
     this.close();
   }
 
   public async refresh() {
-    const preview = renderPatternPreview(
-      this.selectedPattern?.pattern ?? null,
-      48,
-      48,
-    );
+    const preview = renderPatternPreview(this.selectedPattern ?? null, 48, 48);
     this.requestUpdate();
 
     // Wait for the DOM to be updated and the o-modal element to be available
