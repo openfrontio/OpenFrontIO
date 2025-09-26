@@ -8,7 +8,8 @@ import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import stopTradingIcon from "../../../../resources/images/StopIconWhite.png";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import startTradingIcon from "../../../../resources/images/TradingIconWhite.png";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import traitorIcon from "../../../../resources/images/TraitorIconLightRed.svg";
+import breakAllianceIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -226,6 +227,16 @@ export class PlayerPanel extends LitElement implements Layer {
     return "text-emerald-400"; // More than 60 seconds: Green
   }
 
+  private getTraitorRemainingSeconds(player: PlayerView): number | null {
+    const ticksLeft = player.data.getTraitorRemainingTicks ?? 0;
+    if (!player.isTraitor() || ticksLeft <= 0) return null;
+    return Math.ceil(ticksLeft / 10); // 10 ticks = 1 second
+  }
+
+  private formatTraitorCountdown(seconds: number): string {
+    return `${seconds}s`;
+  }
+
   render() {
     if (!this.isVisible) {
       return html``;
@@ -263,6 +274,32 @@ export class PlayerPanel extends LitElement implements Layer {
     const flagName = country?.name;
 
     return html`
+      <style>
+        /* Soft glowing ring animation - rounded, moderate glow */
+        .traitor-ring {
+          border-radius: 1rem;
+          box-shadow:
+            0 0 0 2px rgba(239, 68, 68, 0.28),
+            /* outer ring */ 0 0 10px 3px rgba(239, 68, 68, 0.18),
+            /* outer glow */ inset 0 0 12px rgba(239, 68, 68, 0.09); /* inner glow */
+          animation: glowPulse 2.4s ease-in-out infinite;
+        }
+        @keyframes glowPulse {
+          0%,
+          100% {
+            box-shadow:
+              0 0 0 2px rgba(239, 68, 68, 0.18),
+              0 0 6px 1.5px rgba(239, 68, 68, 0.11),
+              inset 0 0 6px rgba(239, 68, 68, 0.05);
+          }
+          50% {
+            box-shadow:
+              0 0 0 3px rgba(239, 68, 68, 0.32),
+              0 0 16px 5px rgba(239, 68, 68, 0.22),
+              inset 0 0 16px rgba(239, 68, 68, 0.11);
+          }
+        }
+      </style>
       <div
         class="fixed inset-0 z-[1001] flex items-center justify-center overflow-auto
        pointer-events-none bg-black/60 backdrop-blur-sm"
@@ -273,8 +310,9 @@ export class PlayerPanel extends LitElement implements Layer {
           class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[240px] w-auto px-4 py-2"
         >
           <div
-            class="relative mt-2 w-full order border-white/10  bg-zinc-900/95
-                  backdrop-blur-sm p-5 shadow-2xl ring-1 ring-zinc-800 rounded-xl text-zinc-200"
+            class=${`relative mt-2 w-full order border-white/10 bg-zinc-900/95
+                  backdrop-blur-sm p-5 shadow-2xl rounded-xl text-zinc-200
+                  ${other.isTraitor() ? "traitor-ring" : "ring-1 ring-zinc-800"}`}
           >
             <!-- Close button -->
             <button
@@ -289,19 +327,77 @@ export class PlayerPanel extends LitElement implements Layer {
               class="flex flex-col gap-2 font-sans antialiased text-[14px] text-zinc-200 leading-relaxed"
             >
               <!-- Name section -->
-              <div class="mb-1 flex items-center gap-2.5">
-                ${country
-                  ? html`<img
-                      src="/flags/${flagCode}.svg"
-                      alt=${flagName}
-                      class="h-10 w-10 rounded-full object-cover"
-                    />`
-                  : ""}
-                <h1
-                  class="text-2xl font-bold tracking-[-0.01em] truncate text-zinc-50"
-                >
-                  ${other?.name()}
-                </h1>
+              <div class="mb-1">
+                <div class="flex items-center gap-2.5">
+                  ${country
+                    ? html`<img
+                        src="/flags/${flagCode}.svg"
+                        alt=${flagName}
+                        class="h-10 w-10 rounded-full object-cover"
+                      />`
+                    : ""}
+
+                  <h1
+                    class="text-2xl font-bold tracking-[-0.01em] truncate text-zinc-50"
+                  >
+                    ${other?.name()}
+                  </h1>
+                </div>
+
+                ${other.isTraitor()
+                  ? html`
+                      <div
+                        class="mt-1"
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        <!-- Traitor pill (slightly larger text) -->
+                        <span
+                          class="inline-flex items-center gap-2 rounded-full border border-red-400/30
+                            bg-red-500/10 px-2.5 py-0.5 text-sm font-semibold text-red-200
+                            shadow-[inset_0_0_8px_rgba(239,68,68,0.12)]"
+                          title=${translateText("player_panel.traitor")}
+                        >
+                          <img
+                            src=${traitorIcon}
+                            alt=""
+                            aria-hidden="true"
+                            class="h-[18px] w-[18px]"
+                          />
+                          <span class="tracking-tight">
+                            ${translateText("player_panel.traitor")}
+                          </span>
+
+                          ${(() => {
+                            const s = this.getTraitorRemainingSeconds(other);
+                            if (s === null) return html``;
+
+                            const label = this.formatTraitorCountdown(s);
+                            const dotCls = `mx-1 h-[4px] w-[4px] rounded-full bg-red-400/70 ${s <= 10 ? "animate-pulse" : ""}`;
+
+                            return html`
+                              <span class=${dotCls}></span>
+                              <span
+                                class="tabular-nums font-bold text-red-100 whitespace-nowrap text-sm"
+                                aria-label=${translateText(
+                                  "player_panel.time_remaining",
+                                ) +
+                                ": " +
+                                label}
+                              >
+                                ${label}
+                              </span>
+                              <span class="sr-only">
+                                ${translateText("player_panel.time_remaining")}:
+                                ${label}
+                              </span>
+                            `;
+                          })()}
+                        </span>
+                      </div>
+                    `
+                  : html``}
               </div>
 
               <!-- Divider -->
@@ -345,30 +441,6 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Divider -->
               <ui-divider></ui-divider>
 
-              <!-- Trust -->
-              <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
-                <div
-                  class="flex items-center gap-2 font-semibold text-zinc-300 leading-snug"
-                >
-                  <span aria-hidden="true">🤝</span>
-                  <span>${translateText("player_panel.trust")}</span>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 font-semibold">
-                  ${other.isTraitor()
-                    ? html`
-                        <span class="text-red-400">
-                          ${translateText("player_panel.traitor")}
-                        </span>
-                      `
-                    : html`
-                        <span class="text-emerald-400">
-                          ${translateText("player_panel.stable")}
-                        </span>
-                      `}
-                </div>
-              </div>
-
               <!-- Betrayals -->
               <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
                 <div
@@ -400,7 +472,7 @@ export class PlayerPanel extends LitElement implements Layer {
                         </span>
                       `
                     : html`
-                        <span class="text-[#38bdf8]">
+                        <span class="text-emerald-400">
                           ${translateText("player_panel.active")}
                         </span>
                       `}
@@ -554,7 +626,7 @@ export class PlayerPanel extends LitElement implements Layer {
                           iconAlt: "Start Trading",
                           title: translateText("player_panel.start_trade"),
                           label: translateText("player_panel.start_trade"),
-                          type: "sky",
+                          type: "green",
                         })
                     : ""}
 
@@ -563,7 +635,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     ? actionButton({
                         onClick: (e: MouseEvent) =>
                           this.handleBreakAllianceClick(e, myPlayer, other),
-                        icon: traitorIcon,
+                        icon: breakAllianceIcon,
                         iconAlt: "Break Alliance",
                         title: translateText("player_panel.break_alliance"),
                         label: translateText("player_panel.break_alliance"),

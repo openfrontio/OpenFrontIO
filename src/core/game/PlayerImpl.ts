@@ -143,6 +143,7 @@ export class PlayerImpl implements Player {
       allies: this.alliances().map((a) => a.other(this).smallID()),
       embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
       isTraitor: this.isTraitor(),
+      getTraitorRemainingTicks: this.getTraitorRemainingTicks(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
       outgoingAttacks: this._outgoingAttacks.map((a) => {
@@ -420,11 +421,15 @@ export class PlayerImpl implements Player {
   }
 
   isTraitor(): boolean {
-    return (
-      this.markedTraitorTick >= 0 &&
-      this.mg.ticks() - this.markedTraitorTick <
-        this.mg.config().traitorDuration()
-    );
+    return this.getTraitorRemainingTicks() > 0;
+  }
+
+  getTraitorRemainingTicks(): number {
+    if (this.markedTraitorTick < 0) return 0;
+    const elapsed = this.mg.ticks() - this.markedTraitorTick;
+    const duration = this.mg.config().traitorDuration();
+    const remaining = duration - elapsed;
+    return remaining > 0 ? remaining : 0;
   }
 
   markTraitor(): void {

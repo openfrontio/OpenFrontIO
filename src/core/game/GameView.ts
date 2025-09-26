@@ -345,6 +345,9 @@ export class PlayerView {
   isTraitor(): boolean {
     return this.data.isTraitor;
   }
+  getTraitorRemainingTicks(): number {
+    return this.data.getTraitorRemainingTicks;
+  }
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;
   }

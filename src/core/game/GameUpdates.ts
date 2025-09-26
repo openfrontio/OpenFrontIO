@@ -160,6 +160,7 @@ export interface PlayerUpdate {
   allies: number[];
   embargoes: Set<PlayerID>;
   isTraitor: boolean;
+  getTraitorRemainingTicks: number;
   targets: number[];
   outgoingEmojis: EmojiMessage[];
   outgoingAttacks: AttackUpdate[];
