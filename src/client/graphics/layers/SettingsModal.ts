@@ -162,6 +162,13 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onSoundEffectsVolumeChange(event: Event) {
+    const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
+    this.userSettings.setSoundEffectsVolume(volume);
+    SoundManager.setSoundEffectsVolume(volume);
+    this.requestUpdate();
+  }
+
   render() {
     if (!this.isVisible) {
       return null;
@@ -218,6 +225,33 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${Math.round(this.userSettings.backgroundMusicVolume() * 100)}%
+              </div>
+            </div>
+
+            <div
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+            >
+              <img
+                src=${musicIcon}
+                alt="soundEffectsIcon"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.sound_effects_volume")}
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  .value=${this.userSettings.soundEffectsVolume() * 100}
+                  @input=${this.onSoundEffectsVolumeChange}
+                  class="w-full border border-slate-500 rounded-lg"
+                />
+              </div>
+              <div class="text-sm text-slate-400">
+                ${Math.round(this.userSettings.soundEffectsVolume() * 100)}%
               </div>
             </div>
 
