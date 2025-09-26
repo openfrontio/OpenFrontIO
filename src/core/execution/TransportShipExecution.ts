@@ -178,6 +178,13 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
+      // Set arrival tick to null on the boat itself
+      if (this.boat.setEstimatedArrivalTick) {
+        this.boat.setEstimatedArrivalTick(null);
+      }
+      // Reset path length so we recompute for the new path
+      this.pathLength = null;
+      this.journeyStartTick = null;
 
       if (this.boat.targetTile() !== this.dst) {
         this.boat.setTargetTile(this.dst);
