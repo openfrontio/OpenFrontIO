@@ -130,9 +130,8 @@
     "disable_nations": "Disable Nations",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
-    "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
-    "donate_troops": "Donate troops",
+    "compact_map": "Mini Map",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game"
@@ -229,6 +228,7 @@
     "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
+    "compact_map": "Mini Map",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -647,5 +647,63 @@
   "radial_menu": {
     "delete_unit_title": "Delete Unit",
     "delete_unit_description": "Click to delete the nearest unit"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Avatar"
+  },
+  "player_stats_table": {
+    "building_stats": "Building Statistics",
+    "ship_arrivals": "Ship Arrivals",
+    "nuke_stats": "Nuke Statistics",
+    "player_metrics": "Player Metrics",
+    "building": "Building",
+    "ship_type": "Ship Type",
+    "weapon": "Weapon",
+    "built": "Built",
+    "destroyed": "Destroyed",
+    "captured": "Captured",
+    "lost": "Lost",
+    "hits": "Hits",
+    "launched": "Launched",
+    "landed": "Landed",
+    "sent": "Sent",
+    "arrived": "Arrived",
+    "attack": "Attack",
+    "received": "Received",
+    "cancelled": "Cancelled",
+    "count": "Count",
+    "gold": "Gold",
+    "workers": "Workers",
+    "war": "War",
+    "trade": "Trade",
+    "steal": "Steal",
+    "unit": {
+      "city": "City",
+      "port": "Port",
+      "defp": "Defense Post",
+      "saml": "SAM Launcher",
+      "silo": "Missile Silo",
+      "wshp": "Warship",
+      "fact": "Factory",
+      "trade": "Trade Ship",
+      "trans": "Transport Ship",
+      "abomb": "Atom Bomb",
+      "hbomb": "Hydrogen Bomb",
+      "mirv": "MIRV",
+      "mirvw": "MIRV Warhead"
+    }
+  },
+  "game_list": {
+    "recent_games": "Recent Games",
+    "game_id": "Game ID",
+    "mode": "Mode",
+    "mode_ffa": "Free-for-All",
+    "mode_team": "Team",
+    "view": "View",
+    "details": "Details",
+    "started": "Started",
+    "map": "Map",
+    "difficulty": "Difficulty",
+    "type": "Type"
   }
 }

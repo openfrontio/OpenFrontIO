@@ -44,10 +44,17 @@ export class BinaryLoaderGameMapLoader implements GameMapLoader {
           ) as Promise<BinModule>
         ).then((m) => this.toUInt8Array(m.default)),
       ),
-      miniMapBin: this.createLazyLoader(() =>
+      map4xBin: this.createLazyLoader(() =>
         (
           import(
-            `!!binary-loader!../../../resources/maps/${fileName}/mini_map.bin`
+            `!!binary-loader!../../../resources/maps/${fileName}/map4x.bin`
+          ) as Promise<BinModule>
+        ).then((m) => this.toUInt8Array(m.default)),
+      ),
+      map16xBin: this.createLazyLoader(() =>
+        (
+          import(
+            `!!binary-loader!../../../resources/maps/${fileName}/map16x.bin`
           ) as Promise<BinModule>
         ).then((m) => this.toUInt8Array(m.default)),
       ),

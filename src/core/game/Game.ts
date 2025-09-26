@@ -139,6 +139,11 @@ export enum GameMode {
   Team = "Team",
 }
 
+export enum GameMapSize {
+  Compact = "Compact",
+  Normal = "Normal",
+}
+
 export interface UnitInfo {
   cost: (player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
@@ -792,6 +797,7 @@ export enum MessageType {
 // Message categories used for filtering events in the EventsDisplay
 export enum MessageCategory {
   ATTACK = "ATTACK",
+  NUKE = "NUKE",
   ALLIANCE = "ALLIANCE",
   TRADE = "TRADE",
   CHAT = "CHAT",
@@ -803,9 +809,9 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ATTACK_CANCELLED]: MessageCategory.ATTACK,
   [MessageType.ATTACK_REQUEST]: MessageCategory.ATTACK,
   [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
-  [MessageType.MIRV_INBOUND]: MessageCategory.ATTACK,
-  [MessageType.NUKE_INBOUND]: MessageCategory.ATTACK,
-  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.MIRV_INBOUND]: MessageCategory.NUKE,
+  [MessageType.NUKE_INBOUND]: MessageCategory.NUKE,
+  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.NUKE,
   [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
   [MessageType.SAM_MISS]: MessageCategory.ATTACK,
   [MessageType.SAM_HIT]: MessageCategory.ATTACK,

@@ -6,6 +6,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
   Duos,
+  GameMapSize,
   GameMapType,
   GameMode,
   Quads,
@@ -44,6 +45,7 @@ export class HostLobbyModal extends LitElement {
   @state() private infiniteTroops: boolean = false;
   @state() private donateTroops: boolean = false;
   @state() private instantBuild: boolean = false;
+  @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private clients: ClientInfo[] = [];
@@ -424,6 +426,21 @@ export class HostLobbyModal extends LitElement {
                     ${translateText("host_modal.infinite_troops")}
                   </div>
                 </label>
+                <label
+                for="host-modal-compact-map"
+                class="option-card ${this.compactMap ? "selected" : ""}"
+              >
+                <div class="checkbox-icon"></div>
+                <input
+                  type="checkbox"
+                  id="host-modal-compact-map"
+                  @change=${this.handleCompactMapChange}
+                  .checked=${this.compactMap}
+                />
+                <div class="option-card-title">
+                  ${translateText("host_modal.compact_map")}
+                </div>
+              </label>
 
                 <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
 
@@ -603,6 +620,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleCompactMapChange(e: Event) {
+    this.compactMap = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private handleDonateTroopsChange(e: Event) {
     this.donateTroops = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -635,6 +657,9 @@ export class HostLobbyModal extends LitElement {
         },
         body: JSON.stringify({
           gameMap: this.selectedMap,
+          gameMapSize: this.compactMap
+            ? GameMapSize.Compact
+            : GameMapSize.Normal,
           difficulty: this.selectedDifficulty,
           disableNPCs: this.disableNPCs,
           bots: this.bots,
