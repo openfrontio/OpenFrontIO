@@ -29,6 +29,7 @@ import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
+  GhostStructureEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
@@ -37,6 +38,7 @@ import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
+  BuildUnitIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
@@ -196,11 +198,11 @@ export class ClientGameRunner {
 
   private turnsSeen = 0;
   private hasJoined = false;
-
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private hasGhost = false;
 
   constructor(
     private lobby: LobbyConfig,
@@ -254,6 +256,19 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
+
+    this.eventBus.on(GhostStructureEvent, (e) => {
+      this.hasGhost = e.structureType !== null;
+    });
+
+    this.eventBus.on(BuildUnitIntentEvent, () => {
+      this.hasGhost = false;
+    });
+
+    this.eventBus.on(SendUpgradeStructureIntentEvent, () => {
+      this.hasGhost = false;
+    });
+
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
     this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
@@ -383,7 +398,7 @@ export class ClientGameRunner {
   }
 
   private inputEvent(event: MouseUpEvent) {
-    if (!this.isActive) {
+    if (!this.isActive || this.hasGhost) {
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
