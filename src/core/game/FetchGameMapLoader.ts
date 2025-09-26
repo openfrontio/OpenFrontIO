@@ -28,8 +28,8 @@ export class FetchGameMapLoader implements GameMapLoader {
 
     const mapData = {
       mapBin: () => this.loadBinaryFromUrl(this.url(fileName, "map.bin")),
-      miniMapBin: () =>
-        this.loadBinaryFromUrl(this.url(fileName, "mini_map.bin")),
+      map4xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map4x.bin")),
+      map16xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map16x.bin")),
       manifest: () => this.loadJsonFromUrl(this.url(fileName, "manifest.json")),
       webpPath: async () => this.url(fileName, "thumbnail.webp"),
     } satisfies MapData;
