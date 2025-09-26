@@ -227,11 +227,9 @@ export class EventsDisplay extends LitElement implements Layer {
       .outgoingAttacks()
       .filter((a) => a.targetID === 0);
 
-    const newOutgoingBoats = myPlayer
+    this.outgoingBoats = myPlayer
       .units()
       .filter((u) => u.type() === UnitType.TransportShip);
-
-    this.outgoingBoats = newOutgoingBoats;
 
     this.requestUpdate();
   }
@@ -825,7 +823,7 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
-  private calculateBoatCountdown(boat: UnitView): number {
+  private calculateBoatCountdown(boat: UnitView): number | null {
     const currentTick = this.game.ticks();
     const createdAt = boat.createdAt();
     const ticksTraveled = currentTick - createdAt;
@@ -833,17 +831,17 @@ export class EventsDisplay extends LitElement implements Layer {
     // Try to use server-provided estimated arrival tick if available
     const estimatedArrivalTick = boat.estimatedArrivalTick();
 
-    if (estimatedArrivalTick !== undefined) {
+    if (estimatedArrivalTick !== undefined && estimatedArrivalTick !== null) {
       const remaining = Math.max(0, estimatedArrivalTick - currentTick);
       return remaining;
     }
 
     // If no server estimate available, show "Calculating..." status
-    return -1; // Special value to indicate "Calculating..." status
+    return null; // Return null to indicate "Calculating..." status
   }
 
-  private formatCountdown(ticks: number): string {
-    if (ticks === -1) {
+  private formatCountdown(ticks: number | null): string {
+    if (ticks === null) {
       return translateText("events_display.boat_countdown.calculating");
     }
 

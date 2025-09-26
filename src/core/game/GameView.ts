@@ -103,7 +103,7 @@ export class UnitView {
     return this.data.retreating;
   }
 
-  estimatedArrivalTick(): number | undefined {
+  estimatedArrivalTick(): number | null | undefined {
     return this.data.estimatedArrivalTick;
   }
   tile(): TileRef {

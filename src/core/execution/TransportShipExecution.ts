@@ -135,8 +135,6 @@ export class TransportShipExecution implements Execution {
       troops: this.startTroops,
     });
 
-    // Don't set any estimated arrival tick initially - wait for A* path to complete
-
     // Notify the target player about the incoming naval invasion
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
@@ -167,11 +165,6 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
-    // Calculate estimated arrival tick if we have a path length
-    if (this.pathLength !== null) {
-      this.updateEstimatedArrivalTick(ticks);
-    }
-
     if (ticks - this.lastMove < this.ticksPerMove) {
       return;
     }
@@ -179,6 +172,10 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
+      // Set arrival tick to null on the boat itself
+      if (this.boat.setEstimatedArrivalTick) {
+        this.boat.setEstimatedArrivalTick(null);
+      }
       // Reset path length so we recompute for the new path
       this.pathLength = null;
       this.journeyStartTick = null;
@@ -194,10 +191,11 @@ export class TransportShipExecution implements Execution {
       // Get the current remaining path length from the pathfinder
       const remainingPathLength = this.pathFinder.getPathLength();
 
-      if (remainingPathLength > 0) {
+      if (remainingPathLength !== null && remainingPathLength > 0) {
         // The pathfinder has already consumed 1 tile (the current one), so add it back
         this.pathLength = remainingPathLength + 1;
         this.journeyStartTick = ticks; // Record when the journey started
+        this.updateEstimatedArrivalTick(ticks);
       }
     }
 

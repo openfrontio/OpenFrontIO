@@ -204,7 +204,7 @@ export class PathFinder {
     return false;
   }
 
-  public getPathLength(): number {
-    return this.path ? this.path.length : 0;
+  public getPathLength(): number | null {
+    return this.path ? this.path.length : null;
   }
 }
