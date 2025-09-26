@@ -41,8 +41,8 @@ export class PlayerStatsTreeView extends LitElement {
 
   private labelForMode(m: GameMode) {
     return m === GameMode.FFA
-      ? translateText("player_modal.mode_ffa")
-      : translateText("player_modal.mode_team");
+      ? translateText("player_stats_tree.mode_ffa")
+      : translateText("player_stats_tree.mode_team");
   }
 
   createRenderRoot() {
@@ -129,10 +129,10 @@ export class PlayerStatsTreeView extends LitElement {
               @click=${() => this.setGameType(t)}
             >
               ${t === GameType.Public
-                ? translateText("player_modal.public")
+                ? translateText("player_stats_tree.public")
                 : t === GameType.Private
-                  ? translateText("player_modal.private")
-                  : translateText("player_modal.singleplayer")}
+                  ? translateText("player_stats_tree.private")
+                  : translateText("player_stats_tree.singleplayer")}
             </button>
           `,
         )}
@@ -148,7 +148,7 @@ export class PlayerStatsTreeView extends LitElement {
                     ? "border-white/60 text-white"
                     : "border-white/20 text-gray-300"}"
                   @click=${() => this.setMode(m)}
-                  title=${translateText("player_modal.mode")}
+                  title=${translateText("player_stats_tree.mode")}
                 >
                   ${this.labelForMode(m)}
                 </button>
@@ -167,7 +167,7 @@ export class PlayerStatsTreeView extends LitElement {
                     ? "border-white/60 text-white"
                     : "border-white/20 text-gray-300"}"
                   @click=${() => this.setDifficulty(d)}
-                  title=${translateText("player_modal.difficulty")}
+                  title=${translateText("difficulty.difficulty")}
                 >
                   ${translateText(`difficulty.${d}`)}
                 </button>`,
@@ -179,10 +179,10 @@ export class PlayerStatsTreeView extends LitElement {
             <hr class="w-2/3 border-gray-600 my-2" />
             <player-stats-grid
               .titles=${[
-                translateText("player_modal.stats_wins"),
-                translateText("player_modal.stats_losses"),
-                translateText("player_modal.stats_wlr"),
-                translateText("player_modal.stats_games_played"),
+                translateText("player_stats_tree.stats_wins"),
+                translateText("player_stats_tree.stats_losses"),
+                translateText("player_stats_tree.stats_wlr"),
+                translateText("player_stats_tree.stats_games_played"),
               ]}
               .values=${[
                 renderNumber(leaf.wins),
