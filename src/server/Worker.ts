@@ -1,3 +1,4 @@
+import compression from "compression";
 import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
@@ -6,18 +7,17 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
-  GameRecord,
-  GameRecordSchema,
   ID,
+  PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
-import { archive, readGameRecord } from "./Archive";
+import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
@@ -81,6 +81,7 @@ export async function startWorker() {
   });
 
   app.set("trust proxy", 3);
+  app.use(compression());
   app.use(express.json());
   app.use(express.static(path.join(__dirname, "../../out")));
   app.use(
@@ -210,55 +211,47 @@ export async function startWorker() {
     res.json(game.gameInfo());
   });
 
-  app.get("/api/archived_game/:id", async (req, res) => {
-    const gameRecord = await readGameRecord(req.params.id);
-
-    if (!gameRecord) {
-      return res.status(404).json({
-        success: false,
-        error: "Game not found",
-        exists: false,
-      });
-    }
-
-    if (
-      config.env() !== GameEnv.Dev &&
-      gameRecord.gitCommit !== config.gitCommit()
-    ) {
-      log.warn(
-        `git commit mismatch for game ${req.params.id}, expected ${config.gitCommit()}, got ${gameRecord.gitCommit}`,
-      );
-      return res.status(409).json({
-        success: false,
-        error: "Version mismatch",
-        exists: true,
-        details: {
-          expectedCommit: config.gitCommit(),
-          actualCommit: gameRecord.gitCommit,
-        },
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      exists: true,
-      gameRecord: gameRecord,
-    });
-  });
-
   app.post("/api/archive_singleplayer_game", async (req, res) => {
-    const result = GameRecordSchema.safeParse(req.body);
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      log.info(error);
-      return res.status(400).json({ error });
-    }
+    try {
+      const record = req.body;
 
-    const gameRecord: GameRecord = result.data;
-    archive(gameRecord);
-    res.json({
-      success: true,
-    });
+      const result = PartialGameRecordSchema.safeParse(record);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        log.info(error);
+        return res.status(400).json({ error });
+      }
+      const gameRecord = result.data;
+
+      if (gameRecord.info.config.gameType !== GameType.Singleplayer) {
+        log.warn(
+          `cannot archive singleplayer with game type ${gameRecord.info.config.gameType}`,
+          {
+            gameID: gameRecord.info.gameID,
+          },
+        );
+        return res.status(400).json({ error: "Invalid request" });
+      }
+
+      if (result.data.info.players.length !== 1) {
+        log.warn(`cannot archive singleplayer game multiple players`, {
+          gameID: gameRecord.info.gameID,
+        });
+        return res.status(400).json({ error: "Invalid request" });
+      }
+
+      log.info("archiving singleplayer game", {
+        gameID: gameRecord.info.gameID,
+      });
+
+      archive(finalizeGameRecord(gameRecord));
+      res.json({
+        success: true,
+      });
+    } catch (error) {
+      log.error("Error processing archive request:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 
   app.post("/api/kick_player/:gameID/:clientID", async (req, res) => {
@@ -311,7 +304,9 @@ export async function startWorker() {
           // Ignore ping
           return;
         } else if (clientMsg.type !== "join") {
-          log.warn(`Invalid message before join: ${JSON.stringify(clientMsg)}`);
+          log.warn(
+            `Invalid message before join: ${JSON.stringify(clientMsg, replacer)}`,
+          );
           return;
         }
 

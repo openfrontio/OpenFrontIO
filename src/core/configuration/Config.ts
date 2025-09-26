@@ -48,6 +48,7 @@ export interface ServerConfig {
   r2Endpoint(): string;
   r2AccessKey(): string;
   r2SecretKey(): string;
+  apiKey(): string;
   otelEndpoint(): string;
   otelAuthHeader(): string;
   otelEnabled(): boolean;

@@ -400,7 +400,7 @@ export class GameView implements GameMap {
         { flag: h.flag, pattern: h.pattern } satisfies PlayerCosmetics,
       ]),
     );
-    for (const nation of this._mapData.manifest.nations) {
+    for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {
         flag: nation.flag,
@@ -451,6 +451,9 @@ export class GameView implements GameMap {
         );
       }
     });
+
+    this._myPlayer ??= this.playerByClientID(this._myClientID);
+
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
       unit.lastPos = unit.lastPos.slice(-1);
@@ -511,7 +514,6 @@ export class GameView implements GameMap {
   }
 
   myPlayer(): PlayerView | null {
-    this._myPlayer ??= this.playerByClientID(this._myClientID);
     return this._myPlayer;
   }
 

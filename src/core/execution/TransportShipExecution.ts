@@ -135,6 +135,12 @@ export class TransportShipExecution implements Execution {
       troops: this.startTroops,
     });
 
+    if (this.dst !== null) {
+      this.boat.setTargetTile(this.dst);
+    } else {
+      this.boat.setTargetTile(undefined);
+    }
+
     // Notify the target player about the incoming naval invasion
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
@@ -172,13 +178,6 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
-      // Set arrival tick to null on the boat itself
-      if (this.boat.setEstimatedArrivalTick) {
-        this.boat.setEstimatedArrivalTick(null);
-      }
-      // Reset path length so we recompute for the new path
-      this.pathLength = null;
-      this.journeyStartTick = null;
 
       if (this.boat.targetTile() !== this.dst) {
         this.boat.setTargetTile(this.dst);

@@ -84,6 +84,7 @@ export enum GameMapType {
   Italia = "Italia",
   Yenisei = "Yenisei",
   Pluto = "Pluto",
+  Montreal = "Montreal",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -116,6 +117,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
     GameMapType.Yenisei,
+    GameMapType.Montreal,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -134,6 +136,11 @@ export enum GameType {
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
+}
+
+export enum GameMapSize {
+  Compact = "Compact",
+  Normal = "Normal",
 }
 
 export interface UnitInfo {
@@ -791,6 +798,7 @@ export enum MessageType {
 // Message categories used for filtering events in the EventsDisplay
 export enum MessageCategory {
   ATTACK = "ATTACK",
+  NUKE = "NUKE",
   ALLIANCE = "ALLIANCE",
   TRADE = "TRADE",
   CHAT = "CHAT",
@@ -802,9 +810,9 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ATTACK_CANCELLED]: MessageCategory.ATTACK,
   [MessageType.ATTACK_REQUEST]: MessageCategory.ATTACK,
   [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
-  [MessageType.MIRV_INBOUND]: MessageCategory.ATTACK,
-  [MessageType.NUKE_INBOUND]: MessageCategory.ATTACK,
-  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.MIRV_INBOUND]: MessageCategory.NUKE,
+  [MessageType.NUKE_INBOUND]: MessageCategory.NUKE,
+  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.NUKE,
   [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
   [MessageType.SAM_MISS]: MessageCategory.ATTACK,
   [MessageType.SAM_HIT]: MessageCategory.ATTACK,

@@ -13,6 +13,7 @@ import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
+import { TargetFx } from "../fx/TargetFx";
 import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
@@ -27,6 +28,7 @@ export class FxLayer implements Layer {
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
+  private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -37,6 +39,7 @@ export class FxLayer implements Layer {
   }
 
   tick() {
+    this.manageBoatTargetFx();
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -63,6 +66,24 @@ export class FxLayer implements Layer {
         if (update === undefined) return;
         this.onConquestEvent(update);
       });
+  }
+
+  private manageBoatTargetFx() {
+    // End markers for boats that arrived or retreated
+    for (const [unitId, fx] of Array.from(
+      this.boatTargetFxByUnitId.entries(),
+    )) {
+      const unit = this.game.unit(unitId);
+      if (
+        !unit ||
+        !unit.isActive() ||
+        unit.reachedTarget() ||
+        unit.retreating()
+      ) {
+        (fx as any).end?.();
+        this.boatTargetFxByUnitId.delete(unitId);
+      }
+    }
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {
@@ -94,8 +115,30 @@ export class FxLayer implements Layer {
     this.allFx.push(textFx);
   }
 
+  addTargetFx(x: number, y: number) {
+    const fx = new TargetFx(x, y, 1200, 12);
+    this.allFx.push(fx);
+  }
+
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
+      case UnitType.TransportShip: {
+        const my = this.game.myPlayer();
+        if (!my) return;
+        if (unit.owner() !== my) return;
+        if (!unit.isActive()) return;
+        if (this.boatTargetFxByUnitId.has(unit.id())) return;
+        const t = unit.targetTile();
+        if (t !== undefined) {
+          const x = this.game.x(t);
+          const y = this.game.y(t);
+          // persistent until boat finishes or retreats
+          const fx = new TargetFx(x, y, 0, 12, true);
+          this.allFx.push(fx);
+          this.boatTargetFxByUnitId.set(unit.id(), fx);
+        }
+        break;
+      }
       case UnitType.AtomBomb:
       case UnitType.MIRVWarhead:
         this.onNukeEvent(unit, 70);

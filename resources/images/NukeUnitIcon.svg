@@ -1,8 +1,1 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="9px" height="9px" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
-<g><path style="opacity:1" fill="#000000" d="M -0.5,-0.5 C 0.166667,-0.5 0.833333,-0.5 1.5,-0.5C 4.10422,2.56691 3.43755,3.56691 -0.5,2.5C -0.5,1.5 -0.5,0.5 -0.5,-0.5 Z"/></g>
-<g><path style="opacity:1" fill="#000000" d="M 6.5,-0.5 C 7.16667,-0.5 7.83333,-0.5 8.5,-0.5C 8.5,0.5 8.5,1.5 8.5,2.5C 4.56245,3.56691 3.89578,2.56691 6.5,-0.5 Z"/></g>
-<g><path style="opacity:1" fill="#000000" d="M 3.5,3.5 C 4.83333,4.16667 4.83333,4.16667 3.5,3.5 Z"/></g>
-<g><path style="opacity:1" fill="#000000" d="M 6.5,8.5 C 4.83333,8.5 3.16667,8.5 1.5,8.5C 3.16667,4.5 4.83333,4.5 6.5,8.5 Z"/></g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" shape-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" xmlns:v="https://vecta.io/nano"><path d="M-.5-.5h2c2.60422 3.06691 1.93755 4.06691-2 3v-3zm7 0h2v3c-3.93755 1.06691-4.60422.06691-2-3zm-3 4c1.33333.66667 1.33333.66667 0 0zm3 5h-5c1.66667-4 3.33333-4 5 0z"/></svg>

@@ -5,6 +5,7 @@ import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import nukeIcon from "../../../../resources/images/NukeIconWhite.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -91,6 +92,7 @@ export class EventsDisplay extends LitElement implements Layer {
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
     [MessageCategory.ATTACK, false],
+    [MessageCategory.NUKE, false],
     [MessageCategory.TRADE, false],
     [MessageCategory.ALLIANCE, false],
     [MessageCategory.CHAT, false],
@@ -984,6 +986,20 @@ export class EventsDisplay extends LitElement implements Layer {
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.ATTACK),
+                      className: "cursor-pointer pointer-events-auto",
+                    })}
+                    ${this.renderButton({
+                      content: html`<img
+                        src="${nukeIcon}"
+                        class="w-5 h-5"
+                        style="filter: ${this.eventsFilters.get(
+                          MessageCategory.NUKE,
+                        )
+                          ? "grayscale(1) opacity(0.5)"
+                          : "none"}"
+                      />`,
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.NUKE),
                       className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
