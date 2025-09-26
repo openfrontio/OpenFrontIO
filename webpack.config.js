@@ -93,6 +93,13 @@ export default async (env, argv) => {
             filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
           },
         },
+        {
+          test: /\.(mp3|wav|ogg)$/i,
+          type: "asset/resource",
+          generator: {
+            filename: "sounds/[name].[contenthash][ext]",
+          },
+        },
       ],
     },
     resolve: {
