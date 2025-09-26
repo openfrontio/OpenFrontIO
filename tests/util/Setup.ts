@@ -3,6 +3,7 @@ import path from "path";
 import {
   Difficulty,
   Game,
+  GameMapSize,
   GameMapType,
   GameMode,
   GameType,
@@ -35,7 +36,7 @@ export async function setup(
   );
   const miniMapBinPath = path.join(
     currentDir,
-    `../testdata/maps/${mapName}/mini_map.bin`,
+    `../testdata/maps/${mapName}/map4x.bin`,
   );
   const manifestPath = path.join(
     currentDir,
@@ -49,15 +50,13 @@ export async function setup(
   ) satisfies MapManifest;
 
   const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
-  const miniGameMap = await genTerrainFromBin(
-    manifest.mini_map,
-    miniMapBinBuffer,
-  );
+  const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
   // Configure the game
   const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {
     gameMap: GameMapType.Asia,
+    gameMapSize: GameMapSize.Normal,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
     difficulty: Difficulty.Medium,

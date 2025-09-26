@@ -4,7 +4,12 @@
     "num_land_tiles": 194648,
     "width": 2000
   },
-  "mini_map": {
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 10867,
+    "width": 500
+  },
+  "map4x": {
     "height": 500,
     "num_land_tiles": 46767,
     "width": 1000

@@ -187,6 +187,7 @@ export class LocalServer {
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
         stats: this.allPlayersStats[this.lobbyConfig.clientID],
+        cosmetics: this.lobbyConfig.gameStartInfo?.players[0].cosmetics,
       },
     ];
     if (this.lobbyConfig.gameStartInfo === undefined) {

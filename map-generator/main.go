@@ -111,24 +111,32 @@ func processMap(name string, isTest bool) error {
 	}
 
 	manifest["map"] = map[string]interface{}{
-		"width": result.MapWidth,
-		"height": result.MapHeight,
-		"num_land_tiles": result.MapNumLandTiles,
+		"width": result.Map.Width,
+		"height": result.Map.Height,
+		"num_land_tiles": result.Map.NumLandTiles,
 	}	
-	manifest["mini_map"] = map[string]interface{}{
-		"width": result.MiniMapWidth,
-		"height": result.MiniMapHeight,
-		"num_land_tiles": result.MiniMapNumLandTiles,
+	manifest["map4x"] = map[string]interface{}{
+		"width": result.Map4x.Width,
+		"height": result.Map4x.Height,
+		"num_land_tiles": result.Map4x.NumLandTiles,
+	}
+	manifest["map16x"] = map[string]interface{}{
+		"width": result.Map16x.Width,
+		"height": result.Map16x.Height,
+		"num_land_tiles": result.Map16x.NumLandTiles,
 	}
 
 	mapDir := filepath.Join(outputMapBaseDir, name)
 	if err := os.MkdirAll(mapDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory for %s: %w", name, err)
 	}
-	if err := os.WriteFile(filepath.Join(mapDir, "map.bin"), result.Map, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(mapDir, "map.bin"), result.Map.Data, 0644); err != nil {
 		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
 	}
-	if err := os.WriteFile(filepath.Join(mapDir, "mini_map.bin"), result.MiniMap, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(mapDir, "map4x.bin"), result.Map4x.Data, 0644); err != nil {
+		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
+	}
+	if err := os.WriteFile(filepath.Join(mapDir, "map16x.bin"), result.Map16x.Data, 0644); err != nil {
 		return fmt.Errorf("failed to write combined binary for %s: %w", name, err)
 	}
 	if err := os.WriteFile(filepath.Join(mapDir, "thumbnail.webp"), result.Thumbnail, 0644); err != nil {

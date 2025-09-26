@@ -5,6 +5,7 @@ import { translateText } from "../client/Utils";
 import {
   Difficulty,
   Duos,
+  GameMapSize,
   GameMapType,
   GameMode,
   GameType,
@@ -16,7 +17,11 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { getCosmetics } from "./Cosmetics";
+import "./components/baseComponents/Button";
+import "./components/baseComponents/Modal";
+import "./components/Difficulties";
+import "./components/Maps";
+import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -33,9 +38,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private disableNPCs: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
-  @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
-  @state() private donateTroops: boolean = false;
+  @state() private compactMap: boolean = false;
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
@@ -296,6 +300,21 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("single_modal.infinite_troops")}
                 </div>
               </label>
+              <label
+                for="singleplayer-modal-compact-map"
+                class="option-card ${this.compactMap ? "selected" : ""}"
+              >
+                <div class="checkbox-icon"></div>
+                <input
+                  type="checkbox"
+                  id="singleplayer-modal-compact-map"
+                  @change=${this.handleCompactMapChange}
+                  .checked=${this.compactMap}
+                />
+                <div class="option-card-title">
+                  ${translateText("single_modal.compact_map")}
+                </div>
+              </label>
             </div>
 
             <hr
@@ -372,6 +391,10 @@ export class SinglePlayerModal extends LitElement {
     this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
   }
 
+  private handleCompactMapChange(e: Event) {
+    this.compactMap = Boolean((e.target as HTMLInputElement).checked);
+  }
+
   private handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
   }
@@ -420,13 +443,12 @@ export class SinglePlayerModal extends LitElement {
     if (!flagInput) {
       console.warn("Flag input element not found");
     }
-    const patternName = this.userSettings.getSelectedPatternName();
-    let pattern: string | undefined = undefined;
-    if (this.userSettings.getDevOnlyPattern()) {
-      pattern = this.userSettings.getDevOnlyPattern();
-    } else if (patternName) {
-      pattern = (await getCosmetics())?.patterns[patternName]?.pattern;
-    }
+    const cosmetics = await fetchCosmetics();
+    let selectedPattern = this.userSettings.getSelectedPatternName(cosmetics);
+    selectedPattern ??= cosmetics
+      ? (this.userSettings.getDevOnlyPattern() ?? null)
+      : null;
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -438,15 +460,20 @@ export class SinglePlayerModal extends LitElement {
               {
                 clientID,
                 username: usernameInput.getCurrentUsername(),
-                flag:
-                  flagInput.getCurrentFlag() === "xx"
-                    ? ""
-                    : flagInput.getCurrentFlag(),
-                pattern: pattern,
+                cosmetics: {
+                  flag:
+                    flagInput.getCurrentFlag() === "xx"
+                      ? ""
+                      : flagInput.getCurrentFlag(),
+                  pattern: selectedPattern ?? undefined,
+                },
               },
             ],
             config: {
               gameMap: this.selectedMap,
+              gameMapSize: this.compactMap
+                ? GameMapSize.Compact
+                : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
@@ -454,9 +481,9 @@ export class SinglePlayerModal extends LitElement {
               disableNPCs: this.disableNPCs,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
-              donateGold: this.donateGold,
+              donateGold: true,
+              donateTroops: true,
               infiniteTroops: this.infiniteTroops,
-              donateTroops: this.donateTroops,
               instantBuild: this.instantBuild,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
