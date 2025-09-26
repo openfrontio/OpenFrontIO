@@ -483,6 +483,10 @@ export interface Unit {
   // Warships
   setPatrolTile(tile: TileRef): void;
   patrolTile(): TileRef | undefined;
+
+  // Transport Ships
+  setEstimatedArrivalTick(tick: number | null): void;
+  estimatedArrivalTick(): number | null | undefined;
 }
 
 export interface TerraNullius {
