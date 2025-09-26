@@ -179,6 +179,10 @@ export class TransportShipExecution implements Execution {
       // Reset path length so we recompute for the new path
       this.pathLength = null;
       this.journeyStartTick = null;
+
+      if (this.boat.targetTile() !== this.dst) {
+        this.boat.setTargetTile(this.dst);
+      }
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
