@@ -197,35 +197,42 @@ export class PlayerView {
       );
     }
 
+    const defaultSecondaryColor = this.game
+      .config()
+      .theme()
+      .territoryColor(this)
+      .darken(0.125)
+      .toHex();
+
     const pattern = this.cosmetics.pattern;
     if (pattern) {
       const territoryColor = this.game.config().theme().territoryColor(this);
       pattern.colorPalette ??= {
         name: "",
         primaryColor: territoryColor.toHex(),
-        secondaryColor: territoryColor.darken(0.125).toHex(),
+        secondaryColor: defaultSecondaryColor,
       } satisfies ColorPalette;
     }
 
-    if (
-      this.team() === null &&
-      this.cosmetics.pattern?.colorPalette?.primaryColor !== undefined
-    ) {
+    if (this.team() === null) {
       this._territoryColor = colord(
-        this.cosmetics.pattern.colorPalette.primaryColor,
+        this.cosmetics.color?.color ??
+          this.cosmetics.pattern?.colorPalette?.primaryColor ??
+          this.game.config().theme().territoryColor(this).toHex(),
       );
-    } else {
-      this._territoryColor = this.game.config().theme().territoryColor(this);
     }
 
-    if (this.cosmetics.pattern?.colorPalette?.secondaryColor !== undefined) {
-      this._borderColor = colord(
-        this.cosmetics.pattern.colorPalette.secondaryColor,
-      );
-    } else if (this.game.myClientID() === this.data.clientID) {
-      this._borderColor = this.game.config().theme().focusedBorderColor();
+    if (pattern === undefined) {
+      if (this.game.myClientID() === this.data.clientID) {
+        this._borderColor = this.game.config().theme().focusedBorderColor();
+      } else {
+        this._borderColor = colord(defaultSecondaryColor);
+      }
     } else {
-      this._borderColor = this.game.config().theme().borderColor(this);
+      this._borderColor = colord(
+        this.cosmetics.pattern?.colorPalette?.secondaryColor ??
+          defaultSecondaryColor,
+      );
     }
 
     this._defendedBorderColors = this.game

@@ -148,10 +148,26 @@ export class UserSettings {
   }
 
   setSelectedPatternName(patternName: string | undefined): void {
+    localStorage.removeItem("settings.territoryColor");
     if (patternName === undefined) {
       localStorage.removeItem(PATTERN_KEY);
     } else {
       localStorage.setItem(PATTERN_KEY, patternName);
+    }
+  }
+
+  getSelectedColor(): string | undefined {
+    const data = localStorage.getItem("settings.territoryColor") ?? undefined;
+    if (data === undefined) return undefined;
+    return data;
+  }
+
+  setSelectedColor(color: string | undefined): void {
+    localStorage.removeItem(PATTERN_KEY);
+    if (color === undefined) {
+      localStorage.removeItem("settings.territoryColor");
+    } else {
+      localStorage.setItem("settings.territoryColor", color);
     }
   }
 }
