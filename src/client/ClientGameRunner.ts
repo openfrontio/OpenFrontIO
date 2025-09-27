@@ -5,6 +5,7 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
+  PlayerPattern,
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
@@ -49,7 +50,7 @@ import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
-  patternName: string | undefined;
+  pattern: PlayerPattern | undefined;
   flag: string;
   playerName: string;
   clientID: ClientID;
@@ -87,7 +88,11 @@ export function joinLobby(
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
       );
-      terrainLoad = loadTerrainMap(message.gameMap, terrainMapFileLoader);
+      terrainLoad = loadTerrainMap(
+        message.gameMap,
+        message.gameMapSize,
+        terrainMapFileLoader,
+      );
       onPrestart();
     }
     if (message.type === "start") {
@@ -150,6 +155,7 @@ async function createClientGame(
   } else {
     gameMap = await loadTerrainMap(
       lobbyConfig.gameStartInfo.config.gameMap,
+      lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
     );
   }
@@ -167,8 +173,6 @@ async function createClientGame(
     lobbyConfig.gameStartInfo.players,
   );
 
-  console.log("going to init path finder");
-  console.log("inited path finder");
   const canvas = createCanvas();
   const gameRenderer = createRenderer(canvas, gameView, eventBus);
 

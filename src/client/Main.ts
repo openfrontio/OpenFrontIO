@@ -7,6 +7,7 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
+import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
@@ -508,7 +509,9 @@ class Client {
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        patternName: this.userSettings.getSelectedPatternName(),
+        pattern:
+          this.userSettings.getSelectedPatternName(await fetchCosmetics()) ??
+          undefined,
         flag:
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""

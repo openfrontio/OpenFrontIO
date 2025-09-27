@@ -13,6 +13,9 @@ import {
   ClientMessageSchema,
   ID,
   PartialGameRecordSchema,
+  PlayerCosmeticRefs,
+  PlayerCosmetics,
+  PlayerPattern,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
@@ -363,47 +366,16 @@ export async function startWorker() {
           }
         }
 
-        // Check if the flag is allowed
-        if (clientMsg.flag !== undefined) {
-          if (clientMsg.flag.startsWith("!")) {
-            const allowed = privilegeRefresher
-              .get()
-              .isCustomFlagAllowed(clientMsg.flag, flares);
-            if (allowed !== true) {
-              log.warn(`Custom flag ${allowed}: ${clientMsg.flag}`);
-              ws.close(1002, `Custom flag ${allowed}`);
-              return;
-            }
-          }
-        }
-
-        let pattern: string | undefined;
-        // Check if the pattern is allowed
-        if (clientMsg.patternName !== undefined) {
-          const result = privilegeRefresher
-            .get()
-            .isPatternAllowed(clientMsg.patternName, flares);
-          switch (result.type) {
-            case "allowed":
-              pattern = result.pattern;
-              break;
-            case "unknown":
-              log.warn(`Pattern ${clientMsg.patternName} unknown`);
-              ws.close(
-                1002,
-                "Could not look up pattern, backend may be offline",
-              );
-              return;
-            case "forbidden":
-              log.warn(`Pattern ${clientMsg.patternName}: ${result.reason}`);
-              ws.close(
-                1002,
-                `Pattern ${clientMsg.patternName}: ${result.reason}`,
-              );
-              return;
-            default:
-              assertNever(result);
-          }
+        const { perm, cosmetics, error } = checkCosmetics(
+          clientMsg.cosmetics,
+          flares ?? [],
+        );
+        if (perm === "forbidden") {
+          log.warn(`Forbidden: ${error}`, {
+            clientID: clientMsg.clientID,
+          });
+          ws.close(1002, error);
+          return;
         }
 
         // Create client and add to game
@@ -416,8 +388,7 @@ export async function startWorker() {
           ip,
           clientMsg.username,
           ws,
-          clientMsg.flag,
-          pattern,
+          cosmetics,
         );
 
         const wasFound = gm.addClient(
@@ -452,6 +423,76 @@ export async function startWorker() {
       ws.removeAllListeners();
     });
   });
+
+  function checkCosmetics(
+    cosmetics: PlayerCosmeticRefs | undefined,
+    flares: readonly string[],
+  ): {
+    perm: "forbidden" | "allowed";
+    cosmetics?: PlayerCosmetics | undefined;
+    error?: string;
+  } {
+    if (cosmetics === undefined) {
+      return {
+        perm: "allowed",
+        cosmetics: undefined,
+      };
+    }
+    // Check if the flag is allowed
+    if (cosmetics.flag !== undefined) {
+      if (cosmetics.flag.startsWith("!")) {
+        const allowed = privilegeRefresher
+          .get()
+          .isCustomFlagAllowed(cosmetics.flag, flares);
+        if (allowed !== true) {
+          log.warn(`Custom flag ${allowed}: ${cosmetics.flag}`);
+          return {
+            perm: "forbidden",
+            error: `Custom flag ${allowed}`,
+          };
+        }
+      }
+    }
+
+    let pattern: PlayerPattern | undefined;
+    // Check if the pattern is allowed
+    if (cosmetics.patternName !== undefined) {
+      const result = privilegeRefresher
+        .get()
+        .isPatternAllowed(
+          flares,
+          cosmetics.patternName,
+          cosmetics.patternColorPaletteName ?? null,
+        );
+      switch (result.type) {
+        case "allowed":
+          pattern = result.pattern;
+          break;
+        case "unknown":
+          log.warn(`Pattern ${cosmetics.patternName} unknown`);
+          return {
+            perm: "forbidden",
+            error: "Could not look up pattern, backend may be offline",
+          };
+        case "forbidden":
+          log.warn(`Pattern ${cosmetics.patternName}: ${result.reason}`);
+          return {
+            perm: "forbidden",
+            error: `Pattern ${cosmetics.patternName}: ${result.reason}`,
+          };
+        default:
+          assertNever(result);
+      }
+    }
+
+    return {
+      perm: "allowed",
+      cosmetics: {
+        flag: cosmetics.flag,
+        pattern: pattern,
+      },
+    };
+  }
 
   // The load balancer will handle routing to this server based on path
   const PORT = config.workerPortByIndex(workerId);

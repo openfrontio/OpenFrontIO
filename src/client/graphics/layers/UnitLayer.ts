@@ -201,7 +201,7 @@ export class UnitLayer implements Layer {
           this.game.x(t),
           this.game.y(t),
           this.relationship(unit),
-          this.theme.territoryColor(unit.owner()),
+          unit.owner().territoryColor(),
           150,
           this.unitTrailContext,
         );
@@ -321,14 +321,14 @@ export class UnitLayer implements Layer {
       this.game.x(unit.tile()),
       this.game.y(unit.tile()),
       rel,
-      this.theme.borderColor(unit.owner()),
+      unit.owner().borderColor(),
       255,
     );
     this.paintCell(
       this.game.x(unit.lastTile()),
       this.game.y(unit.lastTile()),
       rel,
-      this.theme.borderColor(unit.owner()),
+      unit.owner().borderColor(),
       255,
     );
   }
@@ -369,7 +369,7 @@ export class UnitLayer implements Layer {
             this.game.x(t),
             this.game.y(t),
             rel,
-            this.theme.territoryColor(other.owner()),
+            other.owner().territoryColor(),
             150,
             this.unitTrailContext,
           );
@@ -410,7 +410,7 @@ export class UnitLayer implements Layer {
 
     this.drawTrail(
       trail.slice(-newTrailSize),
-      this.theme.territoryColor(unit.owner()),
+      unit.owner().territoryColor(),
       rel,
     );
     this.drawSprite(unit);
@@ -430,7 +430,7 @@ export class UnitLayer implements Layer {
         this.game.x(unit.tile()),
         this.game.y(unit.tile()),
         rel,
-        this.theme.borderColor(unit.owner()),
+        unit.owner().borderColor(),
         255,
       );
     }
@@ -454,11 +454,7 @@ export class UnitLayer implements Layer {
     trail.push(unit.lastTile());
 
     // Paint trail
-    this.drawTrail(
-      trail.slice(-1),
-      this.theme.territoryColor(unit.owner()),
-      rel,
-    );
+    this.drawTrail(trail.slice(-1), unit.owner().territoryColor(), rel);
     this.drawSprite(unit);
 
     if (!unit.isActive()) {

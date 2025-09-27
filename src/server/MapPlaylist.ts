@@ -3,6 +3,7 @@ import {
   Difficulty,
   Duos,
   GameMapName,
+  GameMapSize,
   GameMapType,
   GameMode,
   GameType,
@@ -77,11 +78,12 @@ export class MapPlaylist {
 
     // Create the default public game config (from your GameManager)
     return {
-      donateGold: true,
-      donateTroops: true,
+      donateGold: false,
+      donateTroops: false,
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,

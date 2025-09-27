@@ -85,6 +85,9 @@ export class GameServer {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
     }
+    if (gameConfig.gameMapSize !== undefined) {
+      this.gameConfig.gameMapSize = gameConfig.gameMapSize;
+    }
     if (gameConfig.difficulty !== undefined) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
@@ -357,6 +360,7 @@ export class GameServer {
     const prestartMsg = ServerPrestartMessageSchema.safeParse({
       type: "prestart",
       gameMap: this.gameConfig.gameMap,
+      gameMapSize: this.gameConfig.gameMapSize,
     });
 
     if (!prestartMsg.success) {
@@ -395,8 +399,7 @@ export class GameServer {
       players: this.activeClients.map((c) => ({
         username: c.username,
         clientID: c.clientID,
-        pattern: c.pattern,
-        flag: c.flag,
+        cosmetics: c.cosmetics,
       })),
     });
     if (!result.success) {
@@ -682,6 +685,7 @@ export class GameServer {
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
+          cosmetics: player.cosmetics,
         } satisfies PlayerRecord;
       },
     );

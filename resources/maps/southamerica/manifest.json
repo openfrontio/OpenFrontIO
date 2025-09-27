@@ -1,13 +1,18 @@
 {
   "map": {
-    "height": 2378,
+    "height": 2376,
     "num_land_tiles": 1411064,
-    "width": 1746
+    "width": 1744
   },
-  "mini_map": {
-    "height": 1189,
+  "map16x": {
+    "height": 594,
+    "num_land_tiles": 81182,
+    "width": 436
+  },
+  "map4x": {
+    "height": 1188,
     "num_land_tiles": 342861,
-    "width": 873
+    "width": 872
   },
   "name": "Americas",
   "nations": [
