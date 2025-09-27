@@ -107,6 +107,9 @@ export class PlayerPanel extends LitElement implements Layer {
     this.eventBus.on(MouseUpEvent, () => this.hide());
 
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
+    if (!this.ctModal) {
+      console.warn("ChatModal element not found in DOM");
+    }
   }
 
   async tick() {
@@ -261,6 +264,12 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private handleChat(e: Event, sender: PlayerView, other: PlayerView) {
     e.stopPropagation();
+
+    if (!this.ctModal) {
+      console.warn("ChatModal element not found in DOM");
+      return;
+    }
+
     this.ctModal.open(sender, other);
     this.hide();
   }
@@ -351,7 +360,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private getTraitorRemainingSeconds(player: PlayerView): number | null {
-    const ticksLeft = player.data.getTraitorRemainingTicks ?? 0;
+    const ticksLeft = player.data.traitorRemainingTicks ?? 0;
     if (!player.isTraitor() || ticksLeft <= 0) return null;
     return Math.ceil(ticksLeft / 10); // 10 ticks = 1 second
   }
@@ -718,7 +727,7 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!this.tile) return html``;
 
     const owner = this.g.owner(this.tile);
-    if (!owner || !owner.isPlayer || !owner.isPlayer()) {
+    if (!owner || !owner.isPlayer()) {
       this.hide();
       console.warn("Tile is not owned by a player");
       return html``;
@@ -774,6 +783,8 @@ export class PlayerPanel extends LitElement implements Layer {
               @click=${this.handleClose}
               class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center
                      rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
+              aria-label=${translateText("player_panel.close") || "Close"}
+              title=${translateText("player_panel.close") || "Close"}
             >
               ✕
             </button>

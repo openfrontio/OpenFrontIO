@@ -143,7 +143,7 @@ export class PlayerImpl implements Player {
       allies: this.alliances().map((a) => a.other(this).smallID()),
       embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
       isTraitor: this.isTraitor(),
-      getTraitorRemainingTicks: this.getTraitorRemainingTicks(),
+      traitorRemainingTicks: this.getTraitorRemainingTicks(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
       outgoingAttacks: this._outgoingAttacks.map((a) => {

@@ -346,7 +346,7 @@ export class PlayerView {
     return this.data.isTraitor;
   }
   getTraitorRemainingTicks(): number {
-    return this.data.getTraitorRemainingTicks;
+    return this.data.traitorRemainingTicks;
   }
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;

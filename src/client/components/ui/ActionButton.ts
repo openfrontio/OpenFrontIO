@@ -59,8 +59,9 @@ export const actionButton = (props: ActionButtonProps): TemplateResult => {
       class="${buttonClass}"
       title="${title}"
       ?disabled=${disabled}
+      aria-label="${title}"
     >
-      <img src=${icon} alt=${iconAlt} class="${ICON_SIZE}" />
+      <img src=${icon} alt=${iconAlt} aria-hidden="true" class="${ICON_SIZE}" />
       <span class="${TEXT_SIZE}">${label}</span>
     </button>
   `;
