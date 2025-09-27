@@ -740,24 +740,24 @@ export class PlayerPanel extends LitElement implements Layer {
         .traitor-ring {
           border-radius: 1rem;
           box-shadow:
-            0 0 0 2px rgba(239, 68, 68, 0.28),
-            0 0 10px 3px rgba(239, 68, 68, 0.18),
-            inset 0 0 12px rgba(239, 68, 68, 0.09);
+            0 0 0 2px rgba(239, 68, 68, 0.34),
+            0 0 12px 4px rgba(239, 68, 68, 0.22),
+            inset 0 0 14px rgba(239, 68, 68, 0.13);
           animation: glowPulse 2.4s ease-in-out infinite;
         }
         @keyframes glowPulse {
           0%,
           100% {
             box-shadow:
-              0 0 0 2px rgba(239, 68, 68, 0.18),
-              0 0 6px 1.5px rgba(239, 68, 68, 0.11),
-              inset 0 0 6px rgba(239, 68, 68, 0.05);
+              0 0 0 2px rgba(239, 68, 68, 0.22),
+              0 0 8px 2px rgba(239, 68, 68, 0.15),
+              inset 0 0 8px rgba(239, 68, 68, 0.07);
           }
           50% {
             box-shadow:
-              0 0 0 3px rgba(239, 68, 68, 0.32),
-              0 0 16px 5px rgba(239, 68, 68, 0.22),
-              inset 0 0 16px rgba(239, 68, 68, 0.11);
+              0 0 0 4px rgba(239, 68, 68, 0.38),
+              0 0 18px 6px rgba(239, 68, 68, 0.26),
+              inset 0 0 18px rgba(239, 68, 68, 0.15);
           }
         }
       </style>
