@@ -133,6 +133,22 @@ export class StatsImpl implements Stats {
     p.units[type][index] += _bigint(value);
   }
 
+  private _addConquest(player: Player) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    if (p.conquests === undefined) {
+      p.conquests = _bigint(1);
+    } else {
+      p.conquests += _bigint(1);
+    }
+  }
+
+  private _addPlayerKilled(player: Player, tick: number) {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.killedAt = _bigint(tick);
+  }
+
   attack(
     player: Player,
     target: Player | TerraNullius,
@@ -225,6 +241,7 @@ export class StatsImpl implements Stats {
 
   goldWar(player: Player, captured: Player, gold: BigIntLike): void {
     this._addGold(player, GOLD_INDEX_WAR, gold);
+    this._addConquest(player);
   }
 
   unitBuild(player: Player, type: OtherUnitType): void {
@@ -245,5 +262,9 @@ export class StatsImpl implements Stats {
 
   unitLose(player: Player, type: OtherUnitType): void {
     this._addOtherUnit(player, type, OTHER_INDEX_LOST, 1);
+  }
+
+  playerKilled(player: Player, tick: number): void {
+    this._addPlayerKilled(player, tick);
   }
 }
