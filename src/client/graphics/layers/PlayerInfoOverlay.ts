@@ -268,13 +268,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     let playerType = "";
     switch (player.type()) {
       case PlayerType.Bot:
-        playerType = translateText("player_info_overlay.bot");
+        playerType = translateText("player_type.bot");
         break;
       case PlayerType.FakeHuman:
-        playerType = translateText("player_info_overlay.nation");
+        playerType = translateText("player_type.nation");
         break;
       case PlayerType.Human:
-        playerType = translateText("player_info_overlay.player");
+        playerType = translateText("player_type.player");
         break;
     }
 

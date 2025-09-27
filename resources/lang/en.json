@@ -540,6 +540,11 @@
     "upgrade": "Upgrade",
     "level": "Level"
   },
+  "player_type": {
+    "player": "Player",
+    "nation": "Nation",
+    "bot": "Bot"
+  },
   "relation": {
     "hostile": "Hostile",
     "distrustful": "Distrustful",
