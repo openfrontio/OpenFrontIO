@@ -404,6 +404,9 @@ export class PlayerView {
   isTraitor(): boolean {
     return this.data.isTraitor;
   }
+  getTraitorRemainingTicks(): number {
+    return this.data.traitorRemainingTicks;
+  }
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;
   }
