@@ -93,6 +93,32 @@ export class NukeExecution implements Execution {
     }
   }
 
+  private maybeRevokeAllianceRequests(toDestroy: Set<TileRef>) {
+    if (this.nuke === null) {
+      throw new Error("Not initialized");
+    }
+    const attacked = new Map<Player, number>();
+    for (const tile of toDestroy) {
+      const owner = this.mg.owner(tile);
+      if (owner.isPlayer()) {
+        const prev = attacked.get(owner) ?? 0;
+        attacked.set(owner, prev + 1);
+      }
+    }
+
+    const threshold = this.mg.config().nukeAllianceBreakThreshold();
+    for (const [other, tilesDestroyed] of attacked) {
+      if (tilesDestroyed > threshold) {
+        const allianceRequest = other
+          .incomingAllianceRequests()
+          .find((ar) => ar.requestor() === this.player);
+        if (allianceRequest) {
+          allianceRequest?.reject();
+        }
+      }
+    }
+  }
+
   tick(ticks: number): void {
     if (this.nuke === null) {
       const spawn = this.src ?? this.player.canBuild(this.nukeType, this.dst);
@@ -112,7 +138,9 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
-      this.maybeBreakAlliances(this.tilesToDestroy());
+      const tilesToDestroy = this.tilesToDestroy();
+      this.maybeRevokeAllianceRequests(tilesToDestroy);
+      this.maybeBreakAlliances(tilesToDestroy);
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
         if (!target.isPlayer()) {
