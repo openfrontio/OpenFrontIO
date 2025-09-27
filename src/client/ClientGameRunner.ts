@@ -5,10 +5,11 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
+  PlayerPattern,
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
+import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { PlayerActions, UnitType } from "../core/game/Game";
@@ -49,7 +50,7 @@ import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
-  patternName: string | undefined;
+  pattern: PlayerPattern | undefined;
   flag: string;
   playerName: string;
   clientID: ClientID;
@@ -84,14 +85,22 @@ export function joinLobby(
 
   const onmessage = (message: ServerMessage) => {
     if (message.type === "prestart") {
-      console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
-      terrainLoad = loadTerrainMap(message.gameMap, terrainMapFileLoader);
+      console.log(
+        `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
+      );
+      terrainLoad = loadTerrainMap(
+        message.gameMap,
+        message.gameMapSize,
+        terrainMapFileLoader,
+      );
       onPrestart();
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
       onPrestart();
-      console.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
+      console.log(
+        `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
+      );
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
@@ -146,6 +155,7 @@ async function createClientGame(
   } else {
     gameMap = await loadTerrainMap(
       lobbyConfig.gameStartInfo.config.gameMap,
+      lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
     );
   }
@@ -163,8 +173,6 @@ async function createClientGame(
     lobbyConfig.gameStartInfo.players,
   );
 
-  console.log("going to init path finder");
-  console.log("inited path finder");
   const canvas = createCanvas();
   const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
@@ -223,7 +231,7 @@ export class ClientGameRunner {
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
-    const record = createGameRecord(
+    const record = createPartialGameRecord(
       this.lobby.gameStartInfo.gameID,
       this.lobby.gameStartInfo.config,
       players,
@@ -232,7 +240,6 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       update.winner,
-      this.lobby.serverConfig,
     );
     endGame(record);
   }
@@ -274,7 +281,7 @@ export class ClientGameRunner {
           this.lobby.clientID,
         );
         console.error(gu.stack);
-        this.stop(true);
+        this.stop();
         return;
       }
       this.transport.turnComplete();
@@ -364,12 +371,12 @@ export class ClientGameRunner {
     this.transport.connect(onconnect, onmessage);
   }
 
-  public stop(saveFullGame: boolean = false) {
+  public stop() {
     if (!this.isActive) return;
 
     this.isActive = false;
     this.worker.cleanup();
-    this.transport.leaveGame(saveFullGame);
+    this.transport.leaveGame();
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;

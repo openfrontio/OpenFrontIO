@@ -1,3 +1,4 @@
+import compression from "compression";
 import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import http from "http";
@@ -6,18 +7,20 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
-  GameRecord,
-  GameRecordSchema,
   ID,
+  PartialGameRecordSchema,
+  PlayerCosmeticRefs,
+  PlayerCosmetics,
+  PlayerPattern,
   ServerErrorMessage,
 } from "../core/Schemas";
+import { replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
-import { archive, readGameRecord } from "./Archive";
+import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
@@ -81,6 +84,7 @@ export async function startWorker() {
   });
 
   app.set("trust proxy", 3);
+  app.use(compression());
   app.use(express.json());
   app.use(express.static(path.join(__dirname, "../../out")));
   app.use(
@@ -210,55 +214,47 @@ export async function startWorker() {
     res.json(game.gameInfo());
   });
 
-  app.get("/api/archived_game/:id", async (req, res) => {
-    const gameRecord = await readGameRecord(req.params.id);
-
-    if (!gameRecord) {
-      return res.status(404).json({
-        success: false,
-        error: "Game not found",
-        exists: false,
-      });
-    }
-
-    if (
-      config.env() !== GameEnv.Dev &&
-      gameRecord.gitCommit !== config.gitCommit()
-    ) {
-      log.warn(
-        `git commit mismatch for game ${req.params.id}, expected ${config.gitCommit()}, got ${gameRecord.gitCommit}`,
-      );
-      return res.status(409).json({
-        success: false,
-        error: "Version mismatch",
-        exists: true,
-        details: {
-          expectedCommit: config.gitCommit(),
-          actualCommit: gameRecord.gitCommit,
-        },
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      exists: true,
-      gameRecord: gameRecord,
-    });
-  });
-
   app.post("/api/archive_singleplayer_game", async (req, res) => {
-    const result = GameRecordSchema.safeParse(req.body);
-    if (!result.success) {
-      const error = z.prettifyError(result.error);
-      log.info(error);
-      return res.status(400).json({ error });
-    }
+    try {
+      const record = req.body;
 
-    const gameRecord: GameRecord = result.data;
-    archive(gameRecord);
-    res.json({
-      success: true,
-    });
+      const result = PartialGameRecordSchema.safeParse(record);
+      if (!result.success) {
+        const error = z.prettifyError(result.error);
+        log.info(error);
+        return res.status(400).json({ error });
+      }
+      const gameRecord = result.data;
+
+      if (gameRecord.info.config.gameType !== GameType.Singleplayer) {
+        log.warn(
+          `cannot archive singleplayer with game type ${gameRecord.info.config.gameType}`,
+          {
+            gameID: gameRecord.info.gameID,
+          },
+        );
+        return res.status(400).json({ error: "Invalid request" });
+      }
+
+      if (result.data.info.players.length !== 1) {
+        log.warn(`cannot archive singleplayer game multiple players`, {
+          gameID: gameRecord.info.gameID,
+        });
+        return res.status(400).json({ error: "Invalid request" });
+      }
+
+      log.info("archiving singleplayer game", {
+        gameID: gameRecord.info.gameID,
+      });
+
+      archive(finalizeGameRecord(gameRecord));
+      res.json({
+        success: true,
+      });
+    } catch (error) {
+      log.error("Error processing archive request:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 
   app.post("/api/kick_player/:gameID/:clientID", async (req, res) => {
@@ -311,7 +307,9 @@ export async function startWorker() {
           // Ignore ping
           return;
         } else if (clientMsg.type !== "join") {
-          log.warn(`Invalid message before join: ${JSON.stringify(clientMsg)}`);
+          log.warn(
+            `Invalid message before join: ${JSON.stringify(clientMsg, replacer)}`,
+          );
           return;
         }
 
@@ -368,47 +366,16 @@ export async function startWorker() {
           }
         }
 
-        // Check if the flag is allowed
-        if (clientMsg.flag !== undefined) {
-          if (clientMsg.flag.startsWith("!")) {
-            const allowed = privilegeRefresher
-              .get()
-              .isCustomFlagAllowed(clientMsg.flag, flares);
-            if (allowed !== true) {
-              log.warn(`Custom flag ${allowed}: ${clientMsg.flag}`);
-              ws.close(1002, `Custom flag ${allowed}`);
-              return;
-            }
-          }
-        }
-
-        let pattern: string | undefined;
-        // Check if the pattern is allowed
-        if (clientMsg.patternName !== undefined) {
-          const result = privilegeRefresher
-            .get()
-            .isPatternAllowed(clientMsg.patternName, flares);
-          switch (result.type) {
-            case "allowed":
-              pattern = result.pattern;
-              break;
-            case "unknown":
-              log.warn(`Pattern ${clientMsg.patternName} unknown`);
-              ws.close(
-                1002,
-                "Could not look up pattern, backend may be offline",
-              );
-              return;
-            case "forbidden":
-              log.warn(`Pattern ${clientMsg.patternName}: ${result.reason}`);
-              ws.close(
-                1002,
-                `Pattern ${clientMsg.patternName}: ${result.reason}`,
-              );
-              return;
-            default:
-              assertNever(result);
-          }
+        const { perm, cosmetics, error } = checkCosmetics(
+          clientMsg.cosmetics,
+          flares ?? [],
+        );
+        if (perm === "forbidden") {
+          log.warn(`Forbidden: ${error}`, {
+            clientID: clientMsg.clientID,
+          });
+          ws.close(1002, error);
+          return;
         }
 
         // Create client and add to game
@@ -421,8 +388,7 @@ export async function startWorker() {
           ip,
           clientMsg.username,
           ws,
-          clientMsg.flag,
-          pattern,
+          cosmetics,
         );
 
         const wasFound = gm.addClient(
@@ -457,6 +423,76 @@ export async function startWorker() {
       ws.removeAllListeners();
     });
   });
+
+  function checkCosmetics(
+    cosmetics: PlayerCosmeticRefs | undefined,
+    flares: readonly string[],
+  ): {
+    perm: "forbidden" | "allowed";
+    cosmetics?: PlayerCosmetics | undefined;
+    error?: string;
+  } {
+    if (cosmetics === undefined) {
+      return {
+        perm: "allowed",
+        cosmetics: undefined,
+      };
+    }
+    // Check if the flag is allowed
+    if (cosmetics.flag !== undefined) {
+      if (cosmetics.flag.startsWith("!")) {
+        const allowed = privilegeRefresher
+          .get()
+          .isCustomFlagAllowed(cosmetics.flag, flares);
+        if (allowed !== true) {
+          log.warn(`Custom flag ${allowed}: ${cosmetics.flag}`);
+          return {
+            perm: "forbidden",
+            error: `Custom flag ${allowed}`,
+          };
+        }
+      }
+    }
+
+    let pattern: PlayerPattern | undefined;
+    // Check if the pattern is allowed
+    if (cosmetics.patternName !== undefined) {
+      const result = privilegeRefresher
+        .get()
+        .isPatternAllowed(
+          flares,
+          cosmetics.patternName,
+          cosmetics.patternColorPaletteName ?? null,
+        );
+      switch (result.type) {
+        case "allowed":
+          pattern = result.pattern;
+          break;
+        case "unknown":
+          log.warn(`Pattern ${cosmetics.patternName} unknown`);
+          return {
+            perm: "forbidden",
+            error: "Could not look up pattern, backend may be offline",
+          };
+        case "forbidden":
+          log.warn(`Pattern ${cosmetics.patternName}: ${result.reason}`);
+          return {
+            perm: "forbidden",
+            error: `Pattern ${cosmetics.patternName}: ${result.reason}`,
+          };
+        default:
+          assertNever(result);
+      }
+    }
+
+    return {
+      perm: "allowed",
+      cosmetics: {
+        flag: cosmetics.flag,
+        pattern: pattern,
+      },
+    };
+  }
 
   // The load balancer will handle routing to this server based on path
   const PORT = config.workerPortByIndex(workerId);

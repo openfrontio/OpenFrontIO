@@ -16,8 +16,6 @@ import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if neede
 
 const malusForRetreat = 25;
 export class AttackExecution implements Execution {
-  private breakAlliance = false;
-  private wasAlliedAtInit = false; // Store alliance state at initialization
   private active: boolean = true;
   private toConquer = new FlatBinaryHeap();
 
@@ -66,6 +64,18 @@ export class AttackExecution implements Execution {
       console.error(`Player ${this._owner} cannot attack itself`);
       this.active = false;
       return;
+    }
+
+    // ALLIANCE CHECK — block attacks on friendly (ally or same team)
+    if (this.target.isPlayer()) {
+      const targetPlayer = this.target as Player;
+      if (this._owner.isFriendly(targetPlayer)) {
+        console.warn(
+          `${this._owner.displayName()} cannot attack ${targetPlayer.displayName()} because they are friendly (allied or same team)`,
+        );
+        this.active = false;
+        return;
+      }
     }
 
     if (this.target && this.target.isPlayer()) {
@@ -149,11 +159,6 @@ export class AttackExecution implements Execution {
     }
 
     if (this.target.isPlayer()) {
-      // Store the alliance state at initialization time to prevent race conditions
-      this.wasAlliedAtInit = this._owner.isAlliedWith(this.target);
-      if (this.wasAlliedAtInit) {
-        this.breakAlliance = true;
-      }
       this.target.updateRelation(this._owner, -80);
     }
   }
@@ -222,20 +227,8 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    const alliance = targetPlayer
-      ? this._owner.allianceWith(targetPlayer)
-      : null;
-    if (this.breakAlliance && alliance !== null) {
-      this.breakAlliance = false;
-      this._owner.breakAlliance(alliance);
-    }
-    if (
-      targetPlayer &&
-      this._owner.isAlliedWith(targetPlayer) &&
-      !this.wasAlliedAtInit
-    ) {
+    if (targetPlayer && this._owner.isFriendly(targetPlayer)) {
       // In this case a new alliance was created AFTER the attack started.
-      // We should retreat to avoid the attacker becoming a traitor.
       this.retreat();
       return;
     }

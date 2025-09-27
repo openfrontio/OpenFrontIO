@@ -377,14 +377,17 @@ export class Transport {
       lastTurn: numTurns,
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
-      flag: this.lobbyConfig.flag,
-      patternName: this.lobbyConfig.patternName,
+      cosmetics: {
+        flag: this.lobbyConfig.flag,
+        patternName: this.lobbyConfig.pattern?.name,
+        patternColorPaletteName: this.lobbyConfig.pattern?.colorPalette?.name,
+      },
     } satisfies ClientJoinMessage);
   }
 
-  leaveGame(saveFullGame: boolean = false) {
+  leaveGame() {
     if (this.isLocal) {
-      this.localServer.endGame(saveFullGame);
+      this.localServer.endGame();
       return;
     }
     this.stopPing();

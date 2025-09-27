@@ -143,7 +143,7 @@ export class UILayer implements Layer {
     if (this.context === null || this.theme === null) {
       return;
     }
-    const color = this.theme.borderColor(unit.owner());
+    const color = unit.owner().borderColor();
     this.context.fillStyle = color.toRgbString();
     this.context.fillRect(startX, startY, icon.width, icon.height);
     this.context.drawImage(icon, startX, startY);
@@ -208,7 +208,7 @@ export class UILayer implements Layer {
 
     // Get the unit's owner color for the box
     if (this.theme === null) throw new Error("missing theme");
-    const ownerColor = this.theme.territoryColor(unit.owner());
+    const ownerColor = unit.owner().territoryColor();
 
     // Create a brighter version of the owner color for the selection
     const selectionColor = ownerColor.lighten(0.2);

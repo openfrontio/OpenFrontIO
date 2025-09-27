@@ -21,8 +21,6 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
-  GameMode,
-  GameType,
   Gold,
   MessageType,
   MutableAlliance,
@@ -583,12 +581,8 @@ export class PlayerImpl implements Player {
     }
     if (
       recipient.type() === PlayerType.Human &&
-      this.mg.config().gameConfig().gameMode === GameMode.FFA &&
-      this.mg.config().gameConfig().gameType === GameType.Public
+      this.mg.config().donateGold() === false
     ) {
-      return false;
-    }
-    if (this.mg.config().donateGold() === false) {
       return false;
     }
     for (const donation of this.sentDonations) {
@@ -610,12 +604,8 @@ export class PlayerImpl implements Player {
     }
     if (
       recipient.type() === PlayerType.Human &&
-      this.mg.config().gameConfig().gameMode === GameMode.FFA &&
-      this.mg.config().gameConfig().gameType === GameType.Public
+      this.mg.config().donateTroops() === false
     ) {
-      return false;
-    }
-    if (this.mg.config().donateTroops() === false) {
       return false;
     }
     for (const donation of this.sentDonations) {
