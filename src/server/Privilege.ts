@@ -1,22 +1,18 @@
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
-import { PlayerPattern } from "../core/Schemas";
+import {
+  PlayerColor,
+  PlayerCosmeticRefs,
+  PlayerCosmetics,
+  PlayerPattern,
+} from "../core/Schemas";
 
-type PatternResult =
-  | { type: "allowed"; pattern: PlayerPattern }
-  | { type: "unknown" }
+type CosmeticResult =
+  | { type: "allowed"; cosmetics: PlayerCosmetics }
   | { type: "forbidden"; reason: string };
 
 export interface PrivilegeChecker {
-  isPatternAllowed(
-    flares: readonly string[],
-    name: string,
-    colorPaletteName: string | null,
-  ): PatternResult;
-  isCustomFlagAllowed(
-    flag: string,
-    flares: readonly string[] | undefined,
-  ): true | "restricted" | "invalid";
+  isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult;
 }
 
 export class PrivilegeCheckerImpl implements PrivilegeChecker {
@@ -25,28 +21,53 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     private b64urlDecode: (base64: string) => Uint8Array,
   ) {}
 
+  isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
+    const cosmetics: PlayerCosmetics = {};
+    if (refs.patternName) {
+      try {
+        cosmetics.pattern = this.isPatternAllowed(
+          flares,
+          refs.patternName,
+          refs.patternColorPaletteName ?? null,
+        );
+      } catch (e) {
+        return { type: "forbidden", reason: "invalid pattern: " + e.message };
+      }
+    }
+    if (refs.color) {
+      try {
+        cosmetics.color = this.isColorAllowed(flares, refs.color);
+      } catch (e) {
+        return { type: "forbidden", reason: "invalid color: " + e.message };
+      }
+    }
+
+    return { type: "allowed", cosmetics };
+  }
+
   isPatternAllowed(
     flares: readonly string[],
     name: string,
     colorPaletteName: string | null,
-  ): PatternResult {
+  ): PlayerPattern {
     // Look for the pattern in the cosmetics.json config
     const found = this.cosmetics.patterns[name];
-    if (!found) return { type: "forbidden", reason: "pattern not found" };
+    if (!found) throw new Error(`Pattern ${name} not found`);
 
     try {
       decodePatternData(found.pattern, this.b64urlDecode);
     } catch (e) {
-      return { type: "forbidden", reason: "invalid pattern" };
+      throw new Error(`Invalid pattern ${name}`);
     }
 
     const colorPalette = this.cosmetics.colorPalettes?.[colorPaletteName ?? ""];
 
     if (flares.includes("pattern:*")) {
       return {
-        type: "allowed",
-        pattern: { name: found.name, patternData: found.pattern, colorPalette },
-      };
+        name: found.name,
+        patternData: found.pattern,
+        colorPalette,
+      } satisfies PlayerPattern;
     }
 
     const flareName =
@@ -56,101 +77,28 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     if (flares.includes(flareName)) {
       // Player has a flare for this pattern
       return {
-        type: "allowed",
-        pattern: { name: found.name, patternData: found.pattern, colorPalette },
-      };
+        name: found.name,
+        patternData: found.pattern,
+        colorPalette,
+      } satisfies PlayerPattern;
     } else {
-      return { type: "forbidden", reason: "no flares for pattern" };
+      throw new Error(`No flares for pattern ${name}`);
     }
   }
 
-  isCustomFlagAllowed(
-    flag: string,
-    flares: readonly string[] | undefined,
-  ): true | "restricted" | "invalid" {
-    if (!flag.startsWith("!")) return "invalid";
-    const code = flag.slice(1);
-    if (!code) return "invalid";
-    const segments = code.split("_");
-    if (segments.length === 0) return "invalid";
-
-    const MAX_LAYERS = 6; // Maximum number of layers allowed
-    if (segments.length > MAX_LAYERS) return "invalid";
-
-    const superFlare = flares?.includes("flag:*") ?? false;
-
-    for (const segment of segments) {
-      const [layerKey, colorKey] = segment.split("-");
-      if (!layerKey || !colorKey) return "invalid";
-      const layer = this.cosmetics.flag?.layers[layerKey];
-      const color = this.cosmetics.flag?.color[colorKey];
-      if (!layer || !color) return "invalid";
-
-      // Super-flare bypasses all restrictions
-      if (superFlare) {
-        continue;
-      }
-
-      // Check layer restrictions
-      const layerSpec = layer;
-      let layerAllowed = false;
-      if (!layerSpec.flares) {
-        layerAllowed = true;
-      } else {
-        // By flare
-        if (
-          layerSpec.flares &&
-          flares?.some((f) => layerSpec.flares?.includes(f))
-        ) {
-          layerAllowed = true;
-        }
-        // By named flag:layer:{name}
-        if (flares?.includes(`flag:layer:${layerSpec.name}`)) {
-          layerAllowed = true;
-        }
-      }
-
-      // Check color restrictions
-      const colorSpec = color;
-      let colorAllowed = false;
-      if (!colorSpec.flares) {
-        colorAllowed = true;
-      } else {
-        // By flare
-        if (
-          colorSpec.flares &&
-          flares?.some((f) => colorSpec.flares?.includes(f))
-        ) {
-          colorAllowed = true;
-        }
-        // By named flag:color:{name}
-        if (flares?.includes(`flag:color:${colorSpec.name}`)) {
-          colorAllowed = true;
-        }
-      }
-
-      // If either part is restricted, block
-      if (!(layerAllowed && colorAllowed)) {
-        return "restricted";
-      }
+  isColorAllowed(flares: string[], color: string): PlayerColor {
+    const allowedColors = flares
+      .filter((flare) => flare.startsWith("color:"))
+      .map((flare) => "#" + flare.split(":")[1]);
+    if (!allowedColors.includes(color)) {
+      throw new Error(`Color ${color} not allowed`);
     }
-    return true;
+    return { color };
   }
 }
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
-  isPatternAllowed(
-    flares: readonly string[],
-    name: string,
-    colorPaletteName: string | null,
-  ): PatternResult {
-    return { type: "unknown" };
-  }
-
-  isCustomFlagAllowed(
-    flag: string,
-    flares: readonly string[] | undefined,
-  ): true | "restricted" | "invalid" {
-    return true;
+  isAllowed(flares: string[], refs: PlayerCosmeticRefs): CosmeticResult {
+    return { type: "allowed", cosmetics: {} };
   }
 }
