@@ -1,13 +1,18 @@
 {
   "map": {
-    "height": 1062,
-    "num_land_tiles": 1483208,
-    "width": 1778
+    "height": 1060,
+    "num_land_tiles": 1478803,
+    "width": 1776
   },
-  "mini_map": {
-    "height": 531,
-    "num_land_tiles": 365411,
-    "width": 889
+  "map16x": {
+    "height": 265,
+    "num_land_tiles": 88499,
+    "width": 444
+  },
+  "map4x": {
+    "height": 530,
+    "num_land_tiles": 364318,
+    "width": 888
   },
   "name": "BetweenTwoSeas",
   "nations": [

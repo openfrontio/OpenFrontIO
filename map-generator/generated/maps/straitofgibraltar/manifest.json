@@ -1,12 +1,12 @@
 {
   "map": {
     "height": 1476,
-    "num_land_tiles": 1998085,
+    "num_land_tiles": 1942981,
     "width": 2902
   },
   "mini_map": {
     "height": 738,
-    "num_land_tiles": 498123,
+    "num_land_tiles": 483724,
     "width": 1451
   },
   "name": "Strait of Gibraltar",

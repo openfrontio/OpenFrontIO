@@ -1,13 +1,18 @@
 {
   "map": {
-    "height": 1646,
+    "height": 1644,
     "num_land_tiles": 879264,
-    "width": 1562
+    "width": 1560
   },
-  "mini_map": {
-    "height": 823,
+  "map16x": {
+    "height": 411,
+    "num_land_tiles": 51660,
+    "width": 390
+  },
+  "map4x": {
+    "height": 822,
     "num_land_tiles": 215238,
-    "width": 781
+    "width": 780
   },
   "name": "East Asia",
   "nations": [
