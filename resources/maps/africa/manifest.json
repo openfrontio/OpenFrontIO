@@ -1,13 +1,18 @@
 {
   "map": {
     "height": 2032,
-    "num_land_tiles": 2184135,
-    "width": 1950
+    "num_land_tiles": 2183186,
+    "width": 1948
   },
-  "mini_map": {
+  "map16x": {
+    "height": 508,
+    "num_land_tiles": 130748,
+    "width": 487
+  },
+  "map4x": {
     "height": 1016,
-    "num_land_tiles": 538153,
-    "width": 975
+    "num_land_tiles": 537916,
+    "width": 974
   },
   "name": "Africa",
   "nations": [

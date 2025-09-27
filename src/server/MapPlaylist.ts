@@ -3,6 +3,7 @@ import {
   Difficulty,
   Duos,
   GameMapName,
+  GameMapSize,
   GameMapType,
   GameMode,
   GameType,
@@ -39,6 +40,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Italia: 6,
   Mars: 3,
   Mena: 6,
+  Montreal: 6,
   NorthAmerica: 5,
   Pangaea: 5,
   Pluto: 6,
@@ -76,11 +78,12 @@ export class MapPlaylist {
 
     // Create the default public game config (from your GameManager)
     return {
-      donateGold: true,
-      donateTroops: true,
+      donateGold: false,
+      donateTroops: false,
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
