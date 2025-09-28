@@ -37,7 +37,7 @@ import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
-import "./SendTroopsModal";
+import "./SendResourceModal";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -49,18 +49,44 @@ export class PlayerPanel extends LitElement implements Layer {
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
 
-  private troopsTarget: PlayerView | null = null;
   @state()
-  private showTroopsModal = false;
-
+  private openSend = false;
+  @state()
+  private sendMode: "troops" | "gold" = "troops";
+  @state()
+  private sendTarget: PlayerView | null = null;
   @state()
   public isVisible: boolean = false;
-
   @state()
   private allianceExpiryText: string | null = null;
-
   @state()
   private allianceExpirySeconds: number | null = null;
+
+  private openSendTroops(target: PlayerView) {
+    this.sendTarget = target;
+    this.sendMode = "troops";
+    this.openSend = true;
+  }
+
+  private openSendGold(target: PlayerView) {
+    this.sendTarget = target;
+    this.sendMode = "gold";
+    this.openSend = true;
+  }
+  private handleDonateTroopClick(e: Event, my: PlayerView, other: PlayerView) {
+    e.stopPropagation();
+    this.openSendTroops(other);
+  }
+
+  private handleDonateGoldClick(e: Event, my: PlayerView, other: PlayerView) {
+    e.stopPropagation();
+    this.openSendGold(other);
+  }
+
+  private closeSend = () => {
+    this.openSend = false;
+    this.sendTarget = null;
+  };
 
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
@@ -71,8 +97,8 @@ export class PlayerPanel extends LitElement implements Layer {
 
   public hide() {
     this.isVisible = false;
-    this.showTroopsModal = false;
-    this.troopsTarget = null;
+    this.openSend = false;
+    this.sendTarget = null;
     this.requestUpdate();
   }
 
@@ -101,52 +127,32 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
-  private handleDonateTroopClick(
-    e: Event,
-    myPlayer: PlayerView,
-    other: PlayerView,
-  ) {
-    e.stopPropagation();
-    this.troopsTarget = other;
-    this.showTroopsModal = true;
-    this.requestUpdate();
-  }
-
-  private handleDonateGoldClick(
-    e: Event,
-    myPlayer: PlayerView,
-    other: PlayerView,
-  ) {
-    e.stopPropagation();
-    this.eventBus.emit(new SendDonateGoldIntentEvent(other, null));
-    this.hide();
-  }
-
-  private handleConfirmSendTroops = (
+  private confirmSend = (
     e: CustomEvent<{ amount: number; closePanel?: boolean }>,
   ) => {
     const amount = Math.floor(Math.max(0, e.detail?.amount ?? 0));
-
     const myPlayer = this.g.myPlayer();
+    const target = this.sendTarget;
 
-    if (!this.troopsTarget || !myPlayer) return;
+    if (!myPlayer || !target || amount <= 0) return;
 
-    if (amount <= 0 || amount > myPlayer.troops()) return;
+    if (this.sendMode === "troops") {
+      if (amount > myPlayer.troops()) return;
+      this.eventBus.emit(new SendDonateTroopsIntentEvent(target, amount));
+    } else {
+      // Normalize bigint → number for UI logic
+      const rawGold =
+        typeof (myPlayer as any).gold === "function"
+          ? (myPlayer as any).gold()
+          : 0;
+      const myGold = Number(rawGold); // ensure number for comparisons/UI
+      if (amount > myGold) return;
 
-    this.eventBus.emit(
-      new SendDonateTroopsIntentEvent(this.troopsTarget, amount),
-    );
-    this.handleCloseTroopsModal();
-
-    // Close the PlayerPanel if requested
-    if (e.detail?.closePanel) {
-      this.hide();
+      this.eventBus.emit(new SendDonateGoldIntentEvent(target, BigInt(amount)));
     }
-  };
 
-  private handleCloseTroopsModal = () => {
-    this.showTroopsModal = false;
-    this.troopsTarget = null;
+    this.closeSend();
+    if (e.detail?.closePanel) this.hide();
   };
 
   private handleEmbargoClick(
@@ -332,17 +338,26 @@ export class PlayerPanel extends LitElement implements Layer {
                 </h1>
               </div>
 
-              ${this.showTroopsModal && this.troopsTarget
+              ${this.openSend && this.sendTarget
                 ? html`
-                    <send-troops-modal
-                      .myPlayer=${this.g.myPlayer()}
-                      .troopsTarget=${this.troopsTarget}
-                      .open=${this.showTroopsModal}
-                      .total=${myPlayer.troops()}
+                    <send-resource-modal
+                      .open=${this.openSend}
+                      .mode=${this.sendMode}
+                      .total=${this.sendMode === "troops"
+                        ? myPlayer.troops()
+                        : typeof (myPlayer as any).gold === "function"
+                          ? (myPlayer as any).gold()
+                          : 0}
                       .uiState=${this.uiState}
-                      @confirm=${this.handleConfirmSendTroops}
-                      @close=${this.handleCloseTroopsModal}
-                    ></send-troops-modal>
+                      .myPlayer=${myPlayer}
+                      .target=${this.sendTarget}
+                      .gameView=${this.g}
+                      .format=${this.sendMode === "troops"
+                        ? renderTroops
+                        : renderNumber}
+                      @confirm=${this.confirmSend}
+                      @close=${this.closeSend}
+                    ></send-resource-modal>
                   `
                 : ""}
 
