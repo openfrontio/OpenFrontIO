@@ -5,6 +5,9 @@ import {
   PlayerStatsTree,
   UserMeResponse,
 } from "../core/ApiSchemas";
+import "./components/baseComponents/stats/DiscordUserHeader";
+import "./components/baseComponents/stats/GameList";
+import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import {
@@ -15,6 +18,7 @@ import {
   logOut,
 } from "./jwt";
 import { translateText } from "./Utils";
+// import "./components/baseComponents/stats/PlayerStatsTree";
 
 @customElement("account-modal")
 export class AccountModal extends LitElement {
