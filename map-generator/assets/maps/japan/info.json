@@ -1,0 +1,65 @@
+{
+  "name": "japan",
+  "nations": [
+    {
+      "coordinates": [1206, 145],
+      "name": "Hokkaido",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1090, 410],
+      "name": "Tohoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1062, 584],
+      "name": "Kanto",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [920, 534],
+      "name": "Hokuriku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [953, 609],
+      "name": "Chubu",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [790, 669],
+      "name": "Kansai",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [613, 659],
+      "name": "Chugoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [652, 726],
+      "name": "Shikoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [505, 782],
+      "name": "Kyushu",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [330, 1155],
+      "name": "Okinawa",
+      "strength": 2,
+      "flag": "jp"
+    }
+  ]
+}

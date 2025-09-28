@@ -1,0 +1,80 @@
+{
+  "map": {
+    "height": 1320,
+    "num_land_tiles": 144769,
+    "width": 1588
+  },
+  "map16x": {
+    "height": 330,
+    "num_land_tiles": 8066,
+    "width": 397
+  },
+  "map4x": {
+    "height": 660,
+    "num_land_tiles": 34838,
+    "width": 794
+  },
+  "name": "japan",
+  "nations": [
+    {
+      "coordinates": [1206, 145],
+      "flag": "jp",
+      "name": "Hokkaido",
+      "strength": 3
+    },
+    {
+      "coordinates": [1090, 410],
+      "flag": "jp",
+      "name": "Tohoku",
+      "strength": 2
+    },
+    {
+      "coordinates": [1062, 584],
+      "flag": "jp",
+      "name": "Kanto",
+      "strength": 3
+    },
+    {
+      "coordinates": [920, 534],
+      "flag": "jp",
+      "name": "Hokuriku",
+      "strength": 2
+    },
+    {
+      "coordinates": [953, 609],
+      "flag": "jp",
+      "name": "Chubu",
+      "strength": 2
+    },
+    {
+      "coordinates": [790, 669],
+      "flag": "jp",
+      "name": "Kansai",
+      "strength": 2
+    },
+    {
+      "coordinates": [613, 659],
+      "flag": "jp",
+      "name": "Chugoku",
+      "strength": 2
+    },
+    {
+      "coordinates": [652, 726],
+      "flag": "jp",
+      "name": "Shikoku",
+      "strength": 2
+    },
+    {
+      "coordinates": [505, 782],
+      "flag": "jp",
+      "name": "Kyushu",
+      "strength": 2
+    },
+    {
+      "coordinates": [330, 1155],
+      "flag": "jp",
+      "name": "Okinawa",
+      "strength": 2
+    }
+  ]
+}
