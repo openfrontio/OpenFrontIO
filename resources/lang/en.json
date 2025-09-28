@@ -316,6 +316,8 @@
     "territory_patterns_desc": "Choose whether to display territory pattern designs in game",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
+    "performance_overlay_enabled": "Performance overlay enabled",
+    "performance_overlay_disabled": "Performance overlay disabled",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
