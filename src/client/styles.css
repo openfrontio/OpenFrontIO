@@ -77,19 +77,6 @@
   margin: 24px 0;
 }
 
-.options-section {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 12px 24px 24px 24px;
-  border-radius: 12px;
-}
-
-.option-title {
-  margin: 0 0 16px 0;
-  font-size: 20px;
-  color: #fff;
-  text-align: center;
-}
-
 .option-cards {
   display: flex;
   flex-direction: row;
@@ -203,14 +190,6 @@ label.option-card:hover {
   color: #4caf50;
 }
 
-.lobby-id-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin: 8px 0px 0px 0px;
-}
-
 #lobbyIdInput {
   font-family: monospace;
   font-weight: 600;
@@ -240,14 +219,6 @@ label.option-card:hover {
   text-align: center;
   font-family: monospace;
   font-weight: 600;
-}
-
-.players-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  padding: 0 16px;
 }
 
 .player-tag {
