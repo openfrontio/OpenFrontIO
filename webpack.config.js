@@ -138,6 +138,11 @@ export default async (env, argv) => {
             to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,
           },
+          {
+            from: path.resolve(__dirname, "proprietary"),
+            to: path.resolve(__dirname, "static"),
+            noErrorOnMissing: true,
+          },
         ],
         options: { concurrency: 100 },
       }),
