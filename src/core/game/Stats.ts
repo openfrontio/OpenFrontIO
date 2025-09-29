@@ -93,4 +93,7 @@ export interface Stats {
 
   // Player loses a unit of type
   unitLose(player: Player, type: OtherUnitType): void;
+
+  // player was killed (0 tiles)
+  playerKilled(player: Player, tick: number): void;
 }

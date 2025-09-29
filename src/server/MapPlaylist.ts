@@ -38,6 +38,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Halkidiki: 4,
   Iceland: 4,
   Italia: 6,
+  Japan: 6,
   Mars: 3,
   Mena: 6,
   Montreal: 6,
