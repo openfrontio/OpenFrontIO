@@ -137,7 +137,8 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!myPlayer || !target || amount <= 0) return;
 
     if (this.sendMode === "troops") {
-      if (amount > myPlayer.troops()) return;
+      const myTroops = Number(myPlayer.troops?.() ?? 0);
+      if (amount > myTroops) return;
       this.eventBus.emit(new SendDonateTroopsIntentEvent(target, amount));
     } else {
       // Normalize bigint → number for UI logic
@@ -147,7 +148,6 @@ export class PlayerPanel extends LitElement implements Layer {
           : 0;
       const myGold = Number(rawGold); // ensure number for comparisons/UI
       if (amount > myGold) return;
-
       this.eventBus.emit(new SendDonateGoldIntentEvent(target, BigInt(amount)));
     }
 
@@ -298,6 +298,13 @@ export class PlayerPanel extends LitElement implements Layer {
         : undefined;
     const flagName = country?.name;
 
+    const myGoldRaw =
+      typeof (myPlayer as any)?.gold === "function"
+        ? (myPlayer as any).gold()
+        : 0n;
+    const myGoldNum = Number(myGoldRaw);
+    const myTroopsNum = Number(myPlayer?.troops?.() ?? 0);
+
     return html`
       <div
         class="fixed inset-0 z-[1001] flex items-center justify-center overflow-auto
@@ -344,10 +351,8 @@ export class PlayerPanel extends LitElement implements Layer {
                       .open=${this.openSend}
                       .mode=${this.sendMode}
                       .total=${this.sendMode === "troops"
-                        ? myPlayer.troops()
-                        : typeof (myPlayer as any).gold === "function"
-                          ? (myPlayer as any).gold()
-                          : 0}
+                        ? myTroopsNum
+                        : myGoldNum}
                       .uiState=${this.uiState}
                       .myPlayer=${myPlayer}
                       .target=${this.sendTarget}

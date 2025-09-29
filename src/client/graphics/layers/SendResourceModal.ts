@@ -164,11 +164,13 @@ class SendResourceModal extends LitElement {
   }
 
   private getPercentBasis(): number {
+    // Basis is the *true* max we let the user choose via presets/slider.
     if (this.mode === "troops") {
-      const cap = this.getCapacityLeft();
-      if (cap !== null) return cap;
+      const cap = this.getCapacityLeft(); // receiver headroom
+      const total = this.getTotalNumber(); // sender available
+      if (cap !== null) return Math.min(total, cap);
     }
-    return this.getTotalNumber();
+    return this.getTotalNumber(); // gold or missing context → sender available
   }
 
   private limitAmount(proposed: number): number {
@@ -231,35 +233,70 @@ class SendResourceModal extends LitElement {
     const total = this.getTotalNumber();
 
     if (this.mode === "troops") {
-      const cap = this.getCapacityLeft() ?? 0;
+      const cap = this.getCapacityLeft();
+      if (cap === null) {
+        return html`
+          <div class="mb-4 pb-3 border-b border-zinc-800">
+            <div class="flex items-center gap-2 text-[13px]">
+              <span
+                class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-100"
+                title="Your current available troops"
+              >
+                <span class="opacity-90">Available</span>
+                <span class="font-mono tabular-nums"
+                  >${this.format(total)}</span
+                >
+              </span>
+            </div>
+          </div>
+        `;
+      }
+
+      const showAvailableOnly = total <= cap; // if equal, prefer Available
       return html`
         <div class="mb-4 pb-3 border-b border-zinc-800">
-          <div class="flex items-center gap-2 text-xs">
-            <!-- Sender's available troops -->
-            <span
-              class="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-2 py-0.5 ring-1 ring-zinc-700 text-zinc-200"
-            >
-              <span class="opacity-70">Available</span>
-              <span class="font-mono">${this.format(total)}</span>
-            </span>
-            <!-- Recipient's capacity left -->
-            <span
-              class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-200"
-            >
-              <span class="opacity-80">Player Cap</span>
-              <span class="font-mono">${this.format(cap)}</span>
-            </span>
+          <div class="flex items-center gap-2 text-[13px]">
+            ${showAvailableOnly
+              ? html`
+                  <!-- Sender's available troops -->
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-100"
+                    title="How much the recipient can still accept"
+                  >
+                    <span class="opacity-90">Available</span>
+                    <span class="font-mono tabular-nums"
+                      >${this.format(total)}</span
+                    >
+                  </span>
+                `
+              : html`
+                  <!-- Recipient's capacity left -->
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-100"
+                    title="How much the recipient can still accept"
+                  >
+                    <span class="opacity-90">Player Cap</span>
+                    <span class="font-mono tabular-nums"
+                      >${this.format(cap)}</span
+                    >
+                  </span>
+                `}
           </div>
         </div>
       `;
     }
-
+    // Gold / generic
     return html`
-      <div class="mb-4 pb-3 text-sm text-zinc-300 border-b border-zinc-800">
-        ${this.i18n.available()}
-        <span class="font-medium font-mono text-zinc-100"
-          >${this.format(total)}</span
-        >
+      <div class="mb-4 pb-3 border-b border-zinc-800">
+        <div class="flex items-center gap-2 text-[13px]">
+          <span
+            class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-100"
+            title="Your current available troops"
+          >
+            <span class="opacity-90"> ${this.i18n.available()}</span>
+            <span class="font-mono tabular-nums">${this.format(total)}</span>
+          </span>
+        </div>
       </div>
     `;
   }
