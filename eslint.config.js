@@ -50,6 +50,7 @@ export default [
       // Enable rules
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
+      "no-case-declarations": "error",
     },
   },
 ];
