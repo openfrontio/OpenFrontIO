@@ -56,12 +56,16 @@ class SendResourceModal extends LitElement {
 
   updated(changed: Map<string, unknown>) {
     if (changed.has("open") && this.open) {
+      // If either side is dead, just close and do nothing
+      if (!this.isSenderAlive() || !this.isTargetAlive()) {
+        this.closeModal();
+        return;
+      }
       queueMicrotask(() =>
         (this.querySelector('[role="dialog"]') as HTMLElement | null)?.focus(),
       );
     }
 
-    // Keep amount sane when inputs change
     if (
       changed.has("total") ||
       changed.has("mode") ||
@@ -71,7 +75,8 @@ class SendResourceModal extends LitElement {
       const basis = this.getPercentBasis();
       if (this.selectedPercent !== null) {
         const pct = this.sanitizePercent(this.selectedPercent);
-        this.sendAmount = this.clampSend(Math.floor((basis * pct) / 100));
+        const raw = Math.floor((basis * pct) / 100);
+        this.sendAmount = this.clampSend(raw);
       } else {
         this.sendAmount = this.clampSend(this.sendAmount);
       }
@@ -86,6 +91,8 @@ class SendResourceModal extends LitElement {
   }
 
   private confirm() {
+    // TODO Backend validation still not added!
+    if (!this.isSenderAlive() || !this.isTargetAlive()) return;
     const amount = this.limitAmount(this.sendAmount);
     this.dispatchEvent(
       new CustomEvent("confirm", { detail: { amount, closePanel: true } }),
@@ -102,42 +109,6 @@ class SendResourceModal extends LitElement {
       this.confirm();
     }
   };
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // i18n
-  // ─────────────────────────────────────────────────────────────────────────────
-  private i18n = {
-    title: (name: string) =>
-      this.mode === "troops"
-        ? translateText("send_troops_modal.title", { name })
-        : name
-          ? `Send Gold to ${name}`
-          : "Send Gold",
-    available: () =>
-      this.mode === "troops"
-        ? translateText("send_troops_modal.available")
-        : "Available:",
-    max: () =>
-      this.mode === "troops"
-        ? translateText("send_troops_modal.preset_max")
-        : "Max",
-    ariaSlider: () =>
-      this.mode === "troops"
-        ? translateText("send_troops_modal.aria_slider")
-        : "Amount slider",
-    summarySend: () =>
-      this.mode === "troops"
-        ? translateText("send_troops_modal.summary_send")
-        : "Send",
-    summaryKeep: () =>
-      this.mode === "troops"
-        ? translateText("send_troops_modal.summary_keep")
-        : "Keep",
-    closeLabel: () => translateText("common.close") ?? "Close",
-    cancel: () => translateText("send_troops_modal.cancel") ?? "Cancel",
-    send: () => translateText("send_troops_modal.send") ?? "Send",
-  };
-
   // ────────────────────────────────────────────────────────────────────────────
   // Computation
   // ────────────────────────────────────────────────────────────────────────────
@@ -147,7 +118,8 @@ class SendResourceModal extends LitElement {
   }
 
   private getTotalNumber(): number {
-    return this.toNum(this.total);
+    const base = this.toNum(this.total);
+    return this.isSenderAlive() ? base : 0;
   }
 
   private sanitizePercent(p: number) {
@@ -156,7 +128,8 @@ class SendResourceModal extends LitElement {
 
   /** Internal capacity only for troops; gold is unlimited. */
   private getCapacityLeft(): number | null {
-    if (this.mode !== "troops") return null;
+    if (!this.isTargetAlive()) return 0;
+    if (this.mode !== "troops") return this.getTotalNumber();
     if (!this.gameView || !this.target) return null;
     const current = this.toNum(this.target.troops());
     const max = this.toNum(this.gameView.config().maxTroops(this.target));
@@ -164,19 +137,15 @@ class SendResourceModal extends LitElement {
   }
 
   private getPercentBasis(): number {
-    // Basis is the *true* max we let the user choose via presets/slider.
-    if (this.mode === "troops") {
-      const cap = this.getCapacityLeft(); // receiver headroom
-      const total = this.getTotalNumber(); // sender available
-      if (cap !== null) return Math.min(total, cap);
-    }
-    return this.getTotalNumber(); // gold or missing context → sender available
+    // Always compute presets/slider percent against the sender's Available
+    return this.getTotalNumber();
   }
 
   private limitAmount(proposed: number): number {
-    const cap = this.getCapacityLeft();
-    if (cap === null) return proposed; // gold -> unlimited
-    return Math.min(proposed, cap);
+    const cap = this.getCapacityLeft(); // receiver headroom
+    const total = this.getTotalNumber(); // sender available
+    const hardMax = cap === null ? total : Math.min(total, cap);
+    return Math.min(Math.max(0, proposed), hardMax);
   }
 
   private clampSend(n: number) {
@@ -205,6 +174,67 @@ class SendResourceModal extends LitElement {
   private getMinKeepRatio(): number {
     return this.mode === "troops" ? 0.3 : 0; // gold has no keep rule
   }
+
+  private isTargetAlive(): boolean {
+    const t = this.target as any;
+    return !!(t && typeof t.isAlive === "function" ? t.isAlive() : true);
+  }
+
+  private isSenderAlive(): boolean {
+    const s = this.myPlayer as any;
+    return !!(s && typeof s.isAlive === "function" ? s.isAlive() : true);
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+  // i18n
+  // ────────────────────────────────────────────────────────────────────────────
+  private i18n = {
+    title: (name: string) =>
+      this.mode === "troops"
+        ? translateText("send_troops_modal.title_with_name", { name })
+        : translateText("send_gold_modal.title_with_name", { name }),
+
+    availableChip: () => translateText("common.available"),
+
+    availableTooltip: () =>
+      this.mode === "troops"
+        ? translateText("send_troops_modal.available_tooltip")
+        : translateText("send_gold_modal.available_tooltip"),
+
+    max: () => translateText("common.preset_max"),
+
+    ariaSlider: () =>
+      this.mode === "troops"
+        ? translateText("send_troops_modal.aria_slider")
+        : translateText("send_gold_modal.aria_slider"),
+
+    summarySend: () => translateText("common.summary_send"),
+    summaryKeep: () => translateText("common.summary_keep"),
+
+    closeLabel: () => translateText("common.close"),
+    cancel: () => translateText("common.cancel"),
+    send: () => translateText("common.send"),
+
+    cap: () => translateText("common.cap_label"),
+    capTooltip: () => translateText("common.cap_tooltip"),
+
+    sliderTooltip: (percent: number, amountStr: string) =>
+      this.mode === "troops"
+        ? translateText("send_troops_modal.slider_tooltip", {
+            percent,
+            amount: amountStr,
+          })
+        : translateText("send_gold_modal.slider_tooltip", {
+            percent,
+            amount: amountStr,
+          }),
+
+    capacityNote: (amountStr: string) =>
+      translateText("send_troops_modal.capacity_note", { amount: amountStr }),
+
+    targetDeadTitle: () => translateText("common.target_dead"),
+    targetDeadNote: () => translateText("common.target_dead_note"),
+  };
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Render helpers
   // ─────────────────────────────────────────────────────────────────────────────
@@ -231,78 +261,43 @@ class SendResourceModal extends LitElement {
 
   private renderAvailable() {
     const total = this.getTotalNumber();
+    const cap = this.getCapacityLeft(); // null if gold or missing game context
 
-    if (this.mode === "troops") {
-      const cap = this.getCapacityLeft();
-      if (cap === null) {
-        return html`
-          <div class="mb-4 pb-3 border-b border-zinc-800">
-            <div class="flex items-center gap-2 text-[13px]">
-              <span
-                class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-100"
-                title="Your current available troops"
-              >
-                <span class="opacity-90">Available</span>
-                <span class="font-mono tabular-nums"
-                  >${this.format(total)}</span
-                >
-              </span>
-            </div>
-          </div>
-        `;
-      }
-
-      const showAvailableOnly = total <= cap; // if equal, prefer Available
-      return html`
-        <div class="mb-4 pb-3 border-b border-zinc-800">
-          <div class="flex items-center gap-2 text-[13px]">
-            ${showAvailableOnly
-              ? html`
-                  <!-- Sender's available troops -->
-                  <span
-                    class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-100"
-                    title="How much the recipient can still accept"
-                  >
-                    <span class="opacity-90">Available</span>
-                    <span class="font-mono tabular-nums"
-                      >${this.format(total)}</span
-                    >
-                  </span>
-                `
-              : html`
-                  <!-- Recipient's capacity left -->
-                  <span
-                    class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-100"
-                    title="How much the recipient can still accept"
-                  >
-                    <span class="opacity-90">Player Cap</span>
-                    <span class="font-mono tabular-nums"
-                      >${this.format(cap)}</span
-                    >
-                  </span>
-                `}
-          </div>
-        </div>
-      `;
-    }
-    // Gold / generic
     return html`
       <div class="mb-4 pb-3 border-b border-zinc-800">
         <div class="flex items-center gap-2 text-[13px]">
+          <!-- Available -->
           <span
             class="inline-flex items-center gap-1 rounded-full bg-indigo-600/15 px-2 py-0.5 ring-1 ring-indigo-400/40 text-indigo-100"
-            title="Your current available troops"
+            title=${this.i18n.availableTooltip()}
           >
-            <span class="opacity-90"> ${this.i18n.available()}</span>
+            <span class="opacity-90">${this.i18n.availableChip()}</span>
             <span class="font-mono tabular-nums">${this.format(total)}</span>
           </span>
+
+          ${cap !== null
+            ? html`
+                <!-- Cap -->
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 ring-1 ring-amber-400/40 text-amber-200"
+                  title=${this.i18n.capTooltip()}
+                >
+                  <span class="opacity-90">${this.i18n.cap()}</span>
+                  <span class="font-mono tabular-nums"
+                    >${this.format(cap)}</span
+                  >
+                </span>
+              `
+            : html``}
         </div>
       </div>
     `;
   }
 
   private renderPresets(percentNow: number) {
-    const basis = this.getPercentBasis();
+    const basis = this.getTotalNumber();
+    const dead = !this.isSenderAlive() || !this.isTargetAlive();
+
     return html`
       <div class="mb-8 grid grid-cols-5 gap-2">
         ${this.PRESETS.map((p) => {
@@ -311,15 +306,18 @@ class SendResourceModal extends LitElement {
           const label = pct === 100 ? this.i18n.max() : `${pct}%`;
           return html`
             <button
+              ?disabled=${dead}
               class="rounded-lg px-3 py-2 text-sm ring-1 transition
-                     ${active
-                ? "bg-indigo-600 text-white ring-indigo-300/60"
-                : "bg-zinc-800 text-zinc-200 ring-zinc-700 hover:bg-zinc-700 hover:text-zinc-50"}"
+                ${dead
+                ? "bg-zinc-800/70 text-zinc-400 ring-zinc-700 cursor-not-allowed"
+                : active
+                  ? "bg-indigo-600 text-white ring-indigo-300/60"
+                  : "bg-zinc-800 text-zinc-200 ring-zinc-700 hover:bg-zinc-700 hover:text-zinc-50"}"
               @click=${() => {
+                if (dead) return;
                 this.selectedPercent = pct;
-                this.sendAmount = this.clampSend(
-                  Math.floor((basis * pct) / 100),
-                );
+                const raw = Math.floor((basis * pct) / 100);
+                this.sendAmount = this.clampSend(raw);
               }}
               ?aria-pressed=${active}
               title="${pct}%"
@@ -333,32 +331,55 @@ class SendResourceModal extends LitElement {
   }
 
   private renderSlider(percentNow: number) {
+    const basis = this.getTotalNumber();
+    const cap = this.getCapacityLeft();
+    const hardMax = cap === null ? basis : Math.min(basis, cap);
+    const dead = !this.isSenderAlive() || !this.isTargetAlive();
+
+    // Where to draw the cap marker (as % of Available)
+    const capPercent =
+      cap === null
+        ? null
+        : Math.max(
+            0,
+            Math.min(
+              100,
+              Math.round((Math.min(cap, basis) / (basis || 1)) * 100),
+            ),
+          );
+
     const fill = this.getFillColor();
-    const basis = this.getPercentBasis();
+    const disabled = basis <= 0 || dead;
+    const sliderOuterMb = capPercent !== null ? "mb-8" : "mb-2";
+
     return html`
-      <div class="mb-2">
+      <div class="${sliderOuterMb}">
         <div
           class="relative px-1 rounded-lg overflow-visible focus-within:ring-2 focus-within:ring-indigo-500/30"
         >
           <input
             type="range"
             min="0"
-            .max=${String(basis)}
-            .value=${String(this.sendAmount)}
+            .max=${basis}
+            .value=${this.sendAmount}
+            ?disabled=${disabled}
             @input=${(e: Event) => {
+              if (dead) return;
               const raw = Number((e.target as HTMLInputElement).value);
-              this.selectedPercent = basis
-                ? Math.round((raw / basis) * 100)
-                : 0;
-              this.sendAmount = this.clampSend(raw);
+              const pctRaw = basis ? Math.round((raw / basis) * 100) : 0;
+              this.selectedPercent = this.sanitizePercent(pctRaw);
+              const clamped = Math.min(raw, hardMax);
+              this.sendAmount = this.clampSend(clamped);
             }}
             class="w-full appearance-none bg-transparent range-x focus:outline-none"
             aria-label=${this.i18n.ariaSlider()}
             aria-valuemin="0"
-            aria-valuemax=${basis}
+            aria-valuemax=${hardMax}
             aria-valuenow=${this.sendAmount}
             style="--percent:${percentNow}%; --fill:${fill}; --track: rgba(255,255,255,.28); --thumb-ring: rgb(24 24 27);"
           />
+
+          <!-- Tooltip -->
           <div
             class="pointer-events-none absolute -top-6 -translate-x-1/2 select-none"
             style="left:${percentNow}%"
@@ -369,6 +390,27 @@ class SendResourceModal extends LitElement {
               ${percentNow}% • ${this.format(this.sendAmount)}
             </div>
           </div>
+
+          <!-- Cap marker -->
+          ${capPercent !== null
+            ? html`
+                <div
+                  class="pointer-events-none absolute top-1/2 -translate-y-1/2 h-3 w-[2px] bg-amber-400/80 shadow"
+                  style="left:${capPercent}%;"
+                  title=${this.i18n.capTooltip()}
+                ></div>
+                <div
+                  class="pointer-events-none absolute top-full mt-1.5 -translate-x-1/2 select-none"
+                  style="left:${capPercent}%"
+                >
+                  <div
+                    class="rounded bg-[#0f1116] ring-1 ring-amber-400/40 text-amber-200 px-1 py-0.5 text-[11px] shadow whitespace-nowrap"
+                  >
+                    ${this.i18n.cap()}
+                  </div>
+                </div>
+              `
+            : html``}
         </div>
       </div>
     `;
@@ -378,7 +420,7 @@ class SendResourceModal extends LitElement {
     const capped = allowed !== this.sendAmount;
     if (!capped) return html``;
     return html`<p class="mt-1 text-xs text-amber-300">
-      Receiver can accept only ${this.format(allowed)} right now.
+      ${this.i18n.capacityNote(this.format(allowed))}
     </p>`;
   }
 
@@ -409,7 +451,8 @@ class SendResourceModal extends LitElement {
 
   private renderActions() {
     const total = this.getTotalNumber();
-    const disabled = total <= 0 || this.clampSend(this.sendAmount) <= 0;
+    const dead = !this.isSenderAlive() || !this.isTargetAlive();
+    const disabled = total <= 0 || this.clampSend(this.sendAmount) <= 0 || dead;
     return html`
       <div class="mt-5 flex justify-end gap-2">
         <button
@@ -435,6 +478,17 @@ class SendResourceModal extends LitElement {
     `;
   }
 
+  private renderDeadNote() {
+    return html`
+      <div
+        class="mb-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-amber-200 text-sm"
+      >
+        <div class="font-semibold">${this.i18n.targetDeadTitle()}</div>
+        <div>${this.i18n.targetDeadNote()}</div>
+      </div>
+    `;
+  }
+
   private renderSliderStyles() {
     return html`
       <style>
@@ -452,7 +506,8 @@ class SendResourceModal extends LitElement {
             90deg,
             var(--fill) 0,
             var(--fill) var(--percent),
-            rgba(255, 255, 255, 0.22) var(--percent),
+            /* allowed (clamped) fill */ rgba(255, 255, 255, 0.22)
+              var(--percent),
             rgba(255, 255, 255, 0.22) 100%
           );
         }
@@ -515,6 +570,7 @@ class SendResourceModal extends LitElement {
             @click=${(e: MouseEvent) => e.stopPropagation()}
           >
             ${this.renderHeader()} ${this.renderAvailable()}
+            ${!this.isTargetAlive() ? this.renderDeadNote() : html``}
             ${this.renderPresets(percent)} ${this.renderSlider(percent)}
             ${this.mode === "troops"
               ? this.renderCapacityNote(allowed)
