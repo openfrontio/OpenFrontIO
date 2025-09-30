@@ -54,29 +54,7 @@ export class PastelTheme implements Theme {
     return this.nationColorAllocator.assignColor(player.id());
   }
 
-  textColor(player: PlayerView): string {
-    return player.type() === PlayerType.Human ? "#000000" : "#4D4D4D";
-  }
-
-  specialBuildingColor(player: PlayerView): Colord {
-    const tc = this.territoryColor(player).rgba;
-    return colord({
-      r: Math.max(tc.r - 50, 0),
-      g: Math.max(tc.g - 50, 0),
-      b: Math.max(tc.b - 50, 0),
-    });
-  }
-
-  railroadColor(player: PlayerView): Colord {
-    const tc = this.territoryColor(player).rgba;
-    const color = colord({
-      r: Math.max(tc.r - 10, 0),
-      g: Math.max(tc.g - 10, 0),
-      b: Math.max(tc.b - 10, 0),
-    });
-    return color;
-  }
-
+  // Don't call directly, use PlayerView
   borderColor(player: PlayerView): Colord {
     if (this.borderColorCache.has(player.id())) {
       return this.borderColorCache.get(player.id())!;
@@ -92,15 +70,22 @@ export class PastelTheme implements Theme {
     return color;
   }
 
-  defendedBorderColors(player: PlayerView): { light: Colord; dark: Colord } {
+  defendedBorderColors(territoryColor: Colord): {
+    light: Colord;
+    dark: Colord;
+  } {
     return {
-      light: this.territoryColor(player).darken(0.2),
-      dark: this.territoryColor(player).darken(0.4),
+      light: territoryColor.darken(0.2),
+      dark: territoryColor.darken(0.4),
     };
   }
 
   focusedBorderColor(): Colord {
     return colord({ r: 230, g: 230, b: 230 });
+  }
+
+  textColor(player: PlayerView): string {
+    return player.type() === PlayerType.Human ? "#000000" : "#4D4D4D";
   }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
@@ -110,7 +95,7 @@ export class PastelTheme implements Theme {
     }
     switch (gm.terrainType(tile)) {
       case TerrainType.Ocean:
-      case TerrainType.Lake:
+      case TerrainType.Lake: {
         const w = this.water.rgba;
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.shorelineWater;
@@ -120,7 +105,7 @@ export class PastelTheme implements Theme {
           g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
           b: Math.max(w.b - 10 + (11 - Math.min(mag, 10)), 0),
         });
-
+      }
       case TerrainType.Plains:
         return colord({
           r: 190,

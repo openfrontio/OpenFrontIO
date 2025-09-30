@@ -82,6 +82,7 @@ export enum GameMapType {
   Halkidiki = "Halkidiki",
   StraitOfGibraltar = "Strait of Gibraltar",
   Italia = "Italia",
+  Japan = "Japan",
   Yenisei = "Yenisei",
   Pluto = "Pluto",
   Montreal = "Montreal",
@@ -116,6 +117,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Halkidiki,
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
+    GameMapType.Japan,
     GameMapType.Yenisei,
     GameMapType.Montreal,
   ],
@@ -136,6 +138,11 @@ export enum GameType {
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
+}
+
+export enum GameMapSize {
+  Compact = "Compact",
+  Normal = "Normal",
 }
 
 export interface UnitInfo {

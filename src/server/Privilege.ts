@@ -1,15 +1,17 @@
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { PatternDecoder } from "../core/PatternDecoder";
+import { decodePatternData } from "../core/PatternDecoder";
+import { PlayerPattern } from "../core/Schemas";
 
 type PatternResult =
-  | { type: "allowed"; pattern: string }
+  | { type: "allowed"; pattern: PlayerPattern }
   | { type: "unknown" }
   | { type: "forbidden"; reason: string };
 
 export interface PrivilegeChecker {
   isPatternAllowed(
-    base64: string,
-    flares: readonly string[] | undefined,
+    flares: readonly string[],
+    name: string,
+    colorPaletteName: string | null,
   ): PatternResult;
   isCustomFlagAllowed(
     flag: string,
@@ -24,25 +26,39 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
   ) {}
 
   isPatternAllowed(
+    flares: readonly string[],
     name: string,
-    flares: readonly string[] | undefined,
+    colorPaletteName: string | null,
   ): PatternResult {
     // Look for the pattern in the cosmetics.json config
     const found = this.cosmetics.patterns[name];
     if (!found) return { type: "forbidden", reason: "pattern not found" };
 
     try {
-      new PatternDecoder(found.pattern, this.b64urlDecode);
+      decodePatternData(found.pattern, this.b64urlDecode);
     } catch (e) {
       return { type: "forbidden", reason: "invalid pattern" };
     }
 
-    if (
-      flares?.includes(`pattern:${found.name}`) ||
-      flares?.includes("pattern:*")
-    ) {
+    const colorPalette = this.cosmetics.colorPalettes?.[colorPaletteName ?? ""];
+
+    if (flares.includes("pattern:*")) {
+      return {
+        type: "allowed",
+        pattern: { name: found.name, patternData: found.pattern, colorPalette },
+      };
+    }
+
+    const flareName =
+      `pattern:${found.name}` +
+      (colorPaletteName ? `:${colorPaletteName}` : "");
+
+    if (flares.includes(flareName)) {
       // Player has a flare for this pattern
-      return { type: "allowed", pattern: found.pattern };
+      return {
+        type: "allowed",
+        pattern: { name: found.name, patternData: found.pattern, colorPalette },
+      };
     } else {
       return { type: "forbidden", reason: "no flares for pattern" };
     }
@@ -124,8 +140,9 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isPatternAllowed(
+    flares: readonly string[],
     name: string,
-    flares: readonly string[] | undefined,
+    colorPaletteName: string | null,
   ): PatternResult {
     return { type: "unknown" };
   }

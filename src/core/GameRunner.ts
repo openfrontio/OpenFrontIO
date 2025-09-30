@@ -39,7 +39,11 @@ export async function createGameRunner(
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
-  const gameMap = await loadGameMap(gameStart.config.gameMap, mapLoader);
+  const gameMap = await loadGameMap(
+    gameStart.config.gameMap,
+    gameStart.config.gameMapSize,
+    mapLoader,
+  );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map(
@@ -56,7 +60,7 @@ export async function createGameRunner(
 
   const nations = gameStart.config.disableNPCs
     ? []
-    : gameMap.manifest.nations.map(
+    : gameMap.nations.map(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),

@@ -42,15 +42,17 @@ type Terrain struct {
 }
 
 type MapResult struct {
-	Map []byte
-	MiniMap []byte
 	Thumbnail []byte
-	MapWidth int
-	MapHeight int
-	MapNumLandTiles int
-	MiniMapWidth int
-	MiniMapHeight int
-	MiniMapNumLandTiles int
+	Map MapInfo
+	Map4x MapInfo
+	Map16x MapInfo
+}
+
+type MapInfo struct {
+	Data []byte
+	Width int
+	Height int
+	NumLandTiles int
 }
 
 type GeneratorArgs struct {
@@ -68,9 +70,9 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	bounds := img.Bounds()
 	width, height := bounds.Dx(), bounds.Dy()
 
-	// Ensure width and height are even for the mini map downscaling
-	width = width - (width % 2)
-	height = height - (height % 2)
+	// Ensure width and height are multiples of 4 for the mini map downscaling
+	width = width - (width % 4)
+	height = height - (height % 4)
 
 	log.Printf("Processing Map: %s, dimensions: %dx%d", args.Name, width, height)
 
@@ -105,8 +107,10 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	removeSmallIslands(terrain, args.RemoveSmall)
 	processWater(terrain, args.RemoveSmall)
 
-	miniTerrain := createMiniMap(terrain)
-	thumb := createMapThumbnail(miniTerrain, 0.5)
+	terrain4x := createMiniMap(terrain)
+	terrain16x := createMiniMap(terrain4x)
+
+	thumb := createMapThumbnail(terrain4x, 0.5)
 	webp, err := convertToWebP(ThumbData{
 		Data:   thumb.Pix,
 		Width:  thumb.Bounds().Dx(),
@@ -117,19 +121,29 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	}
 
 	mapData, mapNumLandTiles := packTerrain(terrain)
-	miniMapData, miniMapNumLandTiles := packTerrain(miniTerrain)
-
+	mapData4x, numLandTiles4x := packTerrain(terrain4x)
+	mapData16x, numLandTiles16x := packTerrain(terrain16x)
 
 	return MapResult{
-		Map: mapData,
-		MiniMap: miniMapData,
+		Map: MapInfo{
+			Data: mapData,
+			Width: width,
+			Height: height,
+			NumLandTiles: mapNumLandTiles,
+		},
+		Map4x: MapInfo{
+			Data: mapData4x,
+			Width: width / 2,
+			Height: height / 2,
+			NumLandTiles: numLandTiles4x,
+		},
+		Map16x: MapInfo{
+			Data: mapData16x,
+			Width: width / 4,
+			Height: height / 4,
+			NumLandTiles: numLandTiles16x,
+		},
 		Thumbnail: webp,
-		MapWidth: width,
-		MapHeight: height,
-		MapNumLandTiles: mapNumLandTiles,
-		MiniMapWidth: width / 2,
-		MiniMapHeight: height / 2,
-		MiniMapNumLandTiles: miniMapNumLandTiles,
 	}, nil
 }
 

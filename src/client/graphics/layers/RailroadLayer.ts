@@ -170,7 +170,7 @@ export class RailroadLayer implements Layer {
     const owner = this.game.owner(tile);
     const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
-      ? this.theme.railroadColor(recipient)
+      ? recipient.borderColor()
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(this.context, x, y, railType);

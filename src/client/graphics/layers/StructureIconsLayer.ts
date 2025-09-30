@@ -1,3 +1,5 @@
+import { extend } from "colord";
+import a11yPlugin from "colord/plugins/a11y";
 import { OutlineFilter } from "pixi-filters";
 import * as PIXI from "pixi.js";
 import bitmapFont from "../../../../resources/fonts/round_6x6_modified.xml";
@@ -36,6 +38,8 @@ import {
   STRUCTURE_SHAPES,
   ZOOM_THRESHOLD,
 } from "./StructureDrawingUtils";
+
+extend([a11yPlugin]);
 
 class StructureRenderInfo {
   public isOnScreen: boolean = false;
