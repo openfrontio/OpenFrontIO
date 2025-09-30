@@ -2,6 +2,7 @@ import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
+import { UIState } from "./graphics/UIState";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -111,10 +112,6 @@ export class CenterCameraEvent implements GameEvent {
   constructor() {}
 }
 
-export class GhostStructureEvent implements GameEvent {
-  constructor(public readonly structureType: UnitType | null) {}
-}
-
 export class AutoUpgradeEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -146,9 +143,8 @@ export class InputHandler {
 
   private readonly userSettings: UserSettings = new UserSettings();
 
-  private ghostStructure = false;
-
   constructor(
+    public uiState: UIState,
     private canvas: HTMLCanvasElement,
     private eventBus: EventBus,
   ) {}
@@ -228,7 +224,6 @@ export class InputHandler {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
     });
-    this.eventBus.on(GhostStructureEvent, this.onGhostStructure);
     this.eventBus.on(BuildUnitIntentEvent, this.onBuildUnitIntent);
     this.eventBus.on(SendUpgradeStructureIntentEvent, this.onSendUpgradeIntent);
 
@@ -309,7 +304,7 @@ export class InputHandler {
       if (e.code === "Escape") {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
-        this.eventBus.emit(new GhostStructureEvent(null));
+        this.uiState.ghostStructure = null;
       }
 
       if (
@@ -377,47 +372,47 @@ export class InputHandler {
 
       if (e.code === this.keybinds.buildCity) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.City));
+        this.uiState.ghostStructure = UnitType.City;
       }
 
       if (e.code === this.keybinds.buildFactory) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.Factory));
+        this.uiState.ghostStructure = UnitType.Factory;
       }
 
       if (e.code === this.keybinds.buildPort) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.Port));
+        this.uiState.ghostStructure = UnitType.Port;
       }
 
       if (e.code === this.keybinds.buildDefensePost) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.DefensePost));
+        this.uiState.ghostStructure = UnitType.DefensePost;
       }
 
       if (e.code === this.keybinds.buildMissileSilo) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.MissileSilo));
+        this.uiState.ghostStructure = UnitType.MissileSilo;
       }
 
       if (e.code === this.keybinds.buildSamLauncher) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.SAMLauncher));
+        this.uiState.ghostStructure = UnitType.SAMLauncher;
       }
 
       if (e.code === this.keybinds.buildAtomBomb) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.AtomBomb));
+        this.uiState.ghostStructure = UnitType.AtomBomb;
       }
 
       if (e.code === this.keybinds.buildHydrogenBomb) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.HydrogenBomb));
+        this.uiState.ghostStructure = UnitType.HydrogenBomb;
       }
 
       if (e.code === this.keybinds.buildWarship) {
         e.preventDefault();
-        this.eventBus.emit(new GhostStructureEvent(UnitType.Warship));
+        this.uiState.ghostStructure = UnitType.Warship;
       }
 
       // Shift-D to toggle performance overlay
@@ -576,20 +571,17 @@ export class InputHandler {
     }
   }
 
-  private onGhostStructure = (e: GhostStructureEvent) => {
-    this.ghostStructure = e.structureType !== null;
-  };
   private onBuildUnitIntent = (_e: BuildUnitIntentEvent) => {
-    this.ghostStructure = false;
+    this.uiState.ghostStructure = null;
   };
   private onSendUpgradeIntent = (_e: SendUpgradeStructureIntentEvent) => {
-    this.ghostStructure = false;
+    this.uiState.ghostStructure = null;
   };
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
-    if (this.ghostStructure) {
-      this.eventBus.emit(new GhostStructureEvent(null));
+    if (this.uiState.ghostStructure !== null) {
+      this.uiState.ghostStructure = null;
       return;
     }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
@@ -656,7 +648,6 @@ export class InputHandler {
       clearInterval(this.moveInterval);
     }
     this.activeKeys.clear();
-    this.eventBus.off(GhostStructureEvent, this.onGhostStructure);
     this.eventBus.off(BuildUnitIntentEvent, this.onBuildUnitIntent);
     this.eventBus.off(
       SendUpgradeStructureIntentEvent,

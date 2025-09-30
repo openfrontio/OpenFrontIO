@@ -10,10 +10,10 @@ import {
   PlayerID,
   UnitType,
 } from "../../../core/game/Game";
+import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
-  GhostStructureEvent,
   MouseMoveEvent,
   MouseUpEvent,
   ToggleStructureEvent as ToggleStructuresEvent,
@@ -23,6 +23,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 import {
   DOTS_ZOOM_THRESHOLD,
@@ -82,6 +83,7 @@ export class StructureIconsLayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
+    public uiState: UIState,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
@@ -149,12 +151,6 @@ export class StructureIconsLayer implements Layer {
     this.eventBus.on(ToggleStructuresEvent, (e) =>
       this.toggleStructures(e.structureTypes),
     );
-    this.eventBus.on(GhostStructureEvent, (e) => {
-      if (this.game.inSpawnPhase()) {
-        return;
-      }
-      this.createGhostStructure(e.structureType);
-    });
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
 
     this.eventBus.on(MouseUpEvent, (e) => this.createStructure(e));
@@ -197,7 +193,16 @@ export class StructureIconsLayer implements Layer {
     if (!this.renderer) {
       return;
     }
-
+    if (!this.ghostUnit && this.uiState.ghostStructure !== null) {
+      this.createGhostStructure(this.uiState.ghostStructure);
+    }
+    if (
+      this.ghostUnit &&
+      (this.uiState.ghostStructure === null ||
+        this.ghostUnit.buildableUnit.type !== this.uiState.ghostStructure)
+    ) {
+      this.removeGhostStructure();
+    }
     if (this.transformHandler.hasChanged()) {
       for (const render of this.renders) {
         this.computeNewLocation(render);
@@ -231,7 +236,7 @@ export class StructureIconsLayer implements Layer {
       this.ghostUnit.buildableUnit.canUpgrade === false
     ) {
       this.removeGhostStructure();
-      this.eventBus.emit(new GhostStructureEvent(null));
+      this.uiState.ghostStructure = null;
       return;
     }
     const rect = this.transformHandler.boundingRect();
@@ -246,6 +251,7 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.buildableUnit.type,
         ),
       );
+      this.uiState.ghostStructure = null;
     } else if (this.ghostUnit.buildableUnit.canBuild) {
       this.eventBus.emit(
         new BuildUnitIntentEvent(
@@ -253,6 +259,7 @@ export class StructureIconsLayer implements Layer {
           this.game.ref(tile.x, tile.y),
         ),
       );
+      this.uiState.ghostStructure = null;
     }
     this.removeGhostStructure();
   }
@@ -275,49 +282,53 @@ export class StructureIconsLayer implements Layer {
       return;
     }
     this.lastGhostQueryAt = now;
-
+    let tileRef: TileRef | undefined;
     const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
-    if (!this.game.isValidCoord(tile.x, tile.y)) return;
+    if (this.game.isValidCoord(tile.x, tile.y))
+      [(tileRef = this.game.ref(tile.x, tile.y))];
+    const clearFilters = (render: (typeof this.renders)[number]) => {
+      render.iconContainer.filters = [];
+      render.dotContainer.filters = [];
+    };
+
+    const applyFilter = (target: PIXI.Container, color: string) => {
+      target.filters = [new OutlineFilter({ thickness: 2, color })];
+    };
 
     this.game
       ?.myPlayer()
-      ?.actions(this.game.ref(tile.x, tile.y))
+      ?.actions(tileRef)
       .then((actions) => {
+        // reset all
+        this.renders.forEach(clearFilters);
+        this.ghostUnit?.container && (this.ghostUnit.container.filters = []);
+
         if (!this.ghostUnit) return;
 
-        const match = actions.buildableUnits.find(
+        const unit = actions.buildableUnits.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
         );
-        if (match) {
-          this.ghostUnit.buildableUnit = match;
+        if (!unit) {
+          Object.assign(this.ghostUnit.buildableUnit, {
+            canBuild: false,
+            canUpgrade: false,
+          });
+          applyFilter(this.ghostUnit.container, "rgba(255, 0, 0, 1)");
+          return;
         }
 
-        const unit = this.ghostUnit.buildableUnit;
+        this.ghostUnit.buildableUnit = unit;
 
-        for (const r of this.renders) {
-          r.iconContainer.filters = [];
-          r.dotContainer.filters = [];
-        }
         if (unit.canUpgrade) {
           const renderUpgradable = this.renders.find(
             (r) => r.unit.id() === unit.canUpgrade,
           );
           if (renderUpgradable) {
-            renderUpgradable.iconContainer.filters = [
-              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
-            ];
-            renderUpgradable.dotContainer.filters = [
-              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
-            ];
+            applyFilter(renderUpgradable.iconContainer, "rgba(0, 255, 0, 1)");
+            applyFilter(renderUpgradable.dotContainer, "rgba(0, 255, 0, 1)");
           }
-          this.ghostUnit.container.filters = [];
         } else if (unit.canBuild === false) {
-          unit.canBuild = false;
-          this.ghostUnit.container.filters = [
-            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
-          ];
-        } else {
-          this.ghostUnit.container.filters = [];
+          applyFilter(this.ghostUnit.container, "rgba(255, 0, 0, 1)");
         }
       });
 
@@ -331,7 +342,7 @@ export class StructureIconsLayer implements Layer {
     if (this.ghostUnit) {
       const currentType = this.ghostUnit.buildableUnit.type;
       this.removeGhostStructure();
-      this.eventBus.emit(new GhostStructureEvent(null));
+      this.uiState.ghostStructure = null;
       if (type === currentType) {
         return;
       }
@@ -339,16 +350,17 @@ export class StructureIconsLayer implements Layer {
     if (type === null) {
       return;
     }
-    let tile = this.transformHandler.screenToWorldCoordinates(
+    let tileref: TileRef | undefined;
+    const tile: Cell = this.transformHandler.screenToWorldCoordinates(
       this.mousePos.x,
       this.mousePos.y,
     );
-    if (!this.game.isValidCoord(tile.x, tile.y)) {
-      tile = new Cell(1, 1);
+    if (this.game.isValidCoord(tile.x, tile.y)) {
+      tileref = this.game.ref(tile.x, tile.y);
     }
     this.game
       ?.myPlayer()
-      ?.actions(this.game.ref(tile.x, tile.y))
+      ?.actions(tileref)
       .then((actions) => {
         for (const u of actions.buildableUnits) {
           if (u.type === type) {

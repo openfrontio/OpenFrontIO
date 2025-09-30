@@ -36,7 +36,11 @@ describe("InputHandler AutoUpgrade", () => {
 
     eventBus = new EventBus();
 
-    inputHandler = new InputHandler(mockCanvas, eventBus);
+    inputHandler = new InputHandler(
+      { attackRatio: 20, ghostStructure: null },
+      mockCanvas,
+      eventBus,
+    );
   });
 
   describe("Middle Mouse Button Handling", () => {

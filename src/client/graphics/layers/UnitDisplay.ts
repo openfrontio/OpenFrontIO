@@ -12,18 +12,16 @@ import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { Gold, PlayerActions, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import {
-  GhostStructureEvent,
-  MouseUpEvent,
-  ToggleStructureEvent,
-} from "../../InputHandler";
+import { MouseUpEvent, ToggleStructureEvent } from "../../InputHandler";
 import { renderNumber, translateText } from "../../Utils";
+import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  public uiState: UIState;
   private playerActions: PlayerActions | null = null;
   private keybinds: Record<string, { value: string; key: string }> = {};
   private _selectedStructure: UnitType | null = null;
@@ -63,7 +61,6 @@ export class UnitDisplay extends LitElement implements Layer {
       config.isUnitDisabled(UnitType.Warship) &&
       config.isUnitDisabled(UnitType.AtomBomb) &&
       config.isUnitDisabled(UnitType.HydrogenBomb);
-    this.eventBus.on(GhostStructureEvent, this._ghostHandler);
     this.eventBus.on(MouseUpEvent, this._mouseUpHandler);
     this.requestUpdate();
   }
@@ -115,12 +112,6 @@ export class UnitDisplay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private _ghostHandler = (e: GhostStructureEvent) => {
-    this._selectedStructure =
-      this._selectedStructure === e.structureType ? null : e.structureType;
-    this.requestUpdate();
-  };
-
   private _mouseUpHandler = (_: MouseUpEvent) => {
     this._selectedStructure = null;
     this.requestUpdate();
@@ -128,7 +119,6 @@ export class UnitDisplay extends LitElement implements Layer {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    this.eventBus?.off(GhostStructureEvent, this._ghostHandler as any);
     this.eventBus?.off(MouseUpEvent, this._mouseUpHandler as any);
   }
 
@@ -280,9 +270,9 @@ export class UnitDisplay extends LitElement implements Layer {
              rounded text-white ${selected ? "bg-slate-400/20" : ""}"
           @click=${() => {
             if (selected) {
-              this.eventBus?.emit(new GhostStructureEvent(null));
+              this.uiState.ghostStructure = null;
             } else if (this.canBuild(unitType)) {
-              this.eventBus?.emit(new GhostStructureEvent(unitType));
+              this.uiState.ghostStructure = unitType;
             }
             this.requestUpdate();
           }}

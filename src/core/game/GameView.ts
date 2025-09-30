@@ -205,11 +205,11 @@ export class PlayerView {
     return this.decoder;
   }
 
-  async actions(tile: TileRef): Promise<PlayerActions> {
+  async actions(tile?: TileRef): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
-      this.game.x(tile),
-      this.game.y(tile),
+      tile && this.game.x(tile),
+      tile && this.game.y(tile),
     );
   }
 
