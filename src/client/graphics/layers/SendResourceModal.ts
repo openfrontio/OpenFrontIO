@@ -4,15 +4,8 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderTroops, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 
-/**
- * <send-resource-modal>
- * - mode: "troops" (capacity-limited) | "gold" (unlimited)
- * - Computes troops capacity internally (from gameView + target).
- * - Emits "confirm": { amount, closePanel: true } and "close".
- */
 @customElement("send-resource-modal")
 class SendResourceModal extends LitElement {
-  // ── Public API
   @property({ type: Boolean }) open: boolean = false;
   @property({ type: String }) mode: "troops" | "gold" = "troops";
 
@@ -20,12 +13,10 @@ class SendResourceModal extends LitElement {
   @property({ type: Object }) uiState: UIState | null = null; // to seed initial %
   @property({ attribute: false }) format: (n: number) => string = renderTroops;
 
-  // Game context (troops only)
   @property({ type: Object }) myPlayer: PlayerView | null = null;
   @property({ type: Object }) target: PlayerView | null = null;
   @property({ type: Object }) gameView: GameView | null = null;
 
-  // Optional custom heading (otherwise troops i18n / generic “Send”)
   @property({ type: String }) heading: string | null = null;
 
   @state() private sendAmount: number = 0;
@@ -33,9 +24,6 @@ class SendResourceModal extends LitElement {
 
   private PRESETS = [10, 25, 50, 75, 100] as const;
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Lifecycle
-  // ─────────────────────────────────────────────────────────────────────────────
   createRenderRoot() {
     return this;
   }
@@ -83,9 +71,6 @@ class SendResourceModal extends LitElement {
     }
   }
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // Events
-  // ────────────────────────────────────────────────────────────────────────────
   private closeModal() {
     this.dispatchEvent(new CustomEvent("close"));
   }
@@ -109,9 +94,7 @@ class SendResourceModal extends LitElement {
       this.confirm();
     }
   };
-  // ────────────────────────────────────────────────────────────────────────────
-  // Computation
-  // ────────────────────────────────────────────────────────────────────────────
+
   private toNum(x: unknown): number {
     if (typeof x === "bigint") return Number(x);
     return Number(x ?? 0);
@@ -137,13 +120,12 @@ class SendResourceModal extends LitElement {
   }
 
   private getPercentBasis(): number {
-    // Always compute presets/slider percent against the sender's Available
     return this.getTotalNumber();
   }
 
   private limitAmount(proposed: number): number {
-    const cap = this.getCapacityLeft(); // receiver headroom
-    const total = this.getTotalNumber(); // sender available
+    const cap = this.getCapacityLeft();
+    const total = this.getTotalNumber();
     const hardMax = cap === null ? total : Math.min(total, cap);
     return Math.min(Math.max(0, proposed), hardMax);
   }
@@ -172,7 +154,7 @@ class SendResourceModal extends LitElement {
   }
 
   private getMinKeepRatio(): number {
-    return this.mode === "troops" ? 0.3 : 0; // gold has no keep rule
+    return this.mode === "troops" ? 0.3 : 0;
   }
 
   private isTargetAlive(): boolean {
@@ -184,9 +166,7 @@ class SendResourceModal extends LitElement {
     const s = this.myPlayer as any;
     return !!(s && typeof s.isAlive === "function" ? s.isAlive() : true);
   }
-  // ────────────────────────────────────────────────────────────────────────────
-  // i18n
-  // ────────────────────────────────────────────────────────────────────────────
+
   private i18n = {
     title: (name: string) =>
       this.mode === "troops"
@@ -235,9 +215,6 @@ class SendResourceModal extends LitElement {
     targetDeadNote: () => translateText("common.target_dead_note"),
   };
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Render helpers
-  // ─────────────────────────────────────────────────────────────────────────────
   private renderHeader() {
     const name = this.target?.name?.() ?? "";
     return html`
@@ -261,7 +238,7 @@ class SendResourceModal extends LitElement {
 
   private renderAvailable() {
     const total = this.getTotalNumber();
-    const cap = this.getCapacityLeft(); // null if gold or missing game context
+    const cap = this.getCapacityLeft();
 
     return html`
       <div class="mb-4 pb-3 border-b border-zinc-800">
@@ -541,9 +518,6 @@ class SendResourceModal extends LitElement {
     `;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────────────────────────────
   render() {
     if (!this.open) return html``;
 
