@@ -76,18 +76,26 @@ export class NukeExecution implements Execution {
     }
 
     const threshold = this.mg.config().nukeAllianceBreakThreshold();
-    for (const [other, tilesDestroyed] of attacked) {
+    for (const [attackedPlayer, tilesDestroyed] of attacked) {
       if (
         tilesDestroyed > threshold &&
         this.nuke.type() !== UnitType.MIRVWarhead
       ) {
+        // Resolves exploit of alliance breaking in which a pending alliance request
+        // was accepeted in the middle of an missle attack.
+        const allianceRequest = attackedPlayer
+          .incomingAllianceRequests()
+          .find((ar) => ar.requestor() === this.player);
+        if (allianceRequest) {
+          allianceRequest?.reject();
+        }
         // Mirv warheads shouldn't break alliances
-        const alliance = this.player.allianceWith(other);
+        const alliance = this.player.allianceWith(attackedPlayer);
         if (alliance !== null) {
           this.player.breakAlliance(alliance);
         }
-        if (other !== this.player) {
-          other.updateRelation(this.player, -100);
+        if (attackedPlayer !== this.player) {
+          attackedPlayer.updateRelation(this.player, -100);
         }
       }
     }

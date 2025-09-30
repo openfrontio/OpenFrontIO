@@ -38,6 +38,7 @@ var maps = []struct {
 	{Name: "baikal"},
 	{Name: "halkidiki"},
 	{Name: "italia"},
+	{Name: "japan"},
 	{Name: "straitofgibraltar"},
 	{Name: "pluto"},
 	{Name: "big_plains", IsTest: true},

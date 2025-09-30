@@ -312,7 +312,7 @@ export class UILayer implements Layer {
       return 1;
     }
     switch (unit.type()) {
-      case UnitType.Construction:
+      case UnitType.Construction: {
         const constructionType = unit.constructionType();
         if (constructionType === undefined) {
           return 1;
@@ -326,7 +326,7 @@ export class UILayer implements Layer {
           (this.game.ticks() - unit.createdAt()) /
           (constDuration === 0 ? 1 : constDuration)
         );
-
+      }
       case UnitType.MissileSilo:
       case UnitType.SAMLauncher:
         return unit.missileReadinesss();

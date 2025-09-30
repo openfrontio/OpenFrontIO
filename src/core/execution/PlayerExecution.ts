@@ -55,6 +55,7 @@ export class PlayerExecution implements Execution {
         }
       });
       this.active = false;
+      this.mg.stats().playerKilled(this.player, ticks);
       return;
     }
 

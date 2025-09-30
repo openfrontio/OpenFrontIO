@@ -99,13 +99,13 @@ export class Leaderboard extends LitElement implements Layer {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
-    const playersToShow = this.showTopFive ? sorted.slice(0, 5) : sorted;
+    const alivePlayers = sorted.filter((player) => player.isAlive());
+    const playersToShow = this.showTopFive
+      ? alivePlayers.slice(0, 5)
+      : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      let troops = player.troops() / 10;
-      if (!player.isAlive()) {
-        troops = 0;
-      }
+      const troops = player.troops() / 10;
       return {
         name: player.displayName(),
         position: index + 1,
@@ -131,22 +131,21 @@ export class Leaderboard extends LitElement implements Layer {
         }
       }
 
-      let myPlayerTroops = myPlayer.troops() / 10;
-      if (!myPlayer.isAlive()) {
-        myPlayerTroops = 0;
+      if (myPlayer.isAlive()) {
+        const myPlayerTroops = myPlayer.troops() / 10;
+        this.players.pop();
+        this.players.push({
+          name: myPlayer.displayName(),
+          position: place,
+          score: formatPercentage(
+            myPlayer.numTilesOwned() / this.game.numLandTiles(),
+          ),
+          gold: renderNumber(myPlayer.gold()),
+          troops: renderNumber(myPlayerTroops),
+          isMyPlayer: true,
+          player: myPlayer,
+        });
       }
-      this.players.pop();
-      this.players.push({
-        name: myPlayer.displayName(),
-        position: place,
-        score: formatPercentage(
-          myPlayer.numTilesOwned() / this.game.numLandTiles(),
-        ),
-        gold: renderNumber(myPlayer.gold()),
-        troops: renderNumber(myPlayerTroops),
-        isMyPlayer: true,
-        player: myPlayer,
-      });
     }
 
     this.requestUpdate();

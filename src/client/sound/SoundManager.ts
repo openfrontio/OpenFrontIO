@@ -1,8 +1,8 @@
 import { Howl } from "howler";
+import of4 from "../../../proprietary/sounds/music/of4.mp3";
+import openfront from "../../../proprietary/sounds/music/openfront.mp3";
+import war from "../../../proprietary/sounds/music/war.mp3";
 import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
-import evan from "../../../resources/sounds/music/evan.mp3";
-import openfront from "../../../resources/sounds/music/openfront.mp3";
-import war from "../../../resources/sounds/music/war.mp3";
 
 export enum SoundEffect {
   KaChing = "ka-ching",
@@ -18,7 +18,7 @@ class SoundManager {
   constructor() {
     this.backgroundMusic = [
       new Howl({
-        src: [evan],
+        src: [of4],
         loop: false,
         onend: this.playNext.bind(this),
         volume: 0,
