@@ -1,7 +1,7 @@
 import { Howl, Howler } from "howler";
-import evan from "../../../resources/sounds/music/evan.mp3";
-import openfront from "../../../resources/sounds/music/openfront.mp3";
-import war from "../../../resources/sounds/music/war.mp3";
+import evan from "../../../proprietary/sounds/music/evan.mp3";
+import openfront from "../../../proprietary/sounds/music/openfront.mp3";
+import war from "../../../proprietary/sounds/music/war.mp3";
 
 class SoundManager {
   private backgroundMusic: Howl[] = [];
