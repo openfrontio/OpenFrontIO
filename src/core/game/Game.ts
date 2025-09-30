@@ -11,6 +11,13 @@ import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
 
+function isEnumValue<T extends Record<string, string | number>>(
+  enumObj: T,
+  value: unknown,
+): value is T[keyof T] {
+  return Object.values(enumObj).includes(value as T[keyof T]);
+}
+
 export type PlayerID = string;
 export type Tick = number;
 export type Gold = bigint;
@@ -37,14 +44,8 @@ export enum Difficulty {
   Hard = "Hard",
   Impossible = "Impossible",
 }
-export function isDifficulty(difficulty: unknown): difficulty is Difficulty {
-  return (
-    difficulty === Difficulty.Easy ||
-    difficulty === Difficulty.Medium ||
-    difficulty === Difficulty.Hard ||
-    difficulty === Difficulty.Impossible
-  );
-}
+export const isDifficulty = (value: unknown): value is Difficulty =>
+  isEnumValue(Difficulty, value);
 
 export type Team = string;
 
@@ -140,21 +141,15 @@ export enum GameType {
   Public = "Public",
   Private = "Private",
 }
-export function isGameType(type: unknown): type is GameType {
-  return (
-    type === GameType.Singleplayer ||
-    type === GameType.Public ||
-    type === GameType.Private
-  );
-}
+export const isGameType = (value: unknown): value is GameType =>
+  isEnumValue(GameType, value);
 
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
 }
-export function isGameMode(mode: unknown): mode is GameMode {
-  return mode === GameMode.FFA || mode === GameMode.Team;
-}
+export const isGameMode = (value: unknown): value is GameMode =>
+  isEnumValue(GameMode, value);
 
 export enum GameMapSize {
   Compact = "Compact",
