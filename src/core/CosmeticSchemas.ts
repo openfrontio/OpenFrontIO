@@ -94,3 +94,32 @@ export const DefaultPattern = {
   patternData: "AAAAAA",
   colorPalette: undefined,
 } satisfies PlayerPattern;
+
+const imageFile = z
+  .string()
+  .regex(/\.(png|webp|jpg|jpeg|gif)$/i, "Invalid image extension");
+const audioFile = z
+  .string()
+  .regex(/\.(ogg|mp3|wav|m4a)$/i, "Invalid audio extension");
+
+const ImageAssetNode: z.ZodType<any> = z.lazy(() =>
+  z.union([imageFile, z.record(z.string(), ImageAssetNode)]),
+);
+const AudioAssetNode: z.ZodType<any> = z.lazy(() =>
+  z.union([audioFile, z.record(z.string(), AudioAssetNode)]),
+);
+
+export const CosmeticManifestSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    assets: z
+      .object({
+        structure: z.record(z.string(), ImageAssetNode).optional(),
+        sprites: z.record(z.string(), ImageAssetNode).optional(),
+        audio: z.record(z.string(), AudioAssetNode).optional(),
+      })
+      .strict(),
+  })
+  .strict();
+export type CosmeticManifest = z.infer<typeof CosmeticManifestSchema>;

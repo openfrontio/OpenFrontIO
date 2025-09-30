@@ -1,19 +1,19 @@
 import { colord, Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { EventBus } from "../../../core/EventBus";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
-
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import factoryIcon from "../../../../resources/images/buildings/factoryAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt3.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
+import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { resolveCosmeticUrl } from "../../CosmeticPackLoader";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 
@@ -38,7 +38,7 @@ export class StructureLayer implements Layer {
   private tempContext: CanvasRenderingContext2D;
 
   // Configuration for supported unit types only
-  private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
+  private unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
       icon: anchorIcon,
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
@@ -98,7 +98,8 @@ export class StructureLayer implements Layer {
     };
   }
 
-  private loadIconData() {
+  private async loadIconData() {
+    await this.applyCosmeticIcons();
     Object.entries(this.unitConfigs).forEach(([unitType, config]) => {
       this.loadIcon(unitType, config);
     });
@@ -120,6 +121,54 @@ export class StructureLayer implements Layer {
 
   init() {
     this.redraw();
+  }
+
+  private async applyCosmeticIcons(): Promise<void> {
+    const packSpec = "test";
+    this.unitConfigs[UnitType.Port] = {
+      ...this.unitConfigs[UnitType.Port]!,
+      icon: await resolveCosmeticUrl(
+        packSpec,
+        "structure/img/port",
+        anchorIcon,
+      ),
+    };
+    this.unitConfigs[UnitType.City] = {
+      ...this.unitConfigs[UnitType.City]!,
+      icon: await resolveCosmeticUrl(packSpec, "structure/img/city", cityIcon),
+    };
+    this.unitConfigs[UnitType.Factory] = {
+      ...this.unitConfigs[UnitType.Factory]!,
+      icon: await resolveCosmeticUrl(
+        packSpec,
+        "structure/img/factory",
+        factoryIcon,
+      ),
+    };
+    this.unitConfigs[UnitType.MissileSilo] = {
+      ...this.unitConfigs[UnitType.MissileSilo]!,
+      icon: await resolveCosmeticUrl(
+        packSpec,
+        "structure/img/missilesilo",
+        missileSiloIcon,
+      ),
+    };
+    this.unitConfigs[UnitType.DefensePost] = {
+      ...this.unitConfigs[UnitType.DefensePost]!,
+      icon: await resolveCosmeticUrl(
+        packSpec,
+        "structure/img/defensepost",
+        shieldIcon,
+      ),
+    };
+    this.unitConfigs[UnitType.SAMLauncher] = {
+      ...this.unitConfigs[UnitType.SAMLauncher]!,
+      icon: await resolveCosmeticUrl(
+        packSpec,
+        "structure/img/samlauncher",
+        SAMMissileIcon,
+      ),
+    };
   }
 
   redraw() {

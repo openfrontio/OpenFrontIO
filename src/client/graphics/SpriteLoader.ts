@@ -12,6 +12,7 @@ import warshipSprite from "../../../resources/sprites/warship.png";
 import { Theme } from "../../core/configuration/Config";
 import { TrainType, UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
+import { resolveCosmeticUrl } from "../CosmeticPackLoader";
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
 const TrainTypeSprite = {
@@ -22,17 +23,31 @@ const TrainTypeSprite = {
 
 type TrainTypeSprite = (typeof TrainTypeSprite)[keyof typeof TrainTypeSprite];
 
-const SPRITE_CONFIG: Partial<Record<UnitType | TrainTypeSprite, string>> = {
-  [UnitType.TransportShip]: transportShipSprite,
-  [UnitType.Warship]: warshipSprite,
-  [UnitType.SAMMissile]: samMissileSprite,
-  [UnitType.AtomBomb]: atomBombSprite,
-  [UnitType.HydrogenBomb]: hydrogenBombSprite,
-  [UnitType.TradeShip]: tradeShipSprite,
-  [UnitType.MIRV]: mirvSprite,
-  [TrainTypeSprite.Engine]: trainEngineSprite,
-  [TrainTypeSprite.Carriage]: trainCarriageSprite,
-  [TrainTypeSprite.LoadedCarriage]: trainLoadedCarriageSprite,
+const SPRITE_CONFIG: Partial<
+  Record<UnitType | TrainTypeSprite, { key: string; url: string }>
+> = {
+  [UnitType.TransportShip]: {
+    key: "sprites/transportship",
+    url: transportShipSprite,
+  },
+  [UnitType.Warship]: { key: "sprites/warship", url: warshipSprite },
+  [UnitType.SAMMissile]: { key: "sprites/sammissile", url: samMissileSprite },
+  [UnitType.AtomBomb]: { key: "sprites/atombomb", url: atomBombSprite },
+  [UnitType.HydrogenBomb]: {
+    key: "sprites/hydrogenbomb",
+    url: hydrogenBombSprite,
+  },
+  [UnitType.TradeShip]: { key: "sprites/tradeship", url: tradeShipSprite },
+  [UnitType.MIRV]: { key: "sprites/mirv", url: mirvSprite },
+  [TrainTypeSprite.Engine]: { key: "sprites/engine", url: trainEngineSprite },
+  [TrainTypeSprite.Carriage]: {
+    key: "sprites/carriage",
+    url: trainCarriageSprite,
+  },
+  [TrainTypeSprite.LoadedCarriage]: {
+    key: "sprites/loadedcarriage",
+    url: trainLoadedCarriageSprite,
+  },
 };
 
 const spriteMap: Map<UnitType | TrainTypeSprite, ImageBitmap> = new Map();
@@ -43,14 +58,20 @@ export const loadAllSprites = async (): Promise<void> => {
   const totalSprites = entries.length;
   let loadedCount = 0;
 
+  const packId: string | null = "test"; // TODO: wire from server/client selection
+
   await Promise.all(
-    entries.map(async ([unitType, url]) => {
+    entries.map(async ([unitType, value]) => {
       const typedUnitType = unitType as UnitType | TrainTypeSprite;
 
-      if (!url || url === "") {
-        console.warn(`No sprite URL for ${typedUnitType}, skipping...`);
+      const key = value?.key;
+      const fallbackUrl = value?.url;
+
+      if (!fallbackUrl) {
+        console.warn(`No sprite url for ${typedUnitType}, skipping...`);
         return;
       }
+      const url = await resolveCosmeticUrl(packId, key, fallbackUrl);
 
       try {
         const img = new Image();
