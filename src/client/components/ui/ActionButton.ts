@@ -58,8 +58,9 @@ export const actionButton = (props: ActionButtonProps): TemplateResult => {
       @click=${onClick}
       class="${buttonClass}"
       title="${title}"
-      ?disabled=${disabled}
+      type="button"
       aria-label="${title}"
+      ?disabled=${disabled}
     >
       <img src=${icon} alt=${iconAlt} aria-hidden="true" class="${ICON_SIZE}" />
       <span class="${TEXT_SIZE}">${label}</span>

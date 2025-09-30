@@ -1,7 +1,5 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
-
-// ── Icons
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
@@ -12,8 +10,6 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import startTradingIcon from "../../../../resources/images/TradingIconWhite.png";
 import traitorIcon from "../../../../resources/images/TraitorIconLightRed.svg";
 import breakAllianceIcon from "../../../../resources/images/TraitorIconWhite.svg";
-
-// ── Core APIs
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -25,13 +21,9 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
-
-// ── UI
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import Countries from "../../data/countries.json";
-
-// ── Events / Transport
 import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
@@ -42,15 +34,12 @@ import {
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
-
-// ── Utils
 import {
   renderDuration,
   renderNumber,
   renderTroops,
   translateText,
 } from "../../Utils";
-
 import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
@@ -58,17 +47,10 @@ import { Layer } from "./Layer";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Public references
-  // ─────────────────────────────────────────────────────────────────────────────
   public g: GameView;
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
   public uiState: UIState;
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Internal state
-  // ─────────────────────────────────────────────────────────────────────────────
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
   private _profileForPlayerId: number | null = null;
@@ -87,9 +69,6 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private ctModal: ChatModal;
 
-  // ────────────────────────────────────────────────────────────────────────
-  // Lifecycle & framework integration
-  // ────────────────────────────────────────────────────────────────────────
   createRenderRoot() {
     return this;
   }
@@ -120,12 +99,8 @@ export class PlayerPanel extends LitElement implements Layer {
         const id = pv.id();
         // fetch only if we don't have it or the player changed
         if (this._profileForPlayerId !== Number(id)) {
-          try {
-            this.otherProfile = await pv.profile();
-            this._profileForPlayerId = Number(id);
-          } catch (_) {
-            /* swallow fetch errors */
-          }
+          this.otherProfile = await pv.profile();
+          this._profileForPlayerId = Number(id);
         }
       }
 
@@ -154,9 +129,6 @@ export class PlayerPanel extends LitElement implements Layer {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Public API
-  // ─────────────────────────────────────────────────────────────────────────────
   public show(actions: PlayerActions, tile: TileRef) {
     this.actions = actions;
     this.tile = tile;
@@ -169,9 +141,6 @@ export class PlayerPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Event handlers
-  // ─────────────────────────────────────────────────────────────────────────────
   private handleClose(e: Event) {
     e.stopPropagation();
     this.hide();
@@ -280,9 +249,6 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Computation helpers
-  // ─────────────────────────────────────────────────────────────────────────────
   private getIdentityKind(p: PlayerView): "nation" | "bot" | "player" {
     switch (p.type()) {
       case PlayerType.FakeHuman:
@@ -295,29 +261,31 @@ export class PlayerPanel extends LitElement implements Layer {
     }
   }
 
-  private identityChipProps(kind: "nation" | "bot" | "player") {
-    if (kind === "nation") {
-      return {
-        labelKey: "player_type.nation",
-        aria: "Nation player",
-        classes: "border-indigo-400/25 bg-indigo-500/10 text-indigo-200",
-        icon: "🏛️",
-      };
+  private identityChipProps(type: PlayerType) {
+    switch (type) {
+      case PlayerType.FakeHuman:
+        return {
+          labelKey: "player_type.nation",
+          aria: "Nation player",
+          classes: "border-indigo-400/25 bg-indigo-500/10 text-indigo-200",
+          icon: "🏛️",
+        };
+      case PlayerType.Bot:
+        return {
+          labelKey: "player_type.bot",
+          aria: "Bot",
+          classes: "border-purple-400/25 bg-purple-500/10 text-purple-200",
+          icon: "🤖",
+        };
+      case PlayerType.Human:
+      default:
+        return {
+          labelKey: "player_type.player",
+          aria: "Human player",
+          classes: "border-zinc-400/20 bg-zinc-500/5 text-zinc-300",
+          icon: "👤",
+        };
     }
-    if (kind === "bot") {
-      return {
-        labelKey: "player_type.bot",
-        aria: "Bot",
-        classes: "border-purple-400/25 bg-purple-500/10 text-purple-200",
-        icon: "🤖",
-      };
-    }
-    return {
-      labelKey: "player_type.player",
-      aria: "Human player",
-      classes: "border-zinc-400/20 bg-zinc-500/5 text-zinc-300",
-      icon: "👤",
-    };
   }
 
   private getRelationClass(relation: Relation): string {
@@ -365,32 +333,11 @@ export class PlayerPanel extends LitElement implements Layer {
     return Math.ceil(ticksLeft / 10); // 10 ticks = 1 second
   }
 
-  private formatTraitorCountdown(seconds: number): string {
-    return `${seconds}s`;
-  }
-
-  private getPermissions(my: PlayerView, other: PlayerView) {
-    const i = this.actions?.interaction;
-    return {
-      canDonateGold: i?.canDonateGold,
-      canDonateTroops: i?.canDonateTroops,
-      canSendAllianceRequest: i?.canSendAllianceRequest,
-      canBreakAlliance: i?.canBreakAlliance,
-      canTarget: i?.canTarget,
-      canEmbargo: i?.canEmbargo,
-      canSendEmoji:
-        other === my ? this.actions?.canSendEmojiAllPlayers : i?.canSendEmoji,
-    };
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Render helpers (small, focused blocks)
-  // ─────────────────────────────────────────────────────────────────────────────
   private renderTraitorBadge(other: PlayerView) {
     if (!other.isTraitor()) return html``;
 
     const secs = this.getTraitorRemainingSeconds(other);
-    const label = secs !== null ? this.formatTraitorCountdown(secs) : null;
+    const label = secs !== null ? renderDuration(secs) : null;
     const dotCls =
       secs !== null
         ? `mx-1 h-[4px] w-[4px] rounded-full bg-red-400/70 ${secs <= 10 ? "animate-pulse" : ""}`
@@ -427,7 +374,6 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private renderRelationPillIfNation(other: PlayerView, my: PlayerView) {
-    // Only for Nation, not traitor, not allied, and when profile is available
     if (other.type() !== PlayerType.FakeHuman) return html``;
     if (other.isTraitor()) return html``;
     if (my?.isAlliedWith && my.isAlliedWith(other)) return html``;
@@ -446,15 +392,16 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
-    // Flag
     const flagCode = other.cosmetics.flag;
     const country =
       typeof flagCode === "string"
         ? Countries.find((c) => c.code === flagCode)
         : undefined;
 
-    const kind = this.getIdentityKind(other);
-    const chip = kind === "player" ? null : this.identityChipProps(kind);
+    const chip =
+      other.type() === PlayerType.Human
+        ? null
+        : this.identityChipProps(other.type());
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
@@ -614,7 +561,18 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private renderActions(my: PlayerView, other: PlayerView) {
-    const p = this.getPermissions(my, other);
+    const myPlayer = this.g.myPlayer();
+    const canDonateGold = this.actions?.interaction?.canDonateGold;
+    const canDonateTroops = this.actions?.interaction?.canDonateTroops;
+    const canSendAllianceRequest =
+      this.actions?.interaction?.canSendAllianceRequest;
+    const canSendEmoji =
+      other === myPlayer
+        ? this.actions?.canSendEmojiAllPlayers
+        : this.actions?.interaction?.canSendEmoji;
+    const canBreakAlliance = this.actions?.interaction?.canBreakAlliance;
+    const canTarget = this.actions?.interaction?.canTarget;
+    const canEmbargo = this.actions?.interaction?.canEmbargo;
 
     return html`
       <div class="flex flex-col gap-2">
@@ -626,7 +584,7 @@ export class PlayerPanel extends LitElement implements Layer {
             title: translateText("player_panel.chat"),
             label: translateText("player_panel.chat"),
           })}
-          ${p.canSendEmoji
+          ${canSendEmoji
             ? actionButton({
                 onClick: (e: MouseEvent) => this.handleEmojiClick(e, my, other),
                 icon: emojiIcon,
@@ -636,7 +594,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "normal",
               })
             : ""}
-          ${p.canTarget
+          ${canTarget
             ? actionButton({
                 onClick: (e: MouseEvent) => this.handleTargetClick(e, other),
                 icon: targetIcon,
@@ -646,7 +604,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "normal",
               })
             : ""}
-          ${p.canDonateTroops
+          ${canDonateTroops
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleDonateTroopClick(e, my, other),
@@ -657,7 +615,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "normal",
               })
             : ""}
-          ${p.canDonateGold
+          ${canDonateGold
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleDonateGoldClick(e, my, other),
@@ -672,7 +630,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
         <div class="grid auto-cols-fr grid-flow-col gap-1">
           ${other !== my
-            ? p.canEmbargo
+            ? canEmbargo
               ? actionButton({
                   onClick: (e: MouseEvent) =>
                     this.handleEmbargoClick(e, my, other),
@@ -692,7 +650,7 @@ export class PlayerPanel extends LitElement implements Layer {
                   type: "green",
                 })
             : ""}
-          ${p.canBreakAlliance
+          ${canBreakAlliance
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleBreakAllianceClick(e, my, other),
@@ -703,7 +661,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "red",
               })
             : ""}
-          ${p.canSendAllianceRequest
+          ${canSendAllianceRequest
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleAllianceClick(e, my, other),
