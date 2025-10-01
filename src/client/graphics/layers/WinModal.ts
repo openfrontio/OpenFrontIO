@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
+import { isInIframe, translateText } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -95,7 +95,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   innerHtml() {
-    if (this.rand < 0.25) {
+    if (isInIframe() || this.rand < 0.25) {
       return this.steamWishlist();
     }
     return this.renderPatternButton();
