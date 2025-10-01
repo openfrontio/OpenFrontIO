@@ -25,6 +25,15 @@ import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
+import { RankedCoordinator } from "./ranked/RankedCoordinator";
+import { RankedRepository } from "./ranked/RankedRepository";
+import {
+  RankedMatchAcceptSchema,
+  RankedMatchDeclineSchema,
+  RankedMatchIdSchema,
+  RankedQueueJoinRequestSchema,
+  RankedTicketIdSchema,
+} from "./ranked/RankedSchemas";
 
 import { assertNever } from "../core/Util";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
@@ -48,6 +57,12 @@ export async function startWorker() {
 
   const gm = new GameManager(config, log);
 
+  const rankedRepository = RankedRepository.create(
+    log.child({ comp: "ranked_repo" }),
+  );
+  const rankedCoordinator = new RankedCoordinator(gm, log, rankedRepository);
+  await rankedCoordinator.initialize();
+
   if (config.otelEnabled()) {
     initWorkerMetrics(gm);
   }
@@ -60,7 +75,6 @@ export async function startWorker() {
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
-    // Extract the original path without the worker prefix
     const originalPath = req.url;
     const match = originalPath.match(/^\/w(\d+)(.*)$/);
 
@@ -68,7 +82,6 @@ export async function startWorker() {
       const pathWorkerId = parseInt(match[1]);
       const actualPath = match[2] || "/";
 
-      // Verify this request is for the correct worker
       if (pathWorkerId !== workerId) {
         return res.status(404).json({
           error: "Worker mismatch",
@@ -76,7 +89,6 @@ export async function startWorker() {
         });
       }
 
-      // Update the URL to remove the worker prefix
       req.url = actualPath;
     }
 
@@ -98,7 +110,6 @@ export async function startWorker() {
     const id = req.params.id;
     const creatorClientID = (() => {
       if (typeof req.query.creatorClientID !== "string") return undefined;
-
       const trimmed = req.query.creatorClientID.trim();
       return ID.safeParse(trimmed).success ? trimmed : undefined;
     })();
@@ -107,6 +118,7 @@ export async function startWorker() {
       log.warn(`cannot create game, id not found`);
       return res.status(400).json({ error: "Game ID is required" });
     }
+
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
     const result = CreateGameInputSchema.safeParse(req.body);
@@ -135,7 +147,6 @@ export async function startWorker() {
       return res.status(400).json({ error: "Worker, game id mismatch" });
     }
 
-    // Pass creatorClientID to createGame
     const game = gm.createGame(id, gc, creatorClientID);
 
     log.info(
@@ -144,7 +155,6 @@ export async function startWorker() {
     res.json(game.gameInfo());
   });
 
-  // Add other endpoints from your original server
   app.post("/api/start_game/:id", async (req, res) => {
     log.info(`starting private lobby with id ${req.params.id}`);
     const game = gm.game(req.params.id);
@@ -169,10 +179,10 @@ export async function startWorker() {
       const error = z.prettifyError(result.error);
       return res.status(400).json({ error });
     }
-    const config = result.data;
-    // TODO: only update public game if from local host
+    const bodyConfig = result.data;
+
     const lobbyID = req.params.id;
-    if (config.gameType === GameType.Public) {
+    if (bodyConfig.gameType === GameType.Public) {
       log.info(`cannot update game ${lobbyID} to public`);
       return res.status(400).json({ error: "Cannot update public game" });
     }
@@ -194,7 +204,7 @@ export async function startWorker() {
         .status(400)
         .json({ error: "Cannot update game after it has started" });
     }
-    game.updateGameConfig(config);
+    game.updateGameConfig(bodyConfig);
     res.status(200).json({ success: true });
   });
 
@@ -275,20 +285,274 @@ export async function startWorker() {
     res.status(200).send("Player kicked successfully");
   });
 
-  // WebSocket handling
-  wss.on("connection", (ws: WebSocket, req) => {
-    ws.on("message", async (message: string) => {
-      const forwarded = req.headers["x-forwarded-for"];
-      const ip = Array.isArray(forwarded)
-        ? forwarded[0]
-        : // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-          forwarded || req.socket.remoteAddress || "unknown";
+  async function authenticateRankedRequest(
+    req: Request,
+    res: Response,
+  ): Promise<{ playerId: string } | null> {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+      res.status(401).json({ error: "Authorization required" });
+      return null;
+    }
 
+    const match = authorization.match(/^Bearer\s+(.+)$/i);
+    if (!match) {
+      res.status(401).json({ error: "Authorization required" });
+      return null;
+    }
+
+    const token = match[1].trim();
+    if (token.length === 0) {
+      res.status(401).json({ error: "Authorization required" });
+      return null;
+    }
+
+    try {
+      const verification = await verifyClientToken(token, config);
+      if (verification === false || verification.claims === null) {
+        res.status(401).json({ error: "Authentication required" });
+        return null;
+      }
+
+      return { playerId: verification.persistentId };
+    } catch (error) {
+      log.error("failed to authenticate ranked request", { error });
+      res.status(500).json({ error: "Failed to verify authentication" });
+      return null;
+    }
+  }
+
+  app.post("/api/ranked/queue", async (req, res) => {
+    const auth = await authenticateRankedRequest(req, res);
+    if (!auth) {
+      return;
+    }
+
+    const result = RankedQueueJoinRequestSchema.safeParse(req.body);
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      return res.status(400).json({ error });
+    }
+
+    if (result.data.playerId !== auth.playerId) {
+      log.warn("ranked queue join player mismatch", {
+        expectedPlayerId: auth.playerId,
+        providedPlayerId: result.data.playerId,
+      });
+      return res.status(403).json({ error: "Player mismatch" });
+    }
+
+    try {
+      const ticket = await rankedCoordinator.join({
+        playerId: auth.playerId,
+        mode: result.data.mode,
+        region: result.data.region,
+        mmr: result.data.mmr,
+        username: result.data.username,
+      });
+      res.status(201).json({ ticket });
+    } catch (error) {
+      log.error("failed to join ranked queue", { error });
+      res.status(500).json({ error: "Failed to join ranked queue" });
+    }
+  });
+
+  app.get("/api/ranked/queue/:ticketId", async (req, res) => {
+    const auth = await authenticateRankedRequest(req, res);
+    if (!auth) {
+      return;
+    }
+
+    const ticketId = req.params.ticketId;
+    if (!RankedTicketIdSchema.safeParse(ticketId).success) {
+      return res.status(400).json({ error: "Invalid ticket id" });
+    }
+
+    const ticket = rankedCoordinator.get(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ error: "Ticket not found" });
+    }
+
+    if (ticket.playerId !== auth.playerId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    res.json({ ticket });
+  });
+
+  app.delete("/api/ranked/queue/:ticketId", async (req, res) => {
+    const auth = await authenticateRankedRequest(req, res);
+    if (!auth) {
+      return;
+    }
+
+    const ticketId = req.params.ticketId;
+    if (!RankedTicketIdSchema.safeParse(ticketId).success) {
+      return res.status(400).json({ error: "Invalid ticket id" });
+    }
+
+    const ticketView = rankedCoordinator.get(ticketId);
+    if (!ticketView) {
+      return res.status(404).json({
+        error: "Ticket not found or already processed",
+      });
+    }
+
+    if (ticketView.playerId !== auth.playerId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    try {
+      const removed = await rankedCoordinator.leave(ticketId);
+      if (!removed) {
+        return res.status(404).json({
+          error: "Ticket not found or already processed",
+        });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      log.error("failed to leave ranked queue", { error });
+      res.status(500).json({ error: "Failed to leave ranked queue" });
+    }
+  });
+
+  app.post("/api/ranked/match/:matchId/accept", async (req, res) => {
+    const auth = await authenticateRankedRequest(req, res);
+    if (!auth) {
+      return;
+    }
+
+    const matchId = req.params.matchId;
+    if (!RankedMatchIdSchema.safeParse(matchId).success) {
+      return res.status(400).json({ error: "Invalid match id" });
+    }
+
+    const parsed = RankedMatchAcceptSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const error = z.prettifyError(parsed.error);
+      return res.status(400).json({ error });
+    }
+
+    const { ticketId, playerId: requestPlayerId, acceptToken } = parsed.data;
+    if (requestPlayerId !== auth.playerId) {
+      log.warn("ranked match accept player mismatch", {
+        expectedPlayerId: auth.playerId,
+        providedPlayerId: requestPlayerId,
+      });
+      return res.status(403).json({ error: "Player mismatch" });
+    }
+
+    const ticketView = rankedCoordinator.get(ticketId);
+    if (
+      !ticketView ||
+      ticketView.playerId !== auth.playerId ||
+      ticketView.match?.matchId !== matchId
+    ) {
+      return res.status(404).json({ error: "Ticket not found for match" });
+    }
+
+    try {
+      const ticket = await rankedCoordinator.accept(
+        matchId,
+        ticketId,
+        acceptToken,
+      );
+      if (!ticket) {
+        return res
+          .status(404)
+          .json({ error: "Match not found or already processed" });
+      }
+
+      res.json({ ticket });
+    } catch (error) {
+      log.error("failed to accept ranked match", {
+        error,
+        matchId,
+        ticketId,
+        playerId: auth.playerId,
+      });
+      res.status(500).json({ error: "Failed to accept ranked match" });
+    }
+  });
+
+  app.post("/api/ranked/match/:matchId/decline", async (req, res) => {
+    const auth = await authenticateRankedRequest(req, res);
+    if (!auth) {
+      return;
+    }
+
+    const matchId = req.params.matchId;
+    if (!RankedMatchIdSchema.safeParse(matchId).success) {
+      return res.status(400).json({ error: "Invalid match id" });
+    }
+
+    const parsed = RankedMatchDeclineSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const error = z.prettifyError(parsed.error);
+      return res.status(400).json({ error });
+    }
+
+    const { ticketId, playerId: requestPlayerId } = parsed.data;
+    if (requestPlayerId !== auth.playerId) {
+      log.warn("ranked match decline player mismatch", {
+        expectedPlayerId: auth.playerId,
+        providedPlayerId: requestPlayerId,
+      });
+      return res.status(403).json({ error: "Player mismatch" });
+    }
+
+    const ticketView = rankedCoordinator.get(ticketId);
+    if (
+      !ticketView ||
+      ticketView.playerId !== auth.playerId ||
+      ticketView.match?.matchId !== matchId
+    ) {
+      return res.status(404).json({ error: "Ticket not found for match" });
+    }
+
+    try {
+      const ticket = await rankedCoordinator.decline(matchId, ticketId);
+      if (!ticket) {
+        return res
+          .status(404)
+          .json({ error: "Match not found or already processed" });
+      }
+
+      res.json({ ticket });
+    } catch (error) {
+      log.error("failed to decline ranked match", {
+        error,
+        matchId,
+        ticketId,
+        playerId: auth.playerId,
+      });
+      res.status(500).json({ error: "Failed to decline ranked match" });
+    }
+  });
+
+  // === WEBSOCKET HANDLERS ===
+  wss.on("connection", (ws: WebSocket, req) => {
+    const ip = req.socket.remoteAddress ?? "unknown";
+    const url = req.url ?? "/";
+
+    log.info("WebSocket connection attempt", { url, ip });
+
+    // Handle ranked queue WebSocket connections
+    if (url.includes("/ws/ranked")) {
+      log.info("Routing to ranked WebSocket handler");
+      rankedCoordinator.handleWebSocketConnection(ws, req);
+      return;
+    }
+
+    log.info("Routing to game WebSocket handler");
+    // Handle game WebSocket connections (existing logic)
+
+    ws.on("message", async (data: Buffer | string) => {
       try {
-        // Parse and handle client messages
-        const parsed = ClientMessageSchema.safeParse(
-          JSON.parse(message.toString()),
-        );
+        const text = typeof data === "string" ? data : data.toString("utf8");
+        const parsed = ClientMessageSchema.safeParse(JSON.parse(text));
+
         if (!parsed.success) {
           const error = z.prettifyError(parsed.error);
           log.warn("Error parsing client message", error);
@@ -304,11 +568,13 @@ export async function startWorker() {
         const clientMsg = parsed.data;
 
         if (clientMsg.type === "ping") {
-          // Ignore ping
-          return;
+          return; // Ignore ping
         } else if (clientMsg.type !== "join") {
           log.warn(
-            `Invalid message before join: ${JSON.stringify(clientMsg, replacer)}`,
+            `Invalid message before join: ${JSON.stringify(
+              clientMsg,
+              replacer,
+            )}`,
           );
           return;
         }
@@ -323,13 +589,13 @@ export async function startWorker() {
         }
 
         // Verify token signature
-        const result = await verifyClientToken(clientMsg.token, config);
-        if (result === false) {
+        const verifyResult = await verifyClientToken(clientMsg.token, config);
+        if (verifyResult === false) {
           log.warn("Unauthorized: Invalid token");
           ws.close(1002, "Unauthorized");
           return;
         }
-        const { persistentId, claims } = result;
+        const { persistentId, claims } = verifyResult;
 
         let roles: string[] | undefined;
         let flares: string[] | undefined;
@@ -342,15 +608,15 @@ export async function startWorker() {
             return;
           }
         } else {
-          // Verify token and get player permissions
-          const result = await getUserMe(clientMsg.token, config);
-          if (result === false) {
+          // Verify session and read roles/flares
+          const me = await getUserMe(clientMsg.token, config);
+          if (me === false) {
             log.warn("Unauthorized: Invalid session");
             ws.close(1002, "Unauthorized");
             return;
           }
-          roles = result.player.roles;
-          flares = result.player.flares;
+          roles = me.player.roles;
+          flares = me.player.flares;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -399,17 +665,14 @@ export async function startWorker() {
 
         if (!wasFound) {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          // Handle game not found case
+          // Optionally: ws.close(1002, "GameNotFound");
         }
-
-        // Handle other message types
       } catch (error) {
         ws.close(1011, "Internal server error");
         log.warn(
-          `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
-            0,
-            250,
-          ),
+          `error handling websocket message for ${ipAnonymize(ip)}: ${String(
+            error,
+          )}`.substring(0, 250),
         );
       }
     });
@@ -438,6 +701,7 @@ export async function startWorker() {
         cosmetics: undefined,
       };
     }
+
     // Check if the flag is allowed
     if (cosmetics.flag !== undefined) {
       if (cosmetics.flag.startsWith("!")) {
@@ -494,12 +758,132 @@ export async function startWorker() {
     };
   }
 
+  app.get("/api/ranked/leaderboard", async (req, res) => {
+    if (!rankedRepository) {
+      return res.json({ seasonId: null, entries: [] });
+    }
+
+    const auth = await authenticateRankedRequest(req, res);
+    if (!auth) {
+      return;
+    }
+
+    const seasonParam = Array.isArray(req.query.seasonId)
+      ? req.query.seasonId[0]
+      : req.query.seasonId;
+    let seasonId: number | null;
+
+    if (seasonParam !== undefined) {
+      const parsedSeason = Number(seasonParam);
+      if (!Number.isFinite(parsedSeason) || parsedSeason < 0) {
+        return res.status(400).json({ error: "Invalid seasonId" });
+      }
+      seasonId = Math.floor(parsedSeason);
+    } else {
+      seasonId = await rankedRepository.getActiveSeasonId();
+    }
+
+    if (seasonId === null) {
+      return res.json({ seasonId: null, entries: [] });
+    }
+
+    const limitParam = Array.isArray(req.query.limit)
+      ? req.query.limit[0]
+      : req.query.limit;
+    const offsetParam = Array.isArray(req.query.offset)
+      ? req.query.offset[0]
+      : req.query.offset;
+
+    const limitValue = limitParam !== undefined ? Number(limitParam) : 25;
+    const offsetValue = offsetParam !== undefined ? Number(offsetParam) : 0;
+
+    if (!Number.isFinite(limitValue) || limitValue <= 0) {
+      return res.status(400).json({ error: "Invalid limit" });
+    }
+    if (!Number.isFinite(offsetValue) || offsetValue < 0) {
+      return res.status(400).json({ error: "Invalid offset" });
+    }
+
+    const safeLimit = Math.min(Math.floor(limitValue), 100);
+    const safeOffset = Math.floor(offsetValue);
+
+    const leaderboard = await rankedRepository.getLeaderboard(
+      seasonId,
+      safeLimit,
+      safeOffset,
+    );
+    const entries = leaderboard.map((entry, index) => ({
+      ...entry,
+      rank: safeOffset + index + 1,
+    }));
+
+    res.json({ seasonId, entries });
+  });
+
+  app.get("/api/ranked/history", async (req, res) => {
+    if (!rankedRepository) {
+      return res.json({ seasonId: null, matches: [] });
+    }
+
+    const auth = await authenticateRankedRequest(req, res);
+    if (!auth) {
+      return;
+    }
+
+    const seasonParam = Array.isArray(req.query.seasonId)
+      ? req.query.seasonId[0]
+      : req.query.seasonId;
+    let seasonId: number | null;
+
+    if (seasonParam !== undefined) {
+      const parsedSeason = Number(seasonParam);
+      if (!Number.isFinite(parsedSeason) || parsedSeason < 0) {
+        return res.status(400).json({ error: "Invalid seasonId" });
+      }
+      seasonId = Math.floor(parsedSeason);
+    } else {
+      seasonId = await rankedRepository.getActiveSeasonId();
+    }
+
+    if (seasonId === null) {
+      return res.json({ seasonId: null, matches: [] });
+    }
+
+    const limitParam = Array.isArray(req.query.limit)
+      ? req.query.limit[0]
+      : req.query.limit;
+    const offsetParam = Array.isArray(req.query.offset)
+      ? req.query.offset[0]
+      : req.query.offset;
+
+    const limitValue = limitParam !== undefined ? Number(limitParam) : 20;
+    const offsetValue = offsetParam !== undefined ? Number(offsetParam) : 0;
+
+    if (!Number.isFinite(limitValue) || limitValue <= 0) {
+      return res.status(400).json({ error: "Invalid limit" });
+    }
+    if (!Number.isFinite(offsetValue) || offsetValue < 0) {
+      return res.status(400).json({ error: "Invalid offset" });
+    }
+
+    const safeLimit = Math.min(Math.floor(limitValue), 100);
+    const safeOffset = Math.floor(offsetValue);
+
+    const matches = await rankedRepository.getPlayerMatchHistory(
+      auth.playerId,
+      seasonId,
+      safeLimit,
+      safeOffset,
+    );
+
+    res.json({ seasonId, matches });
+  });
+
   // The load balancer will handle routing to this server based on path
   const PORT = config.workerPortByIndex(workerId);
   server.listen(PORT, () => {
     log.info(`running on http://localhost:${PORT}`);
     log.info(`Handling requests with path prefix /w${workerId}/`);
-    // Signal to the master process that this worker is ready
     if (process.send) {
       process.send({
         type: "WORKER_READY",

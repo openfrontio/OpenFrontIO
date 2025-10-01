@@ -141,6 +141,7 @@ export enum GameMode {
 export enum GameMapSize {
   Compact = "Compact",
   Normal = "Normal",
+  Small = "Small",
 }
 
 export interface UnitInfo {

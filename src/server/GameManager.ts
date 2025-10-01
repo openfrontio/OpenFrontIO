@@ -13,6 +13,7 @@ import { GamePhase, GameServer } from "./GameServer";
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
+  private gameFinishedListeners: Array<(game: GameServer) => void> = [];
 
   constructor(
     private config: ServerConfig,
@@ -23,6 +24,10 @@ export class GameManager {
 
   public game(id: GameID): GameServer | null {
     return this.games.get(id) ?? null;
+  }
+
+  public onGameFinished(listener: (game: GameServer) => void): void {
+    this.gameFinishedListeners.push(listener);
   }
 
   addClient(client: Client, gameID: GameID, lastTurn: number): boolean {
@@ -102,6 +107,16 @@ export class GameManager {
           game.end();
         } catch (error) {
           this.log.error(`error ending game ${id}: ${error}`);
+        }
+        for (const listener of this.gameFinishedListeners) {
+          try {
+            listener(game);
+          } catch (listenerError) {
+            this.log.error("error in game finished listener", {
+              gameID: id,
+              error: listenerError,
+            });
+          }
         }
       } else {
         active.set(id, game);

@@ -237,12 +237,98 @@
             block
             secondary
           ></o-button>
-          <!-- <o-button
-            id="chat-button"
-            title="Chat Test"
-            block
-            secondary
-          ></o-button> -->
+        </div>
+
+        <!-- Ranked Queue Section -->
+        <div
+          class="mt-4 rounded-xl bg-white/95 dark:bg-slate-800/95 p-6 shadow-2xl border-2 border-blue-500/50"
+        >
+          <div class="flex items-center justify-center mb-4 gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-7 w-7 text-amber-500"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              />
+            </svg>
+            <h3
+              class="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight uppercase"
+            >
+              Ranked Mode
+            </h3>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-7 w-7 text-amber-500"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              />
+            </svg>
+          </div>
+          <button
+            id="ranked-queue-button"
+            class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-4 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-lg"
+          >
+            Join Ranked Queue
+          </button>
+          <div
+            id="ranked-queue-status"
+            class="text-center text-sm mt-4 px-4 py-3 rounded-lg bg-blue-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 font-medium min-h-[3rem] flex items-center justify-center border border-blue-200 dark:border-slate-600"
+          ></div>
+        </div>
+
+        <div id="ranked-stats" class="mt-6 grid gap-4 hidden md:grid-cols-2">
+          <section
+            class="rounded-xl bg-white/95 dark:bg-slate-800/95 p-5 shadow-xl border-2 border-slate-300/50 dark:border-slate-600/50 flex flex-col max-h-96"
+          >
+            <div class="flex items-center gap-2 mb-4 flex-shrink-0">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-amber-500"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+                />
+              </svg>
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                Leaderboard
+              </h3>
+            </div>
+            <ul
+              id="ranked-leaderboard-list"
+              class="space-y-2 text-sm overflow-y-auto flex-1"
+            ></ul>
+          </section>
+          <section
+            class="rounded-xl bg-white/95 dark:bg-slate-800/95 p-5 shadow-xl border-2 border-slate-300/50 dark:border-slate-600/50 flex flex-col max-h-96"
+          >
+            <div class="flex items-center gap-2 mb-4 flex-shrink-0">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-blue-500"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"
+                />
+              </svg>
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+                Match History
+              </h3>
+            </div>
+            <ul
+              id="ranked-history-list"
+              class="space-y-2 text-sm overflow-y-auto flex-1"
+            ></ul>
+          </section>
         </div>
 
         <o-button
@@ -392,6 +478,7 @@
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
+    <ranked-match-modal></ranked-match-modal>
     <game-top-bar></game-top-bar>
     <unit-display></unit-display>
     <div class="flex fixed top-[20px] right-[20px] z-[1000] items-start gap-2">
