@@ -13,9 +13,9 @@ class SendResourceModal extends LitElement {
   @property({ type: Object }) uiState: UIState | null = null; // to seed initial %
   @property({ attribute: false }) format: (n: number) => string = renderTroops;
 
-  @property({ type: Object }) myPlayer: PlayerView | null = null;
-  @property({ type: Object }) target: PlayerView | null = null;
-  @property({ type: Object }) gameView: GameView | null = null;
+  @property({ attribute: false }) myPlayer: PlayerView | null = null;
+  @property({ attribute: false }) target: PlayerView | null = null;
+  @property({ attribute: false }) gameView: GameView | null = null;
 
   @property({ type: String }) heading: string | null = null;
 
@@ -112,7 +112,7 @@ class SendResourceModal extends LitElement {
   /** Internal capacity only for troops; gold is unlimited. */
   private getCapacityLeft(): number | null {
     if (!this.isTargetAlive()) return 0;
-    if (this.mode !== "troops") return this.getTotalNumber();
+    if (this.mode !== "troops") return null;
     if (!this.gameView || !this.target) return null;
     const current = this.toNum(this.target.troops());
     const max = this.toNum(this.gameView.config().maxTroops(this.target));
@@ -133,8 +133,7 @@ class SendResourceModal extends LitElement {
   private clampSend(n: number) {
     const total = this.getTotalNumber();
     const byTotal = Math.max(0, Math.min(n, total));
-    const byCap = this.limitAmount(byTotal);
-    return Math.max(0, Math.min(byCap, total));
+    return this.limitAmount(byTotal);
   }
 
   private percentOfBasis(n: number): number {
@@ -159,12 +158,14 @@ class SendResourceModal extends LitElement {
 
   private isTargetAlive(): boolean {
     const t = this.target as any;
-    return !!(t && typeof t.isAlive === "function" ? t.isAlive() : true);
+    if (!t || typeof t.isAlive !== "function") return false;
+    return !!t.isAlive();
   }
 
   private isSenderAlive(): boolean {
     const s = this.myPlayer as any;
-    return !!(s && typeof s.isAlive === "function" ? s.isAlive() : true);
+    if (!s || typeof s.isAlive !== "function") return false;
+    return !!s.isAlive();
   }
 
   private i18n = {
@@ -352,7 +353,10 @@ class SendResourceModal extends LitElement {
             aria-label=${this.i18n.ariaSlider()}
             aria-valuemin="0"
             aria-valuemax=${hardMax}
-            aria-valuenow=${this.sendAmount}
+            aria-valuetext=${this.i18n.sliderTooltip(
+              percentNow,
+              this.format(this.sendAmount),
+            )}
             style="--percent:${percentNow}%; --fill:${fill}; --track: rgba(255,255,255,.28); --thumb-ring: rgb(24 24 27);"
           />
 
