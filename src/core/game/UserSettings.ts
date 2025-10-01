@@ -154,4 +154,8 @@ export class UserSettings {
       localStorage.setItem(PATTERN_KEY, patternName);
     }
   }
+
+  getSelectedPackId(): string | undefined {
+    return localStorage.getItem("cosmeticPackId") ?? undefined;
+  }
 }

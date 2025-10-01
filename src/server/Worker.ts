@@ -490,6 +490,7 @@ export async function startWorker() {
       cosmetics: {
         flag: cosmetics.flag,
         pattern: pattern,
+        pack: cosmetics.pack,
       },
     };
   }

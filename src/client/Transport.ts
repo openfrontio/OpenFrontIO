@@ -381,6 +381,7 @@ export class Transport {
         flag: this.lobbyConfig.flag,
         patternName: this.lobbyConfig.pattern?.name,
         patternColorPaletteName: this.lobbyConfig.pattern?.colorPalette?.name,
+        pack: this.lobbyConfig.pack,
       },
     } satisfies ClientJoinMessage);
   }

@@ -390,6 +390,7 @@ export const PlayerCosmeticRefsSchema = z.object({
   flag: FlagSchema.optional(),
   patternName: PatternNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
+  pack: z.string().optional(),
 });
 
 export const PlayerPatternSchema = z.object({
@@ -400,6 +401,7 @@ export const PlayerPatternSchema = z.object({
 export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
+  pack: z.string().optional(),
 });
 export const PlayerSchema = z.object({
   clientID: ID,

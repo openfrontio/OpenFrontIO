@@ -23,11 +23,11 @@ function fetchManifest(packId: string): CosmeticManifest | undefined {
 }
 
 export async function resolveCosmeticUrl(
-  packId: string | null,
+  packId: string | undefined,
   key: string | undefined,
   fallback: string,
 ): Promise<string> {
-  if (!packId || key === undefined) {
+  if (packId === undefined || key === undefined) {
     return fallback;
   }
   try {

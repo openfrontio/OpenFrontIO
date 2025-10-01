@@ -448,6 +448,7 @@ export class SinglePlayerModal extends LitElement {
     selectedPattern ??= cosmetics
       ? (this.userSettings.getDevOnlyPattern() ?? null)
       : null;
+    const selectedPackId = this.userSettings.getSelectedPackId();
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
@@ -466,6 +467,7 @@ export class SinglePlayerModal extends LitElement {
                       ? ""
                       : flagInput.getCurrentFlag(),
                   pattern: selectedPattern ?? undefined,
+                  pack: selectedPackId ?? undefined,
                 },
               },
             ],

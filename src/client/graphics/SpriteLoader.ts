@@ -53,12 +53,12 @@ const SPRITE_CONFIG: Partial<
 const spriteMap: Map<UnitType | TrainTypeSprite, ImageBitmap> = new Map();
 
 // preload all images
-export const loadAllSprites = async (): Promise<void> => {
+export const loadAllSprites = async (
+  packId: string | undefined,
+): Promise<void> => {
   const entries = Object.entries(SPRITE_CONFIG);
   const totalSprites = entries.length;
   let loadedCount = 0;
-
-  const packId: string | null = "test"; // TODO: wire from server/client selection
 
   await Promise.all(
     entries.map(async ([unitType, value]) => {

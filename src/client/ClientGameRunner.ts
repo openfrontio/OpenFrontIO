@@ -52,6 +52,7 @@ export interface LobbyConfig {
   serverConfig: ServerConfig;
   pattern: PlayerPattern | undefined;
   flag: string;
+  pack: string | undefined;
   playerName: string;
   clientID: ClientID;
   gameID: GameID;

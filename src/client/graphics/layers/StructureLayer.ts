@@ -34,6 +34,8 @@ export class StructureLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private unitIcons: Map<string, HTMLImageElement> = new Map();
   private theme: Theme;
+  private packId: string | undefined;
+  private structureLoaded = false;
   private tempCanvas: HTMLCanvasElement;
   private tempContext: CanvasRenderingContext2D;
 
@@ -117,6 +119,14 @@ export class StructureLayer implements Layer {
       if (unit === undefined) continue;
       this.handleUnitRendering(unit);
     }
+    if (!this.structureLoaded) {
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer) {
+        this.packId = myPlayer.cosmetics.pack;
+        this.loadIconData();
+        this.structureLoaded = true;
+      }
+    }
   }
 
   init() {
@@ -124,23 +134,26 @@ export class StructureLayer implements Layer {
   }
 
   private async applyCosmeticIcons(): Promise<void> {
-    const packSpec = "test";
     this.unitConfigs[UnitType.Port] = {
       ...this.unitConfigs[UnitType.Port]!,
       icon: await resolveCosmeticUrl(
-        packSpec,
+        this.packId,
         "structure/img/port",
         anchorIcon,
       ),
     };
     this.unitConfigs[UnitType.City] = {
       ...this.unitConfigs[UnitType.City]!,
-      icon: await resolveCosmeticUrl(packSpec, "structure/img/city", cityIcon),
+      icon: await resolveCosmeticUrl(
+        this.packId,
+        "structure/img/city",
+        cityIcon,
+      ),
     };
     this.unitConfigs[UnitType.Factory] = {
       ...this.unitConfigs[UnitType.Factory]!,
       icon: await resolveCosmeticUrl(
-        packSpec,
+        this.packId,
         "structure/img/factory",
         factoryIcon,
       ),
@@ -148,7 +161,7 @@ export class StructureLayer implements Layer {
     this.unitConfigs[UnitType.MissileSilo] = {
       ...this.unitConfigs[UnitType.MissileSilo]!,
       icon: await resolveCosmeticUrl(
-        packSpec,
+        this.packId,
         "structure/img/missilesilo",
         missileSiloIcon,
       ),
@@ -156,7 +169,7 @@ export class StructureLayer implements Layer {
     this.unitConfigs[UnitType.DefensePost] = {
       ...this.unitConfigs[UnitType.DefensePost]!,
       icon: await resolveCosmeticUrl(
-        packSpec,
+        this.packId,
         "structure/img/defensepost",
         shieldIcon,
       ),
@@ -164,7 +177,7 @@ export class StructureLayer implements Layer {
     this.unitConfigs[UnitType.SAMLauncher] = {
       ...this.unitConfigs[UnitType.SAMLauncher]!,
       icon: await resolveCosmeticUrl(
-        packSpec,
+        this.packId,
         "structure/img/samlauncher",
         SAMMissileIcon,
       ),

@@ -516,6 +516,7 @@ class Client {
           this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
             ? ""
             : this.flagInput.getCurrentFlag(),
+        pack: this.userSettings.getSelectedPackId() ?? undefined,
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,

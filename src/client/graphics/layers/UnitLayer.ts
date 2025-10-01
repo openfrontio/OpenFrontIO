@@ -36,6 +36,8 @@ export class UnitLayer implements Layer {
   private unitToTrail = new Map<UnitView, TileRef[]>();
 
   private theme: Theme;
+  private packId: string | undefined = undefined;
+  private spritesLoaded = false;
 
   private alternateView = false;
 
@@ -68,6 +70,15 @@ export class UnitLayer implements Layer {
       ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
 
     this.updateUnitsSprites(unitIds ?? []);
+
+    if (!this.spritesLoaded) {
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer) {
+        this.packId = myPlayer.cosmetics.pack;
+        loadAllSprites(this.packId);
+        this.spritesLoaded = true;
+      }
+    }
   }
 
   init() {
@@ -75,8 +86,7 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
     this.redraw();
-
-    loadAllSprites();
+    loadAllSprites(this.packId);
   }
 
   /**
