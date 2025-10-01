@@ -26,7 +26,10 @@ global.fetch = jest.fn((url: RequestInfo | URL) => {
 // Mock WebAssembly.instantiateStreaming for Node.js environment
 // This is needed because wasm-bindgen generated code uses instantiateStreaming
 // but Jest runs in Node.js where it's not available.
-global.WebAssembly.instantiateStreaming = jest.fn(
+global.WebAssembly.instantiateStreaming = jest.fn<
+  Promise<WebAssembly.WebAssemblyInstantiatedSource>,
+  [Response | PromiseLike<Response>, WebAssembly.Imports?]
+>(
   async (
     source: Response | PromiseLike<Response> | WebAssembly.Module,
     importObject: WebAssembly.Imports | undefined,
