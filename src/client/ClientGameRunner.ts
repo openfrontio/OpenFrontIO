@@ -5,7 +5,7 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
-  PlayerPattern,
+  PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
@@ -48,8 +48,7 @@ import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
-  pattern: PlayerPattern | undefined;
-  flag: string;
+  cosmetics: PlayerCosmeticRefs;
   playerName: string;
   clientID: ClientID;
   gameID: GameID;
