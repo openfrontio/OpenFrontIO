@@ -258,14 +258,14 @@ export class FakeHumanExecution implements Execution {
       return false;
     }
 
-    const canProceed = this.attackChance(other);
+    const shouldAttack = this.attackChance(other);
 
     // Consider betrayal for allies
-    if (canProceed && this.player.isAlliedWith(other)) {
+    if (shouldAttack && this.player.isAlliedWith(other)) {
       return this.maybeConsiderBetrayal(other);
     }
 
-    return canProceed;
+    return shouldAttack;
   }
 
   private attackChance(other: Player): boolean {
