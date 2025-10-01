@@ -38,7 +38,7 @@ describe("Disconnected", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
   });
 

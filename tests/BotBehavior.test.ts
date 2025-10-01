@@ -274,7 +274,7 @@ describe("BotBehavior Attack Behavior", () => {
 
     // Skip spawn phase
     while (testGame.inSpawnPhase()) {
-      testGame.executeNextTick();
+      await testGame.executeNextTick();
     }
 
     const behavior = new BotBehavior(
@@ -313,7 +313,7 @@ describe("BotBehavior Attack Behavior", () => {
     botBehavior = env.behavior;
   });
 
-  test("bot cannot attack allied player", () => {
+  test("bot cannot attack allied player", async () => {
     // Form alliance (bot creates request to human)
     const allianceRequest = bot.createAllianceRequest(human);
     allianceRequest?.accept();
@@ -328,7 +328,7 @@ describe("BotBehavior Attack Behavior", () => {
 
     // Execute a few ticks to process the attacks
     for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     expect(bot.isAlliedWith(human)).toBe(true);
@@ -337,7 +337,7 @@ describe("BotBehavior Attack Behavior", () => {
     expect(bot.outgoingAttacks()).toHaveLength(attacksBefore);
   });
 
-  test("nation cannot attack allied player", () => {
+  test("nation cannot attack allied player", async () => {
     // Create nation
     const nationInfo = new PlayerInfo(
       "nation_test",
@@ -376,7 +376,7 @@ describe("BotBehavior Attack Behavior", () => {
 
     // Execute a few ticks to process the attacks
     for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     expect(nation.isAlliedWith(human)).toBe(true);

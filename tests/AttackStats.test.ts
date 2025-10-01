@@ -22,17 +22,17 @@ describe("AttackStats", () => {
     game.addExecution(new SpawnExecution(player2.info(), game.ref(50, 55)));
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
   });
 
-  test("should increase war gold stat when a player is eliminated", () => {
+  test("should increase war gold stat when a player is eliminated", async () => {
     expect(player1.sharesBorderWith(player2)).toBeTruthy();
-    performAttack(game, player1, player2);
+    await performAttack(game, player1, player2);
     expectWarGoldStatIsIncreasedAfterKill(game, player1, player2);
   });
 
-  test("should increase war gold stat when elimination occurs via territory annexation", () => {
+  test("should increase war gold stat when elimination occurs via territory annexation", async () => {
     // Mark every tile on the map as owned by player1
     for (let x = 0; x < game.map().width(); x++) {
       for (let y = 0; y < game.map().height(); y++) {
@@ -48,7 +48,7 @@ describe("AttackStats", () => {
       }
     }
 
-    performAttack(game, player1, player2);
+    await performAttack(game, player1, player2);
     expectWarGoldStatIsIncreasedAfterKill(game, player1, player2);
   });
 });
@@ -73,13 +73,13 @@ function expectWarGoldStatIsIncreasedAfterKill(
   );
 }
 
-function performAttack(game: Game, attacker: Player, defender: Player) {
+async function performAttack(game: Game, attacker: Player, defender: Player) {
   // Execute the attack
   game.addExecution(
     new AttackExecution(attacker.troops(), attacker, defender.id()),
   );
   // Wait for the attack to complete
   do {
-    game.executeNextTick();
+    await game.executeNextTick();
   } while (attacker.outgoingAttacks().length > 0);
 }

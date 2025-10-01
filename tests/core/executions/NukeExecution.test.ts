@@ -35,7 +35,7 @@ describe("NukeExecution", () => {
     (game.config() as TestConfig).nukeAllianceBreakThreshold = jest.fn(() => 5);
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     player = game.player("player_id");
@@ -66,7 +66,7 @@ describe("NukeExecution", () => {
     );
     game.addExecution(nukeExec);
     // Run enough ticks for the nuke to detonate
-    executeTicks(game, 10);
+    await executeTicks(game, 10);
     // The city and silo should be destroyed
     expect(player.units(UnitType.City)).toHaveLength(0);
     expect(player.units(UnitType.MissileSilo)).toHaveLength(0);
@@ -86,15 +86,15 @@ describe("NukeExecution", () => {
     // targetable distance is 400
 
     //near launch should be targetable (distance src < 400)
-    executeTicks(game, 2);
+    await executeTicks(game, 2);
     expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
 
     //mid air should not be targetable (distance src > 400, distance target > 400)
-    executeTicks(game, 38);
+    await executeTicks(game, 38);
     expect(nukeExec.getNuke()!.isTargetable()).toBeFalsy();
 
     //near target should be targetable (distance target < 400)
-    executeTicks(game, 35);
+    await executeTicks(game, 35);
     expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
   });
 
@@ -116,8 +116,8 @@ describe("NukeExecution", () => {
       new NukeExecution(UnitType.AtomBomb, player, game.ref(85, 85), null),
     );
 
-    game.executeNextTick(); // init
-    game.executeNextTick(); // exec
+    await game.executeNextTick(); // init
+    await game.executeNextTick(); // exec
 
     expect(player.isTraitor()).toBe(true);
     expect(player.isAlliedWith(otherPlayer)).toBe(false);

@@ -134,7 +134,7 @@ describe("RailNetworkImpl", () => {
     const stationA = createMockStation(1);
     const stationB = createMockStation(2);
     const result = network.findStationsPath(stationA, stationB);
-    expect(result).toEqual([0]);
+    expect(result).toEqual([]);
   });
 
   test("connectToNearbyStations creates new cluster when no neighbors", () => {

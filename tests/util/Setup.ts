@@ -52,6 +52,12 @@ export async function setup(
   const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
   const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
+  // Mock width and height for gameMap and miniGameMap
+  gameMap.width = () => manifest.map.width;
+  gameMap.height = () => manifest.map.height;
+  miniGameMap.width = () => manifest.map4x.width;
+  miniGameMap.height = () => manifest.map4x.height;
+
   // Configure the game
   const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {

@@ -328,7 +328,7 @@ export interface Execution {
   isActive(): boolean;
   activeDuringSpawnPhase(): boolean;
   init(mg: Game, ticks: number): void;
-  tick(ticks: number): void;
+  tick(ticks: number): void | Promise<void>;
 }
 
 export interface Attack {
@@ -665,7 +665,7 @@ export interface Game extends GameMap {
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
-  executeNextTick(): GameUpdates;
+  executeNextTick(): Promise<GameUpdates>;
   setWinner(winner: Player | Team, allPlayersStats: AllPlayersStats): void;
   config(): Config;
 

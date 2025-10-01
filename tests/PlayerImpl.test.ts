@@ -25,7 +25,7 @@ describe("PlayerImpl", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     player = game.player("player_id");

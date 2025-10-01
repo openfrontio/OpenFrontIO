@@ -4,6 +4,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
 import { AStar, AStarResult, PathFindResultType } from "./AStar";
 import { MiniAStar } from "./MiniAStar";
+import { WasmPathFinder } from "./WasmPathfinding";
 
 const parabolaMinHeight = 50;
 
@@ -131,6 +132,10 @@ export class PathFinder {
         waterPath,
       );
     });
+  }
+
+  public static Wasm(game: Game) {
+    return new WasmPathFinder(game);
   }
 
   nextTile(

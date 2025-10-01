@@ -7,14 +7,14 @@ import { ConstructionExecution } from "../../src/core/execution/ConstructionExec
 import { Game, Player, UnitType } from "../../src/core/game/Game";
 
 // built via UI (e.g.: trade ships)
-export function constructionExecution(
+export async function constructionExecution(
   game: Game,
   _owner: Player,
   x: number,
   y: number,
   unit: UnitType,
   ticks = 4,
-) {
+): Promise<void> {
   game.addExecution(new ConstructionExecution(_owner, unit, game.ref(x, y)));
 
   // 4 ticks by default as it usually goes like this
@@ -25,12 +25,15 @@ export function constructionExecution(
   // (sometimes step 3 and 4 are merged in one)
 
   for (let i = 0; i < ticks; i++) {
-    game.executeNextTick();
+    await game.executeNextTick();
   }
 }
 
-export function executeTicks(game: Game, numTicks: number): void {
+export async function executeTicks(
+  game: Game,
+  numTicks: number,
+): Promise<void> {
   for (let i = 0; i < numTicks; i++) {
-    game.executeNextTick();
+    await game.executeNextTick();
   }
 }

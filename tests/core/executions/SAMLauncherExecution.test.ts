@@ -67,7 +67,7 @@ describe("SAM", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     attacker = game.player("attacker_id");
@@ -75,7 +75,7 @@ describe("SAM", () => {
     middle_defender = game.player("middle_defender_id");
     far_defender = game.player("far_defender_id");
 
-    constructionExecution(game, attacker, 7, 7, UnitType.MissileSilo);
+    await constructionExecution(game, attacker, 7, 7, UnitType.MissileSilo);
   });
 
   test("one sam should take down one nuke", async () => {
@@ -91,7 +91,7 @@ describe("SAM", () => {
         { tile: game.ref(3, 1), targetable: true },
       ],
     });
-    executeTicks(game, 3);
+    await executeTicks(game, 3);
 
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
   });
@@ -117,7 +117,7 @@ describe("SAM", () => {
     });
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
 
-    executeTicks(game, 3);
+    await executeTicks(game, 3);
 
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(1);
   });
@@ -136,16 +136,16 @@ describe("SAM", () => {
       ],
     });
 
-    executeTicks(game, 3);
+    await executeTicks(game, 3);
 
     expect(nuke.isActive()).toBeFalsy();
 
     for (let i = 0; i < game.config().SAMCooldown() - 3; i++) {
-      game.executeNextTick();
+      await game.executeNextTick();
       expect(sam.isInCooldown()).toBeTruthy();
     }
 
-    executeTicks(game, 2);
+    await executeTicks(game, 2);
 
     expect(sam.isInCooldown()).toBeFalsy();
   });
@@ -164,7 +164,7 @@ describe("SAM", () => {
       ],
     });
 
-    executeTicks(game, 3);
+    await executeTicks(game, 3);
 
     expect(nuke.isActive()).toBeFalsy();
     expect([sam1, sam2].filter((s) => s.isInCooldown())).toHaveLength(1);
@@ -187,7 +187,7 @@ describe("SAM", () => {
     const ticksToExecute = Math.ceil(
       targetDistance / game.config().defaultNukeSpeed() + 1,
     );
-    executeTicks(game, ticksToExecute);
+    await executeTicks(game, ticksToExecute);
 
     expect(nukeExecution.isActive()).toBeFalsy();
     expect(sam.isInCooldown()).toBeTruthy();
@@ -222,7 +222,7 @@ describe("SAM", () => {
     const ticksToExecute = Math.ceil(
       targetDistance / game.config().defaultNukeSpeed() + 1,
     );
-    executeTicks(game, ticksToExecute);
+    await executeTicks(game, ticksToExecute);
     expect(nukeExecution.isActive()).toBeFalsy();
     expect(sam1.isInCooldown()).toBeFalsy();
     expect(sam2.isInCooldown()).toBeTruthy();
@@ -237,7 +237,7 @@ describe("SAM", () => {
       defender.units(UnitType.SAMLauncher)[0].id(),
     );
     game.addExecution(upgradeStructureExecution);
-    executeTicks(game, 2);
+    await executeTicks(game, 2);
 
     expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(2);
   });

@@ -13,9 +13,9 @@ describe("Territory management", () => {
       new SpawnExecution(game.player("test_id").info(), spawnTile),
     );
     // Init the execution
-    game.executeNextTick();
+    await game.executeNextTick();
     // Execute the execution.
-    game.executeNextTick();
+    await game.executeNextTick();
 
     const owner = game.owner(spawnTile);
     expect(owner.isPlayer()).toBe(true);

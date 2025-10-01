@@ -40,7 +40,7 @@ describe("Donate troops to an ally", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     // donor sends alliance request to recipient
@@ -59,7 +59,7 @@ describe("Donate troops to an ally", () => {
     game.addExecution(new DonateTroopsExecution(donor, recipientInfo.id, 5000));
 
     for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     expect(donor.troops() < donorTroopsBefore).toBe(true);
@@ -103,7 +103,7 @@ describe("Donate gold to an ally", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     // donor sends alliance request to recipient
@@ -114,7 +114,7 @@ describe("Donate gold to an ally", () => {
     if (allianceRequest) {
       allianceRequest.accept();
     }
-    game.executeNextTick();
+    await game.executeNextTick();
 
     // Ensure donor can actually donate the requested amount
     donor.addGold(6000n);
@@ -123,7 +123,7 @@ describe("Donate gold to an ally", () => {
     game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000n));
 
     for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     expect(donor.gold() < donorGoldBefore).toBe(true);
@@ -167,7 +167,7 @@ describe("Donate troops to a non ally", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     // Donor sends alliance request to Recipient
@@ -183,7 +183,7 @@ describe("Donate troops to a non ally", () => {
     const recipientTroopsBefore = recipient.troops();
 
     game.addExecution(new DonateTroopsExecution(donor, recipientInfo.id, 5000));
-    game.executeNextTick();
+    await game.executeNextTick();
 
     // Troops should not be donated since they are not allies
     expect(donor.troops() >= donorTroopsBefore).toBe(true);
@@ -227,7 +227,7 @@ describe("Donate Gold to a non ally", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     // Donor sends alliance request to Recipient
@@ -243,7 +243,7 @@ describe("Donate Gold to a non ally", () => {
     const recipientGoldBefore = donor.gold();
 
     game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000n));
-    game.executeNextTick();
+    await game.executeNextTick();
 
     // Gold should not be donated since they are not allies
     expect(donor.gold() >= donorGoldBefore).toBe(true);
