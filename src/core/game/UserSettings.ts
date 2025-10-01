@@ -19,6 +19,20 @@ export class UserSettings {
     localStorage.setItem(key, value ? "true" : "false");
   }
 
+  getFloat(key: string, defaultValue: number): number {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+
+    const floatValue = parseFloat(value);
+    if (isNaN(floatValue)) return defaultValue;
+
+    return floatValue;
+  }
+
+  setFloat(key: string, value: number) {
+    localStorage.setItem(key, value.toString());
+  }
+
   emojis() {
     return this.get("settings.emojis", true);
   }
@@ -157,5 +171,13 @@ export class UserSettings {
 
   getSelectedPackId(): string | undefined {
     return localStorage.getItem("cosmeticPackId") ?? undefined;
+  }
+
+  backgroundMusicVolume(): number {
+    return this.getFloat("settings.backgroundMusicVolume", 0);
+  }
+
+  setBackgroundMusicVolume(volume: number): void {
+    this.setFloat("settings.backgroundMusicVolume", volume);
   }
 }
