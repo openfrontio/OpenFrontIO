@@ -272,6 +272,7 @@ export class Transport {
   public connect(
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
+    connectionUrl: string | undefined = undefined,
   ) {
     if (this.isLocal) {
       this.connectLocal(onconnect, onmessage);
@@ -297,6 +298,7 @@ export class Transport {
   private connectRemote(
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
+    connectionUrl: string | undefined = undefined,
   ) {
     this.startPing();
     this.killExistingSocket();
@@ -305,7 +307,8 @@ export class Transport {
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
-    this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
+    connectionUrl ??= `${wsProtocol}//${wsHost}/${workerPath}`;
+    this.socket = new WebSocket(connectionUrl);
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
@@ -657,7 +660,7 @@ export class Transport {
       console.warn("socket not ready, closing and trying later");
       this.socket.close();
       this.socket = null;
-      this.connectRemote(this.onconnect, this.onmessage);
+      this.connectRemote(this.onconnect, this.onmessage, this.connectionUrl);
       this.buffer.push(str);
     } else {
       // Send the message directly
