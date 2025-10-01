@@ -29,19 +29,19 @@ describe("Map manifests: nation name length constraint", () => {
           const name = nation?.name;
           if (typeof name !== "string") {
             violations.push(
-              `✖ ${manifestPath} -> nations[${idx}].name is not a string`,
+              `${manifestPath} -> nations[${idx}].name is not a string`,
             );
             return;
           }
           if (name.length > 27) {
             violations.push(
-              `✖ ${manifestPath} -> nations[${idx}].name "${name}" has length ${name.length} (> 27)`,
+              `${manifestPath} -> nations[${idx}].name "${name}" has length ${name.length} (> 27)`,
             );
           }
         });
       } catch (err) {
         violations.push(
-          `✖ Failed to parse ${manifestPath}: ${(err as Error).message}`,
+          `Failed to parse ${manifestPath}: ${(err as Error).message}`,
         );
       }
     }
