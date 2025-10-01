@@ -31,11 +31,12 @@ global.WebAssembly.instantiateStreaming = jest.fn<
   [Response | PromiseLike<Response>, WebAssembly.Imports?]
 >(
   async (
-    source: Response | PromiseLike<Response> | WebAssembly.Module,
+    source: Response | PromiseLike<Response>,
     importObject: WebAssembly.Imports | undefined,
   ) => {
-    if (source instanceof WebAssembly.Module) {
-      return WebAssembly.instantiate(source, importObject);
+    const response = await source;
+    const buffer = await response.arrayBuffer();
+    return WebAssembly.instantiate(buffer, importObject);
     }
     const response = await source;
     const buffer = await response.arrayBuffer();
