@@ -234,18 +234,24 @@ export class SpriteFactory {
     structureCanvas.width = Math.ceil(iconSize);
     structureCanvas.height = Math.ceil(iconSize);
     const context = structureCanvas.getContext("2d")!;
+
+    const tc = owner.territoryColor();
+    const bc = owner.borderColor();
+
+    const darker = bc.luminance() < tc.luminance() ? bc : tc;
+    const lighter = bc.luminance() < tc.luminance() ? tc : bc;
+
     let borderColor: string;
     if (isConstruction) {
       context.fillStyle = "rgb(198, 198, 198)";
       borderColor = "rgb(128, 127, 127)";
     } else {
-      context.fillStyle = this.theme
-        .territoryColor(owner)
+      context.fillStyle = lighter
         .lighten(0.13)
         .alpha(renderIcon ? 0.65 : 1)
         .toRgbString();
-      const darken = this.theme.borderColor(owner).isLight() ? 0.17 : 0.15;
-      borderColor = this.theme.borderColor(owner).darken(darken).toRgbString();
+      const darken = darker.isLight() ? 0.17 : 0.15;
+      borderColor = darker.darken(darken).toRgbString();
     }
     context.strokeStyle = borderColor;
     context.lineWidth = 1;

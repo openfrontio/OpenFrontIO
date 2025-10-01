@@ -183,7 +183,8 @@ export class GameRunner {
     y?: number,
   ): PlayerActions {
     const player = this.game.player(playerID);
-    const tile = x && y ? this.game.ref(x, y) : null;
+    const tile =
+      x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
       canAttack: tile !== null && player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),

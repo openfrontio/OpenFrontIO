@@ -12,7 +12,7 @@ import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { Gold, PlayerActions, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { MouseUpEvent, ToggleStructureEvent } from "../../InputHandler";
+import { ToggleStructureEvent } from "../../InputHandler";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
@@ -24,7 +24,6 @@ export class UnitDisplay extends LitElement implements Layer {
   public uiState: UIState;
   private playerActions: PlayerActions | null = null;
   private keybinds: Record<string, { value: string; key: string }> = {};
-  private _selectedStructure: UnitType | null = null;
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
@@ -61,7 +60,6 @@ export class UnitDisplay extends LitElement implements Layer {
       config.isUnitDisabled(UnitType.Warship) &&
       config.isUnitDisabled(UnitType.AtomBomb) &&
       config.isUnitDisabled(UnitType.HydrogenBomb);
-    this.eventBus.on(MouseUpEvent, this._mouseUpHandler);
     this.requestUpdate();
   }
 
@@ -96,11 +94,9 @@ export class UnitDisplay extends LitElement implements Layer {
 
   tick() {
     const player = this.game?.myPlayer();
-    player
-      ?.actions(1) // we only care about costs
-      .then((actions) => {
-        this.playerActions = actions;
-      });
+    player?.actions().then((actions) => {
+      this.playerActions = actions;
+    });
     if (!player) return;
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
@@ -110,16 +106,6 @@ export class UnitDisplay extends LitElement implements Layer {
     this._factories = player.totalUnitLevels(UnitType.Factory);
     this._warships = player.totalUnitLevels(UnitType.Warship);
     this.requestUpdate();
-  }
-
-  private _mouseUpHandler = (_: MouseUpEvent) => {
-    this._selectedStructure = null;
-    this.requestUpdate();
-  };
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    this.eventBus?.off(MouseUpEvent, this._mouseUpHandler as any);
   }
 
   render() {
@@ -225,7 +211,7 @@ export class UnitDisplay extends LitElement implements Layer {
     if (this.game.config().isUnitDisabled(unitType)) {
       return html``;
     }
-    const selected = this._selectedStructure === unitType;
+    const selected = this.uiState.ghostStructure === unitType;
     const hovered = this._hoveredUnit === unitType;
 
     return html`

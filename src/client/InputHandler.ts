@@ -3,10 +3,6 @@ import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
-import {
-  BuildUnitIntentEvent,
-  SendUpgradeStructureIntentEvent,
-} from "./Transport";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -224,8 +220,6 @@ export class InputHandler {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
     });
-    this.eventBus.on(BuildUnitIntentEvent, this.onBuildUnitIntent);
-    this.eventBus.on(SendUpgradeStructureIntentEvent, this.onSendUpgradeIntent);
 
     this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
       passive: false,
@@ -571,13 +565,6 @@ export class InputHandler {
     }
   }
 
-  private onBuildUnitIntent = (_e: BuildUnitIntentEvent) => {
-    this.uiState.ghostStructure = null;
-  };
-  private onSendUpgradeIntent = (_e: SendUpgradeStructureIntentEvent) => {
-    this.uiState.ghostStructure = null;
-  };
-
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
     if (this.uiState.ghostStructure !== null) {
@@ -648,11 +635,6 @@ export class InputHandler {
       clearInterval(this.moveInterval);
     }
     this.activeKeys.clear();
-    this.eventBus.off(BuildUnitIntentEvent, this.onBuildUnitIntent);
-    this.eventBus.off(
-      SendUpgradeStructureIntentEvent,
-      this.onSendUpgradeIntent,
-    );
   }
 
   isModifierKeyPressed(event: PointerEvent): boolean {

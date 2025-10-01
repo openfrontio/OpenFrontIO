@@ -83,6 +83,7 @@ export class StructureIconsLayer implements Layer {
     [UnitType.SAMLauncher, { visible: true }],
   ]);
   private lastGhostQueryAt: number;
+  potentialUpgrade: StructureRenderInfo | undefined;
 
   constructor(
     private game: GameView,
@@ -197,16 +198,20 @@ export class StructureIconsLayer implements Layer {
     if (!this.renderer) {
       return;
     }
-    if (!this.ghostUnit && this.uiState.ghostStructure !== null) {
+
+    if (this.ghostUnit) {
+      if (this.uiState.ghostStructure === null) {
+        this.removeGhostStructure();
+      } else if (
+        this.uiState.ghostStructure !== this.ghostUnit.buildableUnit.type
+      ) {
+        this.clearGhostStructure();
+      }
+    } else if (this.uiState.ghostStructure !== null) {
       this.createGhostStructure(this.uiState.ghostStructure);
     }
-    if (
-      this.ghostUnit &&
-      (this.uiState.ghostStructure === null ||
-        this.ghostUnit.buildableUnit.type !== this.uiState.ghostStructure)
-    ) {
-      this.removeGhostStructure();
-    }
+    this.renderGhost();
+
     if (this.transformHandler.hasChanged()) {
       for (const render of this.renders) {
         this.computeNewLocation(render);
@@ -219,18 +224,83 @@ export class StructureIconsLayer implements Layer {
       scale > DOTS_ZOOM_THRESHOLD &&
       (scale <= ZOOM_THRESHOLD || !this.renderSprites);
     this.levelsStage!.visible = scale > ZOOM_THRESHOLD && this.renderSprites;
-
-    if (this.ghostUnit) {
-      const s =
-        scale >= ZOOM_THRESHOLD
-          ? Math.max(1, scale / ICON_SCALE_FACTOR_ZOOMED_IN)
-          : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
-      this.ghostUnit.container.scale.set(s);
-      this.ghostUnit.range?.scale.set(this.transformHandler.scale);
-    }
-
     this.renderer.render(this.rootStage);
     mainContext.drawImage(this.renderer.canvas, 0, 0);
+  }
+
+  renderGhost() {
+    if (!this.ghostUnit) return;
+
+    const now = performance.now();
+    if (now - this.lastGhostQueryAt < 50) {
+      return;
+    }
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) return;
+
+    const localX = this.mousePos.x - rect.left;
+    const localY = this.mousePos.y - rect.top;
+    this.lastGhostQueryAt = now;
+    let tileRef: TileRef | undefined;
+    const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
+    if (this.game.isValidCoord(tile.x, tile.y)) {
+      tileRef = this.game.ref(tile.x, tile.y);
+    }
+
+    this.game
+      ?.myPlayer()
+      ?.actions(tileRef)
+      .then((actions) => {
+        if (this.potentialUpgrade) {
+          this.potentialUpgrade.iconContainer.filters = [];
+          this.potentialUpgrade.dotContainer.filters = [];
+        }
+        this.ghostUnit?.container && (this.ghostUnit.container.filters = []);
+
+        if (!this.ghostUnit) return;
+
+        const unit = actions.buildableUnits.find(
+          (u) => u.type === this.ghostUnit!.buildableUnit.type,
+        );
+        if (!unit) {
+          Object.assign(this.ghostUnit.buildableUnit, {
+            canBuild: false,
+            canUpgrade: false,
+          });
+          this.ghostUnit.container.filters = [
+            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
+          ];
+          return;
+        }
+
+        this.ghostUnit.buildableUnit = unit;
+
+        if (unit.canUpgrade) {
+          this.potentialUpgrade = this.renders.find(
+            (r) => r.unit.id() === unit.canUpgrade,
+          );
+          if (this.potentialUpgrade) {
+            this.potentialUpgrade.iconContainer.filters = [
+              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
+            ];
+            this.potentialUpgrade.dotContainer.filters = [
+              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
+            ];
+          }
+        } else if (unit.canBuild === false) {
+          this.ghostUnit.container.filters = [
+            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
+          ];
+        }
+
+        const scale = this.transformHandler.scale;
+        const s =
+          scale >= ZOOM_THRESHOLD
+            ? Math.max(1, scale / ICON_SCALE_FACTOR_ZOOMED_IN)
+            : Math.min(1, scale / ICON_SCALE_FACTOR_ZOOMED_OUT);
+        this.ghostUnit.container.scale.set(s);
+        this.ghostUnit.range?.scale.set(this.transformHandler.scale);
+      });
   }
 
   private createStructure(e: MouseUpEvent) {
@@ -240,7 +310,6 @@ export class StructureIconsLayer implements Layer {
       this.ghostUnit.buildableUnit.canUpgrade === false
     ) {
       this.removeGhostStructure();
-      this.uiState.ghostStructure = null;
       return;
     }
     const rect = this.transformHandler.boundingRect();
@@ -255,7 +324,6 @@ export class StructureIconsLayer implements Layer {
           this.ghostUnit.buildableUnit.type,
         ),
       );
-      this.uiState.ghostStructure = null;
     } else if (this.ghostUnit.buildableUnit.canBuild) {
       this.eventBus.emit(
         new BuildUnitIntentEvent(
@@ -263,7 +331,6 @@ export class StructureIconsLayer implements Layer {
           this.game.ref(tile.x, tile.y),
         ),
       );
-      this.uiState.ghostStructure = null;
     }
     this.removeGhostStructure();
   }
@@ -278,64 +345,6 @@ export class StructureIconsLayer implements Layer {
 
     const localX = e.x - rect.left;
     const localY = e.y - rect.top;
-
-    const now = performance.now();
-    if (now - this.lastGhostQueryAt < 50) {
-      this.ghostUnit.container.position.set(localX, localY);
-      this.ghostUnit.range?.position.set(localX, localY);
-      return;
-    }
-    this.lastGhostQueryAt = now;
-    let tileRef: TileRef | undefined;
-    const tile = this.transformHandler.screenToWorldCoordinates(localX, localY);
-    if (this.game.isValidCoord(tile.x, tile.y))
-      [(tileRef = this.game.ref(tile.x, tile.y))];
-    const clearFilters = (render: (typeof this.renders)[number]) => {
-      render.iconContainer.filters = [];
-      render.dotContainer.filters = [];
-    };
-
-    const applyFilter = (target: PIXI.Container, color: string) => {
-      target.filters = [new OutlineFilter({ thickness: 2, color })];
-    };
-
-    this.game
-      ?.myPlayer()
-      ?.actions(tileRef)
-      .then((actions) => {
-        // reset all
-        this.renders.forEach(clearFilters);
-        this.ghostUnit?.container && (this.ghostUnit.container.filters = []);
-
-        if (!this.ghostUnit) return;
-
-        const unit = actions.buildableUnits.find(
-          (u) => u.type === this.ghostUnit!.buildableUnit.type,
-        );
-        if (!unit) {
-          Object.assign(this.ghostUnit.buildableUnit, {
-            canBuild: false,
-            canUpgrade: false,
-          });
-          applyFilter(this.ghostUnit.container, "rgba(255, 0, 0, 1)");
-          return;
-        }
-
-        this.ghostUnit.buildableUnit = unit;
-
-        if (unit.canUpgrade) {
-          const renderUpgradable = this.renders.find(
-            (r) => r.unit.id() === unit.canUpgrade,
-          );
-          if (renderUpgradable) {
-            applyFilter(renderUpgradable.iconContainer, "rgba(0, 255, 0, 1)");
-            applyFilter(renderUpgradable.dotContainer, "rgba(0, 255, 0, 1)");
-          }
-        } else if (unit.canBuild === false) {
-          applyFilter(this.ghostUnit.container, "rgba(255, 0, 0, 1)");
-        }
-      });
-
     this.ghostUnit.container.position.set(localX, localY);
     this.ghostUnit.range?.position.set(localX, localY);
   }
@@ -343,57 +352,37 @@ export class StructureIconsLayer implements Layer {
   private createGhostStructure(type: UnitType | null) {
     const player = this.game.myPlayer();
     if (!player) return;
-    if (this.ghostUnit) {
-      const currentType = this.ghostUnit.buildableUnit.type;
-      this.removeGhostStructure();
-      this.uiState.ghostStructure = null;
-      if (type === currentType) {
-        return;
-      }
-    }
     if (type === null) {
       return;
     }
-    let tileref: TileRef | undefined;
-    const tile: Cell = this.transformHandler.screenToWorldCoordinates(
-      this.mousePos.x,
-      this.mousePos.y,
-    );
-    if (this.game.isValidCoord(tile.x, tile.y)) {
-      tileref = this.game.ref(tile.x, tile.y);
-    }
-    this.game
-      ?.myPlayer()
-      ?.actions(tileref)
-      .then((actions) => {
-        for (const u of actions.buildableUnits) {
-          if (u.type === type) {
-            this.ghostUnit = {
-              container: this.factory.createGhostContainer(
-                player,
-                this.ghostStage,
-                this.mousePos,
-                type,
-              ),
-              range: this.factory.createRange(
-                type,
-                this.ghostStage,
-                this.mousePos,
-              ),
-              buildableUnit: u,
-            };
-            return;
-          }
-        }
-      });
+    this.ghostUnit = {
+      container: this.factory.createGhostContainer(
+        player,
+        this.ghostStage,
+        this.mousePos,
+        type,
+      ),
+      range: this.factory.createRange(type, this.ghostStage, this.mousePos),
+      buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
+    };
   }
 
-  private removeGhostStructure() {
+  private clearGhostStructure() {
     if (this.ghostUnit) {
       this.ghostUnit.container.destroy();
       this.ghostUnit.range?.destroy();
       this.ghostUnit = null;
     }
+    if (this.potentialUpgrade) {
+      this.potentialUpgrade.iconContainer.filters = [];
+      this.potentialUpgrade.dotContainer.filters = [];
+      this.potentialUpgrade = undefined;
+    }
+  }
+
+  private removeGhostStructure() {
+    this.clearGhostStructure();
+    this.uiState.ghostStructure = null;
   }
 
   private toggleStructures(toggleStructureType: UnitType[] | null): void {
