@@ -355,14 +355,20 @@ export class StructureIconsLayer implements Layer {
     if (type === null) {
       return;
     }
+    const rect = this.transformHandler.boundingRect();
+    const localX = this.mousePos.x - rect.left;
+    const localY = this.mousePos.y - rect.top;
     this.ghostUnit = {
       container: this.factory.createGhostContainer(
         player,
         this.ghostStage,
-        this.mousePos,
+        { x: localX, y: localY },
         type,
       ),
-      range: this.factory.createRange(type, this.ghostStage, this.mousePos),
+      range: this.factory.createRange(type, this.ghostStage, {
+        x: localX,
+        y: localY,
+      }),
       buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
     };
   }
