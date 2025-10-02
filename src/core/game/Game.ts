@@ -481,6 +481,7 @@ export interface Unit {
   // Upgradable Structures
   level(): number;
   increaseLevel(): void;
+  decreaseLevel(destroyer?: Player): void;
 
   // Warships
   setPatrolTile(tile: TileRef): void;
