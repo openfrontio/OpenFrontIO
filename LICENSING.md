@@ -39,6 +39,22 @@ This document provides comprehensive licensing information for the OpenFront.io 
   - Added Creative Commons BY-SA 4.0 for all assets
   - All new code is AGPL v3.0 only
 
+### Phase 4: Mixed Asset Licensing
+
+- **Starting After:** c2cf2ce65f74ac91859f68a84aec89aeda5722ee
+- **Date:** September 28, 2025
+- **Licenses:**
+  - **Code:** AGPL v3.0 (unchanged from Phase 3)
+  - **Open Assets (/resources):** Creative Commons BY-SA 4.0 (unchanged from Phase 3)
+  - **Proprietary Assets (/proprietary):** All Rights Reserved
+- **Copyright Holders:** OpenFront LLC and Contributors
+- **Changes:**
+  - Added `/proprietary` directory for copyrighted assets
+  - Established dual-track asset licensing structure
+  - Open assets in `/resources` remain CC BY-SA 4.0
+  - Proprietary assets override open assets during build process
+  - Contributors retain copyright while granting usage rights to OpenFront LLC
+
 ## Important Notes
 
 ### For Code:
@@ -69,6 +85,7 @@ All assets included in this repository (graphics, sounds, music, models) are lic
 - Premium skins, models, and textures
 - Sound effects and music accessed via API
 - Any assets not explicitly included in this repository
+- Any asset in the proprietary/ folder
 
 These external assets are:
 

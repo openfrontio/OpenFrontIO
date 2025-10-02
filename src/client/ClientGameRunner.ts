@@ -47,6 +47,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -184,7 +185,7 @@ async function createClientGame(
     lobbyConfig,
     eventBus,
     gameRenderer,
-    new InputHandler(canvas, eventBus),
+    new InputHandler(gameRenderer.uiState, canvas, eventBus),
     transport,
     worker,
     gameView,
@@ -197,7 +198,6 @@ export class ClientGameRunner {
 
   private turnsSeen = 0;
   private hasJoined = false;
-
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
@@ -245,6 +245,7 @@ export class ClientGameRunner {
   }
 
   public start() {
+    SoundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -255,6 +256,7 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
+
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
     this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
@@ -372,6 +374,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
+    SoundManager.stopBackgroundMusic();
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -384,7 +387,7 @@ export class ClientGameRunner {
   }
 
   private inputEvent(event: MouseUpEvent) {
-    if (!this.isActive) {
+    if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(

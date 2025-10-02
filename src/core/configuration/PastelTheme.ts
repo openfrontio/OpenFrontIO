@@ -95,7 +95,7 @@ export class PastelTheme implements Theme {
     }
     switch (gm.terrainType(tile)) {
       case TerrainType.Ocean:
-      case TerrainType.Lake:
+      case TerrainType.Lake: {
         const w = this.water.rgba;
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.shorelineWater;
@@ -105,7 +105,7 @@ export class PastelTheme implements Theme {
           g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
           b: Math.max(w.b - 10 + (11 - Math.min(mag, 10)), 0),
         });
-
+      }
       case TerrainType.Plains:
         return colord({
           r: 190,
