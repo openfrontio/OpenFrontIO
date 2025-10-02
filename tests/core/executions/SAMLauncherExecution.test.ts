@@ -83,7 +83,7 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
 
     // Sam will only target nukes it can destroy before it reaches its target
-    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
+    attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(3, 1),
       trajectory: [
         { tile: game.ref(1, 1), targetable: true },

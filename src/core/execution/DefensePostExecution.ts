@@ -17,7 +17,7 @@ export class DefensePostExecution implements Execution {
     private tile: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
   }
 
@@ -44,7 +44,7 @@ export class DefensePostExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.post === null) {
       const spawnTile = this.player.canBuild(UnitType.DefensePost, this.tile);
       if (spawnTile === false) {

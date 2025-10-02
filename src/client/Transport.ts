@@ -402,7 +402,7 @@ export class Transport {
       );
       console.error("attempting reconnect");
     }
-    this.socket.onclose = (event: CloseEvent) => {};
+    this.socket.onclose = (_event: CloseEvent) => {};
   }
 
   private onSendAllianceRequest(event: SendAllianceRequestIntentEvent) {

@@ -11,7 +11,7 @@ export class DonateTroopsExecution implements Execution {
     private troops: number | null,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(`DonateExecution recipient ${this.recipientID} not found`);
       this.active = false;
@@ -25,7 +25,7 @@ export class DonateTroopsExecution implements Execution {
     this.troops = Math.min(this.troops, maxDonation);
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.troops === null) throw new Error("not initialized");
     if (
       this.sender.canDonateTroops(this.recipient) &&

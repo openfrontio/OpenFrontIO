@@ -108,7 +108,7 @@ export class RadialMenu implements Layer {
   init() {
     this.createMenuElement();
     this.createTooltipElement();
-    this.eventBus.on(CloseViewEvent, (e) => {
+    this.eventBus.on(CloseViewEvent, (_e) => {
       this.hideRadialMenu();
     });
   }
@@ -155,7 +155,7 @@ export class RadialMenu implements Layer {
       )
       .style("transform", "translate(-50%, -50%)")
       .style("pointer-events", "all")
-      .on("click", (event) => this.hideRadialMenu());
+      .on("click", (_event) => this.hideRadialMenu());
 
     const container = svg
       .append("g")
@@ -1006,7 +1006,7 @@ export class RadialMenu implements Layer {
     this.updateCenterButtonState(this.centerButtonState);
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {
+  renderLayer(_context: CanvasRenderingContext2D) {
     // No need to render anything on the canvas
   }
 

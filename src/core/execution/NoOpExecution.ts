@@ -7,6 +7,6 @@ export class NoOpExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
-  init(mg: Game, ticks: number): void {}
-  tick(ticks: number): void {}
+  init(_mg: Game, _ticks: number): void {}
+  tick(_ticks: number): void {}
 }

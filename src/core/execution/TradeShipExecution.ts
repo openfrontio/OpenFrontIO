@@ -26,7 +26,7 @@ export class TradeShipExecution implements Execution {
     private _dstPort: Unit,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     this.pathFinder = PathFinder.Mini(mg, 2500);
   }

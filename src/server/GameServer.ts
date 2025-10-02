@@ -504,7 +504,7 @@ export class GameServer {
       } else {
         try {
           errorDetails = JSON.stringify(error, null, 2);
-        } catch (e) {
+        } catch (_e) {
           errorDetails = String(error);
         }
       }

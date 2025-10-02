@@ -61,7 +61,7 @@ export class ChatIntegration {
                 className: "description",
               },
             ],
-            action: (params: MenuElementParams) => {
+            action: (_params: MenuElementParams) => {
               if (phrase.requiresPlayer) {
                 this.ctModal.openWithSelection(
                   category.id,

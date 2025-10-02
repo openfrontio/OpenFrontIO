@@ -243,7 +243,7 @@ export async function postRefresh(): Promise<boolean> {
     }
     localStorage.setItem("token", result.data.token);
     return true;
-  } catch (e) {
+  } catch (_e) {
     __isLoggedIn = false;
     return false;
   }
@@ -273,7 +273,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
       return false;
     }
     return result.data;
-  } catch (e) {
+  } catch (_e) {
     __isLoggedIn = false;
     return false;
   }

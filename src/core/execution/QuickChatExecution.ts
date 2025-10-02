@@ -13,7 +13,7 @@ export class QuickChatExecution implements Execution {
     private target: PlayerID | undefined,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(
@@ -26,7 +26,7 @@ export class QuickChatExecution implements Execution {
     this.recipient = mg.player(this.recipientID);
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     const message = this.getMessageFromKey(this.quickChatKey);
 
     this.mg.displayChat(

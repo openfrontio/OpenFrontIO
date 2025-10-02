@@ -38,7 +38,7 @@ export class MirvExecution implements Execution {
     private dst: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
     this.pathFinder = new ParabolaPathFinder(mg);
@@ -60,7 +60,7 @@ export class MirvExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.nuke === null) {
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {

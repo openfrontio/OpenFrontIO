@@ -19,7 +19,7 @@ export class EmojiExecution implements Execution {
     private emoji: number,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     if (this.recipientID !== AllPlayers && !mg.hasPlayer(this.recipientID)) {
       console.warn(`EmojiExecution: recipient ${this.recipientID} not found`);
       this.active = false;
@@ -32,7 +32,7 @@ export class EmojiExecution implements Execution {
         : mg.player(this.recipientID);
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     const emojiString = flattenedEmojiTable[this.emoji];
     if (emojiString === undefined) {
       console.warn(

@@ -22,7 +22,7 @@ export class TrainStationExecution implements Execution {
     return this.active;
   }
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     if (this.spawnTrains) {
       this.random = new PseudoRandom(mg.ticks());

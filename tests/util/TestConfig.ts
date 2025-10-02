@@ -21,7 +21,7 @@ export class TestConfig extends DefaultConfig {
     return 1;
   }
 
-  proximityBonusPortsNb(totalPorts: number): number {
+  proximityBonusPortsNb(_totalPorts: number): number {
     return this._proximityBonusPortsNb;
   }
 
@@ -55,11 +55,11 @@ export class TestConfig extends DefaultConfig {
   }
 
   attackLogic(
-    gm: Game,
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    tileToConquer: TileRef,
+    _gm: Game,
+    _attackTroops: number,
+    _attacker: Player,
+    _defender: Player | TerraNullius,
+    _tileToConquer: TileRef,
   ): {
     attackerTroopLoss: number;
     defenderTroopLoss: number;
@@ -69,10 +69,10 @@ export class TestConfig extends DefaultConfig {
   }
 
   attackTilesPerTick(
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    numAdjacentTilesWithEnemy: number,
+    _attackTroops: number,
+    _attacker: Player,
+    _defender: Player | TerraNullius,
+    _numAdjacentTilesWithEnemy: number,
   ): number {
     return 1;
   }

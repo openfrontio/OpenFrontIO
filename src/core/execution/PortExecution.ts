@@ -16,13 +16,13 @@ export class PortExecution implements Execution {
     private tile: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
     this.checkOffset = mg.ticks() % 10;
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.mg === null || this.random === null || this.checkOffset === null) {
       throw new Error("Not initialized");
     }

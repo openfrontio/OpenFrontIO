@@ -176,7 +176,7 @@ export class StatsImpl implements Stats {
     this._addBetrayal(player, 1);
   }
 
-  boatSendTrade(player: Player, target: Player): void {
+  boatSendTrade(player: Player, _target: Player): void {
     this._addBoat(player, "trade", BOAT_INDEX_SENT, 1);
   }
 
@@ -191,27 +191,31 @@ export class StatsImpl implements Stats {
     this._addGold(player, GOLD_INDEX_STEAL, gold);
   }
 
-  boatDestroyTrade(player: Player, target: Player): void {
+  boatDestroyTrade(player: Player, _target: Player): void {
     this._addBoat(player, "trade", BOAT_INDEX_DESTROY, 1);
   }
 
   boatSendTroops(
     player: Player,
-    target: Player | TerraNullius,
-    troops: BigIntLike,
+    _target: Player | TerraNullius,
+    _troops: BigIntLike,
   ): void {
     this._addBoat(player, "trans", BOAT_INDEX_SENT, 1);
   }
 
   boatArriveTroops(
     player: Player,
-    target: Player | TerraNullius,
-    troops: BigIntLike,
+    _target: Player | TerraNullius,
+    _troops: BigIntLike,
   ): void {
     this._addBoat(player, "trans", BOAT_INDEX_ARRIVE, 1);
   }
 
-  boatDestroyTroops(player: Player, target: Player, troops: BigIntLike): void {
+  boatDestroyTroops(
+    player: Player,
+    _target: Player,
+    _troops: BigIntLike,
+  ): void {
     this._addBoat(player, "trans", BOAT_INDEX_DESTROY, 1);
   }
 

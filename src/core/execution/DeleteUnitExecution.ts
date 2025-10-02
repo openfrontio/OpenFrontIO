@@ -13,7 +13,7 @@ export class DeleteUnitExecution implements Execution {
     return false;
   }
 
-  init(mg: Game, ticks: number) {
+  init(mg: Game, _ticks: number) {
     if (!this.active) {
       return;
     }
@@ -73,7 +73,7 @@ export class DeleteUnitExecution implements Execution {
     this.active = false;
   }
 
-  tick(ticks: number) {}
+  tick(_ticks: number) {}
 
   isActive(): boolean {
     return this.active;

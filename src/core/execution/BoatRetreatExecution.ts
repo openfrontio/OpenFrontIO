@@ -7,9 +7,9 @@ export class BoatRetreatExecution implements Execution {
     private unitID: number,
   ) {}
 
-  init(mg: Game, ticks: number): void {}
+  init(_mg: Game, _ticks: number): void {}
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     const unit = this.player
       .units()
       .find(

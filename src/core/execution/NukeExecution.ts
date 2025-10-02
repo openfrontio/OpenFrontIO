@@ -32,7 +32,7 @@ export class NukeExecution implements Execution {
     private waitTicks = 0,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     if (this.speed === -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
@@ -101,7 +101,7 @@ export class NukeExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.nuke === null) {
       const spawn = this.src ?? this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {

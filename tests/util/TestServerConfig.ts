@@ -55,22 +55,22 @@ export class TestServerConfig implements ServerConfig {
   gameCreationRate(): number {
     throw new Error("Method not implemented.");
   }
-  lobbyMaxPlayers(map: GameMapType): number {
+  lobbyMaxPlayers(_map: GameMapType): number {
     throw new Error("Method not implemented.");
   }
   numWorkers(): number {
     throw new Error("Method not implemented.");
   }
-  workerIndex(gameID: GameID): number {
+  workerIndex(_gameID: GameID): number {
     throw new Error("Method not implemented.");
   }
-  workerPath(gameID: GameID): string {
+  workerPath(_gameID: GameID): string {
     throw new Error("Method not implemented.");
   }
-  workerPort(gameID: GameID): number {
+  workerPort(_gameID: GameID): number {
     throw new Error("Method not implemented.");
   }
-  workerPortByIndex(workerID: number): number {
+  workerPortByIndex(_workerID: number): number {
     throw new Error("Method not implemented.");
   }
   env(): GameEnv {

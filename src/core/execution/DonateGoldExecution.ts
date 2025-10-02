@@ -11,7 +11,7 @@ export class DonateGoldExecution implements Execution {
     private gold: Gold | null,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(`DonateExecution recipient ${this.recipientID} not found`);
       this.active = false;
@@ -22,7 +22,7 @@ export class DonateGoldExecution implements Execution {
     this.gold ??= this.sender.gold() / 3n;
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.gold === null) throw new Error("not initialized");
     if (
       this.sender.canDonateGold(this.recipient) &&

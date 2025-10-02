@@ -6,11 +6,11 @@ export class MarkDisconnectedExecution implements Execution {
     private isDisconnected: boolean,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(_mg: Game, _ticks: number): void {
     this.player.markDisconnected(this.isDisconnected);
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     return;
   }
 

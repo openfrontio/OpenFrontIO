@@ -12,7 +12,7 @@ export class AllianceExtensionExecution implements Execution {
     private readonly toID: PlayerID,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     if (!mg.hasPlayer(this.toID)) {
       console.warn(
         `[AllianceExtensionExecution] Player ${this.toID} not found`,
@@ -59,7 +59,7 @@ export class AllianceExtensionExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     // No-op
   }
 

@@ -8,7 +8,7 @@ export class MoveWarshipExecution implements Execution {
     private readonly position: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     if (!mg.isValidRef(this.position)) {
       console.warn(`MoveWarshipExecution: position ${this.position} not valid`);
       return;
@@ -28,7 +28,7 @@ export class MoveWarshipExecution implements Execution {
     warship.setTargetTile(undefined);
   }
 
-  tick(ticks: number): void {}
+  tick(_ticks: number): void {}
 
   isActive(): boolean {
     return false;

@@ -77,6 +77,7 @@ export class SpriteFx implements Fx {
 
     if (!this.animatedSprite.isActive() && !this.waitToTheEnd) return false;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const t = this.elapsedTime / this.duration;
     this.animatedSprite.update(frameTime);
     this.animatedSprite.draw(ctx, this.x, this.y);

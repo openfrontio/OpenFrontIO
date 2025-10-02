@@ -23,7 +23,7 @@ describe("TradeShipExecution", () => {
     game.displayMessage = jest.fn();
     origOwner = {
       canBuild: jest.fn(() => true),
-      buildUnit: jest.fn((type, spawn, opts) => tradeShip),
+      buildUnit: jest.fn(() => tradeShip),
       displayName: jest.fn(() => "Origin"),
       addGold: jest.fn(),
       units: jest.fn(() => [dstPort]),

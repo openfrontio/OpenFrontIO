@@ -36,7 +36,7 @@ export class TrainExecution implements Execution {
     return this.player;
   }
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     const stations = this.railNetwork.findStationsPath(
       this.source,
@@ -65,7 +65,7 @@ export class TrainExecution implements Execution {
     this.train = this.createTrainUnits(spawn);
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.train === null) {
       throw new Error("Not initialized");
     }

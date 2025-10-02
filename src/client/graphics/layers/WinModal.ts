@@ -162,7 +162,7 @@ export class WinModal extends LitElement implements Layer {
               .pattern=${pattern}
               .colorPalette=${colorPalette}
               .requiresPurchase=${true}
-              .onSelect=${(p: Pattern | null) => {}}
+              .onSelect=${(_p: Pattern | null) => {}}
               .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
                 handlePurchase(p, colorPalette)}
             ></pattern-button>

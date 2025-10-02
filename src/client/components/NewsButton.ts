@@ -19,7 +19,7 @@ export class NewsButton extends LitElement {
     try {
       const lastSeenVersion = localStorage.getItem("version");
       this.isActive = lastSeenVersion !== version;
-    } catch (error) {
+    } catch (_error) {
       // Fallback to NOT showing notification if localStorage fails
       this.isActive = false;
     }
