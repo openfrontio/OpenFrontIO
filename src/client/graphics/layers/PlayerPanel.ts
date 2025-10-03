@@ -76,7 +76,7 @@ export class PlayerPanel extends LitElement implements Layer {
   initEventBus(eventBus: EventBus) {
     this.eventBus = eventBus;
     eventBus.on(CloseViewEvent, (e) => {
-      if (!this.hidden) {
+      if (this.isVisible) {
         this.hide();
       }
     });
