@@ -249,18 +249,6 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
-  private getIdentityKind(p: PlayerView): "nation" | "bot" | "player" {
-    switch (p.type()) {
-      case PlayerType.FakeHuman:
-        return "nation";
-      case PlayerType.Bot:
-        return "bot";
-      case PlayerType.Human:
-      default:
-        return "player";
-    }
-  }
-
   private identityChipProps(type: PlayerType) {
     switch (type) {
       case PlayerType.FakeHuman:
@@ -550,7 +538,6 @@ export class PlayerPanel extends LitElement implements Layer {
                       >
                       </span>
 
-                      <!-- Name (non-selectable, truncated) -->
                       <span
                         class="truncate select-none pointer-events-none font-medium"
                       >
