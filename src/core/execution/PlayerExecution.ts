@@ -30,9 +30,14 @@ export class PlayerExecution implements Execution {
     this.player.units().forEach((u) => {
       const tileOwner = this.mg!.owner(u.tile());
       if (u.info().territoryBound) {
-        if (tileOwner.isPlayer()) {
+        if (tileOwner?.isPlayer()) {
           if (tileOwner !== this.player) {
-            this.mg!.player(tileOwner.id()).captureUnit(u);
+            if (u.type() === UnitType.DefensePost) {
+              this.mg!.player(tileOwner.id()).captureUnit(u);
+              u.decreaseLevel(this.mg!.player(tileOwner.id()));
+            } else {
+              this.mg!.player(tileOwner.id()).captureUnit(u);
+            }
           }
         } else {
           u.delete();
