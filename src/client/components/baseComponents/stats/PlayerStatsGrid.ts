@@ -32,10 +32,13 @@ export class PlayerStatsGrid extends LitElement {
   @property({ type: Array }) titles: string[] = [];
   @property({ type: Array }) values: Array<string | number> = [];
 
+  // Currently fixed to display 4 stats (can be changed if needed)
+  private readonly VISIBLE_STATS_COUNT = 4;
+
   render() {
     return html`
       <div class="grid mb-2">
-        ${Array(4)
+        ${Array(this.VISIBLE_STATS_COUNT)
           .fill(0)
           .map(
             (_, i) => html`
