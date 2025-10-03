@@ -164,7 +164,7 @@ export class RailroadExecution implements Execution {
   }
 
   private redrawBuildings() {
-    this.railRoad.from.unit.isActive() && this.railRoad.from.unit.touch();
-    this.railRoad.to.unit.isActive() && this.railRoad.to.unit.touch();
+    if (this.railRoad.from.unit.isActive()) this.railRoad.from.unit.touch();
+    if (this.railRoad.to.unit.isActive()) this.railRoad.to.unit.touch();
   }
 }
