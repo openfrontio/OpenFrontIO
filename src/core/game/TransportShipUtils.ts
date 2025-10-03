@@ -1,5 +1,3 @@
-import { PathFindResultType } from "../pathfinding/AStar";
-import { MiniAStar } from "../pathfinding/MiniAStar";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
 
@@ -144,30 +142,9 @@ export function bestShoreDeploymentSource(
   player: Player,
   target: TileRef,
 ): TileRef | false {
-  const t = targetTransportTile(gm, target);
-  if (t === null) return false;
-
-  const candidates = candidateShoreTiles(gm, player, t);
-  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 1);
-  const result = aStar.compute();
-  if (result !== PathFindResultType.Completed) {
-    console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
-    return false;
-  }
-  const path = aStar.reconstructPath();
-  if (path.length === 0) {
-    return false;
-  }
-  const potential = path[0];
-  // Since mini a* downscales the map, we need to check the neighbors
-  // of the potential tile to find a valid deployment point
-  const neighbors = gm
-    .neighbors(potential)
-    .filter((n) => gm.isShore(n) && gm.owner(n) === player);
-  if (neighbors.length === 0) {
-    return false;
-  }
-  return neighbors[0];
+  // This function needs to be re-implemented to use the WASM pathfinding module.
+  // For now, it will return false.
+  return false;
 }
 
 export function candidateShoreTiles(

@@ -49,7 +49,7 @@ describe("DeleteUnitExecution Security Tests", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     player = game.player(player1Info.id);

@@ -8,8 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { PathFinder, PathFindResultType } from "../pathfinding/PathFinding";
 import { distSortUnit } from "../Util";
 
 export class TradeShipExecution implements Execution {
@@ -28,10 +27,10 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 2500);
+    this.pathFinder = PathFinder.Wasm(mg);
   }
 
-  tick(ticks: number): void {
+  async tick(ticks: number): Promise<void> {
     if (this.tradeShip === undefined) {
       const spawn = this.origOwner.canBuild(
         UnitType.TradeShip,
@@ -102,7 +101,10 @@ export class TradeShipExecution implements Execution {
       return;
     }
 
-    const result = this.pathFinder.nextTile(curTile, this._dstPort.tile());
+    const result = await this.pathFinder.nextTile(
+      curTile,
+      this._dstPort.tile(),
+    );
 
     switch (result.type) {
       case PathFindResultType.Pending:

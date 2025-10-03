@@ -1,0 +1,14 @@
+[package]
+name = "pathfinding"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2.92"
+pathfinding = "4.0.0"
+console_error_panic_hook = { version = "0.1.7", optional = true }
+js-sys = "0.3.69" # Added js-sys as a separate dependency
+web-sys = { version = "0.3.69", features = ["console"] } # Removed js-sys feature

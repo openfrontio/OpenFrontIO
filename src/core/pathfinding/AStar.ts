@@ -24,8 +24,3 @@ export type AStarResult<NodeType> =
   | {
       type: PathFindResultType.PathNotFound;
     };
-
-export interface Point {
-  x: number;
-  y: number;
-}

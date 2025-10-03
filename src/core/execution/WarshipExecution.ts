@@ -8,8 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { PathFinder, PathFindResultType } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
 
@@ -27,7 +26,7 @@ export class WarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathfinder = PathFinder.Mini(mg, 10_000, true, 100);
+    this.pathfinder = PathFinder.Wasm(mg);
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -50,7 +49,7 @@ export class WarshipExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
+  async tick(ticks: number): Promise<void> {
     if (this.warship.health() <= 0) {
       this.warship.delete();
       return;
@@ -62,11 +61,11 @@ export class WarshipExecution implements Execution {
 
     this.warship.setTargetUnit(this.findTargetUnit());
     if (this.warship.targetUnit()?.type() === UnitType.TradeShip) {
-      this.huntDownTradeShip();
+      await this.huntDownTradeShip();
       return;
     }
 
-    this.patrol();
+    await this.patrol();
 
     if (this.warship.targetUnit() !== undefined) {
       this.shootTarget();
@@ -173,10 +172,10 @@ export class WarshipExecution implements Execution {
     }
   }
 
-  private huntDownTradeShip() {
+  private async huntDownTradeShip() {
     for (let i = 0; i < 2; i++) {
       // target is trade ship so capture it.
-      const result = this.pathfinder.nextTile(
+      const result = await this.pathfinder.nextTile(
         this.warship.tile(),
         this.warship.targetUnit()!.tile(),
         5,
@@ -200,7 +199,7 @@ export class WarshipExecution implements Execution {
     }
   }
 
-  private patrol() {
+  private async patrol() {
     if (this.warship.targetTile() === undefined) {
       this.warship.setTargetTile(this.randomTile());
       if (this.warship.targetTile() === undefined) {
@@ -208,7 +207,7 @@ export class WarshipExecution implements Execution {
       }
     }
 
-    const result = this.pathfinder.nextTile(
+    const result = await this.pathfinder.nextTile(
       this.warship.tile(),
       this.warship.targetTile()!,
     );

@@ -1,12 +1,12 @@
 import { RailroadExecution } from "../execution/RailroadExecution";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { MiniAStar } from "../pathfinding/MiniAStar";
-import { SerialAStar } from "../pathfinding/SerialAStar";
+import {
+  PathFindResultType,
+  WasmPathFinder,
+} from "../pathfinding/WasmPathfinding";
 import { Game, Unit, UnitType } from "./Game";
-import { TileRef } from "./GameMap";
 import { RailNetwork } from "./RailNetwork";
 import { Railroad } from "./Railroad";
-import { Cluster, TrainStation, TrainStationMapAdapter } from "./TrainStation";
+import { Cluster, TrainStation } from "./TrainStation";
 
 /**
  * The Stations handle their own neighbors so the graph is naturally traversable,
@@ -43,48 +43,9 @@ export class StationManagerImpl implements StationManager {
   }
 }
 
-export interface RailPathFinderService {
-  findTilePath(from: TileRef, to: TileRef): TileRef[];
-  findStationsPath(from: TrainStation, to: TrainStation): TrainStation[];
-}
-
-class RailPathFinderServiceImpl implements RailPathFinderService {
-  constructor(private game: Game) {}
-
-  findTilePath(from: TileRef, to: TileRef): TileRef[] {
-    const astar = new MiniAStar(
-      this.game.map(),
-      this.game.miniMap(),
-      from,
-      to,
-      5000,
-      20,
-      false,
-      3,
-    );
-    return astar.compute() === PathFindResultType.Completed
-      ? astar.reconstructPath()
-      : [];
-  }
-
-  findStationsPath(from: TrainStation, to: TrainStation): TrainStation[] {
-    const stationAStar = new SerialAStar(
-      from,
-      to,
-      5000,
-      20,
-      new TrainStationMapAdapter(this.game),
-    );
-    return stationAStar.compute() === PathFindResultType.Completed
-      ? stationAStar.reconstructPath()
-      : [];
-  }
-}
-
 export function createRailNetwork(game: Game): RailNetwork {
   const stationManager = new StationManagerImpl();
-  const pathService = new RailPathFinderServiceImpl(game);
-  return new RailNetworkImpl(game, stationManager, pathService);
+  return new RailNetworkImpl(game, stationManager);
 }
 
 export class RailNetworkImpl implements RailNetwork {
@@ -93,7 +54,6 @@ export class RailNetworkImpl implements RailNetwork {
   constructor(
     private game: Game,
     private stationManager: StationManager,
-    private pathService: RailPathFinderService,
   ) {}
 
   connectStation(station: TrainStation) {
@@ -127,7 +87,8 @@ export class RailNetworkImpl implements RailNetwork {
    * Return the intermediary stations connecting two stations
    */
   findStationsPath(from: TrainStation, to: TrainStation): TrainStation[] {
-    return this.pathService.findStationsPath(from, to);
+    // This method is no longer needed as pathfinding is handled by WASM
+    return [];
   }
 
   private connectToNearbyStations(station: TrainStation) {
@@ -173,7 +134,7 @@ export class RailNetworkImpl implements RailNetwork {
     } else if (editedClusters.size === 0) {
       // If no cluster owns the station, creates a new one for it
       const newCluster = new Cluster();
-      newCluster.addStation(station);
+      newCluster.addStations([station]);
     }
   }
 
@@ -195,14 +156,26 @@ export class RailNetworkImpl implements RailNetwork {
     cluster.clear();
   }
 
-  private connect(from: TrainStation, to: TrainStation) {
-    const path = this.pathService.findTilePath(from.tile(), to.tile());
-    if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
-      const railRoad = new Railroad(from, to, path);
-      this.game.addExecution(new RailroadExecution(railRoad));
-      from.addRailroad(railRoad);
-      to.addRailroad(railRoad);
-      return true;
+  private async connect(from: TrainStation, to: TrainStation) {
+    const wasmPathFinder = new WasmPathFinder(this.game);
+
+    const pathResult = await wasmPathFinder.nextTile(from.tile(), to.tile());
+
+    if (
+      pathResult.type === PathFindResultType.Completed &&
+      wasmPathFinder.path
+    ) {
+      const path = wasmPathFinder.path;
+      if (
+        path.length > 0 &&
+        path.length < this.game.config().railroadMaxSize()
+      ) {
+        const railRoad = new Railroad(from, to, path);
+        this.game.addExecution(new RailroadExecution(railRoad));
+        from.addRailroad(railRoad);
+        to.addRailroad(railRoad);
+        return true;
+      }
     }
     return false;
   }
