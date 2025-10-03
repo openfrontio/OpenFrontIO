@@ -509,32 +509,61 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private renderAlliances(other: PlayerView) {
     const allies = other.allies();
+
     return html`
-      <div class="text-base">
-        <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-1 mb-2">
+      <div class="text-base select-none">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-2">
           <div class="font-semibold text-zinc-300 text-base">
             ${translateText("player_panel.alliances")}
           </div>
-          <div class="text-right font-semibold text-zinc-200 text-base">
-            (${allies.length})
-          </div>
+          <span
+            aria-label="Alliance count"
+            class="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-[10px] 
+              text-[12px] text-zinc-100 bg-white/10 border border-white/20"
+          >
+            ${allies.length}
+          </span>
         </div>
 
         <div class="mt-1 rounded-lg border border-zinc-600 bg-zinc-800/80">
           <div
-            class="max-h-[72px] overflow-y-auto p-2 text-zinc-200 text-base leading-relaxed"
+            class="max-h-[72px] overflow-y-auto p-2 text-zinc-200 text-[12.5px] leading-relaxed"
+            role="list"
+            aria-label="Alliance list"
             translate="no"
           >
             ${allies.length > 0
-              ? allies.map(
-                  (p) =>
-                    html`<div class="truncate leading-7 font-medium">
-                      ${p.name()}
-                    </div>`,
-                )
-              : html`<div class="py-2 text-zinc-300">
-                  ${translateText("player_panel.none")}
-                </div>`}
+              ? allies.map((p) => {
+                  const color = p.territoryColor().toHex();
+                  return html`
+                    <div
+                      role="listitem"
+                      class="grid grid-cols-[16px_1fr] items-center gap-2 w-full h-[30px]
+                            px-2 rounded-lg border border-transparent text-left
+                            hover:bg-[#141821] hover:border-white/30 transition-colors"
+                      title=${p.name()}
+                    >
+                      <span
+                        class="inline-block w-3 h-3 rounded-full mr-2"
+                        style="background-color: ${color}"
+                      >
+                      </span>
+
+                      <!-- Name (non-selectable, truncated) -->
+                      <span
+                        class="truncate select-none pointer-events-none font-medium"
+                      >
+                        ${p.name()}
+                      </span>
+                    </div>
+                  `;
+                })
+              : html`
+                  <div class="py-2 text-zinc-300">
+                    ${translateText("player_panel.none")}
+                  </div>
+                `}
           </div>
         </div>
       </div>
