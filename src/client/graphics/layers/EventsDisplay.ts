@@ -40,6 +40,7 @@ import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
+import SoundManager from "../../sound/SoundManager";
 import { renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
@@ -681,6 +682,19 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     const unitView = this.game.unit(event.unitID);
+
+    // Play sound
+    switch (event.messageType) {
+      case MessageType.NUKE_INBOUND:
+        SoundManager.playAtomLaunch();
+        break;
+      case MessageType.HYDROGEN_BOMB_INBOUND:
+        SoundManager.playHydroLaunch();
+        break;
+      case MessageType.MIRV_INBOUND:
+        SoundManager.playMirvLaunch();
+        break;
+    }
 
     this.addEvent({
       description: event.message,

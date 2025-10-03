@@ -587,7 +587,10 @@ export class GameView implements GameMap {
     }
     const playerId = this.smallIDToID.get(id);
     if (playerId === undefined) {
-      throw new Error(`small id ${id} not found`);
+      // Instead of throwing an error, return TerraNullius.
+      // This can happen if a tile update arrives before a player update.
+      console.warn(`small id ${id} not found`);
+      return new TerraNulliusImpl();
     }
     return this.player(playerId);
   }

@@ -176,4 +176,12 @@ export class UserSettings {
   setBackgroundMusicVolume(volume: number): void {
     this.setFloat("settings.backgroundMusicVolume", volume);
   }
+
+  soundEffectsVolume(): number {
+    return this.getFloat("settings.soundEffectsVolume", 1);
+  }
+
+  setSoundEffectsVolume(volume: number): void {
+    this.setFloat("settings.soundEffectsVolume", volume);
+  }
 }

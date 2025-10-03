@@ -42,6 +42,7 @@ export enum GameUpdateType {
   Win,
   Hash,
   UnitIncoming,
+  NukeLaunch,
   BonusEvent,
   RailroadEvent,
   ConquestEvent,
@@ -63,6 +64,7 @@ export type GameUpdate =
   | WinUpdate
   | HashUpdate
   | UnitIncomingUpdate
+  | NukeLaunchUpdate
   | AllianceExtensionUpdate
   | BonusEventUpdate
   | RailroadUpdate
@@ -255,6 +257,12 @@ export interface UnitIncomingUpdate {
   unitID: number;
   message: string;
   messageType: MessageType;
+  playerID: number;
+}
+
+export interface NukeLaunchUpdate {
+  type: GameUpdateType.NukeLaunch;
+  nukeType: UnitType;
   playerID: number;
 }
 

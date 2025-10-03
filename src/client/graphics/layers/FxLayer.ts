@@ -4,9 +4,11 @@ import {
   BonusEventUpdate,
   ConquestUpdate,
   GameUpdateType,
+  NukeLaunchUpdate,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import SoundManager from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
@@ -66,6 +68,31 @@ export class FxLayer implements Layer {
         if (update === undefined) return;
         this.onConquestEvent(update);
       });
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.NukeLaunch]?.forEach((nukeLaunch) => {
+        if (nukeLaunch === undefined) return;
+        this.onNukeLaunchEvent(nukeLaunch as NukeLaunchUpdate);
+      });
+  }
+
+  private onNukeLaunchEvent(event: NukeLaunchUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || myPlayer.smallID() !== event.playerID) {
+      return;
+    }
+
+    switch (event.nukeType) {
+      case UnitType.AtomBomb:
+        SoundManager.playAtomLaunch();
+        break;
+      case UnitType.HydrogenBomb:
+        SoundManager.playHydroLaunch();
+        break;
+      case UnitType.MIRV:
+        SoundManager.playMirvLaunch();
+        break;
+    }
   }
 
   private manageBoatTargetFx() {
@@ -270,6 +297,19 @@ export class FxLayer implements Layer {
       this.game,
     );
     this.allFx = this.allFx.concat(nukeFx);
+
+    // Play sound
+    switch (unit.type()) {
+      case UnitType.AtomBomb:
+        SoundManager.playAtomHit();
+        break;
+      case UnitType.HydrogenBomb:
+        SoundManager.playHydroHit();
+        break;
+      case UnitType.MIRVWarhead:
+        SoundManager.playMirvHit();
+        break;
+    }
   }
 
   handleSAMInterception(unit: UnitView) {

@@ -361,7 +361,8 @@
     "terrain_disabled": "Terrain view disabled",
     "exit_game_label": "Exit Game",
     "exit_game_info": "Return to main menu",
-    "background_music_volume": "Background Music Volume"
+    "background_music_volume": "Background Music Volume",
+    "sound_effects_volume": "Sound Effects Volume"
   },
   "chat": {
     "title": "Quick Chat",

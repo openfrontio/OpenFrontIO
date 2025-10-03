@@ -8,6 +8,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameUpdateType } from "../game/GameUpdates";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
@@ -69,6 +70,11 @@ export class MirvExecution implements Execution {
         return;
       }
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {});
+      this.mg.addUpdate({
+        type: GameUpdateType.NukeLaunch,
+        nukeType: UnitType.MIRV,
+        playerID: this.player.smallID(),
+      });
       const x = Math.floor(
         (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
       );

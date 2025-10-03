@@ -10,6 +10,7 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameUpdateType } from "../game/GameUpdates";
 import { ParabolaPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { NukeType } from "../StatsSchemas";
@@ -119,6 +120,11 @@ export class NukeExecution implements Execution {
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
+      });
+      this.mg.addUpdate({
+        type: GameUpdateType.NukeLaunch,
+        nukeType: this.nukeType,
+        playerID: this.player.smallID(),
       });
       this.maybeBreakAlliances(this.tilesToDestroy());
       if (this.mg.hasOwner(this.dst)) {
