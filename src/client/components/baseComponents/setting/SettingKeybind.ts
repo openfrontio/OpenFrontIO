@@ -80,7 +80,7 @@ export class SettingKeybind extends LitElement {
 
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { action: this.action, value: code, key: e.key },
+        detail: { action: this.action, value: code },
         bubbles: true,
         composed: true,
       }),

@@ -185,7 +185,7 @@ async function createClientGame(
     lobbyConfig,
     eventBus,
     gameRenderer,
-    new InputHandler(gameRenderer.uiState, canvas, eventBus),
+    new InputHandler(canvas, eventBus),
     transport,
     worker,
     gameView,
@@ -198,6 +198,7 @@ export class ClientGameRunner {
 
   private turnsSeen = 0;
   private hasJoined = false;
+
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
@@ -256,7 +257,6 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
-
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
     this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
@@ -387,7 +387,7 @@ export class ClientGameRunner {
   }
 
   private inputEvent(event: MouseUpEvent) {
-    if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
+    if (!this.isActive) {
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(

@@ -862,22 +862,21 @@ export class PlayerImpl implements Player {
     this.recordUnitConstructed(unit.type());
   }
 
-  public buildableUnits(tile: TileRef | null): BuildableUnit[] {
-    const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
+  public buildableUnits(tile: TileRef): BuildableUnit[] {
+    const validTiles = this.validStructureSpawnTiles(tile);
     return Object.values(UnitType).map((u) => {
       let canUpgrade: number | false = false;
       if (!this.mg.inSpawnPhase()) {
-        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
+        const existingUnit = this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }
       }
       return {
         type: u,
-        canBuild:
-          this.mg.inSpawnPhase() || tile === null
-            ? false
-            : this.canBuild(u, tile, validTiles),
+        canBuild: this.mg.inSpawnPhase()
+          ? false
+          : this.canBuild(u, tile, validTiles),
         canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;

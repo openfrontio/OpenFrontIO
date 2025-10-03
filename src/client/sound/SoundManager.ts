@@ -1,20 +1,17 @@
 import { Howl } from "howler";
+import atomHit from "../../../proprietary/sounds/effects/Atom Hit.mp3";
+import atomLaunch from "../../../proprietary/sounds/effects/Atom Launch.mp3";
+import hydroHit from "../../../proprietary/sounds/effects/Hydrogen Hit.mp3";
+import hydroLaunch from "../../../proprietary/sounds/effects/Hydrogen Launch.mp3";
+import mirvLaunch from "../../../proprietary/sounds/effects/MIRV Launch.mp3";
 import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
-import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
-
-export enum SoundEffect {
-  KaChing = "ka-ching",
-}
 
 class SoundManager {
   private backgroundMusic: Howl[] = [];
   private soundEffects: Howl[] = [];
   private currentTrack: number = 0;
-  private soundEffects: Map<SoundEffect, Howl> = new Map();
-  private soundEffectsVolume: number = 1;
-  private backgroundMusicVolume: number = 0;
 
   private musicVolume: number = 0;
   private effectsVolume: number = 1;
@@ -35,22 +32,50 @@ class SoundManager {
         src: [of4],
         loop: false,
         onend: this.playNext.bind(this),
-        volume: 0,
+        volume: this.musicVolume,
       }),
       new Howl({
         src: [openfront],
         loop: false,
         onend: this.playNext.bind(this),
-        volume: 0,
+        volume: this.musicVolume,
       }),
       new Howl({
         src: [war],
         loop: false,
         onend: this.playNext.bind(this),
-        volume: 0,
+        volume: this.musicVolume,
       }),
     ];
-    this.loadSoundEffect(SoundEffect.KaChing, kaChingSound);
+
+    this.atomHitSound = new Howl({
+      src: [atomHit],
+      volume: this.effectsVolume,
+    });
+    this.atomLaunchSound = new Howl({
+      src: [atomLaunch],
+      volume: this.effectsVolume,
+    });
+    this.hydroHitSound = new Howl({
+      src: [hydroHit],
+      volume: this.effectsVolume,
+    });
+    this.hydroLaunchSound = new Howl({
+      src: [hydroLaunch],
+      volume: this.effectsVolume,
+    });
+    this.mirvLaunchSound = new Howl({
+      src: [mirvLaunch],
+      volume: this.effectsVolume,
+    });
+
+    this.soundEffects.push(
+      this.atomHitSound,
+      this.atomLaunchSound,
+      this.hydroHitSound,
+      this.hydroLaunchSound,
+      this.mirvLaunchSound,
+    );
   }
 
   public playBackgroundMusic(): void {
@@ -69,10 +94,13 @@ class SoundManager {
   }
 
   public setBackgroundMusicVolume(volume: number): void {
-    this.backgroundMusicVolume = Math.max(0, Math.min(1, volume));
-    this.backgroundMusic.forEach((track) => {
-      track.volume(this.backgroundMusicVolume);
-    });
+    this.musicVolume = Math.max(0, Math.min(1, volume));
+    this.backgroundMusic.forEach((track) => track.volume(this.musicVolume));
+  }
+
+  public setSoundEffectsVolume(volume: number): void {
+    this.effectsVolume = Math.max(0, Math.min(1, volume));
+    this.soundEffects.forEach((sound) => sound.volume(this.effectsVolume));
   }
 
   private playNext(): void {
@@ -102,43 +130,6 @@ class SoundManager {
 
   public playMirvHit(): void {
     this.atomHitSound.play();
-  public loadSoundEffect(name: SoundEffect, src: string): void {
-    if (!this.soundEffects.has(name)) {
-      const sound = new Howl({
-        src: [src],
-        volume: this.soundEffectsVolume,
-      });
-      this.soundEffects.set(name, sound);
-    }
-  }
-
-  public playSoundEffect(name: SoundEffect): void {
-    const sound = this.soundEffects.get(name);
-    if (sound) {
-      sound.play();
-    }
-  }
-
-  public setSoundEffectsVolume(volume: number): void {
-    this.soundEffectsVolume = Math.max(0, Math.min(1, volume));
-    this.soundEffects.forEach((sound) => {
-      sound.volume(this.soundEffectsVolume);
-    });
-  }
-
-  public stopSoundEffect(name: SoundEffect): void {
-    const sound = this.soundEffects.get(name);
-    if (sound) {
-      sound.stop();
-    }
-  }
-
-  public unloadSoundEffect(name: SoundEffect): void {
-    const sound = this.soundEffects.get(name);
-    if (sound) {
-      sound.unload();
-      this.soundEffects.delete(name);
-    }
   }
 }
 

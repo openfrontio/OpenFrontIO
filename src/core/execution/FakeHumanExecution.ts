@@ -182,6 +182,7 @@ export class FakeHumanExecution implements Execution {
 
     this.player.breakAlliance(alliance);
 
+    // Successfully broken an alliance
     return true;
   }
 
@@ -258,25 +259,22 @@ export class FakeHumanExecution implements Execution {
       return false;
     }
 
-    const shouldAttack = this.attackChance(other);
-
     // Consider betrayal for allies
-    if (shouldAttack && this.player.isAlliedWith(other)) {
-      return this.maybeConsiderBetrayal(other);
+    if (this.player.isAlliedWith(other)) {
+      const canProceed = this.maybeConsiderBetrayal(other);
+      return canProceed;
     }
 
-    return shouldAttack;
-  }
-
-  private attackChance(other: Player): boolean {
-    if (this.player === null) throw new Error("not initialized");
-
-    if (this.player.isAlliedWith(other)) {
-      return this.shouldDiscourageAttack(other)
-        ? this.random.chance(200)
-        : this.random.chance(50);
+    if (this.player.isFriendly(other)) {
+      if (this.shouldDiscourageAttack(other)) {
+        return this.random.chance(200);
+      }
+      return this.random.chance(50);
     } else {
-      return this.shouldDiscourageAttack(other) ? this.random.chance(4) : true;
+      if (this.shouldDiscourageAttack(other)) {
+        return this.random.chance(4);
+      }
+      return true;
     }
   }
 

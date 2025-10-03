@@ -13,8 +13,7 @@ export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
 
   @state() private settingsMode: "basic" | "keybinds" = "basic";
-  @state() private keybinds: Record<string, { value: string; key: string }> =
-    {};
+  @state() private keybinds: Record<string, string> = {};
 
   @state() private keySequence: string[] = [];
   @state() private showEasterEggSettings = false;
@@ -207,15 +206,14 @@ export class UserSettingModal extends LitElement {
   }
 
   private handleKeybindChange(
-    e: CustomEvent<{ action: string; value: string; key: string }>,
+    e: CustomEvent<{ action: string; value: string }>,
   ) {
-    console.log("Keybind change event:", e);
-    const { action, value, key } = e.detail;
-    const prevValue = this.keybinds[action]?.value ?? "";
+    const { action, value } = e.detail;
+    const prevValue = this.keybinds[action] ?? "";
 
     const values = Object.entries(this.keybinds)
       .filter(([k]) => k !== action)
-      .map(([, v]) => v.value);
+      .map(([, v]) => v);
     if (values.includes(value) && value !== "Null") {
       const popup = document.createElement("div");
       popup.className = "setting-popup";
@@ -230,7 +228,7 @@ export class UserSettingModal extends LitElement {
       }
       return;
     }
-    this.keybinds = { ...this.keybinds, [action]: { value: value, key: key } };
+    this.keybinds = { ...this.keybinds, [action]: value };
     localStorage.setItem("settings.keybinds", JSON.stringify(this.keybinds));
   }
 
@@ -432,92 +430,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.toggle_view")}
         description=${translateText("user_setting.toggle_view_desc")}
         defaultKey="Space"
-        .value=${this.keybinds["toggleView"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
-        ${translateText("user_setting.build_controls")}
-      </div>
-
-      <setting-keybind
-        action="buildCity"
-        label=${translateText("user_setting.build_city")}
-        description=${translateText("user_setting.build_city_desc")}
-        defaultKey="Digit1"
-        .value=${this.keybinds["buildCity"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildFactory"
-        label=${translateText("user_setting.build_factory")}
-        description=${translateText("user_setting.build_factory_desc")}
-        defaultKey="Digit2"
-        .value=${this.keybinds["buildFactory"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildPort"
-        label=${translateText("user_setting.build_port")}
-        description=${translateText("user_setting.build_port_desc")}
-        defaultKey="Digit3"
-        .value=${this.keybinds["buildPort"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildDefensePost"
-        label=${translateText("user_setting.build_defense_post")}
-        description=${translateText("user_setting.build_defense_post_desc")}
-        defaultKey="Digit4"
-        .value=${this.keybinds["buildDefensePost"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildMissileSilo"
-        label=${translateText("user_setting.build_missile_silo")}
-        description=${translateText("user_setting.build_missile_silo_desc")}
-        defaultKey="Digit5"
-        .value=${this.keybinds["buildMissileSilo"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildSamLauncher"
-        label=${translateText("user_setting.build_sam_launcher")}
-        description=${translateText("user_setting.build_sam_launcher_desc")}
-        defaultKey="Digit6"
-        .value=${this.keybinds["buildSamLauncher"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildAtomBomb"
-        label=${translateText("user_setting.build_atom_bomb")}
-        description=${translateText("user_setting.build_atom_bomb_desc")}
-        defaultKey="Digit7"
-        .value=${this.keybinds["buildAtomBomb"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildHydrogenBomb"
-        label=${translateText("user_setting.build_hydrogen_bomb")}
-        description=${translateText("user_setting.build_hydrogen_bomb_desc")}
-        defaultKey="Digit8"
-        .value=${this.keybinds["buildHydrogenBomb"]?.key ?? ""}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildWarship"
-        label=${translateText("user_setting.build_warship")}
-        description=${translateText("user_setting.build_warship_desc")}
-        defaultKey="Digit9"
-        .value=${this.keybinds["buildWarship"]?.key ?? ""}
+        .value=${this.keybinds["toggleView"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -529,8 +442,8 @@ export class UserSettingModal extends LitElement {
         action="attackRatioDown"
         label=${translateText("user_setting.attack_ratio_down")}
         description=${translateText("user_setting.attack_ratio_down_desc")}
-        defaultKey="KeyT"
-        .value=${this.keybinds["attackRatioDown"]?.key ?? ""}
+        defaultKey="Digit1"
+        .value=${this.keybinds["attackRatioDown"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -538,8 +451,8 @@ export class UserSettingModal extends LitElement {
         action="attackRatioUp"
         label=${translateText("user_setting.attack_ratio_up")}
         description=${translateText("user_setting.attack_ratio_up_desc")}
-        defaultKey="KeyY"
-        .value=${this.keybinds["attackRatioUp"]?.key ?? ""}
+        defaultKey="Digit2"
+        .value=${this.keybinds["attackRatioUp"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -552,7 +465,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.boat_attack")}
         description=${translateText("user_setting.boat_attack_desc")}
         defaultKey="KeyB"
-        .value=${this.keybinds["boatAttack"]?.key ?? ""}
+        .value=${this.keybinds["boatAttack"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -561,7 +474,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.ground_attack")}
         description=${translateText("user_setting.ground_attack_desc")}
         defaultKey="KeyG"
-        .value=${this.keybinds["groundAttack"]?.key ?? ""}
+        .value=${this.keybinds["groundAttack"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -574,7 +487,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.zoom_out")}
         description=${translateText("user_setting.zoom_out_desc")}
         defaultKey="KeyQ"
-        .value=${this.keybinds["zoomOut"]?.key ?? ""}
+        .value=${this.keybinds["zoomOut"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -583,7 +496,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.zoom_in")}
         description=${translateText("user_setting.zoom_in_desc")}
         defaultKey="KeyE"
-        .value=${this.keybinds["zoomIn"]?.key ?? ""}
+        .value=${this.keybinds["zoomIn"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -596,7 +509,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.center_camera")}
         description=${translateText("user_setting.center_camera_desc")}
         defaultKey="KeyC"
-        .value=${this.keybinds["centerCamera"]?.key ?? ""}
+        .value=${this.keybinds["centerCamera"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -605,7 +518,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.move_up")}
         description=${translateText("user_setting.move_up_desc")}
         defaultKey="KeyW"
-        .value=${this.keybinds["moveUp"]?.key ?? ""}
+        .value=${this.keybinds["moveUp"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -614,7 +527,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
         defaultKey="KeyA"
-        .value=${this.keybinds["moveLeft"]?.key ?? ""}
+        .value=${this.keybinds["moveLeft"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -623,7 +536,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.move_down")}
         description=${translateText("user_setting.move_down_desc")}
         defaultKey="KeyS"
-        .value=${this.keybinds["moveDown"]?.key ?? ""}
+        .value=${this.keybinds["moveDown"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -632,7 +545,7 @@ export class UserSettingModal extends LitElement {
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
         defaultKey="KeyD"
-        .value=${this.keybinds["moveRight"]?.key ?? ""}
+        .value=${this.keybinds["moveRight"] ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
     `;

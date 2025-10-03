@@ -179,19 +179,18 @@ export class GameRunner {
 
   public playerActions(
     playerID: PlayerID,
-    x?: number,
-    y?: number,
+    x: number,
+    y: number,
   ): PlayerActions {
     const player = this.game.player(playerID);
-    const tile =
-      x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
+    const tile = this.game.ref(x, y);
     const actions = {
-      canAttack: tile !== null && player.canAttack(tile),
+      canAttack: player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 
-    if (tile !== null && this.game.hasOwner(tile)) {
+    if (this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
       actions.interaction = {
         sharedBorder: player.sharesBorderWith(other),
