@@ -232,7 +232,12 @@ export class SettingsModal extends LitElement implements Layer {
             <div
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
             >
-              <img src=${musicIcon} alt="musicIcon" width="20" height="20" />
+              <img
+                src=${musicIcon}
+                alt="soundEffectsIcon"
+                width="20"
+                height="20"
+              />
               <div class="flex-1">
                 <div class="font-medium">
                   ${translateText("user_setting.sound_effects_volume")}
