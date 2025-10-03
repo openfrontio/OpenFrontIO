@@ -393,11 +393,14 @@ export class PlayerPanel extends LitElement implements Layer {
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
-        ${country
+        ${country && typeof flagCode === "string"
           ? html`<img
-              src="/flags/${flagCode}.svg"
-              alt=${country?.name}
+              src="/flags/${encodeURIComponent(flagCode)}.svg"
+              alt=${country?.name || "Flag"}
               class="h-10 w-10 rounded-full object-cover"
+              @error=${(e: Event) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />`
           : ""}
         <h1 class="text-2xl font-bold tracking-[-0.01em] truncate text-zinc-50">
