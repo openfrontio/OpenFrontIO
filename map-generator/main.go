@@ -36,6 +36,7 @@ var maps = []struct {
 	{Name: "deglaciatedantarctica"},
 	{Name: "falklandislands"},
 	{Name: "baikal"},
+	{Name: "montreal"},
 	{Name: "halkidiki"},
 	{Name: "italia"},
 	{Name: "japan"},
