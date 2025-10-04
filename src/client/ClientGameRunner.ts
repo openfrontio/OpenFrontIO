@@ -232,7 +232,7 @@ export class ClientGameRunner {
   public shouldPreventWindowClose(): boolean {
     // Show confirmation dialog if player is alive and has more than 10k troops.
     // This prevents the popup from being too annoying by only showing when
-    // relevant (i.e. when the player is "effectively alive" with significant troops).
+    // most relevant (i.e. when the player is "effectively alive").
     if (
       this.myPlayer &&
       this.myPlayer.isAlive() &&
