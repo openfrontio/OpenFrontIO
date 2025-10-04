@@ -5,4 +5,4 @@
 export PATH="/usr/local/bin:$HOME/.npm-global/bin:$HOME/.nvm/versions/node/$(node -v)/bin:$PATH"
 
 # Then run lint-staged if tests pass
-npx lint-staged
+npx.cmd lint-staged
