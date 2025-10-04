@@ -154,7 +154,7 @@ class Client {
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
     window.addEventListener("beforeunload", (e) => {
-      // Check if we should prevent unload (player alive with >10k troops)
+      // Check if we should prevent unload (player is alive)
       if (shouldPreventUnload()) {
         e.preventDefault();
         return "";
