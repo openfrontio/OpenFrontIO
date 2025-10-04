@@ -460,7 +460,7 @@ export class EventsDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       priority: 0,
       duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
-      shouldDelete: (game) => {
+      shouldDelete: (_game) => {
         // Recipient sent a separate request, so they became allied without the recipient responding.
         return requestor.isAlliedWith(recipient);
       },
@@ -1040,7 +1040,7 @@ export class EventsDisplay extends LitElement implements Layer {
                   >
                     <tbody>
                       ${filteredEvents.map(
-                        (event, index) => html`
+                        (event, _index) => html`
                           <tr>
                             <td
                               class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(

@@ -36,7 +36,7 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
 
     try {
       decodePatternData(found.pattern, this.b64urlDecode);
-    } catch (e) {
+    } catch (_e) {
       return { type: "forbidden", reason: "invalid pattern" };
     }
 
@@ -140,16 +140,16 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
 
 export class FailOpenPrivilegeChecker implements PrivilegeChecker {
   isPatternAllowed(
-    flares: readonly string[],
-    name: string,
-    colorPaletteName: string | null,
+    _flares: readonly string[],
+    _name: string,
+    _colorPaletteName: string | null,
   ): PatternResult {
     return { type: "unknown" };
   }
 
   isCustomFlagAllowed(
-    flag: string,
-    flares: readonly string[] | undefined,
+    _flag: string,
+    _flares: readonly string[] | undefined,
   ): true | "restricted" | "invalid" {
     return true;
   }

@@ -12,12 +12,12 @@ export class RetreatExecution implements Execution {
     private attackID: string,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     this.startTick = mg.ticks();
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (!this.retreatOrdered) {
       this.player.orderRetreat(this.attackID);
       this.retreatOrdered = true;

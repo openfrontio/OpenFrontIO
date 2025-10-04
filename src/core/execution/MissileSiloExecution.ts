@@ -11,11 +11,11 @@ export class MissileSiloExecution implements Execution {
     private tile: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.silo === null) {
       const spawn = this.player.canBuild(UnitType.MissileSilo, this.tile);
       if (spawn === false) {

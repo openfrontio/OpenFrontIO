@@ -286,18 +286,19 @@ async function schedulePublicGame(playlist: MapPlaylist) {
       throw new Error(`Failed to schedule public game: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    await response.json();
   } catch (error) {
     log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
     throw error;
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // SPA fallback route
-app.get("*", function (req, res) {
+app.get("*", function (_req, res) {
   res.sendFile(path.join(__dirname, "../../static/index.html"));
 });

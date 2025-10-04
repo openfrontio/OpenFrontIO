@@ -9,7 +9,7 @@ export class UpgradeStructureExecution implements Execution {
     private unitId: number,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(_mg: Game, _ticks: number): void {
     this.structure = this.player
       .units()
       .find((unit) => unit.id() === this.unitId);
@@ -29,7 +29,7 @@ export class UpgradeStructureExecution implements Execution {
     return;
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     return;
   }
 

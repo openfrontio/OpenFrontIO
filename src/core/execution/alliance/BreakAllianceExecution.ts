@@ -10,7 +10,7 @@ export class BreakAllianceExecution implements Execution {
     private recipientID: PlayerID,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(
         `BreakAllianceExecution: recipient ${this.recipientID} not found`,
@@ -22,7 +22,7 @@ export class BreakAllianceExecution implements Execution {
     this.mg = mg;
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (
       this.mg === null ||
       this.requestor === null ||

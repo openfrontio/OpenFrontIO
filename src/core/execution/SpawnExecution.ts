@@ -13,11 +13,11 @@ export class SpawnExecution implements Execution {
     public readonly tile: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number) {
+  init(mg: Game, _ticks: number) {
     this.mg = mg;
   }
 
-  tick(ticks: number) {
+  tick(_ticks: number) {
     this.active = false;
 
     if (!this.mg.isValidRef(this.tile)) {

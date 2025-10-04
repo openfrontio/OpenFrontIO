@@ -25,7 +25,7 @@ export class WarshipExecution implements Execution {
     private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     this.pathfinder = PathFinder.Mini(mg, 10_000, true, 100);
     this.random = new PseudoRandom(mg.ticks());
@@ -50,7 +50,7 @@ export class WarshipExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.warship.health() <= 0) {
       this.warship.delete();
       return;

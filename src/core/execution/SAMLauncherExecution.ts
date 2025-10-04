@@ -181,7 +181,7 @@ export class SAMLauncherExecution implements Execution {
     }
   }
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
   }
 

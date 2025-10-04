@@ -510,7 +510,7 @@ export async function startWorker() {
   });
 
   // Global error handler
-  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     log.error(`Error in ${req.method} ${req.path}:`, err);
     res.status(500).json({ error: "An unexpected error occurred" });
   });

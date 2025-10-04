@@ -104,7 +104,7 @@ export class TeamStats extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {}
+  renderLayer(_context: CanvasRenderingContext2D) {}
 
   shouldTransform(): boolean {
     return false;

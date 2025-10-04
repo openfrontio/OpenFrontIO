@@ -751,7 +751,7 @@ export class DefaultConfig implements Config {
     }
   }
 
-  boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number {
+  boatAttackAmount(attacker: Player, _defender: Player | TerraNullius): number {
     return Math.floor(attacker.troops() / 5);
   }
 
@@ -767,7 +767,7 @@ export class DefaultConfig implements Config {
     return within(totalPorts / 3, 4, totalPorts);
   }
 
-  attackAmount(attacker: Player, defender: Player | TerraNullius) {
+  attackAmount(attacker: Player, _defender: Player | TerraNullius) {
     if (attacker.type() === PlayerType.Bot) {
       return attacker.troops() / 20;
     } else {

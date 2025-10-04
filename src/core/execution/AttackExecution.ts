@@ -43,7 +43,7 @@ export class AttackExecution implements Execution {
     return false;
   }
 
-  init(mg: Game, ticks: number) {
+  init(mg: Game, _ticks: number) {
     if (!this.active) {
       return;
     }
@@ -200,7 +200,7 @@ export class AttackExecution implements Execution {
     }
   }
 
-  tick(ticks: number) {
+  tick(_ticks: number) {
     if (this.attack === null) {
       throw new Error("Attack not initialized");
     }

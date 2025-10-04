@@ -26,13 +26,13 @@ export class SAMMissileExecution implements Execution {
     private targetTile: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
     this.mg = mg;
     this.speed = this.mg.config().defaultSamMissileSpeed();
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     this.SAMMissile ??= this._owner.buildUnit(
       UnitType.SAMMissile,
       this.spawn,

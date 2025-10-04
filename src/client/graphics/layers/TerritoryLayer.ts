@@ -228,7 +228,7 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
     });
-    this.eventBus.on(DragEvent, (e) => {
+    this.eventBus.on(DragEvent, (_e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
       // this.lastDragTime = Date.now();
     });
@@ -447,12 +447,15 @@ export class TerritoryLayer implements Layer {
       return;
     }
     const owner = this.game.owner(tile) as PlayerView;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isHighlighted =
       this.highlightedTerritory &&
       this.highlightedTerritory.id() === owner.id();
     const myPlayer = this.game.myPlayer();
 
     if (this.game.isBorder(tile)) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const playerIsFocused = owner && this.game.focusedPlayer() === owner;
       if (myPlayer) {
         const alternativeColor = this.alternateViewColor(owner);

@@ -10,7 +10,7 @@ export class AllianceRequestReplyExecution implements Execution {
     private accept: boolean,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     if (!mg.hasPlayer(this.requestorID)) {
       console.warn(
         `AllianceRequestReplyExecution requester ${this.requestorID} not found`,
@@ -21,7 +21,7 @@ export class AllianceRequestReplyExecution implements Execution {
     this.requestor = mg.player(this.requestorID);
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.requestor === null) {
       throw new Error("Not initialized");
     }

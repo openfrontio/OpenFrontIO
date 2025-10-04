@@ -5,7 +5,7 @@ export const CreateGameInputSchema = GameConfigSchema.or(
   z
     .object({})
     .strict()
-    .transform((val) => undefined),
+    .transform((_val) => undefined),
 );
 
 export const GameInputSchema = GameConfigSchema.partial();

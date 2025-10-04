@@ -18,7 +18,7 @@ export class RailroadExecution implements Execution {
     return this.active;
   }
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     const tiles = this.railRoad.tiles;
     // Inverse direction computation for the first tile
@@ -111,7 +111,7 @@ export class RailroadExecution implements Execution {
     return RailType.VERTICAL;
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.mg === null) {
       throw new Error("Not initialized");
     }

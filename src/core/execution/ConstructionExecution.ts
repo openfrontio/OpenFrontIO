@@ -33,7 +33,7 @@ export class ConstructionExecution implements Execution {
     private tile: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
 
     if (this.mg.config().isUnitDisabled(this.constructionType)) {
@@ -51,7 +51,7 @@ export class ConstructionExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (this.construction === null) {
       const info = this.mg.unitInfo(this.constructionType);
       if (info.constructionDuration === undefined) {

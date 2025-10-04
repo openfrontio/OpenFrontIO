@@ -11,11 +11,11 @@ export class FactoryExecution implements Execution {
     private tile: TileRef,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.game = mg;
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (!this.factory) {
       const spawnTile = this.player.canBuild(UnitType.Factory, this.tile);
       if (spawnTile === false) {

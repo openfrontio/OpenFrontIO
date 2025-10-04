@@ -96,7 +96,7 @@ export class TerritoryPatternsModal extends LitElement {
           ? html`
               <pattern-button
                 .pattern=${null}
-                .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
+                .onSelect=${(_p: Pattern | null) => this.selectPattern(null)}
               ></pattern-button>
             `
           : html``}

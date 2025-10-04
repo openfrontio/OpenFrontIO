@@ -19,7 +19,7 @@ export class WinCheckExecution implements Execution {
 
   constructor() {}
 
-  init(mg: Game, ticks: number) {
+  init(mg: Game, _ticks: number) {
     this.mg = mg;
   }
 

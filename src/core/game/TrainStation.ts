@@ -55,9 +55,9 @@ class PortStopHandler implements TrainStopHandler {
 
 class FactoryStopHandler implements TrainStopHandler {
   onStop(
-    mg: Game,
-    station: TrainStation,
-    trainExecution: TrainExecution,
+    _mg: Game,
+    _station: TrainStation,
+    _trainExecution: TrainExecution,
   ): void {}
 }
 
@@ -166,7 +166,7 @@ export class TrainStationMapAdapter implements GraphAdapter<TrainStation> {
     return node.neighbors();
   }
 
-  cost(node: TrainStation): number {
+  cost(_node: TrainStation): number {
     return 1;
   }
 
@@ -174,7 +174,7 @@ export class TrainStationMapAdapter implements GraphAdapter<TrainStation> {
     return { x: this.game.x(node.tile()), y: this.game.y(node.tile()) };
   }
 
-  isTraversable(from: TrainStation, to: TrainStation): boolean {
+  isTraversable(_from: TrainStation, _to: TrainStation): boolean {
     return true;
   }
 }

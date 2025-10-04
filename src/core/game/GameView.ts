@@ -428,6 +428,7 @@ export class GameView implements GameMap {
   private updatedTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
+
   private _focusedPlayer: PlayerView | null = null;
 
   private unitGrid: UnitGrid;
@@ -602,7 +603,7 @@ export class GameView implements GameMap {
     }
     return player;
   }
-  hasPlayer(id: PlayerID): boolean {
+  hasPlayer(_id: PlayerID): boolean {
     return false;
   }
   playerViews(): PlayerView[] {

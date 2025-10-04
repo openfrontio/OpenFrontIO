@@ -159,7 +159,7 @@ export class FPSDisplay extends LitElement implements Layer {
     document.removeEventListener("mouseup", this.handleMouseUp);
   };
 
-  updateFPS(frameDuration: number) {
+  updateFPS(_frameDuration: number) {
     this.isVisible = this.userSettings.performanceOverlay();
 
     if (!this.isVisible) return;

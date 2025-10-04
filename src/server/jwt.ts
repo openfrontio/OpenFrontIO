@@ -27,7 +27,7 @@ export async function verifyClientToken(
     const issuer = config.jwtIssuer();
     const audience = config.jwtAudience();
     const key = await config.jwkPublicKey();
-    const { payload, protectedHeader } = await jwtVerify(token, key, {
+    const { payload } = await jwtVerify(token, key, {
       algorithms: ["EdDSA"],
       issuer,
       audience,
@@ -41,7 +41,7 @@ export async function verifyClientToken(
     const claims = result.data;
     const persistentId = claims.sub;
     return { persistentId, claims };
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }
@@ -69,7 +69,7 @@ export async function getUserMe(
       return false;
     }
     return result.data;
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }

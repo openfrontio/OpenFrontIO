@@ -16,7 +16,7 @@ export class AllianceRequestExecution implements Execution {
     private recipientID: PlayerID,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.mg = mg;
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(
@@ -45,7 +45,7 @@ export class AllianceRequestExecution implements Execution {
     }
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     if (
       this.req?.status() === "accepted" ||
       this.req?.status() === "rejected"

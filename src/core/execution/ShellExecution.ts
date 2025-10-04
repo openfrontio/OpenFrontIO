@@ -18,13 +18,13 @@ export class ShellExecution implements Execution {
     private target: Unit,
   ) {}
 
-  init(mg: Game, ticks: number): void {
+  init(mg: Game, _ticks: number): void {
     this.pathFinder = new AirPathFinder(mg, new PseudoRandom(mg.ticks()));
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
   }
 
-  tick(ticks: number): void {
+  tick(_ticks: number): void {
     this.shell ??= this._owner.buildUnit(UnitType.Shell, this.spawn, {});
     if (!this.shell.isActive()) {
       this.active = false;

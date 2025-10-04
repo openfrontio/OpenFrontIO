@@ -106,7 +106,7 @@ export class ControlPanel extends LitElement implements Layer {
     this.uiState.attackRatio = newRatio;
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {
+  renderLayer(_context: CanvasRenderingContext2D) {
     // Render any necessary canvas elements
   }
 
