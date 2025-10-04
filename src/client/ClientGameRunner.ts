@@ -63,6 +63,16 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
 }
 
+// Module-level reference to the current game runner
+let currentGameRunner: ClientGameRunner | null = null;
+
+export function shouldPreventUnload(): boolean {
+  if (currentGameRunner) {
+    return currentGameRunner.shouldPreventWindowClose();
+  }
+  return false;
+}
+
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
@@ -112,7 +122,10 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
-      ).then((r) => r.start());
+      ).then((r) => {
+        currentGameRunner = r;
+        r.start();
+      });
     }
     if (message.type === "error") {
       showErrorModal(
@@ -129,6 +142,7 @@ export function joinLobby(
   transport.connect(onconnect, onmessage);
   return () => {
     console.log("leaving game");
+    currentGameRunner = null;
     transport.leaveGame();
   };
 }
@@ -213,6 +227,14 @@ export class ClientGameRunner {
     private gameView: GameView,
   ) {
     this.lastMessageTime = Date.now();
+  }
+
+  public shouldPreventWindowClose(): boolean {
+    // Show confirmation dialog if player is alive in the game
+    if (this.myPlayer && this.myPlayer.isAlive()) {
+      return true;
+    }
+    return false;
   }
 
   private saveGame(update: WinUpdate) {
