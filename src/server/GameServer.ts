@@ -5,6 +5,7 @@ import { z } from "zod";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
+  AllPlayersStats,
   ClientID,
   ClientMessageSchema,
   ClientSendWinnerMessage,
@@ -20,6 +21,7 @@ import {
   ServerStartGameMessage,
   ServerTurnMessage,
   Turn,
+  Winner,
 } from "../core/Schemas";
 import { createPartialGameRecord } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
@@ -28,6 +30,18 @@ export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
   Finished = "FINISHED",
+}
+
+export interface GameMatchPlayerSummary {
+  clientID: string;
+  persistentID: string;
+  username: string;
+}
+
+export interface GameMatchResult {
+  winner: Winner | undefined;
+  allPlayersStats?: AllPlayersStats;
+  players: GameMatchPlayerSummary[];
 }
 
 export class GameServer {
@@ -555,12 +569,19 @@ export class GameServer {
             gameID: this.id,
           });
           return GamePhase.Finished;
-        } else {
-          return GamePhase.Active;
         }
-      } else {
-        return GamePhase.Lobby;
+        return GamePhase.Active;
       }
+
+      const expectedPlayers = this.gameConfig.maxPlayers ?? 0;
+      const hasEnoughPlayers =
+        expectedPlayers > 0
+          ? this.activeClients.length >= expectedPlayers
+          : this.activeClients.length > 0;
+      if (hasEnoughPlayers) {
+        return GamePhase.Active;
+      }
+      return GamePhase.Lobby;
     }
 
     const msSinceCreation = now - this.createdAt;
@@ -800,6 +821,38 @@ export class GameServer {
     return {
       mostCommonHash,
       outOfSyncClients,
+    };
+  }
+
+  public getMatchResult(): GameMatchResult | null {
+    if (!this.gameStartInfo) {
+      return null;
+    }
+
+    const players: GameMatchPlayerSummary[] = this.gameStartInfo.players.map(
+      (player) => {
+        const client =
+          this.allClients.get(player.clientID) ??
+          this.activeClients.find((c) => c.clientID === player.clientID) ??
+          null;
+        if (!client) {
+          this.log.warn("Missing client mapping for ranked match result", {
+            gameID: this.id,
+            clientID: player.clientID,
+          });
+        }
+        return {
+          clientID: player.clientID,
+          persistentID: client?.persistentID ?? player.clientID,
+          username: player.username,
+        };
+      },
+    );
+
+    return {
+      winner: this.winner?.winner,
+      allPlayersStats: this.winner?.allPlayersStats,
+      players,
     };
   }
 

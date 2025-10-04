@@ -1,10 +1,12 @@
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GameID, GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { generateID } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
+import { RankedMode, RankedRegion } from "../server/ranked/types";
 import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
@@ -24,6 +26,12 @@ import { LanguageModal } from "./LanguageModal";
 import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
+import "./RankedMatchModal";
+import type {
+  RankedMatchAcceptDetail,
+  RankedMatchDeclineDetail,
+  RankedMatchModal,
+} from "./RankedMatchModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
@@ -41,6 +49,19 @@ import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { discordLogin, getUserMe, isLoggedIn } from "./jwt";
+import {
+  acceptRankedMatch,
+  declineRankedMatch,
+  fetchRankedHistory,
+  fetchRankedLeaderboard,
+  getRankedTicket,
+  joinRankedQueue,
+  leaveRankedQueue,
+  RankedLeaderboardEntry,
+  RankedMatchHistoryEntry,
+  RankedQueueTicket,
+} from "./ranked/RankedQueueClient";
+import { RankedWebSocket } from "./ranked/RankedWebSocket";
 import "./styles.css";
 
 declare global {
@@ -92,6 +113,22 @@ class Client {
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
+
+  private rankedQueueButton: HTMLButtonElement | null = null;
+  private rankedQueueStatusEl: HTMLElement | null = null;
+  private rankedStatsContainer: HTMLElement | null = null;
+  private rankedLeaderboardList: HTMLUListElement | null = null;
+  private rankedHistoryList: HTMLUListElement | null = null;
+  private rankedMatchModal: RankedMatchModal | null = null;
+  private rankedTicketPollHandle: number | null = null;
+  private rankedStatsPollHandle: number | null = null;
+  private rankedTicket: RankedQueueTicket | null = null;
+  private rankedPlayerId: string | null = null;
+  private rankedLaunchedGameId: string | null = null;
+  private rankedBusy = false;
+  private rankedModalOpen = false;
+  private rankedWebSocket: RankedWebSocket | null = null;
+  private readonly rankedTicketStorageKey = "ranked.queue.ticket";
 
   constructor() {}
 
@@ -221,6 +258,8 @@ class Client {
     ) as TokenLoginModal;
     this.tokenLoginModal instanceof TokenLoginModal;
 
+    this.setupRankedUI();
+
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       document.dispatchEvent(
         new CustomEvent("userMeResponse", {
@@ -229,6 +268,8 @@ class Client {
           cancelable: true,
         }),
       );
+
+      await this.syncRankedState(userMeResponse);
 
       const config = await getServerConfigFromClient();
       if (!hasAllowedFlare(userMeResponse, config)) {
@@ -492,6 +533,742 @@ class Client {
     }
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
+    }
+  }
+
+  private setupRankedUI(): void {
+    this.rankedQueueButton = document.getElementById(
+      "ranked-queue-button",
+    ) as HTMLButtonElement | null;
+    this.rankedQueueStatusEl = document.getElementById("ranked-queue-status");
+    this.rankedStatsContainer = document.getElementById("ranked-stats");
+    this.rankedLeaderboardList = document.getElementById(
+      "ranked-leaderboard-list",
+    ) as HTMLUListElement | null;
+    this.rankedHistoryList = document.getElementById(
+      "ranked-history-list",
+    ) as HTMLUListElement | null;
+    this.rankedMatchModal = document.querySelector(
+      "ranked-match-modal",
+    ) as RankedMatchModal | null;
+
+    if (this.rankedQueueButton) {
+      this.rankedQueueButton.addEventListener("click", () => {
+        this.handleRankedQueueClick();
+      });
+    }
+
+    if (this.rankedMatchModal) {
+      this.rankedMatchModal.addEventListener("ranked-match-accept", (event) => {
+        void this.handleRankedMatchAccept(
+          event as CustomEvent<RankedMatchAcceptDetail>,
+        );
+      });
+      this.rankedMatchModal.addEventListener(
+        "ranked-match-decline",
+        (event) => {
+          void this.handleRankedMatchDecline(
+            event as CustomEvent<RankedMatchDeclineDetail>,
+          );
+        },
+      );
+    }
+
+    this.updateRankedUI(this.rankedTicket);
+  }
+
+  private async syncRankedState(userMeResponse: UserMeResponse | false) {
+    if (!this.rankedQueueButton && !this.rankedStatsContainer) {
+      return;
+    }
+
+    if (userMeResponse === false) {
+      this.rankedPlayerId = null;
+      this.stopRankedTicketPolling();
+      this.stopRankedStatsPolling();
+      this.closeRankedMatchModal();
+      this.clearStoredRankedTicket();
+      this.updateRankedUI(null);
+      this.setRankedListMessage(
+        this.rankedLeaderboardList,
+        "Log in to see leaderboard updates.",
+      );
+      this.setRankedListMessage(
+        this.rankedHistoryList,
+        "Log in to see your recent ranked matches.",
+      );
+      return;
+    }
+
+    this.rankedPlayerId = getPersistentID();
+    this.updateRankedUI(this.rankedTicket);
+    await this.tryRestoreRankedTicket();
+    await this.refreshRankedStats();
+    // Start polling stats for live updates
+    this.startRankedStatsPolling();
+  }
+
+  private updateRankedUI(ticket: RankedQueueTicket | null): void {
+    const button = this.rankedQueueButton;
+    const previousState = this.rankedTicket?.state ?? null;
+
+    this.rankedTicket = ticket ?? null;
+
+    if (!this.rankedPlayerId) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Log in to play ranked";
+      }
+      this.updateRankedStatus("Log in to access ranked matchmaking.");
+      this.toggleRankedStats(false);
+      this.closeRankedMatchModal();
+      this.stopRankedTicketPolling();
+      return;
+    }
+
+    this.toggleRankedStats(true);
+
+    let label = "Join Ranked Queue";
+    let message = "Not in ranked queue.";
+
+    if (ticket) {
+      switch (ticket.state) {
+        case "queued":
+          label = "Leave Ranked Queue";
+          message = "Searching for a ranked match...";
+          break;
+        case "matched":
+          label = "Leave Ranked Queue";
+          message = "Ranked match found. Awaiting acceptance.";
+          break;
+        case "ready":
+          label = "Match Ready";
+          message = "Ranked match ready. Please check your game client.";
+          break;
+        case "completed":
+          label = "Join Ranked Queue";
+          message = "Ranked match completed.";
+          break;
+        case "cancelled":
+          label = "Join Ranked Queue";
+          message = "Ranked queue cancelled.";
+          break;
+        default:
+          label = "Join Ranked Queue";
+          message = "Ranked queue state unknown.";
+          break;
+      }
+
+      if (
+        ticket.match &&
+        ticket.acceptToken &&
+        ticket.match.state === "awaiting_accept"
+      ) {
+        // Always call showMatch - it handles both opening and updating
+        this.rankedMatchModal?.showMatch({
+          matchId: ticket.match.matchId,
+          ticketId: ticket.ticketId,
+          acceptToken: ticket.acceptToken,
+          acceptDeadline: ticket.match.acceptDeadline ?? Date.now() + 30000,
+          accepted: Boolean(ticket.acceptedAt),
+          acceptedCount:
+            ticket.match.acceptedCount ?? (ticket.acceptedAt ? 1 : 0),
+          totalPlayers:
+            ticket.match.totalPlayers ?? ticket.match.tickets?.length ?? 0,
+        });
+        this.rankedModalOpen = true;
+      } else {
+        this.closeRankedMatchModal();
+      }
+
+      if (ticket.match?.state === "ready") {
+        if (this.attemptLaunchRankedGame(ticket)) {
+          message = "Joining ranked match lobby...";
+        }
+      } else if (ticket.match?.state !== "awaiting_accept") {
+        this.rankedLaunchedGameId = null;
+      }
+
+      if (
+        ticket.state === "queued" ||
+        ticket.state === "matched" ||
+        ticket.state === "ready"
+      ) {
+        this.persistRankedTicket(ticket);
+      } else {
+        this.clearStoredRankedTicket();
+        this.stopRankedTicketPolling();
+      }
+    } else {
+      this.clearStoredRankedTicket();
+      this.closeRankedMatchModal();
+      this.stopRankedTicketPolling();
+      this.rankedLaunchedGameId = null;
+    }
+
+    if (!ticket && this.rankedBusy) {
+      message = "Processing ranked queue request...";
+    }
+
+    if (button) {
+      const shouldDisable = this.rankedBusy || ticket?.state === "ready";
+      button.disabled = shouldDisable;
+      const labelText =
+        this.rankedBusy && ticket?.state !== "ready" ? `${label}...` : label;
+      button.textContent = labelText;
+    }
+
+    this.updateRankedStatus(message);
+
+    if (
+      ticket &&
+      (ticket.state === "completed" || ticket.state === "cancelled") &&
+      previousState !== ticket.state
+    ) {
+      void this.refreshRankedStats();
+    }
+  }
+
+  private updateRankedStatus(message: string): void {
+    if (this.rankedQueueStatusEl) {
+      this.rankedQueueStatusEl.textContent = message;
+    }
+  }
+
+  private toggleRankedStats(visible: boolean): void {
+    if (!this.rankedStatsContainer) {
+      return;
+    }
+    this.rankedStatsContainer.classList.toggle("hidden", !visible);
+  }
+
+  private setRankedListMessage(
+    list: HTMLUListElement | null,
+    message: string,
+  ): void {
+    if (!list) {
+      return;
+    }
+    list.innerHTML = "";
+    const item = document.createElement("li");
+    item.className = "text-gray-600 dark:text-gray-400 text-center py-4";
+    item.textContent = message;
+    list.appendChild(item);
+  }
+
+  private startRankedTicketPolling(): void {
+    if (this.rankedTicketPollHandle !== null) {
+      return;
+    }
+
+    // Slow fallback polling (30s) for when WebSocket is disconnected
+    this.rankedTicketPollHandle = window.setInterval(() => {
+      void this.refreshRankedTicket({ silent: true });
+    }, 30000);
+  }
+
+  private stopRankedTicketPolling(): void {
+    if (this.rankedTicketPollHandle !== null) {
+      window.clearInterval(this.rankedTicketPollHandle);
+      this.rankedTicketPollHandle = null;
+    }
+  }
+
+  private startRankedStatsPolling(): void {
+    if (this.rankedStatsPollHandle !== null) {
+      return;
+    }
+    // Refresh leaderboard and match history every 30 seconds
+    this.rankedStatsPollHandle = window.setInterval(() => {
+      void this.refreshRankedStats();
+    }, 30000);
+  }
+
+  private stopRankedStatsPolling(): void {
+    if (this.rankedStatsPollHandle !== null) {
+      window.clearInterval(this.rankedStatsPollHandle);
+      this.rankedStatsPollHandle = null;
+    }
+  }
+
+  private handleRankedQueueClick(): void {
+    if (this.rankedBusy) {
+      return;
+    }
+
+    if (!this.rankedPlayerId) {
+      this.updateRankedStatus("Log in to access ranked matchmaking.");
+      discordLogin();
+      return;
+    }
+
+    if (!this.rankedTicket) {
+      void this.joinRankedQueue();
+      return;
+    }
+
+    if (
+      this.rankedTicket.state === "queued" ||
+      this.rankedTicket.state === "matched"
+    ) {
+      void this.leaveRankedQueue();
+      return;
+    }
+
+    if (this.rankedTicket.state === "ready") {
+      this.updateRankedStatus("Ranked match is starting shortly.");
+      return;
+    }
+
+    void this.joinRankedQueue();
+  }
+
+  private async joinRankedQueue(): Promise<void> {
+    if (!this.rankedPlayerId) {
+      return;
+    }
+    this.rankedBusy = true;
+    this.updateRankedUI(this.rankedTicket);
+    try {
+      const username = this.usernameInput?.getCurrentUsername();
+      const ticket = await joinRankedQueue(
+        this.rankedPlayerId,
+        RankedMode.Duel,
+        RankedRegion.Global,
+        undefined,
+        username,
+      );
+      this.updateRankedUI(ticket);
+      this.startRankedTicketPolling();
+      this.connectRankedWebSocket(ticket.ticketId);
+    } catch (error) {
+      console.error("Failed to join ranked queue", error);
+      this.updateRankedStatus("Failed to join ranked queue. Please try again.");
+    } finally {
+      this.rankedBusy = false;
+      this.updateRankedUI(this.rankedTicket);
+    }
+  }
+
+  private async leaveRankedQueue(): Promise<void> {
+    if (!this.rankedPlayerId || !this.rankedTicket) {
+      return;
+    }
+    this.rankedBusy = true;
+    this.updateRankedUI(this.rankedTicket);
+    try {
+      await leaveRankedQueue(this.rankedPlayerId, this.rankedTicket.ticketId);
+      this.updateRankedUI(null);
+      this.stopRankedTicketPolling();
+      this.disconnectRankedWebSocket();
+      void this.refreshRankedStats();
+    } catch (error) {
+      console.error("Failed to leave ranked queue", error);
+      this.updateRankedStatus(
+        "Failed to leave ranked queue. Please try again.",
+      );
+    } finally {
+      this.rankedBusy = false;
+      this.updateRankedUI(this.rankedTicket);
+    }
+  }
+
+  private async refreshRankedTicket(
+    options: { ticketId?: string; silent?: boolean } = {},
+  ): Promise<void> {
+    if (!this.rankedPlayerId) {
+      return;
+    }
+    const ticketId = options.ticketId ?? this.rankedTicket?.ticketId;
+    if (!ticketId) {
+      return;
+    }
+
+    try {
+      const ticket = await getRankedTicket(this.rankedPlayerId, ticketId);
+      this.updateRankedUI(ticket);
+      this.startRankedTicketPolling();
+    } catch (error) {
+      const message = String(error);
+      if (message.includes("404")) {
+        this.updateRankedUI(null);
+        this.clearStoredRankedTicket();
+        this.stopRankedTicketPolling();
+      } else {
+        console.warn("Failed to refresh ranked ticket", error);
+        if (!options.silent) {
+          this.updateRankedStatus("Unable to refresh ranked queue status.");
+        }
+      }
+    }
+  }
+
+  private persistRankedTicket(ticket: RankedQueueTicket): void {
+    if (!this.rankedPlayerId) {
+      return;
+    }
+    try {
+      localStorage.setItem(
+        this.rankedTicketStorageKey,
+        JSON.stringify({
+          playerId: this.rankedPlayerId,
+          ticketId: ticket.ticketId,
+        }),
+      );
+    } catch (error) {
+      console.warn("Failed to persist ranked ticket", error);
+    }
+  }
+
+  private clearStoredRankedTicket(): void {
+    try {
+      localStorage.removeItem(this.rankedTicketStorageKey);
+    } catch (error) {
+      console.warn("Failed to clear ranked ticket cache", error);
+    }
+  }
+
+  private loadStoredRankedTicket(): {
+    ticketId: string;
+    playerId: string;
+  } | null {
+    try {
+      const raw = localStorage.getItem(this.rankedTicketStorageKey);
+      if (!raw) {
+        return null;
+      }
+      const data = JSON.parse(raw) as {
+        ticketId?: unknown;
+        playerId?: unknown;
+      };
+      if (
+        typeof data.ticketId === "string" &&
+        typeof data.playerId === "string"
+      ) {
+        return { ticketId: data.ticketId, playerId: data.playerId };
+      }
+    } catch (error) {
+      console.warn("Failed to load ranked ticket cache", error);
+    }
+    return null;
+  }
+
+  private async tryRestoreRankedTicket(): Promise<void> {
+    if (!this.rankedPlayerId) {
+      return;
+    }
+    const stored = this.loadStoredRankedTicket();
+    if (!stored || stored.playerId !== this.rankedPlayerId) {
+      this.clearStoredRankedTicket();
+      this.updateRankedUI(this.rankedTicket);
+      return;
+    }
+    await this.refreshRankedTicket({ ticketId: stored.ticketId, silent: true });
+  }
+
+  private renderRankedLeaderboard(entries: RankedLeaderboardEntry[]): void {
+    if (!this.rankedLeaderboardList) {
+      return;
+    }
+    this.rankedLeaderboardList.innerHTML = "";
+    if (entries.length === 0) {
+      this.setRankedListMessage(
+        this.rankedLeaderboardList,
+        "No ranked data yet.",
+      );
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const entry of entries.slice(0, 10)) {
+      const item = document.createElement("li");
+      item.className =
+        "flex items-center justify-between rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700/50 px-3 py-2 text-gray-900 dark:text-white";
+      if (this.rankedPlayerId && entry.playerId === this.rankedPlayerId) {
+        item.classList.add(
+          "!border-emerald-500",
+          "!bg-emerald-100",
+          "dark:!bg-emerald-900/30",
+          "font-semibold",
+        );
+      }
+      const nameLabel = document.createElement("span");
+      const displayName =
+        entry.username ??
+        (entry.playerId.length > 12
+          ? `${entry.playerId.slice(0, 8)}...`
+          : entry.playerId);
+      nameLabel.textContent = `#${entry.rank} ${displayName}`;
+      const rating = document.createElement("span");
+      rating.className = "font-bold text-blue-600 dark:text-blue-400";
+      rating.textContent = `${Math.round(entry.rating)}`;
+      item.append(nameLabel, rating);
+      fragment.appendChild(item);
+    }
+
+    this.rankedLeaderboardList.appendChild(fragment);
+  }
+
+  private renderRankedHistory(matches: RankedMatchHistoryEntry[]): void {
+    if (!this.rankedHistoryList) {
+      return;
+    }
+    this.rankedHistoryList.innerHTML = "";
+    if (matches.length === 0) {
+      this.setRankedListMessage(
+        this.rankedHistoryList,
+        "No ranked matches yet.",
+      );
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const match of matches.slice(0, 10)) {
+      const item = document.createElement("li");
+      item.className =
+        "rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700/50 px-3 py-2 text-sm text-gray-900 dark:text-white";
+      const header = document.createElement("div");
+      header.className = "flex items-center justify-between font-semibold";
+      const outcome = document.createElement("span");
+      const outcomeRaw = match.outcome ?? "pending";
+      const outcomeLabel =
+        outcomeRaw.charAt(0).toUpperCase() + outcomeRaw.slice(1);
+      outcome.textContent = outcomeLabel;
+      if (outcomeRaw === "win") {
+        outcome.className = "text-emerald-600 dark:text-emerald-400";
+      } else if (outcomeRaw === "loss") {
+        outcome.className = "text-rose-600 dark:text-rose-400";
+      } else {
+        outcome.className = "text-slate-600 dark:text-slate-400";
+      }
+      const ratingDelta = document.createElement("span");
+      if (typeof match.ratingDelta === "number") {
+        const sign = match.ratingDelta > 0 ? "+" : "";
+        ratingDelta.textContent = `${sign}${match.ratingDelta.toFixed(0)}`;
+        ratingDelta.className =
+          match.ratingDelta >= 0
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-rose-600 dark:text-rose-400";
+      } else {
+        ratingDelta.textContent = "";
+      }
+      header.append(outcome, ratingDelta);
+
+      const meta = document.createElement("div");
+      meta.className = "mt-1 text-xs text-gray-600 dark:text-gray-400";
+      const opponentId =
+        match.opponentPlayerId && match.opponentPlayerId.length > 12
+          ? `${match.opponentPlayerId.slice(0, 8)}...`
+          : (match.opponentPlayerId ?? "Unknown opponent");
+      const when = new Date(match.createdAt).toLocaleString();
+      meta.textContent = `${opponentId} - ${when}`;
+
+      // Add replay link
+      const replayHint = document.createElement("div");
+      replayHint.className =
+        "mt-1 text-xs text-blue-600 dark:text-blue-400 font-medium";
+      replayHint.textContent = "Click to watch replay →";
+
+      item.append(header, meta, replayHint);
+
+      // Make item clickable and add hover effect
+      item.classList.add(
+        "cursor-pointer",
+        "hover:bg-slate-200",
+        "dark:hover:bg-slate-600/50",
+        "transition-colors",
+      );
+      if (match.gameId) {
+        item.addEventListener("click", () => {
+          const replayUrl = `${window.location.origin}/#join=${match.gameId}`;
+          window.open(replayUrl, "_blank");
+        });
+      }
+
+      fragment.appendChild(item);
+    }
+
+    this.rankedHistoryList.appendChild(fragment);
+  }
+
+  private async refreshRankedStats(): Promise<void> {
+    if (!this.rankedPlayerId) {
+      return;
+    }
+    try {
+      const [leaderboard, history] = await Promise.all([
+        fetchRankedLeaderboard(this.rankedPlayerId, { limit: 10 }),
+        fetchRankedHistory(this.rankedPlayerId, { limit: 10 }),
+      ]);
+      this.renderRankedLeaderboard(leaderboard.entries);
+      this.renderRankedHistory(history.matches);
+    } catch (error) {
+      console.error("Failed to load ranked stats", error);
+      this.setRankedListMessage(
+        this.rankedLeaderboardList,
+        "Unable to load leaderboard right now.",
+      );
+      this.setRankedListMessage(
+        this.rankedHistoryList,
+        "Unable to load match history right now.",
+      );
+    }
+  }
+
+  private closeRankedMatchModal(): void {
+    this.rankedMatchModal?.close();
+    this.rankedModalOpen = false;
+  }
+
+  private attemptLaunchRankedGame(ticket: RankedQueueTicket): boolean {
+    const match = ticket.match;
+    if (!match || match.state !== "ready" || !match.gameId) {
+      return false;
+    }
+    if (this.rankedLaunchedGameId === match.gameId) {
+      return false;
+    }
+
+    // Stop public lobby polling to reduce API calls during game
+    this.publicLobby?.stop();
+
+    const event: JoinLobbyEvent = {
+      gameID: match.gameId,
+      clientID: generateID(),
+    };
+    document.dispatchEvent(
+      new CustomEvent<JoinLobbyEvent>("join-lobby", {
+        detail: event,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    this.closeRankedMatchModal();
+    this.rankedLaunchedGameId = match.gameId;
+    return true;
+  }
+
+  private async handleRankedMatchAccept(
+    event: CustomEvent<RankedMatchAcceptDetail>,
+  ): Promise<void> {
+    if (!this.rankedPlayerId) {
+      return;
+    }
+    const { ticketId, matchId, acceptToken } = event.detail;
+    this.rankedBusy = true;
+    this.updateRankedUI(this.rankedTicket);
+    try {
+      const ticket = await acceptRankedMatch(
+        this.rankedPlayerId,
+        matchId,
+        ticketId,
+        acceptToken,
+      );
+      this.updateRankedUI(ticket);
+      this.startRankedTicketPolling();
+
+      // Poll more aggressively for a few seconds after accepting
+      // to catch the "ready" state quickly
+      const aggressivePollCount = 4; // Poll 4 times over 2 seconds
+      for (let i = 0; i < aggressivePollCount; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await this.refreshRankedTicket({ silent: true });
+        if (this.rankedTicket?.match?.state === "ready") {
+          break;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to accept ranked match", error);
+      this.updateRankedStatus(
+        "Failed to accept ranked match. Please try again.",
+      );
+      await this.refreshRankedTicket();
+    } finally {
+      this.rankedBusy = false;
+      this.updateRankedUI(this.rankedTicket);
+    }
+  }
+
+  private async handleRankedMatchDecline(
+    event: CustomEvent<RankedMatchDeclineDetail>,
+  ): Promise<void> {
+    if (!this.rankedPlayerId) {
+      return;
+    }
+    const { ticketId, matchId } = event.detail;
+    this.rankedBusy = true;
+    this.updateRankedUI(this.rankedTicket);
+
+    // Close the modal immediately to provide feedback
+    this.closeRankedMatchModal();
+
+    try {
+      const ticket = await declineRankedMatch(
+        this.rankedPlayerId,
+        matchId,
+        ticketId,
+      );
+      // Update internal ticket but don't re-render UI to avoid re-opening modal
+      this.rankedTicket = ticket;
+      // Don't start polling after declining - player is out of queue with penalty
+      this.stopRankedTicketPolling();
+      this.disconnectRankedWebSocket();
+      this.clearStoredRankedTicket();
+      this.updateRankedStatus(
+        "Match declined. You can rejoin the queue when ready.",
+      );
+
+      // Update button state without triggering modal
+      if (this.rankedQueueButton) {
+        this.rankedQueueButton.disabled = false;
+        this.rankedQueueButton.textContent = "Join Ranked Queue";
+      }
+    } catch (error) {
+      console.error("Failed to decline ranked match", error);
+      // If decline fails (likely match already timed out), close modal and refresh state
+      this.stopRankedTicketPolling();
+      this.disconnectRankedWebSocket();
+      this.clearStoredRankedTicket();
+      await this.refreshRankedTicket({ silent: true });
+      this.updateRankedStatus("Match was cancelled or timed out.");
+    } finally {
+      this.rankedBusy = false;
+    }
+  }
+
+  // === RANKED WEBSOCKET METHODS ===
+
+  private async connectRankedWebSocket(ticketId: string): Promise<void> {
+    if (!this.rankedPlayerId) {
+      return;
+    }
+
+    try {
+      const config = await getServerConfigFromClient();
+      const workerPath = config.workerPath("ranked-queue" as GameID);
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsHost = window.location.host;
+      const serverUrl = `${wsProtocol}//${wsHost}/${workerPath}`;
+
+      if (!this.rankedWebSocket) {
+        this.rankedWebSocket = new RankedWebSocket(serverUrl);
+        // Set up callback for WebSocket updates
+        this.rankedWebSocket.onUpdate((ticket) => {
+          this.updateRankedUI(ticket);
+        });
+      }
+
+      this.rankedWebSocket.connect(this.rankedPlayerId, ticketId);
+    } catch (error) {
+      console.error("Failed to connect ranked WebSocket", error);
+    }
+  }
+
+  private disconnectRankedWebSocket(): void {
+    if (this.rankedWebSocket) {
+      this.rankedWebSocket.disconnect();
+      this.rankedWebSocket = null;
     }
   }
 

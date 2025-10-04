@@ -27,7 +27,7 @@ export class PublicLobby extends LitElement {
     this.fetchAndUpdateLobbies();
     this.lobbiesInterval = window.setInterval(
       () => this.fetchAndUpdateLobbies(),
-      1000,
+      3000, // Reduced from 1s to 3s to avoid rate limiting
     );
   }
 

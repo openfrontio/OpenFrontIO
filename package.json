@@ -98,7 +98,8 @@
     "webpack": "^5.100.2",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.2",
-    "worker-loader": "^3.0.8"
+    "worker-loader": "^3.0.8",
+    "@types/better-sqlite3": "^7.6.10"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
@@ -122,6 +123,7 @@
     "fastpriorityqueue": "^0.7.5",
     "howler": "^2.2.4",
     "intl-messageformat": "^10.7.16",
+    "ioredis": "^5.4.1",
     "ip-anonymize": "^0.1.0",
     "jose": "^6.0.10",
     "js-yaml": "^4.1.0",
@@ -132,7 +134,8 @@
     "uuid": "^11.1.0",
     "winston": "^3.17.0",
     "ws": "^8.18.0",
-    "zod": "^4.0.5"
+    "zod": "^4.0.5",
+    "better-sqlite3": "^11.5.0"
   },
   "type": "module"
 }

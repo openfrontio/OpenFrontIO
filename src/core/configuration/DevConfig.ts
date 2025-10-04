@@ -5,6 +5,39 @@ import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
+  private apiDomainHost(): string | null {
+    const raw = process.env.API_DOMAIN;
+    if (!raw || raw.length === 0) {
+      return null;
+    }
+    const trimmed = raw.replace(/^https?:\/\//, "").split("/")[0];
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private apiBaseDomain(): string | null {
+    const host = this.apiDomainHost();
+    if (!host) {
+      return null;
+    }
+    const parts = host.split(".");
+    if (parts.length >= 2) {
+      return parts.slice(-2).join(".");
+    }
+    return host;
+  }
+
+  private apiSubdomain(): string | null {
+    const host = this.apiDomainHost();
+    if (!host) {
+      return null;
+    }
+    const parts = host.split(".");
+    if (parts.length <= 2) {
+      return parts.length === 1 ? parts[0] : "";
+    }
+    return parts.slice(0, parts.length - 2).join(".");
+  }
+
   adminToken(): string {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }
@@ -33,18 +66,21 @@ export class DevServerConfig extends DefaultServerConfig {
     return 2;
   }
   jwtAudience(): string {
-    return "localhost";
+    const base = this.apiBaseDomain();
+    return base ?? "localhost";
   }
   gitCommit(): string {
     return "DEV";
   }
 
   domain(): string {
-    return "localhost";
+    const base = this.apiBaseDomain();
+    return base ?? "localhost";
   }
 
   subdomain(): string {
-    return "";
+    const sub = this.apiSubdomain();
+    return sub ?? "";
   }
 }
 
