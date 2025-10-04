@@ -215,6 +215,19 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  private handleBeforeUnload = (e: BeforeUnloadEvent): string | undefined => {
+    // Show confirmation dialog if player is alive and has more than 10k troops
+    if (
+      this.myPlayer &&
+      this.myPlayer.isAlive() &&
+      this.myPlayer.troops() > 10000
+    ) {
+      e.preventDefault();
+      return "";
+    }
+    return undefined;
+  };
+
   private saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
@@ -256,6 +269,9 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
+
+    // Add beforeunload handler to warn before closing window
+    window.addEventListener("beforeunload", this.handleBeforeUnload);
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
@@ -384,6 +400,8 @@ export class ClientGameRunner {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
     }
+    // Remove beforeunload handler when game stops
+    window.removeEventListener("beforeunload", this.handleBeforeUnload);
   }
 
   private inputEvent(event: MouseUpEvent) {
