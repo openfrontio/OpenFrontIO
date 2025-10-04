@@ -63,6 +63,16 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
 }
 
+// Module-level reference to the current game runner
+let currentGameRunner: ClientGameRunner | null = null;
+
+export function shouldPreventUnload(): boolean {
+  if (currentGameRunner) {
+    return currentGameRunner.shouldPreventWindowClose();
+  }
+  return false;
+}
+
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
@@ -112,7 +122,10 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
-      ).then((r) => r.start());
+      ).then((r) => {
+        currentGameRunner = r;
+        r.start();
+      });
     }
     if (message.type === "error") {
       showErrorModal(
@@ -129,6 +142,7 @@ export function joinLobby(
   transport.connect(onconnect, onmessage);
   return () => {
     console.log("leaving game");
+    currentGameRunner = null;
     transport.leaveGame();
   };
 }
@@ -215,18 +229,17 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private handleBeforeUnload = (e: BeforeUnloadEvent): string | undefined => {
+  public shouldPreventWindowClose(): boolean {
     // Show confirmation dialog if player is alive and has more than 10k troops
     if (
       this.myPlayer &&
       this.myPlayer.isAlive() &&
       this.myPlayer.troops() > 10000
     ) {
-      e.preventDefault();
-      return "";
+      return true;
     }
-    return undefined;
-  };
+    return false;
+  }
 
   private saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
@@ -269,9 +282,6 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
-
-    // Add beforeunload handler to warn before closing window
-    window.addEventListener("beforeunload", this.handleBeforeUnload);
 
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
@@ -400,8 +410,6 @@ export class ClientGameRunner {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
     }
-    // Remove beforeunload handler when game stops
-    window.removeEventListener("beforeunload", this.handleBeforeUnload);
   }
 
   private inputEvent(event: MouseUpEvent) {
