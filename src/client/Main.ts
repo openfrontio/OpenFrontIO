@@ -6,7 +6,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
-import { joinLobby } from "./ClientGameRunner";
+import { joinLobby, shouldPreventUnload } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -153,7 +153,13 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
+    window.addEventListener("beforeunload", (e) => {
+      // Check if we should prevent unload (player alive with >10k troops)
+      if (shouldPreventUnload()) {
+        e.preventDefault();
+        return "";
+      }
+      // Otherwise, cleanup the game normally
       console.log("Browser is closing");
       if (this.gameStop !== null) {
         this.gameStop();
