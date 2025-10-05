@@ -15,7 +15,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
-import SoundManager from "../../sound/SoundManager";
+import { SoundManager } from "../../sound/SoundManager";
 import { Layer } from "./Layer";
 
 export class ShowSettingsModalEvent {
@@ -30,6 +30,7 @@ export class ShowSettingsModalEvent {
 export class SettingsModal extends LitElement implements Layer {
   public eventBus: EventBus;
   public userSettings: UserSettings;
+  public soundManager: SoundManager;
 
   @state()
   private isVisible: boolean = false;
@@ -47,10 +48,12 @@ export class SettingsModal extends LitElement implements Layer {
   wasPausedWhenOpened = false;
 
   init() {
-    SoundManager.setBackgroundMusicVolume(
+    this.soundManager.setBackgroundMusicVolume(
       this.userSettings.backgroundMusicVolume(),
     );
-    SoundManager.setSoundEffectsVolume(this.userSettings.soundEffectsVolume());
+    this.soundManager.setSoundEffectsVolume(
+      this.userSettings.soundEffectsVolume(),
+    );
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;
@@ -159,14 +162,14 @@ export class SettingsModal extends LitElement implements Layer {
   private onVolumeChange(event: Event) {
     const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
     this.userSettings.setBackgroundMusicVolume(volume);
-    SoundManager.setBackgroundMusicVolume(volume);
+    this.soundManager.setBackgroundMusicVolume(volume);
     this.requestUpdate();
   }
 
   private onSoundEffectsVolumeChange(event: Event) {
     const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
     this.userSettings.setSoundEffectsVolume(volume);
-    SoundManager.setSoundEffectsVolume(volume);
+    this.soundManager.setSoundEffectsVolume(volume);
     this.requestUpdate();
   }
 

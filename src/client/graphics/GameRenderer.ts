@@ -3,6 +3,8 @@ import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { SoundLayer } from "../sound/SoundLayer";
+import { SoundManager } from "../sound/SoundManager";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AlertFrame } from "./layers/AlertFrame";
@@ -44,6 +46,8 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
+  soundManager: SoundManager,
+  soundLayer: SoundLayer,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
@@ -160,6 +164,7 @@ export function createRenderer(
   }
   settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
+  settingsModal.soundManager = soundManager;
 
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {
@@ -273,6 +278,7 @@ export function createRenderer(
     gutterAdModal,
     alertFrame,
     fpsDisplay,
+    soundLayer,
   ];
 
   return new GameRenderer(
@@ -283,6 +289,7 @@ export function createRenderer(
     uiState,
     layers,
     fpsDisplay,
+    soundManager,
   );
 }
 
@@ -297,6 +304,7 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Layer[],
     private fpsDisplay: FPSDisplay,
+    public soundManager: SoundManager,
   ) {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");

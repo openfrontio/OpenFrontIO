@@ -7,7 +7,7 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
@@ -142,26 +142,14 @@ export class FxLayer implements Layer {
         break;
       }
       case UnitType.AtomBomb:
-        if (!this.seenNukes.has(unit.id())) {
-          SoundManager.playSoundEffect(SoundEffect.AtomLaunch);
-          this.seenNukes.add(unit.id());
-        }
         this.onNukeEvent(unit, 70);
         break;
       case UnitType.MIRV:
-        if (!this.seenNukes.has(unit.id())) {
-          SoundManager.playSoundEffect(SoundEffect.MirvLaunch);
-          this.seenNukes.add(unit.id());
-        }
         break;
       case UnitType.MIRVWarhead:
         this.onNukeEvent(unit, 70);
         break;
       case UnitType.HydrogenBomb:
-        if (!this.seenNukes.has(unit.id())) {
-          SoundManager.playSoundEffect(SoundEffect.HydroLaunch);
-          this.seenNukes.add(unit.id());
-        }
         this.onNukeEvent(unit, 160);
         break;
       case UnitType.Warship:
@@ -234,8 +222,6 @@ export class FxLayer implements Layer {
       return;
     }
 
-    SoundManager.playSoundEffect(SoundEffect.KaChing);
-
     const conquestFx = conquestFxFactory(
       this.animatedSpriteLoader,
       conquest,
@@ -280,14 +266,6 @@ export class FxLayer implements Layer {
   }
 
   handleNukeExplosion(unit: UnitView, radius: number) {
-    if (unit.type() === UnitType.AtomBomb) {
-      SoundManager.playSoundEffect(SoundEffect.AtomHit);
-    } else if (unit.type() === UnitType.HydrogenBomb) {
-      SoundManager.playSoundEffect(SoundEffect.HydroHit);
-    } else if (unit.type() === UnitType.MIRVWarhead) {
-      SoundManager.playSoundEffect(SoundEffect.MirvHit);
-    }
-
     const x = this.game.x(unit.lastTile());
     const y = this.game.y(unit.lastTile());
     const nukeFx = nukeFxFactory(

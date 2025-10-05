@@ -19,7 +19,7 @@ export enum SoundEffect {
   MirvLaunch = "mirv_launch",
 }
 
-class SoundManager {
+export class SoundManager {
   private backgroundMusic: Howl[] = [];
   private currentTrack: number = 0;
   private soundEffects: Map<SoundEffect, Howl> = new Map();
@@ -122,5 +122,3 @@ class SoundManager {
     }
   }
 }
-
-export default new SoundManager();
