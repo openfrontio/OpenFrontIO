@@ -10,6 +10,14 @@ import sinkingShip from "../../../resources/sprites/sinkingShip.png";
 import miniSmoke from "../../../resources/sprites/smoke.png";
 import miniSmokeAndFire from "../../../resources/sprites/smokeAndFire.png";
 import unitExplosion from "../../../resources/sprites/unitExplosion.png";
+
+import bats from "../../../resources/sprites/halloween/bats.png";
+import ghost from "../../../resources/sprites/halloween/ghost.png";
+import minifireGreen from "../../../resources/sprites/halloween/minifireGreen.png";
+import skull from "../../../resources/sprites/halloween/skull.png";
+import skullNuke from "../../../resources/sprites/halloween/skullNuke.png";
+import miniSmokeAndFireGreen from "../../../resources/sprites/halloween/smokeAndFireGreen.png";
+
 import { Theme } from "../../core/configuration/Config";
 import { PlayerView } from "../../core/game/GameView";
 import { AnimatedSprite } from "./AnimatedSprite";
@@ -137,6 +145,109 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
   },
 };
 
+const HALLOWEEN_ANIMATED_SPRITE_CONFIG: Partial<
+  Record<FxType, AnimatedSpriteConfig>
+> = {
+  [FxType.MiniFire]: {
+    url: minifireGreen,
+    frameWidth: 7,
+    frameCount: 6,
+    frameDuration: 100,
+    looping: true,
+    originX: 3,
+    originY: 11,
+  },
+  [FxType.MiniSmoke]: {
+    url: ghost,
+    frameWidth: 10,
+    frameCount: 5,
+    frameDuration: 100,
+    looping: true,
+    originX: 4,
+    originY: 10,
+  },
+  [FxType.MiniBigSmoke]: {
+    url: bats,
+    frameWidth: 21,
+    frameCount: 6,
+    frameDuration: 120,
+    looping: true,
+    originX: 9,
+    originY: 14,
+  },
+  [FxType.MiniSmokeAndFire]: {
+    url: miniSmokeAndFireGreen,
+    frameWidth: 24,
+    frameCount: 5,
+    frameDuration: 90,
+    looping: true,
+    originX: 9,
+    originY: 14,
+  },
+  [FxType.MiniExplosion]: {
+    url: miniExplosion,
+    frameWidth: 13,
+    frameCount: 4,
+    frameDuration: 70,
+    looping: false,
+    originX: 6,
+    originY: 6,
+  },
+  [FxType.Dust]: {
+    url: dust,
+    frameWidth: 9,
+    frameCount: 3,
+    frameDuration: 100,
+    looping: false,
+    originX: 4,
+    originY: 5,
+  },
+  [FxType.UnitExplosion]: {
+    url: unitExplosion,
+    frameWidth: 19,
+    frameCount: 4,
+    frameDuration: 70,
+    looping: false,
+    originX: 9,
+    originY: 9,
+  },
+  [FxType.SinkingShip]: {
+    url: sinkingShip,
+    frameWidth: 16,
+    frameCount: 14,
+    frameDuration: 90,
+    looping: false,
+    originX: 7,
+    originY: 7,
+  },
+  [FxType.Nuke]: {
+    url: skullNuke,
+    frameWidth: 42,
+    frameCount: 19,
+    frameDuration: 50,
+    looping: false,
+    originX: 20,
+    originY: 21,
+  },
+  [FxType.SAMExplosion]: {
+    url: SAMExplosion,
+    frameWidth: 48,
+    frameCount: 9,
+    frameDuration: 70,
+    looping: false,
+    originX: 23,
+    originY: 19,
+  },
+  [FxType.Conquest]: {
+    url: skull,
+    frameWidth: 14,
+    frameCount: 14,
+    frameDuration: 90,
+    looping: false,
+    originX: 7,
+    originY: 23,
+  },
+};
 export class AnimatedSpriteLoader {
   private animatedSpriteImageMap: Map<FxType, HTMLCanvasElement> = new Map();
   // Do not color the same sprite twice
@@ -144,7 +255,7 @@ export class AnimatedSpriteLoader {
     new Map();
 
   public async loadAllAnimatedSpriteImages(): Promise<void> {
-    const entries = Object.entries(ANIMATED_SPRITE_CONFIG);
+    const entries = Object.entries(HALLOWEEN_ANIMATED_SPRITE_CONFIG);
 
     await Promise.all(
       entries.map(async ([fxType, config]) => {
@@ -175,7 +286,7 @@ export class AnimatedSpriteLoader {
   }
 
   private createRegularAnimatedSprite(fxType: FxType): AnimatedSprite | null {
-    const config = ANIMATED_SPRITE_CONFIG[fxType];
+    const config = HALLOWEEN_ANIMATED_SPRITE_CONFIG[fxType];
     const image = this.animatedSpriteImageMap.get(fxType);
     if (!config || !image) return null;
 
@@ -196,7 +307,7 @@ export class AnimatedSpriteLoader {
     theme: Theme,
   ): HTMLCanvasElement | null {
     const baseImage = this.animatedSpriteImageMap.get(fxType);
-    const config = ANIMATED_SPRITE_CONFIG[fxType];
+    const config = HALLOWEEN_ANIMATED_SPRITE_CONFIG[fxType];
     if (!baseImage || !config) return null;
     const territoryColor = owner.territoryColor();
     const borderColor = owner.borderColor();
@@ -223,7 +334,7 @@ export class AnimatedSpriteLoader {
     owner: PlayerView,
     theme: Theme,
   ): AnimatedSprite | null {
-    const config = ANIMATED_SPRITE_CONFIG[fxType];
+    const config = HALLOWEEN_ANIMATED_SPRITE_CONFIG[fxType];
     const image = this.getColoredAnimatedSprite(owner, fxType, theme);
     if (!config || !image) return null;
 
