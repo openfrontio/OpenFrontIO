@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { fetchUrl } from "../client/CosmeticPackLoader";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
@@ -485,12 +486,56 @@ export async function startWorker() {
       }
     }
 
+    // Temporary full assignment (unless there’s a better approach).
+    const pack = {
+      structurePort: fetchUrl(cosmetics.structurePort, "structurePort"),
+      structureCity: fetchUrl(cosmetics.structureCity, "structureCity"),
+      structureFactory: fetchUrl(
+        cosmetics.structureFactory,
+        "structureFactory",
+      ),
+      structureMissilesilo: fetchUrl(
+        cosmetics.structureMissilesilo,
+        "structureMissilesilo",
+      ),
+      structureDefensepost: fetchUrl(
+        cosmetics.structureDefensepost,
+        "structureDefensepost",
+      ),
+      structureSamlauncher: fetchUrl(
+        cosmetics.structureSamlauncher,
+        "structureSamlauncher",
+      ),
+      spriteTransportship: fetchUrl(
+        cosmetics.spriteTransportship,
+        "spriteTransportship",
+      ),
+      spriteWarship: fetchUrl(cosmetics.spriteWarship, "spriteWarship"),
+      spriteSammissile: fetchUrl(
+        cosmetics.spriteSammissile,
+        "spriteSammissile",
+      ),
+      spriteAtombomb: fetchUrl(cosmetics.spriteAtombomb, "spriteAtombomb"),
+      spriteHydrogenbomb: fetchUrl(
+        cosmetics.spriteHydrogenbomb,
+        "spriteHydrogenbomb",
+      ),
+      spriteTradeship: fetchUrl(cosmetics.spriteTradeship, "spriteTradeship"),
+      spriteMirv: fetchUrl(cosmetics.spriteMirv, "spriteMirv"),
+      spriteEngine: fetchUrl(cosmetics.spriteEngine, "spriteEngine"),
+      spriteCarriage: fetchUrl(cosmetics.spriteCarriage, "spriteCarriage"),
+      spriteLoadedcarriage: fetchUrl(
+        cosmetics.spriteLoadedcarriage,
+        "spriteLoadedcarriage",
+      ),
+    };
+
     return {
       perm: "allowed",
       cosmetics: {
         flag: cosmetics.flag,
         pattern: pattern,
-        pack: cosmetics.pack,
+        pack: pack,
       },
     };
   }

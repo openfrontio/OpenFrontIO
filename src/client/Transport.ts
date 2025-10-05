@@ -381,7 +381,24 @@ export class Transport {
         flag: this.lobbyConfig.flag,
         patternName: this.lobbyConfig.pattern?.name,
         patternColorPaletteName: this.lobbyConfig.pattern?.colorPalette?.name,
-        pack: this.lobbyConfig.pack,
+
+        structurePort: this.lobbyConfig.structurePort,
+        structureCity: this.lobbyConfig.structureCity,
+        structureFactory: this.lobbyConfig.structureFactory,
+        structureMissilesilo: this.lobbyConfig.structureMissilesilo,
+        structureDefensepost: this.lobbyConfig.structureDefensepost,
+        structureSamlauncher: this.lobbyConfig.structureSamlauncher,
+
+        spriteTransportship: this.lobbyConfig.spriteTransportship,
+        spriteWarship: this.lobbyConfig.spriteWarship,
+        spriteSammissile: this.lobbyConfig.spriteSammissile,
+        spriteAtombomb: this.lobbyConfig.spriteAtombomb,
+        spriteHydrogenbomb: this.lobbyConfig.spriteHydrogenbomb,
+        spriteTradeship: this.lobbyConfig.spriteTradeship,
+        spriteMirv: this.lobbyConfig.spriteMirv,
+        spriteEngine: this.lobbyConfig.spriteEngine,
+        spriteCarriage: this.lobbyConfig.spriteCarriage,
+        spriteLoadedcarriage: this.lobbyConfig.spriteLoadedcarriage,
       },
     } satisfies ClientJoinMessage);
   }

@@ -1,62 +1,22 @@
-import test from "../../resources/cosmetics/cosmetic_pack/test/manifest.json";
-import {
-  CosmeticManifest,
-  CosmeticManifestSchema,
-} from "../core/CosmeticSchemas";
+export function fetchUrl(
+  packId: string | undefined,
+  type: string,
+): string | undefined {
+  // TODO: Fetches the resource URL from the API server.
 
-function parseCosmeticManifest(json: unknown): CosmeticManifest {
-  const res = CosmeticManifestSchema.safeParse(json);
-  if (!res.success) {
-    throw new Error(`Invalid CosmeticManifest: ${res.error.message}`);
-  }
-  return res.data;
-}
+  // Request parameters:
+  //   - packKey: identifier of the cosmetic pack
+  //   - type: asset type (e.g., "structurePort", "structureCity")
+  // Response:
+  //   - URL string pointing to the requested asset
 
-function fetchManifest(packId: string): CosmeticManifest | undefined {
+  // Even if this approach changes, this function will be responsible for obtaining the URL by some method.
+
   switch (packId) {
     case "base":
       return;
     case "test":
-      return parseCosmeticManifest(test) as CosmeticManifest;
+      return "/images/test/test.png"; // Example URL for testing
   }
   return;
-}
-
-export async function resolveCosmeticUrl(
-  packId: string | undefined,
-  key: string | undefined,
-  fallback: string,
-): Promise<string> {
-  if (packId === undefined || key === undefined) {
-    return fallback;
-  }
-  try {
-    const manifest = fetchManifest(packId);
-    if (!manifest) {
-      return fallback;
-    }
-    // Determine category and subKey from the first "/" only.
-    const firstSlash = key.indexOf("/");
-    if (firstSlash === -1) {
-      return fallback;
-    }
-    const category = key.slice(0, firstSlash);
-    const subKey = key.slice(firstSlash + 1);
-
-    const table = (manifest.assets as Record<string, any>)[category];
-    if (table) {
-      const parts = subKey.split("/");
-      let current: any = table;
-      for (const part of parts) {
-        if (current === null) break;
-        current = current[part];
-      }
-      if (typeof current === "string") {
-        return `/cosmetics/cosmetic_pack/${packId}/${current}`;
-      }
-    }
-  } catch (e) {
-    console.warn("[cosmetics] manifest load failed", e);
-  }
-  return fallback;
 }

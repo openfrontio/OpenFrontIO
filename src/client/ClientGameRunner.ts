@@ -53,7 +53,25 @@ export interface LobbyConfig {
   serverConfig: ServerConfig;
   pattern: PlayerPattern | undefined;
   flag: string;
-  pack: string | undefined;
+
+  structurePort: string | undefined;
+  structureCity: string | undefined;
+  structureFactory: string | undefined;
+  structureMissilesilo: string | undefined;
+  structureDefensepost: string | undefined;
+  structureSamlauncher: string | undefined;
+
+  spriteTransportship: string | undefined;
+  spriteWarship: string | undefined;
+  spriteSammissile: string | undefined;
+  spriteAtombomb: string | undefined;
+  spriteHydrogenbomb: string | undefined;
+  spriteTradeship: string | undefined;
+  spriteMirv: string | undefined;
+  spriteEngine: string | undefined;
+  spriteCarriage: string | undefined;
+  spriteLoadedcarriage: string | undefined;
+
   playerName: string;
   clientID: ClientID;
   gameID: GameID;

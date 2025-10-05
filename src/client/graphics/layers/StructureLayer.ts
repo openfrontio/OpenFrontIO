@@ -11,7 +11,7 @@ import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { resolveCosmeticUrl } from "../../CosmeticPackLoader";
+import { PlayerPack } from "../../../core/Schemas";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -25,6 +25,7 @@ const ZOOM_THRESHOLD = 4.3; // below this zoom level, structures are not rendere
 
 interface UnitRenderConfig {
   icon: string;
+  key: string;
   borderRadius: number;
   territoryRadius: number;
 }
@@ -34,7 +35,7 @@ export class StructureLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private unitIcons: Map<string, HTMLImageElement> = new Map();
   private theme: Theme;
-  private packId: string | undefined;
+  private pack: PlayerPack;
   private structureLoaded = false;
   private tempCanvas: HTMLCanvasElement;
   private tempContext: CanvasRenderingContext2D;
@@ -43,31 +44,37 @@ export class StructureLayer implements Layer {
   private unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
       icon: anchorIcon,
+      key: "structurePort",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.City]: {
       icon: cityIcon,
+      key: "structureCity",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.Factory]: {
       icon: factoryIcon,
+      key: "structureFactory",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
+      key: "structureMissilesilo",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
+      key: "structureDefensepost",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
+      key: "structureSamlauncher",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
@@ -88,6 +95,7 @@ export class StructureLayer implements Layer {
 
   private loadIcon(unitType: string, config: UnitRenderConfig) {
     const image = new Image();
+    console.log(`loading icon for ${unitType} from ${config.icon}`);
     image.src = config.icon;
     image.onload = () => {
       this.unitIcons.set(unitType, image);
@@ -101,8 +109,8 @@ export class StructureLayer implements Layer {
   }
 
   private async loadIconData() {
-    await this.applyCosmeticIcons();
     Object.entries(this.unitConfigs).forEach(([unitType, config]) => {
+      config.icon = this.pack?.[config.key] ?? config.icon;
       this.loadIcon(unitType, config);
     });
   }
@@ -122,7 +130,7 @@ export class StructureLayer implements Layer {
     if (!this.structureLoaded) {
       const myPlayer = this.game.myPlayer();
       if (myPlayer) {
-        this.packId = myPlayer.cosmetics.pack;
+        this.pack = myPlayer.cosmetics.pack ?? {};
         this.loadIconData();
         this.structureLoaded = true;
       }
@@ -131,57 +139,6 @@ export class StructureLayer implements Layer {
 
   init() {
     this.redraw();
-  }
-
-  private async applyCosmeticIcons(): Promise<void> {
-    this.unitConfigs[UnitType.Port] = {
-      ...this.unitConfigs[UnitType.Port]!,
-      icon: await resolveCosmeticUrl(
-        this.packId,
-        "structure/img/port",
-        anchorIcon,
-      ),
-    };
-    this.unitConfigs[UnitType.City] = {
-      ...this.unitConfigs[UnitType.City]!,
-      icon: await resolveCosmeticUrl(
-        this.packId,
-        "structure/img/city",
-        cityIcon,
-      ),
-    };
-    this.unitConfigs[UnitType.Factory] = {
-      ...this.unitConfigs[UnitType.Factory]!,
-      icon: await resolveCosmeticUrl(
-        this.packId,
-        "structure/img/factory",
-        factoryIcon,
-      ),
-    };
-    this.unitConfigs[UnitType.MissileSilo] = {
-      ...this.unitConfigs[UnitType.MissileSilo]!,
-      icon: await resolveCosmeticUrl(
-        this.packId,
-        "structure/img/missilesilo",
-        missileSiloIcon,
-      ),
-    };
-    this.unitConfigs[UnitType.DefensePost] = {
-      ...this.unitConfigs[UnitType.DefensePost]!,
-      icon: await resolveCosmeticUrl(
-        this.packId,
-        "structure/img/defensepost",
-        shieldIcon,
-      ),
-    };
-    this.unitConfigs[UnitType.SAMLauncher] = {
-      ...this.unitConfigs[UnitType.SAMLauncher]!,
-      icon: await resolveCosmeticUrl(
-        this.packId,
-        "structure/img/samlauncher",
-        SAMMissileIcon,
-      ),
-    };
   }
 
   redraw() {

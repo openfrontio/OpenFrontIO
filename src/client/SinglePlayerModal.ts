@@ -21,6 +21,7 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import "./components/Maps";
+import { fetchUrl } from "./CosmeticPackLoader";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
@@ -448,7 +449,6 @@ export class SinglePlayerModal extends LitElement {
     selectedPattern ??= cosmetics
       ? (this.userSettings.getDevOnlyPattern() ?? null)
       : null;
-    const selectedPackId = this.userSettings.getSelectedPackId();
 
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
@@ -467,7 +467,84 @@ export class SinglePlayerModal extends LitElement {
                       ? ""
                       : flagInput.getCurrentFlag(),
                   pattern: selectedPattern ?? undefined,
-                  pack: selectedPackId ?? undefined,
+                  pack: {
+                    structurePort: fetchUrl(
+                      this.userSettings.getSelectedStructurePort() ?? undefined,
+                      "structurePort",
+                    ),
+                    structureCity: fetchUrl(
+                      this.userSettings.getSelectedStructureCity() ?? undefined,
+                      "structureCity",
+                    ),
+                    structureFactory: fetchUrl(
+                      this.userSettings.getSelectedStructureFactory() ??
+                        undefined,
+                      "structureFactory",
+                    ),
+                    structureMissilesilo: fetchUrl(
+                      this.userSettings.getSelectedStructureMissilesilo() ??
+                        undefined,
+                      "structureMissilesilo",
+                    ),
+                    structureDefensepost: fetchUrl(
+                      this.userSettings.getSelectedStructureDefensepost() ??
+                        undefined,
+                      "structureDefensepost",
+                    ),
+                    structureSamlauncher: fetchUrl(
+                      this.userSettings.getSelectedStructureSamlauncher() ??
+                        undefined,
+                      "structureSamlauncher",
+                    ),
+
+                    spriteTransportship: fetchUrl(
+                      this.userSettings.getSelectedSpriteTransportship() ??
+                        undefined,
+                      "spriteTransportship",
+                    ),
+                    spriteWarship: fetchUrl(
+                      this.userSettings.getSelectedSpriteWarship() ?? undefined,
+                      "spriteWarship",
+                    ),
+                    spriteSammissile: fetchUrl(
+                      this.userSettings.getSelectedSpriteSammissile() ??
+                        undefined,
+                      "spriteSammissile",
+                    ),
+                    spriteAtombomb: fetchUrl(
+                      this.userSettings.getSelectedSpriteAtombomb() ??
+                        undefined,
+                      "spriteAtombomb",
+                    ),
+                    spriteHydrogenbomb: fetchUrl(
+                      this.userSettings.getSelectedSpriteHydrogenbomb() ??
+                        undefined,
+                      "spriteHydrogenbomb",
+                    ),
+                    spriteTradeship: fetchUrl(
+                      this.userSettings.getSelectedSpriteTradeship() ??
+                        undefined,
+                      "spriteTradeship",
+                    ),
+                    spriteMirv: fetchUrl(
+                      this.userSettings.getSelectedSpriteMirv() ?? undefined,
+                      "spriteMirv",
+                    ),
+                    spriteEngine: fetchUrl(
+                      this.userSettings.getSelectedSpriteEngine() ?? undefined,
+                      "spriteEngine",
+                    ),
+                    spriteCarriage: fetchUrl(
+                      this.userSettings.getSelectedSpriteCarriage() ??
+                        undefined,
+                      "spriteCarriage",
+                    ),
+                    spriteLoadedcarriage: fetchUrl(
+                      this.userSettings.getSelectedSpriteLoadedcarriage() ??
+                        undefined,
+                      "spriteLoadedcarriage",
+                    ),
+                  },
                 },
               },
             ],

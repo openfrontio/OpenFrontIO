@@ -390,7 +390,24 @@ export const PlayerCosmeticRefsSchema = z.object({
   flag: FlagSchema.optional(),
   patternName: PatternNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
-  pack: z.string().optional(),
+
+  structurePort: z.string().optional(),
+  structureCity: z.string().optional(),
+  structureFactory: z.string().optional(),
+  structureMissilesilo: z.string().optional(),
+  structureDefensepost: z.string().optional(),
+  structureSamlauncher: z.string().optional(),
+
+  spriteTransportship: z.string().optional(),
+  spriteWarship: z.string().optional(),
+  spriteSammissile: z.string().optional(),
+  spriteAtombomb: z.string().optional(),
+  spriteHydrogenbomb: z.string().optional(),
+  spriteTradeship: z.string().optional(),
+  spriteMirv: z.string().optional(),
+  spriteEngine: z.string().optional(),
+  spriteCarriage: z.string().optional(),
+  spriteLoadedcarriage: z.string().optional(),
 });
 
 export const PlayerPatternSchema = z.object({
@@ -398,10 +415,32 @@ export const PlayerPatternSchema = z.object({
   patternData: PatternDataSchema,
   colorPalette: ColorPaletteSchema.optional(),
 });
+
+export const PlayerPackSchema = z.object({
+  structurePort: z.string().optional(),
+  structureCity: z.string().optional(),
+  structureFactory: z.string().optional(),
+  structureMissilesilo: z.string().optional(),
+  structureDefensepost: z.string().optional(),
+  structureSamlauncher: z.string().optional(),
+
+  spriteTransportship: z.string().optional(),
+  spriteWarship: z.string().optional(),
+  spriteSammissile: z.string().optional(),
+  spriteAtombomb: z.string().optional(),
+  spriteHydrogenbomb: z.string().optional(),
+  spriteTradeship: z.string().optional(),
+  spriteMirv: z.string().optional(),
+  spriteEngine: z.string().optional(),
+  spriteCarriage: z.string().optional(),
+  spriteLoadedcarriage: z.string().optional(),
+});
+export type PlayerPack = z.infer<typeof PlayerPackSchema>;
+
 export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
-  pack: z.string().optional(),
+  pack: PlayerPackSchema.optional(),
 });
 export const PlayerSchema = z.object({
   clientID: ID,
