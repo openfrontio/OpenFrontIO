@@ -746,6 +746,9 @@ export class PlayerImpl implements Player {
   }
 
   isFriendly(other: Player): boolean {
+    if (other.isDisconnected()) {
+      return false;
+    }
     return this.isOnSameTeam(other) || this.isAlliedWith(other);
   }
 
