@@ -399,8 +399,7 @@ export class GameServer {
       players: this.activeClients.map((c) => ({
         username: c.username,
         clientID: c.clientID,
-        pattern: c.pattern,
-        flag: c.flag,
+        cosmetics: c.cosmetics,
       })),
     });
     if (!result.success) {
@@ -686,6 +685,7 @@ export class GameServer {
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
+          cosmetics: player.cosmetics,
         } satisfies PlayerRecord;
       },
     );

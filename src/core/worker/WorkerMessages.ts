@@ -60,8 +60,8 @@ export interface GameUpdateMessage extends BaseWorkerMessage {
 export interface PlayerActionsMessage extends BaseWorkerMessage {
   type: "player_actions";
   playerID: PlayerID;
-  x: number;
-  y: number;
+  x?: number;
+  y?: number;
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {

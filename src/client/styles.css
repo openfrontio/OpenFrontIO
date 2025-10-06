@@ -77,19 +77,6 @@
   margin: 24px 0;
 }
 
-.options-section {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 12px 24px 24px 24px;
-  border-radius: 12px;
-}
-
-.option-title {
-  margin: 0 0 16px 0;
-  font-size: 20px;
-  color: #fff;
-  text-align: center;
-}
-
 .option-cards {
   display: flex;
   flex-direction: row;
@@ -203,14 +190,6 @@ label.option-card:hover {
   color: #4caf50;
 }
 
-.lobby-id-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin: 8px 0px 0px 0px;
-}
-
 #lobbyIdInput {
   font-family: monospace;
   font-weight: 600;
@@ -220,7 +199,7 @@ label.option-card:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.6);
   padding: 8px 16px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -240,14 +219,6 @@ label.option-card:hover {
   text-align: center;
   font-family: monospace;
   font-weight: 600;
-}
-
-.players-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  padding: 0 16px;
 }
 
 .player-tag {
@@ -565,6 +536,9 @@ label.option-card:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
   gap: 10px;
   margin: 40px 0px 0px 0px;
 }

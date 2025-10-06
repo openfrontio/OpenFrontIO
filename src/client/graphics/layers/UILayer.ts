@@ -143,7 +143,7 @@ export class UILayer implements Layer {
     if (this.context === null || this.theme === null) {
       return;
     }
-    const color = this.theme.borderColor(unit.owner());
+    const color = unit.owner().borderColor();
     this.context.fillStyle = color.toRgbString();
     this.context.fillRect(startX, startY, icon.width, icon.height);
     this.context.drawImage(icon, startX, startY);
@@ -208,7 +208,7 @@ export class UILayer implements Layer {
 
     // Get the unit's owner color for the box
     if (this.theme === null) throw new Error("missing theme");
-    const ownerColor = this.theme.territoryColor(unit.owner());
+    const ownerColor = unit.owner().territoryColor();
 
     // Create a brighter version of the owner color for the selection
     const selectionColor = ownerColor.lighten(0.2);
@@ -312,7 +312,7 @@ export class UILayer implements Layer {
       return 1;
     }
     switch (unit.type()) {
-      case UnitType.Construction:
+      case UnitType.Construction: {
         const constructionType = unit.constructionType();
         if (constructionType === undefined) {
           return 1;
@@ -326,7 +326,7 @@ export class UILayer implements Layer {
           (this.game.ticks() - unit.createdAt()) /
           (constDuration === 0 ? 1 : constDuration)
         );
-
+      }
       case UnitType.MissileSilo:
       case UnitType.SAMLauncher:
         return unit.missileReadinesss();

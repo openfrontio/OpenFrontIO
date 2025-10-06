@@ -160,7 +160,17 @@ describe("Stats", () => {
   test("goldWar", () => {
     stats.goldWar(player1, player2, 1);
     expect(stats.stats()).toStrictEqual({
-      client1: { gold: [0n, 1n] },
+      client1: {
+        gold: [0n, 1n],
+        conquests: 1n,
+      },
+    });
+    stats.goldWar(player1, player2, 1);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        gold: [0n, 2n],
+        conquests: 2n,
+      },
     });
   });
 
@@ -207,6 +217,19 @@ describe("Stats", () => {
         units: {
           port: [0n, 0n, 0n, 1n],
         },
+      },
+    });
+  });
+
+  test("playerKilled", () => {
+    stats.playerKilled(player1, 10);
+    stats.playerKilled(player2, 40);
+    expect(stats.stats()).toStrictEqual({
+      client1: {
+        killedAt: 10n,
+      },
+      client2: {
+        killedAt: 40n,
       },
     });
   });

@@ -9,6 +9,7 @@ import {
   RailType,
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { getBridgeRects, getRailroadRects } from "./RailroadSprites";
 
@@ -27,7 +28,10 @@ export class RailroadLayer implements Layer {
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
 
-  constructor(private game: GameView) {
+  constructor(
+    private game: GameView,
+    private transformHandler: TransformHandler,
+  ) {
     this.theme = game.config().theme();
   }
 
@@ -91,6 +95,11 @@ export class RailroadLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     this.updateRailColors();
+    if (this.transformHandler.scale <= 2) {
+      // When zoomed out, don't show the railroads
+      // to prevent map clutter.
+      return;
+    }
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -170,7 +179,7 @@ export class RailroadLayer implements Layer {
     const owner = this.game.owner(tile);
     const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
-      ? this.theme.railroadColor(recipient)
+      ? recipient.borderColor()
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(this.context, x, y, railType);
