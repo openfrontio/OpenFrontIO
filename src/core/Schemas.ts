@@ -14,7 +14,6 @@ import {
   GameMapType,
   GameMode,
   GameType,
-  PlayerType,
   Quads,
   Trios,
   UnitType,
@@ -118,7 +117,6 @@ export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
-const PlayerTypeSchema = z.enum(PlayerType);
 
 export interface GameInfo {
   gameID: GameID;

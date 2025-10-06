@@ -246,6 +246,7 @@ export class StructureLayer implements Layer {
   ) {
     let color = unit.owner().borderColor();
     if (unit.type() === UnitType.Construction) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       color = underConstructionColor;
     }
 

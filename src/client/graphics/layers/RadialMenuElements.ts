@@ -106,6 +106,7 @@ export enum Slot {
   Delete = "delete",
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoChatElement: MenuElement = {
   id: "info_chat",
   name: "chat",
@@ -123,6 +124,7 @@ const infoChatElement: MenuElement = {
       })),
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyTargetElement: MenuElement = {
   id: "ally_target",
   name: "target",
@@ -138,6 +140,7 @@ const allyTargetElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyTradeElement: MenuElement = {
   id: "ally_trade",
   name: "trade",
@@ -153,6 +156,7 @@ const allyTradeElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyEmbargoElement: MenuElement = {
   id: "ally_embargo",
   name: "embargo",
@@ -204,6 +208,7 @@ const allyBreakElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
   name: "donate gold",
@@ -217,6 +222,7 @@ const allyDonateGoldElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateTroopsElement: MenuElement = {
   id: "ally_donate_troops",
   name: "donate troops",
@@ -230,6 +236,7 @@ const allyDonateTroopsElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoPlayerElement: MenuElement = {
   id: "info_player",
   name: "player",
@@ -241,6 +248,7 @@ const infoPlayerElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoEmojiElement: MenuElement = {
   id: "info_emoji",
   name: "emoji",
