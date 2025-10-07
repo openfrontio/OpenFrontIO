@@ -6,7 +6,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
-import { joinLobby, LobbyControl } from "./ClientGameRunner";
+import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -80,7 +80,7 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private lobbyControl: LobbyControl | null = null;
+  private leaveLobby: (() => boolean) | null = null;
   private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
@@ -154,16 +154,14 @@ class Client {
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
     window.addEventListener("beforeunload", (e) => {
-      // Check if we should prevent unload (player is alive)
-      if (this.lobbyControl && this.lobbyControl.shouldPreventUnload()) {
+      // Try to leave the lobby/game
+      if (this.leaveLobby && !this.leaveLobby()) {
+        // If leaveLobby returns false, it means we should prevent unload
         e.preventDefault();
         return "";
       }
-      // Otherwise, cleanup the game normally
+      // Successfully closed or no game running
       console.log("Browser is closing");
-      if (this.lobbyControl !== null) {
-        this.lobbyControl.cleanup();
-      }
     });
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
@@ -383,7 +381,7 @@ class Client {
     const onHashUpdate = () => {
       // Reset the UI to its initial state
       this.joinModal.close();
-      if (this.lobbyControl !== null) {
+      if (this.leaveLobby !== null) {
         this.handleLeaveLobby();
       }
 
@@ -504,13 +502,13 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
-    if (this.lobbyControl !== null) {
+    if (this.leaveLobby !== null) {
       console.log("joining lobby, stopping existing game");
-      this.lobbyControl.cleanup();
+      this.leaveLobby();
     }
     const config = await getServerConfigFromClient();
 
-    this.lobbyControl = joinLobby(
+    this.leaveLobby = joinLobby(
       this.eventBus,
       {
         gameID: lobby.gameID,
@@ -596,12 +594,12 @@ class Client {
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
-    if (this.lobbyControl === null) {
+    if (this.leaveLobby === null) {
       return;
     }
     console.log("leaving lobby, cancelling game");
-    this.lobbyControl.cleanup();
-    this.lobbyControl = null;
+    this.leaveLobby();
+    this.leaveLobby = null;
     this.publicLobby.leaveLobby();
   }
 

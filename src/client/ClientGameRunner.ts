@@ -63,17 +63,12 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
 }
 
-export interface LobbyControl {
-  cleanup: () => void;
-  shouldPreventUnload: () => boolean;
-}
-
 export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
-): LobbyControl {
+): () => boolean {
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
@@ -138,18 +133,15 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return {
-    cleanup: () => {
-      console.log("leaving game");
-      currentGameRunner = null;
-      transport.leaveGame();
-    },
-    shouldPreventUnload: () => {
-      if (currentGameRunner) {
-        return currentGameRunner.shouldPreventWindowClose();
-      }
-      return false;
-    },
+  return () => {
+    // Check if we should prevent closing (player is still alive in game)
+    if (currentGameRunner && currentGameRunner.shouldPreventWindowClose()) {
+      return false; // Don't close, return false to indicate prevented
+    }
+    console.log("leaving game");
+    currentGameRunner = null;
+    transport.leaveGame();
+    return true; // Successfully closed, return true
   };
 }
 
