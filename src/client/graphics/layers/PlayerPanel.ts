@@ -44,6 +44,7 @@ import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
+import "./SendResourceModal";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -51,21 +52,18 @@ export class PlayerPanel extends LitElement implements Layer {
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
   public uiState: UIState;
+
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
   private _profileForPlayerId: number | null = null;
 
-  @state()
-  public isVisible: boolean = false;
-
-  @state()
-  private allianceExpiryText: string | null = null;
-
-  @state()
-  private allianceExpirySeconds: number | null = null;
-
-  @state()
-  private otherProfile: PlayerProfile | null = null;
+  @state() private sendTarget: PlayerView | null = null;
+  @state() private sendMode: "troops" | "gold" = "troops";
+  @state() private openSend = false;
+  @state() public isVisible: boolean = false;
+  @state() private allianceExpiryText: string | null = null;
+  @state() private allianceExpirySeconds: number | null = null;
+  @state() private otherProfile: PlayerProfile | null = null;
 
   private ctModal: ChatModal;
 
@@ -138,6 +136,8 @@ export class PlayerPanel extends LitElement implements Layer {
 
   public hide() {
     this.isVisible = false;
+    this.openSend = false;
+    this.sendTarget = null;
     this.requestUpdate();
   }
 
@@ -166,19 +166,25 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
+  private openSendTroops(target: PlayerView) {
+    this.sendTarget = target;
+    this.sendMode = "troops";
+    this.openSend = true;
+  }
+
+  private openSendGold(target: PlayerView) {
+    this.sendTarget = target;
+    this.sendMode = "gold";
+    this.openSend = true;
+  }
+
   private handleDonateTroopClick(
     e: Event,
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(
-      new SendDonateTroopsIntentEvent(
-        other,
-        myPlayer.troops() * this.uiState.attackRatio,
-      ),
-    );
-    this.hide();
+    this.openSendTroops(other);
   }
 
   private handleDonateGoldClick(
@@ -187,9 +193,40 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateGoldIntentEvent(other, null));
-    this.hide();
+    this.openSendGold(other);
   }
+
+  private closeSend = () => {
+    this.openSend = false;
+    this.sendTarget = null;
+  };
+
+  private confirmSend = (
+    e: CustomEvent<{ amount: number; closePanel?: boolean }>,
+  ) => {
+    const amount = Math.floor(Math.max(0, e.detail?.amount ?? 0));
+    const myPlayer = this.g.myPlayer();
+    const target = this.sendTarget;
+
+    if (!myPlayer || !target || amount <= 0) return;
+
+    if (this.sendMode === "troops") {
+      const myTroops = Number(myPlayer.troops?.() ?? 0);
+      if (amount > myTroops) return;
+      this.eventBus.emit(new SendDonateTroopsIntentEvent(target, amount));
+    } else {
+      const rawGold =
+        typeof (myPlayer as any).gold === "function"
+          ? (myPlayer as any).gold()
+          : 0;
+      const myGold = Number(rawGold);
+      if (amount > myGold) return;
+      this.eventBus.emit(new SendDonateGoldIntentEvent(target, BigInt(amount)));
+    }
+
+    this.closeSend();
+    if (e.detail?.closePanel) this.hide();
+  };
 
   private handleEmbargoClick(
     e: Event,
@@ -309,10 +346,11 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private getExpiryColorClass(seconds: number | null): string {
-    if (seconds === null) return "text-white";
-    if (seconds <= 30) return "text-red-400";
-    if (seconds <= 60) return "text-yellow-400";
-    return "text-emerald-400";
+    if (seconds === null) return "text-white"; // Default color
+
+    if (seconds <= 30) return "text-red-400"; // Last 30 seconds: Red
+    if (seconds <= 60) return "text-yellow-400"; // Last 60 seconds: Yellow
+    return "text-emerald-400"; // More than 60 seconds: Green
   }
 
   private getTraitorRemainingSeconds(player: PlayerView): number | null {
@@ -430,31 +468,27 @@ export class PlayerPanel extends LitElement implements Layer {
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div
-          class="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1
-                    text-lg font-semibold text-zinc-100"
+          class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.04] px-2.5 py-1
+                    text-base font-semibold text-zinc-200"
         >
           <span class="mr-0.5">💰</span>
-          <span
-            translate="no"
-            class="inline-block w-[45px] text-right text-zinc-50"
-          >
+          <span translate="no" class="inline-block min-w-[45px] text-right">
             ${renderNumber(other.gold() || 0)}
           </span>
-          <span class="opacity-95">${translateText("player_panel.gold")}</span>
+          <span class="opacity-95 whitespace-nowrap"
+            >${translateText("player_panel.gold")}</span
+          >
         </div>
 
         <div
-          class="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1
-                    text-lg font-semibold text-zinc-100"
+          class="inline-flex items-center gap-1.5 rounded-full bg-white/[0.04] px-2.5 py-1
+                    text-base font-semibold text-zinc-200"
         >
           <span class="mr-0.5">🛡️</span>
-          <span
-            translate="no"
-            class="inline-block w-[45px] text-right text-zinc-50"
-          >
+          <span translate="no" class="inline-block min-w-[45px] text-right">
             ${renderTroops(other.troops() || 0)}
           </span>
-          <span class="opacity-95"
+          <span class="opacity-95 whitespace-nowrap"
             >${translateText("player_panel.troops")}</span
           >
         </div>
@@ -551,7 +585,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 })
               : html`
                   <div class="py-2 text-zinc-300">
-                    ${translateText("player_panel.none")}
+                    ${translateText("common.none")}
                   </div>
                 `}
           </div>
@@ -564,7 +598,7 @@ export class PlayerPanel extends LitElement implements Layer {
     if (this.allianceExpiryText === null) return html``;
     return html`
       <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
-        <div class="font-semibold text-zinc-400">
+        <div class="font-semibold text-zinc-300">
           ${translateText("player_panel.alliance_time_remaining")}
         </div>
         <div class="text-right font-semibold">
@@ -710,6 +744,10 @@ export class PlayerPanel extends LitElement implements Layer {
       return html``;
     }
     const other = owner as PlayerView;
+    const myGoldRaw =
+      typeof (my as any)?.gold === "function" ? (my as any).gold() : 0n;
+    const myGoldNum = Number(myGoldRaw);
+    const myTroopsNum = Number(my?.troops?.() ?? 0);
 
     return html`
       <style>
@@ -741,12 +779,11 @@ export class PlayerPanel extends LitElement implements Layer {
 
       <div
         class="fixed inset-0 z-[1001] flex items-center justify-center overflow-auto
-               bg-black/40 backdrop-blur-sm backdrop-brightness-110 pointer-events-auto"
+               bg-black/15 backdrop-blur-sm backdrop-brightness-110 pointer-events-auto"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @wheel=${(e: MouseEvent) => e.stopPropagation()}
         @click=${() => this.hide()}
       >
-        <!-- Stop clicks inside the panel from closing it -->
         <div
           class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[240px] w-auto px-4 py-2"
           @click=${(e: MouseEvent) => e.stopPropagation()}
@@ -760,8 +797,8 @@ export class PlayerPanel extends LitElement implements Layer {
               @click=${this.handleClose}
               class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center
                      rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
-              aria-label=${translateText("player_panel.close") || "Close"}
-              title=${translateText("player_panel.close") || "Close"}
+              aria-label=${translateText("common.close") || "Close"}
+              title=${translateText("common.close") || "Close"}
             >
               ✕
             </button>
@@ -771,6 +808,27 @@ export class PlayerPanel extends LitElement implements Layer {
             >
               <!-- Identity (flag, name, type, traitor, relation) -->
               <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
+
+              ${this.openSend && this.sendTarget
+                ? html`
+                    <send-resource-modal
+                      .open=${this.openSend}
+                      .mode=${this.sendMode}
+                      .total=${this.sendMode === "troops"
+                        ? myTroopsNum
+                        : myGoldNum}
+                      .uiState=${this.uiState}
+                      .myPlayer=${my}
+                      .target=${this.sendTarget}
+                      .gameView=${this.g}
+                      .format=${this.sendMode === "troops"
+                        ? renderTroops
+                        : renderNumber}
+                      @confirm=${this.confirmSend}
+                      @close=${this.closeSend}
+                    ></send-resource-modal>
+                  `
+                : ""}
 
               <ui-divider></ui-divider>
 
