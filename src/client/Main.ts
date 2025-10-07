@@ -6,7 +6,7 @@ import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
-import { joinLobby, shouldPreventUnload } from "./ClientGameRunner";
+import { joinLobby, LobbyControl } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
@@ -80,7 +80,7 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private gameStop: (() => void) | null = null;
+  private lobbyControl: LobbyControl | null = null;
   private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
@@ -155,14 +155,14 @@ class Client {
 
     window.addEventListener("beforeunload", (e) => {
       // Check if we should prevent unload (player is alive)
-      if (shouldPreventUnload()) {
+      if (this.lobbyControl && this.lobbyControl.shouldPreventUnload()) {
         e.preventDefault();
         return "";
       }
       // Otherwise, cleanup the game normally
       console.log("Browser is closing");
-      if (this.gameStop !== null) {
-        this.gameStop();
+      if (this.lobbyControl !== null) {
+        this.lobbyControl.cleanup();
       }
     });
 
@@ -383,7 +383,7 @@ class Client {
     const onHashUpdate = () => {
       // Reset the UI to its initial state
       this.joinModal.close();
-      if (this.gameStop !== null) {
+      if (this.lobbyControl !== null) {
         this.handleLeaveLobby();
       }
 
@@ -504,13 +504,13 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
-    if (this.gameStop !== null) {
+    if (this.lobbyControl !== null) {
       console.log("joining lobby, stopping existing game");
-      this.gameStop();
+      this.lobbyControl.cleanup();
     }
     const config = await getServerConfigFromClient();
 
-    this.gameStop = joinLobby(
+    this.lobbyControl = joinLobby(
       this.eventBus,
       {
         gameID: lobby.gameID,
@@ -596,12 +596,12 @@ class Client {
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
-    if (this.gameStop === null) {
+    if (this.lobbyControl === null) {
       return;
     }
     console.log("leaving lobby, cancelling game");
-    this.gameStop();
-    this.gameStop = null;
+    this.lobbyControl.cleanup();
+    this.lobbyControl = null;
     this.publicLobby.leaveLobby();
   }
 

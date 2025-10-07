@@ -63,14 +63,9 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
 }
 
-// Module-level reference to the current game runner
-let currentGameRunner: ClientGameRunner | null = null;
-
-export function shouldPreventUnload(): boolean {
-  if (currentGameRunner) {
-    return currentGameRunner.shouldPreventWindowClose();
-  }
-  return false;
+export interface LobbyControl {
+  cleanup: () => void;
+  shouldPreventUnload: () => boolean;
 }
 
 export function joinLobby(
@@ -78,7 +73,7 @@ export function joinLobby(
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
-): () => void {
+): LobbyControl {
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
@@ -87,6 +82,9 @@ export function joinLobby(
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
   const transport = new Transport(lobbyConfig, eventBus);
+
+  // Track the current game runner locally within this closure
+  let currentGameRunner: ClientGameRunner | null = null;
 
   const onconnect = () => {
     console.log(`Joined game lobby ${lobbyConfig.gameID}`);
@@ -140,10 +138,18 @@ export function joinLobby(
     }
   };
   transport.connect(onconnect, onmessage);
-  return () => {
-    console.log("leaving game");
-    currentGameRunner = null;
-    transport.leaveGame();
+  return {
+    cleanup: () => {
+      console.log("leaving game");
+      currentGameRunner = null;
+      transport.leaveGame();
+    },
+    shouldPreventUnload: () => {
+      if (currentGameRunner) {
+        return currentGameRunner.shouldPreventWindowClose();
+      }
+      return false;
+    },
   };
 }
 
