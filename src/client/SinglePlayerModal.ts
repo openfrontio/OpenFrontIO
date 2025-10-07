@@ -1,6 +1,8 @@
+import type { PropertyValues } from "lit";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { Ref, createRef, ref } from "lit/directives/ref.js";
+import type { Ref } from "lit/directives/ref.js";
+import { createRef, ref } from "lit/directives/ref.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
@@ -45,11 +47,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
-
   @state() private sliderPercentage: number = (this.bots / 400) * 100;
-
   @state() private isEditingBots: boolean = false;
-
   @state() private disabledUnits: UnitType[] = [];
 
   private userSettings: UserSettings = new UserSettings();
@@ -73,7 +72,7 @@ export class SinglePlayerModal extends LitElement {
 
   private botsInputRef: Ref<HTMLInputElement> = createRef();
 
-  protected updated(changedProps: Map<string, any>) {
+  protected override updated(changedProps: PropertyValues) {
     if (changedProps.has("isEditingBots") && this.isEditingBots) {
       requestAnimationFrame(() => {
         const inputEl = this.botsInputRef.value;
@@ -247,8 +246,8 @@ export class SinglePlayerModal extends LitElement {
                   max="400"
                   step="1"
                   @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
+                  +
+                  .value=${String(this.bots)}
                 />
 
                 <div
@@ -263,6 +262,7 @@ export class SinglePlayerModal extends LitElement {
                         type="number"
                         min="0"
                         max="400"
+                        aria-label=${translateText("single_modal.bots")}
                         .value=${this.bots.toString()}
                         @input=${this.handleBotsInputChange}
                         @blur=${() => {
@@ -273,6 +273,14 @@ export class SinglePlayerModal extends LitElement {
                         style="width: 60px; background-color: #2d3748; color: white; border: 1px solid #4a5568; text-align: center; border-radius: 4px;"
                       />`
                     : html`<span
+                        role="button"
+                        tabindex="0"
+                        @keydown=${(e: KeyboardEvent) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            this.isEditingBots = true;
+                            e.preventDefault();
+                          }
+                        }}
                         @click=${() => {
                           this.isEditingBots = true;
                         }}
@@ -419,12 +427,12 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private handleBotsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
-    if (isNaN(value) || value < 0 || value > 400) {
-      return;
-    }
+    const inputEl = e.target as HTMLInputElement;
+    let value = inputEl.valueAsNumber;
+    if (Number.isNaN(value)) return;
+    if (value < 0) value = 0;
+    if (value > 400) value = 400;
     this.bots = value;
-    this.sliderPercentage = (value / 400) * 100;
   }
 
   private handleBotsInputChange(e: Event) {
@@ -447,7 +455,6 @@ export class SinglePlayerModal extends LitElement {
     }
 
     this.bots = value;
-    this.sliderPercentage = (value / 400) * 100;
     input.value = value.toString();
   }
 
