@@ -47,7 +47,6 @@ export class SinglePlayerModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
-  @state() private sliderPercentage: number = (this.bots / 400) * 100;
   @state() private isEditingBots: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
 
@@ -246,7 +245,6 @@ export class SinglePlayerModal extends LitElement {
                   max="400"
                   step="1"
                   @input=${this.handleBotsChange}
-                  +
                   .value=${String(this.bots)}
                 />
 
@@ -456,6 +454,12 @@ export class SinglePlayerModal extends LitElement {
 
     this.bots = value;
     input.value = value.toString();
+    const slider = this.renderRoot.querySelector(
+      "#bots-count",
+    ) as HTMLInputElement;
+    if (slider) {
+      slider.value = value.toString();
+    }
   }
 
   private handleBotInputKeyDown(e: KeyboardEvent) {
