@@ -2,8 +2,6 @@
 
 This document outlines the architecture of the OpenFrontIO project(which took a bit longer than expected)
 
-# OpenFrontIO Project Structure
-
 OpenFrontIO/
 ├── .dockerignore # Specifies files to be ignored by Docker
 ├── .editorconfig # Defines coding styles for different editors

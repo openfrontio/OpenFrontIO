@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
+import { Ref, createRef, ref } from "lit/directives/ref.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
@@ -69,6 +70,20 @@ export class SinglePlayerModal extends LitElement {
       this.close();
     }
   };
+
+  private botsInputRef: Ref<HTMLInputElement> = createRef();
+
+  protected updated(changedProps: Map<string, any>) {
+    if (changedProps.has("isEditingBots") && this.isEditingBots) {
+      requestAnimationFrame(() => {
+        const inputEl = this.botsInputRef.value;
+        if (inputEl) {
+          inputEl.focus();
+          inputEl.select();
+        }
+      });
+    }
+  }
 
   render() {
     return html`
@@ -224,6 +239,7 @@ export class SinglePlayerModal extends LitElement {
             </div>
             <div class="option-cards">
               <label for="bots-count" class="option-card">
+                <!-- Slider -->
                 <input
                   type="range"
                   id="bots-count"
@@ -234,8 +250,14 @@ export class SinglePlayerModal extends LitElement {
                   @change=${this.handleBotsChange}
                   .value="${String(this.bots)}"
                 />
-                <div class="option-card-title">
+
+                <div
+                  class="option-card-title"
+                  style="display:flex; align-items:center; gap:8px; justify-content:center;"
+                >
                   <span>${translateText("single_modal.bots")}</span>
+
+                  <!-- Conditional number input or clickable span -->
                   ${this.isEditingBots
                     ? html`<input
                         type="number"
@@ -247,8 +269,8 @@ export class SinglePlayerModal extends LitElement {
                           this.isEditingBots = false;
                         }}
                         @keydown=${this.handleBotInputKeyDown}
+                        ${ref(this.botsInputRef)}
                         style="width: 60px; background-color: #2d3748; color: white; border: 1px solid #4a5568; text-align: center; border-radius: 4px;"
-                        autofocus
                       />`
                     : html`<span
                         @click=${() => {
