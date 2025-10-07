@@ -45,6 +45,10 @@ export class SinglePlayerModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
+  @state() private sliderPercentage: number = (this.bots / 400) * 100;
+
+  @state() private isEditingBots: boolean = false;
+
   @state() private disabledUnits: UnitType[] = [];
 
   private userSettings: UserSettings = new UserSettings();
@@ -231,10 +235,31 @@ export class SinglePlayerModal extends LitElement {
                   .value="${String(this.bots)}"
                 />
                 <div class="option-card-title">
-                  <span>${translateText("single_modal.bots")}</span>${this
-                    .bots === 0
-                    ? translateText("single_modal.bots_disabled")
-                    : this.bots}
+                  <span>${translateText("single_modal.bots")}</span>
+                  ${this.isEditingBots
+                    ? html`<input
+                        type="number"
+                        min="0"
+                        max="400"
+                        .value=${this.bots.toString()}
+                        @input=${this.handleBotsInputChange}
+                        @blur=${() => {
+                          this.isEditingBots = false;
+                        }}
+                        @keydown=${this.handleBotInputKeyDown}
+                        style="width: 60px; background-color: #2d3748; color: white; border: 1px solid #4a5568; text-align: center; border-radius: 4px;"
+                        autofocus
+                      />`
+                    : html`<span
+                        @click=${() => {
+                          this.isEditingBots = true;
+                        }}
+                        style="cursor: pointer; min-width: 60px; display: inline-block; text-align: center;"
+                      >
+                        ${this.bots === 0
+                          ? translateText("single_modal.bots_disabled")
+                          : this.bots}
+                      </span>`}
                 </div>
               </label>
 
@@ -377,6 +402,37 @@ export class SinglePlayerModal extends LitElement {
       return;
     }
     this.bots = value;
+    this.sliderPercentage = (value / 400) * 100;
+  }
+
+  private handleBotsInputChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const sanitizedValue = input.value.replace(/[^0-9]/g, "");
+    let value = parseInt(sanitizedValue, 10);
+
+    if (isNaN(value)) {
+      // This case might happen if the input is empty after sanitizing
+      this.bots = 0; // Or some other default value
+      input.value = "0";
+      return;
+    }
+
+    if (value < 0) {
+      value = 0;
+    }
+    if (value > 400) {
+      value = 400;
+    }
+
+    this.bots = value;
+    this.sliderPercentage = (value / 400) * 100;
+    input.value = value.toString();
+  }
+
+  private handleBotInputKeyDown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      (e.target as HTMLInputElement).blur();
+    }
   }
 
   private handleInstantBuildChange(e: Event) {
