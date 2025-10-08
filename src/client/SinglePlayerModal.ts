@@ -1,8 +1,5 @@
-import type { PropertyValues } from "lit";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import type { Ref } from "lit/directives/ref.js";
-import { createRef } from "lit/directives/ref.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
@@ -48,7 +45,6 @@ export class SinglePlayerModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
-  @state() private isEditingBots: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
 
   private userSettings: UserSettings = new UserSettings();
@@ -69,20 +65,6 @@ export class SinglePlayerModal extends LitElement {
       this.close();
     }
   };
-
-  private botsInputRef: Ref<HTMLInputElement> = createRef();
-
-  protected override updated(changedProps: PropertyValues) {
-    if (changedProps.has("isEditingBots") && this.isEditingBots) {
-      requestAnimationFrame(() => {
-        const inputEl = this.botsInputRef.value;
-        if (inputEl) {
-          inputEl.focus();
-          inputEl.select();
-        }
-      });
-    }
-  }
 
   render() {
     return html`
@@ -388,41 +370,6 @@ export class SinglePlayerModal extends LitElement {
     if (value < 0) value = 0;
     if (value > 400) value = 400;
     this.bots = value;
-  }
-
-  private handleBotsInputChange(e: Event) {
-    const input = e.target as HTMLInputElement;
-    const sanitizedValue = input.value.replace(/[^0-9]/g, "");
-    let value = parseInt(sanitizedValue, 10);
-
-    if (isNaN(value)) {
-      // This case might happen if the input is empty after sanitizing
-      this.bots = 0; // Or some other default value
-      input.value = "0";
-      return;
-    }
-
-    if (value < 0) {
-      value = 0;
-    }
-    if (value > 400) {
-      value = 400;
-    }
-
-    this.bots = value;
-    input.value = value.toString();
-    const slider = this.renderRoot.querySelector(
-      "#bots-count",
-    ) as HTMLInputElement;
-    if (slider) {
-      slider.value = value.toString();
-    }
-  }
-
-  private handleBotInputKeyDown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      (e.target as HTMLInputElement).blur();
-    }
   }
 
   private handleInstantBuildChange(e: Event) {
