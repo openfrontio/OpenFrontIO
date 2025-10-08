@@ -188,9 +188,10 @@ export class InputHandler {
       buildDefensePost: "Digit4",
       buildMissileSilo: "Digit5",
       buildSamLauncher: "Digit6",
-      buildAtomBomb: "Digit7",
-      buildHydrogenBomb: "Digit8",
-      buildWarship: "Digit9",
+      buildWarship: "Digit7",
+      buildAtomBomb: "Digit8",
+      buildHydrogenBomb: "Digit9",
+      buildMIRV: "Digit0",
       ...saved,
     };
 
@@ -407,6 +408,11 @@ export class InputHandler {
       if (e.code === this.keybinds.buildWarship) {
         e.preventDefault();
         this.uiState.ghostStructure = UnitType.Warship;
+      }
+
+      if (e.code === this.keybinds.buildMIRV) {
+        e.preventDefault();
+        this.uiState.ghostStructure = UnitType.MIRV;
       }
 
       // Shift-D to toggle performance overlay
