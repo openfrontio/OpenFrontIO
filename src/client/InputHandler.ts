@@ -516,7 +516,13 @@ export class InputHandler {
       return false;
     }
 
-    const isTrackpadPan = event.deltaMode === 0 && event.deltaX !== 0;
+    const isTrackpadPan =
+      event.deltaMode === 0 &&
+      (Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) > 0) &&
+      ((Math.abs(event.deltaX) > 0 && Math.abs(event.deltaY) > 0) ||
+        event.deltaX % 1 !== 0 ||
+        event.deltaY % 1 !== 0 ||
+        (Math.abs(event.deltaX) < 30 && Math.abs(event.deltaY) < 30));
 
     if (!isTrackpadPan) {
       return false;
