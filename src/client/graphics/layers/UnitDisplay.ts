@@ -3,7 +3,7 @@ import { customElement } from "lit/decorators.js";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
+import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.svg";
 import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
 import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
