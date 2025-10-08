@@ -4,7 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { AllPlayers } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
-import { emojiTable, flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, emojiTable, flattenedEmojiTable } from "../../../core/Util";
 import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
 import { SendEmojiIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
@@ -42,7 +42,7 @@ export class EmojiTable extends LitElement {
         eventBus.emit(
           new SendEmojiIntentEvent(
             recipient,
-            flattenedEmojiTable.indexOf(emoji),
+            flattenedEmojiTable.indexOf(emoji as Emoji),
           ),
         );
         this.hideTable();

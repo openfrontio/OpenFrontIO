@@ -50,7 +50,8 @@ class SAMTargetingSystem {
 
   private isInRange(tile: TileRef) {
     const samTile = this.sam.tile();
-    const rangeSquared = this.mg.config().defaultSamRange() ** 2;
+    const range = this.mg.config().defaultSamRange();
+    const rangeSquared = range * range;
     return this.mg.euclideanDistSquared(samTile, tile) <= rangeSquared;
   }
 
