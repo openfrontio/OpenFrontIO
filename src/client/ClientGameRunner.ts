@@ -225,6 +225,16 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
+  /**
+   * Determines whether window closing should be prevented.
+   *
+   * Used to show a confirmation dialog when the user attempts to close
+   * the window or navigate away during an active game session.
+   *
+   * @returns {boolean} `true` if the window close should be prevented
+   * (when the player is alive in the game), `false` otherwise
+   * (when the player is not alive or doesn't exist)
+   */
   public shouldPreventWindowClose(): boolean {
     // Show confirmation dialog if player is alive in the game
     if (this.myPlayer && this.myPlayer.isAlive()) {
