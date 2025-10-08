@@ -260,6 +260,7 @@
   },
   "game_starting_modal": {
     "title": "Game is Starting...",
+    "code_license": "Code licensed under AGPL-3.0",
     "desc": "Preparing for the lobby to start. Please wait."
   },
   "difficulty": {
@@ -507,6 +508,7 @@
     "other_won": "{player} has won!",
     "exit": "Exit Game",
     "keep": "Keep Playing",
+    "spectate": "Spectate",
     "wishlist": "Wishlist on Steam!"
   },
   "leaderboard": {

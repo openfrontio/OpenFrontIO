@@ -20,7 +20,7 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import Countries from "../../data/countries.json";
@@ -255,12 +255,15 @@ export class PlayerPanel extends LitElement implements Layer {
         this.eventBus.emit(
           new SendEmojiIntentEvent(
             AllPlayers,
-            flattenedEmojiTable.indexOf(emoji),
+            flattenedEmojiTable.indexOf(emoji as Emoji),
           ),
         );
       } else {
         this.eventBus.emit(
-          new SendEmojiIntentEvent(other, flattenedEmojiTable.indexOf(emoji)),
+          new SendEmojiIntentEvent(
+            other,
+            flattenedEmojiTable.indexOf(emoji as Emoji),
+          ),
         );
       }
       this.emojiTable.hideTable();
