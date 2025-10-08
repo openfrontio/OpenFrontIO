@@ -117,10 +117,6 @@ export class RailroadLayer implements Layer {
 
   private handleRailroadRendering(railUpdate: RailroadUpdate) {
     for (const railRoad of railUpdate.railTiles) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const x = this.game.x(railRoad.tile);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const y = this.game.y(railRoad.tile);
       if (railUpdate.isActive) {
         this.paintRailroad(railRoad);
       } else {
