@@ -2,7 +2,7 @@ import { Config } from "../../../core/configuration/Config";
 import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
@@ -271,7 +271,7 @@ const infoEmojiElement: MenuElement = {
                 : params.selected;
             params.playerActionHandler.handleEmoji(
               targetPlayer!,
-              flattenedEmojiTable.indexOf(emoji),
+              flattenedEmojiTable.indexOf(emoji as Emoji),
             );
             params.emojiTable.hideTable();
           });
