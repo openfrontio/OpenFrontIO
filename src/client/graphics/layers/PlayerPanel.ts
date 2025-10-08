@@ -28,8 +28,6 @@ import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
-  SendDonateGoldIntentEvent,
-  SendDonateTroopsIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
@@ -58,8 +56,7 @@ export class PlayerPanel extends LitElement implements Layer {
   private _profileForPlayerId: number | null = null;
 
   @state() private sendTarget: PlayerView | null = null;
-  @state() private sendMode: "troops" | "gold" = "troops";
-  @state() private openSend = false;
+  @state() private sendMode: "troops" | "gold" | "none" = "none";
   @state() public isVisible: boolean = false;
   @state() private allianceExpiryText: string | null = null;
   @state() private allianceExpirySeconds: number | null = null;
@@ -136,7 +133,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
   public hide() {
     this.isVisible = false;
-    this.openSend = false;
+    this.sendMode = "none";
     this.sendTarget = null;
     this.requestUpdate();
   }
@@ -169,13 +166,11 @@ export class PlayerPanel extends LitElement implements Layer {
   private openSendTroops(target: PlayerView) {
     this.sendTarget = target;
     this.sendMode = "troops";
-    this.openSend = true;
   }
 
   private openSendGold(target: PlayerView) {
     this.sendTarget = target;
     this.sendMode = "gold";
-    this.openSend = true;
   }
 
   private handleDonateTroopClick(
@@ -197,33 +192,12 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private closeSend = () => {
-    this.openSend = false;
     this.sendTarget = null;
   };
 
   private confirmSend = (
     e: CustomEvent<{ amount: number; closePanel?: boolean }>,
   ) => {
-    const amount = Math.floor(Math.max(0, e.detail?.amount ?? 0));
-    const myPlayer = this.g.myPlayer();
-    const target = this.sendTarget;
-
-    if (!myPlayer || !target || amount <= 0) return;
-
-    if (this.sendMode === "troops") {
-      const myTroops = Number(myPlayer.troops?.() ?? 0);
-      if (amount > myTroops) return;
-      this.eventBus.emit(new SendDonateTroopsIntentEvent(target, amount));
-    } else {
-      const rawGold =
-        typeof (myPlayer as any).gold === "function"
-          ? (myPlayer as any).gold()
-          : 0;
-      const myGold = Number(rawGold);
-      if (amount > myGold) return;
-      this.eventBus.emit(new SendDonateGoldIntentEvent(target, BigInt(amount)));
-    }
-
     this.closeSend();
     if (e.detail?.closePanel) this.hide();
   };
@@ -475,7 +449,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     text-base font-semibold text-zinc-200"
         >
           <span class="mr-0.5">💰</span>
-          <span translate="no" class="inline-block min-w-[45px] text-right">
+          <span translate="no" class="inline-block w-[45px] text-right">
             ${renderNumber(other.gold() || 0)}
           </span>
           <span class="opacity-95 whitespace-nowrap"
@@ -488,7 +462,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     text-base font-semibold text-zinc-200"
         >
           <span class="mr-0.5">🛡️</span>
-          <span translate="no" class="inline-block min-w-[45px] text-right">
+          <span translate="no" class="inline-block w-[45px] text-right">
             ${renderTroops(other.troops() || 0)}
           </span>
           <span class="opacity-95 whitespace-nowrap"
@@ -748,7 +722,7 @@ export class PlayerPanel extends LitElement implements Layer {
     }
     const other = owner as PlayerView;
     const myGoldRaw =
-      typeof (my as any)?.gold === "function" ? (my as any).gold() : 0n;
+      "gold" in my && typeof my.gold === "function" ? my.gold() : 0n;
     const myGoldNum = Number(myGoldRaw);
     const myTroopsNum = Number(my?.troops?.() ?? 0);
 
@@ -812,10 +786,11 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Identity (flag, name, type, traitor, relation) -->
               <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
 
-              ${this.openSend && this.sendTarget
+              ${this.sendMode !== "none" && this.sendTarget
                 ? html`
                     <send-resource-modal
-                      .open=${this.openSend}
+                      .open=${(this.sendMode as "troops" | "gold" | "none") !==
+                      "none"}
                       .mode=${this.sendMode}
                       .total=${this.sendMode === "troops"
                         ? myTroopsNum
@@ -824,6 +799,7 @@ export class PlayerPanel extends LitElement implements Layer {
                       .myPlayer=${my}
                       .target=${this.sendTarget}
                       .gameView=${this.g}
+                      .eventBus=${this.eventBus}
                       .format=${this.sendMode === "troops"
                         ? renderTroops
                         : renderNumber}

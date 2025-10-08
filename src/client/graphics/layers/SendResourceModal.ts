@@ -1,11 +1,19 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { within } from "../../../core/Util";
+import {
+  SendDonateGoldIntentEvent,
+  SendDonateTroopsIntentEvent,
+} from "../../Transport";
 import { renderTroops, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 
 @customElement("send-resource-modal")
 export class SendResourceModal extends LitElement {
+  @property({ attribute: false }) eventBus: EventBus | null = null;
+
   @property({ type: Boolean }) open: boolean = false;
   @property({ type: String }) mode: "troops" | "gold" = "troops";
 
@@ -77,11 +85,39 @@ export class SendResourceModal extends LitElement {
 
   private confirm() {
     // TODO Backend validation still not added!
-    if (!this.isSenderAlive() || !this.isTargetAlive()) return;
+    if (!this.isSenderAlive() || !this.isTargetAlive() || !this.eventBus) {
+      return;
+    }
+
+    const myPlayer = this.myPlayer;
+    const target = this.target;
     const amount = this.limitAmount(this.sendAmount);
+
+    if (!myPlayer || !target || amount <= 0) return;
+
+    if (this.mode === "troops") {
+      const myTroops = Number(this.myPlayer?.troops?.() ?? 0);
+      if (amount > myTroops) return;
+      this.eventBus.emit(new SendDonateTroopsIntentEvent(this.target!, amount));
+    } else {
+      const rawGold =
+        "gold" in this.myPlayer! && typeof this.myPlayer!.gold === "function"
+          ? this.myPlayer!.gold()
+          : 0;
+      const myGold = Number(rawGold);
+      if (amount > myGold) return;
+      this.eventBus.emit(
+        new SendDonateGoldIntentEvent(this.target!, BigInt(amount)),
+      );
+    }
+
     this.dispatchEvent(
-      new CustomEvent("confirm", { detail: { amount, closePanel: true } }),
+      new CustomEvent("confirm", {
+        detail: { amount, closePanel: true, success: true },
+      }),
     );
+
+    this.closeModal();
   }
 
   private handleKeydown = (e: KeyboardEvent) => {
@@ -106,7 +142,7 @@ export class SendResourceModal extends LitElement {
   }
 
   private sanitizePercent(p: number) {
-    return Math.max(0, Math.min(100, Math.round(p)));
+    return within(p, 0, 100);
   }
 
   /** Internal capacity only for troops; gold is unlimited. */
@@ -127,12 +163,12 @@ export class SendResourceModal extends LitElement {
     const cap = this.getCapacityLeft();
     const total = this.getTotalNumber();
     const hardMax = cap === null ? total : Math.min(total, cap);
-    return Math.min(Math.max(0, proposed), hardMax);
+    return within(proposed, 0, hardMax);
   }
 
   private clampSend(n: number) {
     const total = this.getTotalNumber();
-    const byTotal = Math.max(0, Math.min(n, total));
+    const byTotal = within(n, 0, total);
     return this.limitAmount(byTotal);
   }
 
@@ -157,15 +193,15 @@ export class SendResourceModal extends LitElement {
   }
 
   private isTargetAlive(): boolean {
-    const t = this.target as any;
-    if (!t || typeof t.isAlive !== "function") return false;
-    return !!t.isAlive();
+    if (!this.target) return false;
+    return typeof this.target.isAlive === "function" && !!this.target.isAlive();
   }
 
   private isSenderAlive(): boolean {
-    const s = this.myPlayer as any;
-    if (!s || typeof s.isAlive !== "function") return false;
-    return !!s.isAlive();
+    if (!this.myPlayer) return false;
+    return (
+      typeof this.myPlayer.isAlive === "function" && !!this.myPlayer.isAlive()
+    );
   }
 
   private i18n = {
