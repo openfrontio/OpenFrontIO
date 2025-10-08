@@ -2,12 +2,12 @@ import { LitElement, TemplateResult, html } from "lit";
 import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
-import portIcon from "../../../../resources/images/AnchorIcon.png";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
+import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
+import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
@@ -268,13 +268,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     let playerType = "";
     switch (player.type()) {
       case PlayerType.Bot:
-        playerType = translateText("player_info_overlay.bot");
+        playerType = translateText("player_type.bot");
         break;
       case PlayerType.FakeHuman:
-        playerType = translateText("player_info_overlay.nation");
+        playerType = translateText("player_type.nation");
         break;
       case PlayerType.Human:
-        playerType = translateText("player_info_overlay.player");
+        playerType = translateText("player_type.player");
         break;
     }
 
@@ -366,15 +366,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 )}
                 ${this.displayUnitCount(
                   player,
-                  UnitType.Port,
-                  portIcon,
-                  "player_info_overlay.ports",
-                )}
-                ${this.displayUnitCount(
-                  player,
                   UnitType.Factory,
                   factoryIcon,
                   "player_info_overlay.factories",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Port,
+                  portIcon,
+                  "player_info_overlay.ports",
                 )}
                 ${this.displayUnitCount(
                   player,

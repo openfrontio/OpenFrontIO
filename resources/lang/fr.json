@@ -130,9 +130,8 @@
     "disable_nations": "Désactiver les nations",
     "instant_build": "Construction instantanée",
     "infinite_gold": "Or infini",
-    "donate_gold": "Donner de l'or",
     "infinite_troops": "Troupes infinies",
-    "donate_troops": "Donner des troupes",
+    "compact_map": "Mini-carte",
     "disable_nukes": "Désactiver les armes nucléaires",
     "enables_title": "Activer les paramètres",
     "start": "Commencer la partie"
@@ -177,8 +176,10 @@
     "halkidiki": "Chalcidique",
     "straitofgibraltar": "Détroit de Gibraltar",
     "italia": "Italie",
+    "japan": "Japon",
     "yenisei": "Ienisseï",
-    "pluto": "Pluton"
+    "pluto": "Pluton",
+    "montreal": "Montréal"
   },
   "map_categories": {
     "continental": "Continental",
@@ -196,8 +197,9 @@
     "join_lobby": "Rejoindre le salon",
     "checking": "Vérification du salon...",
     "not_found": "Salon introuvable. Veuillez vérifier l'ID et réessayer.",
-    "error": "Une erreur est survenue. Veuillez réessayer.",
-    "joined_waiting": "Rejoint avec succès ! En attente du début de la partie..."
+    "error": "Une erreur s'est produite. Veuillez réessayer ou contacter le support.",
+    "joined_waiting": "Rejoint avec succès ! En attente du début de la partie...",
+    "version_mismatch": "Cette partie a été créée avec une version différente. Impossible de rejoindre."
   },
   "public_lobby": {
     "join": "Rejoindre la prochaine partie",
@@ -227,6 +229,7 @@
     "donate_gold": "Donner de l'or",
     "infinite_troops": "Troupes infinies",
     "donate_troops": "Donner des troupes",
+    "compact_map": "Mini-carte",
     "enables_title": "Activer les paramètres",
     "player": "Joueur",
     "players": "Joueurs",
@@ -314,6 +317,8 @@
     "territory_patterns_desc": "Choisissez si vous voulez afficher les motifs de territoire en jeu",
     "performance_overlay_label": "Surcouche de performances",
     "performance_overlay_desc": "Activer/désactiver la surcouche de performances. Lorsqu'elle est activée, la surcouche de performances sera affichée. Appuyez sur Maj+D pendant le jeu pour l\"activer.",
+    "performance_overlay_enabled": "Affichage des performances activé",
+    "performance_overlay_disabled": "Affichage des performances désactivé",
     "easter_writing_speed_label": "Multiplicateur de vitesse d'écriture",
     "easter_writing_speed_desc": "Ajuster la vitesse à laquelle vous prétendez coder (x1–x100)",
     "easter_bug_count_label": "Nombre de bugs",
@@ -494,7 +499,8 @@
     "nation": "Nation",
     "player": "Joueur",
     "team": "Équipe",
-    "d_troops": "Troupes en défense",
+    "alliance_timeout": "L'alliance se termine dans",
+    "troops": "Troupes",
     "a_troops": "Troupes en attaque",
     "gold": "Or",
     "ports": "Ports",
@@ -585,7 +591,7 @@
     "choose_spawn": "Choisissez un emplacement de départ"
   },
   "territory_patterns": {
-    "title": "Sélectionnez un motif de territoire",
+    "title": "Sélectionner un motif de territoire",
     "purchase": "Acheter",
     "blocked": {
       "login": "Vous devez être connecté pour accéder à ce motif.",
@@ -644,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "Supprimer une unité",
     "delete_unit_description": "Cliquez pour supprimer l'unité la plus proche"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Avatar"
+  },
+  "player_stats_table": {
+    "building_stats": "Statistiques de construction",
+    "ship_arrivals": "Arrivées de navire",
+    "nuke_stats": "Statistiques de bombes",
+    "player_metrics": "Statistiques du joueur",
+    "building": "Batîment",
+    "ship_type": "Type de navire",
+    "weapon": "Arme",
+    "built": "Construit",
+    "destroyed": "Détruit",
+    "captured": "Capturé",
+    "lost": "Perdu",
+    "hits": "Coups",
+    "launched": "Lancés",
+    "landed": "Atterris",
+    "sent": "Envoyés",
+    "arrived": "Arrivés",
+    "attack": "Attaque",
+    "received": "Reçu",
+    "cancelled": "Annulé",
+    "count": "Compte",
+    "gold": "Or",
+    "workers": "Ouvriers",
+    "war": "Guerre",
+    "trade": "Commercer",
+    "steal": "Voler",
+    "unit": {
+      "city": "Ville",
+      "port": "Port",
+      "defp": "Poste de défense",
+      "saml": "Lanceur de SAM",
+      "silo": "Silo à missiles",
+      "wshp": "Navire de guerre",
+      "fact": "Usine",
+      "trade": "Bateau de commerce",
+      "trans": "Bateau de transport",
+      "abomb": "Bombe atomique",
+      "hbomb": "Bombe à hydrogène",
+      "mirv": "MIRV",
+      "mirvw": "Ogive de MIRV"
+    }
+  },
+  "game_list": {
+    "recent_games": "Parties récentes",
+    "game_id": "ID de la partie",
+    "mode": "Mode",
+    "mode_ffa": "Chacun pour soi",
+    "mode_team": "Équipe",
+    "view": "Vue",
+    "details": "Détails",
+    "started": "Débuté",
+    "map": "Carte",
+    "difficulty": "Difficulté",
+    "type": "Type"
   }
 }

@@ -130,9 +130,8 @@
     "disable_nations": "Malŝalti naciojn",
     "instant_build": "Tujkonstruaĵo",
     "infinite_gold": "Senfina oro",
-    "donate_gold": "Donaci oron",
     "infinite_troops": "Senfinaj trupoj",
-    "donate_troops": "Donaci trupojn",
+    "compact_map": "Karteto",
     "disable_nukes": "Malŝalti nukleajn armilojn",
     "enables_title": "Ebligi Agordojn",
     "start": "Komenci la ludon"
@@ -177,8 +176,10 @@
     "halkidiki": "Ĥalkidiko",
     "straitofgibraltar": "Ĝibraltara Markolo",
     "italia": "Italio",
+    "japan": "Japanio",
     "yenisei": "Jenisejo",
-    "pluto": "Plutono"
+    "pluto": "Plutono",
+    "montreal": "Montrealo"
   },
   "map_categories": {
     "continental": "Kontinenta",
@@ -196,8 +197,9 @@
     "join_lobby": "Aliĝi al la ludejo",
     "checking": "Kontrolado de la ludejo...",
     "not_found": "Ludejo ne trovita. Bonvolu kontroli la ID kaj reprovi.",
-    "error": "Eraro okazis. Bonvolu provi denove.",
-    "joined_waiting": "Sukcese aliĝis! Atendante la komencon de la ludo..."
+    "error": "Eraro okazis. Bonvolu reprovi aŭ kontaktu helpon.",
+    "joined_waiting": "Sukcese aliĝis! Atendante la komencon de la ludo...",
+    "version_mismatch": "Ĉi tiu ludo estis kreita kun malsama versio. Ne eblas aliĝi."
   },
   "public_lobby": {
     "join": "Kunigi la baldaŭan ludon",
@@ -227,6 +229,7 @@
     "donate_gold": "Donacu oron",
     "infinite_troops": "Senfinaj trupoj",
     "donate_troops": "Donacu trupojn",
+    "compact_map": "Karteto",
     "enables_title": "Ebligi Agordojn",
     "player": "Ludanto",
     "players": "Ludantoj",
@@ -314,6 +317,8 @@
     "territory_patterns_desc": "Elektu ĉu montri teritoriajn ŝablonajn dezajnojn en la ludo",
     "performance_overlay_label": "Efikeco Supermetaĵo",
     "performance_overlay_desc": "Ŝalti la efikecon supermetaĵon. Kiam ebligita, la efikeco supermetaĵo estos montrata. Premu la Majuskligan klavon\n+ D dum la ludo por ŝalti.",
+    "performance_overlay_enabled": "Funkciada supermetaĵo ŝaltita",
+    "performance_overlay_disabled": "Funkciada supermetaĵo malŝaltita",
     "easter_writing_speed_label": "Rapidskriba multiganto",
     "easter_writing_speed_desc": "Alĝustigu kiom rapide vi ŝajnigas kodi (x1–x100)",
     "easter_bug_count_label": "Nombro da cimoj",
@@ -494,7 +499,8 @@
     "nation": "Nacio",
     "player": "Ludanto",
     "team": "Teamo",
-    "d_troops": "Defendante trupoj",
+    "alliance_timeout": "Alianco finiĝas en",
+    "troops": "Trupoj",
     "a_troops": "Atakante trupoj",
     "gold": "Oro",
     "ports": "Havenoj",
@@ -585,7 +591,7 @@
     "choose_spawn": "Elektu komencan lokon"
   },
   "territory_patterns": {
-    "title": "Elekti Teritoriajn Ŝablonojn",
+    "title": "Elekti Teritoria Ŝablono",
     "purchase": "Aĉeti",
     "blocked": {
       "login": "Vi devas esti ensalutinta por aliri ĉi tiun ŝablonon.",
@@ -644,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "Forigi trupunon",
     "delete_unit_description": "Alklaku por forigi la plej proksiman trupunon"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Profilbildo"
+  },
+  "player_stats_table": {
+    "building_stats": "Konstruaĵaj statistikoj",
+    "ship_arrivals": "Ŝipoj alvenoj",
+    "nuke_stats": "Bomboj statistikoj",
+    "player_metrics": "Ludanta statistikoj",
+    "building": "Konstruaĵo",
+    "ship_type": "Ŝipa tipo",
+    "weapon": "Armilo",
+    "built": "Konstruita",
+    "destroyed": "Detruita",
+    "captured": "Ekkaptita",
+    "lost": "Perdita",
+    "hits": "Frapoj",
+    "launched": "Lanĉita",
+    "landed": "Surterigita",
+    "sent": "Sendita",
+    "arrived": "Alveninta",
+    "attack": "Atako",
+    "received": "Ricevita",
+    "cancelled": "Nuligita",
+    "count": "Nombro",
+    "gold": "Oro",
+    "workers": "Laboristoj",
+    "war": "Milito",
+    "trade": "Komerci",
+    "steal": "Ŝteli",
+    "unit": {
+      "city": "Urbo",
+      "port": "Haveno",
+      "defp": "Defenda Posteno",
+      "saml": "SAM-lanĉilo",
+      "silo": "Misila Silo",
+      "wshp": "Militŝipo",
+      "fact": "Fabriko",
+      "trade": "Komerca ŝipo",
+      "trans": "Transporta ŝipo",
+      "abomb": "Atombombo",
+      "hbomb": "Hidrogenbombo",
+      "mirv": "MIRV",
+      "mirvw": "MIRV-kapo"
+    }
+  },
+  "game_list": {
+    "recent_games": "Lastaj ludoj",
+    "game_id": "Ludo ID",
+    "mode": "Reĝimo",
+    "mode_ffa": "Ĉiu por si",
+    "mode_team": "Teamo",
+    "view": "Vido",
+    "details": "Detaloj",
+    "started": "Komencita",
+    "map": "Karto",
+    "difficulty": "Malfacileco",
+    "type": "Tipo"
   }
 }

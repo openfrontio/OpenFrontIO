@@ -249,6 +249,7 @@
   },
   "game_starting_modal": {
     "title": "Game is Starting...",
+    "code_license": "Code licensed under AGPL-3.0",
     "desc": "Preparing for the lobby to start. Please wait."
   },
   "difficulty": {
@@ -380,7 +381,8 @@
     "terrain_disabled": "Terrain view disabled",
     "exit_game_label": "Exit Game",
     "exit_game_info": "Return to main menu",
-    "background_music_volume": "Background Music Volume"
+    "background_music_volume": "Background Music Volume",
+    "sound_effects_volume": "Sound Effects Volume"
   },
   "chat": {
     "title": "Quick Chat",
@@ -495,6 +497,7 @@
     "other_won": "{player} has won!",
     "exit": "Exit Game",
     "keep": "Keep Playing",
+    "spectate": "Spectate",
     "wishlist": "Wishlist on Steam!"
   },
   "leaderboard": {
@@ -565,6 +568,11 @@
     "upgrade": "Upgrade",
     "level": "Level"
   },
+  "player_type": {
+    "player": "Player",
+    "nation": "Nation",
+    "bot": "Bot"
+  },
   "relation": {
     "hostile": "Hostile",
     "distrustful": "Distrustful",
@@ -580,23 +588,37 @@
   "player_panel": {
     "gold": "Gold",
     "troops": "Troops",
-    "betrayals": "Number of betrayals",
+    "betrayals": "Betrayals",
     "traitor": "Traitor",
+    "stable": "Stable",
+    "trust": "Trust",
+    "trading": "Trading",
+    "active": "Active",
+    "stopped": "Stopped",
     "alliance_time_remaining": "Alliance Expires In",
     "embargo": "Stopped trading with you",
     "nuke": "Nukes sent by them to you",
-    "start_trade": "Start trading",
-    "stop_trade": "Stop trading",
+    "start_trade": "Start Trading",
+    "stop_trade": "Stop Trading",
     "yes": "Yes",
     "no": "No",
     "none": "None",
     "alliances": "Alliances",
-    "flag": "Flag"
+    "flag": "Flag",
+    "chat": "Chat",
+    "target": "Target",
+    "break": "Break",
+    "break_alliance": "Break Alliance",
+    "alliance": "Alliance",
+    "send_alliance": "Send Alliance",
+    "send_troops": "Send Troops",
+    "send_gold": "Send Gold",
+    "emotes": "Emojis"
   },
   "replay_panel": {
     "replay_speed": "Replay speed",
     "game_speed": "Game speed",
-    "fastest_game_speed": "max"
+    "fastest_game_speed": "Max"
   },
   "error_modal": {
     "crashed": "Game crashed!",
@@ -728,5 +750,17 @@
     "map": "Map",
     "difficulty": "Difficulty",
     "type": "Type"
+  },
+  "player_stats_tree": {
+    "public": "Public",
+    "private": "Private",
+    "singleplayer": "Single Player",
+    "mode": "Mode",
+    "stats_wins": "Wins",
+    "stats_losses": "Losses",
+    "stats_wlr": "Win:Loss Ratio",
+    "stats_games_played": "Games Played",
+    "mode_ffa": "Free-for-All",
+    "mode_team": "Team"
   }
 }
