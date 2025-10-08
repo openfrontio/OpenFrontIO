@@ -245,10 +245,7 @@ export class SinglePlayerModal extends LitElement {
                   .max=${400}
                   .step=${1}
                   ariaLabel=${translateText("single_modal.bots")}
-                  @input=${(e: Event) => {
-                    const target = e.target as any;
-                    this.bots = target.value;
-                  }}
+                  @input=${this.handleBotsChange}
                 ></fluent-slider>
               </label>
               <label

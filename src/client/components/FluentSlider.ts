@@ -1,5 +1,6 @@
 import { LitElement, css, html } from "lit";
 import { property, query, state } from "lit/decorators.js";
+import { translateText } from "../Utils";
 
 export class FluentSlider extends LitElement {
   static styles = css`
@@ -86,14 +87,6 @@ export class FluentSlider extends LitElement {
     this.updateComplete.then(() => this.numberInput?.focus());
   }
 
-  private translateText(key: string) {
-    const translations: Record<string, string> = {
-      "slider.label": "Bots:",
-      "slider.disabled": "Disabled",
-    };
-    return translations[key] || key;
-  }
-
   render() {
     return html`
       <div class="slider-container">
@@ -107,7 +100,7 @@ export class FluentSlider extends LitElement {
         />
 
         <div class="option-card-title">
-          <span>${this.translateText("slider.label")}</span>
+          <span>${translateText("slider.label")}</span>
 
           ${this.isEditing
             ? html`<input
@@ -132,7 +125,7 @@ export class FluentSlider extends LitElement {
                 }}
               >
                 ${this.value === 0
-                  ? this.translateText("slider.disabled")
+                  ? translateText("slider.disabled")
                   : this.value}
               </span>`}
         </div>
