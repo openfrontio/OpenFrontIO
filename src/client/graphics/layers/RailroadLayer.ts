@@ -96,15 +96,11 @@ export class RailroadLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     this.updateRailColors();
-    const scale = this.transformHandler.scale;
-    if (scale <= 1) {
+    if (this.transformHandler.scale <= 2) {
+      // When zoomed out, don't show the railroads
+      // to prevent map clutter.
       return;
     }
-    const rawAlpha = (scale - 1) / (2 - 1); // maps 1->0, 2->1
-    const alpha = Math.max(0, Math.min(1, rawAlpha));
-
-    context.save();
-    context.globalAlpha = alpha;
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -116,6 +112,10 @@ export class RailroadLayer implements Layer {
   }
 
   private handleRailroadRendering(railUpdate: RailroadUpdate) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const x = this.game.x(railRoad.tile);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const y = this.game.y(railRoad.tile);
     for (const railRoad of railUpdate.railTiles) {
       if (railUpdate.isActive) {
         this.paintRailroad(railRoad);
