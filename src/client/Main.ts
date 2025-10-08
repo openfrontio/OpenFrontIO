@@ -156,6 +156,7 @@ class Client {
     window.addEventListener("beforeunload", (e) => {
       if (this.gameStop && !this.gameStop()) {
         e.preventDefault();
+        e.returnValue = '';
         return "";
       }
       console.log("Browser is closing");
