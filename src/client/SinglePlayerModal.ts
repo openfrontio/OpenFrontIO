@@ -2,7 +2,7 @@ import type { PropertyValues } from "lit";
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import type { Ref } from "lit/directives/ref.js";
-import { createRef, ref } from "lit/directives/ref.js";
+import { createRef } from "lit/directives/ref.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
@@ -23,6 +23,7 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/FluentSlider";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
@@ -238,59 +239,18 @@ export class SinglePlayerModal extends LitElement {
             <div class="option-cards">
               <label for="bots-count" class="option-card">
                 <!-- Slider -->
-                <input
-                  type="range"
-                  id="bots-count"
-                  min="0"
-                  max="400"
-                  step="1"
-                  @input=${this.handleBotsChange}
-                  .value=${String(this.bots)}
-                />
-
-                <div
-                  class="option-card-title"
-                  style="display:flex; align-items:center; gap:8px; justify-content:center;"
-                >
-                  <span>${translateText("single_modal.bots")}</span>
-
-                  <!-- Conditional number input or clickable span -->
-                  ${this.isEditingBots
-                    ? html`<input
-                        type="number"
-                        min="0"
-                        max="400"
-                        aria-label=${translateText("single_modal.bots")}
-                        .value=${this.bots.toString()}
-                        @input=${this.handleBotsInputChange}
-                        @blur=${() => {
-                          this.isEditingBots = false;
-                        }}
-                        @keydown=${this.handleBotInputKeyDown}
-                        ${ref(this.botsInputRef)}
-                        style="width: 60px; background-color: #2d3748; color: white; border: 1px solid #4a5568; text-align: center; border-radius: 4px;"
-                      />`
-                    : html`<span
-                        role="button"
-                        tabindex="0"
-                        @keydown=${(e: KeyboardEvent) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            this.isEditingBots = true;
-                            e.preventDefault();
-                          }
-                        }}
-                        @click=${() => {
-                          this.isEditingBots = true;
-                        }}
-                        style="cursor: pointer; min-width: 60px; display: inline-block; text-align: center;"
-                      >
-                        ${this.bots === 0
-                          ? translateText("single_modal.bots_disabled")
-                          : this.bots}
-                      </span>`}
-                </div>
+                <fluent-slider
+                  .value=${this.bots}
+                  .min=${0}
+                  .max=${400}
+                  .step=${1}
+                  ariaLabel=${translateText("single_modal.bots")}
+                  @input=${(e: Event) => {
+                    const target = e.target as any;
+                    this.bots = target.value;
+                  }}
+                ></fluent-slider>
               </label>
-
               <label
                 for="singleplayer-modal-disable-npcs"
                 class="option-card ${this.disableNPCs ? "selected" : ""}"
