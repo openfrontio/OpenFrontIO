@@ -8,6 +8,7 @@ import {
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
+import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import {
@@ -96,24 +97,25 @@ export class AccountModal extends LitElement {
   private renderLoggedInDiscord() {
     return html`
       <div class="p-6">
-        <div class="mb-4">
-          <p class="text-white text-center mb-4">
+        <div class="mb-4 text-center">
+          <p class="text-white mb-4">
             Logged in with Discord as ${this.loggedInDiscord}
           </p>
+          ${this.logoutButton()}
         </div>
-        ${this.logoutButton()}
-
-        <discord-user-header
-          .data=${this.userMeResponse?.user?.discord ?? null}
-        ></discord-user-header>
-        <player-stats-tree-view
-          .statsTree=${this.statsTree}
-        ></player-stats-tree-view>
-        <hr class="w-2/3 border-gray-600 my-2" />
-        <game-list
-          .games=${this.recentGames}
-          .onViewGame=${(id: string) => this.viewGame(id)}
-        ></game-list>
+        <div class="flex flex-col items-center mt-2 mb-4">
+          <discord-user-header
+            .data=${this.userMeResponse?.user?.discord ?? null}
+          ></discord-user-header>
+          <player-stats-tree-view
+            .statsTree=${this.statsTree}
+          ></player-stats-tree-view>
+          <hr class="w-2/3 border-gray-600 my-2" />
+          <game-list
+            .games=${this.recentGames}
+            .onViewGame=${(id: string) => this.viewGame(id)}
+          ></game-list>
+        </div>
       </div>
     `;
   }
