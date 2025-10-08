@@ -108,15 +108,14 @@ export class RailroadLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
-    context.restore();
   }
 
   private handleRailroadRendering(railUpdate: RailroadUpdate) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const x = this.game.x(railRoad.tile);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const y = this.game.y(railRoad.tile);
     for (const railRoad of railUpdate.railTiles) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const x = this.game.x(railRoad.tile);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const y = this.game.y(railRoad.tile);
       if (railUpdate.isActive) {
         this.paintRailroad(railRoad);
       } else {

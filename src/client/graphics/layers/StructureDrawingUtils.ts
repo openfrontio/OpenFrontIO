@@ -18,10 +18,9 @@ export const STRUCTURE_SHAPES: Partial<Record<UnitType, ShapeType>> = {
   [UnitType.DefensePost]: "octagon",
   [UnitType.SAMLauncher]: "square",
   [UnitType.MissileSilo]: "triangle",
-  [UnitType.Warship]: "cross",
   [UnitType.AtomBomb]: "cross",
   [UnitType.HydrogenBomb]: "cross",
-  [UnitType.MIRV]: "cross",
+  [UnitType.Warship]: "cross",
 };
 export const LEVEL_SCALE_FACTOR = 3;
 export const ICON_SCALE_FACTOR_ZOOMED_IN = 3.5;
@@ -233,7 +232,7 @@ export class SpriteFactory {
       iconSize /= 2.5;
     }
     structureCanvas.width = Math.ceil(iconSize);
-    structureCanvas.height = Math.ceil(iconSize + 2);
+    structureCanvas.height = Math.ceil(iconSize);
     const context = structureCanvas.getContext("2d")!;
 
     const tc = owner.territoryColor();
@@ -251,44 +250,26 @@ export class SpriteFactory {
         .lighten(0.13)
         .alpha(renderIcon ? 0.65 : 1)
         .toRgbString();
-      const darken = darker.isLight() ? 0.18 : 0.15;
+      const darken = darker.isLight() ? 0.17 : 0.15;
       borderColor = darker.darken(darken).toRgbString();
     }
-    const strokeStyle = borderColor;
+    context.strokeStyle = borderColor;
     context.lineWidth = 1;
     const halfIconSize = iconSize / 2;
 
     switch (shape) {
       case "triangle":
-        if (!isConstruction) {
-          context.beginPath();
-          context.moveTo(0, iconSize); // Bottom left
-          context.lineTo(iconSize - 1, iconSize); // Bottom right
-          context.closePath();
-          context.strokeStyle = darker.darken(0.5).toRgbString();
-          context.stroke();
-        }
         context.beginPath();
         context.moveTo(halfIconSize, 1); // Top
         context.lineTo(iconSize - 1, iconSize - 1); // Bottom right
         context.lineTo(0, iconSize - 1); // Bottom left
         context.closePath();
         context.fill();
-        context.strokeStyle = strokeStyle;
         context.stroke();
         break;
 
       case "square":
-        if (!isConstruction) {
-          context.beginPath();
-          context.moveTo(1, iconSize - 1);
-          context.lineTo(iconSize - 1, iconSize - 1);
-          context.closePath();
-          context.strokeStyle = darker.darken(0.5).toRgbString();
-          context.stroke();
-        }
         context.fillRect(1, 1, iconSize - 2, iconSize - 2);
-        context.strokeStyle = strokeStyle;
         context.strokeRect(1, 1, iconSize - 3, iconSize - 3);
         break;
 
@@ -297,23 +278,8 @@ export class SpriteFactory {
           const cx = halfIconSize;
           const cy = halfIconSize;
           const r = halfIconSize - 1;
-
           const step = (Math.PI * 2) / 8;
-          if (!isConstruction) {
-            context.beginPath();
-            for (let i = 0; i < 5; i++) {
-              const angle = step * i - Math.PI / 8;
-              const x = cx + r * Math.cos(angle);
-              const y = cy + r * Math.sin(angle);
-              if (i === 0) {
-                context.moveTo(x, y + 1);
-              } else {
-                context.lineTo(x, y + 1);
-              }
-            }
-            context.strokeStyle = darker.darken(0.5).toRgbString();
-            context.stroke();
-          }
+
           context.beginPath();
           for (let i = 0; i < 8; i++) {
             const angle = step * i - Math.PI / 8; // slight rotation for flat top
@@ -327,7 +293,6 @@ export class SpriteFactory {
           }
           context.closePath();
           context.fill();
-          context.strokeStyle = strokeStyle;
           context.stroke();
         }
         break;
@@ -336,26 +301,8 @@ export class SpriteFactory {
           const cx = halfIconSize;
           const cy = halfIconSize;
           const r = halfIconSize - 1;
-
           const step = (Math.PI * 2) / 5;
-          if (!isConstruction) {
-            context.beginPath();
-            for (let i = 0; i < 4; i++) {
-              const angle = step * (i + 1) - Math.PI / 2;
-              const x = cx + r * Math.cos(angle);
-              const y = cy + r * Math.sin(angle);
-              if (i === 0) {
-                context.moveTo(x, y + 1);
-              } else {
-                context.lineTo(x, y + 1);
-              }
-            }
-            context.lineWidth = 2;
-            context.strokeStyle = darker.darken(0.5).toRgbString();
-            context.stroke();
-          }
 
-          context.lineWidth = 1;
           context.beginPath();
           for (let i = 0; i < 5; i++) {
             const angle = step * i - Math.PI / 2; // rotate to have flat base or point up
@@ -369,7 +316,6 @@ export class SpriteFactory {
           }
           context.closePath();
           context.fill();
-          context.strokeStyle = strokeStyle;
           context.stroke();
         }
         break;
@@ -406,16 +352,6 @@ export class SpriteFactory {
       }
 
       case "circle":
-        if (!isConstruction) {
-          // draw a darker arc slightly below the circle bottom to match curvature
-          const cx = halfIconSize;
-          const cy = halfIconSize + 1; // offset down
-          const r = halfIconSize - 1;
-          context.beginPath();
-          context.arc(cx, cy, r, 2 * Math.PI, Math.PI);
-          context.strokeStyle = darker.darken(0.5).toRgbString();
-          context.stroke();
-        }
         context.beginPath();
         context.arc(
           halfIconSize,
@@ -425,7 +361,6 @@ export class SpriteFactory {
           Math.PI * 2,
         );
         context.fill();
-        context.strokeStyle = strokeStyle;
         context.stroke();
         break;
 
