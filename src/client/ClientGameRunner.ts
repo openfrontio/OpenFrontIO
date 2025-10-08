@@ -78,7 +78,6 @@ export function joinLobby(
 
   const transport = new Transport(lobbyConfig, eventBus);
 
-  // Track the current game runner locally within this closure
   let currentGameRunner: ClientGameRunner | null = null;
 
   const onconnect = () => {
@@ -134,14 +133,13 @@ export function joinLobby(
   };
   transport.connect(onconnect, onmessage);
   return () => {
-    // Check if we should prevent closing (player is still alive in game)
     if (currentGameRunner && currentGameRunner.shouldPreventWindowClose()) {
-      return false; // Don't close, return false to indicate prevented
+      return false;
     }
     console.log("leaving game");
     currentGameRunner = null;
     transport.leaveGame();
-    return true; // Successfully closed, return true
+    return true;
   };
 }
 

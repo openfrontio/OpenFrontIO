@@ -80,7 +80,7 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private leaveLobby: (() => boolean) | null = null;
+  private gameStop: (() => boolean) | null = null;
   private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
@@ -154,13 +154,10 @@ class Client {
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
     window.addEventListener("beforeunload", (e) => {
-      // Try to leave the lobby/game
-      if (this.leaveLobby && !this.leaveLobby()) {
-        // If leaveLobby returns false, it means we should prevent unload
+      if (this.gameStop && !this.gameStop()) {
         e.preventDefault();
         return "";
       }
-      // Successfully closed or no game running
       console.log("Browser is closing");
     });
 
@@ -381,7 +378,7 @@ class Client {
     const onHashUpdate = () => {
       // Reset the UI to its initial state
       this.joinModal.close();
-      if (this.leaveLobby !== null) {
+      if (this.gameStop !== null) {
         this.handleLeaveLobby();
       }
 
@@ -502,13 +499,13 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
-    if (this.leaveLobby !== null) {
+    if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
-      this.leaveLobby();
+      this.gameStop();
     }
     const config = await getServerConfigFromClient();
 
-    this.leaveLobby = joinLobby(
+    this.gameStop = joinLobby(
       this.eventBus,
       {
         gameID: lobby.gameID,
@@ -594,12 +591,12 @@ class Client {
   }
 
   private async handleLeaveLobby(/* event: CustomEvent */) {
-    if (this.leaveLobby === null) {
+    if (this.gameStop === null) {
       return;
     }
     console.log("leaving lobby, cancelling game");
-    this.leaveLobby();
-    this.leaveLobby = null;
+    this.gameStop();
+    this.gameStop = null;
     this.publicLobby.leaveLobby();
   }
 
