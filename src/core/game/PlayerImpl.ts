@@ -1,4 +1,6 @@
 import { renderNumber, renderTroops } from "../../client/Utils";
+import { PathFindResultType } from "../pathfinding/AStar";
+import { MiniAStar } from "../pathfinding/MiniAStar";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
 import {
@@ -987,15 +989,55 @@ export class PlayerImpl implements Player {
     if (!this.mg.isOcean(tile)) {
       return false;
     }
-    const spawns = this.units(UnitType.Port).sort(
-      (a, b) =>
-        this.mg.manhattanDist(a.tile(), tile) -
-        this.mg.manhattanDist(b.tile(), tile),
-    );
-    if (spawns.length === 0) {
+    const ports = this.units(UnitType.Port);
+    if (ports.length === 0) {
       return false;
     }
-    return spawns[0].tile();
+
+    // If there's only one port, return it immediately
+    if (ports.length === 1) {
+      return ports[0].tile();
+    }
+
+    // Use pathfinding to find the port with the shortest water path
+    const portTiles = ports.map((p) => p.tile());
+    const aStar = new MiniAStar(
+      this.mg.map(),
+      this.mg.miniMap(),
+      portTiles,
+      tile,
+      1_000_000,
+      20,
+      true, // waterPath = true for ocean pathfinding
+    );
+
+    const result = aStar.compute();
+    if (result !== PathFindResultType.Completed) {
+      // Fallback to Manhattan distance if pathfinding fails
+      console.warn(
+        `warshipSpawn: pathfinding failed (${result}), using Manhattan distance fallback`,
+      );
+      const sortedByDistance = ports.sort(
+        (a, b) =>
+          this.mg.manhattanDist(a.tile(), tile) -
+          this.mg.manhattanDist(b.tile(), tile),
+      );
+      return sortedByDistance[0].tile();
+    }
+
+    const path = aStar.reconstructPath();
+    if (path.length === 0) {
+      // Fallback to Manhattan distance if path is empty
+      const sortedByDistance = ports.sort(
+        (a, b) =>
+          this.mg.manhattanDist(a.tile(), tile) -
+          this.mg.manhattanDist(b.tile(), tile),
+      );
+      return sortedByDistance[0].tile();
+    }
+
+    // The first tile in the path is the optimal port
+    return path[0];
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {
