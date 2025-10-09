@@ -194,6 +194,7 @@ export class FakeHumanExecution implements Execution {
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
 
+    let borderingEnemies: Player[] = [];
     if (enemyborder.length === 0) {
       if (this.random.chance(5)) {
         this.sendBoatRandomly();
@@ -212,35 +213,22 @@ export class FakeHumanExecution implements Execution {
         return;
       }
 
-      const enemies = borderPlayers
+      borderingEnemies = borderPlayers
         .filter((o) => o.isPlayer())
         .sort((a, b) => a.troops() - b.troops());
-      console.log("enemies of " + this.player.name() + " are " + enemies);
 
       // 5% chance to send a random alliance request
       if (this.random.chance(20)) {
-        const toAlly = this.random.randElement(enemies);
+        const toAlly = this.random.randElement(borderingEnemies);
         if (this.player.canSendAllianceRequest(toAlly)) {
           this.player.createAllianceRequest(toAlly);
-          return;
         }
-      }
-
-      // 50-50 attack weakest player vs random player
-      const toAttack = this.random.chance(2)
-        ? enemies[0]
-        : this.random.randElement(enemies);
-
-      if (this.shouldAttack(toAttack)) {
-        this.behavior.sendAttack(toAttack);
-        return;
       }
     }
 
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
-    const enemy = this.behavior.selectEnemy(enemies);
-    console.log("enemy of " + this.player.name() + " is " + enemy?.name());
+    const enemy = this.behavior.selectEnemy(borderingEnemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
     this.maybeSendNuke(enemy);
@@ -636,7 +624,7 @@ export class FakeHumanExecution implements Execution {
       if (owner === this.player) {
         continue;
       }
-      // Don't randomly attack players that are more than twice as large as us
+      // Don't spam boats into players that are more than twice as large as us
       if (owner.isPlayer() && owner.troops() > this.player.troops() * 2) {
         continue;
       }
