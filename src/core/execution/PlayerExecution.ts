@@ -2,7 +2,7 @@ import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
 import { GameMap, TileRef } from "../game/GameMap";
-import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
+import { calculateBoundingBox, inscribed, simpleHash } from "../Util";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -222,14 +222,12 @@ export class PlayerExecution implements Execution {
     }
 
     // Filter out friendly and non-player candidates
-    const neighborsIDs = new Set<number>();
     const neighbors = new Set<Player>();
     for (const id of candidatesIDs) {
       const neighbor = this.mg.playerBySmallID(id);
       if (!neighbor.isPlayer() || neighbor.isFriendly(this.player)) {
         continue;
       }
-      neighborsIDs.add(id);
       neighbors.add(neighbor);
     }
 
@@ -251,17 +249,10 @@ export class PlayerExecution implements Execution {
         }
       }
     }
-    if (largestNeighborAttack !== null) {
-      return largestNeighborAttack;
-    }
 
-    // Fall back to getting mode if no attacks
-    const mode = getMode(neighborsIDs);
-    const capturing = this.mg.playerBySmallID(mode);
-    if (!capturing.isPlayer()) {
-      return null;
-    }
-    return capturing;
+    // Return the largest neighbor attack
+    // If there is no largest neighbor attack, this will return null
+    return largestNeighborAttack;
   }
 
   private calculateClusters(): Set<TileRef>[] {
