@@ -32,11 +32,14 @@ export class PlayerExecution implements Execution {
       if (u.info().territoryBound) {
         if (tileOwner?.isPlayer()) {
           if (tileOwner !== this.player) {
+            const captor = this.mg!.player(tileOwner.id());
             if (u.type() === UnitType.DefensePost) {
-              this.mg!.player(tileOwner.id()).captureUnit(u);
-              u.decreaseLevel(this.mg!.player(tileOwner.id()));
+              u.decreaseLevel(captor);
+              if (u.isActive()) {
+                captor.captureUnit(u);
+              }
             } else {
-              this.mg!.player(tileOwner.id()).captureUnit(u);
+              captor.captureUnit(u);
             }
           }
         } else {
