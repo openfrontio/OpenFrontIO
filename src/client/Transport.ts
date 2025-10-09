@@ -180,6 +180,8 @@ export class Transport {
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
+
+  private connectionUrl: string | undefined = undefined;
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
@@ -272,7 +274,9 @@ export class Transport {
   public connect(
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
+    connectionUrl: string | undefined = undefined,
   ) {
+    this.connectionUrl = connectionUrl;
     if (this.isLocal) {
       this.connectLocal(onconnect, onmessage);
     } else {
@@ -305,7 +309,9 @@ export class Transport {
     const workerPath = this.lobbyConfig.serverConfig.workerPath(
       this.lobbyConfig.gameID,
     );
-    this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
+    const connectionUrl =
+      this.connectionUrl ?? `${wsProtocol}//${wsHost}/${workerPath}`;
+    this.socket = new WebSocket(connectionUrl);
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {

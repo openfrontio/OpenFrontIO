@@ -39,6 +39,13 @@ const log = logger.child({ comp: `w_${workerId}` });
 export async function startWorker() {
   log.info(`Worker starting...`);
 
+  setTimeout(
+    () => {
+      pollLobby(gm);
+    },
+    1000 + Math.random() * 2000,
+  );
+
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
@@ -523,4 +530,41 @@ export async function startWorker() {
   process.on("unhandledRejection", (reason, promise) => {
     log.error(`unhandled rejection at:`, promise, "reason:", reason);
   });
+}
+
+async function pollLobby(gm: GameManager) {
+  // TODO: AUTH!!!
+  const url = `${config.jwtIssuer() + "/lobby/checkin"}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: workerId,
+        ccu: gm.activeClients(),
+      }),
+    });
+
+    if (!response.ok) {
+      log.warn(
+        `Failed to poll lobby: ${response.status} ${response.statusText}`,
+      );
+      return;
+    }
+
+    const data = await response.json();
+    log.info(`Lobby poll successful:`, data);
+  } catch (error) {
+    log.error(`Error polling lobby:`, error);
+  } finally {
+    setTimeout(
+      () => {
+        pollLobby(gm);
+      },
+      5000 + Math.random() * 1000,
+    );
+  }
 }

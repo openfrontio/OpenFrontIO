@@ -21,6 +21,7 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import "./Matchmaking";
 import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
