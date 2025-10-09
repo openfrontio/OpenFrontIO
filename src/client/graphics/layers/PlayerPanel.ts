@@ -721,10 +721,8 @@ export class PlayerPanel extends LitElement implements Layer {
       return html``;
     }
     const other = owner as PlayerView;
-    const myGoldRaw =
-      "gold" in my && typeof my.gold === "function" ? my.gold() : 0n;
-    const myGoldNum = Number(myGoldRaw);
-    const myTroopsNum = Number(my?.troops?.() ?? 0);
+    const myGoldNum = Number(my.gold());
+    const myTroopsNum = Number(my.troops());
 
     return html`
       <style>

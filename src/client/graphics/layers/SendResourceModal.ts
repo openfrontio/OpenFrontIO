@@ -96,19 +96,13 @@ export class SendResourceModal extends LitElement {
     if (!myPlayer || !target || amount <= 0) return;
 
     if (this.mode === "troops") {
-      const myTroops = Number(this.myPlayer?.troops?.() ?? 0);
+      const myTroops = Number(myPlayer?.troops?.() ?? 0);
       if (amount > myTroops) return;
-      this.eventBus.emit(new SendDonateTroopsIntentEvent(this.target!, amount));
+      this.eventBus.emit(new SendDonateTroopsIntentEvent(target, amount));
     } else {
-      const rawGold =
-        "gold" in this.myPlayer! && typeof this.myPlayer!.gold === "function"
-          ? this.myPlayer!.gold()
-          : 0;
-      const myGold = Number(rawGold);
+      const myGold = Number(myPlayer.gold());
       if (amount > myGold) return;
-      this.eventBus.emit(
-        new SendDonateGoldIntentEvent(this.target!, BigInt(amount)),
-      );
+      this.eventBus.emit(new SendDonateGoldIntentEvent(target, BigInt(amount)));
     }
 
     this.dispatchEvent(
@@ -193,15 +187,11 @@ export class SendResourceModal extends LitElement {
   }
 
   private isTargetAlive(): boolean {
-    if (!this.target) return false;
-    return typeof this.target.isAlive === "function" && !!this.target.isAlive();
+    return this.target?.isAlive() ?? false;
   }
 
   private isSenderAlive(): boolean {
-    if (!this.myPlayer) return false;
-    return (
-      typeof this.myPlayer.isAlive === "function" && !!this.myPlayer.isAlive()
-    );
+    return this.myPlayer?.isAlive() ?? false;
   }
 
   private i18n = {
