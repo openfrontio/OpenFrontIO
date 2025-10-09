@@ -18,7 +18,7 @@ export class DevServerConfig extends DefaultServerConfig {
   }
 
   gameCreationRate(): number {
-    return 5 * 1000;
+    return 5 * 10000;
   }
 
   samWarheadHittingChance(): number {

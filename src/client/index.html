@@ -84,12 +84,11 @@
       document.documentElement.className = "preload";
     </script>
 
-    <!-- Playwire ads -->
-    <script>
-      window.ramp = window.ramp || {};
-      window.ramp.que = window.ramp.que || [];
-      window.ramp.passiveMode = true;
-    </script>
+    <!-- Publift/Fuse ads -->
+    <script
+      async
+      src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
+    ></script>
 
     <!-- Analytics -->
     <script
@@ -125,6 +124,9 @@
   <body
     class="h-full select-none font-sans min-h-screen bg-opacity-0 bg-cover bg-center bg-fixed transition-opacity duration-300 ease-in-out flex flex-col"
   >
+    <!-- GAM 71161633/OPNFRT_openfront/sidebar_vrec -->
+    <div data-fuse="sidebar_vrec"></div>
+
     <header class="l-header">
       <div class="l-header__content">
         <svg
@@ -190,7 +192,7 @@
     </header>
     <div class="bg-image"></div>
 
-    <gutter-ad-modal></gutter-ad-modal>
+    <gutter-ads></gutter-ads>
 
     <!-- Main container with responsive padding -->
     <main class="flex justify-center flex-grow">
@@ -431,9 +433,6 @@
         });
       });
     </script>
-
-    <!-- Playwire ads -->
-    <script async src="//cdn.intergient.com/1025558/75940/ramp.js"></script>
 
     <!-- Analytics -->
     <script
