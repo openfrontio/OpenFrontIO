@@ -1036,8 +1036,21 @@ export class PlayerImpl implements Player {
       return sortedByDistance[0].tile();
     }
 
-    // The first tile in the path is the optimal port
-    return path[0];
+    // Scan the path for the first tile that matches any port tile
+    for (const pTile of path) {
+      for (const port of ports) {
+        if (pTile === port.tile()) {
+          return port.tile();
+        }
+      }
+    }
+    // If no port tile found in the path, fallback to Manhattan distance
+    const sortedByDistance = ports.sort(
+      (a, b) =>
+        this.mg.manhattanDist(a.tile(), tile) -
+        this.mg.manhattanDist(b.tile(), tile),
+    );
+    return sortedByDistance[0].tile();
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {
