@@ -63,6 +63,7 @@ const numPlayersConfig = {
   [GameMapType.Halkidiki]: [100, 50, 40],
   [GameMapType.Iceland]: [50, 40, 30],
   [GameMapType.Italia]: [50, 30, 20],
+  [GameMapType.Japan]: [20, 15, 10],
   [GameMapType.Mars]: [70, 40, 30],
   [GameMapType.Mena]: [70, 50, 40],
   [GameMapType.Montreal]: [60, 40, 30],
@@ -668,6 +669,10 @@ export class DefaultConfig implements Config {
     }
 
     if (attacker.isPlayer() && defender.isPlayer()) {
+      if (defender.isDisconnected() && attacker.isOnSameTeam(defender)) {
+        // No troop loss if defender is disconnected.
+        mag = 0;
+      }
       if (
         attacker.type() === PlayerType.Human &&
         defender.type() === PlayerType.Bot

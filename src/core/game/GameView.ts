@@ -264,11 +264,11 @@ export class PlayerView {
       : this._defendedBorderColors.dark;
   }
 
-  async actions(tile: TileRef): Promise<PlayerActions> {
+  async actions(tile?: TileRef): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
-      this.game.x(tile),
-      this.game.y(tile),
+      tile && this.game.x(tile),
+      tile && this.game.y(tile),
     );
   }
 
@@ -403,6 +403,9 @@ export class PlayerView {
 
   isTraitor(): boolean {
     return this.data.isTraitor;
+  }
+  getTraitorRemainingTicks(): number {
+    return Math.max(0, this.data.traitorRemainingTicks ?? 0);
   }
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;

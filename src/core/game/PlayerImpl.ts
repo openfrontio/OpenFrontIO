@@ -141,6 +141,7 @@ export class PlayerImpl implements Player {
       allies: this.alliances().map((a) => a.other(this).smallID()),
       embargoes: new Set([...this.embargoes.keys()].map((p) => p.toString())),
       isTraitor: this.isTraitor(),
+      traitorRemainingTicks: this.getTraitorRemainingTicks(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
       outgoingAttacks: this._outgoingAttacks.map((a) => {
@@ -418,11 +419,15 @@ export class PlayerImpl implements Player {
   }
 
   isTraitor(): boolean {
-    return (
-      this.markedTraitorTick >= 0 &&
-      this.mg.ticks() - this.markedTraitorTick <
-        this.mg.config().traitorDuration()
-    );
+    return this.getTraitorRemainingTicks() > 0;
+  }
+
+  getTraitorRemainingTicks(): number {
+    if (this.markedTraitorTick < 0) return 0;
+    const elapsed = this.mg.ticks() - this.markedTraitorTick;
+    const duration = this.mg.config().traitorDuration();
+    const remaining = duration - elapsed;
+    return remaining > 0 ? remaining : 0;
   }
 
   markTraitor(): void {
@@ -741,6 +746,9 @@ export class PlayerImpl implements Player {
   }
 
   isFriendly(other: Player): boolean {
+    if (other.isDisconnected()) {
+      return false;
+    }
     return this.isOnSameTeam(other) || this.isAlliedWith(other);
   }
 
@@ -862,21 +870,22 @@ export class PlayerImpl implements Player {
     this.recordUnitConstructed(unit.type());
   }
 
-  public buildableUnits(tile: TileRef): BuildableUnit[] {
-    const validTiles = this.validStructureSpawnTiles(tile);
+  public buildableUnits(tile: TileRef | null): BuildableUnit[] {
+    const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
     return Object.values(UnitType).map((u) => {
       let canUpgrade: number | false = false;
       if (!this.mg.inSpawnPhase()) {
-        const existingUnit = this.findUnitToUpgrade(u, tile);
+        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }
       }
       return {
         type: u,
-        canBuild: this.mg.inSpawnPhase()
-          ? false
-          : this.canBuild(u, tile, validTiles),
+        canBuild:
+          this.mg.inSpawnPhase() || tile === null
+            ? false
+            : this.canBuild(u, tile, validTiles),
         canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;

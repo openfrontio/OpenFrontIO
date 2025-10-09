@@ -9,6 +9,7 @@ import {
   RailType,
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { getBridgeRects, getRailroadRects } from "./RailroadSprites";
 
@@ -27,7 +28,10 @@ export class RailroadLayer implements Layer {
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
 
-  constructor(private game: GameView) {
+  constructor(
+    private game: GameView,
+    private transformHandler: TransformHandler,
+  ) {
     this.theme = game.config().theme();
   }
 
@@ -84,6 +88,7 @@ export class RailroadLayer implements Layer {
     this.canvas.width = this.game.width() * 2;
     this.canvas.height = this.game.height() * 2;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const [_, rail] of this.existingRailroads) {
       this.paintRail(rail.tile);
     }
@@ -91,6 +96,11 @@ export class RailroadLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     this.updateRailColors();
+    if (this.transformHandler.scale <= 2) {
+      // When zoomed out, don't show the railroads
+      // to prevent map clutter.
+      return;
+    }
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -102,7 +112,9 @@ export class RailroadLayer implements Layer {
 
   private handleRailroadRendering(railUpdate: RailroadUpdate) {
     for (const railRoad of railUpdate.railTiles) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const x = this.game.x(railRoad.tile);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const y = this.game.y(railRoad.tile);
       if (railUpdate.isActive) {
         this.paintRailroad(railRoad);

@@ -1,6 +1,5 @@
 import {
   Cell,
-  Difficulty,
   Execution,
   Game,
   Gold,
@@ -14,17 +13,18 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { euclDistFN, manhattanDistFN, TileRef } from "../game/GameMap";
+import { TileRef, euclDistFN, manhattanDistFN } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
-import { calculateBoundingBox, flattenedEmojiTable, simpleHash } from "../Util";
+import { calculateBoundingBox, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { closestTwoTiles } from "./Util";
-import { BotBehavior } from "./utils/BotBehavior";
+import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private active = true;
@@ -39,10 +39,9 @@ export class FakeHumanExecution implements Execution {
   private reserveRatio: number;
   private expandRatio: number;
 
-  private lastEmojiSent = new Map<Player, Tick>();
-  private lastNukeSent: [Tick, TileRef][] = [];
-  private embargoMalusApplied = new Set<PlayerID>();
-  private heckleEmoji: number[];
+  private readonly lastEmojiSent = new Map<Player, Tick>();
+  private readonly lastNukeSent: [Tick, TileRef][] = [];
+  private readonly embargoMalusApplied = new Set<PlayerID>();
 
   constructor(
     gameID: GameID,
@@ -53,10 +52,9 @@ export class FakeHumanExecution implements Execution {
     );
     this.attackRate = this.random.nextInt(40, 80);
     this.attackTick = this.random.nextInt(0, this.attackRate);
-    this.triggerRatio = this.random.nextInt(60, 90) / 100;
-    this.reserveRatio = this.random.nextInt(30, 60) / 100;
-    this.expandRatio = this.random.nextInt(15, 25) / 100;
-    this.heckleEmoji = ["🤡", "😡"].map((e) => flattenedEmojiTable.indexOf(e));
+    this.triggerRatio = this.random.nextInt(50, 60) / 100;
+    this.reserveRatio = this.random.nextInt(30, 40) / 100;
+    this.expandRatio = this.random.nextInt(10, 20) / 100;
   }
 
   init(mg: Game) {
@@ -182,7 +180,6 @@ export class FakeHumanExecution implements Execution {
 
     this.player.breakAlliance(alliance);
 
-    // Successfully broken an alliance
     return true;
   }
 
@@ -225,23 +222,12 @@ export class FakeHumanExecution implements Execution {
       const toAlly = this.random.randElement(enemies);
       if (this.player.canSendAllianceRequest(toAlly)) {
         this.player.createAllianceRequest(toAlly);
-        return;
       }
-    }
-
-    // 50-50 attack weakest player vs random player
-    const toAttack = this.random.chance(2)
-      ? enemies[0]
-      : this.random.randElement(enemies);
-
-    if (this.shouldAttack(toAttack)) {
-      this.behavior.sendAttack(toAttack);
-      return;
     }
 
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
-    const enemy = this.behavior.selectEnemy();
+    const enemy = this.behavior.selectEnemy(enemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
     this.maybeSendNuke(enemy);
@@ -250,50 +236,6 @@ export class FakeHumanExecution implements Execution {
     } else {
       this.maybeSendBoatAttack(enemy);
     }
-  }
-
-  private shouldAttack(other: Player): boolean {
-    if (this.player === null) throw new Error("not initialized");
-
-    if (this.player.isOnSameTeam(other)) {
-      return false;
-    }
-
-    // Consider betrayal for allies
-    if (this.player.isAlliedWith(other)) {
-      const canProceed = this.maybeConsiderBetrayal(other);
-      return canProceed;
-    }
-
-    if (this.player.isFriendly(other)) {
-      if (this.shouldDiscourageAttack(other)) {
-        return this.random.chance(200);
-      }
-      return this.random.chance(50);
-    } else {
-      if (this.shouldDiscourageAttack(other)) {
-        return this.random.chance(4);
-      }
-      return true;
-    }
-  }
-
-  private shouldDiscourageAttack(other: Player) {
-    if (other.isTraitor()) {
-      return false;
-    }
-    const difficulty = this.mg.config().gameConfig().difficulty;
-    if (
-      difficulty === Difficulty.Hard ||
-      difficulty === Difficulty.Impossible
-    ) {
-      return false;
-    }
-    if (other.type() !== PlayerType.Human) {
-      return false;
-    }
-    // Only discourage attacks on Humans who are not traitors on easy or medium difficulty.
-    return true;
   }
 
   private maybeSendEmoji(enemy: Player) {
@@ -306,7 +248,7 @@ export class FakeHumanExecution implements Execution {
       new EmojiExecution(
         this.player,
         enemy.id(),
-        this.random.randElement(this.heckleEmoji),
+        this.random.randElement(EMOJI_HECKLE),
       ),
     );
   }
@@ -458,6 +400,8 @@ export class FakeHumanExecution implements Execution {
       this.maybeSpawnStructure(UnitType.Port) ||
       this.maybeSpawnWarship() ||
       this.maybeSpawnStructure(UnitType.Factory) ||
+      this.maybeSpawnStructure(UnitType.DefensePost) ||
+      this.maybeSpawnStructure(UnitType.SAMLauncher) ||
       this.maybeSpawnStructure(UnitType.MissileSilo)
     );
   }
@@ -484,7 +428,8 @@ export class FakeHumanExecution implements Execution {
   }
 
   private structureSpawnTile(type: UnitType): TileRef | null {
-    if (this.player === null) throw new Error("not initialized");
+    if (this.mg === undefined) throw new Error("Not initialized");
+    if (this.player === null) throw new Error("Not initialized");
     const tiles =
       type === UnitType.Port
         ? Array.from(this.player.borderTiles()).filter((t) =>
@@ -492,7 +437,7 @@ export class FakeHumanExecution implements Execution {
           )
         : Array.from(this.player.tiles());
     if (tiles.length === 0) return null;
-    const valueFunction = this.structureSpawnTileValue(type);
+    const valueFunction = structureSpawnTileValue(this.mg, this.player, type);
     let bestTile: TileRef | null = null;
     let bestValue = 0;
     const sampledTiles = this.arraySampler(tiles);
@@ -519,69 +464,6 @@ export class FakeHumanExecution implements Execution {
         remaining.delete(t);
         yield t;
       }
-    }
-  }
-
-  private structureSpawnTileValue(type: UnitType): (tile: TileRef) => number {
-    if (this.player === null) throw new Error("not initialized");
-    const borderTiles = this.player.borderTiles();
-    const mg = this.mg;
-    const otherUnits = this.player.units(type);
-    // Prefer spacing structures out of atom bomb range
-    const borderSpacing = this.mg
-      .config()
-      .nukeMagnitudes(UnitType.AtomBomb).outer;
-    const structureSpacing = borderSpacing * 2;
-    switch (type) {
-      case UnitType.Port:
-        return (tile) => {
-          let w = 0;
-
-          // Prefer to be far away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(
-            otherUnits.map((u) => u.tile()),
-          );
-          otherTiles.delete(tile);
-          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-          if (closestOther !== null) {
-            const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, structureSpacing);
-          }
-
-          return w;
-        };
-      case UnitType.City:
-      case UnitType.Factory:
-      case UnitType.MissileSilo:
-        return (tile) => {
-          let w = 0;
-
-          // Prefer higher elevations
-          w += mg.magnitude(tile);
-
-          // Prefer to be away from the border
-          const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
-          if (closestBorder !== null) {
-            const d = mg.manhattanDist(closestBorder.x, tile);
-            w += Math.min(d, borderSpacing);
-          }
-
-          // Prefer to be away from other structures of the same type
-          const otherTiles: Set<TileRef> = new Set(
-            otherUnits.map((u) => u.tile()),
-          );
-          otherTiles.delete(tile);
-          const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-          if (closestOther !== null) {
-            const d = mg.manhattanDist(closestOther.x, tile);
-            w += Math.min(d, structureSpacing);
-          }
-
-          // TODO: Cities and factories should consider train range limits
-          return w;
-        };
-      default:
-        throw new Error(`Value function not implemented for ${type}`);
     }
   }
 

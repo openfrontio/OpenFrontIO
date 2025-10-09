@@ -114,27 +114,6 @@ export function inscribed(
   );
 }
 
-export function getMode(list: Set<number>): number {
-  // Count occurrences
-  const counts = new Map<number, number>();
-  for (const item of list) {
-    counts.set(item, (counts.get(item) ?? 0) + 1);
-  }
-
-  // Find the item with the highest count
-  let mode = 0;
-  let maxCount = 0;
-
-  for (const [item, count] of counts) {
-    if (count > maxCount) {
-      maxCount = count;
-      mode = item;
-    }
-  }
-
-  return mode;
-}
-
 export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
@@ -257,7 +236,7 @@ export function createRandomName(
   return randomName;
 }
 
-export const emojiTable: string[][] = [
+export const emojiTable = [
   ["😀", "😊", "🥰", "😇", "😎"],
   ["😞", "🥺", "😭", "😱", "😡"],
   ["😈", "🤡", "🖕", "🥱", "🤦‍♂️"],
@@ -269,9 +248,11 @@ export const emojiTable: string[][] = [
   ["⬅️", "🎯", "➡️", "🥈", "🥉"],
   ["↙️", "⬇️", "↘️", "❤️", "💔"],
   ["💰", "⚓", "⛵", "🏡", "🛡️"],
-];
+] as const;
 // 2d to 1d array
-export const flattenedEmojiTable: string[] = emojiTable.flat();
+export const flattenedEmojiTable = emojiTable.flat();
+
+export type Emoji = (typeof flattenedEmojiTable)[number];
 
 /**
  * JSON.stringify replacer function that converts bigint values to strings.
