@@ -8,7 +8,7 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
-import { flattenedEmojiTable } from "../../Util";
+import { calculateBoundingBoxCenter, flattenedEmojiTable } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
@@ -176,6 +176,60 @@ export class BotBehavior {
           mostHated.relation === Relation.Hostile
         ) {
           this.setNewEnemy(mostHated.player);
+        }
+      }
+
+      // Fallback: Select the nearest FakeHuman from all players
+      if (this.enemy === null) {
+        const allPlayers = this.game.players(); // Get all players in the game
+        const fakeHumans = allPlayers.filter(
+          (p) =>
+            // Don't randomly attack players that are more than twice as large as us
+            p.troops() <= this.player.troops() * 2 &&
+            !this.player.isFriendly(p) && // Exclude friendly FakeHumans
+            p !== this.player, // Exclude self
+        );
+
+        if (fakeHumans.length > 0) {
+          // Find the nearest FakeHuman
+          let nearestEnemy: Player | null = null;
+          let shortestDistance = Infinity;
+
+          const playerCenter = calculateBoundingBoxCenter(
+            this.game,
+            this.player.borderTiles(),
+          );
+
+          for (const fakeHuman of fakeHumans) {
+            const fakeHumanCenter = calculateBoundingBoxCenter(
+              this.game,
+              fakeHuman.borderTiles(),
+            );
+            const playerCenterTile = this.game.ref(
+              playerCenter.x,
+              playerCenter.y,
+            );
+            const fakeHumanCenterTile = this.game.ref(
+              fakeHumanCenter.x,
+              fakeHumanCenter.y,
+            );
+
+            const distance = this.game.manhattanDist(
+              playerCenterTile,
+              fakeHumanCenterTile,
+            );
+            if (distance < shortestDistance) {
+              shortestDistance = distance;
+              nearestEnemy = fakeHuman;
+            }
+          }
+
+          if (nearestEnemy !== null) {
+            this.setNewEnemy(nearestEnemy);
+            console.log(
+              `NEAREST ENEMY!!! ${this.player.name()} attacks ${nearestEnemy.name()} at distance ${shortestDistance}`,
+            );
+          }
         }
       }
     }
