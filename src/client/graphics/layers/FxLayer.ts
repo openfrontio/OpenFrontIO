@@ -122,7 +122,7 @@ export class FxLayer implements Layer {
         const my = this.game.myPlayer();
         if (!my) return;
         if (unit.owner() !== my) return;
-        if (!unit.isActive()) return;
+        if (!unit.isActive() || unit.retreating()) return;
         if (this.boatTargetFxByUnitId.has(unit.id())) return;
         const t = unit.targetTile();
         if (t !== undefined) {
