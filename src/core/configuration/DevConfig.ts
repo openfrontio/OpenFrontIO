@@ -65,6 +65,7 @@ export class DevConfig extends DefaultConfig {
 
   unitInfo(type: UnitType): UnitInfo {
     const info = super.unitInfo(type);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const oldCost = info.cost;
     // info.cost = (p: Player) => oldCost(p) / 1000000000;
     return info;

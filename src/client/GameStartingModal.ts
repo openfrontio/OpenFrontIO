@@ -84,13 +84,20 @@ export class GameStartingModal extends LitElement {
     .modal button:active {
       transform: translateY(1px);
     }
+
+    .copyright {
+      font-size: 32px;
+      margin-top: 20px;
+      opacity: 1;
+    }
   `;
 
   render() {
     return html`
       <div class="modal ${this.isVisible ? "visible" : ""}">
-        <h2>${translateText("game_starting_modal.title")}</h2>
-        <p>${translateText("game_starting_modal.desc")}</p>
+        <div class="copyright">© OpenFront</div>
+        <h5>${translateText("game_starting_modal.code_license")}</h5>
+        <p>${translateText("game_starting_modal.title")}</p>
       </div>
     `;
   }

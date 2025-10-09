@@ -285,14 +285,13 @@ async function schedulePublicGame(playlist: MapPlaylist) {
     if (!response.ok) {
       throw new Error(`Failed to schedule public game: ${response.statusText}`);
     }
-
-    const data = await response.json();
   } catch (error) {
     log.error(`Failed to schedule public game on worker ${workerPath}:`, error);
     throw error;
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
