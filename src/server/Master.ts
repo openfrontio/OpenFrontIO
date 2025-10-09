@@ -5,7 +5,7 @@ import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameInfo, ID } from "../core/Schemas";
+import { GameID, GameInfo, ID } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
@@ -61,6 +61,7 @@ app.use(
 let publicLobbiesJsonStr = "";
 
 const publicLobbyIDs: Set<string> = new Set();
+const lobbyFailCounts = new Map<GameID, number>();
 
 // Start the master process
 export async function startMaster() {
@@ -99,14 +100,27 @@ export async function startMaster() {
           });
         };
 
+        // Track when we last scheduled a lobby to prevent spam
+        let lastScheduleTime = 0;
+
         setInterval(
           () =>
             fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
+              // Maintain up to 3 public lobbies
+              const now = Date.now();
+              const cooldownTime = config.gameCreationRate() / 4;
+              const shouldSchedule =
+                lobbies < 3 && now - lastScheduleTime > cooldownTime;
+
+              if (shouldSchedule) {
+                log.info(
+                  `Scheduling new lobby (current: ${lobbies}/3, cooldown: ${cooldownTime}ms)`,
+                );
                 scheduleLobbies();
+                lastScheduleTime = now;
               }
             }),
-          100,
+          300,
         );
       }
     }
@@ -202,12 +216,25 @@ async function fetchLobbies(): Promise<number> {
     })
       .then((resp) => resp.json())
       .then((json) => {
+        // Reset fail count on successful fetch
+        lobbyFailCounts.delete(gameID);
         return json as GameInfo;
       })
       .catch((error) => {
-        log.error(`Error fetching game ${gameID}:`, error);
-        // Return null or a placeholder if fetch fails
-        publicLobbyIDs.delete(gameID);
+        // Track failed attempts
+        const failCount = (lobbyFailCounts.get(gameID) ?? 0) + 1;
+        lobbyFailCounts.set(gameID, failCount);
+
+        // Only remove lobby after 3 consecutive failures
+        if (failCount >= 3) {
+          log.warn(
+            `Removing lobby ${gameID} after ${failCount} failed attempts`,
+          );
+          publicLobbyIDs.delete(gameID);
+          lobbyFailCounts.delete(gameID);
+        } else {
+          log.debug(`Could not fetch game ${gameID} (attempt ${failCount}/3)`);
+        }
         return null;
       });
 
