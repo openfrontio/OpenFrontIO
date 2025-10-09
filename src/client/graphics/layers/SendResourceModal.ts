@@ -17,7 +17,7 @@ export class SendResourceModal extends LitElement {
   @property({ type: Boolean }) open: boolean = false;
   @property({ type: String }) mode: "troops" | "gold" = "troops";
 
-  @property({ type: Number }) total: number = 0; // sender available
+  @property({ type: Object }) total: number | bigint = 0;
   @property({ type: Object }) uiState: UIState | null = null; // to seed initial %
   @property({ attribute: false }) format: (n: number) => string = renderTroops;
 
@@ -84,7 +84,6 @@ export class SendResourceModal extends LitElement {
   }
 
   private confirm() {
-    // TODO Backend validation still not added!
     if (!this.isSenderAlive() || !this.isTargetAlive() || !this.eventBus) {
       return;
     }
@@ -96,7 +95,7 @@ export class SendResourceModal extends LitElement {
     if (!myPlayer || !target || amount <= 0) return;
 
     if (this.mode === "troops") {
-      const myTroops = Number(myPlayer?.troops?.() ?? 0);
+      const myTroops = Number(myPlayer.troops());
       if (amount > myTroops) return;
       this.eventBus.emit(new SendDonateTroopsIntentEvent(target, amount));
     } else {

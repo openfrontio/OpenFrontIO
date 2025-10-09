@@ -721,7 +721,7 @@ export class PlayerPanel extends LitElement implements Layer {
       return html``;
     }
     const other = owner as PlayerView;
-    const myGoldNum = Number(my.gold());
+    const myGoldNum = my.gold();
     const myTroopsNum = Number(my.troops());
 
     return html`
@@ -784,11 +784,10 @@ export class PlayerPanel extends LitElement implements Layer {
               <!-- Identity (flag, name, type, traitor, relation) -->
               <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
 
-              ${this.sendMode !== "none" && this.sendTarget
+              ${this.sendTarget
                 ? html`
                     <send-resource-modal
-                      .open=${(this.sendMode as "troops" | "gold" | "none") !==
-                      "none"}
+                      .open=${this.sendMode !== "none"}
                       .mode=${this.sendMode}
                       .total=${this.sendMode === "troops"
                         ? myTroopsNum
