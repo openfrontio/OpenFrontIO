@@ -558,7 +558,7 @@ export class FakeHumanExecution implements Execution {
     // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
     let dst = this.randomBoatTarget(src, 150, true);
     if (dst === null) {
-      // Normal: Also look for non-friendly players
+      // None found? Then look for players
       dst = this.randomBoatTarget(src, 150, false);
       if (dst === null) {
         return;
@@ -610,7 +610,7 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null) throw new Error("not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
-    for (let i = 0; i < (highInterestOnly ? 500 : 500); i++) {
+    for (let i = 0; i < 500; i++) {
       const randX = this.random.nextInt(x - dist, x + dist);
       const randY = this.random.nextInt(y - dist, y + dist);
       if (!this.mg.isValidCoord(randX, randY)) {
