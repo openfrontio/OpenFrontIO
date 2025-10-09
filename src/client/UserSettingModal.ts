@@ -495,10 +495,19 @@ export class UserSettingModal extends LitElement {
       ></setting-keybind>
 
       <setting-keybind
+        action="buildWarship"
+        label=${translateText("user_setting.build_warship")}
+        description=${translateText("user_setting.build_warship_desc")}
+        defaultKey="Digit7"
+        .value=${this.keybinds["buildWarship"]?.key ?? ""}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="buildAtomBomb"
         label=${translateText("user_setting.build_atom_bomb")}
         description=${translateText("user_setting.build_atom_bomb_desc")}
-        defaultKey="Digit7"
+        defaultKey="Digit8"
         .value=${this.keybinds["buildAtomBomb"]?.key ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
@@ -507,17 +516,17 @@ export class UserSettingModal extends LitElement {
         action="buildHydrogenBomb"
         label=${translateText("user_setting.build_hydrogen_bomb")}
         description=${translateText("user_setting.build_hydrogen_bomb_desc")}
-        defaultKey="Digit8"
+        defaultKey="Digit9"
         .value=${this.keybinds["buildHydrogenBomb"]?.key ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="buildWarship"
-        label=${translateText("user_setting.build_warship")}
-        description=${translateText("user_setting.build_warship_desc")}
-        defaultKey="Digit9"
-        .value=${this.keybinds["buildWarship"]?.key ?? ""}
+        action="buildMIRV"
+        label=${translateText("user_setting.build_MIRV")}
+        description=${translateText("user_setting.build_MIRV_desc")}
+        defaultKey="Digit0"
+        .value=${this.keybinds["buildMIRV"]?.key ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

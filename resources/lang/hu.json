@@ -130,9 +130,8 @@
     "disable_nations": "Letiltott nemzetek",
     "instant_build": "Instant építés",
     "infinite_gold": "Végtelen arany",
-    "donate_gold": "Arany adományomzása",
     "infinite_troops": "Végtelen katonák",
-    "donate_troops": "Katonák adományozása",
+    "compact_map": "Mini térkép",
     "disable_nukes": "Nukleáris fegyverek letiltása",
     "enables_title": "Beállítások engedélyezése",
     "start": "Játék indítása"
@@ -177,8 +176,10 @@
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Gibraltári-szoros",
     "italia": "Olaszország",
+    "japan": "Japán",
     "yenisei": "Jenisej",
-    "pluto": "Plútó"
+    "pluto": "Plútó",
+    "montreal": "Montreal"
   },
   "map_categories": {
     "continental": "Kontinentális",
@@ -196,8 +197,9 @@
     "join_lobby": "Csatlakozás lobbyhoz",
     "checking": "Lobby ellenőrzése...",
     "not_found": "Lobby nem található. Kérlek, ellenőrizd az azonosítót, és próbáld újra.",
-    "error": "Hiba történt. Kérlek, próbáld újra.",
-    "joined_waiting": "Sikeresen csatlakoztál! Várakozás a játék kezdésére..."
+    "error": "Hiba történt. \nKérjük próbáld újra, vagy lépj kapcsolatba velünk.",
+    "joined_waiting": "Sikeresen csatlakoztál! Várakozás a játék kezdésére...",
+    "version_mismatch": "Ez a játék egy másik verzióval lett létrehozva. Nem lehet csatlakozni."
   },
   "public_lobby": {
     "join": "Csatlakozás a következő játékhoz",
@@ -227,6 +229,7 @@
     "donate_gold": "Arany adományozása",
     "infinite_troops": "Végtelen katonák",
     "donate_troops": "Katonák adományozása",
+    "compact_map": "Mini térkép",
     "enables_title": "Beállítások engedélyezése",
     "player": "Játékos",
     "players": "Játékosok",
@@ -264,10 +267,10 @@
   },
   "unit_type": {
     "city": "Város",
-    "defense_post": "Védelmi poszt",
+    "defense_post": "Védelmi állás",
     "port": "Kikötő",
     "warship": "Hadihajó",
-    "missile_silo": "Rakéta siló",
+    "missile_silo": "Rakétasiló",
     "sam_launcher": "Rakétaelhárító rendszer",
     "atom_bomb": "Atombomba",
     "hydrogen_bomb": "Hidrogénbomba",
@@ -314,6 +317,8 @@
     "territory_patterns_desc": "Válaszd ki, hogy megjelenjenek-e a területmintázatok a játékban",
     "performance_overlay_label": "Teljesítmény kijelző",
     "performance_overlay_desc": "Kapcsoló a teljesítmény kijelzőhöz. Ha engedélyezve van, a teljesítmény kijelző megjelenik. A játék közben nyomd meg a Shift-D-t a váltáshoz.",
+    "performance_overlay_enabled": "Teljesítmény kijelző engedélyezve",
+    "performance_overlay_disabled": "Teljesítmény kijelző letiltva",
     "easter_writing_speed_label": "Írási sebesség szorzó",
     "easter_writing_speed_desc": "Állítsd be, milyen gyorsan szimulálod a kódolást (x1–x100)",
     "easter_bug_count_label": "Hiba számláló",
@@ -494,7 +499,8 @@
     "nation": "Nemzet",
     "player": "Játékos",
     "team": "Csapat",
-    "d_troops": "Védekező katonák",
+    "alliance_timeout": "Szövetség felbomlik",
+    "troops": "Katonák",
     "a_troops": "Támadó katonák",
     "gold": "Arany",
     "ports": "Kikötők",
@@ -644,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "Egység törlése",
     "delete_unit_description": "Kattints a legközelebbi egység törléséhez"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Profilkép"
+  },
+  "player_stats_table": {
+    "building_stats": "Épületstatisztikák",
+    "ship_arrivals": "Hajóérkezések",
+    "nuke_stats": "Nukleáris statisztikák",
+    "player_metrics": "Játékos mutatók",
+    "building": "Épület",
+    "ship_type": "Hajó típus",
+    "weapon": "Fegyver",
+    "built": "Épített",
+    "destroyed": "Megsemmisült",
+    "captured": "Elfoglalva",
+    "lost": "Elveszett",
+    "hits": "Találatok",
+    "launched": "Elindított",
+    "landed": "Célba ért",
+    "sent": "Elküldött",
+    "arrived": "Megérkezett",
+    "attack": "Támadás",
+    "received": "Fogadott",
+    "cancelled": "Megszakítva",
+    "count": "Mennyiség",
+    "gold": "Arany",
+    "workers": "Munkások",
+    "war": "Háború",
+    "trade": "Kereskedelem",
+    "steal": "Lopás",
+    "unit": {
+      "city": "Város",
+      "port": "Kikötő",
+      "defp": "Védelmi állás",
+      "saml": "Rakétaelhárító rendszer",
+      "silo": "Rakétasiló",
+      "wshp": "Hadihajó",
+      "fact": "Gyár",
+      "trade": "Kereskedelmi hajó",
+      "trans": "Szállítóhajó",
+      "abomb": "Atombomba",
+      "hbomb": "Hidrogénbomba",
+      "mirv": "MIRV",
+      "mirvw": "MIRV robbanófej"
+    }
+  },
+  "game_list": {
+    "recent_games": "Legutóbbi Játékok",
+    "game_id": "Játék azonosító",
+    "mode": "Mód",
+    "mode_ffa": "Mindenki mindenki ellen",
+    "mode_team": "Csapat",
+    "view": "Nézet",
+    "details": "Részletek",
+    "started": "Elkezdődött",
+    "map": "Térkép",
+    "difficulty": "Nehézség",
+    "type": "Típus"
   }
 }

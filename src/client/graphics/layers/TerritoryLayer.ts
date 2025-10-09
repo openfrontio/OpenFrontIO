@@ -149,6 +149,11 @@ export class TerritoryLayer implements Layer {
     if (!this.game.inSpawnPhase()) {
       return;
     }
+
+    this.spawnHighlight();
+  }
+
+  private spawnHighlight() {
     if (this.game.ticks() % 5 === 0) {
       return;
     }
@@ -159,11 +164,18 @@ export class TerritoryLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+
+    this.drawFocusedPlayerHighlight();
+
     const humans = this.game
       .playerViews()
       .filter((p) => p.type() === PlayerType.Human);
 
+    const focusedPlayer = this.game.focusedPlayer();
     for (const human of humans) {
+      if (human === focusedPlayer) {
+        continue;
+      }
       const center = human.nameLocation();
       if (!center) {
         continue;
@@ -190,37 +202,34 @@ export class TerritoryLayer implements Layer {
         }
       }
     }
+  }
+
+  private drawFocusedPlayerHighlight() {
+    const focusedPlayer = this.game.focusedPlayer();
+
+    if (!focusedPlayer) {
+      return;
+    }
+    const center = focusedPlayer.nameLocation();
+    if (!center) {
+      return;
+    }
     // Breathing border animation
-    this.borderAnimTime += 1;
-    const minPadding = 3;
-    const maxPadding = 8;
+    this.borderAnimTime += 3;
+    const minPadding = 6;
+    const maxPadding = 12;
     // Range: [minPadding..maxPadding]
     const breathingPadding =
       minPadding +
       (maxPadding - minPadding) *
         (0.5 + 0.5 * Math.sin(this.borderAnimTime * 0.3));
 
-    if (focusedPlayer) {
-      // Clear previous animated border
-      if (this.highlightContext) {
-        this.highlightContext.clearRect(
-          0,
-          0,
-          this.game.width(),
-          this.game.height(),
-        );
-      }
-
-      const center = focusedPlayer.nameLocation();
-      if (center) {
-        this.drawBreathingRing(
-          center.x,
-          center.y,
-          breathingPadding,
-          this.theme.spawnHighlightColor(),
-        );
-      }
-    }
+    this.drawBreathingRing(
+      center.x,
+      center.y,
+      breathingPadding,
+      this.theme.spawnHighlightColor(),
+    );
   }
 
   init() {
@@ -560,7 +569,7 @@ export class TerritoryLayer implements Layer {
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.strokeStyle = color.toRgbString();
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 4;
     ctx.stroke();
   }
 }
