@@ -130,9 +130,8 @@
     "disable_nations": "国家を無効化",
     "instant_build": "即時建設",
     "infinite_gold": "資金無限",
-    "donate_gold": "資金援助",
     "infinite_troops": "兵士無限",
-    "donate_troops": "軍事支援",
+    "compact_map": "ミニマップ",
     "disable_nukes": "核兵器使用禁止",
     "enables_title": "機能の有効化",
     "start": "ゲーム開始"
@@ -177,8 +176,10 @@
     "halkidiki": "ハルキディキ半島",
     "straitofgibraltar": "ジブラルタル海峡",
     "italia": "イタリア",
+    "japan": "日本",
     "yenisei": "エニセイ川",
-    "pluto": "冥王星"
+    "pluto": "冥王星",
+    "montreal": "モントリオール"
   },
   "map_categories": {
     "continental": "大陸",
@@ -196,8 +197,9 @@
     "join_lobby": "ロビーに参加",
     "checking": "ロビーを確認中...",
     "not_found": "ロビーが見つかりません。IDを確認してもう一度お試しください。",
-    "error": "エラーが発生しました。もう一度お試しください。",
-    "joined_waiting": "参加に成功しました！ゲーム開始をお待ちください..."
+    "error": "エラーが発生しました。もう一度試すか、サポートにお問い合わせください。",
+    "joined_waiting": "参加に成功しました！ゲーム開始をお待ちください...",
+    "version_mismatch": "このゲームは別のバージョンで作成されました。参加できません。"
   },
   "public_lobby": {
     "join": "次のゲームに参加",
@@ -227,6 +229,7 @@
     "donate_gold": "資金援助",
     "infinite_troops": "兵士無限",
     "donate_troops": "軍事支援",
+    "compact_map": "ミニマップ",
     "enables_title": "機能設定",
     "player": "プレイヤー",
     "players": "プレイヤー",
@@ -314,6 +317,8 @@
     "territory_patterns_desc": "ゲーム内で領土の模様を表示するかどうか",
     "performance_overlay_label": "パフォーマンスオーバーレイ",
     "performance_overlay_desc": "パフォーマンス表示（オーバーレイ）を切り替えます。有効にすると画面上にパフォーマンスオーバーレイが表示されます。ゲーム中は Shift+D を押して切り替えられます。",
+    "performance_overlay_enabled": "パフォーマンスオーバーレイ有効",
+    "performance_overlay_disabled": "パフォーマンスオーバーレイ無効",
     "easter_writing_speed_label": "書き込み速度の倍率",
     "easter_writing_speed_desc": "コードを書く速さを調節する（x1-x100）",
     "easter_bug_count_label": "バグの個数",
@@ -494,7 +499,8 @@
     "nation": "国家",
     "player": "プレイヤー",
     "team": "チーム",
-    "d_troops": "防衛兵士数",
+    "alliance_timeout": "同盟終了まで",
+    "troops": "軍隊",
     "a_troops": "攻撃兵士数",
     "gold": "資金",
     "ports": "港",
@@ -585,7 +591,7 @@
     "choose_spawn": "スタート地点を選んで下さい"
   },
   "territory_patterns": {
-    "title": "領土の模様を選択",
+    "title": "領土スキンを選択",
     "purchase": "購入",
     "blocked": {
       "login": "このページにアクセスするにはログインしてください。",
@@ -644,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "ユニットを削除する",
     "delete_unit_description": "クリックで最も近いユニットを削除します"
+  },
+  "discord_user_header": {
+    "avatar_alt": "アバター"
+  },
+  "player_stats_table": {
+    "building_stats": "建築物統計情報",
+    "ship_arrivals": "船舶到着数",
+    "nuke_stats": "核兵器統計情報",
+    "player_metrics": "プレイヤー統計情報",
+    "building": "建築物",
+    "ship_type": "船舶の種類",
+    "weapon": "兵器",
+    "built": "建設",
+    "destroyed": "破壊",
+    "captured": "鹵獲",
+    "lost": "損失",
+    "hits": "着弾",
+    "launched": "発射",
+    "landed": "着陸",
+    "sent": "送信",
+    "arrived": "到着",
+    "attack": "攻撃",
+    "received": "受信",
+    "cancelled": "取消",
+    "count": "数",
+    "gold": "資金",
+    "workers": "労働者",
+    "war": "戦争",
+    "trade": "取引",
+    "steal": "略奪",
+    "unit": {
+      "city": "都市",
+      "port": "港",
+      "defp": "防衛ポスト",
+      "saml": "SAMランチャー",
+      "silo": "ミサイル格納庫",
+      "wshp": "戦艦",
+      "fact": "工場",
+      "trade": "交易船",
+      "trans": "輸送船",
+      "abomb": "原子爆弾",
+      "hbomb": "水素爆弾",
+      "mirv": "MIRV",
+      "mirvw": "MIRV 弾頭"
+    }
+  },
+  "game_list": {
+    "recent_games": "最近のゲーム",
+    "game_id": "ゲームID",
+    "mode": "モード",
+    "mode_ffa": "バトルロワイヤル",
+    "mode_team": "チーム",
+    "view": "見る",
+    "details": "詳細",
+    "started": "既に開始",
+    "map": "地図",
+    "difficulty": "難易度",
+    "type": "タイプ"
   }
 }
