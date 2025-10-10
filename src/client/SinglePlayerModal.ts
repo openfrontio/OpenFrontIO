@@ -449,6 +449,8 @@ export class SinglePlayerModal extends LitElement {
       ? (this.userSettings.getDevOnlyPattern() ?? null)
       : null;
 
+    const selectedColor = this.userSettings.getSelectedColor();
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -466,6 +468,7 @@ export class SinglePlayerModal extends LitElement {
                       ? ""
                       : flagInput.getCurrentFlag(),
                   pattern: selectedPattern ?? undefined,
+                  color: selectedColor ? { color: selectedColor } : undefined,
                 },
               },
             ],

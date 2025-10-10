@@ -130,9 +130,8 @@
     "disable_nations": "Вимкнути нації",
     "instant_build": "Миттєве будівництво",
     "infinite_gold": "Необмежене золото",
-    "donate_gold": "Пожертвувати золото",
     "infinite_troops": "Необмежені війська",
-    "donate_troops": "Пожертвувати війська",
+    "compact_map": "Мінімапа",
     "disable_nukes": "Вимкнути бомби",
     "enables_title": "Дозволи",
     "start": "Розпочати гру"
@@ -177,8 +176,10 @@
     "halkidiki": "Халкідіки",
     "straitofgibraltar": "Гібралтарська протока",
     "italia": "Італія",
+    "japan": "Японія",
     "yenisei": "Єнісей",
-    "pluto": "Плутон"
+    "pluto": "Плутон",
+    "montreal": "Монреаль"
   },
   "map_categories": {
     "continental": "Континентальні",
@@ -196,8 +197,9 @@
     "join_lobby": "Приєднатися до лобі",
     "checking": "Перевірка лобі...",
     "not_found": "Лобі не знайдено. Будь ласка, перевірте дійсність ID і спробуйте знову.",
-    "error": "Сталася помилка. Будь ласка, спробуйте знову.",
-    "joined_waiting": "Ви успішно приєдналися! Очікування початку гри..."
+    "error": "Сталася помилка. Спробуйте ще раз або зверніться до служби підтримки.",
+    "joined_waiting": "Ви успішно приєдналися! Очікування початку гри...",
+    "version_mismatch": "Цю гру створено в іншій версії. Неможливо приєднатися."
   },
   "public_lobby": {
     "join": "Приєднатися до наступної гри",
@@ -211,7 +213,7 @@
     "enter_username": "Введіть своє ім'я гравця",
     "not_string": "Ім'я гравця має бути рядком.",
     "too_short": "Ім'я гравця повинно містити щонайменше {min} символів.",
-    "too_long": "Ім'я гравця не повинно перевищувати {max} символів.",
+    "too_long": "Довжина ім'я гравця не повинна перевищувати {max} символів.",
     "invalid_chars": "Ім'я гравця може містити лише латинські літери, цифри, пробіли, знаки підкреслення та [квадратні дужки]."
   },
   "host_modal": {
@@ -227,6 +229,7 @@
     "donate_gold": "Пожертвування золота",
     "infinite_troops": "Безмежні війська",
     "donate_troops": "Пожертвування військ",
+    "compact_map": "Мінімапа",
     "enables_title": "Дозволи",
     "player": "Гравець",
     "players": "Гравці(в)",
@@ -314,6 +317,8 @@
     "territory_patterns_desc": "Виберіть, чи показувати візерунки територій у грі",
     "performance_overlay_label": "Оверлей продуктивности",
     "performance_overlay_desc": "Увімкнення/вимкнення оверлея продуктивности. Якщо ввімкнено, буде показано оверлей продуктивности. Натисніть Shift+D під час гри, щоб увімкнути/вимкнути його.",
+    "performance_overlay_enabled": "Оверлей продуктивності увімкнено",
+    "performance_overlay_disabled": "Оверлей продуктивності вимкнено",
     "easter_writing_speed_label": "Множник швидкості друку",
     "easter_writing_speed_desc": "Налаштуйте швидкість, з якою ви удаєте, що програмуєте (x1–x100)",
     "easter_bug_count_label": "Кількість багів",
@@ -494,7 +499,8 @@
     "nation": "Нація",
     "player": "Гравець",
     "team": "Команда",
-    "d_troops": "Оборонні війська",
+    "alliance_timeout": "Кінець союзу через",
+    "troops": "Війська",
     "a_troops": "Наступальні війська",
     "gold": "Золото",
     "ports": "Порти",
@@ -511,14 +517,14 @@
     "retreating": "відступає",
     "boat": "Човен",
     "alliance_request_status": "{name} {status} запрошення до союзу",
-    "alliance_accepted": "прийняв",
-    "alliance_rejected": "відхилив",
+    "alliance_accepted": "приймає",
+    "alliance_rejected": "відхиляє",
     "duration_second": "1 сек",
     "betrayal_description": "Ви розірвали союз із {name}, ставши ЗРАДНИКОМ (оборону знижено на {malusPercent}% протягом {durationText})",
     "duration_seconds_plural": "{seconds} сек",
-    "betrayed_you": "{name} розірвав союз із вами",
-    "about_to_expire": "Ваш союз із {name} скоро закінчиться!",
-    "alliance_expired": "Ваш союз із {name} закінчився",
+    "betrayed_you": "{name} розриває союз із вами",
+    "about_to_expire": "Союз із {name} скоро закінчиться!",
+    "alliance_expired": "Союз із {name} закінчився",
     "attack_request": "{name} просить вас атакувати {target}",
     "sent_emoji": "Надіслано {name}: {emoji}",
     "renew_alliance": "Запит на поновлення",
@@ -526,7 +532,7 @@
     "focus": "Оглянути",
     "accept_alliance": "Прийняти",
     "reject_alliance": "Відхилити",
-    "alliance_renewed": "Ваш союз із {name} було поновлено",
+    "alliance_renewed": "Союз із {name} було поновлено",
     "ignore": "Ігнорувати",
     "unit_voluntarily_deleted": "Об'єкт добровільно видалено"
   },
@@ -585,7 +591,7 @@
     "choose_spawn": "Виберіть початкове розташування"
   },
   "territory_patterns": {
-    "title": "Виберіть візерунок території",
+    "title": "Вибір візерунка території",
     "purchase": "Придбати",
     "blocked": {
       "login": "Ви повинні ввійти, щоб отримати доступ до цього візерунку.",
@@ -644,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "Видалити об'єкт",
     "delete_unit_description": "Клацніть, щоб видалити найближчий об'єкт"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Аватар"
+  },
+  "player_stats_table": {
+    "building_stats": "Статистика будівництва",
+    "ship_arrivals": "Прибуття кораблів",
+    "nuke_stats": "Статистика бомбардувань",
+    "player_metrics": "Статистика гравця",
+    "building": "Будівництво",
+    "ship_type": "Тип корабля",
+    "weapon": "Зброя",
+    "built": "Побудовано",
+    "destroyed": "Знищено",
+    "captured": "Захоплено",
+    "lost": "Втрачено",
+    "hits": "Удари",
+    "launched": "Запущено",
+    "landed": "Приземлено",
+    "sent": "Відправлено",
+    "arrived": "Прибуло",
+    "attack": "Атаки",
+    "received": "Отримано",
+    "cancelled": "Скасовано",
+    "count": "Кількість",
+    "gold": "Золото",
+    "workers": "Робітники",
+    "war": "Війни",
+    "trade": "Обмін",
+    "steal": "Украдено",
+    "unit": {
+      "city": "Місто",
+      "port": "Порт",
+      "defp": "Пункт оборони",
+      "saml": "Пускова установка ЗРК",
+      "silo": "Ракетна шахта",
+      "wshp": "Військовий корабель",
+      "fact": "Фабрика",
+      "trade": "Торговий корабель",
+      "trans": "Транспортний корабель",
+      "abomb": "Атомна бомба",
+      "hbomb": "Воднева бомба",
+      "mirv": "РГЧ ІН",
+      "mirvw": "Боєголовка РГЧ ІН"
+    }
+  },
+  "game_list": {
+    "recent_games": "Нещодавні ігри",
+    "game_id": "ID гри",
+    "mode": "Режим",
+    "mode_ffa": "Всі проти всіх",
+    "mode_team": "Команда",
+    "view": "Оглянути",
+    "details": "Подробиці",
+    "started": "Почато",
+    "map": "Мапа",
+    "difficulty": "Складність",
+    "type": "Тип"
   }
 }

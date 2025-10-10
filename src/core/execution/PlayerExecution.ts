@@ -2,7 +2,7 @@ import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
 import { GameImpl } from "../game/GameImpl";
 import { GameMap, TileRef } from "../game/GameMap";
-import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
+import { calculateBoundingBox, inscribed, simpleHash } from "../Util";
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -27,18 +27,30 @@ export class PlayerExecution implements Execution {
 
   tick(ticks: number) {
     this.player.decayRelations();
-    this.player.units().forEach((u) => {
-      const tileOwner = this.mg!.owner(u.tile());
-      if (u.info().territoryBound) {
-        if (tileOwner.isPlayer()) {
-          if (tileOwner !== this.player) {
-            this.mg!.player(tileOwner.id()).captureUnit(u);
-          }
-        } else {
-          u.delete();
-        }
+    for (const u of this.player.units()) {
+      if (!u.info().territoryBound) {
+        continue;
       }
-    });
+
+      const owner = this.mg!.owner(u.tile());
+      if (!owner?.isPlayer()) {
+        u.delete();
+        continue;
+      }
+      if (owner === this.player) {
+        continue;
+      }
+
+      const captor = this.mg!.player(owner.id());
+      if (u.type() === UnitType.DefensePost) {
+        u.decreaseLevel(captor);
+        if (u.isActive()) {
+          captor.captureUnit(u);
+        }
+      } else {
+        captor.captureUnit(u);
+      }
+    }
 
     if (!this.player.isAlive()) {
       // Player has no tiles, delete any remaining units and gold
@@ -209,22 +221,37 @@ export class PlayerExecution implements Execution {
   }
 
   private getCapturingPlayer(cluster: Set<TileRef>): Player | null {
-    const neighborsIDs = new Set<number>();
+    // Collect unique neighbor IDs (excluding self) as candidates
+    const candidatesIDs = new Set<number>();
+    const selfID = this.player.smallID();
+
     for (const t of cluster) {
       for (const neighbor of this.mg.neighbors(t)) {
-        if (this.mg.ownerID(neighbor) !== this.player.smallID()) {
-          neighborsIDs.add(this.mg.ownerID(neighbor));
+        if (this.mg.ownerID(neighbor) !== selfID) {
+          candidatesIDs.add(this.mg.ownerID(neighbor));
         }
       }
     }
 
-    let largestNeighborAttack: Player | null = null;
-    let largestTroopCount: number = 0;
-    for (const id of neighborsIDs) {
+    // Filter out friendly and non-player candidates
+    const neighbors = new Set<Player>();
+    for (const id of candidatesIDs) {
       const neighbor = this.mg.playerBySmallID(id);
-      if (!neighbor.isPlayer() || this.player.isFriendly(neighbor)) {
+      if (!neighbor.isPlayer() || neighbor.isFriendly(this.player)) {
         continue;
       }
+      neighbors.add(neighbor);
+    }
+
+    // If there are no enemies, return null
+    if (neighbors.size === 0) {
+      return null;
+    }
+
+    // Get the largest attack from the neighbors
+    let largestNeighborAttack: Player | null = null;
+    let largestTroopCount = 0;
+    for (const neighbor of neighbors) {
       for (const attack of neighbor.outgoingAttacks()) {
         if (attack.target() === this.player) {
           if (attack.troops() > largestTroopCount) {
@@ -234,20 +261,10 @@ export class PlayerExecution implements Execution {
         }
       }
     }
-    if (largestNeighborAttack !== null) {
-      return largestNeighborAttack;
-    }
 
-    // fall back to getting mode if no attacks
-    const mode = getMode(neighborsIDs);
-    if (!this.mg.playerBySmallID(mode).isPlayer()) {
-      return null;
-    }
-    const capturing = this.mg.playerBySmallID(mode);
-    if (!capturing.isPlayer()) {
-      return null;
-    }
-    return capturing;
+    // Return the largest neighbor attack
+    // If there is no largest neighbor attack, this will return null
+    return largestNeighborAttack;
   }
 
   private calculateClusters(): Set<TileRef>[] {
