@@ -61,14 +61,6 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     });
   }
 
-  private findClosestSource(tile: NodeType): NodeType {
-    return this.sources.reduce((closest, source) =>
-      this.heuristic(tile, source) < this.heuristic(tile, closest)
-        ? source
-        : closest,
-    );
-  }
-
   compute(): PathFindResultType {
     if (this.completed) return PathFindResultType.Completed;
 

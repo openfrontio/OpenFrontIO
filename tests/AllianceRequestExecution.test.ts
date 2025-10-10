@@ -32,44 +32,44 @@ describe("AllianceRequestExecution", () => {
     player2.conquer(game.ref(0, 1));
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
   });
 
-  test("Can create alliance by replying", () => {
+  test("Can create alliance by replying", async () => {
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
-    game.executeNextTick();
+    await game.executeNextTick();
 
     game.addExecution(
       new AllianceRequestReplyExecution(player1.id(), player2, true),
     );
-    game.executeNextTick();
-    game.executeNextTick();
+    await game.executeNextTick();
+    await game.executeNextTick();
 
     expect(player1.isAlliedWith(player2)).toBeTruthy();
     expect(player2.isAlliedWith(player1)).toBeTruthy();
   });
 
-  test("Can create alliance by sending alliance request back", () => {
+  test("Can create alliance by sending alliance request back", async () => {
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
-    game.executeNextTick();
+    await game.executeNextTick();
 
     game.addExecution(new AllianceRequestExecution(player2, player1.id()));
-    game.executeNextTick();
+    await game.executeNextTick();
 
     expect(player1.isAlliedWith(player2)).toBeTruthy();
     expect(player2.isAlliedWith(player1)).toBeTruthy();
   });
 
-  test("Alliance request expires", () => {
+  test("Alliance request expires", async () => {
     game.config().allianceRequestDuration = () => 5;
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
-    game.executeNextTick();
+    await game.executeNextTick();
 
     expect(player1.outgoingAllianceRequests().length).toBe(1);
 
     for (let i = 0; i < 6; i++) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     expect(player1.outgoingAllianceRequests().length).toBe(0);
@@ -78,11 +78,11 @@ describe("AllianceRequestExecution", () => {
   });
 
   // Resolves exploit https://github.com/openfrontio/OpenFrontIO/issues/2071
-  test("alliance request is revoked immediately if requester launches a nuke", () => {
+  test("alliance request is revoked immediately if requester launches a nuke", async () => {
     game.config().nukeAllianceBreakThreshold = () => 0;
     // Player 1 sends an alliance request to player 2.
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
-    game.executeNextTick();
+    await game.executeNextTick();
 
     expect(player1.outgoingAllianceRequests().length).toBe(1);
     expect(player2.incomingAllianceRequests().length).toBe(1);
@@ -92,8 +92,8 @@ describe("AllianceRequestExecution", () => {
     game.addExecution(
       new NukeExecution(UnitType.AtomBomb, player1, game.ref(0, 1), null),
     );
-    game.executeNextTick();
-    game.executeNextTick();
+    await game.executeNextTick();
+    await game.executeNextTick();
 
     expect(player1.outgoingAllianceRequests().length).toBe(0);
     expect(player2.incomingAllianceRequests().length).toBe(0);

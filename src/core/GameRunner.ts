@@ -115,7 +115,7 @@ export class GameRunner {
     this.turns.push(turn);
   }
 
-  public executeNextTick() {
+  public async executeNextTick() {
     if (this.isExecuting) {
       return;
     }
@@ -132,7 +132,7 @@ export class GameRunner {
     let updates: GameUpdates;
 
     try {
-      updates = this.game.executeNextTick();
+      updates = await this.game.executeNextTick();
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Game tick error:", error.message);

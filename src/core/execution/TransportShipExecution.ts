@@ -10,8 +10,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { targetTransportTile } from "../game/TransportShipUtils";
-import { PathFindResultType } from "../pathfinding/AStar";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { PathFinder, PathFindResultType } from "../pathfinding/PathFinding";
 import { AttackExecution } from "./AttackExecution";
 
 export class TransportShipExecution implements Execution {
@@ -64,7 +63,7 @@ export class TransportShipExecution implements Execution {
 
     this.lastMove = ticks;
     this.mg = mg;
-    this.pathFinder = PathFinder.Mini(mg, 10_000, true, 100);
+    this.pathFinder = PathFinder.Wasm(mg);
 
     if (
       this.attacker.unitCount(UnitType.TransportShip) >=
@@ -156,7 +155,7 @@ export class TransportShipExecution implements Execution {
       .boatSendTroops(this.attacker, this.target, this.boat.troops());
   }
 
-  tick(ticks: number) {
+  async tick(ticks: number) {
     if (this.dst === null) {
       this.active = false;
       return;
@@ -181,7 +180,7 @@ export class TransportShipExecution implements Execution {
       }
     }
 
-    const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
+    const result = await this.pathFinder.nextTile(this.boat.tile(), this.dst);
     switch (result.type) {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) === this.attacker) {

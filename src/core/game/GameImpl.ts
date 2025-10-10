@@ -327,16 +327,18 @@ export class GameImpl implements Game {
     return this._ticks;
   }
 
-  executeNextTick(): GameUpdates {
+  async executeNextTick(): Promise<GameUpdates> {
     this.updates = createGameUpdatesMap();
+    const promises: (void | Promise<void>)[] = [];
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
         e.isActive()
       ) {
-        e.tick(this._ticks);
+        promises.push(e.tick(this._ticks));
       }
     });
+    await Promise.all(promises);
     const inited: Execution[] = [];
     const unInited: Execution[] = [];
     this.unInitExecs.forEach((e) => {

@@ -30,7 +30,7 @@ describe("Shell Random Damage", () => {
     );
 
     while (game.inSpawnPhase()) {
-      game.executeNextTick();
+      await game.executeNextTick();
     }
 
     player1 = game.player("player_1_id");
@@ -88,7 +88,7 @@ describe("Shell Random Damage", () => {
     expect(damages.length).toBeGreaterThan(0);
   });
 
-  test("Warship shell attacks have random damage", () => {
+  test("Warship shell attacks have random damage", async () => {
     player1.buildUnit(UnitType.Port, game.ref(coastX, 10), {});
 
     const warship = player1.buildUnit(
@@ -118,7 +118,7 @@ describe("Shell Random Damage", () => {
 
     while (damages.length < 10 && attempts < maxAttempts) {
       const healthBefore = target.health();
-      game.executeNextTick();
+      await game.executeNextTick();
       const healthAfter = target.health();
 
       if (healthAfter < healthBefore) {
@@ -144,7 +144,7 @@ describe("Shell Random Damage", () => {
     });
   });
 
-  test("Defense post shell attacks have random damage", () => {
+  test("Defense post shell attacks have random damage", async () => {
     const defensePost = new DefensePostExecution(player1, game.ref(coastX, 5));
 
     const target = player2.buildUnit(
@@ -165,7 +165,7 @@ describe("Shell Random Damage", () => {
     while (damages.length < 5 && attempts < maxAttempts) {
       const healthBefore = target.health();
       defensePost.tick(game.ticks());
-      game.executeNextTick();
+      await game.executeNextTick();
       const healthAfter = target.health();
 
       if (healthAfter < healthBefore) {
@@ -244,7 +244,7 @@ describe("Shell Random Damage", () => {
     expect(maxCount - minCount).toBeLessThan(damages.length * 0.8);
   });
 
-  test("Shell damage is consistent with same random seed", () => {
+  test("Shell damage is consistent with same random seed", async () => {
     const target = player2.buildUnit(
       UnitType.Warship,
       game.ref(coastX + 5, 10),
@@ -272,7 +272,7 @@ describe("Shell Random Damage", () => {
       target,
     );
 
-    game.executeNextTick();
+    await game.executeNextTick();
     const currentTicks = game.ticks();
 
     shell1.init(game, currentTicks);
