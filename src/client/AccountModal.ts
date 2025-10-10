@@ -18,8 +18,7 @@ import {
   getUserMe,
   logOut,
 } from "./jwt";
-import { translateText } from "./Utils";
-// import "./components/baseComponents/stats/PlayerStatsTree";
+import { isInIframe, translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends LitElement {
@@ -346,6 +345,10 @@ export class AccountButton extends LitElement {
   }
 
   render() {
+    if (isInIframe()) {
+      return html``;
+    }
+
     if (!this.isVisible) {
       return html``;
     }

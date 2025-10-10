@@ -576,7 +576,11 @@ export class PlayerImpl implements Player {
   }
 
   canDonateGold(recipient: Player): boolean {
-    if (!this.isFriendly(recipient)) {
+    if (
+      !this.isAlive() ||
+      !recipient.isAlive() ||
+      !this.isFriendly(recipient)
+    ) {
       return false;
     }
     if (
@@ -599,7 +603,11 @@ export class PlayerImpl implements Player {
   }
 
   canDonateTroops(recipient: Player): boolean {
-    if (!this.isFriendly(recipient)) {
+    if (
+      !this.isAlive() ||
+      !recipient.isAlive() ||
+      !this.isFriendly(recipient)
+    ) {
       return false;
     }
     if (

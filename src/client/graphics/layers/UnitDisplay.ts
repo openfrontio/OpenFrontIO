@@ -3,7 +3,8 @@ import { customElement } from "lit/decorators.js";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
+import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
+import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
 import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
@@ -59,7 +60,8 @@ export class UnitDisplay extends LitElement implements Layer {
       config.isUnitDisabled(UnitType.SAMLauncher) &&
       config.isUnitDisabled(UnitType.Warship) &&
       config.isUnitDisabled(UnitType.AtomBomb) &&
-      config.isUnitDisabled(UnitType.HydrogenBomb);
+      config.isUnitDisabled(UnitType.HydrogenBomb) &&
+      config.isUnitDisabled(UnitType.MIRV);
     this.requestUpdate();
   }
 
@@ -78,6 +80,7 @@ export class UnitDisplay extends LitElement implements Layer {
     switch (item) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+      case UnitType.MIRV:
         return (
           this.cost(item) <= (player?.gold() ?? 0n) &&
           (player?.units(UnitType.MissileSilo).length ?? 0) > 0
@@ -124,7 +127,7 @@ export class UnitDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="hidden xl:flex md:flex fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] xl:flex-row lg:flex-col md:flex-col xl:gap-5 lg:gap-2 md:gap-2 justify-center items-center"
+        class="hidden 2xl:flex lg:flex fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] 2xl:flex-row xl:flex-col lg:flex-col 2xl:gap-5 xl:gap-2 lg:gap-2 justify-center items-center"
       >
         <div class="bg-gray-800/70 backdrop-blur-sm rounded-lg p-0.5">
           <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 w-fit">
@@ -175,25 +178,32 @@ export class UnitDisplay extends LitElement implements Layer {
         <div class="bg-gray-800/70 backdrop-blur-sm rounded-lg p-0.5 w-fit">
           <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1">
             ${this.renderUnitItem(
+              warshipIcon,
+              this._warships,
+              UnitType.Warship,
+              "warship",
+              this.keybinds["buildWarship"]?.key ?? "7",
+            )}
+            ${this.renderUnitItem(
               atomBombIcon,
               null,
               UnitType.AtomBomb,
               "atom_bomb",
-              this.keybinds["buildAtomBomb"]?.key ?? "7",
+              this.keybinds["buildAtomBomb"]?.key ?? "8",
             )}
             ${this.renderUnitItem(
               hydrogenBombIcon,
               null,
               UnitType.HydrogenBomb,
               "hydrogen_bomb",
-              this.keybinds["buildHydrogenBomb"]?.key ?? "8",
+              this.keybinds["buildHydrogenBomb"]?.key ?? "9",
             )}
             ${this.renderUnitItem(
-              warshipIcon,
-              this._warships,
-              UnitType.Warship,
-              "warship",
-              this.keybinds["buildWarship"]?.key ?? "9",
+              mirvIcon,
+              null,
+              UnitType.MIRV,
+              "mirv",
+              this.keybinds["buildMIRV"]?.key ?? "0",
             )}
           </div>
         </div>

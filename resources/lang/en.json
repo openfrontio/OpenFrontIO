@@ -6,7 +6,18 @@
     "lang_code": "en"
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "available": "Available",
+    "preset_max": "Max",
+    "summary_send": "Send",
+    "summary_keep": "Keep",
+    "cancel": "Cancel",
+    "send": "Send",
+    "cap_label": "Cap",
+    "cap_tooltip": "Recipient’s remaining capacity",
+    "target_dead": "Target eliminated",
+    "target_dead_note": "You can't send resources to an eliminated player.",
+    "none": "None"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -590,8 +601,6 @@
     "troops": "Troops",
     "betrayals": "Betrayals",
     "traitor": "Traitor",
-    "stable": "Stable",
-    "trust": "Trust",
     "trading": "Trading",
     "active": "Active",
     "stopped": "Stopped",
@@ -600,9 +609,6 @@
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start Trading",
     "stop_trade": "Stop Trading",
-    "yes": "Yes",
-    "no": "No",
-    "none": "None",
     "alliances": "Alliances",
     "flag": "Flag",
     "chat": "Chat",
@@ -614,6 +620,23 @@
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
     "emotes": "Emojis"
+  },
+  "send_troops_modal": {
+    "title_with_name": "Send Troops to {name}",
+    "available_tooltip": "Your current available troops",
+    "min_keep": "Min keep",
+    "min_keep_pct": "(30%)",
+    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "toggle_attack_bar_mode": "Use attack bar to send troops",
+    "warning_attackbar": "Once enabled, you can't open this modal directly. You'll only send troops via the attack bar.",
+    "aria_slider": "Troops slider",
+    "capacity_note": "Receiver can accept only {{amount}} right now."
+  },
+  "send_gold_modal": {
+    "title_with_name": "Send Gold to {name}",
+    "available_tooltip": "Your current available gold",
+    "aria_slider": "Amount slider",
+    "slider_tooltip": "{{percent}}% • {{amount}}"
   },
   "replay_panel": {
     "replay_speed": "Replay speed",
@@ -633,7 +656,8 @@
     "choose_spawn": "Choose a starting location"
   },
   "territory_patterns": {
-    "title": "Select Territory Skin",
+    "title": "Skins",
+    "colors": "Colors",
     "purchase": "Purchase",
     "blocked": {
       "login": "You must be logged in to access this pattern.",
