@@ -43,13 +43,18 @@ export class AccountModal extends LitElement {
     }
   }
 
-  private getDiscordAvatarUrl(discord: any): string {
+  private getDiscordAvatarUrl(discord: DiscordUser): string {
     if (!discord.avatar) {
-      // Default Discord avatar
-      const defaultAvatarNumber = parseInt(discord.discriminator) % 5;
-      return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarNumber}.png`;
+      // Default Discord avatar - fallback to 0 if discriminator is missing or non-numeric
+      const defaultAvatarNumber = (Number(discord.discriminator) || 0) % 5;
+      return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarNumber}.png?size=128`;
     }
-    return `https://cdn.discordapp.com/avatars/${discord.id}/${discord.avatar}.png?size=128`;
+
+    // Determine format: animated avatars start with "a_" and use .gif, otherwise .png
+    const isAnimated = discord.avatar.startsWith("a_");
+    const extension = isAnimated ? "gif" : "png";
+
+    return `https://cdn.discordapp.com/avatars/${discord.id}/${discord.avatar}.${extension}?size=128`;
   }
 
   private renderUserProfile() {
