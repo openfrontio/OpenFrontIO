@@ -509,18 +509,24 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
+    const pattern = this.userSettings.getSelectedPatternName(
+      await fetchCosmetics(),
+    );
+
     this.gameStop = joinLobby(
       this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern:
-          this.userSettings.getSelectedPatternName(await fetchCosmetics()) ??
-          undefined,
-        flag:
-          this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
-            ? ""
-            : this.flagInput.getCurrentFlag(),
+        cosmetics: {
+          color: this.userSettings.getSelectedColor() ?? undefined,
+          patternName: pattern?.name ?? undefined,
+          patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
+          flag:
+            this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
+              ? ""
+              : this.flagInput.getCurrentFlag(),
+        },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,

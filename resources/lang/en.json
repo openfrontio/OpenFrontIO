@@ -656,7 +656,8 @@
     "choose_spawn": "Choose a starting location"
   },
   "territory_patterns": {
-    "title": "Select Territory Skin",
+    "title": "Skins",
+    "colors": "Colors",
     "purchase": "Purchase",
     "blocked": {
       "login": "You must be logged in to access this pattern.",
