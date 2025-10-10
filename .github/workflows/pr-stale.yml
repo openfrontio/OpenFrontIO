@@ -17,9 +17,8 @@ jobs:
           days-before-pr-stale: 14
           exempt-draft-pr: true
           exempt-pr-assignees: evanpelle
-          exempt-pr-labels: "Stale"
+          exempt-pr-labels: "will not stale"
           stale-pr-label: "Stale"
           stale-pr-message: "This pull request is stale because it has been open for 14 days with no activity. If you want to keep this pull request open, add a comment or update the branch."
           close-pr-message: "This pull request has been closed because twenty-eight days have passed without activity. If someone wants to keep working on it, feel free to take the code."
           close-pr-label: "Orphaned"
-          start-date: 2025-09-03T00:00:00+00:00
