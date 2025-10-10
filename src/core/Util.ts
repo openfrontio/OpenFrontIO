@@ -192,7 +192,7 @@ export function assertNever(x: never): never {
 
 export function generateID(): GameID {
   const nanoid = customAlphabet(
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
     8,
   );
   return nanoid();
