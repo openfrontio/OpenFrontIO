@@ -33,7 +33,6 @@ export class TransportShipExecution implements Execution {
 
   private pathFinder: PathFinder;
   private pathLength: number | null = null; // Store the total A* path length when computed
-  private journeyStartTick: number | null = null; // Track when the journey started
 
   constructor(
     private attacker: Player,
@@ -184,7 +183,6 @@ export class TransportShipExecution implements Execution {
       }
       // Reset path length so we recompute for the new path
       this.pathLength = null;
-      this.journeyStartTick = null;
 
       if (this.boat.targetTile() !== this.dst) {
         this.boat.setTargetTile(this.dst);
@@ -204,7 +202,6 @@ export class TransportShipExecution implements Execution {
       if (remainingPathLength !== null && remainingPathLength > 0) {
         // The pathfinder has already consumed 1 tile (the current one), so add it back
         this.pathLength = remainingPathLength + 1;
-        this.journeyStartTick = ticks; // Record when the journey started
         this.updateEstimatedArrivalTick(ticks);
       }
     }
@@ -268,20 +265,11 @@ export class TransportShipExecution implements Execution {
   }
 
   private updateEstimatedArrivalTick(currentTick: number): void {
-    if (
-      this.dst === null ||
-      this.pathLength === null ||
-      this.journeyStartTick === null
-    ) {
+    if (this.dst === null || this.pathLength === null) {
       return;
     }
 
-    // Calculate how many ticks have passed since the journey started
-    const ticksTraveled = currentTick - this.journeyStartTick;
-
-    // Estimate remaining time based on total path length minus time already traveled
-    const remainingTiles = Math.max(0, this.pathLength - ticksTraveled);
-    const estimatedArrivalTick = currentTick + remainingTiles;
+    const estimatedArrivalTick = currentTick + this.pathLength;
 
     // Store the estimated arrival tick on the boat
     if (this.boat.setEstimatedArrivalTick) {

@@ -830,7 +830,6 @@ export class EventsDisplay extends LitElement implements Layer {
     const createdAt = boat.createdAt();
     const ticksTraveled = currentTick - createdAt;
 
-    // Try to use server-provided estimated arrival tick if available
     const estimatedArrivalTick = boat.estimatedArrivalTick();
 
     if (estimatedArrivalTick !== undefined && estimatedArrivalTick !== null) {
@@ -838,7 +837,7 @@ export class EventsDisplay extends LitElement implements Layer {
       return remaining;
     }
 
-    // If no server estimate available, show "Calculating..." status
+    // If no estimate available, show "Calculating..." status
     return null; // Return null to indicate "Calculating..." status
   }
 

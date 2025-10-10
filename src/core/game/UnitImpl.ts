@@ -133,7 +133,7 @@ export class UnitImpl implements Unit {
       constructionType: this._constructionType,
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
-      estimatedArrivalTick: this.calculateEstimatedArrivalTick(),
+      estimatedArrivalTick: this._estimatedArrivalTick,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
@@ -420,10 +420,6 @@ export class UnitImpl implements Unit {
   }
 
   estimatedArrivalTick(): number | null | undefined {
-    return this._estimatedArrivalTick;
-  }
-
-  private calculateEstimatedArrivalTick(): number | null | undefined {
     return this._estimatedArrivalTick;
   }
 }
