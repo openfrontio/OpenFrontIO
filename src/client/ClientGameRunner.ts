@@ -214,13 +214,13 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private saveGame(update: WinUpdate) {
+  private async saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
     }
     const players: PlayerRecord[] = [
       {
-        persistentID: getPersistentID(),
+        persistentID: await getPersistentID(),
         username: this.lobby.playerName,
         clientID: this.lobby.clientID,
         stats: update.allPlayersStats[this.lobby.clientID],
@@ -293,7 +293,7 @@ export class ClientGameRunner {
       this.renderer.tick();
 
       if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
+        void this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
     const worker = this.worker;

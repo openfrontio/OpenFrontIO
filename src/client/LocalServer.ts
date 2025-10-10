@@ -158,7 +158,7 @@ export class LocalServer {
     }
     if (this.replayTurns.length > 0) {
       if (this.turns.length >= this.replayTurns.length) {
-        this.endGame();
+        void this.endGame();
         return;
       }
       this.intents = this.replayTurns[this.turns.length].intents;
@@ -175,7 +175,7 @@ export class LocalServer {
     });
   }
 
-  public endGame() {
+  public async endGame() {
     console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
     if (this.isReplay) {
@@ -183,7 +183,7 @@ export class LocalServer {
     }
     const players: PlayerRecord[] = [
       {
-        persistentID: getPersistentID(),
+        persistentID: await getPersistentID(),
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
         stats: this.allPlayersStats[this.lobbyConfig.clientID],
