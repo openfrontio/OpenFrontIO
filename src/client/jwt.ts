@@ -87,7 +87,6 @@ function _getToken(): string | null {
 
 async function _clearToken() {
   localStorage.removeItem("token");
-  __isLoggedIn = false;
   const config = await getServerConfigFromClient();
   const audience = config.jwtAudience();
   const isSecure = window.location.protocol === "https:";
@@ -183,7 +182,6 @@ export async function postRefresh(): Promise<boolean> {
   });
 
   if (!response) {
-    __isLoggedIn = false;
     return false;
   }
 
@@ -198,12 +196,8 @@ export type IsLoggedInResponse =
   | { token: string; claims: TokenPayload }
   | false;
 
-let __isLoggedIn: IsLoggedInResponse | undefined = undefined;
-
 export async function isLoggedIn(): Promise<IsLoggedInResponse> {
-  __isLoggedIn ??= await _isLoggedIn();
-
-  return __isLoggedIn;
+  return await _isLoggedIn();
 }
 
 async function _validateTokenIssuer(payload: any): Promise<boolean> {
@@ -413,7 +407,6 @@ export async function getUserMe(
 
   const response = await _fetchFromApi({ endpoint: "/users/@me" });
   if (!response) {
-    __isLoggedIn = false;
     _clearUserMeCache();
     return false;
   }
