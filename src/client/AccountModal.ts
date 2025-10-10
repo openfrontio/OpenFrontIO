@@ -4,7 +4,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { discordLogin, getApiBase, getUserMe, logOut } from "./jwt";
-import { translateText } from "./Utils";
+import { isInIframe, translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends LitElement {
@@ -268,6 +268,10 @@ export class AccountButton extends LitElement {
   }
 
   render() {
+    if (isInIframe()) {
+      return html``;
+    }
+
     if (!this.isVisible) {
       return html``;
     }

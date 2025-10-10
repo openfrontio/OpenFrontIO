@@ -13,10 +13,14 @@ jobs:
     steps:
       - uses: actions/stale@8f717f0dfca33b78d3c933452e42558e4456c8e7
         with:
-          days-before-close: 14
-          days-before-stale: 14
+          days-before-pr-close: 14
+          days-before-pr-stale: 14
+          days-before-issue-close: -1
+          days-before-issue-stale: -1
           exempt-draft-pr: true
           exempt-pr-assignees: evanpelle
-          stale-pr-label: "stale"
+          exempt-pr-labels: "will not stale"
+          stale-pr-label: "Stale"
           stale-pr-message: "This pull request is stale because it has been open for 14 days with no activity. If you want to keep this pull request open, add a comment or update the branch."
-          start-date: 2025-09-03T00:00:00+00:00
+          close-pr-message: "This pull request has been closed because twenty-eight days have passed without activity. If someone wants to keep working on it, feel free to take the code."
+          close-pr-label: "Orphaned"
