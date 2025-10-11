@@ -132,6 +132,10 @@
     "info_enemy_panel": "Enemy info panel",
     "exit_confirmation": "Are you sure you want to exit the game?"
   },
+  "slider": {
+    "label": "Bots:",
+    "disabled": "Disabled"
+  },
   "single_modal": {
     "title": "Single Player",
     "allow_alliances": "Allow alliances",
