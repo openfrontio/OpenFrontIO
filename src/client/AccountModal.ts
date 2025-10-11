@@ -1,6 +1,6 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
+import { DiscordUser, UserMeResponse } from "../core/ApiSchemas";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { discordLogin, getApiBase, getUserMe, logOut } from "./jwt";
@@ -14,9 +14,7 @@ export class AccountModal extends LitElement {
   };
 
   @state() private email: string = "";
-
-  private loggedInEmail: string | null = null;
-  private loggedInDiscord: string | null = null;
+  @state() private userMeData: UserMeResponse | null = null;
 
   constructor() {
     super();
@@ -38,37 +36,126 @@ export class AccountModal extends LitElement {
   }
 
   private renderInner() {
-    if (this.loggedInDiscord) {
-      return this.renderLoggedInDiscord();
-    } else if (this.loggedInEmail) {
-      return this.renderLoggedInEmail();
+    if (this.userMeData) {
+      return this.renderUserProfile();
     } else {
       return this.renderLoginOptions();
     }
   }
 
-  private renderLoggedInDiscord() {
-    return html`
-      <div class="p-6">
-        <div class="mb-4">
-          <p class="text-white text-center mb-4">
-            Logged in with Discord as ${this.loggedInDiscord}
-          </p>
-        </div>
-        ${this.logoutButton()}
-      </div>
-    `;
+  private getDiscordAvatarUrl(discord: DiscordUser): string {
+    if (!discord.avatar) {
+      // Default Discord avatar - fallback to 0 if discriminator is missing or non-numeric
+      const defaultAvatarNumber = (Number(discord.discriminator) || 0) % 5;
+      return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarNumber}.png?size=128`;
+    }
+
+    // Determine format: animated avatars start with "a_" and use .gif, otherwise .png
+    const isAnimated = discord.avatar.startsWith("a_");
+    const extension = isAnimated ? "gif" : "png";
+
+    return `https://cdn.discordapp.com/avatars/${discord.id}/${discord.avatar}.${extension}?size=128`;
   }
 
-  private renderLoggedInEmail(): TemplateResult {
+  private renderUserProfile() {
+    if (!this.userMeData) return html``;
+
+    const { user, player } = this.userMeData;
+    const isDiscordUser = !!user.discord;
+    const displayName = isDiscordUser
+      ? (user.discord!.global_name ?? user.discord!.username)
+      : (user.email ?? "User");
+    const avatarUrl = isDiscordUser
+      ? this.getDiscordAvatarUrl(user.discord!)
+      : "/images/DefaultAvatar.svg";
+
     return html`
       <div class="p-6">
-        <div class="mb-4">
-          <p class="text-white text-center mb-4">
-            Logged in as ${this.loggedInEmail}
-          </p>
+        <!-- User Profile -->
+        <div class="flex flex-col items-center mb-6">
+          <!-- Avatar -->
+          <div class="mb-4">
+            <img
+              src="${avatarUrl}"
+              alt="${displayName}"
+              class="w-24 h-24 rounded-full border-4 border-blue-500 shadow-lg"
+              @error="${(e: Event) => {
+                const img = e.target as HTMLImageElement;
+                img.src = "/images/DefaultAvatar.svg";
+              }}"
+            />
+          </div>
+
+          <!-- User Info -->
+          <div class="text-center mb-4">
+            ${isDiscordUser
+              ? html`
+                  <div class="flex items-center justify-center space-x-2 mb-2">
+                    <img
+                      src="/images/DiscordLogo.svg"
+                      alt="Discord"
+                      class="w-5 h-5"
+                    />
+                    <h3 class="text-xl font-bold text-white">${displayName}</h3>
+                  </div>
+                `
+              : html`
+                  <h3 class="text-xl font-bold text-white mb-2">
+                    ${displayName}
+                  </h3>
+                `}
+            <p class="text-sm text-gray-400">Player ID: ${player.publicId}</p>
+          </div>
+
+          <!-- Roles & Flares -->
+          ${player.roles && player.roles.length > 0
+            ? html`
+                <div class="mb-4 w-full">
+                  <p
+                    class="text-xs font-semibold text-gray-400 mb-2 text-center"
+                  >
+                    ROLES
+                  </p>
+                  <div class="flex flex-wrap gap-2 justify-center">
+                    ${player.roles.map(
+                      (role) => html`
+                        <span
+                          class="px-3 py-1 bg-purple-600 text-white text-xs rounded-full font-medium"
+                        >
+                          ${role}
+                        </span>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `
+            : ""}
+          ${player.flares && player.flares.length > 0
+            ? html`
+                <div class="mb-4 w-full">
+                  <p
+                    class="text-xs font-semibold text-gray-400 mb-2 text-center"
+                  >
+                    FLARES
+                  </p>
+                  <div class="flex flex-wrap gap-2 justify-center">
+                    ${player.flares.map(
+                      (flare) => html`
+                        <span
+                          class="px-3 py-1 bg-blue-600 text-white text-xs rounded-full font-medium"
+                        >
+                          ${flare}
+                        </span>
+                      `,
+                    )}
+                  </div>
+                </div>
+              `
+            : ""}
         </div>
-        ${this.logoutButton()}
+
+        <!-- Logout Button -->
+        <div class="flex justify-center">${this.logoutButton()}</div>
       </div>
     `;
   }
@@ -211,8 +298,9 @@ export class AccountModal extends LitElement {
   public async open() {
     const userMe = await getUserMe();
     if (userMe) {
-      this.loggedInEmail = userMe.user.email ?? null;
-      this.loggedInDiscord = userMe.user.discord?.global_name ?? null;
+      this.userMeData = userMe;
+    } else {
+      this.userMeData = null;
     }
     this.modalEl?.open();
     this.requestUpdate();
@@ -234,6 +322,7 @@ export class AccountModal extends LitElement {
 export class AccountButton extends LitElement {
   @state() private loggedInEmail: string | null = null;
   @state() private loggedInDiscord: string | null = null;
+  @state() private discordUserData: DiscordUser | null = null;
 
   private isVisible = true;
 
@@ -249,15 +338,18 @@ export class AccountButton extends LitElement {
         const userMeResponse = customEvent.detail as UserMeResponse;
         if (userMeResponse.user.email) {
           this.loggedInEmail = userMeResponse.user.email;
+          this.discordUserData = null;
           this.requestUpdate();
         } else if (userMeResponse.user.discord) {
           this.loggedInDiscord = userMeResponse.user.discord.id;
+          this.discordUserData = userMeResponse.user.discord;
           this.requestUpdate();
         }
       } else {
         // Clear the logged in states when user logs out
         this.loggedInEmail = null;
         this.loggedInDiscord = null;
+        this.discordUserData = null;
         this.requestUpdate();
       }
     });
@@ -285,11 +377,17 @@ export class AccountButton extends LitElement {
       buttonTitle = translateText("account_modal.logged_in_with_discord");
     }
 
+    const showAvatar = this.loggedInDiscord && this.discordUserData;
+
     return html`
       <div class="fixed top-4 right-4 z-[9999]">
         <button
           @click="${this.open}"
-          class="w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
+          class="w-12 h-12 ${showAvatar
+            ? "p-0"
+            : "bg-blue-600 hover:bg-blue-700"} text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4 ${showAvatar
+            ? "overflow-hidden"
+            : ""}"
           title="${buttonTitle}"
         >
           ${this.renderIcon()}
@@ -299,12 +397,26 @@ export class AccountButton extends LitElement {
     `;
   }
 
+  private getDiscordAvatarUrl(discord: any): string {
+    if (!discord.avatar) {
+      // Default Discord avatar
+      const defaultAvatarNumber = parseInt(discord.discriminator) % 5;
+      return `https://cdn.discordapp.com/embed/avatars/${defaultAvatarNumber}.png`;
+    }
+    return `https://cdn.discordapp.com/avatars/${discord.id}/${discord.avatar}.png?size=64`;
+  }
+
   private renderIcon() {
-    if (this.loggedInDiscord) {
+    if (this.loggedInDiscord && this.discordUserData) {
+      const avatarUrl = this.getDiscordAvatarUrl(this.discordUserData);
       return html`<img
-        src="/images/DiscordLogo.svg"
-        alt="Discord"
-        class="w-6 h-6"
+        src="${avatarUrl}"
+        alt="Discord Avatar"
+        class="w-full h-full rounded-full object-cover"
+        @error="${(e: Event) => {
+          const img = e.target as HTMLImageElement;
+          img.src = "/images/DiscordLogo.svg";
+        }}"
       />`;
     } else if (this.loggedInEmail) {
       return html`<img
