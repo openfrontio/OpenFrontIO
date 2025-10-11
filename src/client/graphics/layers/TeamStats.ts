@@ -83,7 +83,9 @@ export class TeamStats extends LitElement implements Layer {
           }
         }
 
-        const totalScorePercent = totalScoreSort / this.game.numLandTiles();
+        const numTilesWithoutFallout =
+          this.game.numLandTiles() - this.game.numTilesWithFallout();
+        const totalScorePercent = totalScoreSort / numTilesWithoutFallout;
 
         return {
           teamName: teamStr,
