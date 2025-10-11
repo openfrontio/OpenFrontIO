@@ -555,6 +555,12 @@
     "alliance_rejected": "rejected",
     "duration_second": "1 second",
     "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
+    "boat_countdown": {
+      "arriving": "Arriving...",
+      "calculating": "Calculating...",
+      "seconds": "{seconds}s",
+      "minutes_seconds": "{minutes}m {seconds}s"
+    },
     "duration_seconds_plural": "{seconds} seconds",
     "betrayed_you": "{name} broke their alliance with you",
     "about_to_expire": "Your alliance with {name} is about to expire!",
