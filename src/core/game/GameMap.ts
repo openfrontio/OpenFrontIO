@@ -43,7 +43,7 @@ export interface GameMap {
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
   ): Set<TileRef>;
-
+  boundingBox(center: TileRef, radius: number): TileRef[];
   toTileUpdate(tile: TileRef): bigint;
   updateTile(tu: TileUpdate): TileRef;
 
@@ -310,6 +310,40 @@ export class GameMapImpl implements GameMap {
       }
     }
     return seen;
+  }
+
+  boundingBox(center: TileRef, radius: number): TileRef[] {
+    const tiles: TileRef[] = [];
+
+    const centerX = this.x(center);
+    const centerY = this.y(center);
+
+    const minX = centerX - radius;
+    const maxX = centerX + radius;
+    const minY = centerY - radius;
+    const maxY = centerY + radius;
+
+    // Top and bottom edges (full width)
+    for (let x = minX; x <= maxX; x++) {
+      if (this.isValidCoord(x, minY)) {
+        tiles.push(this.ref(x, minY));
+      }
+      if (this.isValidCoord(x, maxY) && minY !== maxY) {
+        tiles.push(this.ref(x, maxY));
+      }
+    }
+
+    // Left and right edges (exclude corners already added)
+    for (let y = minY + 1; y < maxY; y++) {
+      if (this.isValidCoord(minX, y)) {
+        tiles.push(this.ref(minX, y));
+      }
+      if (this.isValidCoord(maxX, y) && minX !== maxX) {
+        tiles.push(this.ref(maxX, y));
+      }
+    }
+
+    return tiles;
   }
 
   toTileUpdate(tile: TileRef): bigint {

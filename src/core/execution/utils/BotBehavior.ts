@@ -308,6 +308,16 @@ export class BotBehavior {
     return this.enemy;
   }
 
+  forceSendAttack(target: Player | TerraNullius) {
+    this.game.addExecution(
+      new AttackExecution(
+        this.player.troops() / 2,
+        this.player,
+        target.isPlayer() ? target.id() : this.game.terraNullius().id(),
+      ),
+    );
+  }
+
   sendAttack(target: Player | TerraNullius) {
     // Skip attacking friendly targets (allies or teammates) - decision to break alliances should be made by caller
     if (target.isPlayer() && this.player.isFriendly(target)) return;

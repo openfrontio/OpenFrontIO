@@ -6,6 +6,23 @@ export function getSpawnTiles(gm: GameMap, tile: TileRef): TileRef[] {
   );
 }
 
+export function closestTile(
+  gm: GameMap,
+  refs: Iterable<TileRef>,
+  tile: TileRef,
+): [TileRef | null, number] {
+  let minDistance = Infinity;
+  let minRef: TileRef | null = null;
+  for (const ref of refs) {
+    const distance = gm.manhattanDist(ref, tile);
+    if (distance < minDistance) {
+      minDistance = distance;
+      minRef = ref;
+    }
+  }
+  return [minRef, minDistance];
+}
+
 export function closestTwoTiles(
   gm: GameMap,
   x: Iterable<TileRef>,

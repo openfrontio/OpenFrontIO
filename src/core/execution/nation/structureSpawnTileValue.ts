@@ -1,6 +1,6 @@
 import { Game, Player, Relation, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
-import { closestTwoTiles } from "../Util";
+import { closestTile, closestTwoTiles } from "../Util";
 
 export function structureSpawnTileValue(
   mg: Game,
@@ -23,11 +23,8 @@ export function structureSpawnTileValue(
         w += mg.magnitude(tile);
 
         // Prefer to be away from the border
-        const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
-        if (closestBorder !== null) {
-          const d = mg.manhattanDist(closestBorder.x, tile);
-          w += Math.min(d, borderSpacing);
-        }
+        const [, closestBorderDist] = closestTile(mg, borderTiles, tile);
+        w += Math.min(closestBorderDist, borderSpacing);
 
         // Prefer to be away from other structures of the same type
         const otherTiles: Set<TileRef> = new Set(
@@ -53,11 +50,8 @@ export function structureSpawnTileValue(
           otherUnits.map((u) => u.tile()),
         );
         otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-        if (closestOther !== null) {
-          const d = mg.manhattanDist(closestOther.x, tile);
-          w += Math.min(d, structureSpacing);
-        }
+        const [, closestOtherDist] = closestTile(mg, otherTiles, tile);
+        w += Math.min(closestOtherDist, structureSpacing);
 
         return w;
       };
@@ -69,15 +63,17 @@ export function structureSpawnTileValue(
         // Prefer higher elevations
         w += mg.magnitude(tile);
 
-        const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
-        if (closestBorder !== null) {
+        const [closest, closestBorderDist] = closestTile(mg, borderTiles, tile);
+        if (closest !== null) {
           // Prefer to be borderSpacing tiles from the border
-          const d = mg.manhattanDist(closestBorder.x, tile);
-          w += Math.max(0, borderSpacing - Math.abs(borderSpacing - d));
+          w += Math.max(
+            0,
+            borderSpacing - Math.abs(borderSpacing - closestBorderDist),
+          );
 
           // Prefer adjacent players who are hostile
           const neighbors: Set<Player> = new Set();
-          for (const tile of mg.neighbors(closestBorder.x)) {
+          for (const tile of mg.neighbors(closest)) {
             if (!mg.isLand(tile)) continue;
             const id = mg.ownerID(tile);
             if (id === player.smallID()) continue;
