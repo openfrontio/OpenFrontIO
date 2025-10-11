@@ -47,7 +47,8 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import SoundManager from "./sound/SoundManager";
+import { SoundLayer } from "./sound/SoundLayer";
+import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -174,7 +175,15 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const soundManager = new SoundManager();
+  const soundLayer = new SoundLayer(gameView, soundManager);
+  const gameRenderer = createRenderer(
+    canvas,
+    gameView,
+    eventBus,
+    soundManager,
+    soundLayer,
+  );
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -188,6 +197,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    soundManager,
   );
 }
 
@@ -210,6 +220,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private soundManager: SoundManager,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -244,7 +255,7 @@ export class ClientGameRunner {
   }
 
   public start() {
-    SoundManager.playBackgroundMusic();
+    this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -373,7 +384,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
-    SoundManager.stopBackgroundMusic();
+    this.soundManager.stopBackgroundMusic();
     if (!this.isActive) return;
 
     this.isActive = false;

@@ -7,7 +7,7 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
@@ -19,6 +19,7 @@ import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
+  private seenNukes: Set<number> = new Set();
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
 
@@ -136,6 +137,10 @@ export class FxLayer implements Layer {
         break;
       }
       case UnitType.AtomBomb:
+        this.onNukeEvent(unit, 70);
+        break;
+      case UnitType.MIRV:
+        break;
       case UnitType.MIRVWarhead:
         this.onNukeEvent(unit, 70);
         break;
@@ -211,8 +216,6 @@ export class FxLayer implements Layer {
     if (conqueror !== this.game.myPlayer()) {
       return;
     }
-
-    SoundManager.playSoundEffect(SoundEffect.KaChing);
 
     const conquestFx = conquestFxFactory(
       this.animatedSpriteLoader,
