@@ -9,7 +9,7 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
-import { flattenedEmojiTable } from "../../Util";
+import { calculateBoundingBoxCenter, flattenedEmojiTable } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
@@ -198,7 +198,7 @@ export class BotBehavior {
     }
   }
 
-  selectEnemy(enemies: Player[]): Player | null {
+  selectEnemy(borderingEnemies: Player[]): Player | null {
     if (this.enemy === null) {
       // Save up troops until we reach the reserve ratio
       if (!this.hasReserveRatioTroops()) return null;
@@ -249,18 +249,76 @@ export class BotBehavior {
       }
 
       // Select the weakest player
-      if (this.enemy === null && enemies.length > 0) {
-        this.setNewEnemy(enemies[0]);
+      if (this.enemy === null && borderingEnemies.length > 0) {
+        this.setNewEnemy(borderingEnemies[0]);
       }
 
       // Select a random player
-      if (this.enemy === null && enemies.length > 0) {
-        this.setNewEnemy(this.random.randElement(enemies));
+      if (this.enemy === null && borderingEnemies.length > 0) {
+        this.setNewEnemy(this.random.randElement(borderingEnemies));
+      }
+
+      // If we don't have bordering enemies, we are on an island. Attack someone on an island next to us
+      if (this.enemy === null && borderingEnemies.length === 0) {
+        this.selectNearestIslandEnemy();
       }
     }
 
     // Sanity check, don't attack our allies or teammates
     return this.enemySanityCheck();
+  }
+
+  selectNearestIslandEnemy() {
+    const allPlayers = this.game.players();
+    const filteredPlayers = allPlayers.filter(
+      (p) =>
+        // Don't spam boats into players that are more than twice as large as us
+        p.troops() <= this.player.troops() * 2 &&
+        !this.player.isFriendly(p) &&
+        p !== this.player,
+    );
+
+    if (filteredPlayers.length > 0) {
+      const playerCenter = calculateBoundingBoxCenter(
+        this.game,
+        this.player.borderTiles(),
+      );
+
+      const sortedPlayers = filteredPlayers
+        .map((filteredPlayer) => {
+          const filteredPlayerCenter = calculateBoundingBoxCenter(
+            this.game,
+            filteredPlayer.borderTiles(),
+          );
+          const playerCenterTile = this.game.ref(
+            playerCenter.x,
+            playerCenter.y,
+          );
+          const filteredPlayerCenterTile = this.game.ref(
+            filteredPlayerCenter.x,
+            filteredPlayerCenter.y,
+          );
+
+          const distance = this.game.manhattanDist(
+            playerCenterTile,
+            filteredPlayerCenterTile,
+          );
+          return { player: filteredPlayer, distance };
+        })
+        .sort((a, b) => a.distance - b.distance); // Sort by distance (ascending)
+
+      // Select the nearest or second-nearest enemy (So our boat doesn't always run into the same warship, if there is one)
+      let selectedEnemy: Player | null;
+      if (sortedPlayers.length > 1 && this.random.chance(2)) {
+        selectedEnemy = sortedPlayers[1].player;
+      } else {
+        selectedEnemy = sortedPlayers[0].player;
+      }
+
+      if (selectedEnemy !== null) {
+        this.setNewEnemy(selectedEnemy);
+      }
+    }
   }
 
   selectRandomEnemy(): Player | TerraNullius | null {
