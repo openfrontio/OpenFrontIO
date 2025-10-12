@@ -34,6 +34,7 @@ import { UsernameInput } from "./UsernameInput";
 import {
   generateCryptoRandomUUID,
   incrementGamesPlayed,
+  isInIframe,
   translateText,
 } from "./Utils";
 import "./components/NewsButton";
@@ -207,6 +208,10 @@ class Client {
     const patternButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
+    if (isInIframe() && patternButton) {
+      patternButton.style.display = "none";
+    }
+
     this.patternsModal instanceof TerritoryPatternsModal;
     if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
@@ -504,18 +509,24 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
+    const pattern = this.userSettings.getSelectedPatternName(
+      await fetchCosmetics(),
+    );
+
     this.gameStop = joinLobby(
       this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern:
-          this.userSettings.getSelectedPatternName(await fetchCosmetics()) ??
-          undefined,
-        flag:
-          this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
-            ? ""
-            : this.flagInput.getCurrentFlag(),
+        cosmetics: {
+          color: this.userSettings.getSelectedColor() ?? undefined,
+          patternName: pattern?.name ?? undefined,
+          patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
+          flag:
+            this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
+              ? ""
+              : this.flagInput.getCurrentFlag(),
+        },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,

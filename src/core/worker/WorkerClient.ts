@@ -160,8 +160,8 @@ export class WorkerClient {
 
   playerInteraction(
     playerID: PlayerID,
-    x: number,
-    y: number,
+    x?: number,
+    y?: number,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {

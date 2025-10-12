@@ -25,6 +25,9 @@ export class TerritoryPatternsModal extends LitElement {
   public previewButton: HTMLElement | null = null;
 
   @state() private selectedPattern: PlayerPattern | null;
+  @state() private selectedColor: string | null = null;
+
+  @state() private activeTab: "patterns" | "colors" = "patterns";
 
   private cosmetics: Cosmetics | null = null;
 
@@ -44,6 +47,7 @@ export class TerritoryPatternsModal extends LitElement {
     if (userMeResponse === null) {
       this.userSettings.setSelectedPatternName(undefined);
       this.selectedPattern = null;
+      this.selectedColor = null;
     }
     this.userMeResponse = userMeResponse;
     this.cosmetics = await fetchCosmetics();
@@ -51,11 +55,37 @@ export class TerritoryPatternsModal extends LitElement {
       this.cosmetics !== null
         ? this.userSettings.getSelectedPatternName(this.cosmetics)
         : null;
+    this.selectedColor = this.userSettings.getSelectedColor() ?? null;
     this.refresh();
   }
 
   createRenderRoot() {
     return this;
+  }
+
+  private renderTabNavigation(): TemplateResult {
+    return html`
+      <div class="flex border-b border-gray-600 mb-4 justify-center">
+        <button
+          class="px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
+            .activeTab === "patterns"
+            ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
+            : "text-gray-400 hover:text-white"}"
+          @click=${() => (this.activeTab = "patterns")}
+        >
+          ${translateText("territory_patterns.title")}
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
+            .activeTab === "colors"
+            ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
+            : "text-gray-400 hover:text-white"}"
+          @click=${() => (this.activeTab = "colors")}
+        >
+          ${translateText("territory_patterns.colors")}
+        </button>
+      </div>
+    `;
   }
 
   private renderPatternGrid(): TemplateResult {
@@ -105,14 +135,39 @@ export class TerritoryPatternsModal extends LitElement {
     `;
   }
 
+  private renderColorSwatchGrid(): TemplateResult {
+    const hexCodes = (this.userMeResponse?.player.flares ?? [])
+      .filter((flare) => flare.startsWith("color:"))
+      .map((flare) => "#" + flare.split(":")[1]);
+    return html`
+      <div class="flex flex-wrap gap-3 p-2 justify-center items-center">
+        ${hexCodes.map(
+          (hexCode) => html`
+            <div
+              class="w-12 h-12 rounded-lg border-2 border-white/30 cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg"
+              style="background-color: ${hexCode};"
+              title="${hexCode}"
+              @click=${() => this.selectColor(hexCode)}
+            ></div>
+          `,
+        )}
+      </div>
+    `;
+  }
+
   render() {
     if (!this.isActive) return html``;
     return html`
       <o-modal
         id="territoryPatternsModal"
-        title="${translateText("territory_patterns.title")}"
+        title="${this.activeTab === "patterns"
+          ? translateText("territory_patterns.title")
+          : translateText("territory_patterns.colors")}"
       >
-        ${this.renderPatternGrid()}
+        ${this.renderTabNavigation()}
+        ${this.activeTab === "patterns"
+          ? this.renderPatternGrid()
+          : this.renderColorSwatchGrid()}
       </o-modal>
     `;
   }
@@ -130,6 +185,8 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private selectPattern(pattern: PlayerPattern | null) {
+    this.selectedColor = null;
+    this.userSettings.setSelectedColor(undefined);
     if (pattern === null) {
       this.userSettings.setSelectedPatternName(undefined);
     } else {
@@ -145,8 +202,32 @@ export class TerritoryPatternsModal extends LitElement {
     this.close();
   }
 
+  private selectColor(hexCode: string) {
+    this.selectedPattern = null;
+    this.userSettings.setSelectedPatternName(undefined);
+    this.selectedColor = hexCode;
+    this.userSettings.setSelectedColor(hexCode);
+    this.refresh();
+    this.close();
+  }
+
+  private renderColorPreview(
+    hexCode: string,
+    width: number,
+    height: number,
+  ): TemplateResult {
+    return html`
+      <div
+        class="rounded"
+        style="width: ${width}px; height: ${height}px; background-color: ${hexCode};"
+      ></div>
+    `;
+  }
+
   public async refresh() {
-    const preview = renderPatternPreview(this.selectedPattern ?? null, 48, 48);
+    const preview = this.selectedColor
+      ? this.renderColorPreview(this.selectedColor, 48, 48)
+      : renderPatternPreview(this.selectedPattern ?? null, 48, 48);
     this.requestUpdate();
 
     // Wait for the DOM to be updated and the o-modal element to be available

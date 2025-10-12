@@ -83,6 +83,7 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
 
     // Sam will only target nukes it can destroy before it reaches its target
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(3, 1),
       trajectory: [

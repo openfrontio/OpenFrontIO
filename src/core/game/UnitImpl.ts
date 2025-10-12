@@ -397,6 +397,18 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
 
+  decreaseLevel(destroyer?: Player): void {
+    this._level--;
+    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+      this._missileTimerQueue.pop();
+    }
+    if (this._level <= 0) {
+      this.delete(true, destroyer);
+      return;
+    }
+    this.mg.addUpdate(this.toUpdate());
+  }
+
   trainType(): TrainType | undefined {
     return this._trainType;
   }

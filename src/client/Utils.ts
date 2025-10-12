@@ -235,3 +235,13 @@ export function incrementGamesPlayed(): void {
     console.warn("Failed to increment games played in localStorage:", error);
   }
 }
+
+export function isInIframe(): boolean {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    // If we can't access window.top due to cross-origin restrictions,
+    // we're definitely in an iframe
+    return true;
+  }
+}

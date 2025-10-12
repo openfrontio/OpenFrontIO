@@ -94,11 +94,11 @@
     "build_city": "Urbo",
     "build_city_desc": "Utila kiam vi ne povas pligrandigi vian teritorion aŭ kiam vi atingas vian loĝantlimon.",
     "build_factory": "Fabriko",
-    "build_factory_desc": "Kreas fervojojn aŭtomate kun apud konstruaĵoj, kaj generas trajnojn sporade.",
+    "build_factory_desc": "Aŭtomate konstruas relvojojn al apudaj urboj, havenoj kaj aliaj fabrikoj, kaj ankaŭ povas ligiĝi kun amikaj najbaroj. Trajnoj aperas regule kaj donas al vi fiksan kvanton da oro por ĉiu konstruaĵo, kiun ili vizitas laŭ la itinero, kun ekstra oro pro vizito al la konstruaĵoj de viaj najbaroj.",
     "build_defense": "Defenda posteno",
     "build_defense_desc": "Plialtigas la defendon ĉirkaŭ najbaraj landlimoj, kiuj montriĝas per kontrolita ŝablono. Atakoj de malamikoj estas pli malrapidaj kaj kaŭzas pli da viktimoj.",
     "build_port": "Haveno",
-    "build_port_desc": "Povas esti konstruita nur proksime al akvo. Permesas konstrui militŝipojn. Aŭtomate sendas komercajn ŝipojn inter havenoj de via lando kaj aliaj landoj (escepte kiam komerco estas haltigita), donante oron al ambaŭ flankoj. Komerco aŭtomate ĉesas kiam vi atakas aŭ estas atakata de ludanto. Ĝi rekomenciĝas post 5 minutoj aŭ se vi fariĝas aliancanoj. Vi povas mane ŝalti komercon per \"Ĉesi komercadon\" aŭ \"Komenci komercadon\".",
+    "build_port_desc": "Nur povas esti konstruita apud akvo. Permesas konstrui militŝipojn. Aŭtomate sendas komercajn ŝipojn inter havenoj de via lando kaj aliaj landoj (krom kiam komerco estas haltigita), donante oron al ambaŭ flankoj. Komerci kun ludanto haltigas aŭtomate kiam vi atakas aŭ estas atakita de ludanto. Ĝi reprenas 5 minutojn poste aŭ se vi devenas aliancanoj. Vi povas permane ŝalti komercadon per \"Ĉesigi komercadon\" aŭ \"Komenci komercadon\".",
     "build_warship": "Militŝipo",
     "build_warship_desc": "Patrolas en areo, kapteblante malamikajn komercajn ŝipojn kaj detruante iliajn Boatojn (transportŝipojn) kaj Militŝipojn. Aperas ĉe la plej proksima haveno kaj patrolas la areon kie vi unue alklakis por konstrui ĝin. Vi povas regi Militŝipojn per atak-alklako (vidu agon Ataki sub Hotklavoj) kaj poste atak-alklaki la novan areon, kien vi volas, ke ili moviĝu.",
     "build_silo": "Misila silo",
@@ -131,9 +131,21 @@
     "instant_build": "Tujkonstruaĵo",
     "infinite_gold": "Senfina oro",
     "infinite_troops": "Senfinaj trupoj",
+    "compact_map": "Karteto",
     "disable_nukes": "Malŝalti nukleajn armilojn",
     "enables_title": "Ebligi Agordojn",
     "start": "Komenci la ludon"
+  },
+  "token_login_modal": {
+    "title": "Ensalutante...",
+    "logging_in": "Ensalutante...",
+    "success": "Sukcese ensalutinta kiel {email}!"
+  },
+  "account_modal": {
+    "title": "Konto",
+    "logged_in_as": "Ensalutinta kiel {email}",
+    "logged_in_with_discord": "Ensalutinta kun Diskordo",
+    "recovery_email_sent": "Reakira retpoŝto sendita al {email}"
   },
   "map": {
     "map": "Karto",
@@ -147,7 +159,6 @@
     "africa": "Afriko",
     "asia": "Azio",
     "mars": "Marso",
-    "marsrevised": "Marso (reviziita)",
     "southamerica": "Sudameriko",
     "britannia": "Granda Britio",
     "gatewaytotheatlantic": "Pordo al Atlantiko",
@@ -165,8 +176,10 @@
     "halkidiki": "Ĥalkidiko",
     "straitofgibraltar": "Ĝibraltara Markolo",
     "italia": "Italio",
+    "japan": "Japanio",
     "yenisei": "Jenisejo",
-    "pluto": "Plutono"
+    "pluto": "Plutono",
+    "montreal": "Montrealo"
   },
   "map_categories": {
     "continental": "Kontinenta",
@@ -184,8 +197,9 @@
     "join_lobby": "Aliĝi al la ludejo",
     "checking": "Kontrolado de la ludejo...",
     "not_found": "Ludejo ne trovita. Bonvolu kontroli la ID kaj reprovi.",
-    "error": "Eraro okazis. Bonvolu provi denove.",
-    "joined_waiting": "Sukcese aliĝis! Atendante la komencon de la ludo..."
+    "error": "Eraro okazis. Bonvolu reprovi aŭ kontaktu helpon.",
+    "joined_waiting": "Sukcese aliĝis! Atendante la komencon de la ludo...",
+    "version_mismatch": "Ĉi tiu ludo estis kreita kun malsama versio. Ne eblas aliĝi."
   },
   "public_lobby": {
     "join": "Kunigi la baldaŭan ludon",
@@ -212,7 +226,10 @@
     "disable_nations": "Malŝalti naciojn",
     "instant_build": "Tujkonstruaĵo",
     "infinite_gold": "Senfina oro",
+    "donate_gold": "Donacu oron",
     "infinite_troops": "Senfinaj trupoj",
+    "donate_troops": "Donacu trupojn",
+    "compact_map": "Karteto",
     "enables_title": "Ebligi Agordojn",
     "player": "Ludanto",
     "players": "Ludantoj",
@@ -236,9 +253,9 @@
   },
   "difficulty": {
     "difficulty": "Malfacileco",
-    "Relaxed": "Senstreĉa",
-    "Balanced": "Ekvilibriga",
-    "Intense": "Intensa",
+    "Easy": "Senstreĉa",
+    "Medium": "Ekvilibriga",
+    "Hard": "Intensa",
     "Impossible": "Neebla"
   },
   "game_mode": {
@@ -300,6 +317,8 @@
     "territory_patterns_desc": "Elektu ĉu montri teritoriajn ŝablonajn dezajnojn en la ludo",
     "performance_overlay_label": "Efikeco Supermetaĵo",
     "performance_overlay_desc": "Ŝalti la efikecon supermetaĵon. Kiam ebligita, la efikeco supermetaĵo estos montrata. Premu la Majuskligan klavon\n+ D dum la ludo por ŝalti.",
+    "performance_overlay_enabled": "Funkciada supermetaĵo ŝaltita",
+    "performance_overlay_disabled": "Funkciada supermetaĵo malŝaltita",
     "easter_writing_speed_label": "Rapidskriba multiganto",
     "easter_writing_speed_desc": "Alĝustigu kiom rapide vi ŝajnigas kodi (x1–x100)",
     "easter_bug_count_label": "Nombro da cimoj",
@@ -363,26 +382,31 @@
     },
     "help": {
       "troops": "Bonvolu doni al mi soldatojn!",
+      "troops_frontlines": "Sendi trupojn al la landlimoj!",
       "gold": "Bonvolu doni al mi oron!",
       "no_attack": "Bonvolu ne ataki min!",
       "sorry_attack": "Pardonu, mi ne intencis ataki.",
       "alliance": "Alianco?",
       "help_defend": "Helpu min defendi kontraŭ [P1]!",
-      "team_up": "Ni kuniĝu kontraŭ [P1]!"
+      "trade_partners": "Ni estu komercaj partneroj!"
     },
     "attack": {
       "attack": "Ataku [P1]!",
       "mirv": "Lanĉu MIRV-on ĉe [P1]!",
       "focus": "Fokusu fajron sur [P1]!",
-      "finish": "Ni finigu [P1]!"
+      "finish": "Ni finigu [P1]!",
+      "build_warships": "Konstruu militŝipojn!"
     },
     "defend": {
       "defend": "Defendu [P1]!",
+      "defend_from": "Defendu de [P1]!",
       "dont_attack": "Ne ataku [P1]!",
-      "ally": "[P1] estas mia aliancano!"
+      "ally": "[P1] estas mia aliancano!",
+      "build_posts": "Konstruu defendajn postenojn!"
     },
     "greet": {
       "hello": "Saluton!",
+      "good_job": "Bonan laboron!",
       "good_luck": "Bonŝancon!",
       "have_fun": "Amuziĝu!",
       "gg": "GG!",
@@ -393,13 +417,19 @@
       "thanks": "Dankon!",
       "oops": "Ups, misa butono!",
       "trust_me": "Vi povas fini min. Promeso!",
-      "trust_broken": "Mi fidis vin..."
+      "trust_broken": "Mi fidis vin...",
+      "ruining_games": "Vi ruinigas ambaŭ niajn ludojn.",
+      "dont_do_that": "Ne faru tion!",
+      "same_team": "Mi estas flanke de vi!"
     },
     "misc": {
       "go": "Eku ni!",
       "strategy": "Bona strategio!",
       "fun": "Ĉi tiu ludo estas amuza!",
-      "pr": "Kiam mia tirpeto finfine estos kunfandita...?"
+      "team_up": "Ni kuniĝu kontraŭ [P1]!",
+      "pr": "Kiam mia tirpeto finfine estos kunfandita...?",
+      "build_closer": "Konstruu pli proksime por havi trajnojn!",
+      "coastline": "Bonvolu lasi min akiri marbordon."
     },
     "warnings": {
       "strong": "[P1] estas forta.",
@@ -410,10 +440,14 @@
       "has_allies": "[P1] havas multe da aliancanoj.",
       "no_allies": "[P1] ne havas aliancanojn.",
       "betrayed": "[P1] perfidis sian aliancanon!",
+      "betrayed_me": "[P1] perfidis min!",
       "getting_big": "[P1] kreskas tro rapide!",
       "danger_base": "[P1] estas senprotekta!",
       "saving_for_mirv": "[P1] ŝparas por lanĉi MIRV-on.",
-      "mirv_ready": "[P1] havas sufiĉe da oro por lanĉi MIRV-on!"
+      "mirv_ready": "[P1] havas sufiĉe da oro por lanĉi MIRV-on!",
+      "snowballing": "[P1] kreskas tro rapide!",
+      "cheating": "[P1] fraŭdas!",
+      "stop_trading": "Ĉesu komerci kun [P1]!"
     }
   },
   "build_menu": {
@@ -432,6 +466,8 @@
     "not_enough_money": "Ne sufiĉe da mono"
   },
   "win_modal": {
+    "support_openfront": "Subtenu OpenFront!",
+    "territory_pattern": "Aĉetu territorian ŝablonon por subteni OpenFront!",
     "died": "Vi mortiĝis",
     "your_team": "Via teamo venkis!",
     "other_team": "{team} teamo venkis!",
@@ -449,7 +485,13 @@
     "team": "Teamo",
     "owned": "Posedata",
     "gold": "Oro",
-    "troops": "Trupoj"
+    "troops": "Trupoj",
+    "launchers": "Lanĉiloj",
+    "sams": "SAM-oj",
+    "warships": "Militŝipoj",
+    "cities": "Urboj",
+    "show_control": "Montri regulilon",
+    "show_units": "Montri trupojn"
   },
   "player_info_overlay": {
     "type": "Tipo",
@@ -457,7 +499,8 @@
     "nation": "Nacio",
     "player": "Ludanto",
     "team": "Teamo",
-    "d_troops": "Defendante trupoj",
+    "alliance_timeout": "Alianco finiĝas en",
+    "troops": "Trupoj",
     "a_troops": "Atakante trupoj",
     "gold": "Oro",
     "ports": "Havenoj",
@@ -527,7 +570,8 @@
     "yes": "Jes",
     "no": "Ne",
     "none": "Neniu",
-    "alliances": "Aliancoj"
+    "alliances": "Aliancoj",
+    "flag": "Flago"
   },
   "replay_panel": {
     "replay_speed": "Reluda rapideco",
@@ -547,7 +591,7 @@
     "choose_spawn": "Elektu komencan lokon"
   },
   "territory_patterns": {
-    "title": "Elekti Teritoriajn Ŝablonojn",
+    "title": "Elekti Teritoria Ŝablono",
     "purchase": "Aĉeti",
     "blocked": {
       "login": "Vi devas esti ensalutinta por aliri ĉi tiun ŝablonon.",
@@ -589,6 +633,11 @@
       "grogu": "Grogu"
     }
   },
+  "flag_input": {
+    "title": "Elekti flagon",
+    "button_title": "Elektu flagon!",
+    "search_flag": "Serĉi..."
+  },
   "spawn_ad": {
     "loading": "Ŝarĝante reklamo..."
   },
@@ -601,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "Forigi trupunon",
     "delete_unit_description": "Alklaku por forigi la plej proksiman trupunon"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Profilbildo"
+  },
+  "player_stats_table": {
+    "building_stats": "Konstruaĵaj statistikoj",
+    "ship_arrivals": "Ŝipoj alvenoj",
+    "nuke_stats": "Bomboj statistikoj",
+    "player_metrics": "Ludanta statistikoj",
+    "building": "Konstruaĵo",
+    "ship_type": "Ŝipa tipo",
+    "weapon": "Armilo",
+    "built": "Konstruita",
+    "destroyed": "Detruita",
+    "captured": "Ekkaptita",
+    "lost": "Perdita",
+    "hits": "Frapoj",
+    "launched": "Lanĉita",
+    "landed": "Surterigita",
+    "sent": "Sendita",
+    "arrived": "Alveninta",
+    "attack": "Atako",
+    "received": "Ricevita",
+    "cancelled": "Nuligita",
+    "count": "Nombro",
+    "gold": "Oro",
+    "workers": "Laboristoj",
+    "war": "Milito",
+    "trade": "Komerci",
+    "steal": "Ŝteli",
+    "unit": {
+      "city": "Urbo",
+      "port": "Haveno",
+      "defp": "Defenda Posteno",
+      "saml": "SAM-lanĉilo",
+      "silo": "Misila Silo",
+      "wshp": "Militŝipo",
+      "fact": "Fabriko",
+      "trade": "Komerca ŝipo",
+      "trans": "Transporta ŝipo",
+      "abomb": "Atombombo",
+      "hbomb": "Hidrogenbombo",
+      "mirv": "MIRV",
+      "mirvw": "MIRV-kapo"
+    }
+  },
+  "game_list": {
+    "recent_games": "Lastaj ludoj",
+    "game_id": "Ludo ID",
+    "mode": "Reĝimo",
+    "mode_ffa": "Ĉiu por si",
+    "mode_team": "Teamo",
+    "view": "Vido",
+    "details": "Detaloj",
+    "started": "Komencita",
+    "map": "Karto",
+    "difficulty": "Malfacileco",
+    "type": "Tipo"
   }
 }

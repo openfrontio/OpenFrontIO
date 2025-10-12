@@ -48,7 +48,7 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = { attackRatio: 20 };
+  const uiState = { attackRatio: 20, ghostStructure: null } as UIState;
 
   //hide when the game renders
   const startingModal = document.querySelector(
@@ -167,6 +167,7 @@ export function createRenderer(
   }
   unitDisplay.game = game;
   unitDisplay.eventBus = eventBus;
+  unitDisplay.uiState = uiState;
 
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
@@ -235,12 +236,12 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game),
+    new RailroadLayer(game, transformHandler),
     structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new StructureIconsLayer(game, eventBus, transformHandler),
+    new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,

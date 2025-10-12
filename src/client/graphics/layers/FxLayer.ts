@@ -7,6 +7,7 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
@@ -115,25 +116,20 @@ export class FxLayer implements Layer {
     this.allFx.push(textFx);
   }
 
-  addTargetFx(x: number, y: number) {
-    const fx = new TargetFx(x, y, 1200, 12);
-    this.allFx.push(fx);
-  }
-
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
       case UnitType.TransportShip: {
         const my = this.game.myPlayer();
         if (!my) return;
         if (unit.owner() !== my) return;
-        if (!unit.isActive()) return;
+        if (!unit.isActive() || unit.retreating()) return;
         if (this.boatTargetFxByUnitId.has(unit.id())) return;
         const t = unit.targetTile();
         if (t !== undefined) {
           const x = this.game.x(t);
           const y = this.game.y(t);
           // persistent until boat finishes or retreats
-          const fx = new TargetFx(x, y, 0, 12, true);
+          const fx = new TargetFx(x, y, 0, true);
           this.allFx.push(fx);
           this.boatTargetFxByUnitId.set(unit.id(), fx);
         }
@@ -215,6 +211,8 @@ export class FxLayer implements Layer {
     if (conqueror !== this.game.myPlayer()) {
       return;
     }
+
+    SoundManager.playSoundEffect(SoundEffect.KaChing);
 
     const conquestFx = conquestFxFactory(
       this.animatedSpriteLoader,

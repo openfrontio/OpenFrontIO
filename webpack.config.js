@@ -93,6 +93,13 @@ export default async (env, argv) => {
             filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
           },
         },
+        {
+          test: /\.(mp3|wav|ogg)$/i,
+          type: "asset/resource",
+          generator: {
+            filename: "sounds/[name].[contenthash][ext]",
+          },
+        },
       ],
     },
     resolve: {
@@ -135,6 +142,11 @@ export default async (env, argv) => {
         patterns: [
           {
             from: path.resolve(__dirname, "resources"),
+            to: path.resolve(__dirname, "static"),
+            noErrorOnMissing: true,
+          },
+          {
+            from: path.resolve(__dirname, "proprietary"),
             to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,
           },

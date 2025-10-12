@@ -18,8 +18,6 @@ export class TerrainSearchMap {
   node(x: number, y: number): SearchMapTileType {
     const packedByte = this.mapData[4 + y * this.width + x];
     const isLand = packedByte & 0b10000000;
-    const shoreline = !!(packedByte & 0b01000000);
-    const ocean = !!(packedByte & 0b00100000);
     const magnitude = packedByte & 0b00011111;
     if (isLand) {
       return SearchMapTileType.Land;

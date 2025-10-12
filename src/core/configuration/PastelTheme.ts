@@ -55,19 +55,8 @@ export class PastelTheme implements Theme {
   }
 
   // Don't call directly, use PlayerView
-  borderColor(player: PlayerView): Colord {
-    if (this.borderColorCache.has(player.id())) {
-      return this.borderColorCache.get(player.id())!;
-    }
-    const tc = this.territoryColor(player).rgba;
-    const color = colord({
-      r: Math.max(tc.r - 40, 0),
-      g: Math.max(tc.g - 40, 0),
-      b: Math.max(tc.b - 40, 0),
-    });
-
-    this.borderColorCache.set(player.id(), color);
-    return color;
+  borderColor(territoryColor: Colord): Colord {
+    return territoryColor.darken(0.125);
   }
 
   defendedBorderColors(territoryColor: Colord): {
@@ -95,7 +84,7 @@ export class PastelTheme implements Theme {
     }
     switch (gm.terrainType(tile)) {
       case TerrainType.Ocean:
-      case TerrainType.Lake:
+      case TerrainType.Lake: {
         const w = this.water.rgba;
         if (gm.isShoreline(tile) && gm.isWater(tile)) {
           return this.shorelineWater;
@@ -105,7 +94,7 @@ export class PastelTheme implements Theme {
           g: Math.max(w.g - 10 + (11 - Math.min(mag, 10)), 0),
           b: Math.max(w.b - 10 + (11 - Math.min(mag, 10)), 0),
         });
-
+      }
       case TerrainType.Plains:
         return colord({
           r: 190,
