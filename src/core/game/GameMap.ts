@@ -43,6 +43,7 @@ export interface GameMap {
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
   ): Set<TileRef>;
+
   toTileUpdate(tile: TileRef): bigint;
   updateTile(tu: TileUpdate): TileRef;
 
