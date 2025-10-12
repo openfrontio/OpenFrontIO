@@ -121,5 +121,35 @@ describe("PlayerInfo", () => {
       );
       expect(playerInfo.clan).toBeNull();
     });
+
+    test("should extract clan name from any location in the player name", () => {
+      const playerInfo = new PlayerInfo(
+        "Player[aa]Name",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("aa");
+    });
+
+    test("should extract only the first occurrence of a clan name match", () => {
+      const playerInfo = new PlayerInfo(
+        "[Ab1cD]Player[aa]Name",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("Ab1cD");
+    });
+
+    test("should extract only the first occurrence of a valid clan name match", () => {
+      const playerInfo = new PlayerInfo(
+        "[Ab1cDEF]Player[aa]Name",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("aa");
+    });
   });
 });
