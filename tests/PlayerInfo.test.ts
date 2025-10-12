@@ -151,5 +151,65 @@ describe("PlayerInfo", () => {
       );
       expect(playerInfo.clan).toBe("aa");
     });
+
+    test("should extract numeric-only clan names", () => {
+      const playerInfo = new PlayerInfo(
+        "[012]PlayerName",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("012");
+    });
+
+    test("should extract numeric-only clan names and only the first valid clan name", () => {
+      const playerInfo = new PlayerInfo(
+        "[012]Player[aa]Name",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("012");
+    });
+
+    test("should extract numeric-only clan names from anywhere within the name", () => {
+      const playerInfo = new PlayerInfo(
+        "Player[012]Name",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("012");
+    });
+
+    test("should extract numeric-only clan names from the end of the name", () => {
+      const playerInfo = new PlayerInfo(
+        "PlayerName[012]",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("012");
+    });
+
+    test("should extract alphanumeric clan names from anywhere within the name", () => {
+      const playerInfo = new PlayerInfo(
+        "Player[0a1B2]Name",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("0a1B2");
+    });
+
+    test("should extract alphanumeric clan names from the end of the name", () => {
+      const playerInfo = new PlayerInfo(
+        "PlayerName[0a1B2]",
+        PlayerType.Human,
+        null,
+        "player_id",
+      );
+      expect(playerInfo.clan).toBe("0a1B2");
+    });
   });
 });
