@@ -236,7 +236,7 @@
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
     "disable_nations": "Disable Nations",
-    "max_timer": "Max timer (minutes)",
+    "max_timer": "Game length (minutes)",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "donate_gold": "Donate gold",
