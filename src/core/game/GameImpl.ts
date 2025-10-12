@@ -861,9 +861,6 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  boundingBox(center: TileRef, radius: number): TileRef[] {
-    return this._map.boundingBox(center, radius);
-  }
   toTileUpdate(tile: TileRef): bigint {
     return this._map.toTileUpdate(tile);
   }

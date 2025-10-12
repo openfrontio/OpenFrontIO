@@ -16,7 +16,7 @@ import {
 import { TileRef, euclDistFN } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
-import { calculateBoundingBox, simpleHash } from "../Util";
+import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
@@ -287,10 +287,9 @@ export class FakeHumanExecution implements Execution {
     this.removeOldNukeEvents();
     outer: for (const tile of new Set(allTiles)) {
       if (tile === null) continue;
-      const boundingBox = this.mg
-        .boundingBox(tile, range)
+      const boundingBox = boundingBoxTiles(this.mg, tile, range)
         // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
-        .concat(this.mg.boundingBox(tile, Math.floor(range / 2)));
+        .concat(boundingBoxTiles(this.mg, tile, Math.floor(range / 2)));
       for (const t of boundingBox) {
         // Make sure we nuke away from the border
         if (this.mg.owner(t) !== other) {
