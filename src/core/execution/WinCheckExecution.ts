@@ -16,7 +16,6 @@ export class WinCheckExecution implements Execution {
   private active = true;
 
   private mg: Game | null = null;
-  /** Remaining seconds – undefined when feature is disabled */
 
   constructor() {}
 
