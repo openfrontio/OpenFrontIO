@@ -17,16 +17,11 @@ export class WinCheckExecution implements Execution {
 
   private mg: Game | null = null;
   /** Remaining seconds – undefined when feature is disabled */
-  private timer?: number;
 
   constructor() {}
 
   init(mg: Game, ticks: number) {
     this.mg = mg;
-    const maxTimerValue = this.mg.config().gameConfig().maxTimerValue;
-    if (maxTimerValue !== undefined) {
-      this.timer = maxTimerValue * 60;
-    }
   }
 
   tick(ticks: number) {
@@ -34,10 +29,6 @@ export class WinCheckExecution implements Execution {
       return;
     }
     if (this.mg === null) throw new Error("Not initialized");
-
-    if (this.timer !== undefined) {
-      this.timer = Math.max(0, this.timer - 1);
-    }
 
     if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
@@ -55,12 +46,15 @@ export class WinCheckExecution implements Execution {
       return;
     }
     const max = sorted[0];
+    const timeElapsed =
+      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     if (
       (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
         this.mg.config().percentageTilesOwnedToWin() ||
-      this.timer === 0
+      (this.mg.config().gameConfig().maxTimerValue !== undefined &&
+        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0)
     ) {
       this.mg.setWinner(max, this.mg.stats().stats());
       console.log(`${max.name()} has won the game`);
@@ -87,12 +81,15 @@ export class WinCheckExecution implements Execution {
       return;
     }
     const max = sorted[0];
+    const timeElapsed =
+      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     const percentage = (max[1] / numTilesWithoutFallout) * 100;
     if (
       percentage > this.mg.config().percentageTilesOwnedToWin() ||
-      this.timer === 0
+      (this.mg.config().gameConfig().maxTimerValue !== undefined &&
+        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0)
     ) {
       if (max[0] === ColoredTeams.Bot) return;
       this.mg.setWinner(max[0], this.mg.stats().stats());
