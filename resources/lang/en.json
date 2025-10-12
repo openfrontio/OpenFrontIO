@@ -143,7 +143,7 @@
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
     "compact_map": "Mini Map",
-    "max_timer": "Max timer (minutes)",
+    "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game"
