@@ -10,6 +10,14 @@
     "ABMIDw8": {
       "name": "stripes_h"
     },
+    "AAEYAwA": {
+      "name": "horizontal_stripes",
+      "role_group": "donor"
+    },
+    "AAoACQ": {
+      "name": "vertical_bars",
+      "role_group": "donor"
+    },
     "ABMIpaU": {
       "name": "checkerboard"
     },
@@ -26,10 +34,6 @@
     },
     "AHEYA8AMMDAMwAPAAzAMDDADwA": {
       "name": "mini_cross",
-      "role_group": "donor"
-    },
-    "AHE4__8AAAAAAAAAAAAAAAAAAP__AAAAAAAAAAAAAAAAAAA": {
-      "name": "horizontal_stripes",
       "role_group": "donor"
     },
     "AHI4AOAAkACIAEQAIgARjAhUBCgCKAHQACgB1AILAwUABwA": {
@@ -60,8 +64,8 @@
       "name": "circuit_board",
       "role_group": "donor"
     },
-    "AHEYSZJJkkmSSZJJkkmSSZJJkg": {
-      "name": "vertical_bars",
+    "AHEgzGfznzu43XPoL2fMn_O4O3fdL-g": {
+      "name": "shells",
       "role_group": "donor"
     },
     "AHEYAAAAAAAAAkCCQUQiLnQWaA": {
@@ -74,6 +78,10 @@
     },
     "AKFwAAAADMAABSiAAgVAoQBQKAA0CwB6AfDhAwIAQQKQkAAkMgCTSkhlGpYBAQJAjAAgEAAQAgB6AUCAABAgAAoUgAIFoFIBqFcAKhWASgXA8wAAAAA": {
       "name": "goat",
+      "role_group": "donor"
+    },
+    "ALF1AAAAAAAAABABAAAAAACwAQAAAAAA8AEAAAAAIFABIoABABDwATbAA4gQ9AU-wBPZIPgDKoSx-UD4Az4C9Kmf8AEcUlj5v_ABPvb9-X_wAX7k__A_8AN-_H_gH_AFfuJ_wBiwJf_BP0AIEBkAAAAAAAAAAAAAAAAAAAAAAAAAIgAAAAAAADYAiAAA-AA-ANgAELEBKgD4ALDhI_4HqgDwsSf-H_oIUPlH_C9xBP_BT_gn-YT_wD_8J_rEf-Af_hP8yD_gHwAM-NAf4B8AAvzhP8APAAAAAAAAAA": {
+      "name": "cats",
       "role_group": "donor"
     },
     "AJhYAAAAGACABACQAAASAEACAMgBAMkBIMkAJCngJAkSIEECIEgABAKAQAAQEAACAiCAAAQQgAAECIAAAfA_AAAA": {
@@ -95,102 +103,429 @@
     "AAIiAAAAAAAAAAAAAAAAAAAAAIDD8YnweTiiD5FIYEIgEpkIRCKBCoFIpCIQeTwyPB6RjEAkEIgQKEQiApFAIEIgEYkIOAKfCIGIIyIAAAAAAAAAAAA": {
       "name": "openfront",
       "role_group": "creator"
+    },
+    "AJlMAAAAAP8A8D8A9gfA_wD4HwAfAOAfAn5A4A8Y_wf3v8D_B_j_AP4PgP8B4B0AGAEAIQBgDAAAAAA": {
+      "name": "t_rex",
+      "role_group": "donor"
+    },
+    "AAqFAAACAAAAOAAAAOADAAAAHwAAAPgAAEDABwQAwZxBAAzuDgYw8H9ggAH-AAMO8Ac4OAAfgMMB-AAcDsAH4HgAPgDPB_ABfD6AD-DzAXwAnx_gA_z8gT_w5x_-wz______-f___4____8__P___8H___8H_v__P-D___8A____B_D__x8A__9_APD__wEA_v8DAMD_BwAA-A8AAA": {
+      "name": "embelem",
+      "role_group": "donor"
+    },
+    "AMo0AAAAAAAAAAAAAIAAJAACEAIIQCAgAAGCAAQgCBCAgEAAAggBCIAEIAAAAAAAAAAAAAAA": {
+      "name": "contributor"
+    },
+    "AMlNAAAAAAAAAAAAAPAfAACAHwDwgAcAAMQf4ADgAAAgwM8BAAwACEPABwDA__8xEACIAAAACAMOgCQAAGEwwAAoAPCAAQGMCCBhAAYIQPwAnwEYgADSB_QEQAAIkD_wJwABgAH8gx8ABAAYwE99ABgAAAcAACBwAADgBDCA-AAAADwQoH8AAAAA_v8DAAAAAAAMAAAAAAAAAAAAAAA": {
+      "name": "grogu_head",
+      "role_group": "donor"
+    },
+    "AMl9AAAAAAAAAAAAAPAfAACAHwDwgAcAAMQf4ADgAAAgwM8BAAwACEPABwDA__8xEACIAAAACAMOgCQAAGEwwAAoAPCAAQGMCCBhAAYIQPwAnwEYgADSB_QEQAAIkD_wJwABgAH8gx8ABAAYwE99ABgAAAcAACBwAADgBDCA-AAAADwQoH8AAABA_v8DBwAAAAIMACwAAAAwAAAwAQAAAAMAoBgAAAA4COCFAAAAYEbAIAcAAICjgzEbAAAALPwHSQAAAGAjAAoDAAAAJknIDAAAAFBEIj8AAACAOpA4AAAAAHyAwAEAAAAAQQQIAAAAAAAAAAAAAA": {
+      "name": "grogu",
+      "role_group": "donor"
     }
   },
   "flag": {
     "layers": {
-      "a": { "name": "center_circle" },
-      "b": { "name": "center_hline" },
-      "c": { "name": "center_vline" },
-      "d": { "name": "center_star" },
-      "e": { "name": "center_flower" },
-      "f": { "name": "flower_tl" },
-      "g": { "name": "flower_tc" },
-      "h": { "name": "flower_tr" },
-      "i": { "name": "diag_br" },
-      "j": { "name": "diag_bl" },
-      "k": { "name": "frame" },
-      "l": { "name": "full" },
-      "m": { "name": "triangle_tl" },
-      "n": { "name": "triangle_bl" },
-      "o": { "name": "triangle_tr" },
-      "p": { "name": "triangle_br" },
-      "q": { "name": "half_l" },
-      "r": { "name": "half_r" },
-      "s": { "name": "half_t" },
-      "t": { "name": "half_b" },
-      "u": { "name": "mini_tr_bl" },
-      "v": { "name": "mini_tr_br" },
-      "w": { "name": "mini_tr_tl" },
-      "x": { "name": "mini_tr_tr" },
-      "y": { "name": "triangle_t" },
-      "z": { "name": "triangle_l" },
-      "aa": { "name": "triangle_b" },
-      "ab": { "name": "triangle_r" },
-      "ac": { "name": "tricolor_l" },
-      "ad": { "name": "tricolor_c" },
-      "ae": { "name": "tricolor_r" },
-      "af": { "name": "tricolor_t" },
-      "ag": { "name": "tricolor_m" },
-      "ah": { "name": "tricolor_b" },
-      "ai": { "name": "nato_emblem" },
-      "aj": { "name": "eu_star" },
-      "ak": { "name": "laurel_wreath" },
-      "al": { "name": "ofm_2025" },
-      "am": { "name": "octagram" },
-      "an": { "name": "octagram_2" },
-      "ao": { "name": "og" },
-      "ap": { "name": "og_plus" },
-      "aq": { "name": "beta_tester" },
-      "ar": { "name": "beta_tester_circle" },
-      "as": { "name": "rocket" },
-      "at": { "name": "rocket_mini" },
-      "au": { "name": "translator" },
-      "av": { "name": "admin_shield" },
-      "aw": { "name": "admin_shield_r" },
-      "ax": { "name": "admin_evan" }
+      "a": {
+        "name": "center_circle",
+        "role_group": "donor"
+      },
+      "b": {
+        "name": "center_hline",
+        "role_group": "donor"
+      },
+      "c": {
+        "name": "center_vline",
+        "role_group": "donor"
+      },
+      "d": {
+        "name": "center_star",
+        "role_group": "donor"
+      },
+      "e": {
+        "name": "center_flower",
+        "role_group": "donor"
+      },
+      "f": {
+        "name": "flower_tl",
+        "role_group": "donor"
+      },
+      "g": {
+        "name": "flower_tc",
+        "role_group": "donor"
+      },
+      "h": {
+        "name": "flower_tr",
+        "role_group": "donor"
+      },
+      "i": {
+        "name": "diag_br",
+        "role_group": "donor"
+      },
+      "j": {
+        "name": "diag_bl",
+        "role_group": "donor"
+      },
+      "k": {
+        "name": "frame"
+      },
+      "l": {
+        "name": "full"
+      },
+      "m": {
+        "name": "triangle_tl",
+        "role_group": "donor"
+      },
+      "n": {
+        "name": "triangle_bl",
+        "role_group": "donor"
+      },
+      "o": {
+        "name": "triangle_tr",
+        "role_group": "donor"
+      },
+      "p": {
+        "name": "triangle_br",
+        "role_group": "donor"
+      },
+      "q": {
+        "name": "half_l",
+        "role_group": "donor"
+      },
+      "r": {
+        "name": "half_r",
+        "role_group": "donor"
+      },
+      "s": {
+        "name": "half_t",
+        "role_group": "donor"
+      },
+      "t": {
+        "name": "half_b",
+        "role_group": "donor"
+      },
+      "u": {
+        "name": "mini_tr_bl",
+        "role_group": "donor"
+      },
+      "v": {
+        "name": "mini_tr_br",
+        "role_group": "donor"
+      },
+      "w": {
+        "name": "mini_tr_tl",
+        "role_group": "donor"
+      },
+      "x": {
+        "name": "mini_tr_tr",
+        "role_group": "donor"
+      },
+      "y": {
+        "name": "triangle_t",
+        "role_group": "donor"
+      },
+      "z": {
+        "name": "triangle_l",
+        "role_group": "donor"
+      },
+      "aa": {
+        "name": "triangle_b",
+        "role_group": "donor"
+      },
+      "ab": {
+        "name": "triangle_r",
+        "role_group": "donor"
+      },
+      "ac": {
+        "name": "tricolor_l",
+        "role_group": "donor"
+      },
+      "ad": {
+        "name": "tricolor_c",
+        "role_group": "donor"
+      },
+      "ae": {
+        "name": "tricolor_r",
+        "role_group": "donor"
+      },
+      "af": {
+        "name": "tricolor_t",
+        "role_group": "donor"
+      },
+      "ag": {
+        "name": "tricolor_m",
+        "role_group": "donor"
+      },
+      "ah": {
+        "name": "tricolor_b",
+        "role_group": "donor"
+      },
+      "ai": {
+        "name": "nato_emblem",
+        "role_group": "donor"
+      },
+      "aj": {
+        "name": "eu_star",
+        "role_group": "donor"
+      },
+      "ak": {
+        "name": "laurel_wreath",
+        "role_group": "donor"
+      },
+      "al": {
+        "name": "ofm_2025",
+        "role_group": "donor"
+      },
+      "am": {
+        "name": "octagram",
+        "role_group": "donor"
+      },
+      "an": {
+        "name": "octagram_2",
+        "role_group": "donor"
+      },
+      "ao": {
+        "name": "og",
+        "role_group": "donor"
+      },
+      "ap": {
+        "name": "og_plus",
+        "role_group": "donor"
+      },
+      "aq": {
+        "name": "beta_tester",
+        "role_group": "donor"
+      },
+      "ar": {
+        "name": "beta_tester_circle",
+        "role_group": "donor"
+      },
+      "as": {
+        "name": "rocket",
+        "role_group": "donor"
+      },
+      "at": {
+        "name": "rocket_mini",
+        "role_group": "donor"
+      },
+      "au": {
+        "name": "translator",
+        "role_group": "donor"
+      },
+      "av": {
+        "name": "admin_shield",
+        "role_group": "donor"
+      },
+      "aw": {
+        "name": "admin_shield_r",
+        "role_group": "donor"
+      },
+      "ax": {
+        "name": "admin_evan",
+        "role_group": "donor"
+      }
     },
     "color": {
-      "a": { "color": "#ff0000", "name": "red" },
-      "b": { "color": "#ffa500", "name": "orange" },
-      "c": { "color": "#ffff00", "name": "yellow" },
-      "d": { "color": "#008000", "name": "green" },
-      "e": { "color": "#00ffff", "name": "cyan" },
-      "f": { "color": "#0000ff", "name": "blue" },
-      "g": { "color": "#000000", "name": "black" },
-      "h": { "color": "#ffffff", "name": "white" },
-      "i": { "color": "#800080", "name": "purple" },
-      "j": { "color": "#ff69b4", "name": "hotpink" },
-      "k": { "color": "#a52a2a", "name": "brown" },
-      "l": { "color": "#808080", "name": "gray" },
-      "m": { "color": "#20b2aa", "name": "teal" },
-      "n": { "color": "#ff6347", "name": "tomato" },
-      "o": { "color": "#4682b4", "name": "steelblue" },
-      "p": { "color": "#90ee90", "name": "lightgreen" },
-      "q": { "color": "#8b0000", "name": "darkred" },
-      "r": { "color": "#191970", "name": "navy" },
-      "s": { "color": "#ffd700", "name": "gold" },
-      "t": { "color": "#add8e6", "name": "lightblue" },
-      "u": { "color": "#f5f5dc", "name": "beige" },
-      "v": { "color": "#ffb6c1", "name": "lightpink" },
-      "w": { "color": "#708090", "name": "slategray" },
-      "x": { "color": "#00ff7f", "name": "springgreen" },
-      "y": { "color": "#dc143c", "name": "crimson" },
-      "z": { "color": "#ffbf00", "name": "amber" },
-      "0": { "color": "#3d9970", "name": "olive_green" },
-      "1": { "color": "#87ceeb", "name": "sky_blue" },
-      "2": { "color": "#6a5acd", "name": "slate_blue" },
-      "3": { "color": "#ff66cc", "name": "rose_pink" },
-      "4": { "color": "#36454f", "name": "charcoal" },
-      "5": { "color": "#fffff0", "name": "ivory" },
-      "A": { "color": "rainbow", "name": "rainbow" },
-      "B": { "color": "bright-rainbow", "name": "bright_rainbow" },
-      "C": { "color": "gold-glow", "name": "gold_glow" },
-      "D": { "color": "silver-glow", "name": "silver_glow" },
-      "E": { "color": "copper-glow", "name": "copper_glow" },
-      "F": { "color": "neon", "name": "neon" },
-      "G": { "color": "lava", "name": "lava" },
-      "H": { "color": "water", "name": "water" }
+      "a": {
+        "color": "#ff0000",
+        "name": "red",
+        "role_group": "donor"
+      },
+      "b": {
+        "color": "#ffa500",
+        "name": "orange",
+        "role_group": "donor"
+      },
+      "c": {
+        "color": "#ffff00",
+        "name": "yellow",
+        "role_group": "donor"
+      },
+      "d": {
+        "color": "#008000",
+        "name": "green",
+        "role_group": "donor"
+      },
+      "e": {
+        "color": "#00ffff",
+        "name": "cyan",
+        "role_group": "donor"
+      },
+      "f": {
+        "color": "#0000ff",
+        "name": "blue",
+        "role_group": "donor"
+      },
+      "g": {
+        "color": "#000000",
+        "name": "black",
+        "role_group": "donor"
+      },
+      "h": {
+        "color": "#ffffff",
+        "name": "white",
+        "role_group": "donor"
+      },
+      "i": {
+        "color": "#800080",
+        "name": "purple",
+        "role_group": "donor"
+      },
+      "j": {
+        "color": "#ff69b4",
+        "name": "hotpink",
+        "role_group": "donor"
+      },
+      "k": {
+        "color": "#a52a2a",
+        "name": "brown",
+        "role_group": "donor"
+      },
+      "l": {
+        "color": "#808080",
+        "name": "gray",
+        "role_group": "donor"
+      },
+      "m": {
+        "color": "#20b2aa",
+        "name": "teal",
+        "role_group": "donor"
+      },
+      "n": {
+        "color": "#ff6347",
+        "name": "tomato",
+        "role_group": "donor"
+      },
+      "o": {
+        "color": "#4682b4",
+        "name": "steelblue",
+        "role_group": "donor"
+      },
+      "p": {
+        "color": "#90ee90",
+        "name": "lightgreen",
+        "role_group": "donor"
+      },
+      "q": {
+        "color": "#8b0000",
+        "name": "darkred",
+        "role_group": "donor"
+      },
+      "r": {
+        "color": "#191970",
+        "name": "navy",
+        "role_group": "donor"
+      },
+      "s": {
+        "color": "#ffd700",
+        "name": "gold",
+        "role_group": "donor"
+      },
+      "t": {
+        "color": "#add8e6",
+        "name": "lightblue",
+        "role_group": "donor"
+      },
+      "u": {
+        "color": "#f5f5dc",
+        "name": "beige",
+        "role_group": "donor"
+      },
+      "v": {
+        "color": "#ffb6c1",
+        "name": "lightpink",
+        "role_group": "donor"
+      },
+      "w": {
+        "color": "#708090",
+        "name": "slategray",
+        "role_group": "donor"
+      },
+      "x": {
+        "color": "#00ff7f",
+        "name": "springgreen",
+        "role_group": "donor"
+      },
+      "y": {
+        "color": "#dc143c",
+        "name": "crimson",
+        "role_group": "donor"
+      },
+      "z": {
+        "color": "#ffbf00",
+        "name": "amber",
+        "role_group": "donor"
+      },
+      "0": {
+        "color": "#3d9970",
+        "name": "olive_green",
+        "role_group": "donor"
+      },
+      "1": {
+        "color": "#87ceeb",
+        "name": "sky_blue",
+        "role_group": "donor"
+      },
+      "2": {
+        "color": "#6a5acd",
+        "name": "slate_blue",
+        "role_group": "donor"
+      },
+      "3": {
+        "color": "#ff66cc",
+        "name": "rose_pink",
+        "role_group": "donor"
+      },
+      "4": {
+        "color": "#36454f",
+        "name": "charcoal",
+        "role_group": "donor"
+      },
+      "5": {
+        "color": "#fffff0",
+        "name": "ivory",
+        "role_group": "donor"
+      },
+      "A": {
+        "color": "rainbow",
+        "name": "rainbow",
+        "role_group": "donor"
+      },
+      "B": {
+        "color": "bright-rainbow",
+        "name": "bright_rainbow",
+        "role_group": "donor"
+      },
+      "C": {
+        "color": "gold-glow",
+        "name": "gold_glow",
+        "role_group": "donor"
+      },
+      "D": {
+        "color": "silver-glow",
+        "name": "silver_glow",
+        "role_group": "donor"
+      },
+      "E": {
+        "color": "copper-glow",
+        "name": "copper_glow",
+        "role_group": "donor"
+      },
+      "F": {
+        "color": "neon",
+        "name": "neon",
+        "role_group": "donor"
+      },
+      "G": {
+        "color": "lava",
+        "name": "lava",
+        "role_group": "donor"
+      },
+      "H": {
+        "color": "water",
+        "name": "water",
+        "role_group": "donor"
+      }
     }
   }
 }

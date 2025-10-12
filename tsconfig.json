@@ -20,11 +20,13 @@
     "experimentalDecorators": true,
     "resolveJsonModule": true,
     "strictNullChecks": true,
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "strictPropertyInitialization": false
   },
   "include": [
     "src/**/*",
     "resources/**/*",
+    "proprietary/**/*",
     "generated/**/*",
     "tests/**/*",
     "src/scripts"

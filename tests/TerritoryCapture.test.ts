@@ -6,14 +6,7 @@ describe("Territory management", () => {
   test("player owns the tile it spawns on", async () => {
     const game = await setup("plains");
     game.addPlayer(
-      new PlayerInfo(
-        undefined,
-        "us",
-        "test_player",
-        PlayerType.Human,
-        null,
-        "test_id",
-      ),
+      new PlayerInfo("test_player", PlayerType.Human, null, "test_id"),
     );
     const spawnTile = game.map().ref(50, 50);
     game.addExecution(

@@ -1,4 +1,3 @@
-import { TradeShipExecution } from "../execution/TradeShipExecution";
 import { TrainExecution } from "../execution/TrainExecution";
 import { GraphAdapter } from "../pathfinding/SerialAStar";
 import { PseudoRandom } from "../PseudoRandom";
@@ -14,21 +13,24 @@ interface TrainStopHandler {
   onStop(mg: Game, station: TrainStation, trainExecution: TrainExecution): void;
 }
 
+/**
+ * All stop handlers share the same logic for the time being
+ * Behavior to be defined
+ */
 class CityStopHandler implements TrainStopHandler {
   onStop(
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const goldBonus = mg.config().trainGold();
-    station.unit.owner().addGold(goldBonus);
-    mg.addUpdate({
-      type: GameUpdateType.BonusEvent,
-      tile: station.tile(),
-      gold: Number(goldBonus),
-      workers: 0,
-      troops: 0,
-    });
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+    // Share revenue with the station owner if it's not the current player
+    if (trainOwner !== stationOwner) {
+      stationOwner.addGold(goldBonus, station.tile());
+    }
+    trainOwner.addGold(goldBonus, station.tile());
   }
 }
 
@@ -39,12 +41,15 @@ class PortStopHandler implements TrainStopHandler {
     station: TrainStation,
     trainExecution: TrainExecution,
   ): void {
-    const unit = station.unit;
-    const ports = unit.owner().tradingPorts(unit);
-    if (ports.length === 0) return;
+    const stationOwner = station.unit.owner();
+    const trainOwner = trainExecution.owner();
+    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
 
-    const port = this.random.randElement(ports);
-    mg.addExecution(new TradeShipExecution(unit.owner(), unit, port));
+    trainOwner.addGold(goldBonus, station.tile());
+    // Share revenue with the station owner if it's not the current player
+    if (trainOwner !== stationOwner) {
+      stationOwner.addGold(goldBonus, station.tile());
+    }
   }
 }
 
@@ -53,9 +58,7 @@ class FactoryStopHandler implements TrainStopHandler {
     mg: Game,
     station: TrainStation,
     trainExecution: TrainExecution,
-  ): void {
-    trainExecution.loadCargo();
-  }
+  ): void {}
 }
 
 export function createTrainStopHandlers(
@@ -210,7 +213,11 @@ export class Cluster {
   availableForTrade(player: Player): Set<TrainStation> {
     const tradingStations = new Set<TrainStation>();
     for (const station of this.stations) {
-      if (station.tradeAvailable(player)) {
+      if (
+        (station.unit.type() === UnitType.City ||
+          station.unit.type() === UnitType.Port) &&
+        station.tradeAvailable(player)
+      ) {
         tradingStations.add(station);
       }
     }
@@ -224,4 +231,20 @@ export class Cluster {
   clear() {
     this.stations.clear();
   }
+}
+
+function rel(
+  player: Player,
+  other: Player,
+): "self" | "team" | "ally" | "other" {
+  if (player === other) {
+    return "self";
+  }
+  if (player.isOnSameTeam(other)) {
+    return "team";
+  }
+  if (player.isAlliedWith(other)) {
+    return "ally";
+  }
+  return "other";
 }

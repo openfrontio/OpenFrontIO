@@ -1,11 +1,19 @@
 import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
+import { EventBus, GameEvent } from "../../../core/EventBus";
+import { CloseViewEvent } from "../../InputHandler";
+import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
   CenterButtonElement,
   MenuElement,
   MenuElementParams,
+  TooltipKey,
 } from "./RadialMenuElements";
+
+export class CloseRadialMenuEvent implements GameEvent {
+  constructor() {}
+}
 
 export interface TooltipItem {
   text: string;
@@ -39,17 +47,18 @@ export class RadialMenu implements Layer {
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
   private menuStack: MenuElement[][] = []; // Stack to track menu navigation history
   private currentMenuItems: MenuElement[] = []; // Current active menu items (changes based on level)
-  private rootMenuItems: MenuElement[] = []; // Store the original root menu items
 
   private readonly config: RequiredRadialMenuConfig;
   private readonly backIconSize: number;
 
   private centerButtonState: CenterButtonState = "default";
-  private centerButtonElement: CenterButtonElement | null = null;
 
   private isTransitioning: boolean = false;
   private lastHideTime: number = 0;
   private reopenCooldownMs: number = 300;
+
+  private anchorX = 0;
+  private anchorY = 0;
 
   private menuGroups: Map<
     number,
@@ -72,7 +81,12 @@ export class RadialMenu implements Layer {
 
   private params: MenuElementParams | null = null;
 
-  constructor(config: RadialMenuConfig = {}) {
+  constructor(
+    private eventBus: EventBus,
+    private rootMenu: MenuElement,
+    private centerButtonElement: CenterButtonElement,
+    config: RadialMenuConfig = {},
+  ) {
     this.config = {
       menuSize: config.menuSize ?? 190,
       submenuScale: config.submenuScale ?? 1.5,
@@ -94,6 +108,9 @@ export class RadialMenu implements Layer {
   init() {
     this.createMenuElement();
     this.createTooltipElement();
+    this.eventBus.on(CloseViewEvent, (e) => {
+      this.hideRadialMenu();
+    });
   }
 
   private createMenuElement() {
@@ -112,10 +129,12 @@ export class RadialMenu implements Layer {
       .style("height", "100vh")
       .on("click", () => {
         this.hideRadialMenu();
+        this.eventBus.emit(new CloseRadialMenuEvent());
       })
       .on("contextmenu", (e) => {
         e.preventDefault();
         this.hideRadialMenu();
+        this.eventBus.emit(new CloseRadialMenuEvent());
       });
 
     // Calculate the total svg size needed for all potential nested menus
@@ -130,6 +149,10 @@ export class RadialMenu implements Layer {
       .style("position", "absolute")
       .style("top", "50%")
       .style("left", "50%")
+      .style(
+        "transition",
+        `top ${this.config.menuTransitionDuration}ms ease, left ${this.config.menuTransitionDuration}ms ease`,
+      )
       .style("transform", "translate(-50%, -50%)")
       .style("pointer-events", "all")
       .on("click", (event) => this.hideRadialMenu());
@@ -217,7 +240,7 @@ export class RadialMenu implements Layer {
   }
 
   private getInnerRadiusForLevel(level: number): number {
-    return level === 0 ? 50 : 50 + 25;
+    return level === 0 ? 40 : 50 + 25;
   }
 
   private getOuterRadiusForLevel(level: number): number {
@@ -237,10 +260,12 @@ export class RadialMenu implements Layer {
       .append("g")
       .attr("class", `menu-level-${level}`);
 
-    // Set initial animation styles
+    // Set initial animation styles only for submenus (level > 0)
     if (level === 0) {
-      menuGroup.style("opacity", 0.5).style("transform", "scale(0.2)");
+      // Main menu appears immediately without animation
+      menuGroup.style("opacity", 1).style("transform", "scale(1)");
     } else {
+      // Submenus get the expansion animation
       menuGroup.style("opacity", 0).style("transform", "scale(0.5)");
     }
 
@@ -296,14 +321,14 @@ export class RadialMenu implements Layer {
         const disabled = this.params === null || d.data.disabled(this.params);
         const color = disabled
           ? this.config.disabledColor
-          : d.data.color || "#333333";
+          : (d.data.color ?? "#333333");
         const opacity = disabled ? 0.5 : 0.7;
 
         if (d.data.id === this.selectedItemId && this.currentLevel > level) {
           return color;
         }
 
-        return d3.color(color)?.copy({ opacity: opacity })?.toString() || color;
+        return d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color;
       })
       .attr("stroke", "#ffffff")
       .attr("stroke-width", "2")
@@ -339,7 +364,7 @@ export class RadialMenu implements Layer {
         const color =
           this.params === null || d.data.disabled(this.params)
             ? this.config.disabledColor
-            : d.data.color || "#333333";
+            : (d.data.color ?? "#333333");
         path.attr("fill", color);
       }
     });
@@ -370,6 +395,8 @@ export class RadialMenu implements Layer {
       const disabled = this.params === null || d.data.disabled(this.params);
       if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
         this.showTooltip(d.data.tooltipItems);
+      } else if (d.data.tooltipKeys && d.data.tooltipKeys.length > 0) {
+        this.showTooltip(d.data.tooltipKeys);
       }
       if (
         disabled ||
@@ -381,36 +408,6 @@ export class RadialMenu implements Layer {
 
       path.attr("filter", "url(#glow)");
       path.attr("stroke-width", "3");
-      const color = disabled
-        ? this.config.disabledColor
-        : d.data.color || "#333333";
-      path.attr("fill", color);
-
-      const subMenu =
-        this.params !== null ? d.data.subMenu?.(this.params) : null;
-      if (
-        subMenu &&
-        subMenu.length > 0 &&
-        !disabled &&
-        !(
-          this.currentLevel > 0 &&
-          d.data.id === this.selectedItemId &&
-          level === 0
-        )
-      ) {
-        if (this.submenuHoverTimeout !== null) {
-          window.clearTimeout(this.submenuHoverTimeout);
-        }
-
-        // Set a small delay before opening submenu to prevent accidental triggers
-        this.submenuHoverTimeout = window.setTimeout(() => {
-          if (this.navigationInProgress) return;
-          this.navigationInProgress = true;
-          this.selectedItemId = d.data.id;
-          this.navigateToSubMenu(subMenu);
-          this.updateCenterButtonState("back");
-        }, 200);
-      }
     };
 
     const onMouseOut = (d: d3.PieArcDatum<MenuElement>, path: any) => {
@@ -433,11 +430,11 @@ export class RadialMenu implements Layer {
       path.attr("stroke-width", "2");
       const color = disabled
         ? this.config.disabledColor
-        : d.data.color || "#333333";
+        : (d.data.color ?? "#333333");
       const opacity = disabled ? 0.5 : 0.7;
       path.attr(
         "fill",
-        d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
+        d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
       );
     };
 
@@ -465,6 +462,8 @@ export class RadialMenu implements Layer {
         this.updateCenterButtonState("back");
       } else {
         d.data.action?.(this.params);
+        // Force transition state to false to ensure menu hides
+        this.isTransitioning = false;
         this.hideRadialMenu();
       }
     };
@@ -507,6 +506,14 @@ export class RadialMenu implements Layer {
     });
   }
 
+  private isItemDisabled(item: MenuElement): boolean {
+    return (
+      this.params === null ||
+      this.params.game.inSpawnPhase() ||
+      item.disabled(this.params)
+    );
+  }
+
   private renderIconsAndText(
     arcs: d3.Selection<
       SVGGElement,
@@ -524,10 +531,7 @@ export class RadialMenu implements Layer {
       .each((d) => {
         const contentId = d.data.id;
         const content = d3.select(`g[data-id="${contentId}"]`);
-        const disabled =
-          this.params === null ||
-          this.params.game.inSpawnPhase() ||
-          d.data.disabled(this.params);
+        const disabled = this.isItemDisabled(d.data);
 
         if (d.data.text) {
           content
@@ -579,30 +583,50 @@ export class RadialMenu implements Layer {
     this.currentMenuItems = children;
     this.currentLevel++;
 
+    this.clampAndSetMenuPositionForLevel(this.currentLevel);
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
     this.updateMenuGroupVisibility();
     this.animatePreviousMenu();
   }
 
   private updateMenuGroupVisibility() {
-    // Hide all menus except the current and immediate previous one
+    this.updateMenuVisibility("forward");
+  }
+
+  private updateMenuVisibility(direction: "forward" | "backward" = "backward") {
     this.menuGroups.forEach((menuGroup, level) => {
       if (level === this.currentLevel) {
+        // Current level - always visible and interactive
         menuGroup.style("display", "block");
-      } else if (level === this.currentLevel - 1) {
-        menuGroup.style("display", "block");
-
         menuGroup
           .transition()
           .duration(this.config.menuTransitionDuration * 0.8)
-          .style("transform", "scale(0.5)")
+          .style("transform", "scale(1)")
+          .style("opacity", 1);
+
+        // Enable pointer events for current level
+        menuGroup.selectAll("path").style("pointer-events", "auto");
+      } else if (level === this.currentLevel - 1 && this.currentLevel > 0) {
+        // Previous level - visible but scaled down
+        menuGroup.style("display", "block");
+        menuGroup
+          .transition()
+          .duration(this.config.menuTransitionDuration * 0.8)
+          .style(
+            "transform",
+            `scale(${this.currentLevel === 1 ? "0.65" : "0.5"})`,
+          )
           .style("opacity", 0.8);
 
-        menuGroup.selectAll("path").each(function () {
-          const pathElement = d3.select(this);
-          pathElement.style("pointer-events", "none");
-        });
-      } else {
+        // Disable pointer events for previous level when going forward
+        if (direction === "forward") {
+          menuGroup.selectAll("path").each(function () {
+            const pathElement = d3.select(this);
+            pathElement.style("pointer-events", "none");
+          });
+        }
+      } else if (level !== this.currentLevel + 1) {
+        // Hide all other levels
         menuGroup
           .transition()
           .duration(this.config.menuTransitionDuration * 0.5)
@@ -639,8 +663,9 @@ export class RadialMenu implements Layer {
     this.isTransitioning = true;
 
     this.updateMenuLevels();
+    this.clampAndSetMenuPositionForLevel(this.currentLevel);
     this.clearSelectedItemHoverState();
-    this.updateMenuVisibility();
+    this.updateMenuVisibility("backward");
     this.animateMenuTransitions();
   }
 
@@ -653,7 +678,7 @@ export class RadialMenu implements Layer {
       this.selectedItemId = null;
     }
 
-    this.currentMenuItems = previousItems || [];
+    this.currentMenuItems = previousItems ?? [];
 
     if (this.currentLevel === 0) {
       this.updateCenterButtonState("default");
@@ -667,54 +692,10 @@ export class RadialMenu implements Layer {
       if (selectedPath) {
         selectedPath.attr("filter", null);
         selectedPath.attr("stroke-width", "2");
-
-        const item = this.findMenuItem(this.selectedItemId);
-        if (item) {
-          const disabled = this.params === null || item.disabled(this.params);
-          const color = disabled
-            ? this.config.disabledColor
-            : item.color || "#333333";
-          const opacity = disabled ? 0.5 : 0.7;
-          selectedPath.attr(
-            "fill",
-            d3.color(color)?.copy({ opacity: opacity })?.toString() || color,
-          );
-        }
       }
     }
-  }
-
-  private updateMenuVisibility() {
-    this.menuGroups.forEach((menuGroup, level) => {
-      if (level === this.currentLevel) {
-        menuGroup.style("display", "block");
-        menuGroup
-          .transition()
-          .duration(this.config.menuTransitionDuration * 0.8)
-          .style("transform", "scale(1)")
-          .style("opacity", 1);
-
-        menuGroup.selectAll("path").style("pointer-events", "auto");
-      } else if (level === this.currentLevel - 1 && this.currentLevel > 0) {
-        menuGroup.style("display", "block");
-        menuGroup
-          .transition()
-          .duration(this.config.menuTransitionDuration * 0.8)
-          .style(
-            "transform",
-            `scale(${this.currentLevel === 1 ? "0.65" : "0.5"})`,
-          )
-          .style("opacity", 0.8);
-      } else if (level !== this.currentLevel + 1) {
-        menuGroup
-          .transition()
-          .duration(this.config.menuTransitionDuration * 0.5)
-          .style("opacity", 0)
-          .on("end", function () {
-            d3.select(this).style("display", "none");
-          });
-      }
-    });
+    // Use refresh() to update all item appearances consistently
+    this.refresh();
   }
 
   private animateMenuTransitions() {
@@ -779,25 +760,26 @@ export class RadialMenu implements Layer {
     this.resetMenu();
     this.isTransitioning = false;
     this.selectedItemId = null;
+    this.anchorX = x;
+    this.anchorY = y;
 
     this.menuElement.style("display", "block");
-
-    this.menuElement
-      .select("svg")
-      .style("top", `${y}px`)
-      .style("left", `${x}px`)
-      .style("transform", `translate(-50%, -50%)`);
+    this.clampAndSetMenuPositionForLevel(this.currentLevel);
 
     this.isVisible = true;
 
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
     this.onCenterButtonHover(true);
+    window.addEventListener("resize", this.handleResize);
   }
 
   public hideRadialMenu() {
-    if (!this.isVisible || this.isTransitioning) {
+    if (!this.isVisible) {
       return;
     }
+
+    // Force transition state to false to ensure menu hides
+    this.isTransitioning = false;
 
     this.menuElement.style("display", "none");
     this.isVisible = false;
@@ -812,11 +794,12 @@ export class RadialMenu implements Layer {
     this.menuIcons.clear();
 
     this.lastHideTime = Date.now();
+    window.removeEventListener("resize", this.handleResize);
   }
 
   private handleCenterButtonClick() {
     if (this.centerButtonState === "default") {
-      if (this.params) {
+      if (this.params && this.isCenterButtonEnabled()) {
         this.centerButtonElement?.action(this.params);
       }
       return;
@@ -840,6 +823,28 @@ export class RadialMenu implements Layer {
   public updateCenterButtonState(state: CenterButtonState) {
     this.centerButtonState = state;
     if (state === "back") {
+      const backButtonSize = this.config.centerButtonSize * 0.8; // Make back button 20% smaller
+      this.menuElement
+        .select(".center-button-hitbox")
+        .transition()
+        .duration(0)
+        .attr("r", backButtonSize);
+      this.menuElement
+        .select(".center-button-visible")
+        .transition()
+        .duration(0)
+        .attr("r", backButtonSize);
+
+      const backIconImg = this.menuElement.select(".center-button-icon");
+      backIconImg
+        .attr("xlink:href", backIcon)
+        .attr("width", this.backIconSize)
+        .attr("height", this.backIconSize)
+        .attr("x", -this.backIconSize / 2)
+        .attr("y", -this.backIconSize / 2);
+    }
+    if (state === "default") {
+      // Restore original button size
       this.menuElement
         .select(".center-button-hitbox")
         .transition()
@@ -851,15 +856,6 @@ export class RadialMenu implements Layer {
         .duration(0)
         .attr("r", this.config.centerButtonSize);
 
-      const backIconImg = this.menuElement.select(".center-button-icon");
-      backIconImg
-        .attr("xlink:href", backIcon)
-        .attr("width", this.backIconSize)
-        .attr("height", this.backIconSize)
-        .attr("x", -this.backIconSize / 2)
-        .attr("y", -this.backIconSize / 2);
-    }
-    if (state === "default") {
       const iconImg = this.menuElement.select(".center-button-icon");
       iconImg
         .attr("xlink:href", this.originalCenterButtonIcon)
@@ -887,6 +883,11 @@ export class RadialMenu implements Layer {
   }
 
   private isCenterButtonEnabled(): boolean {
+    // Back button should always be enabled when in submenu levels
+    if (this.currentLevel > 0) {
+      return true;
+    }
+
     if (this.params && this.centerButtonElement) {
       return !this.centerButtonElement.disabled(this.params);
     }
@@ -919,18 +920,6 @@ export class RadialMenu implements Layer {
     return this.currentLevel;
   }
 
-  public setRootMenuItems(
-    items: MenuElement[],
-    centerButton: CenterButtonElement,
-  ) {
-    this.currentMenuItems = [...items];
-    this.rootMenuItems = [...items];
-    this.centerButtonElement = centerButton;
-    if (this.isVisible) {
-      this.refreshMenu();
-    }
-  }
-
   public setParams(params: MenuElementParams) {
     this.params = params;
   }
@@ -943,7 +932,7 @@ export class RadialMenu implements Layer {
     this.currentLevel = 0;
     this.menuStack = [];
 
-    this.currentMenuItems = [...this.rootMenuItems];
+    this.currentMenuItems = this.rootMenu.subMenu!(this.params!);
 
     this.navigationInProgress = false;
 
@@ -974,6 +963,49 @@ export class RadialMenu implements Layer {
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
   }
 
+  public refresh() {
+    if (!this.isVisible || !this.params) return;
+
+    // Refresh the disabled state of all menu items
+    this.menuPaths.forEach((path, itemId) => {
+      const item = this.findMenuItem(itemId);
+      if (item) {
+        const disabled = this.isItemDisabled(item);
+        const color = disabled
+          ? this.config.disabledColor
+          : (item.color ?? "#333333");
+        const opacity = disabled ? 0.5 : 0.7;
+
+        // Update path appearance
+        path.attr(
+          "fill",
+          d3.color(color)?.copy({ opacity: opacity })?.toString() ?? color,
+        );
+        path.style("opacity", disabled ? 0.5 : 1);
+        path.style("cursor", disabled ? "not-allowed" : "pointer");
+
+        // Update icon/text appearance using the same logic as renderIconsAndText
+        const icon = this.menuIcons.get(itemId);
+        if (icon) {
+          // Update text opacity
+          const textElement = icon.select("text");
+          if (!textElement.empty()) {
+            textElement.style("opacity", disabled ? 0.5 : 1);
+          }
+
+          // Update image opacity
+          const imageElement = icon.select("image");
+          if (!imageElement.empty()) {
+            imageElement.attr("opacity", disabled ? 0.5 : 1);
+          }
+        }
+      }
+    });
+
+    // Refresh center button state
+    this.updateCenterButtonState(this.centerButtonState);
+  }
+
   renderLayer(context: CanvasRenderingContext2D) {
     // No need to render anything on the canvas
   }
@@ -988,7 +1020,7 @@ export class RadialMenu implements Layer {
     return timeSinceHide >= this.reopenCooldownMs;
   }
 
-  private showTooltip(items: TooltipItem[]) {
+  private showTooltip(items: TooltipItem[] | TooltipKey[]) {
     if (!this.tooltipElement) return;
 
     this.tooltipElement.innerHTML = "";
@@ -996,7 +1028,13 @@ export class RadialMenu implements Layer {
     for (const item of items) {
       const div = document.createElement("div");
       div.className = item.className;
-      div.textContent = item.text;
+
+      if ("key" in item) {
+        div.textContent = translateText(item.key, item.params);
+      } else {
+        div.textContent = item.text;
+      }
+
       this.tooltipElement.appendChild(div);
     }
 
@@ -1008,4 +1046,30 @@ export class RadialMenu implements Layer {
       this.tooltipElement.style.display = "none";
     }
   }
+
+  // Ensure the menu's SVG center stays within viewport given the current level's outer radius
+  private clampAndSetMenuPositionForLevel(level: number) {
+    const outerRadius = this.getOuterRadiusForLevel(level);
+    const margin = Math.max(outerRadius, this.config.centerButtonSize) + 10;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // If the menu cannot fully fit on an axis, pin it to the viewport center on that axis.
+    const clampedX =
+      2 * margin > vw
+        ? vw / 2
+        : Math.min(Math.max(this.anchorX, margin), vw - margin);
+    const clampedY =
+      2 * margin > vh
+        ? vh / 2
+        : Math.min(Math.max(this.anchorY, margin), vh - margin);
+
+    const svgSel = this.menuElement.select("svg");
+    svgSel.style("top", `${clampedY}px`).style("left", `${clampedX}px`);
+  }
+
+  private handleResize = () => {
+    if (this.isVisible) this.clampAndSetMenuPositionForLevel(this.currentLevel);
+  };
 }

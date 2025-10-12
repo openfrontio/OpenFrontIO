@@ -1,12 +1,10 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 import { EventBus, GameEvent } from "../core/EventBus";
 import {
   AllPlayers,
-  Cell,
   GameType,
   Gold,
   PlayerID,
-  PlayerType,
   Tick,
   UnitType,
 } from "../core/game/Game";
@@ -54,10 +52,6 @@ export class SendUpgradeStructureIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendCreateTrainStationIntentEvent implements GameEvent {
-  constructor(public readonly unitId: number) {}
-}
-
 export class SendAllianceReplyIntentEvent implements GameEvent {
   constructor(
     // The original alliance requestor
@@ -67,8 +61,12 @@ export class SendAllianceReplyIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendAllianceExtensionIntentEvent implements GameEvent {
+  constructor(public readonly recipient: PlayerView) {}
+}
+
 export class SendSpawnIntentEvent implements GameEvent {
-  constructor(public readonly cell: Cell) {}
+  constructor(public readonly tile: TileRef) {}
 }
 
 export class SendAttackIntentEvent implements GameEvent {
@@ -90,7 +88,7 @@ export class SendBoatAttackIntentEvent implements GameEvent {
 export class BuildUnitIntentEvent implements GameEvent {
   constructor(
     public readonly unit: UnitType,
-    public readonly cell: Cell,
+    public readonly tile: TileRef,
   ) {}
 }
 
@@ -134,16 +132,16 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendDeleteUnitIntentEvent implements GameEvent {
+  constructor(public readonly unitId: number) {}
+}
+
 export class CancelAttackIntentEvent implements GameEvent {
   constructor(public readonly attackID: string) {}
 }
 
 export class CancelBoatIntentEvent implements GameEvent {
   constructor(public readonly unitID: number) {}
-}
-
-export class SendSetTargetTroopRatioEvent implements GameEvent {
-  constructor(public readonly ratio: number) {}
 }
 
 export class SendWinnerEvent implements GameEvent {
@@ -164,6 +162,10 @@ export class MoveWarshipIntentEvent implements GameEvent {
     public readonly unitId: number,
     public readonly tile: number,
   ) {}
+}
+
+export class SendKickPlayerIntentEvent implements GameEvent {
+  constructor(public readonly target: string) {}
 }
 
 export class Transport {
@@ -194,6 +196,9 @@ export class Transport {
     this.eventBus.on(SendAllianceReplyIntentEvent, (e) =>
       this.onAllianceRequestReplyUIEvent(e),
     );
+    this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
+      this.onSendAllianceExtensionIntent(e),
+    );
     this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
     );
@@ -203,9 +208,6 @@ export class Transport {
     this.eventBus.on(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
     this.eventBus.on(SendUpgradeStructureIntentEvent, (e) =>
       this.onSendUpgradeStructureIntent(e),
-    );
-    this.eventBus.on(SendCreateTrainStationIntentEvent, (e) =>
-      this.onSendCreateTrainStationIntent(e),
     );
     this.eventBus.on(SendBoatAttackIntentEvent, (e) =>
       this.onSendBoatAttackIntent(e),
@@ -224,9 +226,6 @@ export class Transport {
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
     );
-    this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
-      this.onSendSetTargetTroopRatioEvent(e),
-    );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
@@ -242,19 +241,25 @@ export class Transport {
     this.eventBus.on(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
+
+    this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
+      this.onSendDeleteUnitIntent(e),
+    );
+
+    this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
+      this.onSendKickPlayerIntent(e),
+    );
   }
 
   private startPing() {
-    if (this.isLocal || this.pingInterval) return;
-    if (this.pingInterval === null) {
-      this.pingInterval = window.setInterval(() => {
-        if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
-          this.sendMsg({
-            type: "ping",
-          } satisfies ClientPingMessage);
-        }
-      }, 5 * 1000);
-    }
+    if (this.isLocal) return;
+    this.pingInterval ??= window.setInterval(() => {
+      if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
+        this.sendMsg({
+          type: "ping",
+        } satisfies ClientPingMessage);
+      }
+    }, 5 * 1000);
   }
 
   private stopPing() {
@@ -344,7 +349,10 @@ export class Transport {
       console.log(
         `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
       );
-      if (event.code !== 1000 && event.code !== 1002) {
+      if (event.code === 1002) {
+        // TODO: make this a modal
+        alert(`connection refused: ${event.reason}`);
+      } else if (event.code !== 1000) {
         console.log(`recieved error code ${event.code}, reconnecting`);
         this.reconnect();
       }
@@ -369,14 +377,13 @@ export class Transport {
       lastTurn: numTurns,
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
-      flag: this.lobbyConfig.flag,
-      pattern: this.lobbyConfig.pattern,
+      cosmetics: this.lobbyConfig.cosmetics,
     } satisfies ClientJoinMessage);
   }
 
-  leaveGame(saveFullGame: boolean = false) {
+  leaveGame() {
     if (this.isLocal) {
-      this.localServer.endGame(saveFullGame);
+      this.localServer.endGame();
       return;
     }
     this.stopPing();
@@ -419,16 +426,21 @@ export class Transport {
     });
   }
 
+  private onSendAllianceExtensionIntent(
+    event: SendAllianceExtensionIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "allianceExtension",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+    });
+  }
+
   private onSendSpawnIntentEvent(event: SendSpawnIntentEvent) {
     this.sendIntent({
       type: "spawn",
       clientID: this.lobbyConfig.clientID,
-      flag: this.lobbyConfig.flag,
-      pattern: this.lobbyConfig.pattern,
-      name: this.lobbyConfig.playerName,
-      playerType: PlayerType.Human,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 
@@ -456,16 +468,6 @@ export class Transport {
     this.sendIntent({
       type: "upgrade_structure",
       unit: event.unitType,
-      clientID: this.lobbyConfig.clientID,
-      unitId: event.unitId,
-    });
-  }
-
-  private onSendCreateTrainStationIntent(
-    event: SendCreateTrainStationIntentEvent,
-  ) {
-    this.sendIntent({
-      type: "create_station",
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
     });
@@ -526,21 +528,12 @@ export class Transport {
     });
   }
 
-  private onSendSetTargetTroopRatioEvent(event: SendSetTargetTroopRatioEvent) {
-    this.sendIntent({
-      type: "troop_ratio",
-      clientID: this.lobbyConfig.clientID,
-      ratio: event.ratio,
-    });
-  }
-
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
     this.sendIntent({
       type: "build_unit",
       clientID: this.lobbyConfig.clientID,
       unit: event.unit,
-      x: event.cell.x,
-      y: event.cell.y,
+      tile: event.tile,
     });
   }
 
@@ -610,6 +603,22 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       unitId: event.unitId,
       tile: event.tile,
+    });
+  }
+
+  private onSendDeleteUnitIntent(event: SendDeleteUnitIntentEvent) {
+    this.sendIntent({
+      type: "delete_unit",
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
+    });
+  }
+
+  private onSendKickPlayerIntent(event: SendKickPlayerIntentEvent) {
+    this.sendIntent({
+      type: "kick_player",
+      clientID: this.lobbyConfig.clientID,
+      target: event.target,
     });
   }
 

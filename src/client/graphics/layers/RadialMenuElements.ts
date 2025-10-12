@@ -1,12 +1,8 @@
-import {
-  AllPlayers,
-  Cell,
-  PlayerActions,
-  UnitType,
-} from "../../../core/game/Game";
+import { Config } from "../../../core/configuration/Config";
+import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
@@ -23,8 +19,11 @@ import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg
 import donateTroopIcon from "../../../../resources/images/DonateTroopIconWhite.svg";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import xIcon from "../../../../resources/images/XIcon.svg";
+import { EventBus } from "../../../core/EventBus";
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -37,6 +36,7 @@ export interface MenuElementParams {
   playerActionHandler: PlayerActionHandler;
   playerPanel: PlayerPanel;
   chatIntegration: ChatIntegration;
+  eventBus: EventBus;
   closeMenu: () => void;
 }
 
@@ -49,10 +49,17 @@ export interface MenuElement {
   text?: string;
   fontSize?: string;
   tooltipItems?: TooltipItem[];
+  tooltipKeys?: TooltipKey[];
 
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+}
+
+export interface TooltipKey {
+  key: string;
+  className: string;
+  params?: Record<string, string | number>;
 }
 
 export interface CenterButtonElement {
@@ -66,8 +73,10 @@ export const COLORS = {
   boat: "#3f6ab1",
   ally: "#53ac75",
   breakAlly: "#c74848",
+  delete: "#ff0000",
   info: "#64748B",
   target: "#ff0000",
+  attack: "#ff0000",
   infoDetails: "#7f8c8d",
   infoEmoji: "#f1c40f",
   trade: "#008080",
@@ -91,10 +100,13 @@ export enum Slot {
   Info = "info",
   Boat = "boat",
   Build = "build",
+  Attack = "attack",
   Ally = "ally",
   Back = "back",
+  Delete = "delete",
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoChatElement: MenuElement = {
   id: "info_chat",
   name: "chat",
@@ -112,6 +124,7 @@ const infoChatElement: MenuElement = {
       })),
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyTargetElement: MenuElement = {
   id: "ally_target",
   name: "target",
@@ -127,6 +140,7 @@ const allyTargetElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyTradeElement: MenuElement = {
   id: "ally_trade",
   name: "trade",
@@ -142,6 +156,7 @@ const allyTradeElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyEmbargoElement: MenuElement = {
   id: "ally_embargo",
   name: "embargo",
@@ -193,11 +208,12 @@ const allyBreakElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
   name: "donate gold",
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonate,
+    !params.playerActions?.interaction?.canDonateGold,
   color: COLORS.ally,
   icon: donateGoldIcon,
   action: (params: MenuElementParams) => {
@@ -206,11 +222,12 @@ const allyDonateGoldElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateTroopsElement: MenuElement = {
   id: "ally_donate_troops",
   name: "donate troops",
   disabled: (params: MenuElementParams) =>
-    !params.playerActions?.interaction?.canDonate,
+    !params.playerActions?.interaction?.canDonateTroops,
   color: COLORS.ally,
   icon: donateTroopIcon,
   action: (params: MenuElementParams) => {
@@ -219,6 +236,7 @@ const allyDonateTroopsElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoPlayerElement: MenuElement = {
   id: "info_player",
   name: "player",
@@ -230,6 +248,7 @@ const infoPlayerElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoEmojiElement: MenuElement = {
   id: "info_emoji",
   name: "emoji",
@@ -252,7 +271,7 @@ const infoEmojiElement: MenuElement = {
                 : params.selected;
             params.playerActionHandler.handleEmoji(
               targetPlayer!,
-              flattenedEmojiTable.indexOf(emoji),
+              flattenedEmojiTable.indexOf(emoji as Emoji),
             );
             params.emojiTable.hideTable();
           });
@@ -290,35 +309,186 @@ export const infoMenuElement: MenuElement = {
     !params.selected || params.game.inSpawnPhase(),
   icon: infoIcon,
   color: COLORS.info,
+  action: (params: MenuElementParams) => {
+    params.playerPanel.show(params.playerActions, params.tile);
+  },
+};
+
+function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
+  const Units: Set<UnitType> = new Set<UnitType>();
+
+  const addStructureIfEnabled = (unitType: UnitType) => {
+    if (!config.isUnitDisabled(unitType)) {
+      Units.add(unitType);
+    }
+  };
+
+  if (myPlayer) {
+    addStructureIfEnabled(UnitType.City);
+    addStructureIfEnabled(UnitType.DefensePost);
+    addStructureIfEnabled(UnitType.Port);
+    addStructureIfEnabled(UnitType.MissileSilo);
+    addStructureIfEnabled(UnitType.SAMLauncher);
+    addStructureIfEnabled(UnitType.Factory);
+  } else {
+    addStructureIfEnabled(UnitType.Warship);
+    addStructureIfEnabled(UnitType.HydrogenBomb);
+    addStructureIfEnabled(UnitType.MIRV);
+    addStructureIfEnabled(UnitType.AtomBomb);
+  }
+
+  return Units;
+}
+
+const ATTACK_UNIT_TYPES: UnitType[] = [
+  UnitType.AtomBomb,
+  UnitType.MIRV,
+  UnitType.HydrogenBomb,
+  UnitType.Warship,
+];
+
+function createMenuElements(
+  params: MenuElementParams,
+  filterType: "attack" | "build",
+  elementIdPrefix: string,
+): MenuElement[] {
+  const unitTypes: Set<UnitType> = getAllEnabledUnits(
+    params.selected === params.myPlayer,
+    params.game.config(),
+  );
+
+  return flattenedBuildTable
+    .filter(
+      (item) =>
+        unitTypes.has(item.unitType) &&
+        (filterType === "attack"
+          ? ATTACK_UNIT_TYPES.includes(item.unitType)
+          : !ATTACK_UNIT_TYPES.includes(item.unitType)),
+    )
+    .map((item: BuildItemDisplay) => ({
+      id: `${elementIdPrefix}_${item.unitType}`,
+      name: item.key
+        ? item.key.replace("unit_type.", "")
+        : item.unitType.toString(),
+      disabled: (params: MenuElementParams) =>
+        !params.buildMenu.canBuildOrUpgrade(item),
+      color: params.buildMenu.canBuildOrUpgrade(item)
+        ? filterType === "attack"
+          ? COLORS.attack
+          : COLORS.building
+        : undefined,
+      icon: item.icon,
+      tooltipItems: [
+        { text: translateText(item.key ?? ""), className: "title" },
+        {
+          text: translateText(item.description ?? ""),
+          className: "description",
+        },
+        {
+          text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
+          className: "cost",
+        },
+        item.countable
+          ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
+          : null,
+      ].filter(
+        (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
+      ),
+      action: (params: MenuElementParams) => {
+        const buildableUnit = params.playerActions.buildableUnits.find(
+          (bu) => bu.type === item.unitType,
+        );
+        if (buildableUnit === undefined) {
+          return;
+        }
+        if (params.buildMenu.canBuildOrUpgrade(item)) {
+          params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+        }
+        params.closeMenu();
+      },
+    }));
+}
+
+export const attackMenuElement: MenuElement = {
+  id: Slot.Attack,
+  name: "radial_attack",
+  disabled: (params: MenuElementParams) => params.game.inSpawnPhase(),
+  icon: swordIcon,
+  color: COLORS.attack,
 
   subMenu: (params: MenuElementParams) => {
-    if (!params.selected || params.game.inSpawnPhase()) return [];
+    if (params === undefined) return [];
+    return createMenuElements(params, "attack", "attack");
+  },
+};
 
-    if (params.selected === params.myPlayer) {
-      return [infoPlayerElement, infoEmojiElement];
+export const deleteUnitElement: MenuElement = {
+  id: Slot.Delete,
+  name: "delete",
+  disabled: (params: MenuElementParams) => {
+    const tileOwner = params.game.owner(params.tile);
+    const isLand = params.game.isLand(params.tile);
+
+    if (!tileOwner.isPlayer() || tileOwner.id() !== params.myPlayer.id()) {
+      return true;
     }
 
-    const elements: MenuElement[] = [
-      infoPlayerElement,
-      infoEmojiElement,
-      infoChatElement,
-    ];
-    if (params.myPlayer.isAlliedWith(params.selected)) {
-      elements.push(
-        allyBreakElement,
-        allyDonateGoldElement,
-        allyDonateTroopsElement,
+    if (!isLand) {
+      return true;
+    }
+
+    if (params.game.inSpawnPhase()) {
+      return true;
+    }
+
+    if (!params.myPlayer.canDeleteUnit()) {
+      return true;
+    }
+
+    const DELETE_SELECTION_RADIUS = 5;
+    const myUnits = params.myPlayer
+      .units()
+      .filter(
+        (unit) =>
+          params.game.manhattanDist(unit.tile(), params.tile) <=
+          DELETE_SELECTION_RADIUS,
       );
-    } else {
-      elements.push(allyTargetElement, allyRequestElement);
-    }
-    if (params.myPlayer.hasEmbargoAgainst(params.selected)) {
-      elements.push(allyTradeElement);
-    } else {
-      elements.push(allyEmbargoElement);
+
+    return myUnits.length === 0;
+  },
+  icon: xIcon,
+  color: COLORS.delete,
+  tooltipKeys: [
+    {
+      key: "radial_menu.delete_unit_title",
+      className: "title",
+    },
+    {
+      key: "radial_menu.delete_unit_description",
+      className: "description",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    const DELETE_SELECTION_RADIUS = 5;
+    const myUnits = params.myPlayer
+      .units()
+      .filter(
+        (unit) =>
+          params.game.manhattanDist(unit.tile(), params.tile) <=
+          DELETE_SELECTION_RADIUS,
+      );
+
+    if (myUnits.length > 0) {
+      myUnits.sort(
+        (a, b) =>
+          params.game.manhattanDist(a.tile(), params.tile) -
+          params.game.manhattanDist(b.tile(), params.tile),
+      );
+
+      params.playerActionHandler.handleDeleteUnit(myUnits[0].id());
     }
 
-    return elements;
+    params.closeMenu();
   },
 };
 
@@ -331,58 +501,7 @@ export const buildMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-
-    const unitTypes: Set<UnitType> = new Set<UnitType>();
-    if (params.selected === params.myPlayer) {
-      unitTypes.add(UnitType.City);
-      unitTypes.add(UnitType.DefensePost);
-      unitTypes.add(UnitType.Port);
-      unitTypes.add(UnitType.MissileSilo);
-      unitTypes.add(UnitType.SAMLauncher);
-      unitTypes.add(UnitType.Factory);
-    } else {
-      unitTypes.add(UnitType.Warship);
-      unitTypes.add(UnitType.HydrogenBomb);
-      unitTypes.add(UnitType.MIRV);
-      unitTypes.add(UnitType.AtomBomb);
-    }
-
-    const buildElements: MenuElement[] = flattenedBuildTable
-      .filter((item) => unitTypes.has(item.unitType))
-      .map((item: BuildItemDisplay) => ({
-        id: `build_${item.unitType}`,
-        name: item.key
-          ? item.key.replace("unit_type.", "")
-          : item.unitType.toString(),
-        disabled: (params: MenuElementParams) =>
-          !params.buildMenu.canBuild(item),
-        color: params.buildMenu.canBuild(item) ? COLORS.building : undefined,
-        icon: item.icon,
-        tooltipItems: [
-          { text: translateText(item.key || ""), className: "title" },
-          {
-            text: translateText(item.description || ""),
-            className: "description",
-          },
-          {
-            text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-            className: "cost",
-          },
-          item.countable
-            ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-            : null,
-        ].filter((item): item is TooltipItem => item !== null),
-        action: (params: MenuElementParams) => {
-          params.playerActionHandler.handleBuildUnit(
-            item.unitType,
-            params.game.x(params.tile),
-            params.game.y(params.tile),
-          );
-          params.closeMenu();
-        },
-      }));
-
-    return buildElements;
+    return createMenuElements(params, "build", "build");
   },
 };
 
@@ -404,7 +523,7 @@ export const boatMenuElement: MenuElement = {
 
     params.playerActionHandler.handleBoatAttack(
       params.myPlayer,
-      params.selected?.id() || null,
+      params.selected?.id() ?? null,
       params.tile,
       spawn !== false ? spawn : null,
     );
@@ -426,15 +545,11 @@ export const centerButtonElement: CenterButtonElement = {
       }
       return false;
     }
-    return false;
+    return !params.playerActions.canAttack;
   },
   action: (params: MenuElementParams) => {
     if (params.game.inSpawnPhase()) {
-      const cell = new Cell(
-        params.game.x(params.tile),
-        params.game.y(params.tile),
-      );
-      params.playerActionHandler.handleSpawn(cell);
+      params.playerActionHandler.handleSpawn(params.tile);
     } else {
       params.playerActionHandler.handleAttack(
         params.myPlayer,
@@ -445,8 +560,36 @@ export const centerButtonElement: CenterButtonElement = {
   },
 };
 
-export const rootMenuItems: MenuElement[] = [
-  infoMenuElement,
-  boatMenuElement,
-  buildMenuElement,
-];
+export const rootMenuElement: MenuElement = {
+  id: "root",
+  name: "root",
+  disabled: () => false,
+  icon: infoIcon,
+  color: COLORS.info,
+  subMenu: (params: MenuElementParams) => {
+    let ally = allyRequestElement;
+    if (params.selected?.isAlliedWith(params.myPlayer)) {
+      ally = allyBreakElement;
+    }
+
+    const tileOwner = params.game.owner(params.tile);
+    const isOwnTerritory =
+      tileOwner.isPlayer() &&
+      (tileOwner as PlayerView).id() === params.myPlayer.id();
+
+    const menuItems: (MenuElement | null)[] = [
+      infoMenuElement,
+      boatMenuElement,
+      ally,
+    ];
+
+    if (isOwnTerritory) {
+      menuItems.push(buildMenuElement);
+      menuItems.push(deleteUnitElement);
+    } else {
+      menuItems.push(attackMenuElement);
+    }
+
+    return menuItems.filter((item): item is MenuElement => item !== null);
+  },
+};

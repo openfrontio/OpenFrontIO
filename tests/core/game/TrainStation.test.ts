@@ -1,5 +1,5 @@
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
-import { Game, Unit, UnitType } from "../../../src/core/game/Game";
+import { Game, Player, Unit, UnitType } from "../../../src/core/game/Game";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 
 jest.mock("../../../src/core/game/Game");
@@ -9,25 +9,30 @@ jest.mock("../../../src/core/PseudoRandom");
 describe("TrainStation", () => {
   let game: jest.Mocked<Game>;
   let unit: jest.Mocked<Unit>;
+  let player: jest.Mocked<Player>;
   let trainExecution: jest.Mocked<TrainExecution>;
 
   beforeEach(() => {
     game = {
       ticks: jest.fn().mockReturnValue(123),
       config: jest.fn().mockReturnValue({
-        trainGold: () => 10,
+        trainGold: (isFriendly: boolean) =>
+          isFriendly ? BigInt(1000) : BigInt(500),
       }),
       addUpdate: jest.fn(),
       addExecution: jest.fn(),
     } as any;
 
+    player = {
+      addGold: jest.fn(),
+      id: 1,
+      canTrade: jest.fn().mockReturnValue(true),
+      isFriendly: jest.fn().mockReturnValue(false),
+    } as any;
+
     unit = {
-      owner: jest.fn().mockReturnValue({
-        addGold: jest.fn(),
-        id: 1,
-        canTrade: jest.fn().mockReturnValue(true),
-        tradingPorts: jest.fn().mockReturnValue([{ name: "Port1" }]),
-      }),
+      owner: jest.fn().mockReturnValue(player),
+      level: jest.fn().mockReturnValue(1),
       tile: jest.fn().mockReturnValue({ x: 0, y: 0 }),
       type: jest.fn(),
       isActive: jest.fn().mockReturnValue(true),
@@ -35,6 +40,8 @@ describe("TrainStation", () => {
 
     trainExecution = {
       loadCargo: jest.fn(),
+      owner: jest.fn().mockReturnValue(player),
+      level: jest.fn(),
     } as any;
   });
 
@@ -44,31 +51,21 @@ describe("TrainStation", () => {
 
     station.onTrainStop(trainExecution);
 
-    expect(unit.owner().addGold).toHaveBeenCalledWith(10);
-    expect(game.addUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: expect.any(Number),
-        gold: 10,
-      }),
+    expect(unit.owner().addGold).toHaveBeenCalledWith(1000n, unit.tile());
+  });
+
+  it("handles allied trade", () => {
+    unit.type.mockReturnValue(UnitType.City);
+    player.isFriendly.mockReturnValue(true);
+    const station = new TrainStation(game, unit);
+
+    station.onTrainStop(trainExecution);
+
+    expect(unit.owner().addGold).toHaveBeenCalledWith(1000n, unit.tile());
+    expect(trainExecution.owner().addGold).toHaveBeenCalledWith(
+      1000n,
+      unit.tile(),
     );
-  });
-
-  it("handles Port stop", () => {
-    unit.type.mockReturnValue(UnitType.Port);
-
-    const station = new TrainStation(game, unit);
-    station.onTrainStop(trainExecution);
-
-    expect(game.addExecution).toHaveBeenCalled();
-  });
-
-  it("handles Factory stop", () => {
-    unit.type.mockReturnValue(UnitType.Factory);
-
-    const station = new TrainStation(game, unit);
-    station.onTrainStop(trainExecution);
-
-    expect(trainExecution.loadCargo).toHaveBeenCalled();
   });
 
   it("checks trade availability (same owner)", () => {

@@ -1,4 +1,4 @@
-import { renderNumber, renderTroops } from "../../client/Utils";
+import { renderTroops } from "../../client/Utils";
 import {
   Attack,
   Execution,
@@ -16,7 +16,6 @@ import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if neede
 
 const malusForRetreat = 25;
 export class AttackExecution implements Execution {
-  private breakAlliance = false;
   private active: boolean = true;
   private toConquer = new FlatBinaryHeap();
 
@@ -61,6 +60,24 @@ export class AttackExecution implements Execution {
         ? mg.terraNullius()
         : mg.player(this._targetID);
 
+    if (this._owner === this.target) {
+      console.error(`Player ${this._owner} cannot attack itself`);
+      this.active = false;
+      return;
+    }
+
+    // ALLIANCE CHECK — block attacks on friendly (ally or same team)
+    if (this.target.isPlayer()) {
+      const targetPlayer = this.target as Player;
+      if (this._owner.isFriendly(targetPlayer)) {
+        console.warn(
+          `${this._owner.displayName()} cannot attack ${targetPlayer.displayName()} because they are friendly (allied or same team)`,
+        );
+        this.active = false;
+        return;
+      }
+    }
+
     if (this.target && this.target.isPlayer()) {
       const targetPlayer = this.target as Player;
       if (
@@ -68,14 +85,9 @@ export class AttackExecution implements Execution {
         this._owner.type() !== PlayerType.Bot
       ) {
         // Don't let bots embargo since they can't trade anyway.
-        targetPlayer.addEmbargo(this._owner.id(), true);
+        targetPlayer.addEmbargo(this._owner, true);
+        this.rejectIncomingAllianceRequests(targetPlayer);
       }
-    }
-
-    if (this._owner === this.target) {
-      console.error(`Player ${this._owner} cannot attack itself`);
-      this.active = false;
-      return;
     }
 
     if (this.target.isPlayer()) {
@@ -88,20 +100,11 @@ export class AttackExecution implements Execution {
         this.active = false;
         return;
       }
-      if (this._owner.isOnSameTeam(this.target)) {
-        console.warn(
-          `${this._owner.displayName()} cannot attack ${this.target.displayName()} because they are on the same team`,
-        );
-        this.active = false;
-        return;
-      }
     }
 
-    if (this.startTroops === null) {
-      this.startTroops = this.mg
-        .config()
-        .attackAmount(this._owner, this.target);
-    }
+    this.startTroops ??= this.mg
+      .config()
+      .attackAmount(this._owner, this.target);
     if (this.removeTroops) {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
       this._owner.removeTroops(this.startTroops);
@@ -122,6 +125,20 @@ export class AttackExecution implements Execution {
     // Record stats
     this.mg.stats().attack(this._owner, this.target, this.startTroops);
 
+    for (const incoming of this._owner.incomingAttacks()) {
+      if (incoming.attacker() === this.target) {
+        // Target has opposing attack, cancel them out
+        if (incoming.troops() > this.attack.troops()) {
+          incoming.setTroops(incoming.troops() - this.attack.troops());
+          this.attack.delete();
+          this.active = false;
+          return;
+        } else {
+          this.attack.setTroops(this.attack.troops() - incoming.troops());
+          incoming.delete();
+        }
+      }
+    }
     for (const outgoing of this._owner.outgoingAttacks()) {
       if (
         outgoing !== this.attack &&
@@ -135,10 +152,6 @@ export class AttackExecution implements Execution {
     }
 
     if (this.target.isPlayer()) {
-      if (this._owner.isAlliedWith(this.target)) {
-        // No updates should happen in init.
-        this.breakAlliance = true;
-      }
       this.target.updateRelation(this._owner, -80);
     }
   }
@@ -173,8 +186,11 @@ export class AttackExecution implements Execution {
     this.attack.delete();
     this.active = false;
 
-    // Record stats
-    this.mg.stats().attackCancel(this._owner, this.target, survivors);
+    // Not all retreats are canceled attacks
+    if (this.attack.retreated()) {
+      // Record stats
+      this.mg.stats().attackCancel(this._owner, this.target, survivors);
+    }
   }
 
   tick(ticks: number) {
@@ -204,14 +220,7 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    const alliance = targetPlayer
-      ? this._owner.allianceWith(targetPlayer)
-      : null;
-    if (this.breakAlliance && alliance !== null) {
-      this.breakAlliance = false;
-      this._owner.breakAlliance(alliance);
-    }
-    if (targetPlayer && this._owner.isAlliedWith(targetPlayer)) {
+    if (targetPlayer && this._owner.isFriendly(targetPlayer)) {
       // In this case a new alliance was created AFTER the attack started.
       this.retreat();
       return;
@@ -273,6 +282,15 @@ export class AttackExecution implements Execution {
     }
   }
 
+  private rejectIncomingAllianceRequests(target: Player) {
+    const request = this._owner
+      .incomingAllianceRequests()
+      .find((ar) => ar.requestor() === target);
+    if (request !== undefined) {
+      request.reject();
+    }
+  }
+
   private addNeighbors(tile: TileRef) {
     if (this.attack === null) {
       throw new Error("Attack not initialized");
@@ -319,17 +337,7 @@ export class AttackExecution implements Execution {
   private handleDeadDefender() {
     if (!(this.target.isPlayer() && this.target.numTilesOwned() < 100)) return;
 
-    const gold = this.target.gold();
-    this.mg.displayMessage(
-      `Conquered ${this.target.displayName()} received ${renderNumber(
-        gold,
-      )} gold`,
-      MessageType.CONQUERED_PLAYER,
-      this._owner.id(),
-      gold,
-    );
-    this.target.removeGold(gold);
-    this._owner.addGold(gold);
+    this.mg.conquerPlayer(this._owner, this.target);
 
     for (let i = 0; i < 10; i++) {
       for (const tile of this.target.tiles()) {

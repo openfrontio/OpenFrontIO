@@ -14,13 +14,15 @@ export class BotExecution implements Execution {
   private attackTick: number;
   private triggerRatio: number;
   private reserveRatio: number;
+  private expandRatio: number;
 
   constructor(private bot: Player) {
     this.random = new PseudoRandom(simpleHash(bot.id()));
     this.attackRate = this.random.nextInt(40, 80);
     this.attackTick = this.random.nextInt(0, this.attackRate);
-    this.triggerRatio = this.random.nextInt(60, 90) / 100;
-    this.reserveRatio = this.random.nextInt(30, 60) / 100;
+    this.triggerRatio = this.random.nextInt(50, 60) / 100;
+    this.reserveRatio = this.random.nextInt(30, 40) / 100;
+    this.expandRatio = this.random.nextInt(10, 20) / 100;
   }
 
   activeDuringSpawnPhase(): boolean {
@@ -29,7 +31,6 @@ export class BotExecution implements Execution {
 
   init(mg: Game) {
     this.mg = mg;
-    this.bot.setTargetTroopRatio(0.7);
   }
 
   tick(ticks: number) {
@@ -47,10 +48,16 @@ export class BotExecution implements Execution {
         this.bot,
         this.triggerRatio,
         this.reserveRatio,
+        this.expandRatio,
       );
+
+      // Send an attack on the first tick
+      this.behavior.sendAttack(this.mg.terraNullius());
+      return;
     }
 
     this.behavior.handleAllianceRequests();
+    this.behavior.handleAllianceExtensionRequests();
     this.maybeAttack();
   }
 
@@ -62,6 +69,13 @@ export class BotExecution implements Execution {
     if (toAttack !== null) {
       const odds = this.bot.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
+        // Check and break alliance before attacking if needed
+        const alliance = this.bot.allianceWith(toAttack);
+
+        if (alliance !== null) {
+          this.bot.breakAlliance(alliance);
+        }
+
         this.behavior.sendAttack(toAttack);
         return;
       }

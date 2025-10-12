@@ -3,6 +3,7 @@ import path from "path";
 import {
   Difficulty,
   Game,
+  GameMapSize,
   GameMapType,
   GameMode,
   GameType,
@@ -35,7 +36,7 @@ export async function setup(
   );
   const miniMapBinPath = path.join(
     currentDir,
-    `../testdata/maps/${mapName}/mini_map.bin`,
+    `../testdata/maps/${mapName}/map4x.bin`,
   );
   const manifestPath = path.join(
     currentDir,
@@ -48,24 +49,20 @@ export async function setup(
     fs.readFileSync(manifestPath, "utf8"),
   ) satisfies MapManifest;
 
-  // Convert Buffer to string (binary encoding)
-  const mapBinString = mapBinBuffer.toString("binary");
-  const miniMapBinString = miniMapBinBuffer.toString("binary");
-
-  const gameMap = await genTerrainFromBin(manifest.map, mapBinString);
-  const miniGameMap = await genTerrainFromBin(
-    manifest.mini_map,
-    miniMapBinString,
-  );
+  const gameMap = await genTerrainFromBin(manifest.map, mapBinBuffer);
+  const miniGameMap = await genTerrainFromBin(manifest.map4x, miniMapBinBuffer);
 
   // Configure the game
   const serverConfig = new TestServerConfig();
   const gameConfig: GameConfig = {
     gameMap: GameMapType.Asia,
+    gameMapSize: GameMapSize.Normal,
     gameMode: GameMode.FFA,
     gameType: GameType.Singleplayer,
     difficulty: Difficulty.Medium,
     disableNPCs: false,
+    donateGold: false,
+    donateTroops: false,
     bots: 0,
     infiniteGold: false,
     infiniteTroops: false,
@@ -83,5 +80,5 @@ export async function setup(
 }
 
 export function playerInfo(name: string, type: PlayerType): PlayerInfo {
-  return new PlayerInfo(undefined, "fr", name, type, null, name);
+  return new PlayerInfo(name, type, null, name);
 }

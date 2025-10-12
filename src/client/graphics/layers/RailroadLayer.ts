@@ -8,9 +8,10 @@ import {
   RailTile,
   RailType,
 } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GameView } from "../../../core/game/GameView";
+import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import { getRailroadRects } from "./RailroadSprites";
+import { getBridgeRects, getRailroadRects } from "./RailroadSprites";
 
 type RailRef = {
   tile: RailTile;
@@ -27,7 +28,10 @@ export class RailroadLayer implements Layer {
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
 
-  constructor(private game: GameView) {
+  constructor(
+    private game: GameView,
+    private transformHandler: TransformHandler,
+  ) {
     this.theme = game.config().theme();
   }
 
@@ -83,10 +87,24 @@ export class RailroadLayer implements Layer {
 
     this.canvas.width = this.game.width() * 2;
     this.canvas.height = this.game.height() * 2;
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for (const [_, rail] of this.existingRailroads) {
+      this.paintRail(rail.tile);
+    }
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
     this.updateRailColors();
+    const scale = this.transformHandler.scale;
+    if (scale <= 1) {
+      return;
+    }
+    const rawAlpha = (scale - 1) / (2 - 1); // maps 1->0, 2->1
+    const alpha = Math.max(0, Math.min(1, rawAlpha));
+
+    context.save();
+    context.globalAlpha = alpha;
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -94,12 +112,11 @@ export class RailroadLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    context.restore();
   }
 
   private handleRailroadRendering(railUpdate: RailroadUpdate) {
     for (const railRoad of railUpdate.railTiles) {
-      const x = this.game.x(railRoad.tile);
-      const y = this.game.y(railRoad.tile);
       if (railUpdate.isActive) {
         this.paintRailroad(railRoad);
       } else {
@@ -134,31 +151,68 @@ export class RailroadLayer implements Layer {
     if (!ref || ref.numOccurence <= 0) {
       this.existingRailroads.delete(railRoad.tile);
       this.railTileList = this.railTileList.filter((t) => t !== railRoad.tile);
-      this.context.clearRect(
-        this.game.x(railRoad.tile) * 2 - 1,
-        this.game.y(railRoad.tile) * 2 - 1,
-        3,
-        3,
-      );
+      if (this.context === undefined) throw new Error("Not initialized");
+      if (this.game.isWater(railRoad.tile)) {
+        this.context.clearRect(
+          this.game.x(railRoad.tile) * 2 - 2,
+          this.game.y(railRoad.tile) * 2 - 2,
+          5,
+          6,
+        );
+      } else {
+        this.context.clearRect(
+          this.game.x(railRoad.tile) * 2 - 1,
+          this.game.y(railRoad.tile) * 2 - 1,
+          3,
+          3,
+        );
+      }
     }
   }
 
   paintRail(railRoad: RailTile) {
-    const x = this.game.x(railRoad.tile);
-    const y = this.game.y(railRoad.tile);
-    const owner = this.game.owner(railRoad.tile);
-    const recipient = owner.isPlayer() ? (owner as PlayerView) : null;
+    if (this.context === undefined) throw new Error("Not initialized");
+    const { tile } = railRoad;
+    const { railType } = railRoad;
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    // If rail tile is over water, paint a bridge underlay first
+    if (this.game.isWater(tile)) {
+      this.paintBridge(this.context, x, y, railType);
+    }
+    const owner = this.game.owner(tile);
+    const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
-      ? this.theme.railroadColor(recipient)
+      ? recipient.borderColor()
       : new Colord({ r: 255, g: 255, b: 255, a: 1 });
     this.context.fillStyle = color.toRgbString();
-    this.paintRailRects(x, y, railRoad.railType);
+    this.paintRailRects(this.context, x, y, railType);
   }
 
-  private paintRailRects(x: number, y: number, direction: RailType) {
+  private paintRailRects(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    direction: RailType,
+  ) {
     const railRects = getRailroadRects(direction);
     for (const [dx, dy, w, h] of railRects) {
-      this.context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
+      context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
     }
+  }
+
+  private paintBridge(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    direction: RailType,
+  ) {
+    context.save();
+    context.fillStyle = "rgb(197,69,72)";
+    const bridgeRects = getBridgeRects(direction);
+    for (const [dx, dy, w, h] of bridgeRects) {
+      context.fillRect(x * 2 + dx, y * 2 + dy, w, h);
+    }
+    context.restore();
   }
 }

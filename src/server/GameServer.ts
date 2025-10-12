@@ -1,7 +1,9 @@
 import ipAnonymize from "ip-anonymize";
 import { Logger } from "winston";
 import WebSocket from "ws";
-import { z } from "zod/v4";
+import { z } from "zod";
+import { GameEnv, ServerConfig } from "../core/configuration/Config";
+import { GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -19,12 +21,9 @@ import {
   ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
-import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
-import { archive } from "./Archive";
+import { createPartialGameRecord } from "../core/Util";
+import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
-import { gatekeeper } from "./Gatekeeper";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -41,18 +40,20 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  // Used for record record keeping
+  private LobbyCreatorID: string | undefined;
   private allClients: Map<ClientID, Client> = new Map();
+  private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
   private _startTime: number | null = null;
 
-  private endTurnIntervalID;
+  private endTurnIntervalID: ReturnType<typeof setInterval> | undefined;
 
   private lastPingUpdate = 0;
 
   private winner: ClientSendWinnerMessage | null = null;
 
-  private gameStartInfo: GameStartInfo;
+  // Note: This can be undefined if accessed before the game starts.
+  private gameStartInfo!: GameStartInfo;
 
   private log: Logger;
 
@@ -61,19 +62,31 @@ export class GameServer {
   private kickedClients: Set<ClientID> = new Set();
   private outOfSyncClients: Set<ClientID> = new Set();
 
+  private websockets: Set<WebSocket> = new Set();
+
+  private winnerVotes: Map<
+    string,
+    { winner: ClientSendWinnerMessage; ips: Set<string> }
+  > = new Map();
+
   constructor(
     public readonly id: string,
     readonly log_: Logger,
     public readonly createdAt: number,
     private config: ServerConfig,
     public gameConfig: GameConfig,
+    lobbyCreatorID?: string,
   ) {
     this.log = log_.child({ gameID: id });
+    this.LobbyCreatorID = lobbyCreatorID ?? undefined;
   }
 
   public updateGameConfig(gameConfig: Partial<GameConfig>): void {
     if (gameConfig.gameMap !== undefined) {
       this.gameConfig.gameMap = gameConfig.gameMap;
+    }
+    if (gameConfig.gameMapSize !== undefined) {
+      this.gameConfig.gameMapSize = gameConfig.gameMapSize;
     }
     if (gameConfig.difficulty !== undefined) {
       this.gameConfig.difficulty = gameConfig.difficulty;
@@ -87,8 +100,14 @@ export class GameServer {
     if (gameConfig.infiniteGold !== undefined) {
       this.gameConfig.infiniteGold = gameConfig.infiniteGold;
     }
+    if (gameConfig.donateGold !== undefined) {
+      this.gameConfig.donateGold = gameConfig.donateGold;
+    }
     if (gameConfig.infiniteTroops !== undefined) {
       this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
+    }
+    if (gameConfig.donateTroops !== undefined) {
+      this.gameConfig.donateTroops = gameConfig.donateTroops;
     }
     if (gameConfig.maxTimerValue !== undefined) {
       this.gameConfig.maxTimerValue = gameConfig.maxTimerValue;
@@ -110,11 +129,19 @@ export class GameServer {
   }
 
   public addClient(client: Client, lastTurn: number) {
+    this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
       });
       return;
+    }
+    // Log when lobby creator joins private game
+    if (client.clientID === this.LobbyCreatorID) {
+      this.log.info("Lobby creator joined", {
+        gameID: this.id,
+        creatorID: this.LobbyCreatorID,
+      });
     }
     this.log.info("client (re)joining game", {
       clientID: client.clientID,
@@ -173,10 +200,9 @@ export class GameServer {
         return;
       }
 
-      client.isDisconnected = existing.isDisconnected;
       client.lastPing = existing.lastPing;
+      client.reportedWinner = existing.reportedWinner;
 
-      existing.ws.removeAllListeners();
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
@@ -184,77 +210,116 @@ export class GameServer {
     this.activeClients.push(client);
     client.lastPing = Date.now();
 
+    this.markClientDisconnected(client.clientID, false);
+
     this.allClients.set(client.clientID, client);
 
     client.ws.removeAllListeners("message");
-    client.ws.removeAllListeners("close");
-    client.ws.removeAllListeners("error");
-    client.ws.on(
-      "message",
-      gatekeeper.wsHandler(client.ip, async (message: string) => {
-        try {
-          const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-          if (!parsed.success) {
-            const error = z.prettifyError(parsed.error);
-            this.log.error("Failed to parse client message", error, {
-              clientID: client.clientID,
-            });
-            client.ws.send(
-              JSON.stringify({
-                type: "error",
-                error: error.toString(),
-              } satisfies ServerErrorMessage),
-            );
-            // Add a small delay before closing the connection to ensure the error message is received
-            setTimeout(() => {
-              client.ws.close(1002, "ClientMessageSchema");
-            }, 100);
-            return;
-          }
-          const clientMsg = parsed.data;
-          if (clientMsg.type === "intent") {
+    client.ws.on("message", async (message: string) => {
+      try {
+        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+        if (!parsed.success) {
+          const error = z.prettifyError(parsed.error);
+          this.log.error("Failed to parse client message", error, {
+            clientID: client.clientID,
+          });
+          client.ws.send(
+            JSON.stringify({
+              type: "error",
+              error,
+              message,
+            } satisfies ServerErrorMessage),
+          );
+          client.ws.close(1002, "ClientMessageSchema");
+          return;
+        }
+        const clientMsg = parsed.data;
+        switch (clientMsg.type) {
+          case "intent": {
             if (clientMsg.intent.clientID !== client.clientID) {
               this.log.warn(
                 `client id mismatch, client: ${client.clientID}, intent: ${clientMsg.intent.clientID}`,
               );
               return;
             }
-            if (clientMsg.intent.type === "mark_disconnected") {
-              this.log.warn(
-                `Should not receive mark_disconnected intent from client`,
-              );
-              return;
+            switch (clientMsg.intent.type) {
+              case "mark_disconnected": {
+                this.log.warn(
+                  `Should not receive mark_disconnected intent from client`,
+                );
+                return;
+              }
+
+              // Handle kick_player intent via WebSocket
+              case "kick_player": {
+                const authenticatedClientID = client.clientID;
+
+                // Check if the authenticated client is the lobby creator
+                if (authenticatedClientID !== this.LobbyCreatorID) {
+                  this.log.warn(`Only lobby creator can kick players`, {
+                    clientID: authenticatedClientID,
+                    creatorID: this.LobbyCreatorID,
+                    target: clientMsg.intent.target,
+                    gameID: this.id,
+                  });
+                  return;
+                }
+
+                // Don't allow lobby creator to kick themselves
+                if (authenticatedClientID === clientMsg.intent.target) {
+                  this.log.warn(`Cannot kick yourself`, {
+                    clientID: authenticatedClientID,
+                  });
+                  return;
+                }
+
+                // Log and execute the kick
+                this.log.info(`Lobby creator initiated kick of player`, {
+                  creatorID: authenticatedClientID,
+                  target: clientMsg.intent.target,
+                  gameID: this.id,
+                  kickMethod: "websocket",
+                });
+
+                this.kickClient(clientMsg.intent.target);
+                return;
+              }
+              default: {
+                this.addIntent(clientMsg.intent);
+                break;
+              }
             }
-            this.addIntent(clientMsg.intent);
+            break;
           }
-          if (clientMsg.type === "ping") {
+          case "ping": {
             this.lastPingUpdate = Date.now();
             client.lastPing = Date.now();
+            break;
           }
-          if (clientMsg.type === "hash") {
+          case "hash": {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+            break;
           }
-          if (clientMsg.type === "winner") {
-            if (
-              this.outOfSyncClients.has(client.clientID) ||
-              this.kickedClients.has(client.clientID) ||
-              this.winner !== null
-            ) {
-              return;
-            }
-            this.winner = clientMsg;
-            this.archiveGame();
+          case "winner": {
+            this.handleWinner(client, clientMsg);
+            break;
           }
-        } catch (error) {
-          this.log.info(
-            `error handline websocket request in game server: ${error}`,
-            {
+          default: {
+            this.log.warn(`Unknown message type: ${(clientMsg as any).type}`, {
               clientID: client.clientID,
-            },
-          );
+            });
+            break;
+          }
         }
-      }),
-    );
+      } catch (error) {
+        this.log.info(
+          `error handline websocket request in game server: ${error}`,
+          {
+            clientID: client.clientID,
+          },
+        );
+      }
+    });
     client.ws.on("close", () => {
       this.log.info("client disconnected", {
         clientID: client.clientID,
@@ -298,6 +363,7 @@ export class GameServer {
     const prestartMsg = ServerPrestartMessageSchema.safeParse({
       type: "prestart",
       gameMap: this.gameConfig.gameMap,
+      gameMapSize: this.gameConfig.gameMapSize,
     });
 
     if (!prestartMsg.success) {
@@ -336,8 +402,7 @@ export class GameServer {
       players: this.activeClients.map((c) => ({
         username: c.username,
         clientID: c.clientID,
-        pattern: c.pattern,
-        flag: c.flag,
+        cosmetics: c.cosmetics,
       })),
     });
     if (!result.success) {
@@ -405,11 +470,12 @@ export class GameServer {
 
   async end() {
     // Close all WebSocket connections
-    clearInterval(this.endTurnIntervalID);
-    this.allClients.forEach((client) => {
-      client.ws.removeAllListeners("message");
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.close(1000, "game has ended");
+    if (this.endTurnIntervalID) {
+      clearInterval(this.endTurnIntervalID);
+    }
+    this.websockets.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close(1000, "game has ended");
       }
     });
     if (!this._hasPrestarted && !this._hasStarted) {
@@ -452,6 +518,10 @@ export class GameServer {
         error: errorDetails,
       });
     }
+  }
+
+  public isPrivateLobbyCreator(clientID: string): boolean {
+    return this.LobbyCreatorID === clientID;
   }
 
   phase(): GamePhase {
@@ -555,14 +625,11 @@ export class GameServer {
           error: "Kicked from game (you may have been playing on another tab)",
         } satisfies ServerErrorMessage),
       );
-      // Add a small delay before closing the connection to ensure the error message is received
-      setTimeout(() => {
-        client.ws.close(1000, "Kicked from game");
-        this.activeClients = this.activeClients.filter(
-          (c) => c.clientID !== clientID,
-        );
-        this.kickedClients.add(clientID);
-      }, 100);
+      client.ws.close(1000, "Kicked from game");
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID !== clientID,
+      );
+      this.kickedClients.add(clientID);
     } else {
       this.log.warn(`cannot kick client, not found in game`, {
         clientID,
@@ -577,25 +644,27 @@ export class GameServer {
 
     const now = Date.now();
     for (const [clientID, client] of this.allClients) {
-      if (
-        client.isDisconnected === false &&
-        now - client.lastPing > this.disconnectedTimeout
-      ) {
-        this.markClientDisconnected(client, true);
+      const isDisconnected = this.isClientDisconnected(clientID);
+      if (!isDisconnected && now - client.lastPing > this.disconnectedTimeout) {
+        this.markClientDisconnected(clientID, true);
       } else if (
-        client.isDisconnected &&
+        isDisconnected &&
         now - client.lastPing < this.disconnectedTimeout
       ) {
-        this.markClientDisconnected(client, false);
+        this.markClientDisconnected(clientID, false);
       }
     }
   }
 
-  private markClientDisconnected(client: Client, isDisconnected: boolean) {
-    client.isDisconnected = isDisconnected;
+  public isClientDisconnected(clientID: string): boolean {
+    return this.clientsDisconnectedStatus.get(clientID) ?? true;
+  }
+
+  private markClientDisconnected(clientID: string, isDisconnected: boolean) {
+    this.clientsDisconnectedStatus.set(clientID, isDisconnected);
     this.addIntent({
       type: "mark_disconnected",
-      clientID: client.clientID,
+      clientID: clientID,
       isDisconnected: isDisconnected,
     });
   }
@@ -619,18 +688,21 @@ export class GameServer {
           persistentID:
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
+          cosmetics: player.cosmetics,
         } satisfies PlayerRecord;
       },
     );
     archive(
-      createGameRecord(
-        this.id,
-        this.gameStartInfo.config,
-        playerRecords,
-        this.turns,
-        this._startTime ?? 0,
-        Date.now(),
-        this.winner?.winner,
+      finalizeGameRecord(
+        createPartialGameRecord(
+          this.id,
+          this.gameStartInfo.config,
+          playerRecords,
+          this.turns,
+          this._startTime ?? 0,
+          Date.now(),
+          this.winner?.winner,
+        ),
       ),
     );
   }
@@ -696,7 +768,7 @@ export class GameServer {
     for (const client of this.activeClients) {
       if (client.hashes.has(turnNumber)) {
         const clientHash = client.hashes.get(turnNumber)!;
-        counts.set(clientHash, (counts.get(clientHash) || 0) + 1);
+        counts.set(clientHash, (counts.get(clientHash) ?? 0) + 1);
       }
     }
 
@@ -732,5 +804,49 @@ export class GameServer {
       mostCommonHash,
       outOfSyncClients,
     };
+  }
+
+  private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
+    if (
+      this.outOfSyncClients.has(client.clientID) ||
+      this.kickedClients.has(client.clientID) ||
+      this.winner !== null ||
+      client.reportedWinner !== null
+    ) {
+      return;
+    }
+    client.reportedWinner = clientMsg.winner;
+
+    // Add client vote
+    const winnerKey = JSON.stringify(clientMsg.winner);
+    if (!this.winnerVotes.has(winnerKey)) {
+      this.winnerVotes.set(winnerKey, { ips: new Set(), winner: clientMsg });
+    }
+    const potentialWinner = this.winnerVotes.get(winnerKey)!;
+    potentialWinner.ips.add(client.ip);
+
+    const activeUniqueIPs = new Set(this.activeClients.map((c) => c.ip));
+
+    const ratio = `${potentialWinner.ips.size}/${activeUniqueIPs.size}`;
+    this.log.info(
+      `recieved winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
+      {
+        clientID: client.clientID,
+      },
+    );
+
+    if (potentialWinner.ips.size * 2 < activeUniqueIPs.size) {
+      return;
+    }
+
+    // Vote succeeded
+    this.winner = potentialWinner.winner;
+    this.log.info(
+      `Winner determined by ${potentialWinner.ips.size}/${activeUniqueIPs.size} active IPs`,
+      {
+        winnerKey: winnerKey,
+      },
+    );
+    this.archiveGame();
   }
 }

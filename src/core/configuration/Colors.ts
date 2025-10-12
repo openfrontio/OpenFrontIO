@@ -1,20 +1,45 @@
-import { colord, Colord, extend, LabColor } from "colord";
+import { colord, Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
-import { ColoredTeams, Team } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
-import { simpleHash } from "../Util";
+
 extend([lchPlugin]);
 extend([labPlugin]);
 
-export const red: Colord = colord({ r: 235, g: 53, b: 53 }); // Bright Red
-export const blue: Colord = colord({ r: 41, g: 98, b: 255 }); // Royal Blue
+export const red = colord({ h: 0, s: 82, l: 56 });
+export const blue = colord({ h: 224, s: 100, l: 58 });
 export const teal = colord({ h: 172, s: 66, l: 50 });
 export const purple = colord({ h: 271, s: 81, l: 56 });
 export const yellow = colord({ h: 45, s: 93, l: 47 });
 export const orange = colord({ h: 25, s: 95, l: 53 });
 export const green = colord({ h: 128, s: 49, l: 50 });
-export const botColor: Colord = colord({ r: 210, g: 206, b: 200 }); // Muted Beige Gray
+export const botColor = colord({ h: 36, s: 10, l: 80 });
+
+export const redTeamColors: Colord[] = generateTeamColors(red);
+export const blueTeamColors: Colord[] = generateTeamColors(blue);
+export const tealTeamColors: Colord[] = generateTeamColors(teal);
+export const purpleTeamColors: Colord[] = generateTeamColors(purple);
+export const yellowTeamColors: Colord[] = generateTeamColors(yellow);
+export const orangeTeamColors: Colord[] = generateTeamColors(orange);
+export const greenTeamColors: Colord[] = generateTeamColors(green);
+export const botTeamColors: Colord[] = [colord(botColor)];
+
+function generateTeamColors(baseColor: Colord): Colord[] {
+  const { h: baseHue, s: baseSaturation, l: baseLightness } = baseColor.toHsl();
+  const colorCount = 64;
+
+  return Array.from({ length: colorCount }, (_, index) => {
+    const progression = index / (colorCount - 1);
+
+    const saturation = baseSaturation * (1.0 - 0.3 * progression);
+    const lightness = Math.min(100, baseLightness + progression * 30);
+
+    return colord({
+      h: baseHue,
+      s: saturation,
+      l: lightness,
+    });
+  });
+}
 
 export const nationColors: Colord[] = [
   colord({ r: 230, g: 100, b: 100 }), // Bright Red
@@ -338,99 +363,3 @@ export const fallbackColors: Colord[] = [
   colord({ r: 255, g: 240, b: 220 }), // Pastel Sand
   colord({ r: 255, g: 245, b: 210 }), // Soft Banana
 ];
-
-export class ColorAllocator {
-  private availableColors: Colord[];
-  private fallbackColors: Colord[];
-  private assigned = new Map<string, Colord>();
-
-  constructor(colors: Colord[], fallback: Colord[]) {
-    this.availableColors = [...colors];
-    this.fallbackColors = [...colors, ...fallback];
-  }
-
-  assignColor(id: string): Colord {
-    if (this.assigned.has(id)) {
-      return this.assigned.get(id)!;
-    }
-
-    if (this.availableColors.length === 0) {
-      this.availableColors = [...this.fallbackColors];
-    }
-
-    const MIN_DELTA_E = 25; // Minimum Delta E for distinct colors
-    const assignedColors = Array.from(this.assigned.values());
-    const rand = new PseudoRandom(simpleHash(id));
-    const shuffledColors = rand.shuffleArray(this.availableColors);
-
-    const selection = selectDistinctColor(
-      shuffledColors,
-      assignedColors,
-      MIN_DELTA_E,
-    );
-
-    let selectedIndex = 0;
-
-    if (selection) {
-      selectedIndex = selection.selectedIndex;
-    }
-
-    const color = this.availableColors.splice(selectedIndex, 1)[0];
-    this.assigned.set(id, color);
-    return color;
-  }
-
-  assignTeamColor(team: Team): Colord {
-    switch (team) {
-      case ColoredTeams.Blue:
-        return blue;
-      case ColoredTeams.Red:
-        return red;
-      case ColoredTeams.Teal:
-        return teal;
-      case ColoredTeams.Purple:
-        return purple;
-      case ColoredTeams.Yellow:
-        return yellow;
-      case ColoredTeams.Orange:
-        return orange;
-      case ColoredTeams.Green:
-        return green;
-      case ColoredTeams.Bot:
-        return botColor;
-      default:
-        return this.availableColors[
-          simpleHash(team) % this.availableColors.length
-        ];
-    }
-  }
-}
-
-// Select a distinct color from the available colors that is sufficiently different from the assigned colors
-export function selectDistinctColor(
-  shuffledColors: Colord[],
-  assignedColors: Colord[],
-  minDeltaE: number,
-): { selectedIndex: number; selectedColor: Colord } | null {
-  const shuffled = shuffledColors.map((color, index) => ({ color, index }));
-
-  for (const { color, index } of shuffled) {
-    const isDistinctEnough = assignedColors.every(
-      (assigned) => deltaE76(color.toLab(), assigned.toLab()) >= minDeltaE,
-    );
-    if (isDistinctEnough) {
-      return { selectedIndex: index, selectedColor: color };
-    }
-  }
-
-  return null;
-}
-
-// Calculate Delta E using the CIE76 formula
-export function deltaE76(c1: LabColor, c2: LabColor) {
-  return Math.sqrt(
-    Math.pow(c1.l - c2.l, 2) +
-      Math.pow(c1.a - c2.a, 2) +
-      Math.pow(c1.b - c2.b, 2),
-  );
-}

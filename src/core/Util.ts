@@ -1,12 +1,12 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
-import twemoji from "twemoji";
 import { Cell, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
 import {
   GameConfig,
   GameID,
   GameRecord,
+  PartialGameRecord,
   PlayerRecord,
   Turn,
   Winner,
@@ -91,6 +91,44 @@ export function calculateBoundingBox(
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
 }
 
+export function boundingBoxTiles(
+  gm: GameMap,
+  center: TileRef,
+  radius: number,
+): TileRef[] {
+  const tiles: TileRef[] = [];
+
+  const centerX = gm.x(center);
+  const centerY = gm.y(center);
+
+  const minX = centerX - radius;
+  const maxX = centerX + radius;
+  const minY = centerY - radius;
+  const maxY = centerY + radius;
+
+  // Top and bottom edges (full width)
+  for (let x = minX; x <= maxX; x++) {
+    if (gm.isValidCoord(x, minY)) {
+      tiles.push(gm.ref(x, minY));
+    }
+    if (gm.isValidCoord(x, maxY) && minY !== maxY) {
+      tiles.push(gm.ref(x, maxY));
+    }
+  }
+
+  // Left and right edges (exclude corners already added)
+  for (let y = minY + 1; y < maxY; y++) {
+    if (gm.isValidCoord(minX, y)) {
+      tiles.push(gm.ref(minX, y));
+    }
+    if (gm.isValidCoord(maxX, y) && minX !== maxX) {
+      tiles.push(gm.ref(maxX, y));
+    }
+  }
+
+  return tiles;
+}
+
 export function calculateBoundingBoxCenter(
   gm: GameMap,
   borderTiles: ReadonlySet<TileRef>,
@@ -114,64 +152,10 @@ export function inscribed(
   );
 }
 
-export function getMode(list: Set<number>): number {
-  // Count occurrences
-  const counts = new Map<number, number>();
-  for (const item of list) {
-    counts.set(item, (counts.get(item) || 0) + 1);
-  }
-
-  // Find the item with the highest count
-  let mode = 0;
-  let maxCount = 0;
-
-  for (const [item, count] of counts) {
-    if (count > maxCount) {
-      maxCount = count;
-      mode = item;
-    }
-  }
-
-  return mode;
-}
-
 export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
-    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}\[\]_]/gu, "");
-}
-
-export function processName(name: string): string {
-  // First sanitize the raw input - strip everything except text and emojis
-  const sanitizedName = sanitize(name);
-  // Process emojis with twemoji
-  const withEmojis = twemoji.parse(sanitizedName, {
-    base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
-    folder: "svg",
-    ext: ".svg",
-  });
-
-  // Add CSS styles inline to the wrapper span
-  const styledHTML = `
-        <span class="player-name" style="
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-weight: 500;
-            vertical-align: middle;
-        ">
-            ${withEmojis}
-        </span>
-    `;
-
-  // Add CSS for the emoji images
-  const withEmojiStyles = styledHTML.replace(
-    /<img/g,
-    '<img style="height: 1.2em; width: 1.2em; vertical-align: -0.2em; margin: 0 0.05em 0 0.1em;"',
-  );
-
-  // Sanitize the final HTML, allowing styles and specific attributes
-  return onlyImages(withEmojiStyles);
+    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
 }
 
 export function onlyImages(html: string) {
@@ -183,7 +167,7 @@ export function onlyImages(html: string) {
   });
 }
 
-export function createGameRecord(
+export function createPartialGameRecord(
   gameID: GameID,
   config: GameConfig,
   // username does not need to be set.
@@ -192,15 +176,13 @@ export function createGameRecord(
   start: number,
   end: number,
   winner: Winner,
-): GameRecord {
+): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
-  const version = "v0.0.2";
-  const gitCommit = process.env.GIT_COMMIT ?? "unknown";
   const num_turns = allTurns.length;
   const turns = allTurns.filter(
     (t) => t.intents.length !== 0 || t.hash !== undefined,
   );
-  const record: GameRecord = {
+  const record: PartialGameRecord = {
     info: {
       gameID,
       config,
@@ -211,8 +193,7 @@ export function createGameRecord(
       num_turns,
       winner,
     },
-    version,
-    gitCommit,
+    version: "v0.0.2",
     turns,
   };
   return record;
@@ -249,7 +230,7 @@ export function assertNever(x: never): never {
 
 export function generateID(): GameID {
   const nanoid = customAlphabet(
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
     8,
   );
   return nanoid();
@@ -293,7 +274,7 @@ export function createRandomName(
   return randomName;
 }
 
-export const emojiTable: string[][] = [
+export const emojiTable = [
   ["😀", "😊", "🥰", "😇", "😎"],
   ["😞", "🥺", "😭", "😱", "😡"],
   ["😈", "🤡", "🖕", "🥱", "🤦‍♂️"],
@@ -305,13 +286,23 @@ export const emojiTable: string[][] = [
   ["⬅️", "🎯", "➡️", "🥈", "🥉"],
   ["↙️", "⬇️", "↘️", "❤️", "💔"],
   ["💰", "⚓", "⛵", "🏡", "🛡️"],
-];
+] as const;
 // 2d to 1d array
-export const flattenedEmojiTable: string[] = emojiTable.flat();
+export const flattenedEmojiTable = emojiTable.flat();
+
+export type Emoji = (typeof flattenedEmojiTable)[number];
 
 /**
  * JSON.stringify replacer function that converts bigint values to strings.
  */
 export function replacer(_key: string, value: any): any {
   return typeof value === "bigint" ? value.toString() : value;
+}
+
+export function sigmoid(
+  value: number,
+  decayRate: number,
+  midpoint: number,
+): number {
+  return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
 }

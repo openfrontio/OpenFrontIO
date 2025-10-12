@@ -37,6 +37,14 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
 .start-game-button {
   width: 100%;
   max-width: 300px;
@@ -67,19 +75,6 @@
   grid-template-columns: 1fr;
   gap: 24px;
   margin: 24px 0;
-}
-
-.options-section {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 12px 24px 24px 24px;
-  border-radius: 12px;
-}
-
-.option-title {
-  margin: 0 0 16px 0;
-  font-size: 20px;
-  color: #fff;
-  text-align: center;
 }
 
 .option-cards {
@@ -175,6 +170,13 @@ label.option-card:hover {
   color: #fff;
 }
 
+.visibility-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
 .copy-success {
   position: relative;
   color: green;
@@ -188,14 +190,6 @@ label.option-card:hover {
   color: #4caf50;
 }
 
-.lobby-id-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin: 8px 0px 0px 0px;
-}
-
 #lobbyIdInput {
   font-family: monospace;
   font-weight: 600;
@@ -205,7 +199,7 @@ label.option-card:hover {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.6);
   padding: 8px 16px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -227,24 +221,16 @@ label.option-card:hover {
   font-weight: 600;
 }
 
-.players-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  padding: 0 16px;
-}
-
 .player-tag {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 16px;
+  gap: 8px;
+  background: #2a2a2a;
+  color: #fff;
+  padding: 8px 12px;
+  margin: 4px;
   border-radius: 16px;
   font-size: 14px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 #bots-count,
@@ -361,6 +347,11 @@ label.option-card:hover {
   mask: url("../../resources/images/CityIconWhite.svg") no-repeat center / cover;
 }
 
+#helpModal .factory-icon {
+  mask: url("../../resources/images/FactoryIconWhite.svg") no-repeat center /
+    cover;
+}
+
 #helpModal .defense-post-icon {
   mask: url("../../resources/images/ShieldIconWhite.svg") no-repeat center /
     cover;
@@ -376,13 +367,13 @@ label.option-card:hover {
 }
 
 #helpModal .missile-silo-icon {
-  mask: url("../../resources/non-commercial/svg/MissileSiloIconWhite.svg")
-    no-repeat center / cover;
+  mask: url("../../resources/images/MissileSiloIconWhite.svg") no-repeat
+    center / cover;
 }
 
 #helpModal .sam-launcher-icon {
-  mask: url("../../resources/non-commercial/svg/SamLauncherIconWhite.svg")
-    no-repeat center / cover;
+  mask: url("../../resources/images/SamLauncherIconWhite.svg") no-repeat
+    center / cover;
 }
 
 #helpModal .atom-bomb-icon {
@@ -483,6 +474,7 @@ label.option-card:hover {
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-height: 400px;
 }
 
 #error-modal button.copy-btn {
@@ -544,6 +536,9 @@ label.option-card:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
   gap: 10px;
   margin: 40px 0px 0px 0px;
 }
@@ -604,14 +599,61 @@ label.option-card:hover {
   padding: 0 16px;
 }
 
-.player-tag {
+/* News Button Notification */
+news-button .active button {
+  position: relative;
+  border-color: #2563eb !important;
+  border-width: 2px !important;
+  box-shadow:
+    0 0 0 1px rgba(37, 99, 235, 0.5),
+    0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+news-button .active button::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: #f59e0b;
+  border: 2px solid white;
+  border-radius: 50%;
+  animation: newsPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes newsPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.4);
+  }
+}
+
+.host-badge {
+  font-size: 11px;
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.remove-player-btn {
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: #ff4444;
+  color: white;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 16px;
-  border-radius: 16px;
-  font-size: 14px;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-left: 4px;
+}
+
+.remove-player-btn:hover {
+  background: #ff6666;
 }

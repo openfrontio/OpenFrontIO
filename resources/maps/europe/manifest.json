@@ -1,13 +1,18 @@
 {
   "map": {
-    "height": 1674,
-    "num_land_tiles": 2501136,
-    "width": 2350
+    "height": 1672,
+    "num_land_tiles": 2311229,
+    "width": 2348
   },
-  "mini_map": {
-    "height": 837,
-    "num_land_tiles": 610071,
-    "width": 1175
+  "map16x": {
+    "height": 418,
+    "num_land_tiles": 132857,
+    "width": 587
+  },
+  "map4x": {
+    "height": 836,
+    "num_land_tiles": 561490,
+    "width": 1174
   },
   "name": "Europe",
   "nations": [
@@ -164,7 +169,7 @@
     {
       "coordinates": [517, 1483],
       "flag": "dz",
-      "name": "People's Democratic Republic of Algeria",
+      "name": "Algeria",
       "strength": 1
     },
     {

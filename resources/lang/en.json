@@ -6,7 +6,18 @@
     "lang_code": "en"
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "available": "Available",
+    "preset_max": "Max",
+    "summary_send": "Send",
+    "summary_keep": "Keep",
+    "cancel": "Cancel",
+    "send": "Send",
+    "cap_label": "Cap",
+    "cap_tooltip": "Recipient’s remaining capacity",
+    "target_dead": "Target eliminated",
+    "target_dead_note": "You can't send resources to an eliminated player.",
+    "none": "None"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -21,12 +32,14 @@
     "instructions": "Instructions",
     "how_to_play": "How to Play",
     "advertise": "Advertise",
-    "wiki": "Wiki"
+    "wiki": "Wiki",
+    "privacy_policy": "Privacy Policy",
+    "terms_of_service": "Terms of Service"
   },
   "news": {
-    "full_changelog": "See the complete change log",
+    "see_all_releases": "See all releases",
     "github_link": "on GitHub",
-    "title": "Version 23 released!"
+    "title": "Release Notes"
   },
   "help_modal": {
     "hotkeys": "Hotkeys",
@@ -41,14 +54,15 @@
     "action_move_camera": "Move camera",
     "action_ratio_change": "Decrease/Increase attack ratio",
     "action_reset_gfx": "Reset graphics",
+    "action_auto_upgrade": "Auto-upgrade nearest building",
     "ui_section": "Game UI",
     "ui_leaderboard": "Leaderboard",
+    "ui_your_team": "Your team:",
     "ui_leaderboard_desc": "Shows the top players of the game and their names, % owned land, gold and troops. Using Show All shows all players in the game. If you don't want to see the leaderboard, click Hide.",
     "ui_control": "Control panel",
     "ui_control_desc": "The control panel contains the following elements:",
     "ui_pop": "Pop - The amount of units you have, your max population and the rate at which you gain them.",
     "ui_gold": "Gold - The amount of gold you have and the rate at which you gain it.",
-    "ui_troops_workers": "Troops and Workers - The amount of allocated troops and workers. Troops are used to attack or defend against attacks. Workers are used to generate gold. You can adjust the number of troops and workers using the slider.",
     "ui_attack_ratio": "Attack ratio - The amount of troops that will be used when you attack. You can adjust the attack ratio using the slider. Having more attacking troops than defending troops will make you lose fewer troops in the attack, while having less will increase the damage dealt to your attacking troops. The effect doesn't go beyond ratios of 2:1.",
     "ui_events": "Event panel",
     "ui_events_desc": "The Event panel displays the latest events, requests and Quick Chat messages. Some examples are:",
@@ -59,6 +73,7 @@
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
     "ui_playeroverlay_desc": "When you hover over a country, the Player info overlay is displayed under Options. It shows the type of player: Human, Nation (smart bot), or Bot. A Nation's attitude towards you, ranging from Hostile to Friendly. And defending troops, gold, plus the number of Warships and various buildings the player has.",
+    "ui_wilderness": "Wilderness",
     "option_pause": "Pause/Unpause the game - Only available in single player mode.",
     "option_timer": "Timer - Time passed since the start of the game.",
     "option_exit": "Exit button.",
@@ -66,6 +81,7 @@
     "radial_title": "Radial menu",
     "radial_desc": "Right clicking (or touch on mobile) opens the Radial menu. Right click outside it to close it. From the menu you can:",
     "radial_build": "Open the Build menu.",
+    "radial_attack": "Open the Attack menu.",
     "radial_info": "Open the Info menu.",
     "radial_boat": "Send a Boat (transport ship) to attack at the selected location. Only available if you have access to water.",
     "radial_close": "Close the menu.",
@@ -88,10 +104,12 @@
     "build_desc": "Description",
     "build_city": "City",
     "build_city_desc": "Increases your max population. Useful when you can't expand your territory or you're about to hit your population limit.",
+    "build_factory": "Factory",
+    "build_factory_desc": "Automatically builds railroads to nearby cities, ports and other factories, and can also link up with friendly neighbors. Trains spawn regularly and give you a fixed amount of gold for each building they visit along the route, with extra gold for visiting your neighbors' buildings.",
     "build_defense": "Defense Post",
     "build_defense_desc": "Increases defenses around nearby borders, which show a checkered pattern. Attacks from enemies are slower and have more casualties.",
     "build_port": "Port",
-    "build_port_desc": "Can only be built near water. Allows building Warships. Automatically sends trade ships between ports of your country and other countries (except when trade is stopped), giving gold to both sides. Trade stops automatically when you attack or are attacked by a player. It resumes after 5 minutes or if you become allies. You can manually toggle trading with \"Stop trading\" or \"Start trading\".",
+    "build_port_desc": "Can only be built near water. Allows building Warships. Automatically sends trade ships between ports of your country and other countries (except when trade is stopped), giving gold to both sides. Trade with a player stops automatically when you attack or are attacked by a player. It resumes after 5 minutes or if you become allies. You can manually toggle trading with \"Stop trading\" or \"Start trading\".",
     "build_warship": "Warship",
     "build_warship_desc": "Patrols in an area, capturing enemy trade ships and destroying their Boats (transport ships) and Warships. Spawns from the nearest Port and patrols the area you first clicked to build it. You can control Warships by attack-clicking on them (see action Attack under Hotkeys) and then attack-clicking the new area you want them to move to.",
     "build_silo": "Missile Silo",
@@ -111,7 +129,8 @@
     "icon_ally": "Handshake - Ally. This player is your ally.",
     "icon_embargo": "Dollar stop sign - Embargo. This player has stopped trading with you automatically or manually.",
     "icon_request": "Envelope - Alliance request. This player has sent you an alliance request.",
-    "info_enemy_panel": "Enemy info panel"
+    "info_enemy_panel": "Enemy info panel",
+    "exit_confirmation": "Are you sure you want to exit the game?"
   },
   "single_modal": {
     "title": "Single Player",
@@ -123,10 +142,22 @@
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
+    "compact_map": "Mini Map",
     "max_timer": "Max timer (minutes)",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game"
+  },
+  "token_login_modal": {
+    "title": "Logging in...",
+    "logging_in": "Logging in...",
+    "success": "Successfully logged in as {email}!"
+  },
+  "account_modal": {
+    "title": "Account",
+    "logged_in_as": "Logged in as {email}",
+    "logged_in_with_discord": "Logged in with Discord",
+    "recovery_email_sent": "Recovery email sent to {email}"
   },
   "map": {
     "map": "Map",
@@ -154,7 +185,13 @@
     "europeclassic": "Europe (classic)",
     "falklandislands": "Falkland Islands",
     "baikal": "Baikal",
-    "halkidiki": "Halkidiki"
+    "halkidiki": "Halkidiki",
+    "straitofgibraltar": "Strait of Gibraltar",
+    "italia": "Italia",
+    "japan": "Japan",
+    "yenisei": "Yenisei",
+    "pluto": "Pluto",
+    "montreal": "Montreal"
   },
   "map_categories": {
     "continental": "Continental",
@@ -172,12 +209,16 @@
     "join_lobby": "Join Lobby",
     "checking": "Checking lobby...",
     "not_found": "Lobby not found. Please check the ID and try again.",
-    "error": "An error occurred. Please try again.",
-    "joined_waiting": "Joined successfully! Waiting for game to start..."
+    "error": "An error occurred. Please try again or contact support.",
+    "joined_waiting": "Joined successfully! Waiting for game to start...",
+    "version_mismatch": "This game was created with a different version. Cannot join."
   },
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
+    "teams_Duos": "Duos (teams of 2)",
+    "teams_Trios": "Trios (teams of 3)",
+    "teams_Quads": "Quads (teams of 4)",
     "teams": "{num} teams"
   },
   "username": {
@@ -198,22 +239,37 @@
     "max_timer": "Max timer (minutes)",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
+    "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
+    "donate_troops": "Donate troops",
+    "compact_map": "Mini Map",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
-    "start": "Start Game"
+    "start": "Start Game",
+    "host_badge": "Host"
+  },
+  "team_colors": {
+    "red": "Red",
+    "blue": "Blue",
+    "teal": "Teal",
+    "purple": "Purple",
+    "yellow": "Yellow",
+    "orange": "Orange",
+    "green": "Green",
+    "bot": "Bot"
   },
   "game_starting_modal": {
     "title": "Game is Starting...",
+    "code_license": "Code licensed under AGPL-3.0",
     "desc": "Preparing for the lobby to start. Please wait."
   },
   "difficulty": {
     "difficulty": "Difficulty",
-    "Relaxed": "Relaxed",
-    "Balanced": "Balanced",
-    "Intense": "Intense",
+    "Easy": "Relaxed",
+    "Medium": "Balanced",
+    "Hard": "Intense",
     "Impossible": "Impossible"
   },
   "game_mode": {
@@ -232,30 +288,51 @@
     "sam_launcher": "SAM Launcher",
     "atom_bomb": "Atom Bomb",
     "hydrogen_bomb": "Hydrogen Bomb",
-    "mirv": "MIRV"
+    "mirv": "MIRV",
+    "factory": "Factory"
   },
   "user_setting": {
     "title": "User Settings",
     "tab_basic": "Basic Settings",
     "tab_keybinds": "Keybinds",
-    "dark_mode_label": "🌙 Dark Mode",
+    "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
-    "emojis_label": "😊 Emojis",
+    "dark_mode_enabled": "Dark mode enabled",
+    "light_mode_enabled": "Light mode enabled",
+    "emojis_label": "Emojis",
+    "emojis_visible": "Emojis are visible",
+    "emojis_hidden": "Emojis are hidden",
     "emojis_desc": "Toggle whether emojis are shown in game",
-    "alert_frame_label": "🚨 Alert Frame",
+    "alert_frame_label": "Alert Frame",
     "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed.",
-    "special_effects_label": "💥 Special effects",
+    "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
-    "anonymous_names_label": "🥷 Hidden Names",
+    "special_effects_enabled": "Special effects enabled",
+    "special_effects_disabled": "Special effects disabled",
+    "structure_sprites_label": "Structure Sprites",
+    "structure_sprites_desc": "Toggle structure sprites",
+    "structure_sprites_enabled": "Structure Sprites enabled",
+    "structure_sprites_disabled": "Structure Sprites disabled",
+    "anonymous_names_label": "Hidden Names",
     "anonymous_names_desc": "Hide real player names with random ones on your screen.",
-    "left_click_label": "🖱️ Left Click to Open Menu",
+    "anonymous_names_enabled": "Anonymous names enabled",
+    "lobby_id_visibility_label": "Hidden Lobby IDs",
+    "lobby_id_visibility_desc": "Hide Lobby ID in private lobby creation",
+    "real_names_shown": "Real names shown",
+    "left_click_label": "Left Click to Open Menu",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
+    "left_click_menu": "Left Click Menu",
+    "left_click_opens_menu": "Left click opens menu",
+    "right_click_opens_menu": "Right click opens menu",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
-    "troop_ratio_label": "🪖🛠️ Troops and Workers Ratio",
     "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
     "territory_patterns_label": "🏳️ Territory Patterns",
     "territory_patterns_desc": "Choose whether to display territory pattern designs in game",
+    "performance_overlay_label": "Performance Overlay",
+    "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
+    "performance_overlay_enabled": "Performance overlay enabled",
+    "performance_overlay_disabled": "Performance overlay disabled",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
@@ -263,6 +340,25 @@
     "view_options": "View Options",
     "toggle_view": "Toggle View",
     "toggle_view_desc": "Alternate view (terrain/countries)",
+    "build_controls": "Build Controls",
+    "build_city": "Build City",
+    "build_city_desc": "Build a City under your cursor.",
+    "build_factory": "Build Factory",
+    "build_factory_desc": "Build a Factory under your cursor.",
+    "build_defense_post": "Build Defense Post",
+    "build_defense_post_desc": "Build a Defense Post under your cursor.",
+    "build_port": "Build Port",
+    "build_port_desc": "Build a Port under your cursor.",
+    "build_warship": "Build Warship",
+    "build_warship_desc": "Build a Warship under your cursor.",
+    "build_missile_silo": "Build Missile Silo",
+    "build_missile_silo_desc": "Build a Missile Silo under your cursor.",
+    "build_sam_launcher": "Build SAM Launcher",
+    "build_sam_launcher_desc": "Build a SAM Launcher under your cursor.",
+    "build_atom_bomb": "Build Atom Bomb",
+    "build_atom_bomb_desc": "Build an Atom Bomb under your cursor.",
+    "build_hydrogen_bomb": "Build Hydrogen Bomb",
+    "build_hydrogen_bomb_desc": "Build a Hydrogen Bomb under your cursor.",
     "attack_ratio_controls": "Attack Ratio Controls",
     "attack_ratio_up": "Increase Attack Ratio",
     "attack_ratio_up_desc": "Increase attack ratio by 10%",
@@ -290,7 +386,16 @@
     "move_right": "Move Camera Right",
     "move_right_desc": "Move the camera to the right",
     "reset": "Reset",
-    "unbind": "Unbind"
+    "unbind": "Unbind",
+    "on": "On",
+    "off": "Off",
+    "toggle_terrain": "Toggle Terrain",
+    "terrain_enabled": "Terrain view enabled",
+    "terrain_disabled": "Terrain view disabled",
+    "exit_game_label": "Exit Game",
+    "exit_game_info": "Return to main menu",
+    "background_music_volume": "Background Music Volume",
+    "sound_effects_volume": "Sound Effects Volume"
   },
   "chat": {
     "title": "Quick Chat",
@@ -312,26 +417,31 @@
     },
     "help": {
       "troops": "Please give me troops!",
+      "troops_frontlines": "Send troops to the frontlines!",
       "gold": "Please give me gold!",
       "no_attack": "Please don't attack me!",
       "sorry_attack": "Sorry, I didn’t mean to attack.",
       "alliance": "Alliance?",
       "help_defend": "Help me defend against [P1]!",
-      "team_up": "Let’s team up against [P1]!"
+      "trade_partners": "Let's be trade partners!"
     },
     "attack": {
       "attack": "Attack [P1]!",
       "mirv": "Launch a MIRV at [P1]!",
       "focus": "Focus fire on [P1]!",
-      "finish": "Let's finish off [P1]!"
+      "finish": "Let's finish off [P1]!",
+      "build_warships": "Build Warships!"
     },
     "defend": {
       "defend": "Defend [P1]!",
+      "defend_from": "Defend from [P1]!",
       "dont_attack": "Don’t attack [P1]!",
-      "ally": "[P1] is my ally!"
+      "ally": "[P1] is my ally!",
+      "build_posts": "Build Defense Posts!"
     },
     "greet": {
       "hello": "Hello!",
+      "good_job": "Good job!",
       "good_luck": "Good luck!",
       "have_fun": "Have fun!",
       "gg": "GG!",
@@ -342,13 +452,19 @@
       "thanks": "Thanks!",
       "oops": "Oops, wrong button!",
       "trust_me": "You can trust me. Promise!",
-      "trust_broken": "I trusted you..."
+      "trust_broken": "I trusted you...",
+      "ruining_games": "You're ruining both of our games.",
+      "dont_do_that": "Don't do that!",
+      "same_team": "I'm on your side!"
     },
     "misc": {
       "go": "Let’s go!",
       "strategy": "Nice strategy!",
       "fun": "This game is fun!",
-      "pr": "When will my PR finally get merged...?"
+      "team_up": "Let’s team up against [P1]!",
+      "pr": "When will my PR finally get merged...?",
+      "build_closer": "Build closer to get trains!",
+      "coastline": "Please let me get a coastline."
     },
     "warnings": {
       "strong": "[P1] is strong.",
@@ -359,10 +475,14 @@
       "has_allies": "[P1] has many allies.",
       "no_allies": "[P1] has no allies.",
       "betrayed": "[P1] betrayed their ally!",
+      "betrayed_me": "[P1] betrayed me!",
       "getting_big": "[P1] is growing too fast!",
       "danger_base": "[P1] is unprotected!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
-      "mirv_ready": "[P1] has enough gold to launch a MIRV!"
+      "mirv_ready": "[P1] has enough gold to launch a MIRV!",
+      "snowballing": "[P1] is snowballing too fast!",
+      "cheating": "[P1] is cheating!",
+      "stop_trading": "Stop trading with [P1]!"
     }
   },
   "build_menu": {
@@ -374,12 +494,15 @@
       "sam_launcher": "Defends against incoming nukes",
       "warship": "Captures trade ships, destroys ships and boats",
       "port": "Sends trade ships to generate gold",
-      "defense_post": "Increase defenses of nearby borders",
-      "city": "Increase max population"
+      "defense_post": "Increases defenses of nearby borders",
+      "city": "Increases max population",
+      "factory": "Creates railroads and spawns trains"
     },
     "not_enough_money": "Not enough money"
   },
   "win_modal": {
+    "support_openfront": "Support OpenFront!",
+    "territory_pattern": "Purchase a territory pattern to support OpenFront!",
     "died": "You died",
     "your_team": "Your team won!",
     "other_team": "{team} team has won!",
@@ -387,6 +510,7 @@
     "other_won": "{player} has won!",
     "exit": "Exit Game",
     "keep": "Keep Playing",
+    "spectate": "Spectate",
     "wishlist": "Wishlist on Steam!"
   },
   "leaderboard": {
@@ -394,9 +518,16 @@
     "hide": "Hide",
     "rank": "Rank",
     "player": "Player",
+    "team": "Team",
     "owned": "Owned",
     "gold": "Gold",
-    "troops": "Troops"
+    "troops": "Troops",
+    "launchers": "Launchers",
+    "sams": "SAMs",
+    "warships": "Warships",
+    "cities": "Cities",
+    "show_control": "Show Control",
+    "show_units": "Show Units"
   },
   "player_info_overlay": {
     "type": "Type",
@@ -404,11 +535,13 @@
     "nation": "Nation",
     "player": "Player",
     "team": "Team",
-    "d_troops": "Defending troops",
+    "alliance_timeout": "Alliance ends in",
+    "troops": "Troops",
     "a_troops": "Attacking troops",
     "gold": "Gold",
     "ports": "Ports",
     "cities": "Cities",
+    "factories": "Factories",
     "missile_launchers": "Missile launchers",
     "sams": "SAMs",
     "warships": "Warships",
@@ -418,7 +551,26 @@
   },
   "events_display": {
     "retreating": "retreating",
-    "boat": "Boat"
+    "boat": "Boat",
+    "alliance_request_status": "{name} {status} your alliance request",
+    "alliance_accepted": "accepted",
+    "alliance_rejected": "rejected",
+    "duration_second": "1 second",
+    "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
+    "duration_seconds_plural": "{seconds} seconds",
+    "betrayed_you": "{name} broke their alliance with you",
+    "about_to_expire": "Your alliance with {name} is about to expire!",
+    "alliance_expired": "Your alliance with {name} expired",
+    "attack_request": "{name} requests you attack {target}",
+    "sent_emoji": "Sent {name}: {emoji}",
+    "renew_alliance": "Request to renew",
+    "request_alliance": "{name} requests an alliance!",
+    "focus": "Focus",
+    "accept_alliance": "Accept",
+    "reject_alliance": "Reject",
+    "alliance_renewed": "Your alliance with {name} has been renewed",
+    "ignore": "Ignore",
+    "unit_voluntarily_deleted": "Unit voluntarily deleted"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
@@ -427,8 +579,12 @@
     "cooldown": "Cooldown",
     "type": "Type",
     "upgrade": "Upgrade",
-    "create_station": "Create Station",
     "level": "Level"
+  },
+  "player_type": {
+    "player": "Player",
+    "nation": "Nation",
+    "bot": "Bot"
   },
   "relation": {
     "hostile": "Hostile",
@@ -438,30 +594,56 @@
     "default": "Default"
   },
   "control_panel": {
-    "pop": "Pop",
     "gold": "Gold",
     "troops": "Troops",
-    "workers": "Workers",
     "attack_ratio": "Attack Ratio"
   },
   "player_panel": {
     "gold": "Gold",
     "troops": "Troops",
-    "betrayals": "Number of betrayals",
+    "betrayals": "Betrayals",
     "traitor": "Traitor",
+    "trading": "Trading",
+    "active": "Active",
+    "stopped": "Stopped",
     "alliance_time_remaining": "Alliance Expires In",
     "embargo": "Stopped trading with you",
     "nuke": "Nukes sent by them to you",
-    "start_trade": "Start trading",
-    "stop_trade": "Stop trading",
-    "yes": "Yes",
-    "no": "No",
-    "none": "None",
-    "alliances": "Alliances"
+    "start_trade": "Start Trading",
+    "stop_trade": "Stop Trading",
+    "alliances": "Alliances",
+    "flag": "Flag",
+    "chat": "Chat",
+    "target": "Target",
+    "break": "Break",
+    "break_alliance": "Break Alliance",
+    "alliance": "Alliance",
+    "send_alliance": "Send Alliance",
+    "send_troops": "Send Troops",
+    "send_gold": "Send Gold",
+    "emotes": "Emojis"
+  },
+  "send_troops_modal": {
+    "title_with_name": "Send Troops to {name}",
+    "available_tooltip": "Your current available troops",
+    "min_keep": "Min keep",
+    "min_keep_pct": "(30%)",
+    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "toggle_attack_bar_mode": "Use attack bar to send troops",
+    "warning_attackbar": "Once enabled, you can't open this modal directly. You'll only send troops via the attack bar.",
+    "aria_slider": "Troops slider",
+    "capacity_note": "Receiver can accept only {{amount}} right now."
+  },
+  "send_gold_modal": {
+    "title_with_name": "Send Gold to {name}",
+    "available_tooltip": "Your current available gold",
+    "aria_slider": "Amount slider",
+    "slider_tooltip": "{{percent}}% • {{amount}}"
   },
   "replay_panel": {
     "replay_speed": "Replay speed",
-    "game_speed": "Game speed"
+    "game_speed": "Game speed",
+    "fastest_game_speed": "Max"
   },
   "error_modal": {
     "crashed": "Game crashed!",
@@ -476,22 +658,25 @@
     "choose_spawn": "Choose a starting location"
   },
   "territory_patterns": {
-    "title": "Select Territory Pattern",
+    "title": "Skins",
+    "colors": "Colors",
+    "purchase": "Purchase",
     "blocked": {
       "login": "You must be logged in to access this pattern.",
-      "role": "This pattern requires the {role} role."
+      "purchase": "Purchase this pattern to unlock it."
     },
     "pattern": {
       "default": "Default",
       "custom": "Custom",
-      "stripes_v": "Vertical Stripes",
-      "stripes_h": "Horizontal Stripes",
+      "stripes_v": "Vertical",
+      "stripes_h": "Horizontal",
+      "horizontal_stripes": "Horizontal (Alt)",
+      "vertical_bars": "Vertical (Alt)",
       "checkerboard": "Checkerboard",
       "choco": "Choco",
       "diagonal": "Diagonal",
       "cross": "Cross",
       "mini_cross": "Mini Cross",
-      "horizontal_stripes": "Horizontal Stripes (Alt)",
       "sword": "Sword",
       "sparse_dots": "Sparse Dots",
       "evan": "Evan",
@@ -499,15 +684,109 @@
       "mountain_ridge": "Mountain Ridge",
       "scattered_dots": "Scattered Dots",
       "circuit_board": "Circuit Board",
-      "vertical_bars": "Vertical Bars",
+      "shells": "Shells",
       "-w-": ".w.",
       "white_rabbit": "White Rabbit",
       "goat": "Goat",
+      "cats": "Cats",
       "cursor": "Cursor",
       "hand": "Hand",
       "radiation": "Radiation",
       "openfront_qr": "OpenFront.io QR code",
-      "openfront": "OpenFront"
+      "openfront": "OpenFront",
+      "t_rex": "T-Rex",
+      "embelem": "Emblem",
+      "contributor": "Contributor",
+      "grogu_head": "Grogu Head",
+      "grogu": "Grogu"
     }
+  },
+  "flag_input": {
+    "title": "Select Flag",
+    "button_title": "Pick a flag!",
+    "search_flag": "Search..."
+  },
+  "spawn_ad": {
+    "loading": "Loading advertisement..."
+  },
+  "auth": {
+    "login_required": "Login is required to access this website.",
+    "redirecting": "You are being redirected...",
+    "not_authorized": "You are not authorized to access this website.",
+    "contact_admin": "If you believe you are seeing this message in error, please contact the website administrator."
+  },
+  "radial_menu": {
+    "delete_unit_title": "Delete Unit",
+    "delete_unit_description": "Click to delete the nearest unit"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Avatar"
+  },
+  "player_stats_table": {
+    "building_stats": "Building Statistics",
+    "ship_arrivals": "Ship Arrivals",
+    "nuke_stats": "Nuke Statistics",
+    "player_metrics": "Player Metrics",
+    "building": "Building",
+    "ship_type": "Ship Type",
+    "weapon": "Weapon",
+    "built": "Built",
+    "destroyed": "Destroyed",
+    "captured": "Captured",
+    "lost": "Lost",
+    "hits": "Hits",
+    "launched": "Launched",
+    "landed": "Landed",
+    "sent": "Sent",
+    "arrived": "Arrived",
+    "attack": "Attack",
+    "received": "Received",
+    "cancelled": "Cancelled",
+    "count": "Count",
+    "gold": "Gold",
+    "workers": "Workers",
+    "war": "War",
+    "trade": "Trade",
+    "steal": "Steal",
+    "unit": {
+      "city": "City",
+      "port": "Port",
+      "defp": "Defense Post",
+      "saml": "SAM Launcher",
+      "silo": "Missile Silo",
+      "wshp": "Warship",
+      "fact": "Factory",
+      "trade": "Trade Ship",
+      "trans": "Transport Ship",
+      "abomb": "Atom Bomb",
+      "hbomb": "Hydrogen Bomb",
+      "mirv": "MIRV",
+      "mirvw": "MIRV Warhead"
+    }
+  },
+  "game_list": {
+    "recent_games": "Recent Games",
+    "game_id": "Game ID",
+    "mode": "Mode",
+    "mode_ffa": "Free-for-All",
+    "mode_team": "Team",
+    "view": "View",
+    "details": "Details",
+    "started": "Started",
+    "map": "Map",
+    "difficulty": "Difficulty",
+    "type": "Type"
+  },
+  "player_stats_tree": {
+    "public": "Public",
+    "private": "Private",
+    "singleplayer": "Single Player",
+    "mode": "Mode",
+    "stats_wins": "Wins",
+    "stats_losses": "Losses",
+    "stats_wlr": "Win:Loss Ratio",
+    "stats_games_played": "Games Played",
+    "mode_ffa": "Free-for-All",
+    "mode_team": "Team"
   }
 }

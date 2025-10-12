@@ -1,28 +1,42 @@
+import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
+
+export function renderDuration(totalSeconds: number): string {
+  if (totalSeconds <= 0) return "0s";
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  let time = "";
+  if (minutes > 0) time += `${minutes}min `;
+  time += `${seconds}s`;
+  return time.trim();
+}
 
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
 
-export function renderNumber(num: number | bigint): string {
+export function renderNumber(
+  num: number | bigint,
+  fixedPoints?: number,
+): string {
   num = Number(num);
   num = Math.max(num, 0);
 
   if (num >= 10_000_000) {
     const value = Math.floor(num / 100000) / 10;
-    return value.toFixed(1) + "M";
+    return value.toFixed(fixedPoints ?? 1) + "M";
   } else if (num >= 1_000_000) {
     const value = Math.floor(num / 10000) / 100;
-    return value.toFixed(2) + "M";
+    return value.toFixed(fixedPoints ?? 2) + "M";
   } else if (num >= 100000) {
     return Math.floor(num / 1000) + "K";
   } else if (num >= 10000) {
     const value = Math.floor(num / 100) / 10;
-    return value.toFixed(1) + "K";
+    return value.toFixed(fixedPoints ?? 1) + "K";
   } else if (num >= 1000) {
     const value = Math.floor(num / 10) / 100;
-    return value.toFixed(2) + "K";
+    return value.toFixed(fixedPoints ?? 2) + "K";
   } else {
     return Math.floor(num).toString();
   }
@@ -75,18 +89,20 @@ export function generateCryptoRandomUUID(): string {
   );
 }
 
-// Re-export translateText from LangSelector
 export const translateText = (
   key: string,
   params: Record<string, string | number> = {},
 ): string => {
+  const self = translateText as any;
+  self.formatterCache ??= new Map();
+  self.lastLang ??= null;
+
   const langSelector = document.querySelector("lang-selector") as LangSelector;
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
     return key;
   }
 
-  // Wait for translations to be loaded
   if (
     !langSelector.translations ||
     Object.keys(langSelector.translations).length === 0
@@ -94,7 +110,40 @@ export const translateText = (
     return key;
   }
 
-  return langSelector.translateText(key, params);
+  if (self.lastLang !== langSelector.currentLang) {
+    self.formatterCache.clear();
+    self.lastLang = langSelector.currentLang;
+  }
+
+  let message = langSelector.translations[key];
+
+  if (!message && langSelector.defaultTranslations) {
+    const defaultTranslations = langSelector.defaultTranslations;
+    if (defaultTranslations && defaultTranslations[key]) {
+      message = defaultTranslations[key];
+    }
+  }
+
+  if (!message) return key;
+
+  try {
+    const locale =
+      !langSelector.translations[key] && langSelector.currentLang !== "en"
+        ? "en"
+        : langSelector.currentLang;
+    const cacheKey = `${key}:${locale}:${message}`;
+    let formatter = self.formatterCache.get(cacheKey);
+
+    if (!formatter) {
+      formatter = new IntlMessageFormat(message, locale);
+      self.formatterCache.set(cacheKey, formatter);
+    }
+
+    return formatter.format(params) as string;
+  } catch (e) {
+    console.warn("ICU format error", e);
+    return message;
+  }
 };
 
 /**
@@ -141,6 +190,7 @@ export function getMessageTypeClasses(type: MessageType): string {
     case MessageType.SAM_MISS:
     case MessageType.ALLIANCE_EXPIRED:
     case MessageType.NAVAL_INVASION_INBOUND:
+    case MessageType.RENEW_ALLIANCE:
       return severityColors["warn"];
     case MessageType.CHAT:
     case MessageType.ALLIANCE_REQUEST:
@@ -171,7 +221,7 @@ export function getAltKey(): string {
 
 export function getGamesPlayed(): number {
   try {
-    return parseInt(localStorage.getItem("gamesPlayed") || "0", 10) || 0;
+    return parseInt(localStorage.getItem("gamesPlayed") ?? "0", 10) || 0;
   } catch (error) {
     console.warn("Failed to read games played from localStorage:", error);
     return 0;
@@ -183,5 +233,15 @@ export function incrementGamesPlayed(): void {
     localStorage.setItem("gamesPlayed", (getGamesPlayed() + 1).toString());
   } catch (error) {
     console.warn("Failed to increment games played in localStorage:", error);
+  }
+}
+
+export function isInIframe(): boolean {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    // If we can't access window.top due to cross-origin restrictions,
+    // we're definitely in an iframe
+    return true;
   }
 }

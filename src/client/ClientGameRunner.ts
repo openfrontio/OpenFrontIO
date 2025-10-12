@@ -5,15 +5,16 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
+  PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
-  Winner,
 } from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
+import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
 import { PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
+import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -26,6 +27,7 @@ import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
+  AutoUpgradeEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
   InputHandler,
@@ -34,20 +36,22 @@ import {
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
+  SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
-  pattern: string | undefined;
-  flag: string;
+  cosmetics: PlayerCosmeticRefs;
   playerName: string;
   clientID: ClientID;
   gameID: GameID;
@@ -59,12 +63,11 @@ export interface LobbyConfig {
 }
 
 export function joinLobby(
+  eventBus: EventBus,
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
 ): () => void {
-  const eventBus = new EventBus();
-
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
@@ -82,14 +85,22 @@ export function joinLobby(
 
   const onmessage = (message: ServerMessage) => {
     if (message.type === "prestart") {
-      console.log(`lobby: game prestarting: ${JSON.stringify(message)}`);
-      terrainLoad = loadTerrainMap(message.gameMap);
+      console.log(
+        `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
+      );
+      terrainLoad = loadTerrainMap(
+        message.gameMap,
+        message.gameMapSize,
+        terrainMapFileLoader,
+      );
       onPrestart();
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
       onPrestart();
-      console.log(`lobby: game started: ${JSON.stringify(message, null, 2)}`);
+      console.log(
+        `lobby: game started: ${JSON.stringify(message, replacer, 2)}`,
+      );
       onJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
@@ -99,12 +110,13 @@ export function joinLobby(
         transport,
         userSettings,
         terrainLoad,
+        terrainMapFileLoader,
       ).then((r) => r.start());
     }
     if (message.type === "error") {
       showErrorModal(
         message.error,
-        "",
+        message.message,
         lobbyConfig.gameID,
         lobbyConfig.clientID,
         true,
@@ -120,12 +132,13 @@ export function joinLobby(
   };
 }
 
-export async function createClientGame(
+async function createClientGame(
   lobbyConfig: LobbyConfig,
   eventBus: EventBus,
   transport: Transport,
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
+  mapLoader: GameMapLoader,
 ): Promise<ClientGameRunner> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
@@ -140,7 +153,11 @@ export async function createClientGame(
   if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
-    gameMap = await loadTerrainMap(lobbyConfig.gameStartInfo.config.gameMap);
+    gameMap = await loadTerrainMap(
+      lobbyConfig.gameStartInfo.config.gameMap,
+      lobbyConfig.gameStartInfo.config.gameMapSize,
+      mapLoader,
+    );
   }
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
@@ -150,13 +167,12 @@ export async function createClientGame(
   const gameView = new GameView(
     worker,
     config,
-    gameMap.gameMap,
+    gameMap,
     lobbyConfig.clientID,
     lobbyConfig.gameStartInfo.gameID,
+    lobbyConfig.gameStartInfo.players,
   );
 
-  console.log("going to init path finder");
-  console.log("inited path finder");
   const canvas = createCanvas();
   const gameRenderer = createRenderer(canvas, gameView, eventBus);
 
@@ -168,7 +184,7 @@ export async function createClientGame(
     lobbyConfig,
     eventBus,
     gameRenderer,
-    new InputHandler(canvas, eventBus),
+    new InputHandler(gameRenderer.uiState, canvas, eventBus),
     transport,
     worker,
     gameView,
@@ -181,7 +197,6 @@ export class ClientGameRunner {
 
   private turnsSeen = 0;
   private hasJoined = false;
-
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
@@ -199,13 +214,6 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private getWinner(update: WinUpdate): Winner {
-    if (update.winner[0] !== "player") return update.winner;
-    const clientId = this.gameView.playerBySmallID(update.winner[1]).clientID();
-    if (clientId === null) return;
-    return ["player", clientId];
-  }
-
   private saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
@@ -218,12 +226,11 @@ export class ClientGameRunner {
         stats: update.allPlayersStats[this.lobby.clientID],
       },
     ];
-    const winner = this.getWinner(update);
 
     if (this.lobby.gameStartInfo === undefined) {
       throw new Error("missing gameStartInfo");
     }
-    const record = createGameRecord(
+    const record = createPartialGameRecord(
       this.lobby.gameStartInfo.gameID,
       this.lobby.gameStartInfo.config,
       players,
@@ -231,12 +238,13 @@ export class ClientGameRunner {
       [],
       startTime(),
       Date.now(),
-      winner,
+      update.winner,
     );
     endGame(record);
   }
 
   public start() {
+    SoundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -247,8 +255,10 @@ export class ClientGameRunner {
         1000,
       );
     }, 20000);
+
     this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
     this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
+    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
     this.eventBus.on(
       DoBoatAttackEvent,
       this.doBoatAttackUnderCursor.bind(this),
@@ -272,7 +282,7 @@ export class ClientGameRunner {
           this.lobby.clientID,
         );
         console.error(gu.stack);
-        this.stop(true);
+        this.stop();
         return;
       }
       this.transport.turnComplete();
@@ -336,7 +346,7 @@ export class ClientGameRunner {
       if (message.type === "error") {
         showErrorModal(
           message.error,
-          "",
+          message.message,
           this.lobby.gameID,
           this.lobby.clientID,
           true,
@@ -362,12 +372,13 @@ export class ClientGameRunner {
     this.transport.connect(onconnect, onmessage);
   }
 
-  public stop(saveFullGame: boolean = false) {
+  public stop() {
+    SoundManager.stopBackgroundMusic();
     if (!this.isActive) return;
 
     this.isActive = false;
     this.worker.cleanup();
-    this.transport.leaveGame(saveFullGame);
+    this.transport.leaveGame();
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
@@ -375,7 +386,7 @@ export class ClientGameRunner {
   }
 
   private inputEvent(event: MouseUpEvent) {
-    if (!this.isActive) {
+    if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
       return;
     }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
@@ -392,7 +403,7 @@ export class ClientGameRunner {
       !this.gameView.hasOwner(tile) &&
       this.gameView.inSpawnPhase()
     ) {
-      this.eventBus.emit(new SendSpawnIntentEvent(cell));
+      this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;
     }
     if (this.gameView.inSpawnPhase()) {
@@ -421,6 +432,76 @@ export class ClientGameRunner {
         this.gameView.setFocusedPlayer(owner as PlayerView);
       } else {
         this.gameView.setFocusedPlayer(null);
+      }
+    });
+  }
+
+  private autoUpgradeEvent(event: AutoUpgradeEvent) {
+    if (!this.isActive) {
+      return;
+    }
+
+    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+    if (!this.gameView.isValidCoord(cell.x, cell.y)) {
+      return;
+    }
+
+    const tile = this.gameView.ref(cell.x, cell.y);
+
+    if (this.myPlayer === null) {
+      const myPlayer = this.gameView.playerByClientID(this.lobby.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    if (this.gameView.inSpawnPhase()) {
+      return;
+    }
+
+    this.findAndUpgradeNearestBuilding(tile);
+  }
+
+  private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
+    this.myPlayer!.actions(clickedTile).then((actions) => {
+      const upgradeUnits: {
+        unitId: number;
+        unitType: UnitType;
+        distance: number;
+      }[] = [];
+
+      for (const bu of actions.buildableUnits) {
+        if (bu.canUpgrade !== false) {
+          const existingUnit = this.gameView
+            .units()
+            .find((unit) => unit.id() === bu.canUpgrade);
+          if (existingUnit) {
+            const distance = this.gameView.manhattanDist(
+              clickedTile,
+              existingUnit.tile(),
+            );
+
+            upgradeUnits.push({
+              unitId: bu.canUpgrade,
+              unitType: bu.type,
+              distance: distance,
+            });
+          }
+        }
+      }
+
+      if (upgradeUnits.length > 0) {
+        upgradeUnits.sort((a, b) => a.distance - b.distance);
+        const bestUpgrade = upgradeUnits[0];
+
+        this.eventBus.emit(
+          new SendUpgradeStructureIntentEvent(
+            bestUpgrade.unitId,
+            bestUpgrade.unitType,
+          ),
+        );
       }
     });
   }
@@ -589,27 +670,31 @@ export class ClientGameRunner {
 }
 
 function showErrorModal(
-  errMsg: string,
-  stack: string,
+  error: string,
+  message: string | undefined,
   gameID: GameID,
   clientID: ClientID,
   closable = false,
   showDiscord = true,
   heading = "error_modal.crashed",
 ) {
-  const errorText = `Error: ${errMsg}\nStack: ${stack}`;
-
   if (document.querySelector("#error-modal")) {
     return;
   }
 
   const modal = document.createElement("div");
-
   modal.id = "error-modal";
 
-  const discord = showDiscord ? translateText("error_modal.paste_discord") : "";
-
-  const content = `${discord}\n${translateText(heading)}\n game id: ${gameID}, client id: ${clientID}\n${errorText}`;
+  const content = [
+    showDiscord ? translateText("error_modal.paste_discord") : null,
+    translateText(heading),
+    `game id: ${gameID}`,
+    `client id: ${clientID}`,
+    `Error: ${error}`,
+    message ? `Message: ${message}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   // Create elements
   const pre = document.createElement("pre");

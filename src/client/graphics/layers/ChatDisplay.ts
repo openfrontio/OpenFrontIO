@@ -26,10 +26,6 @@ export class ChatDisplay extends LitElement implements Layer {
 
   private active: boolean = false;
 
-  private updateMap = new Map([
-    [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
-  ]);
-
   @state() private _hidden: boolean = false;
   @state() private newEvents: number = 0;
   @state() private chatEvents: ChatEvent[] = [];
@@ -80,7 +76,7 @@ export class ChatDisplay extends LitElement implements Layer {
   tick() {
     // this.active = true;
     const updates = this.game.updatesSinceLastTick();
-    if (updates === null) throw new Error("null updates");
+    if (updates === null) return;
     const messages = updates[GameUpdateType.DisplayEvent] as
       | DisplayMessageUpdate[]
       | undefined;

@@ -162,7 +162,9 @@ export class Cloudflare {
     );
 
     const credentials = {
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       AccountTag: tokenData.a || this.accountId,
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
       TunnelID: tokenData.t || tunnelId,
       TunnelName: tunnelName,
       TunnelSecret: tokenData.s,
@@ -235,7 +237,20 @@ export class Cloudflare {
   public async startCloudflared() {
     const cloudflared = spawn(
       "cloudflared",
-      ["tunnel", "--config", this.configPath, "--loglevel", "error", "run"],
+      [
+        "tunnel",
+        "--config",
+        this.configPath,
+        "--loglevel",
+        "error",
+        "--protocol",
+        "http2",
+        "--retries",
+        "15",
+        "--no-autoupdate",
+        "run",
+      ],
+
       {
         detached: true,
         stdio: ["ignore", "pipe", "pipe"],

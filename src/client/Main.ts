@@ -1,14 +1,18 @@
-import favicon from "../../resources/images/Favicon.svg";
 import version from "../../resources/version.txt";
+import { UserMeResponse } from "../core/ApiSchemas";
+import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
+import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
+import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
@@ -22,16 +26,22 @@ import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
+import { TokenLoginModal } from "./TokenLoginModal";
+import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import { generateCryptoRandomUUID, incrementGamesPlayed } from "./Utils";
+import {
+  generateCryptoRandomUUID,
+  incrementGamesPlayed,
+  isInIframe,
+  translateText,
+} from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
-import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
+import { discordLogin, getUserMe, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 declare global {
@@ -52,6 +62,12 @@ declare global {
       spaNewPage: (url: string) => void;
     };
   }
+
+  // Extend the global interfaces to include your custom events
+  interface DocumentEventMap {
+    "join-lobby": CustomEvent<JoinLobbyEvent>;
+    "kick-player": CustomEvent;
+  }
 }
 
 export interface JoinLobbyEvent {
@@ -66,6 +82,7 @@ export interface JoinLobbyEvent {
 
 class Client {
   private gameStop: (() => void) | null = null;
+  private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -74,6 +91,8 @@ class Client {
   private joinModal: JoinPrivateLobbyModal;
   private publicLobby: PublicLobby;
   private userSettings: UserSettings = new UserSettings();
+  private patternsModal: TerritoryPatternsModal;
+  private tokenLoginModal: TokenLoginModal;
 
   constructor() {}
 
@@ -126,13 +145,6 @@ class Client {
       console.warn("Dark mode button element not found");
     }
 
-    const loginDiscordButton = document.getElementById(
-      "login-discord",
-    ) as OButton;
-    const logoutDiscordButton = document.getElementById(
-      "logout-discord",
-    ) as OButton;
-
     this.usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
@@ -149,14 +161,15 @@ class Client {
       }
     });
 
-    setFavicon();
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
+    document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
 
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
+
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
     singlePlayer.addEventListener("click", () => {
@@ -179,68 +192,144 @@ class Client {
       hlpModal.open();
     });
 
-    const territoryModal = document.querySelector(
-      "territory-patterns-modal",
-    ) as TerritoryPatternsModal;
-    const tpButton = document.getElementById(
-      "territory-patterns-input-preview-button",
-    );
-    territoryModal instanceof TerritoryPatternsModal;
-    if (tpButton === null)
-      throw new Error("territory-patterns-input-preview-button");
-    territoryModal.previewButton = tpButton;
-    territoryModal.updatePreview();
-    territoryModal.resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target.classList.contains("preview-container")) {
-          territoryModal.buttonWidth = entry.contentRect.width;
-        }
-      }
-    });
-    tpButton.addEventListener("click", () => {
-      territoryModal.open();
+    const flagInputModal = document.querySelector(
+      "flag-input-modal",
+    ) as FlagInputModal;
+    flagInputModal instanceof FlagInputModal;
+    const flgInput = document.getElementById("flag-input_");
+    if (flgInput === null) throw new Error("Missing flag-input_");
+    flgInput.addEventListener("click", () => {
+      flagInputModal.open();
     });
 
-    if (isLoggedIn() === false) {
-      // Not logged in
-      loginDiscordButton.disable = false;
-      loginDiscordButton.translationKey = "main.login_discord";
-      loginDiscordButton.addEventListener("click", discordLogin);
-      logoutDiscordButton.hidden = true;
-    } else {
-      // JWT appears to be valid
-      loginDiscordButton.disable = true;
-      loginDiscordButton.translationKey = "main.checking_login";
-      logoutDiscordButton.hidden = false;
-      logoutDiscordButton.addEventListener("click", () => {
-        // Log out
-        logOut();
-        loginDiscordButton.disable = false;
-        loginDiscordButton.translationKey = "main.login_discord";
-        loginDiscordButton.hidden = false;
-        loginDiscordButton.addEventListener("click", discordLogin);
-        logoutDiscordButton.hidden = true;
-        territoryModal.onLogout();
-      });
-      // Look up the discord user object.
-      // TODO: Add caching
-      getUserMe().then((userMeResponse) => {
+    this.patternsModal = document.querySelector(
+      "territory-patterns-modal",
+    ) as TerritoryPatternsModal;
+    const patternButton = document.getElementById(
+      "territory-patterns-input-preview-button",
+    );
+    if (isInIframe() && patternButton) {
+      patternButton.style.display = "none";
+    }
+
+    this.patternsModal instanceof TerritoryPatternsModal;
+    if (patternButton === null)
+      throw new Error("territory-patterns-input-preview-button");
+    this.patternsModal.previewButton = patternButton;
+    this.patternsModal.refresh();
+    patternButton.addEventListener("click", () => {
+      this.patternsModal.open();
+    });
+
+    this.tokenLoginModal = document.querySelector(
+      "token-login",
+    ) as TokenLoginModal;
+    this.tokenLoginModal instanceof TokenLoginModal;
+
+    const onUserMe = async (userMeResponse: UserMeResponse | false) => {
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", {
+          detail: userMeResponse,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+
+      const config = await getServerConfigFromClient();
+      if (!hasAllowedFlare(userMeResponse, config)) {
         if (userMeResponse === false) {
-          // Not logged in
-          loginDiscordButton.disable = false;
-          loginDiscordButton.translationKey = "main.login_discord";
-          loginDiscordButton.addEventListener("click", discordLogin);
-          logoutDiscordButton.hidden = true;
-          return;
+          // Login is required
+          document.body.innerHTML = `
+            <div style="
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              font-family: sans-serif;
+              background-size: cover;
+              background-position: center;
+            ">
+              <div style="
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 2em;
+                margin: 5em;
+                border-radius: 12px;
+                text-align: center;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+              ">
+                <p style="margin-bottom: 1em;">${translateText("auth.login_required")}</p>
+                <p style="margin-bottom: 1.5em;">${translateText("auth.redirecting")}</p>
+                <div style="width: 100%; height: 8px; background-color: #444; border-radius: 4px; overflow: hidden;">
+                  <div style="
+                    height: 100%;
+                    width: 0%;
+                    background-color: #4caf50;
+                    animation: fillBar 5s linear forwards;
+                  "></div>
+                </div>
+              </div>
+            </div>
+            <div class="bg-image"></div>
+            <style>
+              @keyframes fillBar {
+                from { width: 0%; }
+                to { width: 100%; }
+              }
+            </style>
+          `;
+          setTimeout(discordLogin, 5000);
+        } else {
+          // Unauthorized
+          document.body.innerHTML = `
+            <div style="
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              height: 100vh;
+              margin: 0;
+              font-family: sans-serif;
+              background-size: cover;
+              background-position: center;
+            ">
+              <div style="
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 2em;
+                margin: 5em;
+                border-radius: 12px;
+                text-align: center;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+              ">
+                <p style="margin-bottom: 1em;">${translateText("auth.not_authorized")}</p>
+                <p>${translateText("auth.contact_admin")}</p>
+              </div>
+            </div>
+            <div class="bg-image"></div>
+          `;
         }
+        return;
+      } else if (userMeResponse === false) {
+        // Not logged in
+        this.patternsModal.onUserMe(null);
+      } else {
+        // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
-        loginDiscordButton.translationKey = "main.logged_in";
-        loginDiscordButton.hidden = true;
-        territoryModal.onUserMe(userMeResponse);
-      });
+        this.patternsModal.onUserMe(userMeResponse);
+      }
+    };
+
+    if (isLoggedIn() === false) {
+      // Not logged in
+      onUserMe(false);
+    } else {
+      // JWT appears to be valid
+      // TODO: Add caching
+      getUserMe().then(onUserMe);
     }
 
     const settingsModal = document.querySelector(
@@ -305,14 +394,18 @@ class Client {
     window.addEventListener("popstate", onHashUpdate);
     window.addEventListener("hashchange", onHashUpdate);
 
-    function updateSliderProgress(slider) {
+    function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
-        ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+        ((Number(slider.value) - Number(slider.min)) /
+          (Number(slider.max) - Number(slider.min))) *
+        100;
       slider.style.setProperty("--progress", `${percent}%`);
     }
 
     document
-      .querySelectorAll("#bots-count, #private-lobby-bots-count")
+      .querySelectorAll<HTMLInputElement>(
+        "#bots-count, #private-lobby-bots-count",
+      )
       .forEach((slider) => {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
@@ -320,14 +413,90 @@ class Client {
   }
 
   private handleHash() {
-    const { hash } = window.location;
-    if (hash.startsWith("#")) {
-      const params = new URLSearchParams(hash.slice(1));
-      const lobbyId = params.get("join");
+    const strip = () =>
+      history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+
+    const alertAndStrip = (message: string) => {
+      alert(message);
+      strip();
+    };
+
+    const hash = window.location.hash;
+
+    // Decode the hash first to handle encoded characters
+    const decodedHash = decodeURIComponent(hash);
+    const params = new URLSearchParams(decodedHash.split("?")[1] || "");
+
+    // Handle different hash sections
+    if (decodedHash.startsWith("#purchase-completed")) {
+      // Parse params after the ?
+      const status = params.get("status");
+
+      if (status !== "true") {
+        alertAndStrip("purchase failed");
+        return;
+      }
+
+      const patternName = params.get("pattern");
+      if (!patternName) {
+        alert("Something went wrong. Please contact support.");
+        console.error("purchase-completed but no pattern name");
+        return;
+      }
+
+      this.userSettings.setSelectedPatternName(patternName);
+      const token = params.get("login-token");
+
+      if (token) {
+        strip();
+        window.addEventListener("beforeunload", () => {
+          // The page reloads after token login, so we need to save the pattern name
+          // in case it is unset during reload.
+          this.userSettings.setSelectedPatternName(patternName);
+        });
+        this.tokenLoginModal.open(token);
+      } else {
+        alertAndStrip(`purchase succeeded: ${patternName}`);
+        this.patternsModal.refresh();
+      }
+      return;
+    }
+
+    if (decodedHash.startsWith("#token-login")) {
+      const token = params.get("token-login");
+
+      if (!token) {
+        alertAndStrip(
+          `login failed! Please try again later or contact support.`,
+        );
+        return;
+      }
+
+      strip();
+      this.tokenLoginModal.open(token);
+      return;
+    }
+
+    if (decodedHash.startsWith("#join=")) {
+      const lobbyId = decodedHash.substring(6); // Remove "#join="
       if (lobbyId && ID.safeParse(lobbyId).success) {
         this.joinModal.open(lobbyId);
         console.log(`joining lobby ${lobbyId}`);
       }
+    }
+    if (decodedHash.startsWith("#affiliate=")) {
+      const affiliateCode = decodedHash.replace("#affiliate=", "");
+      strip();
+      if (affiliateCode) {
+        this.patternsModal.open(affiliateCode);
+      }
+    }
+    if (decodedHash.startsWith("#refresh")) {
+      window.location.href = "/";
     }
   }
 
@@ -340,15 +509,24 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
+    const pattern = this.userSettings.getSelectedPatternName(
+      await fetchCosmetics(),
+    );
+
     this.gameStop = joinLobby(
+      this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern: this.userSettings.getSelectedPattern(),
-        flag:
-          this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
-            ? ""
-            : this.flagInput.getCurrentFlag(),
+        cosmetics: {
+          color: this.userSettings.getSelectedColor() ?? undefined,
+          patternName: pattern?.name ?? undefined,
+          patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
+          flag:
+            this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
+              ? ""
+              : this.flagInput.getCurrentFlag(),
+        },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,
@@ -366,9 +544,15 @@ class Client {
           "host-lobby-modal",
           "join-private-lobby-modal",
           "game-starting-modal",
-          "top-bar",
+          "game-top-bar",
           "help-modal",
           "user-setting",
+          "territory-patterns-modal",
+          "language-modal",
+          "news-modal",
+          "flag-input-modal",
+          "account-button",
+          "token-login",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
@@ -407,9 +591,11 @@ class Client {
           (ad as HTMLElement).style.display = "none";
         });
 
-        if (lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer) {
-          history.pushState(null, "", `#join=${lobby.gameID}`);
+        // Ensure there's a homepage entry in history before adding the lobby entry
+        if (window.location.hash === "" || window.location.hash === "#") {
+          history.pushState(null, "", window.location.origin + "#refresh");
         }
+        history.pushState(null, "", `#join=${lobby.gameID}`);
       },
     );
   }
@@ -423,20 +609,21 @@ class Client {
     this.gameStop = null;
     this.publicLobby.leaveLobby();
   }
+
+  private handleKickPlayer(event: CustomEvent) {
+    const { target } = event.detail;
+
+    // Forward to eventBus if available
+    if (this.eventBus) {
+      this.eventBus.emit(new SendKickPlayerIntentEvent(target));
+    }
+  }
 }
 
 // Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
-
-function setFavicon(): void {
-  const link = document.createElement("link");
-  link.type = "image/x-icon";
-  link.rel = "shortcut icon";
-  link.href = favicon;
-  document.head.appendChild(link);
-}
 
 // WARNING: DO NOT EXPOSE THIS ID
 function getPlayToken(): string {
@@ -476,4 +663,16 @@ function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
+}
+
+function hasAllowedFlare(
+  userMeResponse: UserMeResponse | false,
+  config: ServerConfig,
+) {
+  const allowed = config.allowedFlares();
+  if (allowed === undefined) return true;
+  if (userMeResponse === false) return false;
+  const flares = userMeResponse.player.flares;
+  if (flares === undefined) return false;
+  return allowed.length === 0 || allowed.some((f) => flares.includes(f));
 }

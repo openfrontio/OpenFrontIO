@@ -47,6 +47,17 @@ export class MirvExecution implements Execution {
 
     // Record stats
     this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
+
+    // Betrayal on launch
+    if (this.targetPlayer.isPlayer()) {
+      const alliance = this.player.allianceWith(this.targetPlayer);
+      if (alliance !== null) {
+        this.player.breakAlliance(alliance);
+      }
+      if (this.targetPlayer !== this.player) {
+        this.targetPlayer.updateRelation(this.player, -100);
+      }
+    }
   }
 
   tick(ticks: number): void {
@@ -118,15 +129,6 @@ export class MirvExecution implements Execution {
         ),
       );
     }
-    if (this.targetPlayer.isPlayer()) {
-      const alliance = this.player.allianceWith(this.targetPlayer);
-      if (alliance !== null) {
-        this.player.breakAlliance(alliance);
-      }
-      if (this.targetPlayer !== this.player) {
-        this.targetPlayer.updateRelation(this.player, -100);
-      }
-    }
     this.nuke.delete(false);
   }
 
@@ -167,7 +169,7 @@ export class MirvExecution implements Execution {
 
   private proximityCheck(tile: TileRef, taken: TileRef[]): boolean {
     for (const t of taken) {
-      if (this.mg.manhattanDist(tile, t) < 25) {
+      if (this.mg.manhattanDist(tile, t) < 55) {
         return true;
       }
     }

@@ -5,6 +5,7 @@ import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
+import nukeIcon from "../../../../resources/images/NukeIconWhite.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -32,6 +33,7 @@ import {
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
+  SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
@@ -45,7 +47,6 @@ import {
   GoToUnitEvent,
 } from "./Leaderboard";
 
-import { UserSettings } from "../../../core/game/UserSettings";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
@@ -66,6 +67,7 @@ interface GameEvent {
   duration?: Tick;
   focusID?: number;
   unitView?: UnitView;
+  shouldDelete?: (game: GameView) => boolean;
 }
 
 @customElement("events-display")
@@ -73,9 +75,11 @@ export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
 
-  private userSettings: UserSettings = new UserSettings();
   private active: boolean = false;
   private events: GameEvent[] = [];
+
+  // allianceID -> last checked at tick
+  private alliancesCheckedAt = new Map<number, Tick>();
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
   @state() private outgoingLandAttacks: AttackUpdate[] = [];
@@ -88,6 +92,7 @@ export class EventsDisplay extends LitElement implements Layer {
   private goldAmountTimeoutId: ReturnType<typeof setTimeout> | null = null;
   @state() private eventsFilters: Map<MessageCategory, boolean> = new Map([
     [MessageCategory.ATTACK, false],
+    [MessageCategory.NUKE, false],
     [MessageCategory.TRADE, false],
     [MessageCategory.ALLIANCE, false],
     [MessageCategory.CHAT, false],
@@ -135,24 +140,25 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private toggleEventFilter(filterName: MessageCategory) {
-    const currentState = this.eventsFilters.get(filterName) || false;
+    const currentState = this.eventsFilters.get(filterName) ?? false;
     this.eventsFilters.set(filterName, !currentState);
     this.requestUpdate();
   }
 
-  private updateMap = new Map([
-    [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
-    [GameUpdateType.DisplayChatEvent, (u) => this.onDisplayChatEvent(u)],
-    [GameUpdateType.AllianceRequest, (u) => this.onAllianceRequestEvent(u)],
+  private updateMap = [
+    [GameUpdateType.DisplayEvent, this.onDisplayMessageEvent.bind(this)],
+    [GameUpdateType.DisplayChatEvent, this.onDisplayChatEvent.bind(this)],
+    [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
     [
       GameUpdateType.AllianceRequestReply,
-      (u) => this.onAllianceRequestReplyEvent(u),
+      this.onAllianceRequestReplyEvent.bind(this),
     ],
-    [GameUpdateType.BrokeAlliance, (u) => this.onBrokeAllianceEvent(u)],
-    [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
-    [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
-    [GameUpdateType.UnitIncoming, (u) => this.onUnitIncomingEvent(u)],
-  ]);
+    [GameUpdateType.BrokeAlliance, this.onBrokeAllianceEvent.bind(this)],
+    [GameUpdateType.TargetPlayer, this.onTargetPlayerEvent.bind(this)],
+    [GameUpdateType.Emoji, this.onEmojiMessageEvent.bind(this)],
+    [GameUpdateType.UnitIncoming, this.onUnitIncomingEvent.bind(this)],
+    [GameUpdateType.AllianceExpired, this.onAllianceExpiredEvent.bind(this)],
+  ] as const;
 
   constructor() {
     super();
@@ -181,16 +187,19 @@ export class EventsDisplay extends LitElement implements Layer {
       return;
     }
 
+    this.checkForAllianceExpirations();
+
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       for (const [ut, fn] of this.updateMap) {
-        updates[ut]?.forEach(fn);
+        updates[ut]?.forEach(fn as (event: unknown) => void);
       }
     }
 
     let remainingEvents = this.events.filter((event) => {
       const shouldKeep =
-        this.game.ticks() - event.createdAt < (event.duration ?? 600);
+        this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
+        !event.shouldDelete?.(this.game);
       if (!shouldKeep && event.onDelete) {
         event.onDelete();
       }
@@ -231,6 +240,65 @@ export class EventsDisplay extends LitElement implements Layer {
     if (this.goldAmountTimeoutId !== null) {
       clearTimeout(this.goldAmountTimeoutId);
       this.goldAmountTimeoutId = null;
+    }
+  }
+
+  private checkForAllianceExpirations() {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer?.isAlive()) return;
+
+    for (const alliance of myPlayer.alliances()) {
+      if (
+        alliance.expiresAt >
+        this.game.ticks() + this.game.config().allianceExtensionPromptOffset()
+      ) {
+        continue;
+      }
+
+      if (
+        (this.alliancesCheckedAt.get(alliance.id) ?? 0) >=
+        this.game.ticks() - this.game.config().allianceExtensionPromptOffset()
+      ) {
+        // We've already displayed a message for this alliance.
+        continue;
+      }
+
+      this.alliancesCheckedAt.set(alliance.id, this.game.ticks());
+
+      const other = this.game.player(alliance.other) as PlayerView;
+      if (!other.isAlive()) continue;
+
+      this.addEvent({
+        description: translateText("events_display.about_to_expire", {
+          name: other.name(),
+        }),
+        type: MessageType.RENEW_ALLIANCE,
+        duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
+        buttons: [
+          {
+            text: translateText("events_display.focus"),
+            className: "btn-gray",
+            action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
+            preventClose: true,
+          },
+          {
+            text: translateText("events_display.renew_alliance", {
+              name: other.name(),
+            }),
+            className: "btn",
+            action: () =>
+              this.eventBus.emit(new SendAllianceExtensionIntentEvent(other)),
+          },
+          {
+            text: translateText("events_display.ignore"),
+            className: "btn-info",
+            action: () => {},
+          },
+        ],
+        highlight: true,
+        createdAt: this.game.ticks(),
+        focusID: other.smallID(),
+      });
     }
   }
 
@@ -287,8 +355,13 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
+    let description: string = event.message;
+    if (event.message.startsWith("events_display.")) {
+      description = translateText(event.message, event.params ?? {});
+    }
+
     this.addEvent({
-      description: event.message,
+      description: description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
@@ -311,7 +384,7 @@ export class EventsDisplay extends LitElement implements Layer {
     if (event.target) {
       try {
         const targetPlayer = this.game.player(event.target);
-        const targetName = targetPlayer?.name() ?? event.target;
+        const targetName = targetPlayer?.displayName() ?? event.target;
         translatedMessage = baseMessage.replace("[P1]", targetName);
       } catch (e) {
         console.warn(
@@ -322,9 +395,16 @@ export class EventsDisplay extends LitElement implements Layer {
       }
     }
 
+    let otherPlayerDiplayName: string = "";
+    if (event.recipient !== null) {
+      //'recipient' parameter contains sender ID or recipient ID
+      const player = this.game.player(event.recipient);
+      otherPlayerDiplayName = player ? player.displayName() : "";
+    }
+
     this.addEvent({
       description: translateText(event.isFrom ? "chat.from" : "chat.to", {
-        user: event.recipient,
+        user: otherPlayerDiplayName,
         msg: translatedMessage,
       }),
       createdAt: this.game.ticks(),
@@ -348,16 +428,18 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
 
     this.addEvent({
-      description: `${requestor.name()} requests an alliance!`,
+      description: translateText("events_display.request_alliance", {
+        name: requestor.name(),
+      }),
       buttons: [
         {
-          text: "Focus",
+          text: translateText("events_display.focus"),
           className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
           preventClose: true,
         },
         {
-          text: "Accept",
+          text: translateText("events_display.accept_alliance"),
           className: "btn",
           action: () =>
             this.eventBus.emit(
@@ -365,7 +447,7 @@ export class EventsDisplay extends LitElement implements Layer {
             ),
         },
         {
-          text: "Reject",
+          text: translateText("events_display.reject_alliance"),
           className: "btn-info",
           action: () =>
             this.eventBus.emit(
@@ -376,30 +458,49 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),
-      onDelete: () =>
-        this.eventBus.emit(
-          new SendAllianceReplyIntentEvent(requestor, recipient, false),
-        ),
       priority: 0,
-      duration: 150,
+      duration: this.game.config().allianceRequestDuration() - 20, // 2 second buffer
+      shouldDelete: (game) => {
+        // Recipient sent a separate request, so they became allied without the recipient responding.
+        return requestor.isAlliedWith(recipient);
+      },
       focusID: update.requestorID,
     });
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
+    if (!myPlayer) {
+      return;
+    }
+    // myPlayer can deny alliances without clicking on the button
+    if (update.request.recipientID === myPlayer.smallID()) {
+      // Remove alliance requests whose requestors are the same as the reply's requestor
+      // Noop unless the request was denied through other means (e.g attacking the requestor)
+      this.events = this.events.filter(
+        (event) =>
+          !(
+            event.type === MessageType.ALLIANCE_REQUEST &&
+            event.focusID === update.request.requestorID
+          ),
+      );
+      this.requestUpdate();
+      return;
+    }
+    if (update.request.requestorID !== myPlayer.smallID()) {
       return;
     }
 
     const recipient = this.game.playerBySmallID(
       update.request.recipientID,
     ) as PlayerView;
-
     this.addEvent({
-      description: `${recipient.name()} ${
-        update.accepted ? "accepted" : "rejected"
-      } your alliance request`,
+      description: translateText("events_display.alliance_request_status", {
+        name: recipient.name(),
+        status: update.accepted
+          ? translateText("events_display.alliance_accepted")
+          : translateText("events_display.alliance_rejected"),
+      }),
       type: update.accepted
         ? MessageType.ALLIANCE_ACCEPTED
         : MessageType.ALLIANCE_REJECTED,
@@ -416,6 +517,8 @@ export class EventsDisplay extends LitElement implements Layer {
     const betrayed = this.game.playerBySmallID(update.betrayedID) as PlayerView;
     const traitor = this.game.playerBySmallID(update.traitorID) as PlayerView;
 
+    if (betrayed.isDisconnected()) return; // Do not send the message if betraying a disconnected player
+
     if (!betrayed.isTraitor() && traitor === myPlayer) {
       const malusPercent = Math.round(
         (1 - this.game.config().traitorDefenseDebuff()) * 100,
@@ -425,12 +528,18 @@ export class EventsDisplay extends LitElement implements Layer {
         this.game.config().traitorDuration() * 0.1,
       );
       const durationText =
-        traitorDuration === 1 ? "1 second" : `${traitorDuration} seconds`;
+        traitorDuration === 1
+          ? translateText("events_display.duration_second")
+          : translateText("events_display.duration_seconds_plural", {
+              seconds: traitorDuration,
+            });
 
       this.addEvent({
-        description:
-          `You broke your alliance with ${betrayed.name()}, making you a TRAITOR ` +
-          `(${malusPercent}% defense debuff for ${durationText})`,
+        description: translateText("events_display.betrayal_description", {
+          name: betrayed.name(),
+          malusPercent: malusPercent,
+          durationText: durationText,
+        }),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -439,14 +548,16 @@ export class EventsDisplay extends LitElement implements Layer {
     } else if (betrayed === myPlayer) {
       const buttons = [
         {
-          text: "Focus",
+          text: translateText("events_display.focus"),
           className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(traitor)),
           preventClose: true,
         },
       ];
       this.addEvent({
-        description: `${traitor.name()} broke their alliance with you`,
+        description: translateText("events_display.betrayed_you", {
+          name: traitor.name(),
+        }),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -471,7 +582,9 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
-      description: `Your alliance with ${other.name()} expired`,
+      description: translateText("events_display.alliance_expired", {
+        name: other.name(),
+      }),
       type: MessageType.ALLIANCE_EXPIRED,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -487,7 +600,10 @@ export class EventsDisplay extends LitElement implements Layer {
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
 
     this.addEvent({
-      description: `${other.name()} requests you attack ${target.name()}`,
+      description: translateText("events_display.attack_request", {
+        name: other.name(),
+        target: target.name(),
+      }),
       type: MessageType.ATTACK_REQUEST,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -535,7 +651,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     if (recipient === myPlayer) {
       this.addEvent({
-        description: `${sender.displayName()}:${update.emoji.message}`,
+        description: `${sender.displayName()}: ${update.emoji.message}`,
         unsafeDescription: true,
         type: MessageType.CHAT,
         highlight: true,
@@ -544,9 +660,10 @@ export class EventsDisplay extends LitElement implements Layer {
       });
     } else if (sender === myPlayer && recipient !== AllPlayers) {
       this.addEvent({
-        description: `Sent ${(recipient as PlayerView).displayName()}: ${
-          update.emoji.message
-        }`,
+        description: translateText("events_display.sent_emoji", {
+          name: (recipient as PlayerView).displayName(),
+          emoji: update.emoji.message,
+        }),
         unsafeDescription: true,
         type: MessageType.CHAT,
         highlight: true,
@@ -682,7 +799,7 @@ export class EventsDisplay extends LitElement implements Layer {
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
                       content: html`${renderTroops(landAttack.troops)}
-                      Wilderness`,
+                      ${translateText("help_modal.ui_wilderness")}`,
                       className: "text-left text-gray-400",
                       translate: false,
                     })}
@@ -810,7 +927,7 @@ export class EventsDisplay extends LitElement implements Layer {
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:w-96 backdrop-blur"
+              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
             >
               <!-- Button Bar -->
               <div
@@ -830,6 +947,20 @@ export class EventsDisplay extends LitElement implements Layer {
                       />`,
                       onClick: () =>
                         this.toggleEventFilter(MessageCategory.ATTACK),
+                      className: "cursor-pointer pointer-events-auto",
+                    })}
+                    ${this.renderButton({
+                      content: html`<img
+                        src="${nukeIcon}"
+                        class="w-5 h-5"
+                        style="filter: ${this.eventsFilters.get(
+                          MessageCategory.NUKE,
+                        )
+                          ? "grayscale(1) opacity(0.5)"
+                          : "none"}"
+                      />`,
+                      onClick: () =>
+                        this.toggleEventFilter(MessageCategory.NUKE),
                       className: "cursor-pointer pointer-events-auto",
                     })}
                     ${this.renderButton({
@@ -889,7 +1020,7 @@ export class EventsDisplay extends LitElement implements Layer {
                         >`
                       : ""}
                     ${this.renderButton({
-                      content: "Hide",
+                      content: translateText("leaderboard.hide"),
                       onClick: this.toggleHidden,
                       className:
                         "text-white cursor-pointer pointer-events-auto",

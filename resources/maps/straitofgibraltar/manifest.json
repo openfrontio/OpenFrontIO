@@ -1,0 +1,62 @@
+{
+  "map": {
+    "height": 1476,
+    "num_land_tiles": 1941359,
+    "width": 2900
+  },
+  "map16x": {
+    "height": 369,
+    "num_land_tiles": 119905,
+    "width": 725
+  },
+  "map4x": {
+    "height": 738,
+    "num_land_tiles": 483320,
+    "width": 1450
+  },
+  "name": "Strait of Gibraltar",
+  "nations": [
+    {
+      "coordinates": [1941, 1031],
+      "flag": "Rif",
+      "name": "Rif",
+      "strength": 2
+    },
+    {
+      "coordinates": [2733, 1190],
+      "flag": "dz",
+      "name": "Algeria",
+      "strength": 2
+    },
+    {
+      "coordinates": [1287, 1175],
+      "flag": "ma",
+      "name": "Morocco",
+      "strength": 2
+    },
+    {
+      "coordinates": [414, 59],
+      "flag": "pt",
+      "name": "Portugal",
+      "strength": 2
+    },
+    {
+      "coordinates": [2675, 49],
+      "flag": "es",
+      "name": "Spain",
+      "strength": 2
+    },
+    {
+      "coordinates": [1271, 1393],
+      "flag": "Shilha",
+      "name": "Shilha",
+      "strength": 1
+    },
+    {
+      "coordinates": [1555, 258],
+      "flag": "Andalusia",
+      "name": "Andalusia",
+      "strength": 2
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+# Asset License
+
+## Open Assets (/resources) - Creative Commons BY-SA 4.0
+
+Assets in the `/resources` directory are licensed under Creative Commons BY-SA 4.0, including but not limited to:
+- Graphics, sprites, and images (*.png, *.jpg, *.svg, etc.)
+- 3D models and textures (*.obj, *.fbx, *.blend, etc.)
+- Audio files (*.mp3, *.ogg, *.wav, etc.)
+- Animation files
+- Font files
+- Level/map data files
+
+Attribution required: "OpenFront" or "OpenFront LLC"
+
+To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/
+or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+## Proprietary Assets (/proprietary) - All Rights Reserved
+
+Assets in the `/proprietary` directory are:
+- Copyright © 2024-2025 OpenFront LLC and Contributors
+- All Rights Reserved
+- NOT licensed for use, modification, or redistribution outside of OpenFront
+- May only be used as part of the complete OpenFront software package
+
+See `/proprietary/LICENSE` for full terms.
+
+## External/Proprietary Assets (Not in Repository)
+
+The following assets are NOT included in this repository and are NOT covered by any open source license:
+- Assets hosted on our CDN/servers
+- Assets stored in our database
+- Premium skins, models, and textures accessed via API
+- Sound effects and music accessed via API
+- Any assets not explicitly included in this repository
+
+These external assets are proprietary property of OpenFront LLC.
+
+## Important Legal Notice
+
+- The CC BY-SA 4.0 license applies ONLY to assets in the `/resources` directory
+- Assets in `/proprietary` are restricted use - see their specific LICENSE
+- External assets not in this repository remain fully proprietary
+- Accessing, downloading, extracting, or using proprietary assets without permission is prohibited
+
+For source code licensing, see LICENSE and LICENSING.md files.

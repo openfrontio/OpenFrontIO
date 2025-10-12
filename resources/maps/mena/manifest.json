@@ -1,12 +1,17 @@
 {
   "map": {
     "height": 964,
-    "num_land_tiles": 1672209,
+    "num_land_tiles": 1621317,
     "width": 2200
   },
-  "mini_map": {
+  "map16x": {
+    "height": 241,
+    "num_land_tiles": 97882,
+    "width": 550
+  },
+  "map4x": {
     "height": 482,
-    "num_land_tiles": 413783,
+    "num_land_tiles": 400552,
     "width": 1100
   },
   "name": "MENA",

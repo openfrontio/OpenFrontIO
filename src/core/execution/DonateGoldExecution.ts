@@ -19,15 +19,13 @@ export class DonateGoldExecution implements Execution {
     }
 
     this.recipient = mg.player(this.recipientID);
-    if (this.gold === null) {
-      this.gold = this.sender.gold() / 3n;
-    }
+    this.gold ??= this.sender.gold() / 3n;
   }
 
   tick(ticks: number): void {
     if (this.gold === null) throw new Error("not initialized");
     if (
-      this.sender.canDonate(this.recipient) &&
+      this.sender.canDonateGold(this.recipient) &&
       this.sender.donateGold(this.recipient, this.gold)
     ) {
       this.recipient.updateRelation(this.sender, 50);

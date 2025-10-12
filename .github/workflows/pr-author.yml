@@ -1,0 +1,16 @@
+name: 🧼 PR
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  auto-assign:
+    name: Auto-assign author
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: toshimaru/auto-author-assign@7e15cd70c245ad136377c3fab3479815df10d844

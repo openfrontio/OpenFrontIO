@@ -1,0 +1,23 @@
+{
+  "name": "Montreal",
+  "nations": [
+    {
+      "coordinates": [800, 430],
+      "flag": "ca",
+      "name": "Laval",
+      "strength": 2
+    },
+    {
+      "coordinates": [1110, 930],
+      "flag": "ca",
+      "name": "Montreal",
+      "strength": 2
+    },
+    {
+      "coordinates": [1220, 1360],
+      "flag": "ca",
+      "name": "Hochelaga Archipelago",
+      "strength": 2
+    }
+  ]
+}

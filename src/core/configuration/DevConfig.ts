@@ -9,16 +9,16 @@ export class DevServerConfig extends DefaultServerConfig {
     return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
   }
 
+  apiKey(): string {
+    return "WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION";
+  }
+
   env(): GameEnv {
     return GameEnv.Dev;
   }
 
   gameCreationRate(): number {
     return 5 * 1000;
-  }
-
-  lobbyMaxPlayers(): number {
-    return Math.random() < 0.5 ? 2 : 3;
   }
 
   samWarheadHittingChance(): number {
@@ -37,6 +37,14 @@ export class DevServerConfig extends DefaultServerConfig {
   }
   gitCommit(): string {
     return "DEV";
+  }
+
+  domain(): string {
+    return "localhost";
+  }
+
+  subdomain(): string {
+    return "";
   }
 }
 
@@ -57,6 +65,7 @@ export class DevConfig extends DefaultConfig {
 
   unitInfo(type: UnitType): UnitInfo {
     const info = super.unitInfo(type);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const oldCost = info.cost;
     // info.cost = (p: Player) => oldCost(p) / 1000000000;
     return info;
@@ -68,10 +77,6 @@ export class DevConfig extends DefaultConfig {
 
   // percentageTilesOwnedToWin(): number {
   //     return 1
-  // }
-
-  // populationIncreaseRate(player: Player): number {
-  //     return this.maxPopulation(player)
   // }
 
   // boatMaxDistance(): number {

@@ -2,15 +2,20 @@ import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
+  ConquestUpdate,
   GameUpdateType,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
+import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
-import { shortenNumber, TextFx } from "../fx/TextFx";
+import { TargetFx } from "../fx/TargetFx";
+import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
@@ -24,6 +29,7 @@ export class FxLayer implements Layer {
     new AnimatedSpriteLoader();
 
   private allFx: Fx[] = [];
+  private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -34,6 +40,7 @@ export class FxLayer implements Layer {
   }
 
   tick() {
+    this.manageBoatTargetFx();
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -54,45 +61,80 @@ export class FxLayer implements Layer {
         if (update === undefined) return;
         this.onRailroadEvent(update);
       });
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.ConquestEvent]?.forEach((update) => {
+        if (update === undefined) return;
+        this.onConquestEvent(update);
+      });
+  }
+
+  private manageBoatTargetFx() {
+    // End markers for boats that arrived or retreated
+    for (const [unitId, fx] of Array.from(
+      this.boatTargetFxByUnitId.entries(),
+    )) {
+      const unit = this.game.unit(unitId);
+      if (
+        !unit ||
+        !unit.isActive() ||
+        unit.reachedTarget() ||
+        unit.retreating()
+      ) {
+        (fx as any).end?.();
+        this.boatTargetFxByUnitId.delete(unitId);
+      }
+    }
   }
 
   onBonusEvent(bonus: BonusEventUpdate) {
-    const tile = bonus.tile;
-    if (this.game.owner(tile) !== this.game.myPlayer()) {
+    if (this.game.player(bonus.player) !== this.game.myPlayer()) {
       // Only display text fx for the current player
       return;
     }
+    const tile = bonus.tile;
     const x = this.game.x(tile);
     let y = this.game.y(tile);
     const gold = bonus.gold;
     const troops = bonus.troops;
-    const workers = bonus.workers;
 
     if (gold > 0) {
-      const shortened = shortenNumber(gold);
-      this.addTextFx(`+ ${shortened} gold`, x, y);
+      const shortened = renderNumber(gold, 0);
+      this.addTextFx(`+ ${shortened}`, x, y);
       y += 10; // increase y so the next popup starts bellow
     }
 
     if (troops > 0) {
-      const shortened = shortenNumber(troops);
+      const shortened = renderNumber(troops, 0);
       this.addTextFx(`+ ${shortened} troops`, x, y);
       y += 10;
-    }
-
-    if (workers > 0) {
-      const shortened = shortenNumber(workers);
-      this.addTextFx(`+ ${shortened} workers`, x, y);
     }
   }
 
   addTextFx(text: string, x: number, y: number) {
-    const textFx = new TextFx(text, x, y, 500, 20);
+    const textFx = new TextFx(text, x, y, 1000, 20);
     this.allFx.push(textFx);
   }
 
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
+      case UnitType.TransportShip: {
+        const my = this.game.myPlayer();
+        if (!my) return;
+        if (unit.owner() !== my) return;
+        if (!unit.isActive() || unit.retreating()) return;
+        if (this.boatTargetFxByUnitId.has(unit.id())) return;
+        const t = unit.targetTile();
+        if (t !== undefined) {
+          const x = this.game.x(t);
+          const y = this.game.y(t);
+          // persistent until boat finishes or retreats
+          const fx = new TargetFx(x, y, 0, true);
+          this.allFx.push(fx);
+          this.boatTargetFxByUnitId.set(unit.id(), fx);
+        }
+        break;
+      }
       case UnitType.AtomBomb:
       case UnitType.MIRVWarhead:
         this.onNukeEvent(unit, 70);
@@ -161,6 +203,23 @@ export class FxLayer implements Layer {
         this.allFx.push(animation);
       }
     }
+  }
+
+  onConquestEvent(conquest: ConquestUpdate) {
+    // Only display fx for the current player
+    const conqueror = this.game.player(conquest.conquerorId);
+    if (conqueror !== this.game.myPlayer()) {
+      return;
+    }
+
+    SoundManager.playSoundEffect(SoundEffect.KaChing);
+
+    const conquestFx = conquestFxFactory(
+      this.animatedSpriteLoader,
+      conquest,
+      this.game,
+    );
+    this.allFx = this.allFx.concat(conquestFx);
   }
 
   onWarshipEvent(unit: UnitView) {

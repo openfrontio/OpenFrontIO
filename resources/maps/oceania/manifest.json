@@ -1,12 +1,17 @@
 {
   "map": {
     "height": 1000,
-    "num_land_tiles": 216012,
+    "num_land_tiles": 194648,
     "width": 2000
   },
-  "mini_map": {
+  "map16x": {
+    "height": 250,
+    "num_land_tiles": 10867,
+    "width": 500
+  },
+  "map4x": {
     "height": 500,
-    "num_land_tiles": 52422,
+    "num_land_tiles": 46767,
     "width": 1000
   },
   "name": "Oceania",
@@ -21,12 +26,6 @@
       "coordinates": [1050, 809],
       "flag": "nz",
       "name": "New Zealand",
-      "strength": 1
-    },
-    {
-      "coordinates": [686, 407],
-      "flag": "pg",
-      "name": "Papua New Guinea",
       "strength": 1
     },
     {
@@ -86,7 +85,7 @@
     {
       "coordinates": [143, 37],
       "flag": "la",
-      "name": "Lao People's Democratic Republic",
+      "name": "Lao PDR",
       "strength": 1
     },
     {
@@ -116,7 +115,7 @@
     {
       "coordinates": [834, 215],
       "flag": "fm",
-      "name": "Federated States of Micronesia",
+      "name": "Micronesia",
       "strength": 1
     },
     {

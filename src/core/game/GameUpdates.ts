@@ -1,4 +1,4 @@
-import { AllPlayersStats, ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import {
   EmojiMessage,
   GameUpdates,
@@ -18,7 +18,7 @@ export interface GameUpdateViewData {
   tick: number;
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
-  playerNameViewData: Record<number, NameViewData>;
+  playerNameViewData: Record<string, NameViewData>;
 }
 
 export interface ErrorUpdate {
@@ -36,6 +36,7 @@ export enum GameUpdateType {
   AllianceRequestReply,
   BrokeAlliance,
   AllianceExpired,
+  AllianceExtension,
   TargetPlayer,
   Emoji,
   Win,
@@ -43,6 +44,8 @@ export enum GameUpdateType {
   UnitIncoming,
   BonusEvent,
   RailroadEvent,
+  ConquestEvent,
+  EmbargoEvent,
 }
 
 export type GameUpdate =
@@ -60,14 +63,17 @@ export type GameUpdate =
   | WinUpdate
   | HashUpdate
   | UnitIncomingUpdate
+  | AllianceExtensionUpdate
   | BonusEventUpdate
-  | RailroadUpdate;
+  | RailroadUpdate
+  | ConquestUpdate
+  | EmbargoUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
+  player: PlayerID;
   tile: TileRef;
   gold: number;
-  workers: number;
   troops: number;
 }
 
@@ -84,10 +90,18 @@ export interface RailTile {
   tile: TileRef;
   railType: RailType;
 }
+
 export interface RailroadUpdate {
   type: GameUpdateType.RailroadEvent;
   isActive: boolean;
   railTiles: RailTile[];
+}
+
+export interface ConquestUpdate {
+  type: GameUpdateType.ConquestEvent;
+  conquerorId: PlayerID;
+  conqueredId: PlayerID;
+  gold: Gold;
 }
 
 export interface TileUpdateWrapper {
@@ -114,7 +128,6 @@ export interface UnitUpdate {
   health?: number;
   constructionType?: UnitType;
   missileTimerQueue: number[];
-  readyMissileCount: number;
   level: number;
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
@@ -133,8 +146,6 @@ export interface PlayerUpdate {
   type: GameUpdateType.Player;
   nameViewData?: NameViewData;
   clientID: ClientID | null;
-  pattern: string | undefined;
-  flag: string | undefined;
   name: string;
   displayName: string;
   id: PlayerID;
@@ -145,20 +156,26 @@ export interface PlayerUpdate {
   isDisconnected: boolean;
   tilesOwned: number;
   gold: Gold;
-  population: number;
-  workers: number;
   troops: number;
-  targetTroopRatio: number;
   allies: number[];
   embargoes: Set<PlayerID>;
   isTraitor: boolean;
+  traitorRemainingTicks?: number;
   targets: number[];
   outgoingEmojis: EmojiMessage[];
   outgoingAttacks: AttackUpdate[];
   incomingAttacks: AttackUpdate[];
   outgoingAllianceRequests: PlayerID[];
+  alliances: AllianceView[];
   hasSpawned: boolean;
   betrayals?: bigint;
+}
+
+export interface AllianceView {
+  id: number;
+  other: PlayerID;
+  createdAt: Tick;
+  expiresAt: Tick;
 }
 
 export interface AllianceRequestUpdate {
@@ -186,6 +203,12 @@ export interface AllianceExpiredUpdate {
   player2ID: number;
 }
 
+export interface AllianceExtensionUpdate {
+  type: GameUpdateType.AllianceExtension;
+  playerID: number;
+  allianceID: number;
+}
+
 export interface TargetPlayerUpdate {
   type: GameUpdateType.TargetPlayer;
   playerID: number;
@@ -203,6 +226,7 @@ export interface DisplayMessageUpdate {
   messageType: MessageType;
   goldAmount?: bigint;
   playerID: number | null;
+  params?: Record<string, string | number>;
 }
 
 export type DisplayChatMessageUpdate = {
@@ -218,8 +242,7 @@ export type DisplayChatMessageUpdate = {
 export interface WinUpdate {
   type: GameUpdateType.Win;
   allPlayersStats: AllPlayersStats;
-  // Player id or team name.
-  winner: ["player", number] | ["team", Team];
+  winner: Winner;
 }
 
 export interface HashUpdate {
@@ -234,4 +257,11 @@ export interface UnitIncomingUpdate {
   message: string;
   messageType: MessageType;
   playerID: number;
+}
+
+export interface EmbargoUpdate {
+  type: GameUpdateType.EmbargoEvent;
+  event: "start" | "stop";
+  playerID: number;
+  embargoedID: number;
 }

@@ -1,12 +1,18 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import logo from "../../../../resources/images/ofm/logo_MASTER_2025.png";
-import { translateText } from "../../../client/Utils";
+import { isInIframe, translateText } from "../../../client/Utils";
+import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import "../../components/PatternButton";
+import {
+  fetchCosmetics,
+  handlePurchase,
+  patternRelationship,
+} from "../../Cosmetics";
+import { getUserMe } from "../../jwt";
 import { SendWinnerEvent } from "../../Transport";
-import { GutterAdModalEvent } from "./GutterAdModal";
 import { Layer } from "./Layer";
 
 @customElement("win-modal")
@@ -23,196 +29,176 @@ export class WinModal extends LitElement implements Layer {
   showButtons = false;
 
   @state()
-  private showSteamContent = Math.random() > 0.5;
+  private isWin = false;
+
+  @state()
+  private patternContent: TemplateResult | null = null;
 
   private _title: string;
+
+  private rand = Math.random();
 
   // Override to prevent shadow DOM creation
   createRenderRoot() {
     return this;
   }
 
-  static styles = css`
-    .win-modal {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: rgba(30, 30, 30, 0.7);
-      padding: 25px;
-      border-radius: 10px;
-      z-index: 9999;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(5px);
-      color: white;
-      width: 350px;
-      transition:
-        opacity 0.3s ease-in-out,
-        visibility 0.3s ease-in-out;
-    }
-
-    .win-modal.visible {
-      display: block;
-      animation: fadeIn 0.3s ease-out;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translate(-50%, -48%);
-      }
-      to {
-        opacity: 1;
-        transform: translate(-50%, -50%);
-      }
-    }
-
-    .win-modal h2 {
-      margin: 0 0 15px 0;
-      font-size: 26px;
-      text-align: center;
-      color: white;
-    }
-
-    .win-modal p {
-      margin: 0 0 20px 0;
-      text-align: center;
-      background-color: rgba(0, 0, 0, 0.3);
-      padding: 10px;
-      border-radius: 5px;
-    }
-
-    .button-container {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .win-modal button {
-      flex: 1;
-      padding: 12px;
-      font-size: 16px;
-      cursor: pointer;
-      background: rgba(0, 150, 255, 0.6);
-      color: white;
-      border: none;
-      border-radius: 5px;
-      transition:
-        background-color 0.2s ease,
-        transform 0.1s ease;
-    }
-
-    .win-modal button:hover {
-      background: rgba(0, 150, 255, 0.8);
-      transform: translateY(-1px);
-    }
-
-    .win-modal button:active {
-      transform: translateY(1px);
-    }
-
-    @media (max-width: 768px) {
-      .win-modal {
-        width: 90%;
-        max-width: 300px;
-        padding: 20px;
-      }
-
-      .win-modal h2 {
-        font-size: 26px;
-      }
-
-      .win-modal button {
-        padding: 10px;
-        font-size: 14px;
-      }
-    }
-  `;
-
   constructor() {
     super();
-    // Add styles to document
-    const styleEl = document.createElement("style");
-    styleEl.textContent = WinModal.styles.toString();
-    document.head.appendChild(styleEl);
   }
 
   render() {
     return html`
-      <div class="win-modal ${this.isVisible ? "visible" : ""}">
-        <h2>${this._title || ""}</h2>
-        ${this.showSteamContent
-          ? this.steamWishlist()
-          : this.openfrontMasters()}
+      <div
+        class="${this.isVisible
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-6 rounded-lg z-[9999] shadow-2xl backdrop-blur-sm text-white w-[350px] max-w-[90%] md:w-[700px] md:max-w-[700px] animate-fadeIn"
+          : "hidden"}"
+      >
+        <h2 class="m-0 mb-4 text-[26px] text-center text-white">
+          ${this._title || ""}
+        </h2>
+        ${this.innerHtml()}
         <div
-          class="button-container ${this.showButtons ? "visible" : "hidden"}"
+          class="${this.showButtons
+            ? "flex justify-between gap-2.5"
+            : "hidden"}"
         >
-          <button @click=${this._handleExit}>
+          <button
+            @click=${this._handleExit}
+            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
+          >
             ${translateText("win_modal.exit")}
           </button>
-          <button @click=${this.hide}>
-            ${translateText("win_modal.keep")}
+          <button
+            @click=${this.hide}
+            class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
+          >
+            ${this.isWin
+              ? translateText("win_modal.keep")
+              : translateText("win_modal.spectate")}
           </button>
         </div>
+      </div>
+
+      <style>
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -48%);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+          }
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      </style>
+    `;
+  }
+
+  innerHtml() {
+    if (isInIframe() || this.rand < 0.25) {
+      return this.steamWishlist();
+    }
+    return this.renderPatternButton();
+  }
+
+  renderPatternButton() {
+    return html`
+      <div class="text-center mb-6 bg-black/30 p-2.5 rounded">
+        <h3 class="text-xl font-semibold text-white mb-3">
+          ${translateText("win_modal.support_openfront")}
+        </h3>
+        <p class="text-white mb-3">
+          ${translateText("win_modal.territory_pattern")}
+        </p>
+        <div class="flex justify-center">${this.patternContent}</div>
       </div>
     `;
   }
 
-  steamWishlist() {
-    return html`<p>
+  async loadPatternContent() {
+    const me = await getUserMe();
+    const patterns = await fetchCosmetics();
+
+    const purchasablePatterns: {
+      pattern: Pattern;
+      colorPalette: ColorPalette;
+    }[] = [];
+
+    for (const pattern of Object.values(patterns?.patterns ?? {})) {
+      for (const colorPalette of pattern.colorPalettes ?? []) {
+        if (
+          patternRelationship(
+            pattern,
+            colorPalette,
+            me !== false ? me : null,
+            null,
+          ) === "purchasable"
+        ) {
+          const palette = patterns?.colorPalettes?.[colorPalette.name];
+          if (palette) {
+            purchasablePatterns.push({
+              pattern,
+              colorPalette: palette,
+            });
+          }
+        }
+      }
+    }
+
+    if (purchasablePatterns.length === 0) {
+      this.patternContent = html``;
+      return;
+    }
+
+    // Shuffle the array and take patterns based on screen size
+    const shuffled = [...purchasablePatterns].sort(() => Math.random() - 0.5);
+    const isMobile = window.innerWidth < 768; // md breakpoint
+    const maxPatterns = isMobile ? 1 : 3;
+    const selectedPatterns = shuffled.slice(
+      0,
+      Math.min(maxPatterns, shuffled.length),
+    );
+
+    this.patternContent = html`
+      <div class="flex gap-4 flex-wrap justify-start">
+        ${selectedPatterns.map(
+          ({ pattern, colorPalette }) => html`
+            <pattern-button
+              .pattern=${pattern}
+              .colorPalette=${colorPalette}
+              .requiresPurchase=${true}
+              .onSelect=${(p: Pattern | null) => {}}
+              .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
+                handlePurchase(p, colorPalette)}
+            ></pattern-button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
+  steamWishlist(): TemplateResult {
+    return html`<p class="m-0 mb-5 text-center bg-black/30 p-2.5 rounded">
       <a
         href="https://store.steampowered.com/app/3560670"
         target="_blank"
         rel="noopener noreferrer"
-        style="
-          color: #4a9eff;
-          text-decoration: underline;
-          font-weight: 500;
-          transition: color 0.2s ease;
-          font-size: 24px;
-        "
-        onmouseover="this.style.color='#6db3ff'"
-        onmouseout="this.style.color='#4a9eff'"
+        class="text-[#4a9eff] underline font-medium transition-colors duration-200 text-2xl hover:text-[#6db3ff]"
       >
         ${translateText("win_modal.wishlist")}
       </a>
     </p>`;
   }
 
-  openfrontMasters() {
-    return html`<p>
-      <img
-        src="${logo}"
-        alt="OpenFront Masters"
-        style="max-width: 100%; height: auto; margin-bottom: 16px;"
-      />
-      <a
-        href="https://discord.gg/gStsGh5vWR"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="
-          color: #4a9eff;
-          text-decoration: underline;
-          font-weight: 500;
-          transition: color 0.2s ease;
-          font-size: 24px;
-        "
-        onmouseover="this.style.color='#6db3ff'"
-        onmouseout="this.style.color='#4a9eff'"
-      >
-        Watch the best compete in the
-        <span style="font-weight: bold;">OpenFront Masters</span>
-      </a>
-    </p>`;
-  }
-
-  show() {
-    this.eventBus.emit(new GutterAdModalEvent(true));
-    setTimeout(() => {
-      this.isVisible = true;
-      this.requestUpdate();
-    }, 1500);
+  async show() {
+    await this.loadPatternContent();
+    this.isVisible = true;
+    this.requestUpdate();
     setTimeout(() => {
       this.showButtons = true;
       this.requestUpdate();
@@ -220,7 +206,6 @@ export class WinModal extends LitElement implements Layer {
   }
 
   hide() {
-    this.eventBus.emit(new GutterAdModalEvent(false));
     this.isVisible = false;
     this.showButtons = false;
     this.requestUpdate();
@@ -249,19 +234,23 @@ export class WinModal extends LitElement implements Layer {
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates !== null ? updates[GameUpdateType.Win] : [];
     winUpdates.forEach((wu) => {
-      if (wu.winner[0] === "team") {
+      if (wu.winner === undefined) {
+        // ...
+      } else if (wu.winner[0] === "team") {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
+          this.isWin = true;
         } else {
           this._title = translateText("win_modal.other_team", {
             team: wu.winner[1],
           });
+          this.isWin = false;
         }
         this.show();
       } else {
-        const winner = this.game.playerBySmallID(wu.winner[1]);
-        if (!winner.isPlayer()) return;
+        const winner = this.game.playerByClientID(wu.winner[1]);
+        if (!winner?.isPlayer()) return;
         const winnerClient = winner.clientID();
         if (winnerClient !== null) {
           this.eventBus.emit(
@@ -273,10 +262,12 @@ export class WinModal extends LitElement implements Layer {
           winnerClient === this.game.myPlayer()?.clientID()
         ) {
           this._title = translateText("win_modal.you_won");
+          this.isWin = true;
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.name(),
           });
+          this.isWin = false;
         }
         this.show();
       }

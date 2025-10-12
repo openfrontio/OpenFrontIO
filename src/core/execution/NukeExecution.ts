@@ -5,6 +5,7 @@ import {
   MessageType,
   Player,
   TerraNullius,
+  TrajectoryTile,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -20,8 +21,6 @@ export class NukeExecution implements Execution {
   private mg: Game;
   private nuke: Unit | null = null;
   private tilesToDestroyCache: Set<TileRef> | undefined;
-
-  private random: PseudoRandom;
   private pathFinder: ParabolaPathFinder;
 
   constructor(
@@ -35,7 +34,6 @@ export class NukeExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.random = new PseudoRandom(ticks);
     if (this.speed === -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
@@ -64,7 +62,7 @@ export class NukeExecution implements Execution {
     return this.tilesToDestroyCache;
   }
 
-  private breakAlliances(toDestroy: Set<TileRef>) {
+  private maybeBreakAlliances(toDestroy: Set<TileRef>) {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
@@ -77,15 +75,27 @@ export class NukeExecution implements Execution {
       }
     }
 
-    for (const [other, tilesDestroyed] of attacked) {
-      if (tilesDestroyed > 100 && this.nuke.type() !== UnitType.MIRVWarhead) {
+    const threshold = this.mg.config().nukeAllianceBreakThreshold();
+    for (const [attackedPlayer, tilesDestroyed] of attacked) {
+      if (
+        tilesDestroyed > threshold &&
+        this.nuke.type() !== UnitType.MIRVWarhead
+      ) {
+        // Resolves exploit of alliance breaking in which a pending alliance request
+        // was accepeted in the middle of an missle attack.
+        const allianceRequest = attackedPlayer
+          .incomingAllianceRequests()
+          .find((ar) => ar.requestor() === this.player);
+        if (allianceRequest) {
+          allianceRequest?.reject();
+        }
         // Mirv warheads shouldn't break alliances
-        const alliance = this.player.allianceWith(other);
+        const alliance = this.player.allianceWith(attackedPlayer);
         if (alliance !== null) {
           this.player.breakAlliance(alliance);
         }
-        if (other !== this.player) {
-          other.updateRelation(this.player, -100);
+        if (attackedPlayer !== this.player) {
+          attackedPlayer.updateRelation(this.player, -100);
         }
       }
     }
@@ -103,11 +113,14 @@ export class NukeExecution implements Execution {
       this.pathFinder.computeControlPoints(
         spawn,
         this.dst,
+        this.speed,
         this.nukeType !== UnitType.MIRVWarhead,
       );
       this.nuke = this.player.buildUnit(this.nukeType, spawn, {
         targetTile: this.dst,
+        trajectory: this.getTrajectory(this.dst),
       });
+      this.maybeBreakAlliances(this.tilesToDestroy());
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
         if (!target.isPlayer()) {
@@ -120,7 +133,6 @@ export class NukeExecution implements Execution {
             MessageType.NUKE_INBOUND,
             target.id(),
           );
-          this.breakAlliances(this.tilesToDestroy());
         } else if (this.nukeType === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
@@ -129,7 +141,6 @@ export class NukeExecution implements Execution {
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );
-          this.breakAlliances(this.tilesToDestroy());
         }
 
         // Record stats
@@ -166,6 +177,8 @@ export class NukeExecution implements Execution {
     } else {
       this.updateNukeTargetable();
       this.nuke.move(nextTile);
+      // Update index so SAM can interpolate future position
+      this.nuke.setTrajectoryIndex(this.pathFinder.currentIndex());
     }
   }
 
@@ -173,21 +186,43 @@ export class NukeExecution implements Execution {
     return this.nuke;
   }
 
+  private getTrajectory(target: TileRef): TrajectoryTile[] {
+    const trajectoryTiles: TrajectoryTile[] = [];
+    const targetRangeSquared =
+      this.mg.config().defaultNukeTargetableRange() ** 2;
+    const allTiles: TileRef[] = this.pathFinder.allTiles();
+    for (const tile of allTiles) {
+      trajectoryTiles.push({
+        tile,
+        targetable: this.isTargetable(target, tile, targetRangeSquared),
+      });
+    }
+
+    return trajectoryTiles;
+  }
+
+  private isTargetable(
+    targetTile: TileRef,
+    nukeTile: TileRef,
+    targetRangeSquared: number,
+  ): boolean {
+    return (
+      this.mg.euclideanDistSquared(nukeTile, targetTile) < targetRangeSquared ||
+      (this.src !== undefined &&
+        this.src !== null &&
+        this.mg.euclideanDistSquared(this.src, nukeTile) < targetRangeSquared)
+    );
+  }
+
   private updateNukeTargetable() {
     if (this.nuke === null || this.nuke.targetTile() === undefined) {
       return;
     }
     const targetRangeSquared =
-      this.mg.config().defaultNukeTargetableRange() *
-      this.mg.config().defaultNukeTargetableRange();
+      this.mg.config().defaultNukeTargetableRange() ** 2;
     const targetTile = this.nuke.targetTile();
     this.nuke.setTargetable(
-      this.mg.euclideanDistSquared(this.nuke.tile(), targetTile!) <
-        targetRangeSquared ||
-        (this.src !== undefined &&
-          this.src !== null &&
-          this.mg.euclideanDistSquared(this.src, this.nuke.tile()) <
-            targetRangeSquared),
+      this.isTargetable(targetTile!, this.nuke.tile(), targetRangeSquared),
     );
   }
 
@@ -198,7 +233,11 @@ export class NukeExecution implements Execution {
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
-    this.breakAlliances(toDestroy);
+    this.maybeBreakAlliances(toDestroy);
+
+    const maxTroops = this.target().isPlayer()
+      ? this.mg.config().maxTroops(this.target() as Player)
+      : 1;
 
     for (const tile of toDestroy) {
       const owner = this.mg.owner(tile);
@@ -207,25 +246,35 @@ export class NukeExecution implements Execution {
         owner.removeTroops(
           this.mg
             .config()
-            .nukeDeathFactor(owner.troops(), owner.numTilesOwned()),
-        );
-        owner.removeWorkers(
-          this.mg
-            .config()
-            .nukeDeathFactor(owner.workers(), owner.numTilesOwned()),
+            .nukeDeathFactor(
+              this.nukeType,
+              owner.troops(),
+              owner.numTilesOwned(),
+              maxTroops,
+            ),
         );
         owner.outgoingAttacks().forEach((attack) => {
           const deaths =
             this.mg
               ?.config()
-              .nukeDeathFactor(attack.troops(), owner.numTilesOwned()) ?? 0;
+              .nukeDeathFactor(
+                this.nukeType,
+                attack.troops(),
+                owner.numTilesOwned(),
+                maxTroops,
+              ) ?? 0;
           attack.setTroops(attack.troops() - deaths);
         });
         owner.units(UnitType.TransportShip).forEach((attack) => {
           const deaths =
             this.mg
               ?.config()
-              .nukeDeathFactor(attack.troops(), owner.numTilesOwned()) ?? 0;
+              .nukeDeathFactor(
+                this.nukeType,
+                attack.troops(),
+                owner.numTilesOwned(),
+                maxTroops,
+              ) ?? 0;
           attack.setTroops(attack.troops() - deaths);
         });
       }

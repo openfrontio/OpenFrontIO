@@ -1,10 +1,38 @@
 <!doctype html>
-<html lang="en" class="h-full">
+<html lang="en" class="h-full" translate="no">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
     <title>OpenFront (ALPHA)</title>
     <link rel="manifest" href="../../resources/manifest.json" />
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="../../resources/images/Favicon.svg"
+    />
+
+    <!-- SEO -->
+    <link rel="canonical" href="https://openfront.io/" />
+    <meta
+      name="description"
+      content="Conquer the world in this multiplayer battle royale! Expand your nation, eliminate opponents, and dominate the map in this fast-paced IO game."
+    />
+
+    <!-- Open Graph -->
+    <meta property="og:url" content="https://openfront.io/" />
+    <meta property="og:title" content="OpenFront - Battle Royale" />
+    <meta
+      property="og:description"
+      content="Conquer the world in this multiplayer battle royale! Expand your nation, eliminate opponents, and dominate the map in this fast-paced IO game."
+    />
+    <meta
+      property="og:image"
+      content="https://openfront.io/images/GameplayScreenshot.png"
+    />
+    <meta property="og:type" content="game" />
 
     <!-- Critical CSS to prevent FOUC -->
     <style>
@@ -37,12 +65,19 @@
         left: 0;
         width: 100%;
         height: 100%;
-        filter: blur(4px);
         z-index: -1;
       }
 
+      .bg-image::before {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100vh;
+        backdrop-filter: blur(5px);
+      }
+
       .dark .bg-image {
-        filter: blur(4px) brightness(0.7);
+        filter: brightness(0.4) saturate(0.3) contrast(1.2);
       }
 
       /* display:none if child has class parent-hidden since we can't use shadow DOM in Lit due to Tailwind */
@@ -167,27 +202,14 @@
     <!-- Main container with responsive padding -->
     <main class="flex justify-center flex-grow">
       <div class="container pt-12">
-        <o-button
-          id="login-discord"
-          title="Initializing..."
-          disable="true"
-          block
-        ></o-button>
-
-        <o-button
-          id="logout-discord"
-          title="Log out"
-          translationKey="main.log_out"
-          visible="false"
-          block
-        ></o-button>
+        <token-login class="w-[20%] md:w-[15%]"></token-login>
 
         <div class="container__row">
-          <flag-input class="w-[20%] md:w-[15%]"></flag-input>
-          <territory-patterns-modal class="w-[50%] md:w-[12%]">
+          <flag-input class="w-[20%] md:w-[20%]"></flag-input>
+          <territory-patterns-modal class="w-[20%] md:w-[15%]">
             <button
               id="territory-patterns-input-preview-button"
-              class="w-full border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
+              class="w-full border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)] justify-center"
               title="Pick a pattern!"
             ></button>
           </territory-patterns-modal>
@@ -265,7 +287,6 @@
     <div id="radialMenu" class="radial-menu"></div>
     <div class="flex gap-2 fixed right-[10px] top-[10px] z-50 flex-col">
       <options-menu></options-menu>
-      <replay-panel></replay-panel>
       <player-info-overlay></player-info-overlay>
     </div>
     <div
@@ -275,20 +296,17 @@
     </div>
 
     <div
-      class="bottom-0 w-full flex-col-reverse sm:flex-row z-50"
+      class="bottom-0 w-full flex-col-reverse sm:flex-row z-50 md:w-[320px]"
       style="position: fixed; pointer-events: none"
     >
       <div
-        class="w-full sm:w-2/3 sm:fixed sm:right-0 sm:bottom-0 sm:flex flex-col items-end"
+        class="w-full md:w-2/3 md:fixed sm:right-0 md:bottom-0 md:flex flex-col items-end"
         style="pointer-events: none"
       >
         <chat-display></chat-display>
         <events-display></events-display>
       </div>
-      <div
-        class="w-[320px] flex flex-col items-center"
-        style="pointer-events: auto"
-      >
+      <div style="pointer-events: auto">
         <control-panel></control-panel>
       </div>
     </div>
@@ -336,10 +354,20 @@
               class="ml-2 mr-4"
             />
           </a>
-          <a href="/privacy-policy.html" class="t-link" target="_blank">
+          <a
+            href="/privacy-policy.html"
+            data-i18n="main.privacy_policy"
+            class="t-link"
+            target="_blank"
+          >
             Privacy Policy
           </a>
-          <a href="/terms-of-service.html" class="t-link" target="_blank">
+          <a
+            href="/terms-of-service.html"
+            data-i18n="main.terms_of_service"
+            class="t-link"
+            target="_blank"
+          >
             Terms of Service
           </a>
           <p style="text-align: center">
@@ -355,6 +383,7 @@
         </div>
       </div>
     </footer>
+    <account-button></account-button>
     <!-- Game modals and overlays -->
     <single-player-modal></single-player-modal>
     <host-lobby-modal></host-lobby-modal>
@@ -363,8 +392,13 @@
     <build-menu></build-menu>
     <win-modal></win-modal>
     <game-starting-modal></game-starting-modal>
-    <top-bar></top-bar>
-
+    <game-top-bar></game-top-bar>
+    <unit-display></unit-display>
+    <div class="flex fixed top-[20px] right-[20px] z-[1000] items-start gap-2">
+      <replay-panel></replay-panel>
+      <game-right-sidebar></game-right-sidebar>
+    </div>
+    <settings-modal></settings-modal>
     <player-panel></player-panel>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
@@ -372,10 +406,11 @@
     <chat-modal></chat-modal>
     <user-setting></user-setting>
     <multi-tab-modal></multi-tab-modal>
-    <unit-info-modal></unit-info-modal>
     <news-modal></news-modal>
     <game-left-sidebar></game-left-sidebar>
     <spawn-ad></spawn-ad>
+    <flag-input-modal></flag-input-modal>
+    <fps-display></fps-display>
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"

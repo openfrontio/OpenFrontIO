@@ -1,9 +1,7 @@
 import { Colord } from "colord";
 import { JWK } from "jose";
-import { GameConfig, GameID } from "../Schemas";
 import {
   Difficulty,
-  Duos,
   Game,
   GameMapType,
   GameMode,
@@ -19,6 +17,8 @@ import {
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import { NukeType } from "../StatsSchemas";
 
 export enum GameEnv {
   Dev,
@@ -32,7 +32,7 @@ export interface ServerConfig {
   lobbyMaxPlayers(
     map: GameMapType,
     mode: GameMode,
-    numPlayerTeams: number | undefined,
+    numPlayerTeams: TeamCountConfig | undefined,
   ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
@@ -40,7 +40,6 @@ export interface ServerConfig {
   workerPort(gameID: GameID): number;
   workerPortByIndex(workerID: number): number;
   env(): GameEnv;
-  region(): string;
   adminToken(): string;
   adminHeader(): string;
   // Only available on the server
@@ -49,9 +48,9 @@ export interface ServerConfig {
   r2Endpoint(): string;
   r2AccessKey(): string;
   r2SecretKey(): string;
+  apiKey(): string;
   otelEndpoint(): string;
-  otelUsername(): string;
-  otelPassword(): string;
+  otelAuthHeader(): string;
   otelEnabled(): boolean;
   jwtAudience(): string;
   jwtIssuer(): string;
@@ -62,6 +61,8 @@ export interface ServerConfig {
   cloudflareApiToken(): string;
   cloudflareConfigPath(): string;
   cloudflareCredsPath(): string;
+  stripePublishableKey(): string;
+  allowedFlares(): string[] | undefined;
 }
 
 export interface NukeMagnitude {
@@ -82,16 +83,17 @@ export interface Config {
   isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
+  donateGold(): boolean;
   infiniteTroops(): boolean;
+  donateTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
-  playerTeams(): number | typeof Duos;
+  playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;
-  populationIncreaseRate(player: Player | PlayerView): number;
+  troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
-  troopAdjustmentRate(player: Player): number;
   attackTilesPerTick(
     attckTroops: number,
     attacker: Player,
@@ -114,12 +116,13 @@ export interface Config {
   // When computing likelihood of trading for any given port, the X closest port
   // are twice more likely to be selected. X is determined below.
   proximityBonusPortsNb(totalPorts: number): number;
-  maxPopulation(player: Player | PlayerView): number;
-  cityPopulationIncrease(): number;
+  maxTroops(player: Player | PlayerView): number;
+  cityTroopIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
   shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
+  allianceRequestDuration(): Tick;
   allianceRequestCooldown(): Tick;
   temporaryEmbargoDuration(): Tick;
   targetDuration(): Tick;
@@ -127,12 +130,17 @@ export interface Config {
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
-  tradeShipGold(dist: number): Gold;
-  tradeShipSpawnRate(numberOfPorts: number): number;
-  trainGold(): Gold;
-  trainSpawnRate(numberOfStations: number): number;
+  tradeShipGold(dist: number, numPorts: number): Gold;
+  tradeShipSpawnRate(
+    numTradeShips: number,
+    numPlayerPorts: number,
+    numPlayerTradeShips: number,
+  ): number;
+  trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
+  trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
   railroadMaxSize(): number;
@@ -141,6 +149,7 @@ export interface Config {
   SAMCooldown(): number;
   SiloCooldown(): number;
   defensePostDefenseBonus(): number;
+  defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
   warshipPatrolRange(): number;
@@ -152,21 +161,31 @@ export interface Config {
   traitorDefenseDebuff(): number;
   traitorDuration(): number;
   nukeMagnitudes(unitType: UnitType): NukeMagnitude;
+  // Number of tiles destroyed to break an alliance
+  nukeAllianceBreakThreshold(): number;
   defaultNukeSpeed(): number;
   defaultNukeTargetableRange(): number;
+  defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
-  nukeDeathFactor(humans: number, tilesOwned: number): number;
+  nukeDeathFactor(
+    nukeType: NukeType,
+    humans: number,
+    tilesOwned: number,
+    maxTroops: number,
+  ): number;
   structureMinDist(): number;
   isReplay(): boolean;
+  allianceExtensionPromptOffset(): number;
 }
 
 export interface Theme {
   teamColor(team: Team): Colord;
+  // Don't call directly, use PlayerView
   territoryColor(playerInfo: PlayerView): Colord;
-  specialBuildingColor(playerInfo: PlayerView): Colord;
-  railroadColor(playerInfo: PlayerView): Colord;
-  borderColor(playerInfo: PlayerView): Colord;
-  defendedBorderColors(playerInfo: PlayerView): { light: Colord; dark: Colord };
+  // Don't call directly, use PlayerView
+  borderColor(territoryColor: Colord): Colord;
+  // Don't call directly, use PlayerView
+  defendedBorderColors(territoryColor: Colord): { light: Colord; dark: Colord };
   focusedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
@@ -176,6 +195,7 @@ export interface Theme {
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;
+  neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
 }

@@ -7,6 +7,7 @@ export class OModal extends LitElement {
   @state() public isModalOpen = false;
   @property({ type: String }) title = "";
   @property({ type: String }) translationKey = "";
+  @property({ type: Boolean }) alwaysMaximized = false;
 
   static styles = css`
     .c-modal {
@@ -25,10 +26,20 @@ export class OModal extends LitElement {
     }
 
     .c-modal__wrapper {
-      background: #23232382;
       border-radius: 8px;
       min-width: 340px;
       max-width: 860px;
+    }
+
+    .c-modal__wrapper.always-maximized {
+      width: 100%;
+      min-width: 340px;
+      max-width: 860px;
+      min-height: 320px;
+      /* Fallback for older browsers */
+      height: 60vh;
+      /* Use dvh if supported for dynamic viewport handling */
+      height: 60dvh;
     }
 
     .c-modal__header {
@@ -50,6 +61,7 @@ export class OModal extends LitElement {
     }
 
     .c-modal__content {
+      background: #23232382;
       position: relative;
       color: #fff;
       padding: 1.4rem;
@@ -73,13 +85,18 @@ export class OModal extends LitElement {
     return html`
       ${this.isModalOpen
         ? html`
-            <aside class="c-modal">
-              <div class="c-modal__wrapper">
+            <aside class="c-modal" @click=${this.close}>
+              <div
+                @click=${(e: Event) => e.stopPropagation()}
+                class="c-modal__wrapper ${this.alwaysMaximized
+                  ? "always-maximized"
+                  : ""}"
+              >
                 <header class="c-modal__header">
                   ${`${this.translationKey}` === ""
                     ? `${this.title}`
                     : `${translateText(this.translationKey)}`}
-                  <div class="c-modal__close" @click=${this.close}>X</div>
+                  <div class="c-modal__close" @click=${this.close}>✕</div>
                 </header>
                 <section class="c-modal__content">
                   <slot></slot>

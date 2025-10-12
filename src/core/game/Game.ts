@@ -7,9 +7,16 @@ import {
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
-import { PlayerView } from "./GameView";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
+import { UnitPredicate } from "./UnitGrid";
+
+function isEnumValue<T extends Record<string, string | number>>(
+  enumObj: T,
+  value: unknown,
+): value is T[keyof T] {
+  return Object.values(enumObj).includes(value as T[keyof T]);
+}
 
 export type PlayerID = string;
 export type Tick = number;
@@ -37,10 +44,14 @@ export enum Difficulty {
   Hard = "Hard",
   Impossible = "Impossible",
 }
+export const isDifficulty = (value: unknown): value is Difficulty =>
+  isEnumValue(Difficulty, value);
 
 export type Team = string;
 
 export const Duos = "Duos" as const;
+export const Trios = "Trios" as const;
+export const Quads = "Quads" as const;
 
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
@@ -78,7 +89,15 @@ export enum GameMapType {
   FalklandIslands = "Falkland Islands",
   Baikal = "Baikal",
   Halkidiki = "Halkidiki",
+  StraitOfGibraltar = "Strait of Gibraltar",
+  Italia = "Italia",
+  Japan = "Japan",
+  Yenisei = "Yenisei",
+  Pluto = "Pluto",
+  Montreal = "Montreal",
 }
+
+export type GameMapName = keyof typeof GameMapType;
 
 export const mapCategories: Record<string, GameMapType[]> = {
   continental: [
@@ -105,9 +124,15 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.FalklandIslands,
     GameMapType.Baikal,
     GameMapType.Halkidiki,
+    GameMapType.StraitOfGibraltar,
+    GameMapType.Italia,
+    GameMapType.Japan,
+    GameMapType.Yenisei,
+    GameMapType.Montreal,
   ],
   fantasy: [
     GameMapType.Pangaea,
+    GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
   ],
@@ -118,14 +143,23 @@ export enum GameType {
   Public = "Public",
   Private = "Private",
 }
+export const isGameType = (value: unknown): value is GameType =>
+  isEnumValue(GameType, value);
 
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
 }
+export const isGameMode = (value: unknown): value is GameMode =>
+  isEnumValue(GameMode, value);
+
+export enum GameMapSize {
+  Compact = "Compact",
+  Normal = "Normal",
+}
 
 export interface UnitInfo {
-  cost: (player: Player | PlayerView) => Gold;
+  cost: (player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
   maxHealth?: number;
@@ -133,6 +167,7 @@ export interface UnitInfo {
   constructionDuration?: number;
   upgradable?: boolean;
   canBuildTrainStation?: boolean;
+  experimental?: boolean;
 }
 
 export enum UnitType {
@@ -177,6 +212,10 @@ export interface OwnerComp {
   owner: Player;
 }
 
+export type TrajectoryTile = {
+  tile: TileRef;
+  targetable: boolean;
+};
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
@@ -187,18 +226,20 @@ export interface UnitParamsMap {
     patrolTile: TileRef;
   };
 
-  [UnitType.Shell]: {};
+  [UnitType.Shell]: Record<string, never>;
 
-  [UnitType.SAMMissile]: {};
+  [UnitType.SAMMissile]: Record<string, never>;
 
-  [UnitType.Port]: {};
+  [UnitType.Port]: Record<string, never>;
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 
   [UnitType.HydrogenBomb]: {
     targetTile?: number;
+    trajectory: TrajectoryTile[];
   };
 
   [UnitType.TradeShip]: {
@@ -212,25 +253,23 @@ export interface UnitParamsMap {
     loaded?: boolean;
   };
 
-  [UnitType.Factory]: {};
+  [UnitType.Factory]: Record<string, never>;
 
-  [UnitType.MissileSilo]: {
-    cooldownDuration?: number;
-  };
+  [UnitType.MissileSilo]: Record<string, never>;
 
-  [UnitType.DefensePost]: {};
+  [UnitType.DefensePost]: Record<string, never>;
 
-  [UnitType.SAMLauncher]: {};
+  [UnitType.SAMLauncher]: Record<string, never>;
 
-  [UnitType.City]: {};
+  [UnitType.City]: Record<string, never>;
 
-  [UnitType.MIRV]: {};
+  [UnitType.MIRV]: Record<string, never>;
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
   };
 
-  [UnitType.Construction]: {};
+  [UnitType.Construction]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -332,26 +371,31 @@ export interface AllianceRequest {
   requestor(): Player;
   recipient(): Player;
   createdAt(): Tick;
+  status(): "pending" | "accepted" | "rejected";
 }
 
 export interface Alliance {
   requestor(): Player;
   recipient(): Player;
   createdAt(): Tick;
+  expiresAt(): Tick;
   other(player: Player): Player;
 }
 
 export interface MutableAlliance extends Alliance {
   expire(): void;
   other(player: Player): Player;
+  bothAgreedToExtend(): boolean;
+  addExtensionRequest(player: Player): void;
+  id(): number;
+  extend(): void;
+  onlyOneAgreedToExtend(): boolean;
 }
 
 export class PlayerInfo {
   public readonly clan: string | null;
 
   constructor(
-    public readonly pattern: string | undefined,
-    public readonly flag: string | undefined,
     public readonly name: string,
     public readonly playerType: PlayerType,
     // null if bot.
@@ -370,8 +414,14 @@ export class PlayerInfo {
   }
 }
 
-export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
-  return "isUnit" in unit && typeof unit.isUnit === "function" && unit.isUnit();
+export function isUnit(unit: unknown): unit is Unit {
+  return (
+    unit &&
+    typeof unit === "object" &&
+    "isUnit" in unit &&
+    typeof unit.isUnit === "function" &&
+    unit.isUnit()
+  );
 }
 
 export interface Unit {
@@ -402,6 +452,9 @@ export interface Unit {
   // Targeting
   setTargetTile(cell: TileRef | undefined): void;
   targetTile(): TileRef | undefined;
+  setTrajectoryIndex(i: number): void;
+  trajectoryIndex(): number;
+  trajectory(): TrajectoryTile[];
   setTargetUnit(unit: Unit | undefined): void;
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
@@ -428,7 +481,7 @@ export interface Unit {
   launch(): void;
   reloadMissile(): void;
   isInCooldown(): boolean;
-  ticksLeftInCooldown(): Tick | undefined;
+  missileTimerQueue(): number[];
 
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
@@ -441,6 +494,7 @@ export interface Unit {
   // Upgradable Structures
   level(): number;
   increaseLevel(): void;
+  decreaseLevel(destroyer?: Player): void;
 
   // Warships
   setPatrolTile(tile: TileRef): void;
@@ -457,7 +511,7 @@ export interface TerraNullius {
 export interface Embargo {
   createdAt: Tick;
   isTemporary: boolean;
-  target: PlayerID;
+  target: Player;
 }
 
 export interface Player {
@@ -492,34 +546,35 @@ export interface Player {
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;
 
-  // Resources & Population
+  // Resources & Troops
   gold(): Gold;
-  population(): number;
-  workers(): number;
-  troops(): number;
-  targetTroopRatio(): number;
-  addGold(toAdd: Gold): void;
+  addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
-  addWorkers(toAdd: number): void;
-  removeWorkers(toRemove: number): void;
-  setTargetTroopRatio(target: number): void;
+  troops(): number;
   setTroops(troops: number): void;
   addTroops(troops: number): void;
   removeTroops(troops: number): number;
 
   // Units
   units(...types: UnitType[]): Unit[];
+  unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef): BuildableUnit[];
+  buildableUnits(tile: TileRef | null): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
     spawnTile: TileRef,
     params: UnitParams<T>,
   ): Unit;
-  upgradeUnit(unit: Unit): void;
 
+  // Returns the existing unit that can be upgraded,
+  // or false if it cannot be upgraded.
+  // New units of the same type can upgrade existing units.
+  // e.g. if a place a new city here, can it upgrade an existing city?
+  findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false;
+  canUpgradeUnit(unitType: UnitType): boolean;
+  upgradeUnit(unit: Unit): void;
   captureUnit(unit: Unit): void;
 
   // Relations & Diplomacy
@@ -537,6 +592,7 @@ export interface Player {
   incomingAllianceRequests(): AllianceRequest[];
   outgoingAllianceRequests(): AllianceRequest[];
   alliances(): MutableAlliance[];
+  expiredAlliances(): Alliance[];
   allies(): Player[];
   isAlliedWith(other: Player): boolean;
   allianceWith(other: Player): MutableAlliance | null;
@@ -556,17 +612,20 @@ export interface Player {
   sendEmoji(recipient: Player | typeof AllPlayers, emoji: string): void;
 
   // Donation
-  canDonate(recipient: Player): boolean;
+  canDonateGold(recipient: Player): boolean;
+  canDonateTroops(recipient: Player): boolean;
   donateTroops(recipient: Player, troops: number): boolean;
   donateGold(recipient: Player, gold: Gold): boolean;
+  canDeleteUnit(): boolean;
+  recordDeleteUnit(): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
-  addEmbargo(other: PlayerID, isTemporary: boolean): void;
+  addEmbargo(other: Player, isTemporary: boolean): void;
   getEmbargoes(): Embargo[];
-  stopEmbargo(other: PlayerID): void;
-  endTemporaryEmbargo(other: PlayerID): void;
+  stopEmbargo(other: Player): void;
+  endTemporaryEmbargo(other: Player): void;
   canTrade(other: Player): boolean;
 
   // Attacking.
@@ -592,7 +651,6 @@ export interface Player {
 }
 
 export interface Game extends GameMap {
-  expireAlliance(alliance: Alliance);
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;
@@ -614,6 +672,10 @@ export interface Game extends GameMap {
 
   teams(): Team[];
 
+  // Alliances
+  alliances(): MutableAlliance[];
+  expireAlliance(alliance: Alliance): void;
+
   // Game State
   ticks(): Tick;
   inSpawnPhase(): boolean;
@@ -623,12 +685,19 @@ export interface Game extends GameMap {
 
   // Units
   units(...types: UnitType[]): Unit[];
+  unitCount(type: UnitType): number;
   unitInfo(type: UnitType): UnitInfo;
+  hasUnitNearby(
+    tile: TileRef,
+    searchRange: number,
+    type: UnitType,
+    playerId?: PlayerID,
+  ): boolean;
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-    predicate?: (value: { unit: Unit; distSquared: number }) => boolean,
+    predicate?: UnitPredicate,
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
@@ -637,6 +706,7 @@ export interface Game extends GameMap {
     type: MessageType,
     playerID: PlayerID | null,
     goldAmount?: bigint,
+    params?: Record<string, string | number>,
   ): void;
   displayIncomingUnit(
     unitID: number,
@@ -663,6 +733,7 @@ export interface Game extends GameMap {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  conquerPlayer(conqueror: Player, conquered: Player): void;
 }
 
 export interface PlayerActions {
@@ -674,6 +745,8 @@ export interface PlayerActions {
 
 export interface BuildableUnit {
   canBuild: TileRef | false;
+  // unit id of the existing unit that can be upgraded, or false if it cannot be upgraded.
+  canUpgrade: number | false;
   type: UnitType;
   cost: Gold;
 }
@@ -693,9 +766,10 @@ export interface PlayerInteraction {
   canSendAllianceRequest: boolean;
   canBreakAlliance: boolean;
   canTarget: boolean;
-  canDonate: boolean;
+  canDonateGold: boolean;
+  canDonateTroops: boolean;
   canEmbargo: boolean;
-  allianceCreatedAtTick?: Tick;
+  allianceExpiresAt?: Tick;
 }
 
 export interface EmojiMessage {
@@ -730,11 +804,13 @@ export enum MessageType {
   SENT_TROOPS_TO_PLAYER,
   RECEIVED_TROOPS_FROM_PLAYER,
   CHAT,
+  RENEW_ALLIANCE,
 }
 
 // Message categories used for filtering events in the EventsDisplay
 export enum MessageCategory {
   ATTACK = "ATTACK",
+  NUKE = "NUKE",
   ALLIANCE = "ALLIANCE",
   TRADE = "TRADE",
   CHAT = "CHAT",
@@ -746,9 +822,9 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ATTACK_CANCELLED]: MessageCategory.ATTACK,
   [MessageType.ATTACK_REQUEST]: MessageCategory.ATTACK,
   [MessageType.CONQUERED_PLAYER]: MessageCategory.ATTACK,
-  [MessageType.MIRV_INBOUND]: MessageCategory.ATTACK,
-  [MessageType.NUKE_INBOUND]: MessageCategory.ATTACK,
-  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.MIRV_INBOUND]: MessageCategory.NUKE,
+  [MessageType.NUKE_INBOUND]: MessageCategory.NUKE,
+  [MessageType.HYDROGEN_BOMB_INBOUND]: MessageCategory.NUKE,
   [MessageType.NAVAL_INVASION_INBOUND]: MessageCategory.ATTACK,
   [MessageType.SAM_MISS]: MessageCategory.ATTACK,
   [MessageType.SAM_HIT]: MessageCategory.ATTACK,
@@ -760,6 +836,7 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.ALLIANCE_REQUEST]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_BROKEN]: MessageCategory.ALLIANCE,
   [MessageType.ALLIANCE_EXPIRED]: MessageCategory.ALLIANCE,
+  [MessageType.RENEW_ALLIANCE]: MessageCategory.ALLIANCE,
   [MessageType.SENT_GOLD_TO_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_PLAYER]: MessageCategory.TRADE,
   [MessageType.RECEIVED_GOLD_FROM_TRADE]: MessageCategory.TRADE,

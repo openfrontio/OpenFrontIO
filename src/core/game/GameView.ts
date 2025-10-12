@@ -1,6 +1,9 @@
+import { Colord, colord } from "colord";
+import { base64url } from "jose";
 import { Config } from "../configuration/Config";
+import { ColorPalette } from "../CosmeticSchemas";
 import { PatternDecoder } from "../PatternDecoder";
-import { ClientID, GameID } from "../Schemas";
+import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
@@ -9,11 +12,9 @@ import {
   GameUpdates,
   Gold,
   NameViewData,
-  Player,
   PlayerActions,
   PlayerBorderTiles,
   PlayerID,
-  PlayerInfo,
   PlayerProfile,
   PlayerType,
   Team,
@@ -26,14 +27,16 @@ import {
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import {
+  AllianceView,
   AttackUpdate,
   GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
   UnitUpdate,
 } from "./GameUpdates";
+import { TerrainMapData } from "./TerrainMapLoader";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid } from "./UnitGrid";
+import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
@@ -41,12 +44,18 @@ const userSettings: UserSettings = new UserSettings();
 export class UnitView {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
+  private _createdAt: Tick;
 
   constructor(
     private gameView: GameView,
     private data: UnitUpdate,
   ) {
     this.lastPos.push(data.pos);
+    this._createdAt = this.gameView.ticks();
+  }
+
+  createdAt(): Tick {
+    return this._createdAt;
   }
 
   wasUpdated(): boolean {
@@ -117,12 +126,40 @@ export class UnitView {
   targetTile(): TileRef | undefined {
     return this.data.targetTile;
   }
-  ticksLeftInCooldown(): Tick | undefined {
-    return this.data.missileTimerQueue?.[0];
+
+  // How "ready" this unit is from 0 to 1.
+  missileReadinesss(): number {
+    const maxMissiles = this.data.level;
+    const missilesReloading = this.data.missileTimerQueue.length;
+
+    if (missilesReloading === 0) {
+      return 1;
+    }
+
+    const missilesReady = maxMissiles - missilesReloading;
+
+    if (missilesReady === 0 && maxMissiles > 1) {
+      // Unless we have just one missile (level 1),
+      // show 0% readiness so user knows no missiles are ready.
+      return 0;
+    }
+
+    let readiness = missilesReady / maxMissiles;
+
+    const cooldownDuration =
+      this.data.unitType === UnitType.SAMLauncher
+        ? this.gameView.config().SAMCooldown()
+        : this.gameView.config().SiloCooldown();
+
+    for (const cooldown of this.data.missileTimerQueue) {
+      const cooldownProgress = this.gameView.ticks() - cooldown;
+      const cooldownRatio = cooldownProgress / cooldownDuration;
+      const adjusted = cooldownRatio / maxMissiles;
+      readiness += adjusted;
+    }
+    return readiness;
   }
-  isInCooldown(): boolean {
-    return this.data.readyMissileCount === 0;
-  }
+
   level(): number {
     return this.data.level;
   }
@@ -141,10 +178,15 @@ export class PlayerView {
   public anonymousName: string | null = null;
   private decoder?: PatternDecoder;
 
+  private _territoryColor: Colord;
+  private _borderColor: Colord;
+  private _defendedBorderColors: { light: Colord; dark: Colord };
+
   constructor(
     private game: GameView,
     public data: PlayerUpdate,
     public nameData: NameViewData,
+    public cosmetics: PlayerCosmetics,
   ) {
     if (data.clientID === game.myClientID()) {
       this.anonymousName = this.data.name;
@@ -154,19 +196,87 @@ export class PlayerView {
         this.data.playerType,
       );
     }
+
+    const defaultTerritoryColor = this.game
+      .config()
+      .theme()
+      .territoryColor(this);
+    const defaultBorderColor = this.game
+      .config()
+      .theme()
+      .borderColor(defaultTerritoryColor);
+
+    const pattern = this.cosmetics.pattern;
+    if (pattern) {
+      pattern.colorPalette ??= {
+        name: "",
+        primaryColor: defaultTerritoryColor.toHex(),
+        secondaryColor: defaultBorderColor.toHex(),
+      } satisfies ColorPalette;
+    }
+
+    if (this.team() === null) {
+      this._territoryColor = colord(
+        this.cosmetics.color?.color ??
+          this.cosmetics.pattern?.colorPalette?.primaryColor ??
+          defaultTerritoryColor.toHex(),
+      );
+    } else {
+      this._territoryColor = defaultTerritoryColor;
+    }
+
+    const maybeFocusedBorderColor =
+      this.game.myClientID() === this.data.clientID
+        ? this.game.config().theme().focusedBorderColor()
+        : defaultBorderColor;
+
+    this._borderColor = new Colord(
+      pattern?.colorPalette?.secondaryColor ??
+        this.cosmetics.color?.color ??
+        maybeFocusedBorderColor.toHex(),
+    );
+
+    this._defendedBorderColors = this.game
+      .config()
+      .theme()
+      .defendedBorderColors(this._borderColor);
+
     this.decoder =
-      data.pattern === undefined ? undefined : new PatternDecoder(data.pattern);
+      this.cosmetics.pattern === undefined
+        ? undefined
+        : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
   }
 
-  patternDecoder(): PatternDecoder | undefined {
-    return this.decoder;
-  }
-
-  async actions(tile: TileRef): Promise<PlayerActions> {
-    return this.game.worker.playerInteraction(
-      this.id(),
+  territoryColor(tile?: TileRef): Colord {
+    if (tile === undefined || this.decoder === undefined) {
+      return this._territoryColor;
+    }
+    const isPrimary = this.decoder.isPrimary(
       this.game.x(tile),
       this.game.y(tile),
+    );
+    return isPrimary ? this._territoryColor : this._borderColor;
+  }
+
+  borderColor(tile?: TileRef, isDefended: boolean = false): Colord {
+    if (tile === undefined || !isDefended) {
+      return this._borderColor;
+    }
+
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    const lightTile =
+      (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
+    return lightTile
+      ? this._defendedBorderColors.light
+      : this._defendedBorderColors.dark;
+  }
+
+  async actions(tile?: TileRef): Promise<PlayerActions> {
+    return this.game.worker.playerInteraction(
+      this.id(),
+      tile && this.game.x(tile),
+      tile && this.game.y(tile),
     );
   }
 
@@ -202,13 +312,6 @@ export class PlayerView {
   smallID(): number {
     return this.data.smallID;
   }
-  flag(): string | undefined {
-    return this.data.flag;
-  }
-
-  pattern(): string | undefined {
-    return this.data.pattern;
-  }
 
   name(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
@@ -236,7 +339,7 @@ export class PlayerView {
   isAlive(): boolean {
     return this.data.isAlive;
   }
-  isPlayer(): this is Player {
+  isPlayer(): this is PlayerView {
     return true;
   }
   numTilesOwned(): number {
@@ -255,17 +358,15 @@ export class PlayerView {
   gold(): Gold {
     return this.data.gold;
   }
-  population(): number {
-    return this.data.population;
-  }
-  workers(): number {
-    return this.data.workers;
-  }
-  targetTroopRatio(): number {
-    return this.data.targetTroopRatio;
-  }
+
   troops(): number {
     return this.data.troops;
+  }
+
+  totalUnitLevels(type: UnitType): number {
+    return this.units(type)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
   }
 
   isAlliedWith(other: PlayerView): boolean {
@@ -284,8 +385,16 @@ export class PlayerView {
     return this.data.outgoingAllianceRequests.some((id) => other.id() === id);
   }
 
+  alliances(): AllianceView[] {
+    return this.data.alliances;
+  }
+
   hasEmbargoAgainst(other: PlayerView): boolean {
     return this.data.embargoes.has(other.id());
+  }
+
+  hasEmbargo(other: PlayerView): boolean {
+    return this.hasEmbargoAgainst(other) || other.hasEmbargoAgainst(this);
   }
 
   profile(): Promise<PlayerProfile> {
@@ -303,24 +412,22 @@ export class PlayerView {
   isTraitor(): boolean {
     return this.data.isTraitor;
   }
+  getTraitorRemainingTicks(): number {
+    return Math.max(0, this.data.traitorRemainingTicks ?? 0);
+  }
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;
   }
-  info(): PlayerInfo {
-    return new PlayerInfo(
-      this.pattern(),
-      this.flag(),
-      this.name(),
-      this.type(),
-      this.clientID(),
-      this.id(),
-    );
-  }
+
   hasSpawned(): boolean {
     return this.data.hasSpawned;
   }
   isDisconnected(): boolean {
     return this.data.isDisconnected;
+  }
+
+  canDeleteUnit(): boolean {
+    return true;
   }
 }
 
@@ -338,16 +445,32 @@ export class GameView implements GameMap {
 
   private toDelete = new Set<number>();
 
+  private _cosmetics: Map<string, PlayerCosmetics> = new Map();
+
+  private _map: GameMap;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,
-    private _map: GameMap,
+    private _mapData: TerrainMapData,
     private _myClientID: ClientID,
     private _gameID: GameID,
+    private humans: Player[],
   ) {
+    this._map = this._mapData.gameMap;
     this.lastUpdate = null;
-    this.unitGrid = new UnitGrid(_map);
+    this.unitGrid = new UnitGrid(this._map);
+    this._cosmetics = new Map(
+      this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
+    );
+    for (const nation of this._mapData.nations) {
+      // Nations don't have client ids, so we use their name as the key instead.
+      this._cosmetics.set(nation.name, {
+        flag: nation.flag,
+      } satisfies PlayerCosmetics);
+    }
   }
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     return this._map.isOnEdgeOfMap(ref);
   }
@@ -379,10 +502,21 @@ export class GameView implements GameMap {
       } else {
         this._players.set(
           pu.id,
-          new PlayerView(this, pu, gu.playerNameViewData[pu.id]),
+          new PlayerView(
+            this,
+            pu,
+            gu.playerNameViewData[pu.id],
+            // First check human by clientID, then check nation by name.
+            this._cosmetics.get(pu.clientID ?? "") ??
+              this._cosmetics.get(pu.name) ??
+              {},
+          ),
         );
       }
     });
+
+    this._myPlayer ??= this.playerByClientID(this._myClientID);
+
     for (const unit of this._units.values()) {
       unit._wasUpdated = false;
       unit.lastPos = unit.lastPos.slice(-1);
@@ -394,11 +528,12 @@ export class GameView implements GameMap {
       } else {
         unit = new UnitView(this, update);
         this._units.set(update.id, unit);
-      }
-      if (update.isActive) {
         this.unitGrid.addUnit(unit);
-      } else {
+      }
+      if (!update.isActive) {
         this.unitGrid.removeUnit(unit);
+      } else if (unit.tile() !== unit.lastTile()) {
+        this.unitGrid.updateUnitCell(unit);
       }
       if (!unit.isActive()) {
         // Wait until next tick to delete the unit.
@@ -415,7 +550,7 @@ export class GameView implements GameMap {
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
-    predicate?: (value: { unit: UnitView; distSquared: number }) => boolean,
+    predicate?: UnitPredicate,
   ): Array<{ unit: UnitView; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
       tile,
@@ -442,9 +577,6 @@ export class GameView implements GameMap {
   }
 
   myPlayer(): PlayerView | null {
-    if (this._myPlayer === null) {
-      this._myPlayer = this.playerByClientID(this._myClientID);
-    }
     return this._myPlayer;
   }
 

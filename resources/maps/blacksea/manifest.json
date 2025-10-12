@@ -1,12 +1,17 @@
 {
   "map": {
     "height": 1100,
-    "num_land_tiles": 1201650,
+    "num_land_tiles": 1153632,
     "width": 1500
   },
-  "mini_map": {
+  "map16x": {
+    "height": 275,
+    "num_land_tiles": 69023,
+    "width": 375
+  },
+  "map4x": {
     "height": 550,
-    "num_land_tiles": 296740,
+    "num_land_tiles": 284219,
     "width": 750
   },
   "name": "BlackSea",
@@ -57,6 +62,12 @@
       "coordinates": [1382, 943],
       "flag": "am",
       "name": "Armenia",
+      "strength": 1
+    },
+    {
+      "coordinates": [1115, 555],
+      "flag": "Circassia",
+      "name": "Circassia",
       "strength": 1
     }
   ]

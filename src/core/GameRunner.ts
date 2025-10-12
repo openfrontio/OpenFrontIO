@@ -4,6 +4,7 @@ import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
+  Attack,
   Cell,
   Game,
   GameUpdates,
@@ -19,6 +20,7 @@ import {
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
+import { GameMapLoader } from "./game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -33,17 +35,20 @@ import { fixProfaneUsername } from "./validations/username";
 export async function createGameRunner(
   gameStart: GameStartInfo,
   clientID: ClientID,
-  callBack: (gu: GameUpdateViewData) => void,
+  mapLoader: GameMapLoader,
+  callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
-  const gameMap = await loadGameMap(gameStart.config.gameMap);
+  const gameMap = await loadGameMap(
+    gameStart.config.gameMap,
+    gameStart.config.gameMapSize,
+    mapLoader,
+  );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map(
     (p) =>
       new PlayerInfo(
-        p.pattern,
-        p.flag,
         p.clientID === clientID
           ? sanitize(p.username)
           : fixProfaneUsername(sanitize(p.username)),
@@ -55,19 +60,12 @@ export async function createGameRunner(
 
   const nations = gameStart.config.disableNPCs
     ? []
-    : gameMap.manifest.nations.map(
+    : gameMap.nations.map(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
             n.strength,
-            new PlayerInfo(
-              undefined,
-              n.flag || "",
-              n.name,
-              PlayerType.FakeHuman,
-              null,
-              random.nextID(),
-            ),
+            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
           ),
       );
 
@@ -181,18 +179,19 @@ export class GameRunner {
 
   public playerActions(
     playerID: PlayerID,
-    x: number,
-    y: number,
+    x?: number,
+    y?: number,
   ): PlayerActions {
     const player = this.game.player(playerID);
-    const tile = this.game.ref(x, y);
+    const tile =
+      x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
-      canAttack: player.canAttack(tile),
+      canAttack: tile !== null && player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 
-    if (this.game.hasOwner(tile)) {
+    if (tile !== null && this.game.hasOwner(tile)) {
       const other = this.game.owner(tile) as Player;
       actions.interaction = {
         sharedBorder: player.sharesBorderWith(other),
@@ -200,17 +199,19 @@ export class GameRunner {
         canTarget: player.canTarget(other),
         canSendAllianceRequest: player.canSendAllianceRequest(other),
         canBreakAlliance: player.isAlliedWith(other),
-        canDonate: player.canDonate(other),
+        canDonateGold: player.canDonateGold(other),
+        canDonateTroops: player.canDonateTroops(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
       };
       const alliance = player.allianceWith(other as Player);
       if (alliance) {
-        actions.interaction.allianceCreatedAtTick = alliance.createdAt();
+        actions.interaction.allianceExpiresAt = alliance.expiresAt();
       }
     }
 
     return actions;
   }
+
   public playerProfile(playerID: number): PlayerProfile {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
@@ -237,7 +238,7 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
 
-    const condition = (a) => a.id() === attackID;
+    const condition = (a: Attack) => a.id() === attackID;
     const attack =
       player.outgoingAttacks().find(condition) ??
       player.incomingAttacks().find(condition);

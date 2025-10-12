@@ -15,6 +15,23 @@ export class HelpModal extends LitElement {
     return this;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
+
   render() {
     return html`
       <o-modal
@@ -121,6 +138,14 @@ export class HelpModal extends LitElement {
                 </td>
                 <td>${translateText("help_modal.action_reset_gfx")}</td>
               </tr>
+              <tr>
+                <td>
+                  <div class="mouse-shell">
+                    <div class="mouse-wheel" id="highlighted-wheel"></div>
+                  </div>
+                </td>
+                <td>${translateText("help_modal.action_auto_upgrade")}</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -166,11 +191,7 @@ export class HelpModal extends LitElement {
           <div>
             <p class="mb-4">${translateText("help_modal.ui_control_desc")}</p>
             <ul>
-              <li class="mb-4">${translateText("help_modal.ui_pop")}</li>
               <li class="mb-4">${translateText("help_modal.ui_gold")}</li>
-              <li class="mb-4">
-                ${translateText("help_modal.ui_troops_workers")}
-              </li>
               <li class="mb-4">
                 ${translateText("help_modal.ui_attack_ratio")}
               </li>
@@ -437,6 +458,11 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.build_port")}</td>
                 <td><div class="icon port-icon"></div></td>
                 <td>${translateText("help_modal.build_port_desc")}</td>
+              </tr>
+              <tr>
+                <td>${translateText("help_modal.build_factory")}</td>
+                <td><div class="icon factory-icon"></div></td>
+                <td>${translateText("help_modal.build_factory_desc")}</td>
               </tr>
               <tr>
                 <td>${translateText("help_modal.build_warship")}</td>

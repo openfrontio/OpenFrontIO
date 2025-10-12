@@ -40,7 +40,6 @@ export class Leaderboard extends LitElement implements Layer {
   players: Entry[] = [];
 
   @property({ type: Boolean }) visible = false;
-  private _shownOnInit = false;
   private showTopFive = true;
 
   @state()
@@ -57,10 +56,6 @@ export class Leaderboard extends LitElement implements Layer {
 
   tick() {
     if (this.game === null) throw new Error("Not initialized");
-    if (!this._shownOnInit && !this.game.inSpawnPhase()) {
-      this._shownOnInit = true;
-      this.updateLeaderboard();
-    }
     if (!this.visible) return;
     if (this.game.ticks() % 10 === 0) {
       this.updateLeaderboard();
@@ -104,13 +99,13 @@ export class Leaderboard extends LitElement implements Layer {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
-    const playersToShow = this.showTopFive ? sorted.slice(0, 5) : sorted;
+    const alivePlayers = sorted.filter((player) => player.isAlive());
+    const playersToShow = this.showTopFive
+      ? alivePlayers.slice(0, 5)
+      : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      let troops = player.troops() / 10;
-      if (!player.isAlive()) {
-        troops = 0;
-      }
+      const troops = player.troops() / 10;
       return {
         name: player.displayName(),
         position: index + 1,
@@ -136,22 +131,21 @@ export class Leaderboard extends LitElement implements Layer {
         }
       }
 
-      let myPlayerTroops = myPlayer.troops() / 10;
-      if (!myPlayer.isAlive()) {
-        myPlayerTroops = 0;
+      if (myPlayer.isAlive()) {
+        const myPlayerTroops = myPlayer.troops() / 10;
+        this.players.pop();
+        this.players.push({
+          name: myPlayer.displayName(),
+          position: place,
+          score: formatPercentage(
+            myPlayer.numTilesOwned() / this.game.numLandTiles(),
+          ),
+          gold: renderNumber(myPlayer.gold()),
+          troops: renderNumber(myPlayerTroops),
+          isMyPlayer: true,
+          player: myPlayer,
+        });
       }
-      this.players.pop();
-      this.players.push({
-        name: myPlayer.displayName(),
-        position: place,
-        score: formatPercentage(
-          myPlayer.numTilesOwned() / this.game.numLandTiles(),
-        ),
-        gold: renderNumber(myPlayer.gold()),
-        troops: renderNumber(myPlayerTroops),
-        isMyPlayer: true,
-        player: myPlayer,
-      });
     }
 
     this.requestUpdate();
@@ -174,35 +168,25 @@ export class Leaderboard extends LitElement implements Layer {
     }
     return html`
       <div
-        class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-sm md:max-h-[50vh]  ${this
+        class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-xs lg:text-sm md:max-h-[50vh]  ${this
           .visible
           ? ""
           : "hidden"}"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
-        <button
-          class="mb-2 px-2 py-1 md:px-2.5 md:py-1.5 text-xs md:text-sm lg:text-base border border-white/20 hover:bg-white/10"
-          @click=${() => {
-            this.showTopFive = !this.showTopFive;
-            this.updateLeaderboard();
-          }}
-        >
-          ${this.showTopFive ? "Show All" : "Show Top 5"}
-        </button>
-
         <div
-          class="grid bg-slate-800/70 w-full text-xs md:text-sm lg:text-base"
-          style="grid-template-columns: 35px 100px 85px 65px 65px;"
+          class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
+          style="grid-template-columns: 30px 100px 70px 55px 75px;"
         >
-          <div class="contents font-bold bg-slate-700/50">
-            <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
+          <div class="contents font-bold bg-gray-700/50">
+            <div class="py-1 md:py-2 text-center border-b border-slate-500">
               #
             </div>
-            <div class="py-1.5 md:py-2.5 text-center border-b border-slate-500">
+            <div class="py-1 md:py-2 text-center border-b border-slate-500">
               ${translateText("leaderboard.player")}
             </div>
             <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("tiles")}
             >
               ${translateText("leaderboard.owned")}
@@ -213,7 +197,7 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("gold")}
             >
               ${translateText("leaderboard.gold")}
@@ -224,7 +208,7 @@ export class Leaderboard extends LitElement implements Layer {
                 : ""}
             </div>
             <div
-              class="py-1.5 md:py-2.5 text-center border-b border-slate-500 cursor-pointer"
+              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("troops")}
             >
               ${translateText("leaderboard.troops")}
@@ -246,29 +230,21 @@ export class Leaderboard extends LitElement implements Layer {
                   : ""} cursor-pointer"
                 @click=${() => this.handleRowClickPlayer(player.player)}
               >
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
+                <div class="py-1 md:py-2 text-center border-b border-slate-500">
                   ${player.position}
                 </div>
                 <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500 truncate"
+                  class="py-1 md:py-2 text-center border-b border-slate-500 truncate"
                 >
                   ${player.name}
                 </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
+                <div class="py-1 md:py-2 text-center border-b border-slate-500">
                   ${player.score}
                 </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
+                <div class="py-1 md:py-2 text-center border-b border-slate-500">
                   ${player.gold}
                 </div>
-                <div
-                  class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
-                >
+                <div class="py-1 md:py-2 text-center border-b border-slate-500">
                   ${player.troops}
                 </div>
               </div>
@@ -276,15 +252,22 @@ export class Leaderboard extends LitElement implements Layer {
           )}
         </div>
       </div>
+
+      <button
+        class="mt-1 px-1.5 py-0.5 md:px-2 md:py-0.5 text-xs md:text-xs lg:text-sm border border-white/20 hover:bg-white/10 text-white mx-auto block"
+        @click=${() => {
+          this.showTopFive = !this.showTopFive;
+          this.updateLeaderboard();
+        }}
+      >
+        ${this.showTopFive ? "+" : "-"}
+      </button>
     `;
   }
 }
 
 function formatPercentage(value: number): string {
   const perc = value * 100;
-  if (perc > 99.5) return "100%";
-  if (perc < 0.01) return "0%";
-  if (perc < 0.1) return perc.toPrecision(1) + "%";
   if (Number.isNaN(perc)) return "0%";
-  return perc.toPrecision(2) + "%";
+  return perc.toFixed(1) + "%";
 }

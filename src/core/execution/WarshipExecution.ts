@@ -27,7 +27,7 @@ export class WarshipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.pathfinder = PathFinder.Mini(mg, 5000);
+    this.pathfinder = PathFinder.Mini(mg, 10_000, true, 100);
     this.random = new PseudoRandom(mg.ticks());
     if (isUnit(this.input)) {
       this.warship = this.input;
@@ -55,7 +55,7 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
-    const hasPort = this.warship.owner().units(UnitType.Port).length > 0;
+    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     if (hasPort) {
       this.warship.modifyHealth(1);
     }
@@ -75,7 +75,7 @@ export class WarshipExecution implements Execution {
   }
 
   private findTargetUnit(): Unit | undefined {
-    const hasPort = this.warship.owner().units(UnitType.Port).length > 0;
+    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
     const ships = this.mg.nearbyUnits(

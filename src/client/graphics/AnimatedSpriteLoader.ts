@@ -1,4 +1,5 @@
 import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
+import conquestSword from "../../../resources/sprites/conquestSword.png";
 import dust from "../../../resources/sprites/dust.png";
 import miniExplosion from "../../../resources/sprites/miniExplosion.png";
 import miniFire from "../../../resources/sprites/minifire.png";
@@ -115,6 +116,15 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     originX: 23,
     originY: 19,
   },
+  [FxType.Conquest]: {
+    url: conquestSword,
+    frameWidth: 21,
+    frameCount: 10,
+    frameDuration: 90,
+    looping: false,
+    originX: 10,
+    originY: 16,
+  },
 };
 
 export class AnimatedSpriteLoader {
@@ -178,8 +188,8 @@ export class AnimatedSpriteLoader {
     const baseImage = this.animatedSpriteImageMap.get(fxType);
     const config = ANIMATED_SPRITE_CONFIG[fxType];
     if (!baseImage || !config) return null;
-    const territoryColor = theme.territoryColor(owner);
-    const borderColor = theme.borderColor(owner);
+    const territoryColor = owner.territoryColor();
+    const borderColor = owner.borderColor();
     const spawnHighlightColor = theme.spawnHighlightColor();
     const key = `${fxType}-${owner.id()}`;
     let coloredCanvas: HTMLCanvasElement;

@@ -2,11 +2,17 @@ import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { COSMETICS } from "../core/CosmeticSchemas";
+import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
-import { PatternDecoder } from "../core/PatternDecoder";
+import { PlayerPattern } from "../core/Schemas";
 import "./components/Difficulties";
-import "./components/Maps";
+import "./components/PatternButton";
+import { renderPatternPreview } from "./components/PatternButton";
+import {
+  fetchCosmetics,
+  handlePurchase,
+  patternRelationship,
+} from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -17,189 +23,98 @@ export class TerritoryPatternsModal extends LitElement {
   };
 
   public previewButton: HTMLElement | null = null;
-  public buttonWidth: number = 100;
 
-  @state() private selectedPattern: string | undefined;
+  @state() private selectedPattern: PlayerPattern | null;
+  @state() private selectedColor: string | null = null;
 
-  @state() private lockedPatterns: string[] = [];
-  @state() private lockedReasons: Record<string, string> = {};
-  @state() private hoveredPattern: string | null = null;
-  @state() private hoverPosition = { x: 0, y: 0 };
+  @state() private activeTab: "patterns" | "colors" = "patterns";
 
-  @state() private keySequence: string[] = [];
-  @state() private showChocoPattern = false;
-
-  public resizeObserver: ResizeObserver;
+  private cosmetics: Cosmetics | null = null;
 
   private userSettings: UserSettings = new UserSettings();
 
+  private isActive = false;
+
+  private affiliateCode: string | null = null;
+
+  private userMeResponse: UserMeResponse | null = null;
+
   constructor() {
     super();
-    this.checkPatternPermission(undefined, undefined);
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    this.selectedPattern = this.userSettings.getSelectedPattern();
-    window.addEventListener("keydown", this.handleKeyDown);
-    this.updateComplete.then(() => {
-      const containers = this.renderRoot.querySelectorAll(".preview-container");
-      if (this.resizeObserver) {
-        containers.forEach((container) =>
-          this.resizeObserver.observe(container),
-        );
-      }
-      this.updatePreview();
-    });
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    window.removeEventListener("keydown", this.handleKeyDown);
-    this.resizeObserver.disconnect();
-  }
-
-  onLogout() {
-    this.checkPatternPermission(undefined, undefined);
-  }
-
-  onUserMe(userMeResponse: UserMeResponse) {
-    const { player } = userMeResponse;
-    const { roles, flares } = player;
-    this.checkPatternPermission(roles, flares);
-  }
-
-  private checkPatternPermission(
-    roles: string[] | undefined,
-    flares: string[] | undefined,
-  ) {
-    this.lockedPatterns = [];
-    this.lockedReasons = {};
-    for (const key in COSMETICS.patterns) {
-      const patternData = COSMETICS.patterns[key];
-      const roleGroup: string[] | string | undefined = patternData.role_group;
-      if (
-        flares !== undefined &&
-        (flares.includes("pattern:*") || flares.includes(`pattern:${key}`))
-      ) {
-        continue;
-      }
-
-      if (!roleGroup || (Array.isArray(roleGroup) && roleGroup.length === 0)) {
-        if (roles === undefined || roles.length === 0) {
-          const reason = translateText("territory_patterns.blocked.login");
-          this.setLockedPatterns([key], reason);
-        }
-        continue;
-      }
-
-      const groupList = Array.isArray(roleGroup) ? roleGroup : [roleGroup];
-      const isAllowed =
-        roles !== undefined &&
-        groupList.some((required) => roles.includes(required));
-
-      if (!isAllowed) {
-        const reason = translateText("territory_patterns.blocked.role", {
-          role: groupList.join(", "),
-        });
-        this.setLockedPatterns([key], reason);
-      }
+  async onUserMe(userMeResponse: UserMeResponse | null) {
+    if (userMeResponse === null) {
+      this.userSettings.setSelectedPatternName(undefined);
+      this.selectedPattern = null;
+      this.selectedColor = null;
     }
-    this.requestUpdate();
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    const key = e.key.toLowerCase();
-    const nextSequence = [...this.keySequence, key].slice(-5);
-    this.keySequence = nextSequence;
-
-    if (nextSequence.join("") === "choco") {
-      this.triggerChocoEasterEgg();
-      this.keySequence = [];
-    }
-  };
-
-  private triggerChocoEasterEgg() {
-    console.log("🍫 Choco pattern unlocked!");
-    this.showChocoPattern = true;
-
-    const popup = document.createElement("div");
-    popup.className = "easter-egg-popup";
-    popup.textContent = "🎉 You unlocked the Choco pattern!";
-    document.body.appendChild(popup);
-
-    setTimeout(() => {
-      popup.remove();
-    }, 5000);
-
-    this.requestUpdate();
+    this.userMeResponse = userMeResponse;
+    this.cosmetics = await fetchCosmetics();
+    this.selectedPattern =
+      this.cosmetics !== null
+        ? this.userSettings.getSelectedPatternName(this.cosmetics)
+        : null;
+    this.selectedColor = this.userSettings.getSelectedColor() ?? null;
+    this.refresh();
   }
 
   createRenderRoot() {
     return this;
   }
 
-  private renderTooltip(): TemplateResult | null {
-    if (this.hoveredPattern && this.lockedReasons[this.hoveredPattern]) {
-      return html`
-        <div
-          class="fixed z-[10000] px-3 py-2 rounded bg-black text-white text-sm pointer-events-none shadow-md"
-          style="top: ${this.hoverPosition.y + 12}px; left: ${this.hoverPosition
-            .x + 12}px;"
-        >
-          ${this.lockedReasons[this.hoveredPattern]}
-        </div>
-      `;
-    }
-    return null;
-  }
-
-  private renderPatternButton(key: string): TemplateResult {
-    const isLocked = this.isPatternLocked(key);
-    const isSelected = this.selectedPattern === key;
-    const name = COSMETICS.patterns[key]?.name ?? "custom";
+  private renderTabNavigation(): TemplateResult {
     return html`
-      <button
-        class="border p-2 rounded-lg shadow text-black dark:text-white text-left
-        ${isSelected
-          ? "bg-blue-500 text-white"
-          : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}
-        ${isLocked ? "opacity-50 cursor-not-allowed" : ""}"
-        style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);"
-        @click=${() => !isLocked && this.selectPattern(key)}
-        @mouseenter=${(e: MouseEvent) => this.handleMouseEnter(key, e)}
-        @mousemove=${(e: MouseEvent) => this.handleMouseMove(e)}
-        @mouseleave=${() => this.handleMouseLeave()}
-      >
-        <div class="text-sm font-bold mb-1">
-          ${translateText(`territory_patterns.pattern.${name}`)}
-        </div>
-        <div
-          class="preview-container"
-          style="
-            width: 100%;
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-          "
+      <div class="flex border-b border-gray-600 mb-4 justify-center">
+        <button
+          class="px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
+            .activeTab === "patterns"
+            ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
+            : "text-gray-400 hover:text-white"}"
+          @click=${() => (this.activeTab = "patterns")}
         >
-          ${this.renderPatternPreview(key, this.buttonWidth, this.buttonWidth)}
-        </div>
-      </button>
+          ${translateText("territory_patterns.title")}
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
+            .activeTab === "colors"
+            ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
+            : "text-gray-400 hover:text-white"}"
+          @click=${() => (this.activeTab = "colors")}
+        >
+          ${translateText("territory_patterns.colors")}
+        </button>
+      </div>
     `;
   }
 
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const key in COSMETICS.patterns) {
-      const value = COSMETICS.patterns[key];
-      if (!this.showChocoPattern && value.name === "choco") continue;
-      const result = this.renderPatternButton(key);
-      buttons.push(result);
+    for (const pattern of Object.values(this.cosmetics?.patterns ?? {})) {
+      const colorPalettes = [...(pattern.colorPalettes ?? []), null];
+      for (const colorPalette of colorPalettes) {
+        const rel = patternRelationship(
+          pattern,
+          colorPalette,
+          this.userMeResponse,
+          this.affiliateCode,
+        );
+        if (rel === "blocked") {
+          continue;
+        }
+        buttons.push(html`
+          <pattern-button
+            .pattern=${pattern}
+            .colorPalette=${this.cosmetics?.colorPalettes?.[
+              colorPalette?.name ?? ""
+            ] ?? null}
+            .requiresPurchase=${rel === "purchasable"}
+            .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
+            .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
+              handlePurchase(p, colorPalette)}
+          ></pattern-button>
+        `);
+      }
     }
 
     return html`
@@ -207,214 +122,125 @@ export class TerritoryPatternsModal extends LitElement {
         class="flex flex-wrap gap-4 p-2"
         style="justify-content: center; align-items: flex-start;"
       >
-        <button
-          class="border p-2 rounded-lg shadow text-black dark:text-white text-left
-          ${this.selectedPattern === undefined
-            ? "bg-blue-500 text-white"
-            : "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"}"
-          style="flex: 0 1 calc(25% - 1rem); max-width: calc(25% - 1rem);"
-          @click=${() => this.selectPattern(undefined)}
-        >
-          <div class="text-sm font-bold mb-1">
-            ${translateText("territory_patterns.pattern.default")}
-          </div>
-          <div
-            class="preview-container"
-            style="
-              width: 100%;
-              aspect-ratio: 1;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              background: #fff;
-              border-radius: 8px;
-              overflow: hidden;
-            "
-          >
-            ${this.renderBlankPreview(this.buttonWidth, this.buttonWidth)}
-          </div>
-        </button>
+        ${this.affiliateCode === null
+          ? html`
+              <pattern-button
+                .pattern=${null}
+                .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
+              ></pattern-button>
+            `
+          : html``}
         ${buttons}
       </div>
     `;
   }
 
-  render() {
+  private renderColorSwatchGrid(): TemplateResult {
+    const hexCodes = (this.userMeResponse?.player.flares ?? [])
+      .filter((flare) => flare.startsWith("color:"))
+      .map((flare) => "#" + flare.split(":")[1]);
     return html`
-      ${this.renderTooltip()}
+      <div class="flex flex-wrap gap-3 p-2 justify-center items-center">
+        ${hexCodes.map(
+          (hexCode) => html`
+            <div
+              class="w-12 h-12 rounded-lg border-2 border-white/30 cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg"
+              style="background-color: ${hexCode};"
+              title="${hexCode}"
+              @click=${() => this.selectColor(hexCode)}
+            ></div>
+          `,
+        )}
+      </div>
+    `;
+  }
+
+  render() {
+    if (!this.isActive) return html``;
+    return html`
       <o-modal
         id="territoryPatternsModal"
-        title="${translateText("territory_patterns.title")}"
+        title="${this.activeTab === "patterns"
+          ? translateText("territory_patterns.title")
+          : translateText("territory_patterns.colors")}"
       >
-        ${this.renderPatternGrid()}
+        ${this.renderTabNavigation()}
+        ${this.activeTab === "patterns"
+          ? this.renderPatternGrid()
+          : this.renderColorSwatchGrid()}
       </o-modal>
     `;
   }
 
-  public open() {
-    this.modalEl?.open();
+  public async open(affiliateCode?: string) {
+    this.isActive = true;
+    this.affiliateCode = affiliateCode ?? null;
+    await this.refresh();
   }
 
   public close() {
+    this.isActive = false;
+    this.affiliateCode = null;
     this.modalEl?.close();
   }
 
-  private selectPattern(pattern: string | undefined) {
-    this.userSettings.setSelectedPattern(pattern);
+  private selectPattern(pattern: PlayerPattern | null) {
+    this.selectedColor = null;
+    this.userSettings.setSelectedColor(undefined);
+    if (pattern === null) {
+      this.userSettings.setSelectedPatternName(undefined);
+    } else {
+      const name =
+        pattern.colorPalette?.name === undefined
+          ? pattern.name
+          : `${pattern.name}:${pattern.colorPalette.name}`;
+
+      this.userSettings.setSelectedPatternName(`pattern:${name}`);
+    }
     this.selectedPattern = pattern;
-    this.updatePreview();
+    this.refresh();
     this.close();
   }
 
-  private renderPatternPreview(
-    pattern: string,
+  private selectColor(hexCode: string) {
+    this.selectedPattern = null;
+    this.userSettings.setSelectedPatternName(undefined);
+    this.selectedColor = hexCode;
+    this.userSettings.setSelectedColor(hexCode);
+    this.refresh();
+    this.close();
+  }
+
+  private renderColorPreview(
+    hexCode: string,
     width: number,
     height: number,
   ): TemplateResult {
-    const decoder = new PatternDecoder(pattern);
-    const cellCountX = decoder.getTileWidth();
-    const cellCountY = decoder.getTileHeight();
-
-    const cellSize =
-      cellCountX > 0 && cellCountY > 0
-        ? Math.min(height / cellCountY, width / cellCountX)
-        : 1;
-
     return html`
       <div
-        style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: ${height}px;
-          width: ${width}px;
-          background-color: #f0f0f0;
-          border-radius: 4px;
-          box-sizing: border-box;
-          overflow: hidden;
-          position: relative;
-        "
-      >
-        <div
-          style="
-            display: grid;
-            grid-template-columns: repeat(${cellCountX}, ${cellSize}px);
-            grid-template-rows: repeat(${cellCountY}, ${cellSize}px);
-            background-color: #ccc;
-            padding: 2px;
-            border-radius: 4px;
-          "
-        >
-          ${(() => {
-            const tiles: TemplateResult[] = [];
-            for (let py = 0; py < cellCountY; py++) {
-              for (let px = 0; px < cellCountX; px++) {
-                const x = px << decoder.getScale();
-                const y = py << decoder.getScale();
-                const bit = decoder.isSet(x, y);
-                tiles.push(html`
-                  <div
-                    style="
-                      background-color: ${bit ? "#000" : "transparent"};
-                      border: 1px solid rgba(0, 0, 0, 0.1);
-                      width: ${cellSize}px;
-                      height: ${cellSize}px;
-                      border-radius: 1px;
-                    "
-                  ></div>
-                `);
-              }
-            }
-            return tiles;
-          })()}
-        </div>
-      </div>
+        class="rounded"
+        style="width: ${width}px; height: ${height}px; background-color: ${hexCode};"
+      ></div>
     `;
   }
 
-  private renderBlankPreview(width: number, height: number): TemplateResult {
-    return html`
-      <div
-        style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: ${height}px;
-          width: ${width}px;
-          background-color: #ffffff;
-          border-radius: 4px;
-          box-sizing: border-box;
-          overflow: hidden;
-          position: relative;
-          border: 1px solid #ccc;
-        "
-      >
-        <div
-          style="display: grid; grid-template-columns: repeat(2, ${width /
-          2}px); grid-template-rows: repeat(2, ${height / 2}px);"
-        >
-          <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
-          ></div>
-          <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
-          ></div>
-          <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
-          ></div>
-          <div
-            style="background-color: #fff; border: 1px solid rgba(0, 0, 0, 0.1); width: ${width /
-            2}px; height: ${height / 2}px;"
-          ></div>
-        </div>
-      </div>
-    `;
-  }
+  public async refresh() {
+    const preview = this.selectedColor
+      ? this.renderColorPreview(this.selectedColor, 48, 48)
+      : renderPatternPreview(this.selectedPattern ?? null, 48, 48);
+    this.requestUpdate();
 
-  public updatePreview() {
+    // Wait for the DOM to be updated and the o-modal element to be available
+    await this.updateComplete;
+
+    // Now modalEl should be available
+    if (this.modalEl) {
+      this.modalEl.open();
+    } else {
+      console.warn("modalEl is still null after updateComplete");
+    }
     if (this.previewButton === null) return;
-    const preview =
-      this.selectedPattern === undefined
-        ? this.renderBlankPreview(48, 48)
-        : this.renderPatternPreview(this.selectedPattern, 48, 48);
     render(preview, this.previewButton);
-  }
-
-  private setLockedPatterns(lockedPatterns: string[], reason: string) {
-    this.lockedPatterns = [...this.lockedPatterns, ...lockedPatterns];
-    this.lockedReasons = {
-      ...this.lockedReasons,
-      ...lockedPatterns.reduce(
-        (acc, key) => {
-          acc[key] = reason;
-          return acc;
-        },
-        {} as Record<string, string>,
-      ),
-    };
-  }
-
-  private isPatternLocked(patternKey: string): boolean {
-    return this.lockedPatterns.includes(patternKey);
-  }
-
-  private handleMouseEnter(patternKey: string, event: MouseEvent) {
-    if (this.isPatternLocked(patternKey)) {
-      this.hoveredPattern = patternKey;
-      this.hoverPosition = { x: event.clientX, y: event.clientY };
-    }
-  }
-
-  private handleMouseMove(event: MouseEvent) {
-    if (this.hoveredPattern) {
-      this.hoverPosition = { x: event.clientX, y: event.clientY };
-    }
-  }
-
-  private handleMouseLeave() {
-    this.hoveredPattern = null;
+    this.requestUpdate();
   }
 }

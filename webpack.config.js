@@ -87,10 +87,17 @@ export default async (env, argv) => {
           },
         },
         {
-          test: /\.(woff|woff2|eot|ttf|otf)$/,
+          test: /\.(woff|woff2|eot|ttf|otf|xml)$/,
           type: "asset/resource", // Changed from file-loader
           generator: {
             filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
+          },
+        },
+        {
+          test: /\.(mp3|wav|ogg)$/i,
+          type: "asset/resource",
+          generator: {
+            filename: "sounds/[name].[contenthash][ext]",
           },
         },
       ],
@@ -126,11 +133,20 @@ export default async (env, argv) => {
         ),
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
         "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
+        "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
+          process.env.STRIPE_PUBLISHABLE_KEY,
+        ),
+        "process.env.API_DOMAIN": JSON.stringify(process.env.API_DOMAIN),
       }),
       new CopyPlugin({
         patterns: [
           {
             from: path.resolve(__dirname, "resources"),
+            to: path.resolve(__dirname, "static"),
+            noErrorOnMissing: true,
+          },
+          {
+            from: path.resolve(__dirname, "proprietary"),
             to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,
           },

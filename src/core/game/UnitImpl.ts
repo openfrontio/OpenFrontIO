@@ -5,6 +5,7 @@ import {
   Player,
   Tick,
   TrainType,
+  TrajectoryTile,
   Unit,
   UnitInfo,
   UnitType,
@@ -27,14 +28,17 @@ export class UnitImpl implements Unit {
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
+  // Number of missiles in cooldown, if empty all missiles are ready.
   private _missileTimerQueue: number[] = [];
-  private _readyMissileCount: number = 1;
   private _hasTrainStation: boolean = false;
   private _patrolTile: TileRef | undefined;
   private _level: number = 1;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
   private _trainType: TrainType | undefined;
+  // Nuke only
+  private _trajectoryIndex: number = 0;
+  private _trajectory: TrajectoryTile[];
 
   constructor(
     private _type: UnitType,
@@ -48,6 +52,7 @@ export class UnitImpl implements Unit {
     this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
     this._targetTile =
       "targetTile" in params ? (params.targetTile ?? undefined) : undefined;
+    this._trajectory = "trajectory" in params ? (params.trajectory ?? []) : [];
     this._troops = "troops" in params ? (params.troops ?? 0) : 0;
     this._lastSetSafeFromPirates =
       "lastSetSafeFromPirates" in params
@@ -128,7 +133,6 @@ export class UnitImpl implements Unit {
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
-      readyMissileCount: this._readyMissileCount,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
@@ -148,10 +152,9 @@ export class UnitImpl implements Unit {
     if (tile === null) {
       throw new Error("tile cannot be null");
     }
-    this.mg.removeUnit(this);
     this._lastTile = this._tile;
     this._tile = tile;
-    this.mg.addUnit(this);
+    this.mg.updateUnitTile(this);
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -249,6 +252,7 @@ export class UnitImpl implements Unit {
         case UnitType.Port:
         case UnitType.SAMLauncher:
         case UnitType.Warship:
+        case UnitType.Factory:
           this.mg.stats().unitDestroy(destroyer, this._type);
           this.mg.stats().unitLose(this.owner(), this._type);
           break;
@@ -296,7 +300,6 @@ export class UnitImpl implements Unit {
 
   launch(): void {
     this._missileTimerQueue.push(this.mg.ticks());
-    this._readyMissileCount--;
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -305,12 +308,15 @@ export class UnitImpl implements Unit {
   }
 
   isInCooldown(): boolean {
-    return this._readyMissileCount === 0;
+    return this._missileTimerQueue.length === this._level;
+  }
+
+  missileTimerQueue(): number[] {
+    return this._missileTimerQueue;
   }
 
   reloadMissile(): void {
     this._missileTimerQueue.shift();
-    this._readyMissileCount++;
     this.mg.addUpdate(this.toUpdate());
   }
 
@@ -320,6 +326,19 @@ export class UnitImpl implements Unit {
 
   targetTile(): TileRef | undefined {
     return this._targetTile;
+  }
+
+  setTrajectoryIndex(i: number): void {
+    const max = this._trajectory.length - 1;
+    this._trajectoryIndex = i < 0 ? 0 : i > max ? max : i;
+  }
+
+  trajectoryIndex(): number {
+    return this._trajectoryIndex;
+  }
+
+  trajectory(): TrajectoryTile[] {
+    return this._trajectory;
   }
 
   setTargetUnit(target: Unit | undefined): void {
@@ -373,7 +392,19 @@ export class UnitImpl implements Unit {
   increaseLevel(): void {
     this._level++;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
-      this._readyMissileCount++;
+      this._missileTimerQueue.push(this.mg.ticks());
+    }
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  decreaseLevel(destroyer?: Player): void {
+    this._level--;
+    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+      this._missileTimerQueue.pop();
+    }
+    if (this._level <= 0) {
+      this.delete(true, destroyer);
+      return;
     }
     this.mg.addUpdate(this.toUpdate());
   }

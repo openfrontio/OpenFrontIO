@@ -20,21 +20,43 @@ export default [
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
+    languageOptions: {
+      parserOptions: {
+        projectService: {
+          allowDefaultProject: [
+            "__mocks__/fileMock.js",
+            "eslint.config.js",
+            "jest.config.ts",
+            "postcss.config.js",
+            "tailwind.config.js",
+            "webpack.config.js",
+          ],
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
     rules: {
       // Disable rules that would fail. The failures should be fixed, and the entries here removed.
-      "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/no-unused-expressions": "off",
-      "@typescript-eslint/no-unused-vars": "off",
-      "no-case-declarations": "off",
-      "no-useless-escape": "off",
+      "no-unused-vars": "off",
     },
   },
   {
     rules: {
       // Enable rules
+      "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
+      "no-case-declarations": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "none",
+          caughtErrors: "none",
+        },
+      ],
     },
   },
 ];

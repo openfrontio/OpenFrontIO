@@ -5,19 +5,23 @@ import { translateText } from "../client/Utils";
 import {
   Difficulty,
   Duos,
+  GameMapSize,
   GameMapType,
   GameMode,
   GameType,
+  Quads,
+  Trios,
   UnitType,
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
+import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
@@ -35,16 +39,34 @@ export class SinglePlayerModal extends LitElement {
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
+  @state() private compactMap: boolean = false;
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
-  @state() private teamCount: number | typeof Duos = 2;
+  @state() private teamCount: TeamCountConfig = 2;
 
   @state() private disabledUnits: UnitType[] = [];
 
   private userSettings: UserSettings = new UserSettings();
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.handleKeyDown);
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyDown);
+    super.disconnectedCallback();
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === "Escape") {
+      e.preventDefault();
+      this.close();
+    }
+  };
 
   render() {
     return html`
@@ -66,7 +88,9 @@ export class SinglePlayerModal extends LitElement {
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
                         const mapKey = Object.keys(GameMapType).find(
-                          (key) => GameMapType[key] === mapValue,
+                          (key) =>
+                            GameMapType[key as keyof typeof GameMapType] ===
+                            mapValue,
                         );
                         return html`
                           <div
@@ -127,9 +151,7 @@ export class SinglePlayerModal extends LitElement {
                         .difficultyKey=${key}
                       ></difficulty-display>
                       <p class="option-card-title">
-                        ${translateText(
-                          `difficulty.${DifficultyDescription[key]}`,
-                        )}
+                        ${translateText(`difficulty.${key}`)}
                       </p>
                     </div>
                   `,
@@ -173,7 +195,7 @@ export class SinglePlayerModal extends LitElement {
                     ${translateText("host_modal.team_count")}
                   </div>
                   <div class="option-cards">
-                    ${["Duos", 2, 3, 4, 5, 6, 7].map(
+                    ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
                       (o) => html`
                         <div
                           class="option-card ${this.teamCount === o
@@ -181,7 +203,11 @@ export class SinglePlayerModal extends LitElement {
                             : ""}"
                           @click=${() => this.handleTeamCountSelection(o)}
                         >
-                          <div class="option-card-title">${o}</div>
+                          <div class="option-card-title">
+                            ${typeof o === "string"
+                              ? translateText(`public_lobby.teams_${o}`)
+                              : translateText(`public_lobby.teams`, { num: o })}
+                          </div>
                         </div>
                       `,
                     )}
@@ -274,6 +300,21 @@ export class SinglePlayerModal extends LitElement {
                 />
                 <div class="option-card-title">
                   ${translateText("single_modal.infinite_troops")}
+                </div>
+              </label>
+              <label
+                for="singleplayer-modal-compact-map"
+                class="option-card ${this.compactMap ? "selected" : ""}"
+              >
+                <div class="checkbox-icon"></div>
+                <input
+                  type="checkbox"
+                  id="singleplayer-modal-compact-map"
+                  @change=${this.handleCompactMapChange}
+                  .checked=${this.compactMap}
+                />
+                <div class="option-card-title">
+                  ${translateText("single_modal.compact_map")}
                 </div>
               </label>
               <label
@@ -385,6 +426,10 @@ export class SinglePlayerModal extends LitElement {
     this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
   }
 
+  private handleCompactMapChange(e: Event) {
+    this.compactMap = Boolean((e.target as HTMLInputElement).checked);
+  }
+
   private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
     if (["-", "+", "e"].includes(e.key)) {
       e.preventDefault();
@@ -411,8 +456,8 @@ export class SinglePlayerModal extends LitElement {
     this.gameMode = value;
   }
 
-  private handleTeamCountSelection(value: number | string) {
-    this.teamCount = value === "Duos" ? Duos : Number(value);
+  private handleTeamCountSelection(value: TeamCountConfig) {
+    this.teamCount = value;
   }
 
   private getRandomMap(): GameMapType {
@@ -428,14 +473,14 @@ export class SinglePlayerModal extends LitElement {
       : this.disabledUnits.filter((u) => u !== unit);
   }
 
-  private startGame() {
+  private async startGame() {
     // If random map is selected, choose a random map now
     if (this.useRandomMap) {
       this.selectedMap = this.getRandomMap();
     }
 
     console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     const clientID = generateID();
     const gameID = generateID();
@@ -451,6 +496,14 @@ export class SinglePlayerModal extends LitElement {
     if (!flagInput) {
       console.warn("Flag input element not found");
     }
+    const cosmetics = await fetchCosmetics();
+    let selectedPattern = this.userSettings.getSelectedPatternName(cosmetics);
+    selectedPattern ??= cosmetics
+      ? (this.userSettings.getDevOnlyPattern() ?? null)
+      : null;
+
+    const selectedColor = this.userSettings.getSelectedColor();
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -462,15 +515,21 @@ export class SinglePlayerModal extends LitElement {
               {
                 clientID,
                 username: usernameInput.getCurrentUsername(),
-                flag:
-                  flagInput.getCurrentFlag() === "xx"
-                    ? ""
-                    : flagInput.getCurrentFlag(),
-                pattern: this.userSettings.getSelectedPattern(),
+                cosmetics: {
+                  flag:
+                    flagInput.getCurrentFlag() === "xx"
+                      ? ""
+                      : flagInput.getCurrentFlag(),
+                  pattern: selectedPattern ?? undefined,
+                  color: selectedColor ? { color: selectedColor } : undefined,
+                },
               },
             ],
             config: {
               gameMap: this.selectedMap,
+              gameMapSize: this.compactMap
+                ? GameMapSize.Compact
+                : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
@@ -479,6 +538,8 @@ export class SinglePlayerModal extends LitElement {
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
+              donateGold: true,
+              donateTroops: true,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
               disabledUnits: this.disabledUnits

@@ -9,7 +9,7 @@ export function canBuildTransportShip(
   tile: TileRef,
 ): TileRef | false {
   if (
-    player.units(UnitType.TransportShip).length >= game.config().boatMaxNumber()
+    player.unitCount(UnitType.TransportShip) >= game.config().boatMaxNumber()
   ) {
     return false;
   }
@@ -148,7 +148,7 @@ export function bestShoreDeploymentSource(
   if (t === null) return false;
 
   const candidates = candidateShoreTiles(gm, player, t);
-  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 500_000, 1);
+  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 1);
   const result = aStar.compute();
   if (result !== PathFindResultType.Completed) {
     console.warn(`bestShoreDeploymentSource: path not found: ${result}`);

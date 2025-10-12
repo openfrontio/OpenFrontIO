@@ -1,12 +1,17 @@
 {
   "map": {
     "height": 1968,
-    "num_land_tiles": 2291474,
+    "num_land_tiles": 2239818,
     "width": 2216
   },
-  "mini_map": {
+  "map16x": {
+    "height": 492,
+    "num_land_tiles": 136295,
+    "width": 554
+  },
+  "map4x": {
     "height": 984,
-    "num_land_tiles": 568298,
+    "num_land_tiles": 555003,
     "width": 1108
   },
   "name": "GatewayToTheAtlantic",
@@ -80,7 +85,7 @@
     {
       "coordinates": [1609, 1837],
       "flag": "dz",
-      "name": "People's Republic of Algeria'",
+      "name": "Algeria",
       "strength": 2
     },
     {

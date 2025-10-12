@@ -11,4 +11,13 @@ export const preprodConfig = new (class extends DefaultServerConfig {
   jwtAudience(): string {
     return "openfront.dev";
   }
+  allowedFlares(): string[] | undefined {
+    return undefined;
+    // TODO: Uncomment this after testing.
+    // Allow access without login for now to test
+    // the new login flow.
+    // return [
+    //   // "access:openfront.dev"
+    // ];
+  }
 })();
