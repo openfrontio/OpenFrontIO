@@ -18,22 +18,6 @@ describe("WinCheckExecution", () => {
     winCheck.init(mg, 0);
   });
 
-  it("should initialize timer if maxTimerValue is set", () => {
-    expect((winCheck as any).timer).toBe(300);
-  });
-
-  it("should decrement timer every 10 ticks", () => {
-    const initialTimer = (winCheck as any).timer;
-    winCheck.tick(10);
-    expect((winCheck as any).timer).toBe(initialTimer - 1);
-  });
-
-  it("should not decrement timer if ticks is not a multiple of 10", () => {
-    const initialTimer = (winCheck as any).timer;
-    winCheck.tick(7);
-    expect((winCheck as any).timer).toBe(initialTimer);
-  });
-
   it("should call checkWinnerFFA in FFA mode", () => {
     const spy = jest.spyOn(winCheck as any, "checkWinnerFFA");
     winCheck.tick(10);
@@ -67,7 +51,6 @@ describe("WinCheckExecution", () => {
   });
 
   it("should set winner in FFA if timer is 0", () => {
-    (winCheck as any).timer = 0; // Simulate timer reaching 0
     const player = {
       numTilesOwned: jest.fn(() => 10),
       name: jest.fn(() => "P1"),
@@ -76,6 +59,15 @@ describe("WinCheckExecution", () => {
     mg.numLandTiles = jest.fn(() => 100);
     mg.numTilesWithFallout = jest.fn(() => 0);
     mg.stats = jest.fn(() => ({ stats: () => ({ mocked: true }) }));
+    // Advance ticks until timeElapsed (in seconds) >= maxTimerValue * 60
+    // timeElapsed = (ticks - numSpawnPhaseTurns) / 10  =>
+    // ticks >= numSpawnPhaseTurns + maxTimerValue * 600
+    const threshold =
+      mg.config().numSpawnPhaseTurns() +
+      (mg.config().gameConfig().maxTimerValue ?? 0) * 600;
+    while (mg.ticks() < threshold) {
+      mg.executeNextTick();
+    }
     winCheck.checkWinnerFFA();
     expect(mg.setWinner).toHaveBeenCalledWith(player, expect.any(Object));
   });
