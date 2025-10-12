@@ -14,6 +14,7 @@ import {
   GameID,
   ID,
   PartialGameRecordSchema,
+  ServerAuthFinishedMessage,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
@@ -413,6 +414,12 @@ export async function startWorker() {
           // Handle game not found case
         }
 
+        ws.send(
+          JSON.stringify({
+            type: "authentication-finished",
+            success: true,
+          } satisfies ServerAuthFinishedMessage),
+        );
         // Handle other message types
       } catch (error) {
         ws.close(1011, "Internal server error");
