@@ -132,6 +132,10 @@
     "enables_title": "설정 활성화",
     "start": "게임 시작하기"
   },
+  "slider": {
+    "label": "봇:",
+    "disabled": "사용 안 함"
+  },
   "map": {
     "map": "지도",
     "world": "세계",

@@ -311,26 +311,17 @@ export class HostLobbyModal extends LitElement {
               ${translateText("host_modal.options_title")}
             </div>
             <div class="option-cards">
-              <label for="bots-count" class="option-card">
-                <input
-                  type="range"
-                  id="bots-count"
-                  min="0"
-                  max="400"
-                  step="1"
-                  @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
-                />
-                <div class="option-card-title">
-                  <span>${translateText("host_modal.bots")}</span>${
-                    this.bots === 0
-                      ? translateText("host_modal.bots_disabled")
-                      : this.bots
-                  }
-                </div>
-              </label>
-
+                <label for="bots-count" class="option-card">
+                <!-- Slider -->
+                  <fluent-slider
+                    .value=${this.bots}
+                    .min=${0}
+                    .max=${400}
+                    .step=${1}
+                    ariaLabel=${translateText("single_modal.bots")}
+                    @input=${this.handleBotsChange}
+                  ></fluent-slider>
+                </label>
                 <label
                   for="disable-npcs"
                   class="option-card ${this.disableNPCs ? "selected" : ""}"
