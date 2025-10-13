@@ -145,7 +145,7 @@ export class TransportShipExecution implements Execution {
       mg.displayIncomingUnit(
         this.boat.id(),
         translateText("incoming_attacks.naval_invasion_inbound", {
-          playerName: this.attacker.displayName(),
+          playerName: this.attacker.name(),
         }),
         MessageType.NAVAL_INVASION_INBOUND,
         this.targetID,
