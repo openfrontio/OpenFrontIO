@@ -626,17 +626,17 @@
     "available_tooltip": "Your current available troops",
     "min_keep": "Min keep",
     "min_keep_pct": "(30%)",
-    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "slider_tooltip": "{percent}% • {amount}",
     "toggle_attack_bar_mode": "Use attack bar to send troops",
     "warning_attackbar": "Once enabled, you can't open this modal directly. You'll only send troops via the attack bar.",
     "aria_slider": "Troops slider",
-    "capacity_note": "Receiver can accept only {{amount}} right now."
+    "capacity_note": "Receiver can accept only {amount} right now."
   },
   "send_gold_modal": {
     "title_with_name": "Send Gold to {name}",
     "available_tooltip": "Your current available gold",
     "aria_slider": "Amount slider",
-    "slider_tooltip": "{{percent}}% • {{amount}}"
+    "slider_tooltip": "{percent}% • {amount}"
   },
   "replay_panel": {
     "replay_speed": "Replay speed",
