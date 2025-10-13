@@ -786,5 +786,11 @@
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
+  },
+  "incoming_attacks": {
+    "atom_bomb_inbound": "{playerName} - atom bomb inbound",
+    "hydrogen_bomb_inbound": "{playerName} - hydrogen bomb inbound",
+    "mirv_inbound": "⚠️⚠️⚠️ {playerName} - MIRV INBOUND ⚠️⚠️⚠️",
+    "naval_invasion_inbound": "Naval invasion incoming from {playerName}"
   }
 }

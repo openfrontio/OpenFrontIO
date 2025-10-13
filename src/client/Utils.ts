@@ -97,6 +97,16 @@ export const translateText = (
   self.formatterCache ??= new Map();
   self.lastLang ??= null;
 
+  // Check if we're in a browser environment
+  if (typeof document === "undefined") {
+    // Return formatted string with params for non-browser environments (e.g., tests)
+    let message = key;
+    for (const [paramKey, paramValue] of Object.entries(params)) {
+      message = message.replace(`{${paramKey}}`, String(paramValue));
+    }
+    return message;
+  }
+
   const langSelector = document.querySelector("lang-selector") as LangSelector;
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
