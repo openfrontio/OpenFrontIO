@@ -659,3 +659,24 @@ specific requirements.
 if any, to sign a "copyright disclaimer" for the program, if necessary.
 For more information on this, and how to apply and follow the GNU AGPL, see
 <https://www.gnu.org/licenses/>.
+
+
+=== ADDITIONAL TERMS (AGPL v3 Section 7) ===
+
+Attribution Requirement:
+All versions of this software must prominently display one of the following 
+on the main menu/UI screen:
+- "Based on OpenFront"
+- "Derived from OpenFront"
+- "Powered by OpenFront"
+- "Fork of OpenFront"
+
+The attribution must be clearly visible and may not imply the 
+fork is the original OpenFront or officially endorsed. Forks may 
+add their own project name (e.g., "SuperGame - Based on OpenFront")
+but may not use "OpenFront" as the primary title or imply official
+status.
+
+Trademark Notice:
+"OpenFront" is a registered trademark. Use of the trademark must 
+comply with applicable trademark law.
