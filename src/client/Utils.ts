@@ -97,6 +97,17 @@ export const translateText = (
   self.formatterCache ??= new Map();
   self.lastLang ??= null;
 
+  // Check if we're in a browser environment
+  if (typeof document === "undefined") {
+    // Non-browser fallback: simple placeholder substitution only.
+    // Does NOT support ICU features (plurals, select, etc.) - use for basic test mocking.
+    let message = key;
+    for (const [paramKey, paramValue] of Object.entries(params)) {
+      message = message.replace(`{${paramKey}}`, String(paramValue));
+    }
+    return message;
+  }
+
   const langSelector = document.querySelector("lang-selector") as LangSelector;
   if (!langSelector) {
     console.warn("LangSelector not found in DOM");
