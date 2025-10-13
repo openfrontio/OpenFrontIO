@@ -28,6 +28,7 @@ export class AccountModal extends LitElement {
   };
 
   @state() private email: string = "";
+  @state() private isLoadingUser: boolean = false;
 
   private loggedInEmail: string | null = null;
   private loggedInDiscord: string | null = null;
@@ -73,6 +74,16 @@ export class AccountModal extends LitElement {
   }
 
   private renderInner() {
+    if (this.isLoadingUser) {
+      return html`
+        <div class="flex flex-col items-center justify-center p-6 text-white">
+          <p class="mb-2">Fetching account information...</p>
+          <div
+            class="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"
+          ></div>
+        </div>
+      `;
+    }
     if (this.loggedInDiscord) {
       return this.renderLoggedInDiscord();
     } else if (this.loggedInEmail) {
@@ -267,13 +278,27 @@ export class AccountModal extends LitElement {
     discordLogin();
   }
 
-  public async open() {
-    const userMe = await getUserMe();
-    if (userMe) {
-      this.loggedInEmail = userMe.user.email ?? null;
-      this.loggedInDiscord = userMe.user.discord?.global_name ?? null;
-    }
+  public open() {
     this.modalEl?.open();
+    this.isLoadingUser = true;
+
+    void getUserMe()
+      .then((userMe) => {
+        if (userMe) {
+          this.loggedInEmail = userMe.user.email ?? null;
+          this.loggedInDiscord = userMe.user.discord?.global_name ?? null;
+        } else {
+          this.loggedInEmail = null;
+          this.loggedInDiscord = null;
+        }
+        this.isLoadingUser = false;
+        this.requestUpdate();
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch user info in AccountModal.open():", err);
+        this.isLoadingUser = false;
+        this.requestUpdate();
+      });
     this.requestUpdate();
   }
 
