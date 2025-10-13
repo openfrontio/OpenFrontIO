@@ -439,7 +439,7 @@ export class SinglePlayerModal extends LitElement {
   private handleMaxTimerValueChanges(e: Event) {
     (e.target as HTMLInputElement).value = (
       e.target as HTMLInputElement
-    ).value.replace(/[e\+\-]/gi, "");
+    ).value.replace(/[e+-]/gi, "");
     const value = parseInt((e.target as HTMLInputElement).value);
 
     if (isNaN(value) || value < 0 || value > 120) {
