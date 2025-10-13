@@ -77,7 +77,7 @@ export class AccountModal extends LitElement {
     if (this.isLoadingUser) {
       return html`
         <div class="flex flex-col items-center justify-center p-6 text-white">
-          <p class="mb-2">Fetching account information...</p>
+          <p class="mb-2">${translateText("account_modal.fetching_account")}</p>
           <div
             class="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"
           ></div>
