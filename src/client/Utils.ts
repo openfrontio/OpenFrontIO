@@ -1,5 +1,6 @@
 import IntlMessageFormat from "intl-messageformat";
 import { MessageType } from "../core/game/Game";
+import Countries from "./data/countries.json";
 import { LangSelector } from "./LangSelector";
 
 export function renderDuration(totalSeconds: number): string {
@@ -144,6 +145,22 @@ export const translateText = (
     console.warn("ICU format error", e);
     return message;
   }
+};
+
+export const translateCountry = (code: string): string => {
+  const langSelector = document.querySelector("lang-selector") as any;
+
+  const lang = langSelector?.currentLang;
+  const cur = langSelector?.countryMap?.[lang]?.[code];
+  if (cur) return cur;
+
+  // if not found, retrieve from countries.json
+  const hit = (Countries as Array<{ code: string; name: string }>).find(
+    (c) => c.code === code || c.code?.toLowerCase?.() === code?.toLowerCase?.(),
+  );
+  if (hit?.name) return hit.name;
+
+  return code;
 };
 
 /**

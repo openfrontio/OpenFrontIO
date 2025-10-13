@@ -2,38 +2,43 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
-import ar from "../../resources/lang/ar.json";
-import bg from "../../resources/lang/bg.json";
-import bn from "../../resources/lang/bn.json";
-import cs from "../../resources/lang/cs.json";
-import da from "../../resources/lang/da.json";
-import de from "../../resources/lang/de.json";
-import en from "../../resources/lang/en.json";
-import eo from "../../resources/lang/eo.json";
-import es from "../../resources/lang/es.json";
-import fi from "../../resources/lang/fi.json";
-import fr from "../../resources/lang/fr.json";
-import gl from "../../resources/lang/gl.json";
-import he from "../../resources/lang/he.json";
-import hi from "../../resources/lang/hi.json";
-import hu from "../../resources/lang/hu.json";
-import it from "../../resources/lang/it.json";
-import ja from "../../resources/lang/ja.json";
-import ko from "../../resources/lang/ko.json";
-import mk from "../../resources/lang/mk.json";
-import nl from "../../resources/lang/nl.json";
-import pl from "../../resources/lang/pl.json";
-import pt_BR from "../../resources/lang/pt-BR.json";
-import pt_PT from "../../resources/lang/pt-PT.json";
-import ru from "../../resources/lang/ru.json";
-import sh from "../../resources/lang/sh.json";
-import sk from "../../resources/lang/sk.json";
-import sl from "../../resources/lang/sl.json";
-import sv_SE from "../../resources/lang/sv-SE.json";
-import tp from "../../resources/lang/tp.json";
-import tr from "../../resources/lang/tr.json";
-import uk from "../../resources/lang/uk.json";
-import zh_CN from "../../resources/lang/zh-CN.json";
+// Dynamically import all language JSON files
+function getLanguageMap() {
+  const map: Record<string, Record<string, any>> = {};
+  const ctx: any = (require as any).context(
+    "../../resources/lang",
+    true,
+    /main\.json$/,
+  );
+  ctx.keys().forEach((key: string) => {
+    const mod: any = ctx(key);
+    const json = mod?.default ?? mod;
+    const parts = key.split("/");
+    if (parts.length < 3) return;
+    const code = parts[1];
+    map[code] = json ?? {};
+  });
+  return map;
+}
+
+// Dynamically import all country JSON files
+function getCountryMap() {
+  const map: Record<string, Record<string, string>> = {};
+  const ctx: any = (require as any).context(
+    "../../resources/lang",
+    true,
+    /country\.json$/,
+  );
+  ctx.keys().forEach((key: string) => {
+    const mod: any = ctx(key);
+    const json = mod?.default ?? mod;
+    const parts = key.split("/");
+    if (parts.length < 3) return;
+    const code = parts[1];
+    map[code] = (json as Record<string, string>) ?? {};
+  });
+  return map;
+}
 
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
@@ -46,40 +51,8 @@ export class LangSelector extends LitElement {
 
   private debugKeyPressed: boolean = false;
 
-  private languageMap: Record<string, any> = {
-    ar,
-    bg,
-    bn,
-    de,
-    en,
-    es,
-    eo,
-    fr,
-    it,
-    hi,
-    hu,
-    ja,
-    nl,
-    pl,
-    "pt-PT": pt_PT,
-    "pt-BR": pt_BR,
-    ru,
-    sh,
-    tr,
-    tp,
-    uk,
-    cs,
-    he,
-    da,
-    fi,
-    "sv-SE": sv_SE,
-    "zh-CN": zh_CN,
-    ko,
-    mk,
-    gl,
-    sl,
-    sk,
-  };
+  private languageMap: Record<string, any> = getLanguageMap();
+  private countryMap: Record<string, Record<string, string>> = getCountryMap();
 
   createRenderRoot() {
     return this;

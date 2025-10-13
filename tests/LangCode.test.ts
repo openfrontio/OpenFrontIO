@@ -1,27 +1,28 @@
 import fs from "fs";
 import path from "path";
 
-describe("LangCode Filename Check", () => {
-  const langDir = path.join(__dirname, "../resources/lang");
+describe("LangCode Directory Check", () => {
+  const langRoot = path.join(__dirname, "../resources/lang");
 
-  test("lang_code matches filename", () => {
-    const files = fs
-      .readdirSync(langDir)
-      .filter((file) => file.endsWith(".json"));
+  test("lang.lang_code matches directory name", () => {
+    const entries = fs
+      .readdirSync(langRoot, { withFileTypes: true })
+      .filter((e) => e.isDirectory());
 
-    if (files.length === 0) {
-      console.log("No resources/lang/*.json files found. Skipping check.");
+    if (entries.length === 0) {
+      console.log(
+        "No resources/lang/<code>/ directories found. Skipping check.",
+      );
       return;
     }
 
-    for (const file of files) {
-      const filePath = path.join(langDir, file);
-      const jsonData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-
-      const fileNameWithoutExt = path.basename(file, ".json");
+    for (const entry of entries) {
+      const dir = path.join(langRoot, entry.name);
+      const mainPath = path.join(dir, "main.json");
+      if (!fs.existsSync(mainPath)) continue; // allow auxiliary dirs
+      const jsonData = JSON.parse(fs.readFileSync(mainPath, "utf-8"));
       const langCode = jsonData.lang?.lang_code;
-
-      expect(fileNameWithoutExt).toBe(langCode);
+      expect(entry.name).toBe(langCode);
     }
   });
 });

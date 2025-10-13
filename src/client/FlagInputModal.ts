@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
-import { translateText } from "./Utils";
+import { translateCountry, translateText } from "./Utils";
 
 @customElement("flag-input-modal")
 export class FlagInputModal extends LitElement {
@@ -63,7 +63,9 @@ export class FlagInputModal extends LitElement {
                         }
                       }}
                     />
-                    <span class="country-name">${country.name}</span>
+                    <span class="country-name"
+                      >${translateCountry(country.code)}</span
+                    >
                   </button>
                 `,
               )
@@ -74,10 +76,12 @@ export class FlagInputModal extends LitElement {
   }
 
   private includedInSearch(country: { name: string; code: string }): boolean {
-    return (
-      country.name.toLowerCase().includes(this.search.toLowerCase()) ||
-      country.code.toLowerCase().includes(this.search.toLowerCase())
-    );
+    const q = this.search.toLowerCase();
+    const localized = translateCountry(country.code);
+    const localName = (localized ?? "").toLowerCase();
+    const enName = (country.name ?? "").toLowerCase();
+    const code = (country.code ?? "").toLowerCase();
+    return localName.includes(q) || enName.includes(q) || code.includes(q);
   }
 
   private handleSearch(event: Event) {
