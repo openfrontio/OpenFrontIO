@@ -138,7 +138,9 @@ export class StructureLayer implements Layer {
 
     Promise.all(
       Array.from(this.unitIcons.values()).map((img) =>
-        img.decode?.().catch(() => {}),
+        img.decode?.().catch((err) => {
+          console.warn("Failed to decode unit icon image:", err);
+        }),
       ),
     ).finally(() => {
       this.game.units().forEach((u) => this.handleUnitRendering(u));

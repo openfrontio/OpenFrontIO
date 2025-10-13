@@ -353,7 +353,7 @@ export class Transport {
         // TODO: make this a modal
         alert(`connection refused: ${event.reason}`);
       } else if (event.code !== 1000) {
-        console.log(`recieved error code ${event.code}, reconnecting`);
+        console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();
       }
     };
@@ -390,15 +390,15 @@ export class Transport {
     if (this.socket === null) return;
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
-      this.socket.close();
+      this.killExistingSocket();
     } else {
       console.log(
         "WebSocket is not open. Current state:",
         this.socket.readyState,
       );
       console.error("attempting reconnect");
+      this.killExistingSocket();
     }
-    this.socket.onclose = (event: CloseEvent) => {};
   }
 
   private onSendAllianceRequest(event: SendAllianceRequestIntentEvent) {
