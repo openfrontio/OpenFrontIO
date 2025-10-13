@@ -91,6 +91,44 @@ export function calculateBoundingBox(
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
 }
 
+export function boundingBoxTiles(
+  gm: GameMap,
+  center: TileRef,
+  radius: number,
+): TileRef[] {
+  const tiles: TileRef[] = [];
+
+  const centerX = gm.x(center);
+  const centerY = gm.y(center);
+
+  const minX = centerX - radius;
+  const maxX = centerX + radius;
+  const minY = centerY - radius;
+  const maxY = centerY + radius;
+
+  // Top and bottom edges (full width)
+  for (let x = minX; x <= maxX; x++) {
+    if (gm.isValidCoord(x, minY)) {
+      tiles.push(gm.ref(x, minY));
+    }
+    if (gm.isValidCoord(x, maxY) && minY !== maxY) {
+      tiles.push(gm.ref(x, maxY));
+    }
+  }
+
+  // Left and right edges (exclude corners already added)
+  for (let y = minY + 1; y < maxY; y++) {
+    if (gm.isValidCoord(minX, y)) {
+      tiles.push(gm.ref(minX, y));
+    }
+    if (gm.isValidCoord(maxX, y) && minX !== maxX) {
+      tiles.push(gm.ref(maxX, y));
+    }
+  }
+
+  return tiles;
+}
+
 export function calculateBoundingBoxCenter(
   gm: GameMap,
   borderTiles: ReadonlySet<TileRef>,
@@ -192,7 +230,7 @@ export function assertNever(x: never): never {
 
 export function generateID(): GameID {
   const nanoid = customAlphabet(
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
     8,
   );
   return nanoid();

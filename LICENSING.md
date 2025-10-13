@@ -55,6 +55,15 @@ This document provides comprehensive licensing information for the OpenFront.io 
   - Proprietary assets override open assets during build process
   - Contributors retain copyright while granting usage rights to OpenFront LLC
 
+### Phase 5: AGPL with Additional Attribution Terms
+
+- **Starting After:** 136cfa1316dd584bece48f7ad9f8f17e8603f1c7
+- **Date:** October 12, 2025
+- **Changes:**
+  - Added Section 7 attribution requirement to AGPL v3.0
+  - All forks must display "Based on OpenFront" (or similar) on main menu
+  - Make clear that "OpenFront" is a registered trademark
+
 ## Important Notes
 
 ### For Code:

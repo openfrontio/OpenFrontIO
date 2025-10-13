@@ -16,6 +16,14 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Assets: CC BY-SA 4.0](https://img.shields.io/badge/Assets-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
 
+## License
+
+OpenFront is licensed under the **GNU Affero General Public License v3.0** with additional attribution requirements:
+
+- Any forks must display attribution (e.g., "Based on OpenFront") prominently on the main menu
+
+See the [LICENSE](LICENSE) file for full details.
+
 ## 🌟 Features
 
 - **Real-time Strategy Gameplay**: Expand your territory and engage in strategic battles
