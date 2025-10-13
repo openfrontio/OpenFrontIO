@@ -3,41 +3,46 @@ import { customElement, state } from "lit/decorators.js";
 import "./LanguageModal";
 
 // Dynamically import all language JSON files
-function getLanguageMap() {
-  const map: Record<string, Record<string, any>> = {};
-  const ctx: any = (require as any).context(
-    "../../resources/lang",
-    true,
-    /main\.json$/,
-  );
-  ctx.keys().forEach((key: string) => {
-    const mod: any = ctx(key);
-    const json = mod?.default ?? mod;
-    const parts = key.split("/");
-    if (parts.length < 3) return;
-    const code = parts[1];
-    map[code] = json ?? {};
-  });
+function loadJsonMap<T = any>(
+  pattern: RegExp,
+  fallback: T = {} as T,
+): Record<string, T> {
+  const map: Record<string, T> = {};
+  try {
+    const ctx: any = (require as any).context(
+      "../../resources/lang",
+      true,
+      pattern,
+    );
+    ctx.keys().forEach((key: string) => {
+      try {
+        const mod: any = ctx(key);
+        const json = mod?.default ?? mod;
+        const parts = key.split("/");
+        
+        if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
+          console.warn(`Unexpected language file path: ${key}`);
+          return;
+        }
+        
+        const code = parts[1];
+        map[code] = json ?? fallback;
+      } catch (err) {
+        console.error(`Failed to load language file ${key}:`, err);
+      }
+    });
+  } catch (err) {
+    console.error(`Failed to scan language directory:`, err);
+  }
   return map;
 }
 
-// Dynamically import all country JSON files
+function getLanguageMap() {
+  return loadJsonMap<Record<string, any>>(/main\.json$/, {});
+}
+
 function getCountryMap() {
-  const map: Record<string, Record<string, string>> = {};
-  const ctx: any = (require as any).context(
-    "../../resources/lang",
-    true,
-    /country\.json$/,
-  );
-  ctx.keys().forEach((key: string) => {
-    const mod: any = ctx(key);
-    const json = mod?.default ?? mod;
-    const parts = key.split("/");
-    if (parts.length < 3) return;
-    const code = parts[1];
-    map[code] = (json as Record<string, string>) ?? {};
-  });
-  return map;
+  return loadJsonMap<Record<string, string>>(/country\.json$/, {});
 }
 
 @customElement("lang-selector")
