@@ -1,3 +1,4 @@
+import { translateText } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -143,8 +144,9 @@ export class TransportShipExecution implements Execution {
     if (this.targetID && this.targetID !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
         this.boat.id(),
-        // TODO TranslateText
-        `Naval invasion incoming from ${this.attacker.displayName()}`,
+        translateText("incoming_attacks.naval_invasion_inbound", {
+          playerName: this.attacker.displayName(),
+        }),
         MessageType.NAVAL_INVASION_INBOUND,
         this.targetID,
       );

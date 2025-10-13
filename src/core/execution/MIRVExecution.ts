@@ -1,3 +1,4 @@
+import { translateText } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -78,8 +79,9 @@ export class MirvExecution implements Execution {
 
       this.mg.displayIncomingUnit(
         this.nuke.id(),
-        // TODO TranslateText
-        `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
+        translateText("incoming_attacks.mirv_inbound", {
+          playerName: this.player.displayName(),
+        }),
         MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
       );

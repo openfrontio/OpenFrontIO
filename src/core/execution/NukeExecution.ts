@@ -1,3 +1,4 @@
+import { translateText } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -128,16 +129,18 @@ export class NukeExecution implements Execution {
         } else if (this.nukeType === UnitType.AtomBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
-            // TODO TranslateText
-            `${this.player.name()} - atom bomb inbound`,
+            translateText("incoming_attacks.atom_bomb_inbound", {
+              playerName: this.player.displayName(),
+            }),
             MessageType.NUKE_INBOUND,
             target.id(),
           );
         } else if (this.nukeType === UnitType.HydrogenBomb) {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
-            // TODO TranslateText
-            `${this.player.name()} - hydrogen bomb inbound`,
+            translateText("incoming_attacks.hydrogen_bomb_inbound", {
+              playerName: this.player.displayName(),
+            }),
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );
