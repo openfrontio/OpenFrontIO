@@ -1,4 +1,5 @@
 import IntlMessageFormat from "intl-messageformat";
+import enTranslations from "../../resources/lang/en.json";
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
@@ -99,9 +100,27 @@ export const translateText = (
 
   // Check if we're in a browser environment
   if (typeof document === "undefined") {
-    // Non-browser fallback: simple placeholder substitution only.
-    // Does NOT support ICU features (plurals, select, etc.) - use for basic test mocking.
-    let message = key;
+    // Non-browser fallback: Load English translations and resolve the key.
+    // Performs simple {param} substitution (does NOT support full ICU features).
+    self.enTranslations ??= enTranslations;
+
+    const keys = key.split(".");
+    let message: any = self.enTranslations;
+    for (const k of keys) {
+      if (message && typeof message === "object" && k in message) {
+        message = message[k];
+      } else {
+        message = null;
+        break;
+      }
+    }
+
+    // Fall back to key if not found in translations
+    if (typeof message !== "string") {
+      message = key;
+    }
+
+    // Simple placeholder substitution
     for (const [paramKey, paramValue] of Object.entries(params)) {
       message = message.replace(`{${paramKey}}`, String(paramValue));
     }
