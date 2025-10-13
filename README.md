@@ -18,11 +18,13 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 
 ## License
 
-OpenFront is licensed under the **GNU Affero General Public License v3.0** with additional attribution requirements:
+OpenFront source code is licensed under the **GNU Affero General Public License v3.0** with additional attribution requirements:
 
-- Any forks must display attribution (e.g., "Based on OpenFront") prominently on the main menu
+- Any forks or derivative works must display attribution (e.g., "Based on OpenFront", "Derived from OpenFront", "Powered by OpenFront", or "Fork of OpenFront") prominently on the main menu/UI screen
+- Forks must not use "OpenFront" as the primary title or imply official endorsement
+- "OpenFront" is a trademark and must be used in compliance with applicable trademark law
 
-See the [LICENSE](LICENSE) file for full details.
+See [LICENSE](LICENSE), [LICENSE-ASSETS](LICENSE-ASSETS), and [LICENSING.md](LICENSING.md) for full details.
 
 ## 🌟 Features
 
@@ -131,10 +133,6 @@ npm run dev:prod
 - `/src/core` - Shared game logic
 - `/src/server` - Backend game server
 - `/resources` - Static assets (images, maps, etc.)
-
-## 📝 License
-
-This project is licensed under the terms found in the [LICENSE](LICENSE) file.
 
 ## 🤝 Contributing
 
