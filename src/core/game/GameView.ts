@@ -432,7 +432,7 @@ export class PlayerView {
 
   canDeleteUnit(): boolean {
     return (
-      (this.game.ticks() + 1) - this.lastDeleteUnitTick() >=
+      this.game.ticks() + 1 - this.lastDeleteUnitTick() >=
       this.game.config().deleteUnitCooldown()
     );
   }
