@@ -446,7 +446,6 @@ export class GameView implements GameMap {
   private updatedTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
-  private _focusedPlayer: PlayerView | null = null;
 
   private unitGrid: UnitGrid;
 
@@ -763,10 +762,6 @@ export class GameView implements GameMap {
   }
 
   focusedPlayer(): PlayerView | null {
-    // TODO: renable when performance issues are fixed.
     return this.myPlayer();
-  }
-  setFocusedPlayer(player: PlayerView | null): void {
-    this._focusedPlayer = player;
   }
 }
