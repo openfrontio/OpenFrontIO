@@ -81,9 +81,8 @@ export function structureSpawnTileValue(
           otherUnits.map((u) => u.tile()),
         );
         otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-        if (closestOther !== null) {
-          const d = mg.manhattanDist(closestOther.x, tile);
+        const [, d] = closestTile(mg, otherTiles, tile);
+        if (Number.isFinite(d)) {
           w += Math.min(d, structureSpacing);
         }
 
@@ -258,9 +257,8 @@ export function structureSpawnTileValue(
           otherUnits.map((u) => u.tile()),
         );
         otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-        if (closestOther !== null) {
-          const d = mg.manhattanDist(closestOther.x, tile);
+        const [, d] = closestTile(mg, otherTiles, tile);
+        if (Number.isFinite(d)) {
           w += Math.min(d, structureSpacing);
         }
 
@@ -287,10 +285,9 @@ export function structureSpawnTileValue(
         w += mg.magnitude(tile);
 
         // Prefer to be away from the border
-        const closestBorder = closestTwoTiles(mg, borderTiles, [tile]);
-        if (closestBorder !== null) {
-          const d = mg.manhattanDist(closestBorder.x, tile);
-          w += Math.min(d, borderSpacing);
+        const [, borderDist] = closestTile(mg, borderTiles, tile);
+        if (Number.isFinite(borderDist)) {
+          w += Math.min(borderDist, borderSpacing);
         }
 
         // Prefer to be away from other structures of the same type
@@ -298,9 +295,8 @@ export function structureSpawnTileValue(
           otherUnits.map((u) => u.tile()),
         );
         otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-        if (closestOther !== null) {
-          const d = mg.manhattanDist(closestOther.x, tile);
+        const [, d] = closestTile(mg, otherTiles, tile);
+        if (Number.isFinite(d)) {
           w += Math.min(d, structureSpacing);
         }
 
