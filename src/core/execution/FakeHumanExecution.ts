@@ -27,6 +27,10 @@ import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { closestTwoTiles } from "./Util";
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
+/**
+ * Drives nation bots that imitate human play by making periodic build,
+ * upgrade, diplomacy, and attack decisions based on heuristics.
+ */
 export class FakeHumanExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
@@ -402,7 +406,11 @@ export class FakeHumanExecution implements Execution {
     );
   }
 
-  private handleUnits() {
+  /**
+   * Executes economic actions (builds/upgrades) until the maximum number of
+   * allowable actions for this tick is reached.
+   */
+  private handleUnits(): boolean {
     if (this.player === null) throw new Error("not initialized");
 
     const prioritizedTypes = this.determineNeedDrivenOrder();
@@ -462,6 +470,7 @@ export class FakeHumanExecution implements Execution {
     return performed > 0;
   }
 
+  /** Determines how many economic actions can run this tick. */
   private maxEconomicActions(): number {
     if (this.player === null) throw new Error("not initialized");
     const gold = this.player.gold();
@@ -490,6 +499,7 @@ export class FakeHumanExecution implements Execution {
     return 1;
   }
 
+  /** Returns structure types ordered by current urgency scores. */
   private determineNeedDrivenOrder(): UnitType[] {
     if (this.player === null) throw new Error("not initialized");
     const priorities: Array<{ type: UnitType; score: number }> = [
@@ -511,6 +521,10 @@ export class FakeHumanExecution implements Execution {
     return priorities.filter((p) => p.score > 0).map((p) => p.type);
   }
 
+  /**
+   * Builds a list of closures that either upgrade an existing structure or
+   * construct a new one for the given unit types.
+   */
   private buildActionsForTypes(types: UnitType[]): Array<() => boolean> {
     const actions: Array<() => boolean> = [];
     for (const type of types) {
@@ -527,6 +541,7 @@ export class FakeHumanExecution implements Execution {
     return actions;
   }
 
+  /** Provides the perceived cost multiplier for subsequent builds of a type. */
   private structureMultiplier(type: UnitType): (num: number) => number {
     switch (type) {
       case UnitType.City:
@@ -543,6 +558,7 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
+  /** Scores immediate ground defense pressure. */
   private defenseUrgency(): number {
     if (this.player === null) throw new Error("not initialized");
     const incoming = this.player.incomingAttacks().length;
@@ -568,6 +584,7 @@ export class FakeHumanExecution implements Execution {
     return 1;
   }
 
+  /** Scores air-defense pressure for SAM launchers. */
   private advancedDefenseUrgency(): number {
     if (this.player === null) throw new Error("not initialized");
     const base = this.defenseUrgency();
@@ -593,6 +610,7 @@ export class FakeHumanExecution implements Execution {
     return Math.min(3, urgency);
   }
 
+  /** Scores the need to expand manpower via cities. */
   private populationUrgency(): number {
     if (this.player === null) throw new Error("not initialized");
     const maxTroops = this.mg.config().maxTroops(this.player);
@@ -619,6 +637,7 @@ export class FakeHumanExecution implements Execution {
     return urgency;
   }
 
+  /** Scores the need for ports to improve income and logistics. */
   private economyUrgency(): number {
     if (this.player === null) throw new Error("not initialized");
     const portsOwned = this.player.unitsOwned(UnitType.Port);
@@ -644,6 +663,7 @@ export class FakeHumanExecution implements Execution {
     return 0;
   }
 
+  /** Scores production (factory) urgency relative to ports. */
   private productionUrgency(): number {
     if (this.player === null) throw new Error("not initialized");
     const factories = this.player.unitsOwned(UnitType.Factory);
@@ -660,6 +680,7 @@ export class FakeHumanExecution implements Execution {
     return 0;
   }
 
+  /** Scores missile silo urgency based on enemy capabilities. */
   private missileUrgency(): number {
     if (this.player === null) throw new Error("not initialized");
     const silos = this.player.unitsOwned(UnitType.MissileSilo);
@@ -680,6 +701,7 @@ export class FakeHumanExecution implements Execution {
     return 0;
   }
 
+  /** Scores naval urgency relative to enemy fleets and owned ports. */
   private navalUrgency(): number {
     if (this.player === null) throw new Error("not initialized");
     const ports = this.player.units(UnitType.Port).length;
@@ -703,6 +725,7 @@ export class FakeHumanExecution implements Execution {
     return 0;
   }
 
+  /** Returns hostile neighbors sharing a border with this nation. */
   private hostileBorderPlayers(): Player[] {
     if (this.player === null) throw new Error("not initialized");
     const hostiles = new Map<PlayerID, Player>();
@@ -729,6 +752,10 @@ export class FakeHumanExecution implements Execution {
     return Array.from(hostiles.values());
   }
 
+  /**
+   * Attempts to schedule an upgrade for the best candidate structure of the
+   * requested type.
+   */
   private maybeUpgradeStructure(type: UnitType): boolean {
     if (this.player === null) throw new Error("not initialized");
     if (!this.mg.unitInfo(type).upgradable) {
@@ -763,6 +790,10 @@ export class FakeHumanExecution implements Execution {
     return false;
   }
 
+  /**
+   * Queues a structure build when the nation can afford it and a valid tile can
+   * be found.
+   */
   private maybeSpawnStructure(
     type: UnitType,
     multiplier: (num: number) => number,
@@ -787,6 +818,7 @@ export class FakeHumanExecution implements Execution {
     return true;
   }
 
+  /** Samples candidate tiles and returns the highest scoring placement. */
   private structureSpawnTile(type: UnitType): TileRef | null {
     if (this.mg === undefined) throw new Error("Not initialized");
     if (this.player === null) throw new Error("Not initialized");
@@ -831,6 +863,10 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
+  /**
+   * Attempts to spawn a warship from a random port. The `force` flag bypasses
+   * the usual random chance gate.
+   */
   private maybeSpawnWarship(force = false): boolean {
     if (this.player === null) throw new Error("not initialized");
     if (!force && !this.random.chance(50)) {
