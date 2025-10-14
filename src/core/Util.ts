@@ -129,6 +129,20 @@ export function boundingBoxTiles(
   return tiles;
 }
 
+export function getMode<T>(counts: Map<T, number>): T | null {
+  let mode: T | null = null;
+  let maxCount = 0;
+
+  for (const [item, count] of counts) {
+    if (count > maxCount) {
+      maxCount = count;
+      mode = item;
+    }
+  }
+
+  return mode;
+}
+
 export function calculateBoundingBoxCenter(
   gm: GameMap,
   borderTiles: ReadonlySet<TileRef>,
