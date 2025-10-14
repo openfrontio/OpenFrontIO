@@ -1,13 +1,17 @@
 import { structureSpawnTileValue } from "../../../src/core/execution/nation/structureSpawnTileValue";
-import { Relation, UnitType } from "../../../src/core/game/Game";
+import { Player, Relation, Unit, UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
 
 describe("structureSpawnTileValue", () => {
-  const makeUnit = (tile: TileRef, unitType: UnitType = UnitType.City) => ({
-    tile: () => tile,
-    level: () => 1,
-    type: () => unitType,
-  });
+  const makeUnit = (tile: TileRef, unitType: UnitType = UnitType.City) => {
+    const base = {
+      tile: () => tile,
+      level: () => 1,
+      type: () => unitType,
+    } satisfies Pick<Unit, "tile" | "level" | "type">;
+
+    return base as Unit;
+  };
 
   const createPlayer = (options?: { includePorts?: boolean }) => {
     const portUnits =
@@ -22,21 +26,31 @@ describe("structureSpawnTileValue", () => {
       [UnitType.MissileSilo, []],
     ]);
 
-    const player = {
+    const base = {
       borderTiles: () => new Set<TileRef>([0 as TileRef]),
       units: (...types: UnitType[]) => {
         if (types.length === 0) {
           return Array.from(unitsByType.values()).flat();
         }
-        return types.flatMap((type) => unitsByType.get(type) ?? []);
+        return types
+          .flatMap((type) => unitsByType.get(type) ?? [])
+          .map((unit) => unit as Unit);
       },
       unitsOwned: (_type: UnitType) => 0,
       relation: () => Relation.Hostile,
       smallID: () => 1,
-      canBuild: () => true,
-    } satisfies import("../../../src/core/game/Game").Player;
+      canBuild: (_type: UnitType, tile: TileRef) => tile,
+    } satisfies Pick<
+      Player,
+      | "borderTiles"
+      | "units"
+      | "unitsOwned"
+      | "relation"
+      | "smallID"
+      | "canBuild"
+    >;
 
-    return player;
+    return base as Player;
   };
 
   const createGame = () => {
