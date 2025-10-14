@@ -23,6 +23,7 @@ import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
+import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 import { closestTwoTiles } from "./Util";
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
@@ -402,15 +403,364 @@ export class FakeHumanExecution implements Execution {
   }
 
   private handleUnits() {
-    return (
-      this.maybeSpawnStructure(UnitType.City, (num) => num) ||
-      this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
-      this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory, (num) => num) ||
-      this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
-      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => num ** 2) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num ** 2)
+    if (this.player === null) throw new Error("not initialized");
+
+    const prioritizedTypes = this.determineNeedDrivenOrder();
+    const baselineTypes = [
+      UnitType.City,
+      UnitType.Port,
+      UnitType.Factory,
+      UnitType.DefensePost,
+      UnitType.SAMLauncher,
+      UnitType.MissileSilo,
+    ];
+    const fallbackTypes = baselineTypes.filter(
+      (type) => !prioritizedTypes.includes(type),
     );
+
+    const prioritizedActions = this.buildActionsForTypes(prioritizedTypes);
+    const fallbackActions = this.buildActionsForTypes(
+      this.random.shuffleArray(fallbackTypes),
+    );
+
+    let actions = prioritizedActions.concat(fallbackActions);
+
+    const navalUrgency = this.navalUrgency();
+    if (navalUrgency > 0) {
+      const forced = () => this.maybeSpawnWarship(true);
+      actions = [forced, ...actions];
+      if (navalUrgency > 1) {
+        actions.splice(1, 0, () => this.maybeSpawnWarship(true));
+      }
+    } else if (actions.length > 0) {
+      const idx = this.random.nextInt(0, actions.length + 1);
+      actions.splice(idx, 0, () => this.maybeSpawnWarship());
+    }
+
+    const maxActions = this.maxEconomicActions();
+    if (maxActions <= 0) {
+      return false;
+    }
+
+    let performed = 0;
+    do {
+      let executedThisPass = false;
+      for (const action of actions) {
+        if (performed >= maxActions) {
+          break;
+        }
+        if (action()) {
+          performed++;
+          executedThisPass = true;
+        }
+      }
+      if (!executedThisPass) {
+        break;
+      }
+    } while (performed < maxActions);
+
+    return performed > 0;
+  }
+
+  private maxEconomicActions(): number {
+    if (this.player === null) throw new Error("not initialized");
+    const gold = this.player.gold();
+    const baselineCosts = [
+      UnitType.City,
+      UnitType.Port,
+      UnitType.Factory,
+      UnitType.DefensePost,
+    ]
+      .map((type) => this.cost(type))
+      .filter((cost) => cost > 0n)
+      .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+    const baseline = baselineCosts[0] ?? 0n;
+    if (baseline === 0n) {
+      return 3;
+    }
+
+    const potential = gold / baseline;
+    if (potential >= 3n) {
+      return 3;
+    }
+    if (potential >= 2n) {
+      return 2;
+    }
+    return 1;
+  }
+
+  private determineNeedDrivenOrder(): UnitType[] {
+    if (this.player === null) throw new Error("not initialized");
+    const priorities: Array<{ type: UnitType; score: number }> = [
+      { type: UnitType.DefensePost, score: this.defenseUrgency() },
+      { type: UnitType.SAMLauncher, score: this.advancedDefenseUrgency() },
+      { type: UnitType.City, score: this.populationUrgency() },
+      { type: UnitType.Port, score: this.economyUrgency() },
+      { type: UnitType.Factory, score: this.productionUrgency() },
+      { type: UnitType.MissileSilo, score: this.missileUrgency() },
+    ];
+
+    priorities.sort((a, b) => {
+      if (b.score === a.score) {
+        return this.random.chance(2) ? 1 : -1;
+      }
+      return b.score - a.score;
+    });
+
+    return priorities.filter((p) => p.score > 0).map((p) => p.type);
+  }
+
+  private buildActionsForTypes(types: UnitType[]): Array<() => boolean> {
+    const actions: Array<() => boolean> = [];
+    for (const type of types) {
+      const upgradeFirst = this.random.chance(2);
+      const upgradeAction = () => this.maybeUpgradeStructure(type);
+      const buildAction = () =>
+        this.maybeSpawnStructure(type, this.structureMultiplier(type));
+      if (upgradeFirst) {
+        actions.push(upgradeAction, buildAction);
+      } else {
+        actions.push(buildAction, upgradeAction);
+      }
+    }
+    return actions;
+  }
+
+  private structureMultiplier(type: UnitType): (num: number) => number {
+    switch (type) {
+      case UnitType.City:
+      case UnitType.Port:
+      case UnitType.Factory:
+        return (num) => num;
+      case UnitType.DefensePost:
+        return (num) => (num + 2) ** 2;
+      case UnitType.SAMLauncher:
+      case UnitType.MissileSilo:
+        return (num) => num ** 2;
+      default:
+        return (num) => num;
+    }
+  }
+
+  private defenseUrgency(): number {
+    if (this.player === null) throw new Error("not initialized");
+    const incoming = this.player.incomingAttacks().length;
+    if (incoming >= 3) return 3;
+    if (incoming > 0) return 2;
+
+    const hostiles = this.hostileBorderPlayers();
+    if (hostiles.length === 0) {
+      return 0;
+    }
+
+    const myTroops = this.player.troops();
+    const overwhelming = hostiles.some((enemy) => enemy.troops() > myTroops);
+    if (overwhelming) {
+      return 3;
+    }
+    const strongPressure = hostiles.some(
+      (enemy) => enemy.troops() > myTroops * 0.7,
+    );
+    if (strongPressure) {
+      return 2;
+    }
+    return 1;
+  }
+
+  private advancedDefenseUrgency(): number {
+    if (this.player === null) throw new Error("not initialized");
+    const base = this.defenseUrgency();
+    if (base < 2) {
+      return 0;
+    }
+    const hostiles = this.hostileBorderPlayers();
+    const enemyAirThreat = hostiles.some(
+      (enemy) =>
+        enemy.units(UnitType.Warship).length > 0 ||
+        enemy.units(UnitType.MissileSilo).length > 0,
+    );
+    const sams = this.player.units(UnitType.SAMLauncher).length;
+    const desiredSamCount = Math.max(1, Math.floor(hostiles.length / 2));
+
+    let urgency = base - 1;
+    if (enemyAirThreat) {
+      urgency = Math.max(urgency, 2);
+    }
+    if (sams < desiredSamCount) {
+      urgency = Math.max(urgency, 2);
+    }
+    return Math.min(3, urgency);
+  }
+
+  private populationUrgency(): number {
+    if (this.player === null) throw new Error("not initialized");
+    const maxTroops = this.mg.config().maxTroops(this.player);
+    const troopRatio = maxTroops === 0 ? 0 : this.player.troops() / maxTroops;
+    const citiesOwned = this.player.unitsOwned(UnitType.City);
+    const desiredCities = Math.max(
+      1,
+      Math.floor(this.player.numTilesOwned() / 60),
+    );
+
+    let urgency = 0;
+    if (troopRatio > 0.9) {
+      urgency = 3;
+    } else if (troopRatio > 0.75) {
+      urgency = 2;
+    } else if (troopRatio > 0.6) {
+      urgency = 1;
+    }
+
+    if (citiesOwned < desiredCities) {
+      urgency = Math.max(urgency, desiredCities - citiesOwned >= 2 ? 2 : 1);
+    }
+
+    return urgency;
+  }
+
+  private economyUrgency(): number {
+    if (this.player === null) throw new Error("not initialized");
+    const portsOwned = this.player.unitsOwned(UnitType.Port);
+    const desiredPorts = Math.max(
+      1,
+      Math.floor(this.player.numTilesOwned() / 35),
+    );
+
+    if (portsOwned < desiredPorts) {
+      if (portsOwned === 0) {
+        return 3;
+      }
+      return desiredPorts - portsOwned >= 2 ? 2 : 1;
+    }
+
+    if (
+      this.player.gold() > this.cost(UnitType.Port) * 5n &&
+      portsOwned < this.player.unitsOwned(UnitType.City)
+    ) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  private productionUrgency(): number {
+    if (this.player === null) throw new Error("not initialized");
+    const factories = this.player.unitsOwned(UnitType.Factory);
+    const ports = this.player.unitsOwned(UnitType.Port);
+    if (ports === 0) {
+      return 0;
+    }
+    if (factories === 0) {
+      return 2;
+    }
+    if (factories < Math.floor(ports / 2)) {
+      return 1;
+    }
+    return 0;
+  }
+
+  private missileUrgency(): number {
+    if (this.player === null) throw new Error("not initialized");
+    const silos = this.player.unitsOwned(UnitType.MissileSilo);
+    const hostiles = this.hostileBorderPlayers();
+    const enemySilos = hostiles.reduce(
+      (total, enemy) => total + enemy.units(UnitType.MissileSilo).length,
+      0,
+    );
+
+    if (enemySilos > silos) {
+      return 3;
+    }
+
+    if (silos === 0 && this.defenseUrgency() >= 2) {
+      return 2;
+    }
+
+    return 0;
+  }
+
+  private navalUrgency(): number {
+    if (this.player === null) throw new Error("not initialized");
+    const ports = this.player.units(UnitType.Port).length;
+    if (ports === 0) {
+      return 0;
+    }
+    const warships = this.player.units(UnitType.Warship).length;
+    if (warships === 0) {
+      return 2;
+    }
+    const hostileWarships = this.hostileBorderPlayers().reduce(
+      (total, enemy) => total + enemy.units(UnitType.Warship).length,
+      0,
+    );
+    if (hostileWarships > warships) {
+      return 2;
+    }
+    if (warships < Math.ceil(ports / 2)) {
+      return 1;
+    }
+    return 0;
+  }
+
+  private hostileBorderPlayers(): Player[] {
+    if (this.player === null) throw new Error("not initialized");
+    const hostiles = new Map<PlayerID, Player>();
+
+    for (const tile of this.player.borderTiles()) {
+      for (const neighbor of this.mg.neighbors(tile)) {
+        const owner = this.mg.playerBySmallID(this.mg.ownerID(neighbor));
+        if (!owner.isPlayer()) continue;
+        if (owner === this.player) continue;
+        if (
+          this.player.isOnSameTeam(owner) ||
+          this.player.isAlliedWith(owner)
+        ) {
+          continue;
+        }
+        const relation = this.player.relation(owner);
+        if (relation >= Relation.Friendly) {
+          continue;
+        }
+        hostiles.set(owner.id(), owner);
+      }
+    }
+
+    return Array.from(hostiles.values());
+  }
+
+  private maybeUpgradeStructure(type: UnitType): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    if (!this.mg.unitInfo(type).upgradable) {
+      return false;
+    }
+    if (!this.player.canUpgradeUnit(type)) {
+      return false;
+    }
+
+    const borderTiles = this.player.borderTiles();
+    const candidates = this.player.units(type).sort((a, b) => {
+      const aBorder = borderTiles.has(a.tile());
+      const bBorder = borderTiles.has(b.tile());
+      if (aBorder !== bBorder) {
+        return aBorder ? -1 : 1;
+      }
+      if (a.level() !== b.level()) {
+        return a.level() - b.level();
+      }
+      return a.id() - b.id();
+    });
+
+    for (const unit of candidates) {
+      if (!this.player.canUpgradeUnit(type)) {
+        break;
+      }
+      this.mg.addExecution(
+        new UpgradeStructureExecution(this.player, unit.id()),
+      );
+      return true;
+    }
+    return false;
   }
 
   private maybeSpawnStructure(
@@ -481,9 +831,9 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
-  private maybeSpawnWarship(): boolean {
+  private maybeSpawnWarship(force = false): boolean {
     if (this.player === null) throw new Error("not initialized");
-    if (!this.random.chance(50)) {
+    if (!force && !this.random.chance(50)) {
       return false;
     }
     const ports = this.player.units(UnitType.Port);
