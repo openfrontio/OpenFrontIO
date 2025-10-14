@@ -212,6 +212,10 @@ export class BuildMenu extends LitElement implements Layer {
       padding: 10px;
       gap: 5px;
     }
+    .build-button--available {
+      border-color: rgba(251, 191, 36, 0.7);
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+    }
     .build-button:not(:disabled):hover {
       background-color: #3a3a3a;
       transform: scale(1.05);
@@ -233,6 +237,9 @@ export class BuildMenu extends LitElement implements Layer {
     .build-button:disabled .build-cost {
       color: #ff4444;
     }
+    .build-button--available .build-cost {
+      color: #fbbf24;
+    }
     .build-icon {
       font-size: 40px;
       margin-bottom: 5px;
@@ -245,6 +252,18 @@ export class BuildMenu extends LitElement implements Layer {
     }
     .build-cost {
       font-size: 14px;
+    }
+    .build-affordable {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      background-color: rgba(251, 191, 36, 0.18);
+      color: #fbbf24;
+      letter-spacing: 0.02em;
     }
     .hidden {
       display: none !important;
@@ -400,6 +419,42 @@ export class BuildMenu extends LitElement implements Layer {
     this.hideMenu();
   }
 
+  private affordableCountLabel(
+    item: BuildItemDisplay,
+    buildableUnit: BuildableUnit,
+  ): string | null {
+    const player = this.game?.myPlayer();
+    if (!player) {
+      return null;
+    }
+
+    if (
+      buildableUnit.canBuild === false &&
+      buildableUnit.canUpgrade === false
+    ) {
+      return null;
+    }
+
+    const cost = this.cost(item);
+    if (cost <= 0n) {
+      return null;
+    }
+
+    const gold = player.gold();
+    if (gold < cost) {
+      return null;
+    }
+
+    const affordable = gold / cost;
+    if (affordable <= 1n) {
+      return "×1";
+    }
+    if (affordable > 99n) {
+      return "×99+";
+    }
+    return `×${affordable.toString()}`;
+  }
+
   render() {
     return html`
       <div
@@ -419,9 +474,16 @@ export class BuildMenu extends LitElement implements Layer {
                 const enabled =
                   buildableUnit.canBuild !== false ||
                   buildableUnit.canUpgrade !== false;
+                const buttonClass = `build-button${
+                  enabled ? " build-button--available" : ""
+                }`;
+                const affordability = this.affordableCountLabel(
+                  item,
+                  buildableUnit,
+                );
                 return html`
                   <button
-                    class="build-button"
+                    class=${buttonClass}
                     @click=${() =>
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
@@ -454,6 +516,11 @@ export class BuildMenu extends LitElement implements Layer {
                         style="vertical-align: middle;"
                       />
                     </span>
+                    ${affordability
+                      ? html`<span class="build-affordable" translate="no">
+                          ${affordability}
+                        </span>`
+                      : ""}
                     ${item.countable
                       ? html`<div class="build-count-chip">
                           <span class="build-count">${this.count(item)}</span>
