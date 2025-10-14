@@ -3,9 +3,17 @@ import enTranslations from "../../resources/lang/en.json";
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
+/**
+ * Escapes metacharacters in a string so it can be interpolated inside a RegExp
+ * literal without altering the pattern.
+ */
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/**
+ * Converts a number of seconds into a compact string such as `5min 30s`.
+ * Seconds below one minute are rendered as `Xs`.
+ */
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
   const minutes = Math.floor(totalSeconds / 60);
@@ -16,10 +24,19 @@ export function renderDuration(totalSeconds: number): string {
   return time.trim();
 }
 
+/**
+ * Formats troop counts coming from the server (which are stored in tenths) so
+ * the UI displays the human friendly value.
+ */
 export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
 
+/**
+ * Produces strings such as `1.5K` or `2M` for large numbers while keeping
+ * smaller values unchanged. Optional precision can be provided with
+ * `fixedPoints`.
+ */
 export function renderNumber(
   num: number | bigint,
   fixedPoints?: number,
@@ -46,6 +63,10 @@ export function renderNumber(
   }
 }
 
+/**
+ * Creates a canvas element pinned to the viewport that can be used as the
+ * primary rendering surface for the game.
+ */
 export function createCanvas(): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
 
@@ -180,9 +201,7 @@ export const translateText = (
   }
 };
 
-/**
- * Severity colors mapping for message types
- */
+/** Mapping from message severity to the Tailwind class we apply in the UI. */
 export const severityColors: Record<string, string> = {
   fail: "text-red-400",
   warn: "text-yellow-400",
@@ -193,9 +212,7 @@ export const severityColors: Record<string, string> = {
 };
 
 /**
- * Gets the CSS classes for styling message types based on their severity
- * @param type The message type to get styling for
- * @returns CSS class string for the message type
+ * Returns the text color class the UI should use for a given message type.
  */
 export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
@@ -235,6 +252,9 @@ export function getMessageTypeClasses(type: MessageType): string {
   }
 }
 
+/**
+ * Renders the modifier key symbol appropriate for the current platform.
+ */
 export function getModifierKey(): string {
   const isMac = /Mac/.test(navigator.userAgent);
   if (isMac) {
@@ -244,6 +264,9 @@ export function getModifierKey(): string {
   }
 }
 
+/**
+ * Returns the localized label for the alt/option key depending on platform.
+ */
 export function getAltKey(): string {
   const isMac = /Mac/.test(navigator.userAgent);
   if (isMac) {
@@ -253,6 +276,10 @@ export function getAltKey(): string {
   }
 }
 
+/**
+ * Fetches the stored number of games played, defaulting to zero when storage
+ * is unavailable or corrupt.
+ */
 export function getGamesPlayed(): number {
   try {
     return parseInt(localStorage.getItem("gamesPlayed") ?? "0", 10) || 0;
@@ -262,6 +289,9 @@ export function getGamesPlayed(): number {
   }
 }
 
+/**
+ * Increments the games played counter persisted in local storage.
+ */
 export function incrementGamesPlayed(): void {
   try {
     localStorage.setItem("gamesPlayed", (getGamesPlayed() + 1).toString());
@@ -270,6 +300,10 @@ export function incrementGamesPlayed(): void {
   }
 }
 
+/**
+ * Detects whether the current window is embedded inside an iframe. In cases
+ * where cross-origin access throws, the function safely assumes `true`.
+ */
 export function isInIframe(): boolean {
   try {
     return window.self !== window.top;

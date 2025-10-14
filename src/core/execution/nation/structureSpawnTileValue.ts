@@ -1,12 +1,19 @@
 import { Game, Player, Relation, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
-import { closestTile, closestTwoTiles } from "../Util";
+import { closestTile } from "../Util";
 
-type ClusterPreference = {
+type ClusterPreference = Readonly<{
   near: number;
   ideal: number;
   far: number;
   weight: number;
+}>;
+
+const assertPreference = (pref: ClusterPreference): ClusterPreference => {
+  if (!(pref.near <= pref.ideal && pref.ideal <= pref.far) || pref.weight < 0) {
+    throw new Error("Invalid ClusterPreference");
+  }
+  return pref;
 };
 
 function complementaryPlacementScore(
@@ -93,41 +100,41 @@ export function structureSpawnTileValue(
             ? [
                 [
                   portTiles,
-                  {
+                  assertPreference({
                     near: 12,
                     ideal: 60,
                     far: 150,
                     weight: structureSpacing,
-                  },
+                  }),
                 ],
                 [
                   factoryTiles,
-                  {
+                  assertPreference({
                     near: 10,
                     ideal: 55,
                     far: 130,
                     weight: structureSpacing * 0.9,
-                  },
+                  }),
                 ],
               ]
             : [
                 [
                   cityTiles,
-                  {
+                  assertPreference({
                     near: 8,
                     ideal: 50,
                     far: 120,
                     weight: structureSpacing * 0.85,
-                  },
+                  }),
                 ],
                 [
                   portTiles,
-                  {
+                  assertPreference({
                     near: 14,
                     ideal: 65,
                     far: 160,
                     weight: structureSpacing * 0.6,
-                  },
+                  }),
                 ],
               ];
 
@@ -154,20 +161,19 @@ export function structureSpawnTileValue(
           otherUnits.map((u) => u.tile()),
         );
         otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
-        if (closestOther !== null) {
-          const d = mg.manhattanDist(closestOther.x, tile);
-          w += Math.min(d, structureSpacing * 1.5);
+        const [, siloSpacing] = closestTile(mg, otherTiles, tile);
+        if (Number.isFinite(siloSpacing)) {
+          w += Math.min(siloSpacing, structureSpacing * 1.5);
         }
 
         // Keep missile silos offset from economic clusters
         const spacingReference = Math.max(borderSpacing, 25);
-        const missileClusterPreference: ClusterPreference = {
+        const missileClusterPreference = assertPreference({
           near: spacingReference,
           ideal: spacingReference * 2,
           far: spacingReference * 4,
           weight: structureSpacing,
-        };
+        });
         w += complementaryPlacementScore(
           mg,
           tile,
@@ -195,21 +201,21 @@ export function structureSpawnTileValue(
         > = [
           [
             cityTiles,
-            {
+            assertPreference({
               near: 12,
               ideal: 55,
               far: 160,
               weight: structureSpacing,
-            },
+            }),
           ],
           [
             factoryTiles,
-            {
+            assertPreference({
               near: 16,
               ideal: 70,
               far: 170,
               weight: structureSpacing * 0.8,
-            },
+            }),
           ],
         ];
 
