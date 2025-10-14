@@ -174,6 +174,7 @@ export class PlayerImpl implements Player {
       ),
       hasSpawned: this.hasSpawned(),
       betrayals: stats?.betrayals,
+      lastDeleteUnitTick: this.lastDeleteUnitTick,
     };
   }
 

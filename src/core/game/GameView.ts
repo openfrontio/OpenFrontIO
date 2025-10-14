@@ -426,8 +426,15 @@ export class PlayerView {
     return this.data.isDisconnected;
   }
 
+  lastDeleteUnitTick(): Tick {
+    return this.data.lastDeleteUnitTick;
+  }
+
   canDeleteUnit(): boolean {
-    return true;
+    return (
+      (this.game.ticks() + 1) - this.lastDeleteUnitTick() >=
+      this.game.config().deleteUnitCooldown()
+    );
   }
 }
 
