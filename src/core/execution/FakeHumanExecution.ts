@@ -549,6 +549,8 @@ export class FakeHumanExecution implements Execution {
       case UnitType.Factory:
         return (num) => num;
       case UnitType.DefensePost:
+        // Steepen the perceived cost curve (9x, 16x, 25x, …) so nations do not
+        // spam towers early; encourages saving Defense Posts for emergencies.
         return (num) => (num + 2) ** 2;
       case UnitType.SAMLauncher:
       case UnitType.MissileSilo:
