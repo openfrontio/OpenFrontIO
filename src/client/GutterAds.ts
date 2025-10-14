@@ -49,6 +49,7 @@ export class GutterAds extends LitElement {
   }
 
   public hide(): void {
+    this.isVisible = false;
     console.log("hiding GutterAds");
     this.destroyAds();
     this.requestUpdate();

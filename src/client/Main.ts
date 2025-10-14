@@ -350,6 +350,13 @@ class Client {
             "Sharing this ID will allow others to view your game history and stats.",
         );
         this.patternsModal.onUserMe(userMeResponse);
+        const flares = (userMeResponse.player.flares ?? []).filter((flare) =>
+          flare.startsWith("pattern:"),
+        );
+        if (flares.length > 0) {
+          console.log("Hiding gutter ads because you have patterns");
+          this.gutterAds.hide();
+        }
       }
     };
 
