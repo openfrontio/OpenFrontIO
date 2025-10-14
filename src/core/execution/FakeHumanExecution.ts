@@ -28,7 +28,7 @@ import { closestTwoTiles } from "./Util";
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 /**
- * Drives nation bots that imitate human play by making periodic build,
+ * Drives AI-controlled nations that imitate human play by making periodic build,
  * upgrade, diplomacy, and attack decisions based on heuristics.
  */
 export class FakeHumanExecution implements Execution {
