@@ -1,6 +1,10 @@
 import IntlMessageFormat from "intl-messageformat";
+import enTranslations from "../../resources/lang/en.json";
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
+
+const escapeRegex = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
@@ -96,6 +100,36 @@ export const translateText = (
   const self = translateText as any;
   self.formatterCache ??= new Map();
   self.lastLang ??= null;
+
+  // Check if we're in a browser environment
+  if (typeof document === "undefined") {
+    // Non-browser fallback: Load English translations and resolve the key.
+    // Performs simple {param} substitution (does NOT support full ICU features).
+    self.enTranslations ??= enTranslations;
+
+    const keys = key.split(".");
+    let message: any = self.enTranslations;
+    for (const k of keys) {
+      if (message && typeof message === "object" && k in message) {
+        message = message[k];
+      } else {
+        message = null;
+        break;
+      }
+    }
+
+    // Fall back to key if not found in translations
+    if (typeof message !== "string") {
+      message = key;
+    }
+
+    // Simple placeholder substitution
+    for (const [paramKey, paramValue] of Object.entries(params)) {
+      const pattern = new RegExp(`\\{${escapeRegex(paramKey)}\\}`, "g");
+      message = message.replace(pattern, String(paramValue));
+    }
+    return message;
+  }
 
   const langSelector = document.querySelector("lang-selector") as LangSelector;
   if (!langSelector) {
