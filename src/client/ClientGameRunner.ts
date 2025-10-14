@@ -426,13 +426,6 @@ export class ClientGameRunner {
       } else if (this.canBoatAttack(actions, tile)) {
         this.sendBoatAttackIntent(tile);
       }
-
-      const owner = this.gameView.owner(tile);
-      if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
-      }
     });
   }
 
@@ -612,45 +605,6 @@ export class ClientGameRunner {
 
   private onMouseMove(event: MouseMoveEvent) {
     this.lastMousePosition = { x: event.x, y: event.y };
-    this.checkTileUnderCursor();
-  }
-
-  private checkTileUnderCursor() {
-    if (!this.lastMousePosition || !this.renderer.transformHandler) return;
-
-    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
-      this.lastMousePosition.x,
-      this.lastMousePosition.y,
-    );
-
-    if (!cell || !this.gameView.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-
-    const tile = this.gameView.ref(cell.x, cell.y);
-
-    if (this.gameView.isLand(tile)) {
-      const owner = this.gameView.owner(tile);
-      if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
-      }
-    } else {
-      const units = this.gameView
-        .nearbyUnits(tile, 50, [
-          UnitType.Warship,
-          UnitType.TradeShip,
-          UnitType.TransportShip,
-        ])
-        .sort((a, b) => a.distSquared - b.distSquared);
-
-      if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
-      }
-    }
   }
 
   private onConnectionCheck() {
