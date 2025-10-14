@@ -81,7 +81,9 @@ export function structureSpawnTileValue(
 
         // Prefer to be away from the border
         const [, closestBorderDist] = closestTile(mg, borderTiles, tile);
-        w += Math.min(closestBorderDist, borderSpacing);
+        if (Number.isFinite(closestBorderDist)) {
+          w += Math.min(closestBorderDist, borderSpacing);
+        }
 
         // Prefer to be away from other structures of the same type
         const otherTiles: Set<TileRef> = new Set(
@@ -154,7 +156,9 @@ export function structureSpawnTileValue(
         // Favor stable ground and spacing from the front line
         w += mg.magnitude(tile) * 1.25;
         const [, closestBorderDist] = closestTile(mg, borderTiles, tile);
-        w += Math.min(closestBorderDist, borderSpacing * 1.5);
+        if (Number.isFinite(closestBorderDist)) {
+          w += Math.min(closestBorderDist, borderSpacing * 1.5);
+        }
 
         // Avoid clustering missile silos together
         const otherTiles: Set<TileRef> = new Set(
@@ -194,7 +198,9 @@ export function structureSpawnTileValue(
         );
         otherTiles.delete(tile);
         const [, closestOtherDist] = closestTile(mg, otherTiles, tile);
-        w += Math.min(closestOtherDist, structureSpacing);
+        if (Number.isFinite(closestOtherDist)) {
+          w += Math.min(closestOtherDist, structureSpacing);
+        }
 
         const complementaryPreferences: Array<
           [Set<TileRef>, ClusterPreference]

@@ -4,13 +4,6 @@ import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
 /**
- * Escapes metacharacters in a string so it can be interpolated inside a RegExp
- * literal without altering the pattern.
- */
-const escapeRegex = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/**
  * Converts a number of seconds into a compact string such as `5min 30s`.
  * Seconds below one minute are rendered as `Xs`.
  */
@@ -85,19 +78,24 @@ export function createCanvas(): HTMLCanvasElement {
  * for older browsers, particularly Safari versions < 15.4
  */
 export function generateCryptoRandomUUID(): string {
+  const cryptoObj: any =
+    typeof globalThis !== "undefined" && (globalThis as any).crypto
+      ? (globalThis as any).crypto
+      : undefined;
+
   // Type guard to check if randomUUID is available
-  if (crypto !== undefined && "randomUUID" in crypto) {
-    return crypto.randomUUID();
+  if (cryptoObj && typeof cryptoObj.randomUUID === "function") {
+    return cryptoObj.randomUUID();
   }
 
   // Fallback using crypto.getRandomValues
-  if (crypto !== undefined && "getRandomValues" in crypto) {
+  if (cryptoObj && typeof cryptoObj.getRandomValues === "function") {
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
         (
           c ^
-          (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+          (cryptoObj.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
         ).toString(16),
     );
   }
@@ -144,10 +142,10 @@ export const translateText = (
       message = key;
     }
 
-    // Simple placeholder substitution
+    // Simple placeholder substitution without RegExp
     for (const [paramKey, paramValue] of Object.entries(params)) {
-      const pattern = new RegExp(`\\{${escapeRegex(paramKey)}\\}`, "g");
-      message = message.replace(pattern, String(paramValue));
+      const token = `{${paramKey}}`;
+      message = message.split(token).join(String(paramValue));
     }
     return message;
   }
@@ -256,7 +254,8 @@ export function getMessageTypeClasses(type: MessageType): string {
  * Renders the modifier key symbol appropriate for the current platform.
  */
 export function getModifierKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isMac = /Mac/.test(ua);
   if (isMac) {
     return "⌘"; // Command key
   } else {
@@ -268,7 +267,8 @@ export function getModifierKey(): string {
  * Returns the localized label for the alt/option key depending on platform.
  */
 export function getAltKey(): string {
-  const isMac = /Mac/.test(navigator.userAgent);
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isMac = /Mac/.test(ua);
   if (isMac) {
     return "⌥"; // Option key
   } else {
