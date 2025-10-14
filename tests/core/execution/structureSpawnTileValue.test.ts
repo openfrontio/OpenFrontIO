@@ -3,19 +3,21 @@ import { Relation, UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
 
 describe("structureSpawnTileValue", () => {
-  const makeUnit = (tile: TileRef) => ({
+  const makeUnit = (tile: TileRef, unitType: UnitType = UnitType.City) => ({
     tile: () => tile,
     level: () => 1,
-    type: () => UnitType.City,
+    type: () => unitType,
   });
 
   const createPlayer = (options?: { includePorts?: boolean }) => {
     const portUnits =
-      options?.includePorts === false ? [] : [makeUnit(70 as TileRef)];
+      options?.includePorts === false
+        ? []
+        : [makeUnit(70 as TileRef, UnitType.Port)];
 
     const unitsByType = new Map<UnitType, Array<ReturnType<typeof makeUnit>>>([
-      [UnitType.City, [makeUnit(5 as TileRef)]],
-      [UnitType.Factory, [makeUnit(30 as TileRef)]],
+      [UnitType.City, [makeUnit(5 as TileRef, UnitType.City)]],
+      [UnitType.Factory, [makeUnit(30 as TileRef, UnitType.Factory)]],
       [UnitType.Port, portUnits],
       [UnitType.MissileSilo, []],
     ]);
