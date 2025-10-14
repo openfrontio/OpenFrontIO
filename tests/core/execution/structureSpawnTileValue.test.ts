@@ -22,7 +22,7 @@ describe("structureSpawnTileValue", () => {
       [UnitType.MissileSilo, []],
     ]);
 
-    return {
+    const player = {
       borderTiles: () => new Set<TileRef>([0 as TileRef]),
       units: (...types: UnitType[]) => {
         if (types.length === 0) {
@@ -30,11 +30,13 @@ describe("structureSpawnTileValue", () => {
         }
         return types.flatMap((type) => unitsByType.get(type) ?? []);
       },
-      unitsOwned: () => 0,
+      unitsOwned: (_type: UnitType) => 0,
       relation: () => Relation.Hostile,
       smallID: () => 1,
       canBuild: () => true,
-    } as unknown as import("../../../src/core/game/Game").Player;
+    } satisfies import("../../../src/core/game/Game").Player;
+
+    return player;
   };
 
   const createGame = () => {
