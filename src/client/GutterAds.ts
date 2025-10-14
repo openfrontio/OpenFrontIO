@@ -1,6 +1,5 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getGamesPlayed } from "./Utils";
 
 const LEFT_FUSE = "gutter-ad-container-left";
 const RIGHT_FUSE = "gutter-ad-container-right";
@@ -12,9 +11,6 @@ export class GutterAds extends LitElement {
   @state()
   private isVisible: boolean = false;
 
-  @state()
-  private adLoaded: boolean = false;
-
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
     return this;
@@ -24,18 +20,10 @@ export class GutterAds extends LitElement {
     return window.innerWidth >= MIN_SCREEN_WIDTH;
   }
 
-  init() {
-    if (getGamesPlayed() > 1) {
-      console.log("showing front page ads");
-    }
-  }
-
-  static styles = css``;
-
   // Called after the component's DOM is first rendered
   firstUpdated() {
     // DOM is guaranteed to be available here
-    console.log("GutterAdModal DOM is ready");
+    console.log("GutterAd DOM is ready");
   }
 
   public show(): void {
@@ -44,7 +32,7 @@ export class GutterAds extends LitElement {
       return;
     }
 
-    console.log("showing GutterAdModal");
+    console.log("showing GutterAds");
     this.isVisible = true;
     this.requestUpdate();
 
@@ -55,9 +43,8 @@ export class GutterAds extends LitElement {
   }
 
   public hide(): void {
-    console.log("hiding GutterAdModal");
+    console.log("hiding GutterAds");
     this.destroyAds();
-    this.adLoaded = false;
     this.requestUpdate();
   }
 
@@ -76,11 +63,6 @@ export class GutterAds extends LitElement {
       return;
     }
 
-    if (this.adLoaded) {
-      console.log("Ads already loaded, skipping");
-      return;
-    }
-
     try {
       console.log("registering zones");
       window.fusetag.que.push(() => {
@@ -94,8 +76,6 @@ export class GutterAds extends LitElement {
   }
 
   private destroyAds(): void {
-    this.isVisible = false;
-
     if (!window.fusetag) {
       return;
     }

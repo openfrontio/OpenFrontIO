@@ -174,7 +174,6 @@ class Client {
     if (!(gutterAds instanceof GutterAds))
       throw new Error("Missing gutter-ads");
     this.gutterAds = gutterAds;
-    this.gutterAds.init();
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
@@ -633,23 +632,26 @@ class Client {
   }
 
   private initializeFuseTag() {
-    if (window.fusetag && typeof window.fusetag.pageInit === "function") {
-      console.log("initializing fuse tag");
-      window.fusetag.que.push(() => {
-        window.fusetag.pageInit({
-          blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
+    const tryInitFuseTag = (): boolean => {
+      if (window.fusetag && typeof window.fusetag.pageInit === "function") {
+        console.log("initializing fuse tag");
+        window.fusetag.que.push(() => {
+          window.fusetag.pageInit({
+            blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
+          });
+          this.gutterAds.show();
         });
-        this.gutterAds.show();
-      });
-    } else {
-      // Script not loaded yet, wait for it
-      const checkInterval = setInterval(() => {
-        if (window.fusetag && typeof window.fusetag.pageInit === "function") {
-          clearInterval(checkInterval);
-          window.fusetag.pageInit();
-        }
-      }, 100);
-    }
+        return true;
+      } else {
+        return false;
+      }
+    };
+
+    const interval = setInterval(() => {
+      if (tryInitFuseTag()) {
+        clearInterval(interval);
+      }
+    }, 100);
   }
 }
 
