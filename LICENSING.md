@@ -64,6 +64,14 @@ This document provides comprehensive licensing information for the OpenFront.io 
   - All forks must display "Based on OpenFront" (or similar) on main menu
   - Make clear that "OpenFront" is a registered trademark
 
+### Phase 6: Clarified AGPL Additional Attribution Terms
+
+- **Starting After:** e7497bfb767c4bf3e1e00eac0a13de995419f8b5
+- **Date:** October 14, 2025
+- **Changes:**
+  - Added additional Section 7 attribution requirements to the LICENSE
+  - Removed trademark notice from LICENSE file as it's unnecessary
+
 ## Important Notes
 
 ### For Code:
