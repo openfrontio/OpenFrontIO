@@ -513,7 +513,7 @@ export class FakeHumanExecution implements Execution {
 
     priorities.sort((a, b) => {
       if (b.score === a.score) {
-        return this.random.chance(2) ? 1 : -1;
+        return this.random.chance(50) ? 1 : -1;
       }
       return b.score - a.score;
     });
@@ -528,7 +528,7 @@ export class FakeHumanExecution implements Execution {
   private buildActionsForTypes(types: UnitType[]): Array<() => boolean> {
     const actions: Array<() => boolean> = [];
     for (const type of types) {
-      const upgradeFirst = this.random.chance(2);
+      const upgradeFirst = this.random.chance(50);
       const upgradeAction = () => this.maybeUpgradeStructure(type);
       const buildAction = () =>
         this.maybeSpawnStructure(type, this.structureMultiplier(type));
