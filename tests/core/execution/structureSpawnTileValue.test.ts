@@ -50,7 +50,7 @@ describe("structureSpawnTileValue", () => {
       | "canBuild"
     >;
 
-    return base as Player;
+    return base as unknown as Player;
   };
 
   const createGame = () => {
