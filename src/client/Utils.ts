@@ -3,6 +3,9 @@ import enTranslations from "../../resources/lang/en.json";
 import { MessageType } from "../core/game/Game";
 import { LangSelector } from "./LangSelector";
 
+const escapeRegex = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export function renderDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return "0s";
   const minutes = Math.floor(totalSeconds / 60);
@@ -122,7 +125,8 @@ export const translateText = (
 
     // Simple placeholder substitution
     for (const [paramKey, paramValue] of Object.entries(params)) {
-      message = message.replace(`{${paramKey}}`, String(paramValue));
+      const pattern = new RegExp(`\\{${escapeRegex(paramKey)}\\}`, "g");
+      message = message.replace(pattern, String(paramValue));
     }
     return message;
   }
