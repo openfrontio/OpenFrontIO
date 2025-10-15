@@ -1,10 +1,12 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { GameInfo, GameRecordSchema } from "../core/Schemas";
+import { GameConfig, GameInfo, GameRecordSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
+import "./components/GameOptionsDisplay";
+import "./components/LobbyCard";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getApiBase } from "./jwt";
@@ -18,6 +20,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private message: string = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
+  @state() private gameConfig: GameConfig | null = null;
 
   private playersInterval: NodeJS.Timeout | null = null;
 
@@ -88,6 +91,7 @@ export class JoinPrivateLobbyModal extends LitElement {
                 </div>
               </div>`
             : ""}
+          ${this.renderGameSettings()}
         </div>
         <div class="flex justify-center">
           ${!this.hasJoined
@@ -117,6 +121,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   public close() {
     this.lobbyIdInput.value = "";
     this.modalEl?.close();
+    this.gameConfig = null;
     if (this.playersInterval) {
       clearInterval(this.playersInterval);
       this.playersInterval = null;
@@ -169,6 +174,40 @@ export class JoinPrivateLobbyModal extends LitElement {
     }
   }
 
+  /**
+   * Renders the game settings section
+   */
+  private renderGameSettings() {
+    if (!this.hasJoined || !this.gameConfig) {
+      return html``;
+    }
+
+    return html`
+      <!-- Lobby Card -->
+      <lobby-card
+        .gameConfig=${this.gameConfig}
+        .interactive=${false}
+        .showCta=${false}
+        .showPlayerCount=${false}
+        .showTimer=${false}
+        .showDifficulty=${true}
+      ></lobby-card>
+
+      <!-- Game Options Display -->
+      <div class="options-section">
+        <div class="option-title">
+          ${translateText("host_modal.options_title")}
+        </div>
+        <div class="option-cards">
+          <game-options-display
+            .gameConfig=${this.gameConfig}
+            .editable=${false}
+          ></game-options-display>
+        </div>
+      </div>
+    `;
+  }
+
   private async joinLobby(): Promise<void> {
     const lobbyId = this.lobbyIdInput.value;
     console.log(`Joining lobby with ID: ${lobbyId}`);
@@ -201,18 +240,26 @@ export class JoinPrivateLobbyModal extends LitElement {
 
   private async checkActiveLobby(lobbyId: string): Promise<boolean> {
     const config = await getServerConfigFromClient();
-    const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
+    const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}`;
 
     const response = await fetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
 
-    const gameInfo = await response.json();
+    if (response.status === 404) {
+      return false;
+    }
 
-    if (gameInfo.exists) {
+    const gameInfo: GameInfo = await response.json();
+
+    if (gameInfo.gameID) {
       this.message = translateText("private_lobby.joined_waiting");
       this.hasJoined = true;
+
+      // Store the game config immediately
+      this.gameConfig = gameInfo.gameConfig ?? null;
+      this.players = gameInfo.clients?.map((p) => p.username) ?? [];
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
@@ -315,6 +362,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
+        this.gameConfig = data.gameConfig ?? null;
       })
       .catch((error) => {
         console.error("Error polling players:", error);

@@ -9,6 +9,7 @@ import {
   GameMapSize,
   GameMapType,
   GameMode,
+  GameType,
   Quads,
   Trios,
   UnitType,
@@ -24,9 +25,9 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/GameOptionsDisplay";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
-import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -311,155 +312,14 @@ export class HostLobbyModal extends LitElement {
               ${translateText("host_modal.options_title")}
             </div>
             <div class="option-cards">
-              <label for="bots-count" class="option-card">
-                <input
-                  type="range"
-                  id="bots-count"
-                  min="0"
-                  max="400"
-                  step="1"
-                  @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
-                />
-                <div class="option-card-title">
-                  <span>${translateText("host_modal.bots")}</span>${
-                    this.bots === 0
-                      ? translateText("host_modal.bots_disabled")
-                      : this.bots
-                  }
-                </div>
-              </label>
-
-                <label
-                  for="disable-npcs"
-                  class="option-card ${this.disableNPCs ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="disable-npcs"
-                    @change=${this.handleDisableNPCsChange}
-                    .checked=${this.disableNPCs}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.disable_nations")}
-                  </div>
-                </label>
-
-                <label
-                  for="instant-build"
-                  class="option-card ${this.instantBuild ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="instant-build"
-                    @change=${this.handleInstantBuildChange}
-                    .checked=${this.instantBuild}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.instant_build")}
-                  </div>
-                </label>
-
-                <label
-                  for="donate-gold"
-                  class="option-card ${this.donateGold ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="donate-gold"
-                    @change=${this.handleDonateGoldChange}
-                    .checked=${this.donateGold}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.donate_gold")}
-                  </div>
-                </label>
-
-                <label
-                  for="donate-troops"
-                  class="option-card ${this.donateTroops ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="donate-troops"
-                    @change=${this.handleDonateTroopsChange}
-                    .checked=${this.donateTroops}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.donate_troops")}
-                  </div>
-                </label>
-
-                <label
-                  for="infinite-gold"
-                  class="option-card ${this.infiniteGold ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-gold"
-                    @change=${this.handleInfiniteGoldChange}
-                    .checked=${this.infiniteGold}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_gold")}
-                  </div>
-                </label>
-
-                <label
-                  for="infinite-troops"
-                  class="option-card ${this.infiniteTroops ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-troops"
-                    @change=${this.handleInfiniteTroopsChange}
-                    .checked=${this.infiniteTroops}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_troops")}
-                  </div>
-                </label>
-                <label
-                for="host-modal-compact-map"
-                class="option-card ${this.compactMap ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="host-modal-compact-map"
-                  @change=${this.handleCompactMapChange}
-                  .checked=${this.compactMap}
-                />
-                <div class="option-card-title">
-                  ${translateText("host_modal.compact_map")}
-                </div>
-              </label>
-
-                <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
-
-                <!-- Individual disables for structures/weapons -->
-                <div
-                  style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
-                >
-                  ${translateText("host_modal.enables_title")}
-                </div>
-                <div
-                  style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
-                >
-                   ${renderUnitTypeOptions({
-                     disabledUnits: this.disabledUnits,
-                     toggleUnit: this.toggleUnit.bind(this),
-                   })}
-                  </div>
-                </div>
-              </div>
+              <game-options-display
+                .gameConfig=${this.getCurrentGameConfig()}
+                .editable=${true}
+                .bots=${this.bots}
+                .onBotsChange=${this.handleBotsChange.bind(this)}
+                .onOptionChange=${this.handleOptionChange.bind(this)}
+                .onUnitToggle=${this.toggleUnit.bind(this)}
+              ></game-options-display>
             </div>
           </div>
 
@@ -579,8 +439,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   // Modified to include debouncing
-  private handleBotsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
+  private handleBotsChange(value: number) {
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }
@@ -633,6 +492,59 @@ export class HostLobbyModal extends LitElement {
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
     console.log(`updating disable npcs to ${this.disableNPCs}`);
+    this.putGameConfig();
+  }
+
+  /**
+   * Gets the current game configuration for the options display component
+   */
+  private getCurrentGameConfig(): GameConfig {
+    return {
+      gameMap: this.selectedMap,
+      gameMapSize: this.compactMap ? GameMapSize.Compact : GameMapSize.Normal,
+      difficulty: this.selectedDifficulty,
+      disableNPCs: this.disableNPCs,
+      bots: this.bots,
+      infiniteGold: this.infiniteGold,
+      donateGold: this.donateGold,
+      infiniteTroops: this.infiniteTroops,
+      donateTroops: this.donateTroops,
+      instantBuild: this.instantBuild,
+      gameMode: this.gameMode,
+      gameType:
+        this.gameMode === GameMode.FFA ? GameType.Private : GameType.Private,
+      disabledUnits: this.disabledUnits,
+      playerTeams: this.teamCount,
+    } as GameConfig;
+  }
+
+  /**
+   * Unified handler for option changes from the shared component
+   */
+  private handleOptionChange(key: string, value: boolean) {
+    switch (key) {
+      case "disableNPCs":
+        this.disableNPCs = value;
+        break;
+      case "instantBuild":
+        this.instantBuild = value;
+        break;
+      case "donateGold":
+        this.donateGold = value;
+        break;
+      case "donateTroops":
+        this.donateTroops = value;
+        break;
+      case "infiniteGold":
+        this.infiniteGold = value;
+        break;
+      case "infiniteTroops":
+        this.infiniteTroops = value;
+        break;
+      case "compactMap":
+        this.compactMap = value;
+        break;
+    }
     this.putGameConfig();
   }
 

@@ -1,9 +1,9 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { renderDuration, translateText } from "../client/Utils";
-import { GameMapType, GameMode } from "../core/game/Game";
+import { GameMapType } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import "./components/LobbyCard";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
@@ -17,6 +17,7 @@ export class PublicLobby extends LitElement {
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
+  private lobbyIDToCurrentMap = new Map<GameID, string>();
 
   createRenderRoot() {
     return this;
@@ -50,9 +51,14 @@ export class PublicLobby extends LitElement {
           this.lobbyIDToStart.set(l.gameID, msUntilStart + Date.now());
         }
 
-        // Load map image if not already loaded
-        if (l.gameConfig && !this.mapImages.has(l.gameID)) {
-          this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+        // Load map image if not already loaded or if map has changed
+        if (l.gameConfig) {
+          const currentMap = this.lobbyIDToCurrentMap.get(l.gameID);
+          if (currentMap !== l.gameConfig.gameMap) {
+            // Map has changed or not loaded yet, reload the image
+            this.loadMapImage(l.gameID, l.gameConfig.gameMap);
+            this.lobbyIDToCurrentMap.set(l.gameID, l.gameConfig.gameMap);
+          }
         }
       });
     } catch (error) {
@@ -103,75 +109,24 @@ export class PublicLobby extends LitElement {
     const start = this.lobbyIDToStart.get(lobby.gameID) ?? 0;
     const timeRemaining = Math.max(0, Math.floor((start - Date.now()) / 1000));
 
-    // Format time to show minutes and seconds
-    const timeDisplay = renderDuration(timeRemaining);
-
-    const teamCount =
-      lobby.gameConfig.gameMode === GameMode.Team
-        ? (lobby.gameConfig.playerTeams ?? 0)
-        : null;
-
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
-      <button
-        @click=${() => this.lobbyClicked(lobby)}
-        ?disabled=${this.isButtonDebounced}
-        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
-          .isLobbyHighlighted
-          ? "bg-gradient-to-r from-green-600 to-green-500"
-          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
-          .isButtonDebounced
-          ? "opacity-70 cursor-not-allowed"
-          : ""}"
-      >
-        ${mapImageSrc
-          ? html`<img
-              src="${mapImageSrc}"
-              alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10"
-              style="mask-image: linear-gradient(to left, transparent, #fff)"
-            />`
-          : html`<div
-              class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
-            ></div>`}
-        <div
-          class="flex flex-col justify-between h-full col-span-full row-span-full p-4 md:p-6 text-right z-0"
-        >
-          <div>
-            <div class="text-lg md:text-2xl font-semibold">
-              ${translateText("public_lobby.join")}
-            </div>
-            <div class="text-md font-medium text-blue-100">
-              <span
-                class="text-sm ${this.isLobbyHighlighted
-                  ? "text-green-600"
-                  : "text-blue-600"} bg-white rounded-sm px-1"
-              >
-                ${lobby.gameConfig.gameMode === GameMode.Team
-                  ? typeof teamCount === "string"
-                    ? translateText(`public_lobby.teams_${teamCount}`)
-                    : translateText("public_lobby.teams", {
-                        num: teamCount ?? 0,
-                      })
-                  : translateText("game_mode.ffa")}</span
-              >
-              <span
-                >${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
-                )}</span
-              >
-            </div>
-          </div>
-
-          <div>
-            <div class="text-md font-medium text-blue-100">
-              ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
-            </div>
-            <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
-          </div>
-        </div>
-      </button>
+      <lobby-card
+        .gameConfig=${lobby.gameConfig}
+        .mapImageSrc=${mapImageSrc}
+        .highlighted=${this.isLobbyHighlighted}
+        .interactive=${true}
+        .showCta=${true}
+        .showPlayerCount=${true}
+        .showTimer=${true}
+        .showDifficulty=${false}
+        .numClients=${lobby.numClients}
+        .maxPlayers=${lobby.gameConfig.maxPlayers}
+        .timeRemaining=${timeRemaining}
+        .debounced=${this.isButtonDebounced}
+        @card-click=${() => this.lobbyClicked(lobby)}
+      ></lobby-card>
     `;
   }
 

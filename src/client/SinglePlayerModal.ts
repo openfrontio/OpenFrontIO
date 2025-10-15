@@ -20,12 +20,12 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/GameOptionsDisplay";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
-import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -219,119 +219,14 @@ export class SinglePlayerModal extends LitElement {
               ${translateText("single_modal.options_title")}
             </div>
             <div class="option-cards">
-              <label for="bots-count" class="option-card">
-                <input
-                  type="range"
-                  id="bots-count"
-                  min="0"
-                  max="400"
-                  step="1"
-                  @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
-                />
-                <div class="option-card-title">
-                  <span>${translateText("single_modal.bots")}</span>${this
-                    .bots === 0
-                    ? translateText("single_modal.bots_disabled")
-                    : this.bots}
-                </div>
-              </label>
-
-              <label
-                for="singleplayer-modal-disable-npcs"
-                class="option-card ${this.disableNPCs ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="singleplayer-modal-disable-npcs"
-                  @change=${this.handleDisableNPCsChange}
-                  .checked=${this.disableNPCs}
-                />
-                <div class="option-card-title">
-                  ${translateText("single_modal.disable_nations")}
-                </div>
-              </label>
-              <label
-                for="singleplayer-modal-instant-build"
-                class="option-card ${this.instantBuild ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="singleplayer-modal-instant-build"
-                  @change=${this.handleInstantBuildChange}
-                  .checked=${this.instantBuild}
-                />
-                <div class="option-card-title">
-                  ${translateText("single_modal.instant_build")}
-                </div>
-              </label>
-
-              <label
-                for="singleplayer-modal-infinite-gold"
-                class="option-card ${this.infiniteGold ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="singleplayer-modal-infinite-gold"
-                  @change=${this.handleInfiniteGoldChange}
-                  .checked=${this.infiniteGold}
-                />
-                <div class="option-card-title">
-                  ${translateText("single_modal.infinite_gold")}
-                </div>
-              </label>
-
-              <label
-                for="singleplayer-modal-infinite-troops"
-                class="option-card ${this.infiniteTroops ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="singleplayer-modal-infinite-troops"
-                  @change=${this.handleInfiniteTroopsChange}
-                  .checked=${this.infiniteTroops}
-                />
-                <div class="option-card-title">
-                  ${translateText("single_modal.infinite_troops")}
-                </div>
-              </label>
-              <label
-                for="singleplayer-modal-compact-map"
-                class="option-card ${this.compactMap ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="singleplayer-modal-compact-map"
-                  @change=${this.handleCompactMapChange}
-                  .checked=${this.compactMap}
-                />
-                <div class="option-card-title">
-                  ${translateText("single_modal.compact_map")}
-                </div>
-              </label>
-            </div>
-
-            <hr
-              style="width: 100%; border-top: 1px solid #444; margin: 16px 0;"
-            />
-            <div
-              style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
-            >
-              ${translateText("single_modal.enables_title")}
-            </div>
-            <div
-              style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
-            >
-              ${renderUnitTypeOptions({
-                disabledUnits: this.disabledUnits,
-                toggleUnit: this.toggleUnit.bind(this),
-              })}
+              <game-options-display
+                .gameConfig=${this.getCurrentGameConfig()}
+                .editable=${true}
+                .bots=${this.bots}
+                .onBotsChange=${this.handleBotsChange.bind(this)}
+                .onOptionChange=${this.handleOptionChange.bind(this)}
+                .onUnitToggle=${this.toggleUnit.bind(this)}
+              ></game-options-display>
             </div>
           </div>
         </div>
@@ -371,8 +266,7 @@ export class SinglePlayerModal extends LitElement {
     this.selectedDifficulty = value;
   }
 
-  private handleBotsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
+  private handleBotsChange(value: number) {
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }
@@ -418,6 +312,51 @@ export class SinglePlayerModal extends LitElement {
     this.disabledUnits = checked
       ? [...this.disabledUnits, unit]
       : this.disabledUnits.filter((u) => u !== unit);
+  }
+
+  /**
+   * Gets the current game configuration for the options display component
+   */
+  private getCurrentGameConfig() {
+    return {
+      gameMap: this.selectedMap,
+      gameMapSize: this.compactMap ? GameMapSize.Compact : GameMapSize.Normal,
+      difficulty: this.selectedDifficulty,
+      disableNPCs: this.disableNPCs,
+      bots: this.bots,
+      infiniteGold: this.infiniteGold,
+      donateGold: true,
+      infiniteTroops: this.infiniteTroops,
+      donateTroops: true,
+      instantBuild: this.instantBuild,
+      gameMode: this.gameMode,
+      gameType: GameType.Singleplayer,
+      disabledUnits: this.disabledUnits,
+      playerTeams: this.teamCount,
+    };
+  }
+
+  /**
+   * Unified handler for option changes from the shared component
+   */
+  private handleOptionChange(key: string, value: boolean) {
+    switch (key) {
+      case "disableNPCs":
+        this.disableNPCs = value;
+        break;
+      case "instantBuild":
+        this.instantBuild = value;
+        break;
+      case "infiniteGold":
+        this.infiniteGold = value;
+        break;
+      case "infiniteTroops":
+        this.infiniteTroops = value;
+        break;
+      case "compactMap":
+        this.compactMap = value;
+        break;
+    }
   }
 
   private async startGame() {
