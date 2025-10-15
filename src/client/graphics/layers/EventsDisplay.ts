@@ -827,9 +827,6 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private calculateBoatCountdown(boat: UnitView): number | null {
     const currentTick = this.game.ticks();
-    const createdAt = boat.createdAt();
-    const ticksTraveled = currentTick - createdAt;
-
     const estimatedArrivalTick = boat.estimatedArrivalTick();
 
     if (estimatedArrivalTick !== undefined && estimatedArrivalTick !== null) {
