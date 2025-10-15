@@ -33,6 +33,7 @@ export class AccountModal extends LitElement {
   private loggedInEmail: string | null = null;
   private loggedInDiscord: string | null = null;
   private userMeResponse: UserMeResponse | null = null;
+  private playerId: string | null = null;
   private statsTree: PlayerStatsTree | null = null;
   private recentGames: PlayerGame[] = [];
 
@@ -43,10 +44,8 @@ export class AccountModal extends LitElement {
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
         this.userMeResponse = customEvent.detail as UserMeResponse;
-        const playerId = this.userMeResponse?.player?.publicId;
-        if (playerId) {
-          this.loadFromApi(playerId);
-        } else {
+        this.playerId = this.userMeResponse?.player?.publicId;
+        if (this.playerId === undefined) {
           this.statsTree = null;
           this.recentGames = [];
         }
@@ -287,6 +286,9 @@ export class AccountModal extends LitElement {
         if (userMe) {
           this.loggedInEmail = userMe.user.email ?? null;
           this.loggedInDiscord = userMe.user.discord?.global_name ?? null;
+          if (this.playerId) {
+            this.loadFromApi(this.playerId);
+          }
         } else {
           this.loggedInEmail = null;
           this.loggedInDiscord = null;
