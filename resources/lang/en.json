@@ -786,5 +786,14 @@
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
+  },
+  "login_cancelled_modal": {
+    "title": "Login Cancelled",
+    "benefits_title": "Logging in gives you access to more features",
+    "benefits_discord": "Earn patterns based on your Discord role",
+    "benefits_patterns": "Buy and use patterns",
+    "benefits_stats": "Save and track your stats",
+    "button_cancel": "Cancel",
+    "button_try_again": "Try again"
   }
 }
