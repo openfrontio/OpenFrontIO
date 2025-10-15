@@ -82,6 +82,8 @@ export class LoginCancelledModal extends LitElement {
     ) as AccountModal;
 
     this.close();
-    accountModal.open();
+    if (accountModal) {
+      accountModal.open();
+    }
   }
 }

@@ -556,7 +556,10 @@ class Client {
       window.location.href = "/";
     }
     if (decodedHash.startsWith("#login=cancel")) {
-      this.loginCancelledModal.open();
+      if (this.loginCancelledModal) {
+        this.loginCancelledModal.open();
+      }
+      strip();
     }
   }
 
