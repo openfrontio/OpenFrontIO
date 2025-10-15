@@ -1,14 +1,4 @@
 {
-  "map": {
-    "height": 1500,
-    "num_land_tiles": 1961549,
-    "width": 1530
-  },
-  "mini_map": {
-    "height": 750,
-    "num_land_tiles": 485392,
-    "width": 765
-  },
   "name": "Montreal",
   "nations": [
     {

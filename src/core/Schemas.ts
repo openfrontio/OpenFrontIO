@@ -14,7 +14,6 @@ import {
   GameMapType,
   GameMode,
   GameType,
-  PlayerType,
   Quads,
   Trios,
   UnitType,
@@ -116,9 +115,9 @@ export type Player = z.infer<typeof PlayerSchema>;
 export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
+export type PlayerColor = z.infer<typeof PlayerColorSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
-const PlayerTypeSchema = z.enum(PlayerType);
 
 export interface GameInfo {
   gameID: GameID;
@@ -388,6 +387,7 @@ export const FlagSchema = z
 
 export const PlayerCosmeticRefsSchema = z.object({
   flag: FlagSchema.optional(),
+  color: z.string().optional(),
   patternName: PatternNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
 
@@ -416,6 +416,11 @@ export const PlayerPatternSchema = z.object({
   colorPalette: ColorPaletteSchema.optional(),
 });
 
+export const PlayerColorSchema = z.object({
+  color: z.string(),
+});
+
+
 export const PlayerPackSchema = z.object({
   structurePort: z.string().optional(),
   structureCity: z.string().optional(),
@@ -440,8 +445,10 @@ export type PlayerPack = z.infer<typeof PlayerPackSchema>;
 export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
+  color: PlayerColorSchema.optional(),
   pack: PlayerPackSchema.optional(),
 });
+
 export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,

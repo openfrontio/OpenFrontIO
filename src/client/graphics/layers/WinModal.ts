@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
+import { isInIframe, translateText } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -29,9 +29,14 @@ export class WinModal extends LitElement implements Layer {
   showButtons = false;
 
   @state()
+  private isWin = false;
+
+  @state()
   private patternContent: TemplateResult | null = null;
 
   private _title: string;
+
+  private rand = Math.random();
 
   // Override to prevent shadow DOM creation
   createRenderRoot() {
@@ -68,7 +73,9 @@ export class WinModal extends LitElement implements Layer {
             @click=${this.hide}
             class="flex-1 px-3 py-3 text-base cursor-pointer bg-blue-500/60 text-white border-0 rounded transition-all duration-200 hover:bg-blue-500/80 hover:-translate-y-px active:translate-y-px"
           >
-            ${translateText("win_modal.keep")}
+            ${this.isWin
+              ? translateText("win_modal.keep")
+              : translateText("win_modal.spectate")}
           </button>
         </div>
       </div>
@@ -93,6 +100,9 @@ export class WinModal extends LitElement implements Layer {
   }
 
   innerHtml() {
+    if (isInIframe() || this.rand < 0.25) {
+      return this.steamWishlist();
+    }
     return this.renderPatternButton();
   }
 
@@ -230,10 +240,12 @@ export class WinModal extends LitElement implements Layer {
         this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
+          this.isWin = true;
         } else {
           this._title = translateText("win_modal.other_team", {
             team: wu.winner[1],
           });
+          this.isWin = false;
         }
         this.show();
       } else {
@@ -250,10 +262,12 @@ export class WinModal extends LitElement implements Layer {
           winnerClient === this.game.myPlayer()?.clientID()
         ) {
           this._title = translateText("win_modal.you_won");
+          this.isWin = true;
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.name(),
           });
+          this.isWin = false;
         }
         this.show();
       }

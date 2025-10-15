@@ -158,7 +158,6 @@ export class TransformHandler {
   }
 
   onGoToPlayer(event: GoToPlayerEvent) {
-    this.game.setFocusedPlayer(event.player);
     this.clearTarget();
     const nameLocation = event.player.nameLocation();
     if (!nameLocation) {

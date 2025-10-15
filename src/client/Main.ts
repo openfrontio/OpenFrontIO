@@ -15,6 +15,7 @@ import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
+import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
@@ -34,6 +35,7 @@ import { UsernameInput } from "./UsernameInput";
 import {
   generateCryptoRandomUUID,
   incrementGamesPlayed,
+  isInIframe,
   translateText,
 } from "./Utils";
 import "./components/NewsButton";
@@ -49,6 +51,12 @@ declare global {
       session: {
         newPageView: () => void;
       };
+    };
+    fusetag: {
+      registerZone: (id: string) => void;
+      destroyZone: (id: string) => void;
+      pageInit: (options?: any) => void;
+      que: Array<() => void>;
     };
     ramp: {
       que: Array<() => void>;
@@ -93,6 +101,8 @@ class Client {
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
 
+  private gutterAds: GutterAds;
+
   constructor() {}
 
   initialize(): void {
@@ -105,10 +115,9 @@ class Client {
     gameVersion.innerText = version;
 
     const newsModal = document.querySelector("news-modal") as NewsModal;
-    if (!newsModal) {
+    if (!newsModal || !(newsModal instanceof NewsModal)) {
       console.warn("News modal element not found");
     }
-    newsModal instanceof NewsModal;
     const newsButton = document.querySelector("news-button") as NewsButton;
     if (!newsButton) {
       console.warn("News button element not found");
@@ -160,6 +169,11 @@ class Client {
       }
     });
 
+    const gutterAds = document.querySelector("gutter-ads");
+    if (!(gutterAds instanceof GutterAds))
+      throw new Error("Missing gutter-ads");
+    this.gutterAds = gutterAds;
+
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
@@ -167,7 +181,9 @@ class Client {
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
-    spModal instanceof SinglePlayerModal;
+    if (!spModal || !(spModal instanceof SinglePlayerModal)) {
+      console.warn("Singleplayer modal element not found");
+    }
 
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
@@ -177,14 +193,10 @@ class Client {
       }
     });
 
-    // const ctModal = document.querySelector("chat-modal") as ChatModal;
-    // ctModal instanceof ChatModal;
-    // document.getElementById("chat-button").addEventListener("click", () => {
-    //   ctModal.open();
-    // });
-
     const hlpModal = document.querySelector("help-modal") as HelpModal;
-    hlpModal instanceof HelpModal;
+    if (!hlpModal || !(hlpModal instanceof HelpModal)) {
+      console.warn("Help modal element not found");
+    }
     const helpButton = document.getElementById("help-button");
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
@@ -194,7 +206,10 @@ class Client {
     const flagInputModal = document.querySelector(
       "flag-input-modal",
     ) as FlagInputModal;
-    flagInputModal instanceof FlagInputModal;
+    if (!flagInputModal || !(flagInputModal instanceof FlagInputModal)) {
+      console.warn("Flag input modal element not found");
+    }
+
     const flgInput = document.getElementById("flag-input_");
     if (flgInput === null) throw new Error("Missing flag-input_");
     flgInput.addEventListener("click", () => {
@@ -204,10 +219,25 @@ class Client {
     this.patternsModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
+    if (
+      !this.patternsModal ||
+      !(this.patternsModal instanceof TerritoryPatternsModal)
+    ) {
+      console.warn("Territory patterns modal element not found");
+    }
     const patternButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
-    this.patternsModal instanceof TerritoryPatternsModal;
+    if (isInIframe() && patternButton) {
+      patternButton.style.display = "none";
+    }
+
+    if (
+      !this.patternsModal ||
+      !(this.patternsModal instanceof TerritoryPatternsModal)
+    ) {
+      console.warn("Territory patterns modal element not found");
+    }
     if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
     this.patternsModal.previewButton = patternButton;
@@ -219,7 +249,12 @@ class Client {
     this.tokenLoginModal = document.querySelector(
       "token-login",
     ) as TokenLoginModal;
-    this.tokenLoginModal instanceof TokenLoginModal;
+    if (
+      !this.tokenLoginModal ||
+      !(this.tokenLoginModal instanceof TokenLoginModal)
+    ) {
+      console.warn("Token login modal element not found");
+    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       document.dispatchEvent(
@@ -330,7 +365,9 @@ class Client {
     const settingsModal = document.querySelector(
       "user-setting",
     ) as UserSettingModal;
-    settingsModal instanceof UserSettingModal;
+    if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
+      console.warn("User settings modal element not found");
+    }
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {
@@ -340,7 +377,9 @@ class Client {
     const hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
+    if (!hostModal || !(hostModal instanceof HostPrivateLobbyModal)) {
+      console.warn("Host private lobby modal element not found");
+    }
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
@@ -353,7 +392,9 @@ class Client {
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
     ) as JoinPrivateLobbyModal;
-    this.joinModal instanceof JoinPrivateLobbyModal;
+    if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
+      console.warn("Join private lobby modal element not found");
+    }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
@@ -405,6 +446,8 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
+
+    this.initializeFuseTag();
   }
 
   private handleHash() {
@@ -504,49 +547,56 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
+    const pattern = this.userSettings.getSelectedPatternName(
+      await fetchCosmetics(),
+    );
+
     this.gameStop = joinLobby(
       this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        pattern:
-          this.userSettings.getSelectedPatternName(await fetchCosmetics()) ??
-          undefined,
-        flag:
-          this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
-            ? ""
-            : this.flagInput.getCurrentFlag(),
-        structurePort:
-          this.userSettings.getSelectedStructurePort() ?? undefined,
-        structureCity:
-          this.userSettings.getSelectedStructureCity() ?? undefined,
-        structureFactory:
-          this.userSettings.getSelectedStructureFactory() ?? undefined,
-        structureMissilesilo:
-          this.userSettings.getSelectedStructureMissilesilo() ?? undefined,
-        structureDefensepost:
-          this.userSettings.getSelectedStructureDefensepost() ?? undefined,
-        structureSamlauncher:
-          this.userSettings.getSelectedStructureSamlauncher() ?? undefined,
+        cosmetics: {
+          color: this.userSettings.getSelectedColor() ?? undefined,
+          patternName: pattern?.name ?? undefined,
+          patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
+          flag:
+            this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
+              ? ""
+              : this.flagInput.getCurrentFlag(),
+          structurePort:
+            this.userSettings.getSelectedStructurePort() ?? undefined,
+          structureCity:
+            this.userSettings.getSelectedStructureCity() ?? undefined,
+          structureFactory:
+            this.userSettings.getSelectedStructureFactory() ?? undefined,
+          structureMissilesilo:
+            this.userSettings.getSelectedStructureMissilesilo() ?? undefined,
+          structureDefensepost:
+            this.userSettings.getSelectedStructureDefensepost() ?? undefined,
+          structureSamlauncher:
+            this.userSettings.getSelectedStructureSamlauncher() ?? undefined,
 
-        spriteTransportship:
-          this.userSettings.getSelectedSpriteTransportship() ?? undefined,
-        spriteWarship:
-          this.userSettings.getSelectedSpriteWarship() ?? undefined,
-        spriteSammissile:
-          this.userSettings.getSelectedSpriteSammissile() ?? undefined,
-        spriteAtombomb:
-          this.userSettings.getSelectedSpriteAtombomb() ?? undefined,
-        spriteHydrogenbomb:
-          this.userSettings.getSelectedSpriteHydrogenbomb() ?? undefined,
-        spriteTradeship:
-          this.userSettings.getSelectedSpriteTradeship() ?? undefined,
-        spriteMirv: this.userSettings.getSelectedSpriteMirv() ?? undefined,
-        spriteEngine: this.userSettings.getSelectedSpriteEngine() ?? undefined,
-        spriteCarriage:
-          this.userSettings.getSelectedSpriteCarriage() ?? undefined,
-        spriteLoadedcarriage:
-          this.userSettings.getSelectedSpriteLoadedcarriage() ?? undefined,
+          spriteTransportship:
+            this.userSettings.getSelectedSpriteTransportship() ?? undefined,
+          spriteWarship:
+            this.userSettings.getSelectedSpriteWarship() ?? undefined,
+          spriteSammissile:
+            this.userSettings.getSelectedSpriteSammissile() ?? undefined,
+          spriteAtombomb:
+            this.userSettings.getSelectedSpriteAtombomb() ?? undefined,
+          spriteHydrogenbomb:
+            this.userSettings.getSelectedSpriteHydrogenbomb() ?? undefined,
+          spriteTradeship:
+            this.userSettings.getSelectedSpriteTradeship() ?? undefined,
+          spriteMirv: this.userSettings.getSelectedSpriteMirv() ?? undefined,
+          spriteEngine:
+            this.userSettings.getSelectedSpriteEngine() ?? undefined,
+          spriteCarriage:
+            this.userSettings.getSelectedSpriteCarriage() ?? undefined,
+          spriteLoadedcarriage:
+            this.userSettings.getSelectedSpriteLoadedcarriage() ?? undefined,
+        },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,
@@ -593,8 +643,10 @@ class Client {
         const startingModal = document.querySelector(
           "game-starting-modal",
         ) as GameStartingModal;
-        startingModal instanceof GameStartingModal;
-        startingModal.show();
+        if (startingModal && startingModal instanceof GameStartingModal) {
+          startingModal.show();
+        }
+        this.gutterAds.hide();
       },
       () => {
         this.joinModal.close();
@@ -627,6 +679,7 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
+    this.gutterAds.hide();
     this.publicLobby.leaveLobby();
   }
 
@@ -637,6 +690,29 @@ class Client {
     if (this.eventBus) {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
     }
+  }
+
+  private initializeFuseTag() {
+    const tryInitFuseTag = (): boolean => {
+      if (window.fusetag && typeof window.fusetag.pageInit === "function") {
+        console.log("initializing fuse tag");
+        window.fusetag.que.push(() => {
+          window.fusetag.pageInit({
+            blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
+          });
+          this.gutterAds.show();
+        });
+        return true;
+      } else {
+        return false;
+      }
+    };
+
+    const interval = setInterval(() => {
+      if (tryInitFuseTag()) {
+        clearInterval(interval);
+      }
+    }, 100);
   }
 }
 

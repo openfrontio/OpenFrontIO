@@ -91,12 +91,11 @@
       document.documentElement.className = "preload";
     </script>
 
-    <!-- Playwire ads -->
-    <script>
-      window.ramp = window.ramp || {};
-      window.ramp.que = window.ramp.que || [];
-      window.ramp.passiveMode = true;
-    </script>
+    <!-- Publift/Fuse ads -->
+    <script
+      async
+      src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
+    ></script>
 
     <!-- Analytics -->
     <script
@@ -197,7 +196,7 @@
     </header>
     <div class="bg-image"></div>
 
-    <gutter-ad-modal></gutter-ad-modal>
+    <gutter-ads></gutter-ads>
 
     <!-- Main container with responsive padding -->
     <main class="flex justify-center flex-grow">
@@ -286,7 +285,6 @@
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
     <div class="flex gap-2 fixed right-[10px] top-[10px] z-50 flex-col">
-      <options-menu></options-menu>
       <player-info-overlay></player-info-overlay>
     </div>
     <div
@@ -370,16 +368,6 @@
           >
             Terms of Service
           </a>
-          <p style="text-align: center">
-            <a
-              href="https://www.playwire.com/contact-direct-sales"
-              data-i18n="main.advertise"
-              class="t-link"
-              target="_blank"
-              rel="noopener"
-              >Advertise</a
-            >
-          </p>
         </div>
       </div>
     </footer>
@@ -438,9 +426,6 @@
         });
       });
     </script>
-
-    <!-- Playwire ads -->
-    <script async src="//cdn.intergient.com/1025558/75940/ramp.js"></script>
 
     <!-- Analytics -->
     <script

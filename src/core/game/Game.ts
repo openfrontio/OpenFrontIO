@@ -11,6 +11,13 @@ import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
 
+function isEnumValue<T extends Record<string, string | number>>(
+  enumObj: T,
+  value: unknown,
+): value is T[keyof T] {
+  return Object.values(enumObj).includes(value as T[keyof T]);
+}
+
 export type PlayerID = string;
 export type Tick = number;
 export type Gold = bigint;
@@ -37,6 +44,8 @@ export enum Difficulty {
   Hard = "Hard",
   Impossible = "Impossible",
 }
+export const isDifficulty = (value: unknown): value is Difficulty =>
+  isEnumValue(Difficulty, value);
 
 export type Team = string;
 
@@ -134,11 +143,15 @@ export enum GameType {
   Public = "Public",
   Private = "Private",
 }
+export const isGameType = (value: unknown): value is GameType =>
+  isEnumValue(GameType, value);
 
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
 }
+export const isGameMode = (value: unknown): value is GameMode =>
+  isEnumValue(GameMode, value);
 
 export enum GameMapSize {
   Compact = "Compact",
@@ -481,6 +494,7 @@ export interface Unit {
   // Upgradable Structures
   level(): number;
   increaseLevel(): void;
+  decreaseLevel(destroyer?: Player): void;
 
   // Warships
   setPatrolTile(tile: TileRef): void;
@@ -546,7 +560,7 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef): BuildableUnit[];
+  buildableUnits(tile: TileRef | null): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,

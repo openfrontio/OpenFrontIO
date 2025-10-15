@@ -157,7 +157,9 @@ export class StructureLayer implements Layer {
 
     Promise.all(
       Array.from(this.unitIcons.values()).map((img) =>
-        img.decode?.().catch(() => {}),
+        img.decode?.().catch((err) => {
+          console.warn("Failed to decode unit icon image:", err);
+        }),
       ),
     ).finally(() => {
       this.game.units().forEach((u) => this.handleUnitRendering(u));
@@ -265,6 +267,7 @@ export class StructureLayer implements Layer {
   ) {
     let color = unit.owner().borderColor();
     if (unit.type() === UnitType.Construction) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       color = underConstructionColor;
     }
 

@@ -16,7 +16,6 @@ import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
-import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -48,7 +47,7 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = { attackRatio: 20 };
+  const uiState = { attackRatio: 20, ghostStructure: null } as UIState;
 
   //hide when the game renders
   const startingModal = document.querySelector(
@@ -167,6 +166,7 @@ export function createRenderer(
   }
   unitDisplay.game = game;
   unitDisplay.eventBus = eventBus;
+  unitDisplay.uiState = uiState;
 
   const playerPanel = document.querySelector("player-panel") as PlayerPanel;
   if (!(playerPanel instanceof PlayerPanel)) {
@@ -215,14 +215,6 @@ export function createRenderer(
   }
   spawnAd.g = game;
 
-  const gutterAdModal = document.querySelector(
-    "gutter-ad-modal",
-  ) as GutterAdModal;
-  if (!(gutterAdModal instanceof GutterAdModal)) {
-    console.error("gutter ad modal not found");
-  }
-  gutterAdModal.eventBus = eventBus;
-
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -235,12 +227,12 @@ export function createRenderer(
   const layers: Layer[] = [
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
-    new RailroadLayer(game),
+    new RailroadLayer(game, transformHandler),
     structureLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new StructureIconsLayer(game, eventBus, transformHandler),
+    new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
     chatDisplay,
@@ -269,7 +261,6 @@ export function createRenderer(
     headsUpMessage,
     multiTabModal,
     spawnAd,
-    gutterAdModal,
     alertFrame,
     fpsDisplay,
   ];

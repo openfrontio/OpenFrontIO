@@ -100,13 +100,6 @@ export class AttackExecution implements Execution {
         this.active = false;
         return;
       }
-      if (this._owner.isOnSameTeam(this.target)) {
-        console.warn(
-          `${this._owner.displayName()} cannot attack ${this.target.displayName()} because they are on the same team`,
-        );
-        this.active = false;
-        return;
-      }
     }
 
     this.startTroops ??= this.mg

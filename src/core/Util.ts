@@ -91,6 +91,58 @@ export function calculateBoundingBox(
   return { min: new Cell(minX, minY), max: new Cell(maxX, maxY) };
 }
 
+export function boundingBoxTiles(
+  gm: GameMap,
+  center: TileRef,
+  radius: number,
+): TileRef[] {
+  const tiles: TileRef[] = [];
+
+  const centerX = gm.x(center);
+  const centerY = gm.y(center);
+
+  const minX = centerX - radius;
+  const maxX = centerX + radius;
+  const minY = centerY - radius;
+  const maxY = centerY + radius;
+
+  // Top and bottom edges (full width)
+  for (let x = minX; x <= maxX; x++) {
+    if (gm.isValidCoord(x, minY)) {
+      tiles.push(gm.ref(x, minY));
+    }
+    if (gm.isValidCoord(x, maxY) && minY !== maxY) {
+      tiles.push(gm.ref(x, maxY));
+    }
+  }
+
+  // Left and right edges (exclude corners already added)
+  for (let y = minY + 1; y < maxY; y++) {
+    if (gm.isValidCoord(minX, y)) {
+      tiles.push(gm.ref(minX, y));
+    }
+    if (gm.isValidCoord(maxX, y) && minX !== maxX) {
+      tiles.push(gm.ref(maxX, y));
+    }
+  }
+
+  return tiles;
+}
+
+export function getMode<T>(counts: Map<T, number>): T | null {
+  let mode: T | null = null;
+  let maxCount = 0;
+
+  for (const [item, count] of counts) {
+    if (count > maxCount) {
+      maxCount = count;
+      mode = item;
+    }
+  }
+
+  return mode;
+}
+
 export function calculateBoundingBoxCenter(
   gm: GameMap,
   borderTiles: ReadonlySet<TileRef>,
@@ -112,27 +164,6 @@ export function inscribed(
     outer.max.x >= inner.max.x &&
     outer.max.y >= inner.max.y
   );
-}
-
-export function getMode(list: Set<number>): number {
-  // Count occurrences
-  const counts = new Map<number, number>();
-  for (const item of list) {
-    counts.set(item, (counts.get(item) ?? 0) + 1);
-  }
-
-  // Find the item with the highest count
-  let mode = 0;
-  let maxCount = 0;
-
-  for (const [item, count] of counts) {
-    if (count > maxCount) {
-      maxCount = count;
-      mode = item;
-    }
-  }
-
-  return mode;
 }
 
 export function sanitize(name: string): string {
@@ -213,7 +244,7 @@ export function assertNever(x: never): never {
 
 export function generateID(): GameID {
   const nanoid = customAlphabet(
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
     8,
   );
   return nanoid();
@@ -257,7 +288,7 @@ export function createRandomName(
   return randomName;
 }
 
-export const emojiTable: string[][] = [
+export const emojiTable = [
   ["😀", "😊", "🥰", "😇", "😎"],
   ["😞", "🥺", "😭", "😱", "😡"],
   ["😈", "🤡", "🖕", "🥱", "🤦‍♂️"],
@@ -269,9 +300,11 @@ export const emojiTable: string[][] = [
   ["⬅️", "🎯", "➡️", "🥈", "🥉"],
   ["↙️", "⬇️", "↘️", "❤️", "💔"],
   ["💰", "⚓", "⛵", "🏡", "🛡️"],
-];
+] as const;
 // 2d to 1d array
-export const flattenedEmojiTable: string[] = emojiTable.flat();
+export const flattenedEmojiTable = emojiTable.flat();
+
+export type Emoji = (typeof flattenedEmojiTable)[number];
 
 /**
  * JSON.stringify replacer function that converts bigint values to strings.

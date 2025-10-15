@@ -160,6 +160,7 @@ export interface PlayerUpdate {
   allies: number[];
   embargoes: Set<PlayerID>;
   isTraitor: boolean;
+  traitorRemainingTicks?: number;
   targets: number[];
   outgoingEmojis: EmojiMessage[];
   outgoingAttacks: AttackUpdate[];
@@ -168,6 +169,7 @@ export interface PlayerUpdate {
   alliances: AllianceView[];
   hasSpawned: boolean;
   betrayals?: bigint;
+  lastDeleteUnitTick: Tick;
 }
 
 export interface AllianceView {

@@ -826,7 +826,7 @@ export class GameServer {
 
     const ratio = `${potentialWinner.ips.size}/${activeUniqueIPs.size}`;
     this.log.info(
-      `recieved winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
+      `received winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
       {
         clientID: client.clientID,
       },
