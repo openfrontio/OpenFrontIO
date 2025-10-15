@@ -187,6 +187,7 @@ export class TransportShipExecution implements Execution {
       // Ensure retreat source is valid for the new owner, may be same port
       const newSrc = this.attacker.canBuild(UnitType.TransportShip, this.dst);
       if (newSrc === false) {
+        this.src = null;
         console.warn(
           `TransportShipExecution: Failed to find valid src for new attacker`,
         );
