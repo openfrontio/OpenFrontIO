@@ -124,7 +124,6 @@ export class UnitImpl implements Unit {
       ownerID: this._owner.smallID(),
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
-      wasDeleted: this._deleted,
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       pos: this._tile,

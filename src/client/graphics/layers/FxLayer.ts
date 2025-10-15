@@ -256,17 +256,15 @@ export class FxLayer implements Layer {
 
   onStructureEvent(unit: UnitView) {
     if (!unit.isActive()) {
-      if (unit.wasDeleted()) {
-        const x = this.game.x(unit.lastTile());
-        const y = this.game.y(unit.lastTile());
-        const explosion = new SpriteFx(
-          this.animatedSpriteLoader,
-          x,
-          y,
-          FxType.BuildingExplosion,
-        );
-        this.allFx.push(explosion);
-      }
+      const x = this.game.x(unit.lastTile());
+      const y = this.game.y(unit.lastTile());
+      const explosion = new SpriteFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        FxType.BuildingExplosion,
+      );
+      this.allFx.push(explosion);
     }
   }
 

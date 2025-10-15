@@ -120,7 +120,6 @@ export interface UnitUpdate {
   pos: TileRef;
   lastPos: TileRef;
   isActive: boolean;
-  wasDeleted: boolean;
   reachedTarget: boolean;
   retreating: boolean;
   targetable: boolean;
