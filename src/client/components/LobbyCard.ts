@@ -175,8 +175,9 @@ export class LobbyCard extends LitElement {
           </div>
           ${this.showDifficulty
             ? html`<div class="text-md font-medium text-blue-100 mt-1">
-                ${translateText("private_lobby.difficulty")}:
-                ${this.formatDifficulty()}
+                ${translateText(
+                  "private_lobby.difficulty",
+                )}${this.formatDifficulty()}
               </div>`
             : ""}
         </div>
