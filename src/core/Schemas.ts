@@ -278,7 +278,7 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.bigint().nullable(),
+  gold: z.number().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
