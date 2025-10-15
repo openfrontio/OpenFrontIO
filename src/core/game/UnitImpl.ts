@@ -17,6 +17,7 @@ import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {
   private _active = true;
+  private _deleted = false;
   private _targetTile: TileRef | undefined;
   private _targetUnit: Unit | undefined;
   private _health: bigint;
@@ -123,6 +124,7 @@ export class UnitImpl implements Unit {
       ownerID: this._owner.smallID(),
       lastOwnerID: this._lastOwner?.smallID(),
       isActive: this._active,
+      wasDeleted: this._deleted,
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       pos: this._tile,
@@ -227,6 +229,7 @@ export class UnitImpl implements Unit {
     }
     this._owner._units = this._owner._units.filter((b) => b !== this);
     this._active = false;
+    this._deleted = true;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
     if (displayMessage !== false && this._type !== UnitType.MIRVWarhead) {

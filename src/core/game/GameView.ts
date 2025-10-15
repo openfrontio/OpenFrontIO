@@ -108,6 +108,9 @@ export class UnitView {
   isActive(): boolean {
     return this.data.isActive;
   }
+  wasDeleted(): boolean {
+    return this.data.wasDeleted;
+  }
   reachedTarget(): boolean {
     return this.data.reachedTarget;
   }
