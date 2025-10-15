@@ -41,4 +41,19 @@ describe("translateText fallback", () => {
 
     expect(result).toBe("<ok>");
   });
+
+  it("resolves flat translation keys when running in browser mode", () => {
+    const langSelector = {
+      translations: { "main.single_player": "Single Player" },
+      defaultTranslations: undefined,
+      currentLang: "en",
+    };
+    (global as any).document = {
+      querySelector: () => langSelector,
+    } as any;
+
+    const result = translateText("main.single_player");
+
+    expect(result).toBe("Single Player");
+  });
 });

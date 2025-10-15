@@ -232,14 +232,27 @@ export const translateText = (
       return undefined;
     }, obj);
 
-  const directMessage = deepGet(langSelector.translations, key);
-  let message = directMessage;
+  const translations =
+    (langSelector.translations as Record<string, unknown>) ?? {};
+  const directMessage = translations[key];
+  let message: unknown = directMessage;
+
+  if (typeof message !== "string" || message.length === 0) {
+    message = deepGet(translations, key);
+  }
 
   if (
     (typeof message !== "string" || message.length === 0) &&
     langSelector.defaultTranslations
   ) {
-    message = deepGet(langSelector.defaultTranslations, key);
+    const defaults = langSelector.defaultTranslations as
+      | Record<string, unknown>
+      | undefined;
+    const defaultDirect = defaults ? defaults[key] : undefined;
+    message = defaultDirect;
+    if (typeof message !== "string" || message.length === 0) {
+      message = deepGet(defaults, key);
+    }
   }
 
   if (typeof message !== "string" || message.length === 0) {
