@@ -39,6 +39,7 @@ export class TransportShipExecution implements Execution {
     private ref: TileRef,
     private startTroops: number,
     private src: TileRef | null,
+    private originalOwner: Player,
   ) {}
 
   activeDuringSpawnPhase(): boolean {
@@ -179,6 +180,17 @@ export class TransportShipExecution implements Execution {
       if (this.boat.targetTile() !== this.dst) {
         this.boat.setTargetTile(this.dst);
       }
+    }
+
+    // Team member can conquer disconnected player and gets their ships
+    // captureUnit has changed the owner of the unit, now update attacker
+    if (
+      this.originalOwner.isDisconnected() &&
+      this.boat.owner() !== this.originalOwner &&
+      this.boat.owner().isOnSameTeam(this.originalOwner)
+    ) {
+      this.attacker = this.boat.owner();
+      this.originalOwner = this.boat.owner(); // for when this owner disconnects too
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);

@@ -55,10 +55,6 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
-    if (this.warship.owner().isDisconnected()) {
-      this.warship.delete();
-      return;
-    }
 
     const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     if (hasPort) {
@@ -93,7 +89,8 @@ export class WarshipExecution implements Execution {
       if (
         unit.owner() === this.warship.owner() ||
         unit === this.warship ||
-        unit.owner().isFriendly(this.warship.owner()) ||
+        // Keep below order so if warship owner is disconnected, isFriendly still returns true
+        this.warship.owner().isFriendly(unit.owner()) ||
         this.alreadySentShell.has(unit)
       ) {
         continue;

@@ -21,7 +21,14 @@ let attackerSpawn: TileRef;
 
 function sendBoat(target: TileRef, source: TileRef, troops: number) {
   game.addExecution(
-    new TransportShipExecution(defender, null, target, troops, source),
+    new TransportShipExecution(
+      defender,
+      null,
+      target,
+      troops,
+      source,
+      defender,
+    ),
   );
 }
 
