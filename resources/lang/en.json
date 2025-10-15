@@ -496,7 +496,8 @@
       "city": "Increases max population",
       "factory": "Creates railroads and spawns trains"
     },
-    "not_enough_money": "Not enough money"
+    "not_enough_money": "Not enough money",
+    "unavailable": "Unavailable"
   },
   "win_modal": {
     "support_openfront": "Support OpenFront!",

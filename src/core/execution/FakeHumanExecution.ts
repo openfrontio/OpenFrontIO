@@ -479,6 +479,8 @@ export class FakeHumanExecution implements Execution {
       UnitType.Port,
       UnitType.Factory,
       UnitType.DefensePost,
+      UnitType.SAMLauncher,
+      UnitType.MissileSilo,
     ]
       .map((type) => this.cost(type))
       .filter((cost) => cost > 0n)

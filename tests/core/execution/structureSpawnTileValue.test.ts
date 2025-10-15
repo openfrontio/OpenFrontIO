@@ -64,6 +64,10 @@ describe("structureSpawnTileValue", () => {
       magnitude: () => 0,
       manhattanDist: (a: TileRef, b: TileRef) =>
         Math.abs((a as number) - (b as number)),
+      euclideanDistSquared: (a: TileRef, b: TileRef) => {
+        const d = (a as number) - (b as number);
+        return d * d;
+      },
     } as unknown as import("../../../src/core/game/Game").Game;
   };
 

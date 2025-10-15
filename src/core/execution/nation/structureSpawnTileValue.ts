@@ -9,6 +9,8 @@ type ClusterPreference = Readonly<{
   weight: number;
 }>;
 
+type PreferenceTuple = readonly [Set<TileRef>, ClusterPreference];
+
 const assertPreference = (pref: ClusterPreference): ClusterPreference => {
   if (!(pref.near <= pref.ideal && pref.ideal <= pref.far) || pref.weight < 0) {
     throw new Error("Invalid ClusterPreference");
@@ -50,7 +52,10 @@ export function structureSpawnTileValue(
   const borderTiles = player.borderTiles();
   const otherUnits = player.units(type);
   // Prefer spacing structures out of atom bomb range
-  const borderSpacing = mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+  const rawBorderSpacing = mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+  const borderSpacing = Number.isFinite(rawBorderSpacing)
+    ? rawBorderSpacing
+    : 20;
   const structureSpacing = borderSpacing * 2;
   const cityTiles: Set<TileRef> = new Set(
     player.units(UnitType.City).map((u) => u.tile()),
@@ -69,6 +74,69 @@ export function structureSpawnTileValue(
   const missileSiloTiles: Set<TileRef> = new Set(
     player.units(UnitType.MissileSilo).map((u) => u.tile()),
   );
+
+  const cityComplementPreferences: PreferenceTuple[] = [
+    [
+      portTiles,
+      assertPreference({
+        near: 12,
+        ideal: 60,
+        far: 150,
+        weight: structureSpacing,
+      }),
+    ],
+    [
+      factoryTiles,
+      assertPreference({
+        near: 10,
+        ideal: 55,
+        far: 130,
+        weight: structureSpacing * 0.9,
+      }),
+    ],
+  ];
+
+  const factoryComplementPreferences: PreferenceTuple[] = [
+    [
+      cityTiles,
+      assertPreference({
+        near: 8,
+        ideal: 50,
+        far: 120,
+        weight: structureSpacing * 0.85,
+      }),
+    ],
+    [
+      portTiles,
+      assertPreference({
+        near: 14,
+        ideal: 65,
+        far: 160,
+        weight: structureSpacing * 0.6,
+      }),
+    ],
+  ];
+
+  const portComplementPreferences: PreferenceTuple[] = [
+    [
+      cityTiles,
+      assertPreference({
+        near: 12,
+        ideal: 55,
+        far: 160,
+        weight: structureSpacing,
+      }),
+    ],
+    [
+      factoryTiles,
+      assertPreference({
+        near: 16,
+        ideal: 70,
+        far: 170,
+        weight: structureSpacing * 0.8,
+      }),
+    ],
+  ];
 
   switch (type) {
     case UnitType.City:
@@ -95,50 +163,10 @@ export function structureSpawnTileValue(
           w += Math.min(d, structureSpacing);
         }
 
-        const complementaryPreferences: Array<
-          [Set<TileRef>, ClusterPreference]
-        > =
+        const complementaryPreferences =
           type === UnitType.City
-            ? [
-                [
-                  portTiles,
-                  assertPreference({
-                    near: 12,
-                    ideal: 60,
-                    far: 150,
-                    weight: structureSpacing,
-                  }),
-                ],
-                [
-                  factoryTiles,
-                  assertPreference({
-                    near: 10,
-                    ideal: 55,
-                    far: 130,
-                    weight: structureSpacing * 0.9,
-                  }),
-                ],
-              ]
-            : [
-                [
-                  cityTiles,
-                  assertPreference({
-                    near: 8,
-                    ideal: 50,
-                    far: 120,
-                    weight: structureSpacing * 0.85,
-                  }),
-                ],
-                [
-                  portTiles,
-                  assertPreference({
-                    near: 14,
-                    ideal: 65,
-                    far: 160,
-                    weight: structureSpacing * 0.6,
-                  }),
-                ],
-              ];
+            ? cityComplementPreferences
+            : factoryComplementPreferences;
 
         for (const [targets, pref] of complementaryPreferences) {
           const bonus = complementaryPlacementScore(mg, tile, targets, pref);
@@ -202,28 +230,7 @@ export function structureSpawnTileValue(
           w += Math.min(closestOtherDist, structureSpacing);
         }
 
-        const complementaryPreferences: Array<
-          [Set<TileRef>, ClusterPreference]
-        > = [
-          [
-            cityTiles,
-            assertPreference({
-              near: 12,
-              ideal: 55,
-              far: 160,
-              weight: structureSpacing,
-            }),
-          ],
-          [
-            factoryTiles,
-            assertPreference({
-              near: 16,
-              ideal: 70,
-              far: 170,
-              weight: structureSpacing * 0.8,
-            }),
-          ],
-        ];
+        const complementaryPreferences = portComplementPreferences;
 
         for (const [targets, pref] of complementaryPreferences) {
           const bonus = complementaryPlacementScore(mg, tile, targets, pref);
@@ -250,13 +257,16 @@ export function structureSpawnTileValue(
 
           // Prefer adjacent players who are hostile
           const neighbors: Set<Player> = new Set();
-          for (const tile of mg.neighbors(closest)) {
-            if (!mg.isLand(tile)) continue;
-            const id = mg.ownerID(tile);
+          for (const neighborTile of mg.neighbors(closest)) {
+            if (!mg.isLand(neighborTile)) continue;
+            const id = mg.ownerID(neighborTile);
             if (id === player.smallID()) continue;
             const neighbor = mg.playerBySmallID(id);
             if (!neighbor.isPlayer()) continue;
             neighbors.add(neighbor);
+          }
+          if (neighbors.size === 0) {
+            return -Infinity;
           }
           for (const neighbor of neighbors) {
             w +=

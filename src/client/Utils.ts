@@ -34,26 +34,53 @@ export function renderNumber(
   num: number | bigint,
   fixedPoints?: number,
 ): string {
-  num = Number(num);
+  if (typeof num === "bigint") {
+    if (num < 0n) num = 0n;
+
+    if (num >= 10_000_000n) {
+      const scaled = Number(num / 100_000n) / 10;
+      return scaled.toFixed(fixedPoints ?? 1) + "M";
+    }
+    if (num >= 1_000_000n) {
+      const scaled = Number(num / 10_000n) / 100;
+      return scaled.toFixed(fixedPoints ?? 2) + "M";
+    }
+    if (num >= 100_000n) {
+      return `${num / 1_000n}K`;
+    }
+    if (num >= 10_000n) {
+      const scaled = Number(num / 100n) / 10;
+      return scaled.toFixed(fixedPoints ?? 1) + "K";
+    }
+    if (num >= 1_000n) {
+      const scaled = Number(num / 10n) / 100;
+      return scaled.toFixed(fixedPoints ?? 2) + "K";
+    }
+    return num.toString();
+  }
+
   num = Math.max(num, 0);
 
   if (num >= 10_000_000) {
     const value = Math.floor(num / 100000) / 10;
     return value.toFixed(fixedPoints ?? 1) + "M";
-  } else if (num >= 1_000_000) {
+  }
+  if (num >= 1_000_000) {
     const value = Math.floor(num / 10000) / 100;
     return value.toFixed(fixedPoints ?? 2) + "M";
-  } else if (num >= 100000) {
+  }
+  if (num >= 100000) {
     return Math.floor(num / 1000) + "K";
-  } else if (num >= 10000) {
+  }
+  if (num >= 10000) {
     const value = Math.floor(num / 100) / 10;
     return value.toFixed(fixedPoints ?? 1) + "K";
-  } else if (num >= 1000) {
+  }
+  if (num >= 1000) {
     const value = Math.floor(num / 10) / 100;
     return value.toFixed(fixedPoints ?? 2) + "K";
-  } else {
-    return Math.floor(num).toString();
   }
+  return Math.floor(num).toString();
 }
 
 /**
@@ -70,6 +97,35 @@ export function createCanvas(): HTMLCanvasElement {
   canvas.style.width = "100%";
   canvas.style.height = "100%";
   canvas.style.touchAction = "none";
+
+  const resize = () => {
+    if (typeof window === "undefined") {
+      if (canvas.width === 0) canvas.width = 1;
+      if (canvas.height === 0) canvas.height = 1;
+      return;
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || window.innerWidth;
+    const height = rect.height || window.innerHeight;
+    const targetWidth = Math.max(1, Math.floor(width * dpr));
+    const targetHeight = Math.max(1, Math.floor(height * dpr));
+    if (canvas.width !== targetWidth) {
+      canvas.width = targetWidth;
+    }
+    if (canvas.height !== targetHeight) {
+      canvas.height = targetHeight;
+    }
+  };
+
+  resize();
+
+  if (typeof window !== "undefined") {
+    const listener = () => resize();
+    window.addEventListener("resize", listener, { passive: true });
+    (canvas as any).__disposeResize__ = () =>
+      window.removeEventListener("resize", listener);
+  }
 
   return canvas;
 }
@@ -168,20 +224,31 @@ export const translateText = (
     self.lastLang = langSelector.currentLang;
   }
 
-  let message = langSelector.translations[key];
+  const deepGet = (obj: unknown, path: string): unknown =>
+    path.split(".").reduce<unknown>((acc, segment) => {
+      if (acc && typeof acc === "object" && segment in (acc as any)) {
+        return (acc as Record<string, unknown>)[segment];
+      }
+      return undefined;
+    }, obj);
 
-  if (!message && langSelector.defaultTranslations) {
-    const defaultTranslations = langSelector.defaultTranslations;
-    if (defaultTranslations && defaultTranslations[key]) {
-      message = defaultTranslations[key];
-    }
+  const directMessage = deepGet(langSelector.translations, key);
+  let message = directMessage;
+
+  if (
+    (typeof message !== "string" || message.length === 0) &&
+    langSelector.defaultTranslations
+  ) {
+    message = deepGet(langSelector.defaultTranslations, key);
   }
 
-  if (!message) return key;
+  if (typeof message !== "string" || message.length === 0) {
+    return key;
+  }
 
   try {
     const locale =
-      !langSelector.translations[key] && langSelector.currentLang !== "en"
+      typeof directMessage !== "string" && langSelector.currentLang !== "en"
         ? "en"
         : langSelector.currentLang;
     const cacheKey = `${key}:${locale}:${message}`;
@@ -200,7 +267,8 @@ export const translateText = (
 };
 
 /** Mapping from message severity to the Tailwind class we apply in the UI. */
-export const severityColors: Record<string, string> = {
+type Severity = "fail" | "warn" | "success" | "info" | "blue" | "white";
+export const severityColors: Record<Severity, string> = {
   fail: "text-red-400",
   warn: "text-yellow-400",
   success: "text-green-400",
@@ -305,11 +373,28 @@ export function incrementGamesPlayed(): void {
  * where cross-origin access throws, the function safely assumes `true`.
  */
 export function isInIframe(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
   try {
     return window.self !== window.top;
   } catch (e) {
     // If we can't access window.top due to cross-origin restrictions,
     // we're definitely in an iframe
     return true;
+  }
+}
+
+/**
+ * Test helper to clear memoized translation state between Jest runs.
+ */
+export function __resetTranslationCacheForTesting(): void {
+  const self = translateText as any;
+  self.enTranslations = undefined;
+  self.lastLang = null;
+  if (self.formatterCache?.clear) {
+    self.formatterCache.clear();
+  } else {
+    self.formatterCache = new Map();
   }
 }

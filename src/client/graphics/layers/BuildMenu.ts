@@ -460,10 +460,7 @@ export class BuildMenu extends LitElement implements Layer {
       return null;
     }
 
-    if (
-      buildableUnit.canBuild === false &&
-      buildableUnit.canUpgrade === false
-    ) {
+    if (buildableUnit.canBuild === false) {
       return null;
     }
 
@@ -479,7 +476,7 @@ export class BuildMenu extends LitElement implements Layer {
 
     const affordable = gold / cost;
     if (affordable <= 1n) {
-      return "×1";
+      return null;
     }
     if (affordable > 99n) {
       return "×99+";
@@ -506,13 +503,15 @@ export class BuildMenu extends LitElement implements Layer {
                 const enabled =
                   buildableUnit.canBuild !== false ||
                   buildableUnit.canUpgrade !== false;
-                const buttonClass = `build-button${
-                  enabled ? " build-button--available" : ""
-                }`;
                 const affordability = this.affordableCountLabel(
                   item,
                   buildableUnit,
                 );
+                const buttonClass = `build-button${
+                  affordability ? " build-button--available" : ""
+                }`;
+                const showMoneyWarning =
+                  !enabled && buildableUnit.canBuild !== false;
                 return html`
                   <button
                     class=${buttonClass}
@@ -520,7 +519,9 @@ export class BuildMenu extends LitElement implements Layer {
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
                     title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
+                      ? showMoneyWarning
+                        ? translateText("build_menu.not_enough_money")
+                        : translateText("build_menu.unavailable")
                       : ""}
                   >
                     <img
