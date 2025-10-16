@@ -11,7 +11,7 @@ export class CheckboxCard extends LitElement {
   /**
    * Unique identifier for the checkbox input
    */
-  @property({ type: String }) id: string = "";
+  @property({ type: String }) inputId: string = "";
 
   /**
    * Display label text for the checkbox
@@ -129,14 +129,14 @@ export class CheckboxCard extends LitElement {
 
     return html`
       <label
-        for="${this.id}"
+        for="${this.inputId}"
         class="option-card ${this.checked ? "selected" : ""}"
         style="${style}"
       >
         <div class="checkbox-icon"></div>
         <input
           type="checkbox"
-          id="${this.id}"
+          id="${this.inputId}"
           @change=${(e: Event) => {
             const checked = (e.target as HTMLInputElement).checked;
             if (this.onChange) {
