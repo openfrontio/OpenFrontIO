@@ -3,6 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { GameMapSize, UnitType } from "../../core/game/Game";
 import { GameConfig } from "../../core/Schemas";
 import { translateText } from "../Utils";
+import "./CheckboxCard";
 
 /**
  * Shared component for displaying game options and unit settings
@@ -176,53 +177,19 @@ export class GameOptionsDisplay extends LitElement {
 
     const value = this.gameConfig[key as keyof GameConfig] as boolean;
 
-    if (this.editable) {
-      return html`
-        <label
-          for="${key}"
-          class="option-card ${value ? "selected" : ""}"
-          @click=${(e: Event) => {
-            // Handle click on the label to toggle the checkbox
-            const target = e.target as HTMLElement;
-            // Only handle if not clicking directly on the checkbox
-            if (target.tagName !== "INPUT") {
-              e.preventDefault();
-              if (this.onOptionChange) {
-                this.onOptionChange(key, !value);
-              }
-            }
-          }}
-        >
-          <div class="checkbox-icon"></div>
-          <input
-            type="checkbox"
-            id="${key}"
-            @change=${(e: Event) => {
-              const checked = (e.target as HTMLInputElement).checked;
-              if (this.onOptionChange) {
-                this.onOptionChange(key, checked);
-              }
-            }}
-            .checked=${value}
-          />
-          <div class="option-card-title">
-            ${translateText(`host_modal.${label}`)}
-          </div>
-        </label>
-      `;
-    } else {
-      // Read-only mode
-      return html`
-        <div
-          class="option-card ${value ? "selected" : ""}"
-          style="pointer-events: none;"
-        >
-          <div class="option-card-title">
-            ${translateText(`host_modal.${label}`)}
-          </div>
-        </div>
-      `;
-    }
+    return html`
+      <checkbox-card
+        id="${key}"
+        label="${translateText(`host_modal.${label}`)}"
+        .checked=${value}
+        .editable=${this.editable}
+        .onChange=${(checked: boolean) => {
+          if (this.onOptionChange) {
+            this.onOptionChange(key, checked);
+          }
+        }}
+      ></checkbox-card>
+    `;
   }
 
   /**
@@ -233,53 +200,19 @@ export class GameOptionsDisplay extends LitElement {
 
     const isCompact = this.gameConfig.gameMapSize === GameMapSize.Compact;
 
-    if (this.editable) {
-      return html`
-        <label
-          for="host-modal-compact-map"
-          class="option-card ${isCompact ? "selected" : ""}"
-          @click=${(e: Event) => {
-            // Handle click on the label to toggle the checkbox
-            const target = e.target as HTMLElement;
-            // Only handle if not clicking directly on the checkbox
-            if (target.tagName !== "INPUT") {
-              e.preventDefault();
-              if (this.onOptionChange) {
-                this.onOptionChange("compactMap", !isCompact);
-              }
-            }
-          }}
-        >
-          <div class="checkbox-icon"></div>
-          <input
-            type="checkbox"
-            id="host-modal-compact-map"
-            @change=${(e: Event) => {
-              const checked = (e.target as HTMLInputElement).checked;
-              if (this.onOptionChange) {
-                this.onOptionChange("compactMap", checked);
-              }
-            }}
-            .checked=${isCompact}
-          />
-          <div class="option-card-title">
-            ${translateText("host_modal.compact_map")}
-          </div>
-        </label>
-      `;
-    } else {
-      // Read-only mode
-      return html`
-        <div
-          class="option-card ${isCompact ? "selected" : ""}"
-          style="pointer-events: none;"
-        >
-          <div class="option-card-title">
-            ${translateText("host_modal.compact_map")}
-          </div>
-        </div>
-      `;
-    }
+    return html`
+      <checkbox-card
+        id="host-modal-compact-map"
+        label="${translateText("host_modal.compact_map")}"
+        .checked=${isCompact}
+        .editable=${this.editable}
+        .onChange=${(checked: boolean) => {
+          if (this.onOptionChange) {
+            this.onOptionChange("compactMap", checked);
+          }
+        }}
+      ></checkbox-card>
+    `;
   }
 
   /**
@@ -330,43 +263,33 @@ export class GameOptionsDisplay extends LitElement {
             >
               ${unitOptions.map(
                 ({ type, translationKey }) => html`
-                  <label
-                    class="option-card ${disabledUnits.includes(type)
-                      ? ""
-                      : "selected"}"
-                    style="width: 8.75rem;"
-                  >
-                    <div class="checkbox-icon"></div>
-                    <input
-                      type="checkbox"
-                      .checked=${disabledUnits.includes(type)}
-                      @change=${(e: Event) => {
-                        const checked = (e.target as HTMLInputElement).checked;
-                        if (this.onUnitToggle) {
-                          this.onUnitToggle(type, checked);
-                        }
-                      }}
-                    />
-                    <div class="option-card-title" style="text-align: center;">
-                      ${translateText(translationKey)}
-                    </div>
-                  </label>
+                  <checkbox-card
+                    id="unit-${type}"
+                    label="${translateText(translationKey)}"
+                    .checked=${!disabledUnits.includes(type)}
+                    .editable=${true}
+                    width="8.75rem"
+                    titleStyle="text-align: center;"
+                    .onChange=${(checked: boolean) => {
+                      if (this.onUnitToggle) {
+                        this.onUnitToggle(type, !checked);
+                      }
+                    }}
+                  ></checkbox-card>
                 `,
               )}
             </div>
           `
         : unitOptions.map(
             ({ type, translationKey }) => html`
-              <div
-                class="option-card ${disabledUnits.includes(type)
-                  ? ""
-                  : "selected"}"
-                style="width: 9rem; pointer-events: none;"
-              >
-                <div class="option-card-title" style="text-align: center;">
-                  ${translateText(translationKey)}
-                </div>
-              </div>
+              <checkbox-card
+                id="unit-${type}-readonly"
+                label="${translateText(translationKey)}"
+                .checked=${!disabledUnits.includes(type)}
+                .editable=${false}
+                width="9rem"
+                titleStyle="text-align: center;"
+              ></checkbox-card>
             `,
           )}
     `;
