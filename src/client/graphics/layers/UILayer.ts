@@ -117,11 +117,18 @@ export class UILayer implements Layer {
         this.drawHealthBar(unit);
         break;
       }
+      case UnitType.City:
+      case UnitType.Factory:
+      case UnitType.DefensePost:
+      case UnitType.Port:
       case UnitType.MissileSilo:
-        this.createLoadingBar(unit);
-        break;
       case UnitType.SAMLauncher:
-        this.createLoadingBar(unit);
+        if (
+          unit.markedForDeletion() !== false ||
+          unit.missileReadinesss() < 1
+        ) {
+          this.createLoadingBar(unit);
+        }
         break;
       default:
         return;
@@ -328,8 +335,35 @@ export class UILayer implements Layer {
         );
       }
       case UnitType.MissileSilo:
-      case UnitType.SAMLauncher:
-        return unit.missileReadinesss();
+      case UnitType.SAMLauncher: {
+        if (!unit.markedForDeletion()) {
+          return unit.missileReadinesss();
+        } else {
+          const deleteAt = unit.markedForDeletion();
+          if (deleteAt !== false) {
+            return Math.max(
+              0,
+              (deleteAt - this.game.ticks()) /
+                this.game.config().deletionMarkDuration(),
+            );
+          }
+        }
+        return 1;
+      }
+      case UnitType.City:
+      case UnitType.Factory:
+      case UnitType.Port:
+      case UnitType.DefensePost: {
+        const deleteAt = unit.markedForDeletion();
+        if (deleteAt !== false) {
+          return Math.max(
+            0,
+            (deleteAt - this.game.ticks()) /
+              this.game.config().deletionMarkDuration(),
+          );
+        }
+        return 1;
+      }
       default:
         return 1;
     }

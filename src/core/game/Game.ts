@@ -432,6 +432,9 @@ export interface Unit {
   type(): UnitType;
   owner(): Player;
   info(): UnitInfo;
+  isMarkedForDeletion(): boolean;
+  markForDeletion(): void;
+  isOverdueDeletion(): boolean;
   delete(displayMessage?: boolean, destroyer?: Player): void;
   tile(): TileRef;
   lastTile(): TileRef;
