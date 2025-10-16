@@ -260,8 +260,10 @@ export class JoinPrivateLobbyModal extends LitElement {
     }
 
     const archiveData = await archiveResponse.json();
-    const parsed = GameRecordSchema.safeParse(archiveData);
+    const parsed = GameRecordSchema.safeParse(archiveData);    
     if (!parsed.success) {
+      console.error("Error msg: " + parsed.error?.message + "");
+      console.error("Error stack: " + parsed.error?.stack + "");
       return "version_mismatch";
     }
 
