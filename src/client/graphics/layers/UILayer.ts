@@ -335,38 +335,27 @@ export class UILayer implements Layer {
         );
       }
       case UnitType.MissileSilo:
-      case UnitType.SAMLauncher: {
-        if (!unit.markedForDeletion()) {
-          return unit.missileReadinesss();
-        } else {
-          const deleteAt = unit.markedForDeletion();
-          if (deleteAt !== false) {
-            return Math.max(
-              0,
-              (deleteAt - this.game.ticks()) /
-                this.game.config().deletionMarkDuration(),
-            );
-          }
-        }
-        return 1;
-      }
+      case UnitType.SAMLauncher:
+        return !unit.markedForDeletion()
+          ? unit.missileReadinesss()
+          : this.deletionProgress(this.game, unit);
       case UnitType.City:
       case UnitType.Factory:
       case UnitType.Port:
-      case UnitType.DefensePost: {
-        const deleteAt = unit.markedForDeletion();
-        if (deleteAt !== false) {
-          return Math.max(
-            0,
-            (deleteAt - this.game.ticks()) /
-              this.game.config().deletionMarkDuration(),
-          );
-        }
-        return 1;
-      }
+      case UnitType.DefensePost:
+        return this.deletionProgress(this.game, unit);
       default:
         return 1;
     }
+  }
+
+  private deletionProgress(game: GameView, unit: UnitView): number {
+    const deleteAt = unit.markedForDeletion();
+    if (deleteAt === false) return 1;
+    return Math.max(
+      0,
+      (deleteAt - game.ticks()) / game.config().deletionMarkDuration(),
+    );
   }
 
   public createLoadingBar(unit: UnitView) {
