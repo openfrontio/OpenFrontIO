@@ -20,6 +20,7 @@ export async function verifyClientToken(
   token: string,
   config: ServerConfig,
 ): Promise<TokenVerificationResult> {
+  console.log(`Verifying token: ${token}`);
   if (PersistentIdSchema.safeParse(token).success) {
     return { persistentId: token, claims: null };
   }
@@ -42,6 +43,7 @@ export async function verifyClientToken(
     const persistentId = claims.sub;
     return { persistentId, claims };
   } catch (e) {
+    console.error(`Error verifying token: ${e}`);
     return false;
   }
 }

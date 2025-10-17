@@ -22,6 +22,8 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import "./Matchmaking";
+import { MatchmakingModal } from "./Matchmaking";
 import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
@@ -100,6 +102,7 @@ class Client {
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
+  private matchmakingModal: MatchmakingModal;
 
   private gutterAds: GutterAds;
 
@@ -254,6 +257,16 @@ class Client {
       !(this.tokenLoginModal instanceof TokenLoginModal)
     ) {
       console.warn("Token login modal element not found");
+    }
+
+    this.matchmakingModal = document.querySelector(
+      "matchmaking-modal",
+    ) as MatchmakingModal;
+    if (
+      !this.matchmakingModal ||
+      !(this.matchmakingModal instanceof MatchmakingModal)
+    ) {
+      console.warn("Matchmaking modal element not found");
     }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
@@ -598,6 +611,7 @@ class Client {
           "flag-input-modal",
           "account-button",
           "token-login",
+          "matchmaking-modal",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
@@ -697,7 +711,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // WARNING: DO NOT EXPOSE THIS ID
-function getPlayToken(): string {
+export function getPlayToken(): string {
   const result = isLoggedIn();
   if (result !== false) return result.token;
   return getPersistentIDFromCookie();

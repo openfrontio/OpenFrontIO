@@ -4,6 +4,9 @@ import { GameMapType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
+  enableMatchmaking(): boolean {
+    throw new Error("Method not implemented.");
+  }
   apiKey(): string {
     throw new Error("Method not implemented.");
   }

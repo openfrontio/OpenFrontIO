@@ -220,6 +220,11 @@
     "teams_Quads": "Quads (teams of 4)",
     "teams": "{num} teams"
   },
+  "matchmaking_modal": {
+    "title": "Matchmaking",
+    "searching": "Searching for game...",
+    "connecting": "Connecting to game..."
+  },
   "username": {
     "enter_username": "Enter your username",
     "not_string": "Username must be a string.",
