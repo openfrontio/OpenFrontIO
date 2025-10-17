@@ -452,7 +452,7 @@ export class PlayerPanel extends LitElement implements Layer {
       <div class="mb-1 flex justify-between gap-2">
         <div
           class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
-                    text-white"
+                    text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">💰</span>
           <span translate="no" class="tabular-nums font-semibold">
@@ -465,7 +465,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
         <div
           class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
-                    text-white"
+                    text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
           <span translate="no" class="tabular-nums font-semibold">
@@ -478,6 +478,7 @@ export class PlayerPanel extends LitElement implements Layer {
       </div>
     `;
   }
+
   private renderStats(other: PlayerView, my: PlayerView) {
     return html`
       <!-- Betrayals -->
@@ -641,6 +642,7 @@ export class PlayerPanel extends LitElement implements Layer {
               })
             : ""}
         </div>
+        <ui-divider></ui-divider>
 
         <div class="grid auto-cols-fr grid-flow-col gap-1">
           ${other !== my
@@ -744,7 +746,7 @@ export class PlayerPanel extends LitElement implements Layer {
         @click=${() => this.hide()}
       >
         <div
-          class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[300px] max-w-[400px] px-4 py-2"
+          class="pointer-events-auto max-h-[90vh] min-w-[300px] max-w-[400px] px-4 py-2"
           @click=${(e: MouseEvent) => e.stopPropagation()}
         >
           <div class="relative">
@@ -752,7 +754,7 @@ export class PlayerPanel extends LitElement implements Layer {
               class="absolute inset-2 -z-10 rounded-2xl bg-black/25 backdrop-blur-[2px]"
             ></div>
             <div
-              class=${`relative w-full bg-zinc-900/95 p-6 rounded-2xl text-zinc-100
+              class=${`relative w-full bg-zinc-900/95 p-6 rounded-2xl text-zinc-100 overflow-visible 
                  ${other.isTraitor() ? "traitor-ring" : "ring-1 ring-white/5"}`}
             >
               <!-- Close button -->

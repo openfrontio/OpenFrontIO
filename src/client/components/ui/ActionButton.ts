@@ -19,9 +19,9 @@ export interface ActionButtonProps {
 }
 
 const ICON_SIZE =
-  "h-5 w-5 shrink-0 transition-transform group-hover:scale-110 text-zinc-300";
+  "h-5 w-5 shrink-0 transition-transform group-hover:scale-110 text-zinc-400";
 
-const TEXT_SIZE = "text-[14.5px] leading-[1.35] font-semibold tracking-tight";
+const TEXT_SIZE = "text-[13.5px] leading-[1.35] font-semibold tracking-tight";
 
 const getButtonStyles = () => {
   const btnBase =
@@ -37,7 +37,7 @@ const getButtonStyles = () => {
     green: `${btnBase} text-emerald-200 hover:bg-emerald-500/10 hover:text-emerald-100 focus-visible:ring-emerald-400/30`,
     yellow: `${btnBase} text-amber-200 hover:bg-amber-400/10 hover:text-amber-100 focus-visible:ring-amber-400/30`,
     indigo: `${btnBase} text-indigo-200 hover:bg-indigo-500/10 hover:text-indigo-100 focus-visible:ring-indigo-400/30`,
-    sky: `${btnBase} text-sky-200 hover:bg-[#38bdf8]/10 hover:text-sky-100 focus-visible:ring-[#38bdf8]/30`,
+    sky: `${btnBase} text-sky-  200 hover:bg-[#38bdf8]/10 hover:text-sky-100 focus-visible:ring-[#38bdf8]/30`,
   };
 };
 
