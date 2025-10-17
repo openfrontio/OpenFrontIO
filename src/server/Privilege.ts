@@ -41,6 +41,12 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         return { type: "forbidden", reason: "invalid color: " + e.message };
       }
     }
+    if (refs.flag) {
+      cosmetics.flag = cosmetics.flag = refs.flag.replace(
+        /[^a-z0-9-_ ()]/gi,
+        "",
+      );
+    }
 
     return { type: "allowed", cosmetics };
   }

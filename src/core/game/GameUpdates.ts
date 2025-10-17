@@ -169,6 +169,7 @@ export interface PlayerUpdate {
   alliances: AllianceView[];
   hasSpawned: boolean;
   betrayals?: bigint;
+  lastDeleteUnitTick: Tick;
 }
 
 export interface AllianceView {

@@ -55,6 +55,11 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
+    if (this.warship.owner().isDisconnected()) {
+      this.warship.delete();
+      return;
+    }
+
     const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     if (hasPort) {
       this.warship.modifyHealth(1);
