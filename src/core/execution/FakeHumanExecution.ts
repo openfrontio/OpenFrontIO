@@ -710,12 +710,47 @@ export class FakeHumanExecution implements Execution {
     return total;
   }
 
+  private calculateTerritoryCenter(target: Player): TileRef | null {
+    const tiles = Array.from(target.tiles());
+    if (tiles.length === 0) return null;
+
+    let sumX = 0;
+    let sumY = 0;
+    for (const tile of tiles) {
+      sumX += this.mg.x(tile);
+      sumY += this.mg.y(tile);
+    }
+    const centerX = Math.round(sumX / tiles.length);
+    const centerY = Math.round(sumY / tiles.length);
+
+    let closestTile: TileRef | null = null;
+    let closestDistance = Infinity;
+
+    for (const tile of tiles) {
+      const distance = Math.sqrt(
+        Math.pow(this.mg.x(tile) - centerX, 2) +
+          Math.pow(this.mg.y(tile) - centerY, 2),
+      );
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestTile = tile;
+      }
+    }
+
+    return closestTile;
+  }
+
   private maybeSendMIRV(enemy: Player): void {
     if (this.player === null) throw new Error("not initialized");
 
     const enemyTiles = Array.from(enemy.tiles());
     if (enemyTiles.length === 0) return;
 
+    const centerTile = this.calculateTerritoryCenter(enemy);
+    if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
+      this.sendMIRV(centerTile);
+      return;
+    }
     for (const tile of enemyTiles) {
       if (this.player.canBuild(UnitType.MIRV, tile)) {
         this.sendMIRV(tile);
