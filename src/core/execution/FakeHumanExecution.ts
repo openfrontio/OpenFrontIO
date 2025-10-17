@@ -233,7 +233,7 @@ export class FakeHumanExecution implements Execution {
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
 
-    this.considerMIRV();
+    if (this.considerMIRV()) return;
     const enemy = this.behavior.selectEnemy(enemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
@@ -711,31 +711,33 @@ export class FakeHumanExecution implements Execution {
     this.mg.addExecution(new MirvExecution(this.player, tile));
   }
 
-  private considerMIRV(): void {
+  private considerMIRV(): boolean {
     if (this.player === null) throw new Error("not initialized");
-    if (this.player.units(UnitType.MissileSilo).length === 0) return;
-    if (this.player.gold() < this.cost(UnitType.MIRV)) return;
+    if (this.player.units(UnitType.MissileSilo).length === 0) return false;
+    if (this.player.gold() < this.cost(UnitType.MIRV)) return false;
 
     // 1) Counter-MIRV
     const inboundMIRVSender = this.selectCounterMirvTarget();
     if (inboundMIRVSender) {
       this.maybeSendMIRV(inboundMIRVSender);
-      return;
+      return true;
     }
 
     // 2) Victory Denial
     const victoryDenialTarget = this.selectVictoryDenialTarget();
     if (victoryDenialTarget) {
       this.maybeSendMIRV(victoryDenialTarget);
-      return;
+      return true;
     }
 
     // 3) Steamroll Stop
     const steamrollStopTarget = this.selectSteamrollStopTarget();
     if (steamrollStopTarget) {
       this.maybeSendMIRV(steamrollStopTarget);
-      return;
+      return true;
     }
+
+    return false;
   }
 
   private selectCounterMirvTarget(): Player | null {
