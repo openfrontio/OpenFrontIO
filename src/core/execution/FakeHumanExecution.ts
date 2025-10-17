@@ -705,6 +705,7 @@ export class FakeHumanExecution implements Execution {
 
   private sendMIRV(tile: TileRef): void {
     if (this.player === null) throw new Error("not initialized");
+    this.removeOldNukeEvents();
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
     this.mg.addExecution(new MirvExecution(this.player, tile));
