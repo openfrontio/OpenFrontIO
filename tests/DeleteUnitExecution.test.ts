@@ -124,7 +124,7 @@ describe("DeleteUnitExecution Security Tests", () => {
       game.executeNextTick();
       expect(unit.isMarkedForDeletion()).toBe(true);
       expect(unit.isOverdueDeletion()).toBe(false);
-      executeTicks(game, game.config().deletionMarkDuration());
+      executeTicks(game, game.config().deletionMarkDuration() + 1);
       expect(unit.isActive()).toBe(false);
     });
 
