@@ -20,6 +20,7 @@ import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { MirvExecution } from "./MIRVExecution";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -188,6 +189,7 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null || this.behavior === null) {
       throw new Error("not initialized");
     }
+
     const enemyborder = Array.from(this.player.borderTiles())
       .flatMap((t) => this.mg.neighbors(t))
       .filter(
@@ -230,6 +232,8 @@ export class FakeHumanExecution implements Execution {
 
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
+
+    this.considerMIRV();
     const enemy = this.behavior.selectEnemy(enemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
@@ -653,6 +657,148 @@ export class FakeHumanExecution implements Execution {
         return randTile;
       }
     }
+    return null;
+  }
+
+  private isInboundMIRVFrom(attacker: Player): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    // Detect MIRV units launched by attacker whose target tile belongs to us
+    const enemyMirvs = attacker.units(UnitType.MIRV);
+    for (const mirv of enemyMirvs) {
+      const dst = mirv.targetTile();
+      if (!dst) continue;
+      if (!this.mg.hasOwner(dst)) continue;
+      const owner = this.mg.owner(dst);
+      if (owner === this.player) return true;
+    }
+    return false;
+  }
+
+  private countStructures(p: Player): number {
+    // Consider key structures that contribute to board control
+    const importantTypes: UnitType[] = [
+      UnitType.City,
+      UnitType.Factory,
+      UnitType.Port,
+      UnitType.DefensePost,
+      UnitType.SAMLauncher,
+      UnitType.MissileSilo,
+    ];
+    let total = 0;
+    for (const t of importantTypes) total += p.units(t).length;
+    return total;
+  }
+
+  private maybeSendMIRV(enemy: Player): void {
+    if (this.player === null) throw new Error("not initialized");
+
+    const enemyTiles = Array.from(enemy.tiles());
+    if (enemyTiles.length === 0) return;
+
+    for (const tile of enemyTiles) {
+      if (this.player.canBuild(UnitType.MIRV, tile)) {
+        this.sendMIRV(tile);
+        return;
+      }
+    }
+  }
+
+  private sendMIRV(tile: TileRef): void {
+    if (this.player === null) throw new Error("not initialized");
+    const tick = this.mg.ticks();
+    this.lastNukeSent.push([tick, tile]);
+    this.mg.addExecution(new MirvExecution(this.player, tile));
+  }
+
+  private considerMIRV(): void {
+    if (this.player === null) throw new Error("not initialized");
+    if (this.player.units(UnitType.MissileSilo).length === 0) return;
+    if (this.player.gold() < this.cost(UnitType.MIRV)) return;
+
+    // 1) Counter-MIRV
+    const inboundMIRVSender = this.selectCounterMirvTarget();
+    if (inboundMIRVSender) {
+      this.maybeSendMIRV(inboundMIRVSender);
+      return;
+    }
+
+    // 2) Victory Denial
+    const victoryDenialTarget = this.selectVictoryDenialTarget();
+    if (victoryDenialTarget) {
+      this.maybeSendMIRV(victoryDenialTarget);
+      return;
+    }
+
+    // 3) Steamroll Stop
+    const steamrollStopTarget = this.selectSteamrollStopTarget();
+    if (steamrollStopTarget) {
+      this.maybeSendMIRV(steamrollStopTarget);
+      return;
+    }
+  }
+
+  private selectCounterMirvTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const attackers: Player[] = [];
+    for (const p of this.mg.players()) {
+      if (p === this.player) continue;
+      if (!p.isPlayer()) continue;
+      if (this.player.isOnSameTeam(p)) continue;
+      if (p.type() === PlayerType.Bot) continue;
+      if (this.isInboundMIRVFrom(p)) attackers.push(p);
+    }
+    if (attackers.length === 0) return null;
+    attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    return attackers[0];
+  }
+
+  private selectVictoryDenialTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const totalLand = this.mg.numLandTiles();
+    let best: { p: Player; severity: number } | null = null;
+    for (const p of this.mg.players()) {
+      if (p === this.player) continue;
+      if (!p.isPlayer()) continue;
+      if (this.player.isOnSameTeam(p)) continue;
+      if (p.type() === PlayerType.Bot) continue;
+
+      let severity = 0;
+      const team = p.team();
+      if (team !== null) {
+        const teamMembers = this.mg.players().filter((x) => x.team() === team);
+        const teamTerritory = teamMembers
+          .map((x) => x.numTilesOwned())
+          .reduce((a, b) => a + b, 0);
+        const teamShare = teamTerritory / totalLand;
+        if (teamShare >= 0.95) severity = teamShare;
+      } else {
+        const share = p.numTilesOwned() / totalLand;
+        if (share >= 0.8) severity = share;
+      }
+      if (severity > 0) {
+        if (best === null || severity > best.severity) best = { p, severity };
+      }
+    }
+    return best ? best.p : null;
+  }
+
+  private selectSteamrollStopTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    // Choose the structure-dominant player (>=30% ahead of next best)
+    const alive = this.mg.players();
+    const cmp = alive
+      .filter(
+        (p) =>
+          p !== this.player &&
+          p.isPlayer() &&
+          !this.player!.isOnSameTeam(p) &&
+          p.type() !== PlayerType.Bot,
+      )
+      .map((p) => ({ p, c: this.countStructures(p) }));
+    if (cmp.length < 2) return null;
+    cmp.sort((a, b) => b.c - a.c);
+    const [top, second] = [cmp[0], cmp[1]];
+    if (second.c > 0 && top.c >= Math.ceil(second.c * 1.3)) return top.p;
     return null;
   }
 
