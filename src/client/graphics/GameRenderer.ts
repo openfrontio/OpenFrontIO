@@ -16,7 +16,6 @@ import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
-import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -216,14 +215,6 @@ export function createRenderer(
   }
   spawnAd.g = game;
 
-  const gutterAdModal = document.querySelector(
-    "gutter-ad-modal",
-  ) as GutterAdModal;
-  if (!(gutterAdModal instanceof GutterAdModal)) {
-    console.error("gutter ad modal not found");
-  }
-  gutterAdModal.eventBus = eventBus;
-
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -270,7 +261,6 @@ export function createRenderer(
     headsUpMessage,
     multiTabModal,
     spawnAd,
-    gutterAdModal,
     alertFrame,
     fpsDisplay,
   ];

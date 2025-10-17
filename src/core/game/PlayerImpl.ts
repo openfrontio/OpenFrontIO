@@ -174,6 +174,7 @@ export class PlayerImpl implements Player {
       ),
       hasSpawned: this.hasSpawned(),
       betrayals: stats?.betrayals,
+      lastDeleteUnitTick: this.lastDeleteUnitTick,
     };
   }
 
@@ -387,6 +388,13 @@ export class PlayerImpl implements Player {
 
   canSendAllianceRequest(other: Player): boolean {
     if (other === this) {
+      return false;
+    }
+    if (this.isDisconnected() || other.isDisconnected()) {
+      // Disconnected players are marked as not-friendly even if they are allies,
+      // so we need to return early if either player is disconnected.
+      // Otherise we could end up sending an alliance request to someone
+      // we are already allied with.
       return false;
     }
     if (this.isFriendly(other) || !this.isAlive()) {

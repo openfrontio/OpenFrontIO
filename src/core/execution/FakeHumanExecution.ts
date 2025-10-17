@@ -13,10 +13,10 @@ import {
   Unit,
   UnitType,
 } from "../game/Game";
-import { TileRef, euclDistFN, manhattanDistFN } from "../game/GameMap";
+import { TileRef, euclDistFN } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
-import { calculateBoundingBox, simpleHash } from "../Util";
+import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
@@ -113,7 +113,7 @@ export class FakeHumanExecution implements Execution {
     if (ticks % this.attackRate !== this.attackTick) return;
 
     if (this.mg.inSpawnPhase()) {
-      const rl = this.randomLand();
+      const rl = this.randomSpawnLand();
       if (rl === null) {
         console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
@@ -148,7 +148,7 @@ export class FakeHumanExecution implements Execution {
       );
 
       // Send an attack on the first tick
-      this.behavior.sendAttack(this.mg.terraNullius());
+      this.behavior.forceSendAttack(this.mg.terraNullius());
       return;
     }
 
@@ -265,6 +265,12 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
+    const nukeType =
+      this.player.gold() > this.cost(UnitType.HydrogenBomb)
+        ? UnitType.HydrogenBomb
+        : UnitType.AtomBomb;
+    const range = nukeType === UnitType.HydrogenBomb ? 60 : 15;
+
     const structures = other.units(
       UnitType.City,
       UnitType.DefensePost,
@@ -273,10 +279,7 @@ export class FakeHumanExecution implements Execution {
       UnitType.SAMLauncher,
     );
     const structureTiles = structures.map((u) => u.tile());
-    const randomTiles: (TileRef | null)[] = new Array(10);
-    for (let i = 0; i < randomTiles.length; i++) {
-      randomTiles[i] = this.randTerritoryTile(other);
-    }
+    const randomTiles = this.randTerritoryTileArray(10);
     const allTiles = randomTiles.concat(structureTiles);
 
     let bestTile: TileRef | null = null;
@@ -284,13 +287,16 @@ export class FakeHumanExecution implements Execution {
     this.removeOldNukeEvents();
     outer: for (const tile of new Set(allTiles)) {
       if (tile === null) continue;
-      for (const t of this.mg.bfs(tile, manhattanDistFN(tile, 15))) {
-        // Make sure we nuke at least 15 tiles in border
+      const boundingBox = boundingBoxTiles(this.mg, tile, range)
+        // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
+        .concat(boundingBoxTiles(this.mg, tile, Math.floor(range / 2)));
+      for (const t of boundingBox) {
+        // Make sure we nuke away from the border
         if (this.mg.owner(t) !== other) {
           continue outer;
         }
       }
-      if (!this.player.canBuild(UnitType.AtomBomb, tile)) continue;
+      if (!this.player.canBuild(nukeType, tile)) continue;
       const value = this.nukeTileScore(tile, silos, structures);
       if (value > bestValue) {
         bestTile = tile;
@@ -298,7 +304,7 @@ export class FakeHumanExecution implements Execution {
       }
     }
     if (bestTile !== null) {
-      this.sendNuke(bestTile);
+      this.sendNuke(bestTile, nukeType);
     }
   }
 
@@ -313,13 +319,14 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
-  private sendNuke(tile: TileRef) {
+  private sendNuke(
+    tile: TileRef,
+    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
+  ) {
     if (this.player === null) throw new Error("not initialized");
     const tick = this.mg.ticks();
     this.lastNukeSent.push([tick, tile]);
-    this.mg.addExecution(
-      new NukeExecution(UnitType.AtomBomb, this.player, tile),
-    );
+    this.mg.addExecution(new NukeExecution(nukeType, this.player, tile));
   }
 
   private nukeTileScore(tile: TileRef, silos: Unit[], targets: Unit[]): number {
@@ -396,20 +403,23 @@ export class FakeHumanExecution implements Execution {
 
   private handleUnits() {
     return (
-      this.maybeSpawnStructure(UnitType.City) ||
-      this.maybeSpawnStructure(UnitType.Port) ||
+      this.maybeSpawnStructure(UnitType.City, (num) => num) ||
+      this.maybeSpawnStructure(UnitType.Port, (num) => num) ||
       this.maybeSpawnWarship() ||
-      this.maybeSpawnStructure(UnitType.Factory) ||
-      this.maybeSpawnStructure(UnitType.DefensePost) ||
-      this.maybeSpawnStructure(UnitType.SAMLauncher) ||
-      this.maybeSpawnStructure(UnitType.MissileSilo)
+      this.maybeSpawnStructure(UnitType.Factory, (num) => num) ||
+      this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
+      this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => num ** 2) ||
+      this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num ** 2)
     );
   }
 
-  private maybeSpawnStructure(type: UnitType): boolean {
+  private maybeSpawnStructure(
+    type: UnitType,
+    multiplier: (num: number) => number,
+  ) {
     if (this.player === null) throw new Error("not initialized");
     const owned = this.player.unitsOwned(type);
-    const perceivedCostMultiplier = Math.min(owned + 1, 5);
+    const perceivedCostMultiplier = multiplier(owned + 1);
     const realCost = this.cost(type);
     const perceivedCost = realCost * BigInt(perceivedCostMultiplier);
     if (this.player.gold() < perceivedCost) {
@@ -432,16 +442,13 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null) throw new Error("Not initialized");
     const tiles =
       type === UnitType.Port
-        ? Array.from(this.player.borderTiles()).filter((t) =>
-            this.mg.isOceanShore(t),
-          )
-        : Array.from(this.player.tiles());
+        ? this.randCoastalTileArray(25)
+        : this.randTerritoryTileArray(25);
     if (tiles.length === 0) return null;
     const valueFunction = structureSpawnTileValue(this.mg, this.player, type);
     let bestTile: TileRef | null = null;
     let bestValue = 0;
-    const sampledTiles = this.arraySampler(tiles);
-    for (const t of sampledTiles) {
+    for (const t of tiles) {
       const v = valueFunction(t);
       if (v <= bestValue && bestTile !== null) continue;
       if (!this.player.canBuild(type, t)) continue;
@@ -452,7 +459,14 @@ export class FakeHumanExecution implements Execution {
     return bestTile;
   }
 
-  private *arraySampler<T>(a: T[], sampleSize = 50): Generator<T> {
+  private randCoastalTileArray(numTiles: number): TileRef[] {
+    const tiles = Array.from(this.player!.borderTiles()).filter((t) =>
+      this.mg.isOceanShore(t),
+    );
+    return Array.from(this.arraySampler(tiles, numTiles));
+  }
+
+  private *arraySampler<T>(a: T[], sampleSize: number): Generator<T> {
     if (a.length <= sampleSize) {
       // Return all elements
       yield* a;
@@ -497,8 +511,26 @@ export class FakeHumanExecution implements Execution {
     return false;
   }
 
-  private randTerritoryTile(p: Player): TileRef | null {
-    const boundingBox = calculateBoundingBox(this.mg, p.borderTiles());
+  private randTerritoryTileArray(numTiles: number): TileRef[] {
+    const boundingBox = calculateBoundingBox(
+      this.mg,
+      this.player!.borderTiles(),
+    );
+    const tiles: TileRef[] = [];
+    for (let i = 0; i < numTiles; i++) {
+      const tile = this.randTerritoryTile(this.player!, boundingBox);
+      if (tile !== null) {
+        tiles.push(tile);
+      }
+    }
+    return tiles;
+  }
+
+  private randTerritoryTile(
+    p: Player,
+    boundingBox: { min: Cell; max: Cell } | null = null,
+  ): TileRef | null {
+    boundingBox ??= calculateBoundingBox(this.mg, p.borderTiles());
     for (let i = 0; i < 100; i++) {
       const randX = this.random.nextInt(boundingBox.min.x, boundingBox.max.x);
       const randY = this.random.nextInt(boundingBox.min.y, boundingBox.max.y);
@@ -571,7 +603,7 @@ export class FakeHumanExecution implements Execution {
     return;
   }
 
-  randomLand(): TileRef | null {
+  randomSpawnLand(): TileRef | null {
     const delta = 25;
     let tries = 0;
     while (tries < 50) {

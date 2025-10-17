@@ -255,7 +255,9 @@ export class StructureIconsLayer implements Layer {
           this.potentialUpgrade.iconContainer.filters = [];
           this.potentialUpgrade.dotContainer.filters = [];
         }
-        this.ghostUnit?.container && (this.ghostUnit.container.filters = []);
+        if (this.ghostUnit?.container) {
+          this.ghostUnit.container.filters = [];
+        }
 
         if (!this.ghostUnit) return;
 
@@ -277,7 +279,9 @@ export class StructureIconsLayer implements Layer {
 
         if (unit.canUpgrade) {
           this.potentialUpgrade = this.renders.find(
-            (r) => r.unit.id() === unit.canUpgrade,
+            (r) =>
+              r.unit.id() === unit.canUpgrade &&
+              r.unit.owner().id() === this.game.myPlayer()?.id(),
           );
           if (this.potentialUpgrade) {
             this.potentialUpgrade.iconContainer.filters = [
