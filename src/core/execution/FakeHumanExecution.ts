@@ -684,7 +684,6 @@ export class FakeHumanExecution implements Execution {
 
   private isInboundMIRVFrom(attacker: Player): boolean {
     if (this.player === null) throw new Error("not initialized");
-    // Detect MIRV units launched by attacker whose target tile belongs to us
     const enemyMirvs = attacker.units(UnitType.MIRV);
     for (const mirv of enemyMirvs) {
       const dst = mirv.targetTile();
@@ -738,17 +737,9 @@ export class FakeHumanExecution implements Execution {
     if (this.player.units(UnitType.MissileSilo).length === 0) return false;
     if (this.player.gold() < this.cost(UnitType.MIRV)) return false;
 
-    // Check MIRV cooldown to prevent spam
     this.removeOldMIRVEvents();
-    const currentTick = this.mg.ticks();
-    const cooldownTicks = FakeHumanExecution.MIRV_COOLDOWN_TICKS;
 
-    // Check if any recent MIRV launches are still in cooldown
-    for (const [tick] of this.lastMIRVSent) {
-      if (currentTick - tick < cooldownTicks) {
-        return false; // Still in cooldown
-      }
-    }
+    if (this.lastMIRVSent.length > 0) return false;
 
     // 1) Counter-MIRV
     const inboundMIRVSender = this.selectCounterMirvTarget();
@@ -799,6 +790,7 @@ export class FakeHumanExecution implements Execution {
   private selectVictoryDenialTarget(): Player | null {
     if (this.player === null) throw new Error("not initialized");
     const totalLand = this.mg.numLandTiles();
+    if (totalLand === 0) return null;
     let best: { p: Player; severity: number } | null = null;
     for (const p of this.getValidMirvTargetPlayers()) {
       let severity = 0;
