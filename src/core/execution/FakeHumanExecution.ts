@@ -774,16 +774,23 @@ export class FakeHumanExecution implements Execution {
     return false;
   }
 
+  private getValidMirvTargetPlayers(): Player[] {
+    if (this.player === null) throw new Error("not initialized");
+    return this.mg.players().filter((p) => {
+      return (
+        p !== this.player &&
+        p.isPlayer() &&
+        !this.player!.isOnSameTeam(p) &&
+        p.type() !== PlayerType.Bot
+      );
+    });
+  }
+
   private selectCounterMirvTarget(): Player | null {
     if (this.player === null) throw new Error("not initialized");
-    const attackers: Player[] = [];
-    for (const p of this.mg.players()) {
-      if (p === this.player) continue;
-      if (!p.isPlayer()) continue;
-      if (this.player.isOnSameTeam(p)) continue;
-      if (p.type() === PlayerType.Bot) continue;
-      if (this.isInboundMIRVFrom(p)) attackers.push(p);
-    }
+    const attackers = this.getValidMirvTargetPlayers().filter((p) =>
+      this.isInboundMIRVFrom(p),
+    );
     if (attackers.length === 0) return null;
     attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
     return attackers[0];
@@ -793,12 +800,7 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null) throw new Error("not initialized");
     const totalLand = this.mg.numLandTiles();
     let best: { p: Player; severity: number } | null = null;
-    for (const p of this.mg.players()) {
-      if (p === this.player) continue;
-      if (!p.isPlayer()) continue;
-      if (this.player.isOnSameTeam(p)) continue;
-      if (p.type() === PlayerType.Bot) continue;
-
+    for (const p of this.getValidMirvTargetPlayers()) {
       let severity = 0;
       const team = p.team();
       if (team !== null) {
@@ -824,16 +826,10 @@ export class FakeHumanExecution implements Execution {
   private selectSteamrollStopTarget(): Player | null {
     if (this.player === null) throw new Error("not initialized");
     // Choose the structure-dominant player (>=n% ahead of next best)
-    const alive = this.mg.players();
-    const cmp = alive
-      .filter(
-        (p) =>
-          p !== this.player &&
-          p.isPlayer() &&
-          !this.player!.isOnSameTeam(p) &&
-          p.type() !== PlayerType.Bot,
-      )
-      .map((p) => ({ p, c: this.countStructures(p) }));
+    const cmp = this.getValidMirvTargetPlayers().map((p) => ({
+      p,
+      c: this.countStructures(p),
+    }));
     if (cmp.length < 2) return null;
     cmp.sort((a, b) => b.c - a.c);
     const [top, second] = [cmp[0], cmp[1]];
