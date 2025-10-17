@@ -29,6 +29,16 @@ import { closestTwoTiles } from "./Util";
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
+  // MIRV cooldown in ticks (600 ticks = 10 minutes at 1 tick/second)
+  private static readonly MIRV_COOLDOWN_TICKS = 600;
+
+  // Victory denial thresholds (lower than win conditions for strategic timing)
+  private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.85; // 85% of total land
+  private static readonly VICTORY_DENIAL_INDIVIDUAL_THRESHOLD = 0.7; // 70% of total land
+
+  // Steamroll structure gap threshold (n% ahead of next best player)
+  private static readonly STEAMROLL_STRUCTURE_GAP_MULTIPLIER = 1.3;
+
   private active = true;
   private random: PseudoRandom;
   private behavior: BotBehavior | null = null;
@@ -43,6 +53,7 @@ export class FakeHumanExecution implements Execution {
 
   private readonly lastEmojiSent = new Map<Player, Tick>();
   private readonly lastNukeSent: [Tick, TileRef][] = [];
+  private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
   constructor(
@@ -323,6 +334,17 @@ export class FakeHumanExecution implements Execution {
       this.lastNukeSent[0][0] + maxAge < tick
     ) {
       this.lastNukeSent.shift();
+    }
+  }
+
+  private removeOldMIRVEvents() {
+    const maxAge = 600;
+    const tick = this.mg.ticks();
+    while (
+      this.lastMIRVSent.length > 0 &&
+      this.lastMIRVSent[0][0] + maxAge < tick
+    ) {
+      this.lastMIRVSent.shift();
     }
   }
 
@@ -705,9 +727,9 @@ export class FakeHumanExecution implements Execution {
 
   private sendMIRV(tile: TileRef): void {
     if (this.player === null) throw new Error("not initialized");
-    this.removeOldNukeEvents();
+    this.removeOldMIRVEvents();
     const tick = this.mg.ticks();
-    this.lastNukeSent.push([tick, tile]);
+    this.lastMIRVSent.push([tick, tile]);
     this.mg.addExecution(new MirvExecution(this.player, tile));
   }
 
@@ -715,6 +737,18 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null) throw new Error("not initialized");
     if (this.player.units(UnitType.MissileSilo).length === 0) return false;
     if (this.player.gold() < this.cost(UnitType.MIRV)) return false;
+
+    // Check MIRV cooldown to prevent spam
+    this.removeOldMIRVEvents();
+    const currentTick = this.mg.ticks();
+    const cooldownTicks = FakeHumanExecution.MIRV_COOLDOWN_TICKS;
+
+    // Check if any recent MIRV launches are still in cooldown
+    for (const [tick] of this.lastMIRVSent) {
+      if (currentTick - tick < cooldownTicks) {
+        return false; // Still in cooldown
+      }
+    }
 
     // 1) Counter-MIRV
     const inboundMIRVSender = this.selectCounterMirvTarget();
@@ -773,10 +807,12 @@ export class FakeHumanExecution implements Execution {
           .map((x) => x.numTilesOwned())
           .reduce((a, b) => a + b, 0);
         const teamShare = teamTerritory / totalLand;
-        if (teamShare >= 0.95) severity = teamShare;
+        if (teamShare >= FakeHumanExecution.VICTORY_DENIAL_TEAM_THRESHOLD)
+          severity = teamShare;
       } else {
         const share = p.numTilesOwned() / totalLand;
-        if (share >= 0.8) severity = share;
+        if (share >= FakeHumanExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
+          severity = share;
       }
       if (severity > 0) {
         if (best === null || severity > best.severity) best = { p, severity };
@@ -787,7 +823,7 @@ export class FakeHumanExecution implements Execution {
 
   private selectSteamrollStopTarget(): Player | null {
     if (this.player === null) throw new Error("not initialized");
-    // Choose the structure-dominant player (>=30% ahead of next best)
+    // Choose the structure-dominant player (>=n% ahead of next best)
     const alive = this.mg.players();
     const cmp = alive
       .filter(
@@ -801,7 +837,14 @@ export class FakeHumanExecution implements Execution {
     if (cmp.length < 2) return null;
     cmp.sort((a, b) => b.c - a.c);
     const [top, second] = [cmp[0], cmp[1]];
-    if (second.c > 0 && top.c >= Math.ceil(second.c * 1.3)) return top.p;
+    if (
+      second.c > 0 &&
+      top.c >=
+        Math.ceil(
+          second.c * FakeHumanExecution.STEAMROLL_STRUCTURE_GAP_MULTIPLIER,
+        )
+    )
+      return top.p;
     return null;
   }
 
