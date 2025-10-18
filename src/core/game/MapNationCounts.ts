@@ -201,9 +201,14 @@ export async function initMapNationCounts(): Promise<void> {
     return initPromise;
   }
 
-  initPromise = loadNationCounts().then((counts) => {
-    nationCountCache = counts;
-  });
+  initPromise = loadNationCounts()
+    .then((counts) => {
+      nationCountCache = counts;
+    })
+    .catch((err) => {
+      initPromise = null; // allow retry
+      throw err;
+    });
 
   return initPromise;
 }
