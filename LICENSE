@@ -659,3 +659,25 @@ specific requirements.
 if any, to sign a "copyright disclaimer" for the program, if necessary.
 For more information on this, and how to apply and follow the GNU AGPL, see
 <https://www.gnu.org/licenses/>.
+
+=== ADDITIONAL TERMS (AGPL v3 Section 7) ===
+
+Attribution Requirement:
+All modified versions of this web game must prominently display one of the 
+following on the main menu and/or initial title screen:
+- "Based on OpenFront"
+- "Derived from OpenFront"
+- "Powered by OpenFront"
+- "Fork of OpenFront"
+
+Display Requirements:
+- Positioned directly beneath the game's title
+- Minimum 12-point font size (or proportional equivalent)
+- Sufficient contrast for clear readability
+- Visible without scrolling or navigation
+- Must remain visible until user chooses to proceed (no auto-skip)
+- May include a link to https://openfront.io
+
+Modified versions may add their own game title (e.g., 
+"SuperGame - Based on OpenFront") but may not use "OpenFront" 
+as the primary title or imply official endorsement.

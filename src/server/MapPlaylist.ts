@@ -79,8 +79,8 @@ export class MapPlaylist {
 
     // Create the default public game config (from your GameManager)
     return {
-      donateGold: false,
-      donateTroops: false,
+      donateGold: mode === GameMode.Team,
+      donateTroops: mode === GameMode.Team,
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
@@ -88,6 +88,7 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
+      maxTimerValue: undefined,
       instantBuild: false,
       disableNPCs: mode === GameMode.Team,
       gameMode: mode,
