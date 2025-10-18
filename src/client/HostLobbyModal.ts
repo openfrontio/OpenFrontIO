@@ -40,7 +40,7 @@ export class HostLobbyModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number | undefined = 400;
-  @state() private nations: number = 10;
+  @state() private nations: number | undefined = 10;
   @state() private matchNationsToPlayers: boolean | undefined = true;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
@@ -829,7 +829,7 @@ export class HostLobbyModal extends LitElement {
             : {
                 bots: this.bots,
                 disableNPCs: this.disableNPCs,
-                nations: this.nations,
+                nations: undefined,
                 matchNationsToPlayers: undefined,
               }),
           maxTimerValue:
