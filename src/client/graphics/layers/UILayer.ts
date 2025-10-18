@@ -117,11 +117,18 @@ export class UILayer implements Layer {
         this.drawHealthBar(unit);
         break;
       }
+      case UnitType.City:
+      case UnitType.Factory:
+      case UnitType.DefensePost:
+      case UnitType.Port:
       case UnitType.MissileSilo:
-        this.createLoadingBar(unit);
-        break;
       case UnitType.SAMLauncher:
-        this.createLoadingBar(unit);
+        if (
+          unit.markedForDeletion() !== false ||
+          unit.missileReadinesss() < 1
+        ) {
+          this.createLoadingBar(unit);
+        }
         break;
       default:
         return;
@@ -329,10 +336,26 @@ export class UILayer implements Layer {
       }
       case UnitType.MissileSilo:
       case UnitType.SAMLauncher:
-        return unit.missileReadinesss();
+        return !unit.markedForDeletion()
+          ? unit.missileReadinesss()
+          : this.deletionProgress(this.game, unit);
+      case UnitType.City:
+      case UnitType.Factory:
+      case UnitType.Port:
+      case UnitType.DefensePost:
+        return this.deletionProgress(this.game, unit);
       default:
         return 1;
     }
+  }
+
+  private deletionProgress(game: GameView, unit: UnitView): number {
+    const deleteAt = unit.markedForDeletion();
+    if (deleteAt === false) return 1;
+    return Math.max(
+      0,
+      (deleteAt - game.ticks()) / game.config().deletionMarkDuration(),
+    );
   }
 
   public createLoadingBar(unit: UnitView) {

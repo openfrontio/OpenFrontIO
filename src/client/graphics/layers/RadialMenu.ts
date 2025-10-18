@@ -554,6 +554,20 @@ export class RadialMenu implements Layer {
             .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
             .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2)
             .attr("opacity", disabled ? 0.5 : 1);
+
+          if (this.params && d.data.cooldown?.(this.params)) {
+            const cooldown = Math.ceil(d.data.cooldown?.(this.params));
+            content
+              .append("text")
+              .attr("class", `cooldown-text`)
+              .text(cooldown + "s")
+              .attr("fill", "white")
+              .attr("opacity", disabled ? 0.5 : 1)
+              .attr("font-size", "14px")
+              .attr("font-weight", "bold")
+              .attr("x", arc.centroid(d)[0] - this.config.iconSize / 4)
+              .attr("y", arc.centroid(d)[1] + this.config.iconSize / 2 + 7);
+          }
         }
 
         this.menuIcons.set(contentId, content as any);
@@ -997,6 +1011,17 @@ export class RadialMenu implements Layer {
           const imageElement = icon.select("image");
           if (!imageElement.empty()) {
             imageElement.attr("opacity", disabled ? 0.5 : 1);
+          }
+
+          // Update cooldown text if applicable
+          const cooldownElement = icon.select(".cooldown-text");
+          if (this.params && !cooldownElement.empty() && item.cooldown) {
+            const cooldown = Math.ceil(item.cooldown(this.params));
+            if (cooldown <= 0) {
+              cooldownElement.remove();
+            } else {
+              cooldownElement.text(cooldown + "s");
+            }
           }
         }
       }

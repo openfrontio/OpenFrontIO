@@ -99,10 +99,7 @@ export class SpriteFactory {
 
   private invalidateTextureCache(unitType: UnitType) {
     for (const key of Array.from(this.textureCache.keys())) {
-      if (
-        key.endsWith(`-${unitType}-icon`) ||
-        key === `construction-${unitType}-icon`
-      ) {
+      if (key.includes(`-${unitType}`)) {
         this.textureCache.delete(key);
       }
     }
@@ -115,7 +112,13 @@ export class SpriteFactory {
     structureType: UnitType,
   ): PIXI.Container {
     const parentContainer = new PIXI.Container();
-    const texture = this.createTexture(structureType, player, false, true);
+    const texture = this.createTexture(
+      structureType,
+      player,
+      false,
+      false,
+      true,
+    );
     const sprite = new PIXI.Sprite(texture);
     sprite.anchor.set(0.5);
     sprite.alpha = 0.5;
@@ -139,6 +142,7 @@ export class SpriteFactory {
     const worldPos = new Cell(this.game.x(tile), this.game.y(tile));
     const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
 
+    const isMarkedForDeletion = unit.markedForDeletion() !== false;
     const isConstruction = unit.type() === UnitType.Construction;
     const constructionType = unit.constructionType();
     const structureType = isConstruction ? constructionType! : unit.type();
@@ -156,6 +160,7 @@ export class SpriteFactory {
         structureType,
         unit.owner(),
         isConstruction,
+        isMarkedForDeletion,
         type === "icon",
       );
       const sprite = new PIXI.Sprite(texture);
@@ -202,19 +207,30 @@ export class SpriteFactory {
     type: UnitType,
     owner: PlayerView,
     isConstruction: boolean,
+    isMarkedForDeletion: boolean,
     renderIcon: boolean,
   ): PIXI.Texture {
-    const cacheKey = isConstruction
-      ? `construction-${type}` + (renderIcon ? "-icon" : "")
-      : `${this.theme.territoryColor(owner).toRgbString()}-${type}` +
-        (renderIcon ? "-icon" : "");
+    const cacheKeyBase = isConstruction
+      ? `construction-${type}`
+      : `${this.theme.territoryColor(owner).toRgbString()}-${type}`;
+    const cacheKey =
+      cacheKeyBase +
+      (renderIcon ? "-icon" : "") +
+      (isMarkedForDeletion ? "-deleted" : "");
 
     if (this.textureCache.has(cacheKey)) {
       return this.textureCache.get(cacheKey)!;
     }
     const shape = STRUCTURE_SHAPES[type];
     const texture = shape
-      ? this.createIcon(owner, type, isConstruction, shape, renderIcon)
+      ? this.createIcon(
+          owner,
+          type,
+          isConstruction,
+          isMarkedForDeletion,
+          shape,
+          renderIcon,
+        )
       : PIXI.Texture.EMPTY;
     this.textureCache.set(cacheKey, texture);
     return texture;
@@ -224,6 +240,7 @@ export class SpriteFactory {
     owner: PlayerView,
     structureType: UnitType,
     isConstruction: boolean,
+    isMarkedForDeletion: boolean,
     shape: string,
     renderIcon: boolean,
   ): PIXI.Texture {
@@ -370,11 +387,8 @@ export class SpriteFactory {
     }
 
     const structureInfo = this.structuresInfos.get(structureType);
-    if (!structureInfo?.image) {
-      return PIXI.Texture.from(structureCanvas);
-    }
 
-    if (renderIcon) {
+    if (structureInfo?.image && renderIcon) {
       const SHAPE_OFFSETS = {
         triangle: [6, 11],
         square: [5, 5],
@@ -390,6 +404,22 @@ export class SpriteFactory {
         offsetY,
       );
     }
+
+    if (isMarkedForDeletion) {
+      context.save();
+      context.strokeStyle = "rgba(255, 64, 64, 0.95)";
+      context.lineWidth = Math.max(2, Math.round(iconSize * 0.12));
+      context.lineCap = "round";
+      const padding = Math.max(2, iconSize * 0.12);
+      context.beginPath();
+      context.moveTo(padding, padding);
+      context.lineTo(iconSize - padding, iconSize - padding);
+      context.moveTo(iconSize - padding, padding);
+      context.lineTo(padding, iconSize - padding);
+      context.stroke();
+      context.restore();
+    }
+
     return PIXI.Texture.from(structureCanvas);
   }
 

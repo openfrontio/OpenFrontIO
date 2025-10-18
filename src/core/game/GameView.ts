@@ -87,6 +87,10 @@ export class UnitView {
     return this.data.targetable;
   }
 
+  markedForDeletion(): number | false {
+    return this.data.markedForDeletion;
+  }
+
   type(): UnitType {
     return this.data.unitType;
   }
@@ -430,10 +434,13 @@ export class PlayerView {
     return this.data.lastDeleteUnitTick;
   }
 
-  canDeleteUnit(): boolean {
+  deleteUnitCooldown(): number {
     return (
-      this.game.ticks() + 1 - this.lastDeleteUnitTick() >=
-      this.game.config().deleteUnitCooldown()
+      Math.max(
+        0,
+        this.game.config().deleteUnitCooldown() -
+          (this.game.ticks() + 1 - this.lastDeleteUnitTick()),
+      ) / 10
     );
   }
 }
@@ -573,7 +580,7 @@ export class GameView implements GameMap {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ) {
     return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
   }
