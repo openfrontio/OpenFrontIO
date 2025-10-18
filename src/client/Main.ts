@@ -88,7 +88,7 @@ export interface JoinLobbyEvent {
 }
 
 class Client {
-  private gameStop: (() => void) | null = null;
+  private gameStop: (() => boolean) | null = null;
   private eventBus: EventBus = new EventBus();
 
   private usernameInput: UsernameInput | null = null;
@@ -162,11 +162,13 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
-      console.log("Browser is closing");
-      if (this.gameStop !== null) {
-        this.gameStop();
+    window.addEventListener("beforeunload", (e) => {
+      if (this.gameStop && !this.gameStop()) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
       }
+      console.log("Browser is closing");
     });
 
     const gutterAds = document.querySelector("gutter-ads");
