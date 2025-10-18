@@ -88,6 +88,7 @@ export type ClientMessage =
   | ClientLogMessage
   | ClientHashMessage;
 export type ServerMessage =
+  | ServerAuthFinishedMessage
   | ServerTurnMessage
   | ServerStartGameMessage
   | ServerPingMessage
@@ -95,6 +96,9 @@ export type ServerMessage =
   | ServerPrestartMessage
   | ServerErrorMessage;
 
+export type ServerAuthFinishedMessage = z.infer<
+  typeof ServerAuthFinishedMessageSchema
+>;
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
   typeof ServerStartGameMessageSchema
@@ -432,6 +436,11 @@ export type Winner = z.infer<typeof WinnerSchema>;
 //
 // Server
 //
+export const ServerAuthFinishedMessageSchema = z.object({
+  type: z.literal("authentication-finished"),
+  success: z.boolean(),
+  error: z.string().optional(),
+});
 
 export const ServerTurnMessageSchema = z.object({
   type: z.literal("turn"),
@@ -471,6 +480,7 @@ export const ServerErrorSchema = z.object({
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [
+  ServerAuthFinishedMessageSchema,
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,
