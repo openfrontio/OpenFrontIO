@@ -36,8 +36,8 @@ export class FakeHumanExecution implements Execution {
   private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.85; // 85% of total land
   private static readonly VICTORY_DENIAL_INDIVIDUAL_THRESHOLD = 0.7; // 70% of total land
 
-  // Steamroll structure gap threshold (n% ahead of next best player)
-  private static readonly STEAMROLL_STRUCTURE_GAP_MULTIPLIER = 1.3;
+  // Steamroll city gap threshold (n% ahead of next best player)
+  private static readonly STEAMROLL_CITY_GAP_MULTIPLIER = 1.3;
 
   private active = true;
   private random: PseudoRandom;
@@ -201,7 +201,6 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null || this.behavior === null) {
       throw new Error("not initialized");
     }
-
     const enemyborder = Array.from(this.player.borderTiles())
       .flatMap((t) => this.mg.neighbors(t))
       .filter(
@@ -334,17 +333,6 @@ export class FakeHumanExecution implements Execution {
       this.lastNukeSent[0][0] + maxAge < tick
     ) {
       this.lastNukeSent.shift();
-    }
-  }
-
-  private removeOldMIRVEvents() {
-    const maxAge = 600;
-    const tick = this.mg.ticks();
-    while (
-      this.lastMIRVSent.length > 0 &&
-      this.lastMIRVSent[0][0] + maxAge < tick
-    ) {
-      this.lastMIRVSent.shift();
     }
   }
 
@@ -682,6 +670,117 @@ export class FakeHumanExecution implements Execution {
     return null;
   }
 
+  // MIRV Strategy Methods
+  private considerMIRV(): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    if (this.player.units(UnitType.MissileSilo).length === 0) return false;
+    if (this.player.gold() < this.cost(UnitType.MIRV)) return false;
+
+    this.removeOldMIRVEvents();
+    if (this.lastMIRVSent.length > 0) return false;
+
+    const inboundMIRVSender = this.selectCounterMirvTarget();
+    if (inboundMIRVSender) {
+      this.maybeSendMIRV(inboundMIRVSender);
+      return true;
+    }
+
+    const victoryDenialTarget = this.selectVictoryDenialTarget();
+    if (victoryDenialTarget) {
+      this.maybeSendMIRV(victoryDenialTarget);
+      return true;
+    }
+
+    const steamrollStopTarget = this.selectSteamrollStopTarget();
+    if (steamrollStopTarget) {
+      this.maybeSendMIRV(steamrollStopTarget);
+      return true;
+    }
+
+    return false;
+  }
+
+  private selectCounterMirvTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const attackers = this.getValidMirvTargetPlayers().filter((p) =>
+      this.isInboundMIRVFrom(p),
+    );
+    if (attackers.length === 0) return null;
+    attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    return attackers[0];
+  }
+
+  private selectVictoryDenialTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const totalLand = this.mg.numLandTiles();
+    if (totalLand === 0) return null;
+    let best: { p: Player; severity: number } | null = null;
+    for (const p of this.getValidMirvTargetPlayers()) {
+      let severity = 0;
+      const team = p.team();
+      if (team !== null) {
+        const teamMembers = this.mg.players().filter((x) => x.team() === team);
+        const teamTerritory = teamMembers
+          .map((x) => x.numTilesOwned())
+          .reduce((a, b) => a + b, 0);
+        const teamShare = teamTerritory / totalLand;
+        if (teamShare >= FakeHumanExecution.VICTORY_DENIAL_TEAM_THRESHOLD)
+          severity = teamShare;
+      } else {
+        const share = p.numTilesOwned() / totalLand;
+        if (share >= FakeHumanExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
+          severity = share;
+      }
+      if (severity > 0) {
+        if (best === null || severity > best.severity) best = { p, severity };
+      }
+    }
+    return best ? best.p : null;
+  }
+
+  private selectSteamrollStopTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const validTargets = this.getValidMirvTargetPlayers()
+      .map((p) => ({ p, cityCount: this.countCities(p) }))
+      .sort((a, b) => b.cityCount - a.cityCount);
+
+    if (validTargets.length === 0) return null;
+
+    const topTarget = validTargets[0];
+    const allPlayers = this.mg
+      .players()
+      .filter((p) => p.isPlayer())
+      .map((p) => ({ p, cityCount: this.countCities(p) }))
+      .sort((a, b) => b.cityCount - a.cityCount);
+
+    if (allPlayers.length < 2) return null;
+
+    let secondHighest = 0;
+    for (const { p, cityCount } of allPlayers) {
+      if (p !== topTarget.p) {
+        secondHighest = cityCount;
+        break;
+      }
+    }
+
+    const threshold =
+      secondHighest * FakeHumanExecution.STEAMROLL_CITY_GAP_MULTIPLIER;
+
+    if (topTarget.cityCount >= threshold) {
+      return topTarget.p;
+    }
+
+    return null;
+  }
+
+  // MIRV Helper Methods
+  private getValidMirvTargetPlayers(): Player[] {
+    if (this.player === null) throw new Error("not initialized");
+    return this.mg.players().filter((p) => {
+      return p !== this.player && p.isPlayer() && !this.player!.isOnSameTeam(p);
+    });
+  }
+
   private isInboundMIRVFrom(attacker: Player): boolean {
     if (this.player === null) throw new Error("not initialized");
     const enemyMirvs = attacker.units(UnitType.MIRV);
@@ -729,6 +828,7 @@ export class FakeHumanExecution implements Execution {
     return closestTile;
   }
 
+  // MIRV Execution Methods
   private maybeSendMIRV(enemy: Player): void {
     if (this.player === null) throw new Error("not initialized");
 
@@ -756,122 +856,15 @@ export class FakeHumanExecution implements Execution {
     this.mg.addExecution(new MirvExecution(this.player, tile));
   }
 
-  private considerMIRV(): boolean {
-    if (this.player === null) throw new Error("not initialized");
-    if (this.player.units(UnitType.MissileSilo).length === 0) return false;
-    if (this.player.gold() < this.cost(UnitType.MIRV)) return false;
-
-    this.removeOldMIRVEvents();
-
-    if (this.lastMIRVSent.length > 0) return false;
-
-    // 1) Counter-MIRV
-    const inboundMIRVSender = this.selectCounterMirvTarget();
-    if (inboundMIRVSender) {
-      this.maybeSendMIRV(inboundMIRVSender);
-      return true;
+  private removeOldMIRVEvents() {
+    const maxAge = FakeHumanExecution.MIRV_COOLDOWN_TICKS;
+    const tick = this.mg.ticks();
+    while (
+      this.lastMIRVSent.length > 0 &&
+      this.lastMIRVSent[0][0] + maxAge <= tick
+    ) {
+      this.lastMIRVSent.shift();
     }
-
-    // 2) Victory Denial
-    const victoryDenialTarget = this.selectVictoryDenialTarget();
-    if (victoryDenialTarget) {
-      this.maybeSendMIRV(victoryDenialTarget);
-      return true;
-    }
-
-    // 3) Steamroll Stop
-    const steamrollStopTarget = this.selectSteamrollStopTarget();
-    if (steamrollStopTarget) {
-      this.maybeSendMIRV(steamrollStopTarget);
-      return true;
-    }
-
-    return false;
-  }
-
-  private getValidMirvTargetPlayers(): Player[] {
-    if (this.player === null) throw new Error("not initialized");
-    return this.mg.players().filter((p) => {
-      return p !== this.player && p.isPlayer() && !this.player!.isOnSameTeam(p);
-    });
-  }
-
-  private selectCounterMirvTarget(): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-    const attackers = this.getValidMirvTargetPlayers().filter((p) =>
-      this.isInboundMIRVFrom(p),
-    );
-    if (attackers.length === 0) return null;
-    attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
-    return attackers[0];
-  }
-
-  private selectVictoryDenialTarget(): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-    const totalLand = this.mg.numLandTiles();
-    if (totalLand === 0) return null;
-    let best: { p: Player; severity: number } | null = null;
-    for (const p of this.getValidMirvTargetPlayers()) {
-      let severity = 0;
-      const team = p.team();
-      if (team !== null) {
-        const teamMembers = this.mg.players().filter((x) => x.team() === team);
-        const teamTerritory = teamMembers
-          .map((x) => x.numTilesOwned())
-          .reduce((a, b) => a + b, 0);
-        const teamShare = teamTerritory / totalLand;
-        if (teamShare >= FakeHumanExecution.VICTORY_DENIAL_TEAM_THRESHOLD)
-          severity = teamShare;
-      } else {
-        const share = p.numTilesOwned() / totalLand;
-        if (share >= FakeHumanExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
-          severity = share;
-      }
-      if (severity > 0) {
-        if (best === null || severity > best.severity) best = { p, severity };
-      }
-    }
-    return best ? best.p : null;
-  }
-  private selectSteamrollStopTarget(): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-
-    // Get all valid MIRV target players (excluding self and teammates) and sort by city count
-    const validTargets = this.getValidMirvTargetPlayers()
-      .map((p) => ({ p, cityCount: this.countCities(p) }))
-      .sort((a, b) => b.cityCount - a.cityCount);
-
-    if (validTargets.length === 0) return null;
-
-    const topTarget = validTargets[0];
-
-    // Get all players (including self) for comparison
-    const allPlayers = this.mg
-      .players()
-      .filter((p) => p.isPlayer())
-      .map((p) => ({ p, cityCount: this.countCities(p) }))
-      .sort((a, b) => b.cityCount - a.cityCount);
-
-    if (allPlayers.length < 2) return null;
-
-    // Find the second highest city count (excluding the top target)
-    let secondHighest = 0;
-    for (const { p, cityCount } of allPlayers) {
-      if (p !== topTarget.p) {
-        secondHighest = cityCount;
-        break;
-      }
-    }
-
-    // Target should have n% more cities than the next best player
-    const threshold =
-      secondHighest * FakeHumanExecution.STEAMROLL_STRUCTURE_GAP_MULTIPLIER;
-
-    if (topTarget.cityCount >= threshold) {
-      return topTarget.p;
-    }
-
-    return null;
   }
 
   isActive(): boolean {
