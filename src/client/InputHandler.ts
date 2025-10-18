@@ -365,9 +365,9 @@ export class InputHandler {
       }
 
       // Ctrl + Number keys to show only specific structures
-      const realCtrl =
-        this.activeKeys.has("ControlLeft") ||
-        this.activeKeys.has("ControlRight");
+      // (realCtrl already declared earlier in this handler)
+      
+      
       if (realCtrl && e.ctrlKey) {
         const digitMatch = e.code.match(/^Digit(\d)$/);
         if (digitMatch) {
