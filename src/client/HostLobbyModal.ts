@@ -40,6 +40,8 @@ export class HostLobbyModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
+  @state() private nations: number = 10;
+  @state() private matchNationsToPlayers: boolean = true;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -271,11 +273,20 @@ export class HostLobbyModal extends LitElement {
                   ${translateText("game_mode.teams")}
                 </div>
               </div>
+              <div
+                class="option-card ${this.gameMode === GameMode.HumansVsNations ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.HumansVsNations)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.humans_vs_nations")}
+                </div>
+              </div>
             </div>
           </div>
 
           ${
-            this.gameMode === GameMode.FFA
+            this.gameMode === GameMode.FFA ||
+            this.gameMode === GameMode.HumansVsNations
               ? ""
               : html`
                   <!-- Team Count Selection -->
@@ -313,41 +324,96 @@ export class HostLobbyModal extends LitElement {
               ${translateText("host_modal.options_title")}
             </div>
             <div class="option-cards">
-              <label for="bots-count" class="option-card">
-                <input
-                  type="range"
-                  id="bots-count"
-                  min="0"
-                  max="400"
-                  step="1"
-                  @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
-                />
-                <div class="option-card-title">
-                  <span>${translateText("host_modal.bots")}</span>${
-                    this.bots === 0
-                      ? translateText("host_modal.bots_disabled")
-                      : this.bots
-                  }
-                </div>
-              </label>
+              ${
+                this.gameMode === GameMode.HumansVsNations
+                  ? html`
+                      <label
+                        for="match-nations-to-players"
+                        class="option-card ${this.matchNationsToPlayers
+                          ? "selected"
+                          : ""}"
+                      >
+                        <div class="checkbox-icon"></div>
+                        <input
+                          type="checkbox"
+                          id="match-nations-to-players"
+                          @change=${this.handleMatchNationsToPlayersChange}
+                          .checked=${this.matchNationsToPlayers}
+                        />
+                        <div class="option-card-title">
+                          ${translateText(
+                            "host_modal.match_nations_to_players",
+                          )}
+                        </div>
+                      </label>
 
-                <label
-                  for="disable-npcs"
-                  class="option-card ${this.disableNPCs ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="disable-npcs"
-                    @change=${this.handleDisableNPCsChange}
-                    .checked=${this.disableNPCs}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.disable_nations")}
-                  </div>
-                </label>
+                      ${!this.matchNationsToPlayers
+                        ? html`
+                            <label for="nations-count" class="option-card">
+                              <input
+                                type="range"
+                                id="nations-count"
+                                min="1"
+                                max="400"
+                                step="1"
+                                @input=${this.handleNationsChange}
+                                @change=${this.handleNationsChange}
+                                .value="${String(this.nations)}"
+                              />
+                              <div class="option-card-title">
+                                <span
+                                  >${translateText("host_modal.nations")}</span
+                                >${this.nations}
+                              </div>
+                            </label>
+                          `
+                        : ""}
+                    `
+                  : html`
+                      <label for="bots-count" class="option-card">
+                        <input
+                          type="range"
+                          id="bots-count"
+                          min="0"
+                          max="400"
+                          step="1"
+                          @input=${this.handleBotsChange}
+                          @change=${this.handleBotsChange}
+                          .value="${String(this.bots)}"
+                        />
+                        <div class="option-card-title">
+                          <span>${translateText("host_modal.bots")}</span>${this
+                            .bots === 0
+                            ? translateText("host_modal.bots_disabled")
+                            : this.bots}
+                        </div>
+                      </label>
+                    `
+              }
+
+                ${
+                  this.gameMode !== GameMode.HumansVsNations
+                    ? html`
+                        <label
+                          for="disable-npcs"
+                          class="option-card ${this.disableNPCs
+                            ? "selected"
+                            : ""}"
+                        >
+                          <div class="checkbox-icon"></div>
+                          <input
+                            type="checkbox"
+                            id="disable-npcs"
+                            @change=${this.handleDisableNPCsChange}
+                            .checked=${this.disableNPCs}
+                          />
+                          <div class="option-card-title">
+                            ${translateText("host_modal.disable_nations")}
+                          </div>
+                        </label>
+                      `
+                    : ""
+                }
 
                 <label
                   for="instant-build"
@@ -638,6 +704,34 @@ export class HostLobbyModal extends LitElement {
     }, 300);
   }
 
+  private handleNationsChange(e: Event) {
+    const value = parseInt((e.target as HTMLInputElement).value);
+    if (isNaN(value) || value < 1 || value > 400) {
+      return;
+    }
+
+    // Update the display value immediately
+    this.nations = value;
+
+    // Clear any existing timer
+    if (this.botsUpdateTimer !== null) {
+      clearTimeout(this.botsUpdateTimer);
+    }
+
+    // Set a new timer to call putGameConfig after 300ms of inactivity
+    this.botsUpdateTimer = window.setTimeout(() => {
+      this.putGameConfig();
+      this.botsUpdateTimer = null;
+    }, 300);
+  }
+
+  private handleMatchNationsToPlayersChange(e: Event) {
+    this.matchNationsToPlayers = Boolean(
+      (e.target as HTMLInputElement).checked,
+    );
+    this.putGameConfig();
+  }
+
   private handleInstantBuildChange(e: Event) {
     this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -726,6 +820,8 @@ export class HostLobbyModal extends LitElement {
           donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
+          nations: this.nations,
+          matchNationsToPlayers: this.matchNationsToPlayers,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
           maxTimerValue:

@@ -598,7 +598,10 @@ export class DefaultConfig implements Config {
   }
 
   percentageTilesOwnedToWin(): number {
-    if (this._gameConfig.gameMode === GameMode.Team) {
+    if (
+      this._gameConfig.gameMode === GameMode.Team ||
+      this._gameConfig.gameMode === GameMode.HumansVsNations
+    ) {
       return 95;
     }
     return 80;
