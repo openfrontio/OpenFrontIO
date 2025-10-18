@@ -39,9 +39,9 @@ export class HostLobbyModal extends LitElement {
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
-  @state() private bots: number = 400;
+  @state() private bots: number | undefined = 400;
   @state() private nations: number = 10;
-  @state() private matchNationsToPlayers: boolean = true;
+  @state() private matchNationsToPlayers: boolean | undefined = true;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -811,18 +811,27 @@ export class HostLobbyModal extends LitElement {
             ? GameMapSize.Compact
             : GameMapSize.Normal,
           difficulty: this.selectedDifficulty,
-          disableNPCs: this.disableNPCs,
-          bots: this.bots,
           infiniteGold: this.infiniteGold,
           donateGold: this.donateGold,
           infiniteTroops: this.infiniteTroops,
           donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
-          nations: this.nations,
-          matchNationsToPlayers: this.matchNationsToPlayers,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
+          ...(this.gameMode === GameMode.HumansVsNations
+            ? {
+                matchNationsToPlayers: this.matchNationsToPlayers,
+                nations: this.matchNationsToPlayers ? undefined : this.nations,
+                bots: undefined,
+                disableNPCs: undefined,
+              }
+            : {
+                bots: this.bots,
+                disableNPCs: this.disableNPCs,
+                nations: this.nations,
+                matchNationsToPlayers: undefined,
+              }),
           maxTimerValue:
             this.maxTimer === true ? this.maxTimerValue : undefined,
         } satisfies Partial<GameConfig>),
