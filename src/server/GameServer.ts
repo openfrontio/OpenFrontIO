@@ -128,7 +128,11 @@ export class GameServer {
     }
 
     // Update maxPlayers when game mode or map changes for HumansVsNations
-    if (gameConfig.gameMode !== undefined || gameConfig.gameMap !== undefined) {
+    if (
+      gameConfig.gameMode !== undefined ||
+      gameConfig.gameMap !== undefined ||
+      gameConfig.playerTeams !== undefined
+    ) {
       this.gameConfig.maxPlayers = this.config.lobbyMaxPlayers(
         this.gameConfig.gameMap,
         this.gameConfig.gameMode,
