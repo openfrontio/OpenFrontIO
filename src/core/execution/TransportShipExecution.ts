@@ -39,6 +39,7 @@ export class TransportShipExecution implements Execution {
     private ref: TileRef,
     private startTroops: number,
     private src: TileRef | null,
+    private originalOwner: Player,
   ) {}
 
   activeDuringSpawnPhase(): boolean {
@@ -173,11 +174,43 @@ export class TransportShipExecution implements Execution {
     }
     this.lastMove = ticks;
 
-    if (this.boat.retreating()) {
-      this.dst = this.src!; // src is guaranteed to be set at this point
+    // Team member can conquer disconnected player and gets their ships
+    // captureUnit has changed the owner of the unit, now update attacker
+    if (
+      this.originalOwner.isDisconnected() &&
+      this.boat.owner() !== this.originalOwner &&
+      this.boat.owner().isOnSameTeam(this.originalOwner)
+    ) {
+      this.attacker = this.boat.owner();
+      this.originalOwner = this.boat.owner(); // for when this owner disconnects too
 
-      if (this.boat.targetTile() !== this.dst) {
-        this.boat.setTargetTile(this.dst);
+      // Ensure retreat source is valid for the new owner, may be same tile
+      const newSrc = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+      if (newSrc === false) {
+        this.src = null;
+        console.warn(
+          `TransportShipExecution: Failed to find valid src for new attacker`,
+        );
+      } else if (this.mg.owner(this.src!) !== this.attacker) {
+        this.src = newSrc;
+      }
+    }
+
+    if (this.boat.retreating()) {
+      if (this.src === null) {
+        console.warn(
+          `TransportShipExecution: retreating but no src found for new attacker`,
+        );
+        this.attacker.addTroops(this.boat.troops());
+        this.boat.delete(false);
+        this.active = false;
+        return;
+      } else {
+        this.dst = this.src;
+
+        if (this.boat.targetTile() !== this.dst) {
+          this.boat.setTargetTile(this.dst);
+        }
       }
     }
 

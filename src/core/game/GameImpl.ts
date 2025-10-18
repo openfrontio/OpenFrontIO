@@ -877,6 +877,20 @@ export class GameImpl implements Game {
     return this._railNetwork;
   }
   conquerPlayer(conqueror: Player, conquered: Player) {
+    if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
+      const ships = conquered
+        .units()
+        .filter(
+          (u) =>
+            u.type() === UnitType.Warship ||
+            u.type() === UnitType.TransportShip,
+        );
+
+      for (const ship of ships) {
+        conqueror.captureUnit(ship);
+      }
+    }
+
     const gold = conquered.gold();
     this.displayMessage(
       `Conquered ${conquered.displayName()} received ${renderNumber(

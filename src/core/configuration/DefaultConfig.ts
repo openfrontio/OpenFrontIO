@@ -670,7 +670,7 @@ export class DefaultConfig implements Config {
 
     if (attacker.isPlayer() && defender.isPlayer()) {
       if (defender.isDisconnected() && attacker.isOnSameTeam(defender)) {
-        // No troop loss if defender is disconnected.
+        // No troop loss if defender is disconnected and on same team
         mag = 0;
       }
       if (
