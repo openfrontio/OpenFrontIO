@@ -126,6 +126,15 @@ export class GameServer {
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
+
+    // Update maxPlayers when game mode or map changes for HumansVsNations
+    if (gameConfig.gameMode !== undefined || gameConfig.gameMap !== undefined) {
+      this.gameConfig.maxPlayers = this.config.lobbyMaxPlayers(
+        this.gameConfig.gameMap,
+        this.gameConfig.gameMode,
+        this.gameConfig.playerTeams,
+      );
+    }
   }
 
   public addClient(client: Client, lastTurn: number) {

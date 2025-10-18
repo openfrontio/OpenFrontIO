@@ -253,7 +253,9 @@
     "players": "Players",
     "waiting": "Waiting for players...",
     "start": "Start Game",
-    "host_badge": "Host"
+    "host_badge": "Host",
+    "too_many_players": "Too many players! This map supports a maximum of {max} players, but you have {current}.",
+    "too_many_players_button": "Too Many Players"
   },
   "team_colors": {
     "red": "Red",
