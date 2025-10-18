@@ -251,12 +251,15 @@ export class SendResourceModal extends LitElement {
         >
           ${this.heading ?? this.i18n.title(name)}
         </h2>
+        <!-- Close button -->
         <button
-          class="rounded-md px-2 text-2xl leading-none text-zinc-300 hover:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-white/30"
           @click=${() => this.closeModal()}
+          class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center
+              rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
           aria-label=${this.i18n.closeLabel()}
+          title=${this.i18n.closeLabel()}
         >
-          ×
+          ✕
         </button>
       </div>
     `;
@@ -264,7 +267,6 @@ export class SendResourceModal extends LitElement {
 
   private renderAvailable() {
     const total = this.getTotalNumber();
-    const cap = this.getCapacityLeft();
 
     return html`
       <div class="mb-4 pb-3 border-b border-zinc-800">
@@ -277,21 +279,6 @@ export class SendResourceModal extends LitElement {
             <span class="opacity-90">${this.i18n.availableChip()}</span>
             <span class="font-mono tabular-nums">${this.format(total)}</span>
           </span>
-
-          ${cap !== null
-            ? html`
-                <!-- Cap -->
-                <span
-                  class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 ring-1 ring-amber-400/40 text-amber-200"
-                  title=${this.i18n.capTooltip()}
-                >
-                  <span class="opacity-90">${this.i18n.cap()}</span>
-                  <span class="font-mono tabular-nums"
-                    >${this.format(cap)}</span
-                  >
-                </span>
-              `
-            : html``}
         </div>
       </div>
     `;
@@ -554,7 +541,9 @@ export class SendResourceModal extends LitElement {
     const allowed = this.limitAmount(this.sendAmount);
 
     return html`
-      <div class="fixed inset-0 z-[1100] flex items-center justify-center p-4">
+      <div
+        class="absolute inset-0 z-[1100] flex items-center justify-center p-4"
+      >
         <div
           class="absolute inset-0 bg-black/60 backdrop-blur-sm rounded-2xl"
           @click=${() => this.closeModal()}
