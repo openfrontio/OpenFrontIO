@@ -35,18 +35,18 @@
 
 ### Structure Type Mappings
 
-| Key | Structure Type |
-| --- | -------------- |
-| 1   | City           |
-| 2   | Factory        |
-| 3   | Port           |
-| 4   | Defense Post   |
-| 5   | Missile Silo   |
-| 6   | SAM Launcher   |
-| 7   | Warship        |
-| 8   | Atom Bomb      |
-| 9   | Hydrogen Bomb  |
-| 0   | MIRV           |
+Key | Structure Type
+--- | --------------
+1   | City
+2   | Factory
+3   | Port
+4   | Defense Post
+5   | Missile Silo
+6   | SAM Launcher
+7   | Warship
+8   | Atom Bomb
+9   | Hydrogen Bomb
+0   | MIRV
 
 ## Troubleshooting
 
