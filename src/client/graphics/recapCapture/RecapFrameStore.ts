@@ -58,6 +58,11 @@ export class RecapFrameStore {
       removed.forEach((frame) => {
         this.totalBlobBytes -= frame.blob.size;
         URL.revokeObjectURL(frame.objectUrl);
+        try {
+          frame.imageBitmap?.close();
+        } catch {
+          /* ignore */
+        }
       });
       this.frames = next;
     }
@@ -79,6 +84,11 @@ export class RecapFrameStore {
   clear() {
     for (const frame of this.frames) {
       URL.revokeObjectURL(frame.objectUrl);
+      try {
+        frame.imageBitmap?.close();
+      } catch {
+        /* ignore */
+      }
     }
     this.frames = [];
     this.loopPauseMs = 0;

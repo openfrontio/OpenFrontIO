@@ -30,7 +30,6 @@ export class GameRecapCapture {
   private stopped = false;
   private resolvedMimeType: string | null = null;
   private pendingFinalCapture = false;
-  private disableOverridesAfterCapture = false;
   private memoryUsageLogged = false;
 
   constructor(
@@ -47,12 +46,12 @@ export class GameRecapCapture {
   start() {
     this.stopped = false;
     this.resolvedMimeType = null;
+    this.lastCaptureTick = null;
     this.frameStore.setLoopPauseMs(0);
     this.pendingFinalCapture = false;
-    this.disableOverridesAfterCapture = false;
     this.memoryUsageLogged = false;
-    this.setLayerCaptureOverrides(true);
     this.refreshViewportSize();
+    this.frameStore.clear();
   }
 
   dispose() {
@@ -60,8 +59,6 @@ export class GameRecapCapture {
     this.pendingFinalCapture = false;
     this.surface.dispose();
     this.frameStore.clear();
-    this.setLayerCaptureOverrides(false);
-    this.disableOverridesAfterCapture = false;
     this.memoryUsageLogged = false;
   }
 
@@ -114,7 +111,6 @@ export class GameRecapCapture {
     }
     this.stopped = true;
     this.frameStore.setLoopPauseMs(this.config.loopTailHoldMs);
-    this.disableOverridesAfterCapture = true;
     if (this.captureInProgress) {
       this.pendingFinalCapture = true;
     } else {
@@ -126,6 +122,10 @@ export class GameRecapCapture {
     blob: Blob;
     filename: string;
   }> {
+    const fpsInput = Number.isFinite(targetFps)
+      ? targetFps
+      : this.config.exportFps;
+    const fps = Math.min(60, Math.max(1, Math.round(fpsInput)));
     const frames = this.frameStore.getFrames();
     if (frames.length === 0) {
       throw new Error("No recap frames available for export");
@@ -153,7 +153,7 @@ export class GameRecapCapture {
       );
     }
 
-    const stream = canvas.captureStream(targetFps);
+    const stream = canvas.captureStream(fps);
     const recorderOptions: MediaRecorderOptions = { mimeType };
     if (this.config.exportVideoBitsPerSecond) {
       recorderOptions.videoBitsPerSecond = this.config.exportVideoBitsPerSecond;
@@ -210,7 +210,7 @@ export class GameRecapCapture {
 
     const framesToEncode =
       frames.length === 1 ? [...frames, frames[0]] : [...frames];
-    const frameInterval = Math.max(1000 / targetFps, 16);
+    const frameInterval = Math.max(1000 / fps, 16);
 
     await drawFrame(framesToEncode[0]);
 
@@ -348,9 +348,6 @@ export class GameRecapCapture {
         if (this.pendingFinalCapture) {
           this.pendingFinalCapture = false;
           this.queueCapture(this.game.ticks());
-        } else if (this.disableOverridesAfterCapture) {
-          this.disableOverridesAfterCapture = false;
-          this.setLayerCaptureOverrides(false);
         }
       });
     };
@@ -359,21 +356,6 @@ export class GameRecapCapture {
       requestAnimationFrame(() => runCapture());
     } else {
       setTimeout(runCapture, 0);
-    }
-  }
-
-  private setLayerCaptureOverrides(enabled: boolean) {
-    for (const layer of this.layers) {
-      const candidate = layer as {
-        setCaptureRenderEnabled?: (
-          capture: boolean,
-          mode?: "normal" | "shape",
-        ) => void;
-      };
-      candidate.setCaptureRenderEnabled?.(
-        enabled,
-        enabled ? "shape" : "normal",
-      );
     }
   }
 
