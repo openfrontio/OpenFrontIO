@@ -421,12 +421,12 @@ export class PlayerPanel extends LitElement implements Layer {
           : ""}
 
         <div class="flex-1 min-w-0">
-          <h1
+          <h2
             class="text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
             title=${other.name()}
           >
             ${other.name()}
-          </h1>
+          </h2>
         </div>
         ${chip
           ? html`<span
@@ -455,7 +455,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">💰</span>
-          <span translate="no" class="tabular-nums w-[45px] font-semibold">
+          <span translate="no" class="tabular-nums w-[5ch]font-semibold">
             ${renderNumber(other.gold() || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
@@ -468,7 +468,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
-          <span translate="no" class="tabular-nums w-[45px] font-semibold">
+          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
             ${renderTroops(other.troops() || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
@@ -520,21 +520,22 @@ export class PlayerPanel extends LitElement implements Layer {
   private renderAlliances(other: PlayerView) {
     const allies = other.allies();
 
-    const collator = new Intl.Collator(undefined, { sensitivity: "base" });
+    const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
     const alliesSorted = [...allies].sort((a, b) =>
-      a.name().length !== b.name().length
-        ? a.name().length - b.name().length
-        : collator.compare(a.name(), b.name()),
+      nameCollator.compare(a.name(), b.name()),
     );
 
     return html`
       <div class="select-none">
         <div class="flex items-center justify-between mb-2">
-          <div class="text-[15px] font-medium text-zinc-200">
+          <div
+            id="alliances-title"
+            class="text-[15px] font-medium text-zinc-200"
+          >
             ${translateText("player_panel.alliances")}
           </div>
           <span
-            aria-label="Alliance count"
+            aria-labelledby="alliances-title"
             class="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-[10px]
                  text-[12px] text-zinc-100 bg-white/10 border border-white/20"
           >
@@ -550,7 +551,7 @@ export class PlayerPanel extends LitElement implements Layer {
                  flex flex-wrap gap-1.5
                  scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-zinc-800"
             role="list"
-            aria-label="Alliances"
+            aria-labelledby="alliances-title"
             translate="no"
           >
             ${alliesSorted.length === 0
