@@ -208,6 +208,7 @@ export class InputHandler {
       (e) => {
         this.onScroll(e);
         this.onShiftScroll(e);
+        this.onAltScroll(e);
         e.preventDefault();
       },
       { passive: false },
@@ -276,6 +277,14 @@ export class InputHandler {
     }, 1);
 
     window.addEventListener("keydown", (e) => {
+      // Prevent browser tab switching with Ctrl+Number
+      const realCtrl =
+        this.activeKeys.has("ControlLeft") ||
+        this.activeKeys.has("ControlRight");
+      if ((realCtrl || e.ctrlKey) && e.code.match(/^Digit\d$/)) {
+        e.preventDefault();
+      }
+
       if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         if (!this.alternateView) {
@@ -311,6 +320,8 @@ export class InputHandler {
           "ControlRight",
           "ShiftLeft",
           "ShiftRight",
+          "AltLeft",
+          "AltRight",
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -351,6 +362,36 @@ export class InputHandler {
       if (e.code === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
+      }
+
+      // Ctrl + Number keys to show only specific structures
+      const realCtrl =
+        this.activeKeys.has("ControlLeft") ||
+        this.activeKeys.has("ControlRight");
+      if (realCtrl && e.ctrlKey) {
+        const digitMatch = e.code.match(/^Digit(\d)$/);
+        if (digitMatch) {
+          e.preventDefault();
+          const digit = digitMatch[1];
+          const structureMap: Record<string, UnitType> = {
+            "1": UnitType.City,
+            "2": UnitType.Factory,
+            "3": UnitType.Port,
+            "4": UnitType.DefensePost,
+            "5": UnitType.MissileSilo,
+            "6": UnitType.SAMLauncher,
+            "7": UnitType.Warship,
+            "8": UnitType.AtomBomb,
+            "9": UnitType.HydrogenBomb,
+            "0": UnitType.MIRV,
+          };
+          const structureType = structureMap[digit];
+          if (structureType) {
+            // Emit event to toggle structure visibility
+            this.eventBus.emit(new ToggleStructureEvent([structureType]));
+          }
+          return;
+        }
       }
 
       if (e.code === this.keybinds.buildCity) {
@@ -409,6 +450,11 @@ export class InputHandler {
         e.preventDefault();
         console.log("TogglePerformanceOverlayEvent");
         this.eventBus.emit(new TogglePerformanceOverlayEvent());
+      }
+
+      // When Ctrl is released, restore all structure visibility
+      if (e.code === "ControlLeft" || e.code === "ControlRight") {
+        this.eventBus.emit(new ToggleStructureEvent(null));
       }
 
       this.activeKeys.delete(e.code);
@@ -482,7 +528,7 @@ export class InputHandler {
   }
 
   private onScroll(event: WheelEvent) {
-    if (!event.shiftKey) {
+    if (!event.shiftKey && !event.altKey) {
       const realCtrl =
         this.activeKeys.has("ControlLeft") ||
         this.activeKeys.has("ControlRight");
@@ -493,6 +539,14 @@ export class InputHandler {
 
   private onShiftScroll(event: WheelEvent) {
     if (event.shiftKey) {
+      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+      const ratio = scrollValue > 0 ? -10 : 10;
+      this.eventBus.emit(new AttackRatioEvent(ratio));
+    }
+  }
+
+  private onAltScroll(event: WheelEvent) {
+    if (event.altKey) {
       const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
       const ratio = scrollValue > 0 ? -10 : 10;
       this.eventBus.emit(new AttackRatioEvent(ratio));
