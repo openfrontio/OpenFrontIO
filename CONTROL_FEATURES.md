@@ -98,6 +98,6 @@ While in game:
 ## Compatibility
 
 - Works on all platforms (Windows, Mac, Linux)
-- Mac users: Command key is already mapped as the modifier key by default
+- Mac users: Use the Control key as the modifier (Command key is not supported)
 - No conflicts with existing keybindings
 - Seamlessly integrates with the existing structure visibility system
