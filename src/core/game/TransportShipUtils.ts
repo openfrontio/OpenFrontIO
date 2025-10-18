@@ -55,26 +55,74 @@ export function canBuildTransportShip(
     }
   }
 
-  // Now we are boating in a lake, so do a bfs from target until we find
-  // a border tile owned by the player
+  // Now we are boating in a lake, so do a pathfinding search from the player's
+  // border tiles to the target to find the shortest water path
 
-  const tiles = game.bfs(
+  const playerBorderShore = Array.from(player.borderTiles()).filter(
+    (t) => game.isLake(t) || game.isShore(t),
+  );
+
+  if (playerBorderShore.length === 0) {
+    return false;
+  }
+
+  // Use pathfinding to find the shore tile with the shortest water path to destination
+  const aStar = new MiniAStar(
+    game.map(),
+    game.miniMap(),
+    playerBorderShore,
     dst,
-    andFN(
-      manhattanDistFN(dst, 300),
-      (_, t: TileRef) => game.isLake(t) || game.isShore(t),
-    ),
+    1_000_000,
+    20,
+    true, // waterPath = true for lake pathfinding
   );
 
-  const sorted = Array.from(tiles).sort(
-    (a, b) => game.manhattanDist(dst, a) - game.manhattanDist(dst, b),
-  );
+  const result = aStar.compute();
+  if (result !== PathFindResultType.Completed) {
+    console.warn(
+      `canBuildTransportShip (lake): pathfinding failed (${result}), using BFS fallback`,
+    );
+    // Fallback to BFS + Manhattan distance
+    const tiles = game.bfs(
+      dst,
+      andFN(
+        manhattanDistFN(dst, 300),
+        (_, t: TileRef) => game.isLake(t) || game.isShore(t),
+      ),
+    );
 
-  for (const t of sorted) {
+    const sorted = Array.from(tiles).sort(
+      (a, b) => game.manhattanDist(dst, a) - game.manhattanDist(dst, b),
+    );
+
+    for (const t of sorted) {
+      if (game.owner(t) === player) {
+        return transportShipSpawn(game, player, t);
+      }
+    }
+    return false;
+  }
+
+  const path = aStar.reconstructPath();
+  if (path.length === 0) {
+    return false;
+  }
+
+  // The first tile in the path is the optimal starting point
+  const optimalTile = path[0];
+
+  // Verify that the player owns this tile
+  if (game.owner(optimalTile) === player) {
+    return transportShipSpawn(game, player, optimalTile);
+  }
+
+  // If not, find the nearest owned tile (shouldn't normally happen)
+  for (const t of path) {
     if (game.owner(t) === player) {
       return transportShipSpawn(game, player, t);
     }
   }
+
   return false;
 }
 
@@ -148,7 +196,7 @@ export function bestShoreDeploymentSource(
   if (t === null) return false;
 
   const candidates = candidateShoreTiles(gm, player, t);
-  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 1);
+  const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 20);
   const result = aStar.compute();
   if (result !== PathFindResultType.Completed) {
     console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
