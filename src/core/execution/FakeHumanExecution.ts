@@ -19,6 +19,7 @@ import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { MirvExecution } from "./MIRVExecution";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -27,6 +28,16 @@ import { closestTwoTiles } from "./Util";
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
+  // MIRV cooldown in ticks (600 ticks = 10 minutes at 1 tick/second)
+  private static readonly MIRV_COOLDOWN_TICKS = 600;
+
+  // Victory denial thresholds (lower than win conditions for strategic timing)
+  private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.85; // 85% of total land
+  private static readonly VICTORY_DENIAL_INDIVIDUAL_THRESHOLD = 0.7; // 70% of total land
+
+  // Steamroll city gap threshold (n% ahead of next best player)
+  private static readonly STEAMROLL_CITY_GAP_MULTIPLIER = 1.3;
+
   private active = true;
   private random: PseudoRandom;
   private behavior: BotBehavior | null = null;
@@ -41,6 +52,7 @@ export class FakeHumanExecution implements Execution {
 
   private readonly lastEmojiSent = new Map<Player, Tick>();
   private readonly lastNukeSent: [Tick, TileRef][] = [];
+  private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
   constructor(
@@ -157,6 +169,7 @@ export class FakeHumanExecution implements Execution {
     this.behavior.handleAllianceExtensionRequests();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
+    this.considerMIRV();
     this.maybeAttack();
   }
 
@@ -227,6 +240,7 @@ export class FakeHumanExecution implements Execution {
 
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
+
     const enemy = this.behavior.selectEnemy(enemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
@@ -651,6 +665,203 @@ export class FakeHumanExecution implements Execution {
       }
     }
     return null;
+  }
+
+  // MIRV Strategy Methods
+  private considerMIRV(): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    if (this.player.units(UnitType.MissileSilo).length === 0) return false;
+    if (this.player.gold() < this.cost(UnitType.MIRV)) return false;
+
+    this.removeOldMIRVEvents();
+    if (this.lastMIRVSent.length > 0) return false;
+
+    const inboundMIRVSender = this.selectCounterMirvTarget();
+    if (inboundMIRVSender) {
+      this.maybeSendMIRV(inboundMIRVSender);
+      return true;
+    }
+
+    const victoryDenialTarget = this.selectVictoryDenialTarget();
+    if (victoryDenialTarget) {
+      this.maybeSendMIRV(victoryDenialTarget);
+      return true;
+    }
+
+    const steamrollStopTarget = this.selectSteamrollStopTarget();
+    if (steamrollStopTarget) {
+      this.maybeSendMIRV(steamrollStopTarget);
+      return true;
+    }
+
+    return false;
+  }
+
+  private selectCounterMirvTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const attackers = this.getValidMirvTargetPlayers().filter((p) =>
+      this.isInboundMIRVFrom(p),
+    );
+    if (attackers.length === 0) return null;
+    attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    return attackers[0];
+  }
+
+  private selectVictoryDenialTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const totalLand = this.mg.numLandTiles();
+    if (totalLand === 0) return null;
+    let best: { p: Player; severity: number } | null = null;
+    for (const p of this.getValidMirvTargetPlayers()) {
+      let severity = 0;
+      const team = p.team();
+      if (team !== null) {
+        const teamMembers = this.mg.players().filter((x) => x.team() === team);
+        const teamTerritory = teamMembers
+          .map((x) => x.numTilesOwned())
+          .reduce((a, b) => a + b, 0);
+        const teamShare = teamTerritory / totalLand;
+        if (teamShare >= FakeHumanExecution.VICTORY_DENIAL_TEAM_THRESHOLD)
+          severity = teamShare;
+      } else {
+        const share = p.numTilesOwned() / totalLand;
+        if (share >= FakeHumanExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
+          severity = share;
+      }
+      if (severity > 0) {
+        if (best === null || severity > best.severity) best = { p, severity };
+      }
+    }
+    return best ? best.p : null;
+  }
+
+  private selectSteamrollStopTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const validTargets = this.getValidMirvTargetPlayers()
+      .map((p) => ({ p, cityCount: this.countCities(p) }))
+      .sort((a, b) => b.cityCount - a.cityCount);
+
+    if (validTargets.length === 0) return null;
+
+    const topTarget = validTargets[0];
+    const allPlayers = this.mg
+      .players()
+      .filter((p) => p.isPlayer())
+      .map((p) => ({ p, cityCount: this.countCities(p) }))
+      .sort((a, b) => b.cityCount - a.cityCount);
+
+    if (allPlayers.length < 2) return null;
+
+    let secondHighest = 0;
+    for (const { p, cityCount } of allPlayers) {
+      if (p !== topTarget.p) {
+        secondHighest = cityCount;
+        break;
+      }
+    }
+
+    const threshold =
+      secondHighest * FakeHumanExecution.STEAMROLL_CITY_GAP_MULTIPLIER;
+
+    if (topTarget.cityCount >= threshold) {
+      return topTarget.p;
+    }
+
+    return null;
+  }
+
+  // MIRV Helper Methods
+  private getValidMirvTargetPlayers(): Player[] {
+    if (this.player === null) throw new Error("not initialized");
+    return this.mg.players().filter((p) => {
+      return p !== this.player && p.isPlayer() && !this.player!.isOnSameTeam(p);
+    });
+  }
+
+  private isInboundMIRVFrom(attacker: Player): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    const enemyMirvs = attacker.units(UnitType.MIRV);
+    for (const mirv of enemyMirvs) {
+      const dst = mirv.targetTile();
+      if (!dst) continue;
+      if (!this.mg.hasOwner(dst)) continue;
+      const owner = this.mg.owner(dst);
+      if (owner === this.player) return true;
+    }
+    return false;
+  }
+
+  private countCities(p: Player): number {
+    return p.unitCount(UnitType.City);
+  }
+
+  private calculateTerritoryCenter(target: Player): TileRef | null {
+    const tiles = Array.from(target.tiles());
+    if (tiles.length === 0) return null;
+
+    let sumX = 0;
+    let sumY = 0;
+    for (const tile of tiles) {
+      sumX += this.mg.x(tile);
+      sumY += this.mg.y(tile);
+    }
+    const centerX = Math.round(sumX / tiles.length);
+    const centerY = Math.round(sumY / tiles.length);
+
+    let closestTile: TileRef | null = null;
+    let closestDistance = Infinity;
+
+    for (const tile of tiles) {
+      const distance = Math.sqrt(
+        Math.pow(this.mg.x(tile) - centerX, 2) +
+          Math.pow(this.mg.y(tile) - centerY, 2),
+      );
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestTile = tile;
+      }
+    }
+
+    return closestTile;
+  }
+
+  // MIRV Execution Methods
+  private maybeSendMIRV(enemy: Player): void {
+    if (this.player === null) throw new Error("not initialized");
+
+    const enemyTiles = Array.from(enemy.tiles());
+    if (enemyTiles.length === 0) return;
+
+    const centerTile = this.calculateTerritoryCenter(enemy);
+    if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
+      this.sendMIRV(centerTile);
+      return;
+    }
+    for (const tile of enemyTiles) {
+      if (this.player.canBuild(UnitType.MIRV, tile)) {
+        this.sendMIRV(tile);
+        return;
+      }
+    }
+  }
+
+  private sendMIRV(tile: TileRef): void {
+    if (this.player === null) throw new Error("not initialized");
+    this.removeOldMIRVEvents();
+    const tick = this.mg.ticks();
+    this.lastMIRVSent.push([tick, tile]);
+    this.mg.addExecution(new MirvExecution(this.player, tile));
+  }
+
+  private removeOldMIRVEvents() {
+    const maxAge = FakeHumanExecution.MIRV_COOLDOWN_TICKS;
+    const tick = this.mg.ticks();
+    while (
+      this.lastMIRVSent.length > 0 &&
+      this.lastMIRVSent[0][0] + maxAge <= tick
+    ) {
+      this.lastMIRVSent.shift();
+    }
   }
 
   isActive(): boolean {
