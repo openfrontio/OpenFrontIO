@@ -22,6 +22,7 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import { LoginCancelledModal } from "./LoginCancelledModal";
 import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
@@ -100,6 +101,7 @@ class Client {
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
+  private loginCancelledModal: LoginCancelledModal;
 
   private gutterAds: GutterAds;
 
@@ -245,6 +247,16 @@ class Client {
     patternButton.addEventListener("click", () => {
       this.patternsModal.open();
     });
+
+    this.loginCancelledModal = document.querySelector(
+      "login-cancelled-modal",
+    ) as LoginCancelledModal;
+    if (
+      !this.loginCancelledModal ||
+      !(this.loginCancelledModal instanceof LoginCancelledModal)
+    ) {
+      console.warn("Login cancelled modal element not found");
+    }
 
     this.tokenLoginModal = document.querySelector(
       "token-login",
@@ -542,6 +554,12 @@ class Client {
     }
     if (decodedHash.startsWith("#refresh")) {
       window.location.href = "/";
+    }
+    if (decodedHash.startsWith("#login=cancel")) {
+      if (this.loginCancelledModal) {
+        this.loginCancelledModal.open();
+      }
+      strip();
     }
   }
 
