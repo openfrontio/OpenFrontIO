@@ -213,6 +213,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   workerPortByIndex(index: number): number {
     return 3001 + index;
   }
+  enableMatchmaking(): boolean {
+    return false;
+  }
 }
 
 export class DefaultConfig implements Config {

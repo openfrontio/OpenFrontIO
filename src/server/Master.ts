@@ -291,11 +291,6 @@ async function schedulePublicGame(playlist: MapPlaylist) {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 // SPA fallback route
 app.get("*", function (req, res) {
   res.sendFile(path.join(__dirname, "../../static/index.html"));
