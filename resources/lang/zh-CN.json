@@ -130,9 +130,8 @@
     "disable_nations": "禁用国家",
     "instant_build": "立即建造",
     "infinite_gold": "无限黄金",
-    "donate_gold": "捐赠金币",
     "infinite_troops": "无限军队",
-    "donate_troops": "捐赠军队",
+    "compact_map": "小地图",
     "disable_nukes": "禁用核弹",
     "enables_title": "启用设置",
     "start": "开始游戏"
@@ -177,8 +176,10 @@
     "halkidiki": "哈尔基季基",
     "straitofgibraltar": "直布罗陀海峡",
     "italia": "意大利",
+    "japan": "日本",
     "yenisei": "叶尼塞河",
-    "pluto": "冥王星"
+    "pluto": "冥王星",
+    "montreal": "蒙特利尔"
   },
   "map_categories": {
     "continental": "大陆",
@@ -196,8 +197,9 @@
     "join_lobby": "加入房间",
     "checking": "正在确认房间...",
     "not_found": "找不到房间。请检查 ID 然后重试。",
-    "error": "发生了错误，请再试一次。",
-    "joined_waiting": "加入成功！正在等待游戏开始..."
+    "error": "发生错误。请再试一次或联系支持人员。",
+    "joined_waiting": "加入成功！正在等待游戏开始...",
+    "version_mismatch": "这场游戏基于另一个版本，无法加入。"
   },
   "public_lobby": {
     "join": "加入下一场游戏",
@@ -227,6 +229,7 @@
     "donate_gold": "捐赠金币",
     "infinite_troops": "无限军队",
     "donate_troops": "捐赠军队",
+    "compact_map": "小地图",
     "enables_title": "启用设置",
     "player": "玩家",
     "players": "玩家",
@@ -314,6 +317,8 @@
     "territory_patterns_desc": "选择是否在游戏中显示领土皮肤",
     "performance_overlay_label": "性能叠层",
     "performance_overlay_desc": "切换性能叠层。启用后将显示性能叠层。在游戏过程中按下 Shift+D 可进行切换。",
+    "performance_overlay_enabled": "已启用性能叠层",
+    "performance_overlay_disabled": "已禁用性能叠层",
     "easter_writing_speed_label": "写入速度乘数",
     "easter_writing_speed_desc": "调节你“假装写代码”的速度 (x1–x100)",
     "easter_bug_count_label": "Bug 计数",
@@ -494,7 +499,8 @@
     "nation": "国家",
     "player": "玩家",
     "team": "队伍",
-    "d_troops": "防守军队",
+    "alliance_timeout": "结盟剩余时长",
+    "troops": "军队",
     "a_troops": "进攻军队",
     "gold": "黄金",
     "ports": "港口",
@@ -541,7 +547,7 @@
   },
   "relation": {
     "hostile": "敌对",
-    "distrustful": "不可信",
+    "distrustful": "可疑",
     "neutral": "中立",
     "friendly": "友好",
     "default": "默认"
@@ -644,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "删除单位",
     "delete_unit_description": "点击删除最近的单位"
+  },
+  "discord_user_header": {
+    "avatar_alt": "头像"
+  },
+  "player_stats_table": {
+    "building_stats": "建筑统计",
+    "ship_arrivals": "船只抵达",
+    "nuke_stats": "核弹统计",
+    "player_metrics": "玩家指标",
+    "building": "建筑",
+    "ship_type": "船只类型",
+    "weapon": "武器",
+    "built": "已建造",
+    "destroyed": "已摧毁",
+    "captured": "已捕获",
+    "lost": "损失",
+    "hits": "击中",
+    "launched": "已发射",
+    "landed": "已登陆",
+    "sent": "已发送",
+    "arrived": "已抵达",
+    "attack": "攻击",
+    "received": "已收到",
+    "cancelled": "已取消",
+    "count": "总计",
+    "gold": "黄金",
+    "workers": "工人",
+    "war": "战争",
+    "trade": "交易",
+    "steal": "偷窃",
+    "unit": {
+      "city": "城市",
+      "port": "港口",
+      "defp": "防守据点",
+      "saml": "防空塔",
+      "silo": "导弹发射井",
+      "wshp": "军舰",
+      "fact": "工厂",
+      "trade": "贸易船",
+      "trans": "运输船",
+      "abomb": "原子弹",
+      "hbomb": "氢弹",
+      "mirv": "MIRV",
+      "mirvw": "MIRV 弹头"
+    }
+  },
+  "game_list": {
+    "recent_games": "近期对局",
+    "game_id": "游戏 ID",
+    "mode": "模式",
+    "mode_ffa": "混战",
+    "mode_team": "团队",
+    "view": "视图",
+    "details": "详细信息",
+    "started": "已开始",
+    "map": "地图",
+    "difficulty": "难度",
+    "type": "类型"
   }
 }
