@@ -1,9 +1,11 @@
+import { fetchUrl } from "../client/CosmeticPackLoader";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
+  PlayerPack,
   PlayerPattern,
 } from "../core/Schemas";
 
@@ -46,6 +48,33 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
         /[^a-z0-9-_ ()]/gi,
         "",
       );
+    }
+
+    const pack = {
+      structurePort: refs?.structurePort,
+      structureCity: refs?.structureCity,
+      structureFactory: refs?.structureFactory,
+      structureMissilesilo: refs?.structureMissilesilo,
+      structureDefensepost: refs?.structureDefensepost,
+      structureSamlauncher: refs?.structureSamlauncher,
+      spriteTransportship: refs?.spriteTransportship,
+      spriteWarship: refs?.spriteWarship,
+      spriteSammissile: refs?.spriteSammissile,
+      spriteAtombomb: refs?.spriteAtombomb,
+      spriteHydrogenbomb: refs?.spriteHydrogenbomb,
+      spriteTradeship: refs?.spriteTradeship,
+      spriteMirv: refs?.spriteMirv,
+      spriteEngine: refs?.spriteEngine,
+      spriteCarriage: refs?.spriteCarriage,
+      spriteLoadedcarriage: refs?.spriteLoadedcarriage,
+    };
+
+    if (Object.values(pack).some((v) => v !== undefined)) {
+      try {
+        cosmetics.pack = this.isPackAllowed(flares, pack);
+      } catch (e) {
+        return { type: "forbidden", reason: "invalid pack: " + e.message };
+      }
     }
 
     return { type: "allowed", cosmetics };
@@ -100,6 +129,46 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       throw new Error(`Color ${color} not allowed`);
     }
     return { color };
+  }
+
+  isPackAllowed(flares: string[], pack: PlayerPack): PlayerPack {
+    // TODO: add pack privilege checking
+    return {
+      structurePort: fetchUrl(pack.structurePort, "structurePort"),
+      structureCity: fetchUrl(pack.structureCity, "structureCity"),
+      structureFactory: fetchUrl(pack.structureFactory, "structureFactory"),
+      structureMissilesilo: fetchUrl(
+        pack.structureMissilesilo,
+        "structureMissilesilo",
+      ),
+      structureDefensepost: fetchUrl(
+        pack.structureDefensepost,
+        "structureDefensepost",
+      ),
+      structureSamlauncher: fetchUrl(
+        pack.structureSamlauncher,
+        "structureSamlauncher",
+      ),
+      spriteTransportship: fetchUrl(
+        pack.spriteTransportship,
+        "spriteTransportship",
+      ),
+      spriteWarship: fetchUrl(pack.spriteWarship, "spriteWarship"),
+      spriteSammissile: fetchUrl(pack.spriteSammissile, "spriteSammissile"),
+      spriteAtombomb: fetchUrl(pack.spriteAtombomb, "spriteAtombomb"),
+      spriteHydrogenbomb: fetchUrl(
+        pack.spriteHydrogenbomb,
+        "spriteHydrogenbomb",
+      ),
+      spriteTradeship: fetchUrl(pack.spriteTradeship, "spriteTradeship"),
+      spriteMirv: fetchUrl(pack.spriteMirv, "spriteMirv"),
+      spriteEngine: fetchUrl(pack.spriteEngine, "spriteEngine"),
+      spriteCarriage: fetchUrl(pack.spriteCarriage, "spriteCarriage"),
+      spriteLoadedcarriage: fetchUrl(
+        pack.spriteLoadedcarriage,
+        "spriteLoadedcarriage",
+      ),
+    };
   }
 }
 

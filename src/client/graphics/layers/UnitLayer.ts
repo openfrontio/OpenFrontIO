@@ -14,6 +14,7 @@ import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+import { PlayerPack } from "../../../core/Schemas";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import {
   getColoredSprite,
@@ -36,6 +37,8 @@ export class UnitLayer implements Layer {
   private unitToTrail = new Map<UnitView, TileRef[]>();
 
   private theme: Theme;
+  private pack: PlayerPack;
+  private spritesLoaded = false;
 
   private alternateView = false;
 
@@ -68,6 +71,15 @@ export class UnitLayer implements Layer {
       ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
 
     this.updateUnitsSprites(unitIds ?? []);
+
+    if (!this.spritesLoaded) {
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer) {
+        this.pack = myPlayer.cosmetics.pack ?? {};
+        loadAllSprites(this.pack);
+        this.spritesLoaded = true;
+      }
+    }
   }
 
   init() {
@@ -75,8 +87,7 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
     this.redraw();
-
-    loadAllSprites();
+    loadAllSprites(this.pack);
   }
 
   /**

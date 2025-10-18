@@ -571,6 +571,38 @@ class Client {
             this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
               ? ""
               : this.flagInput.getCurrentFlag(),
+          structurePort:
+            this.userSettings.getSelectedStructurePort() ?? undefined,
+          structureCity:
+            this.userSettings.getSelectedStructureCity() ?? undefined,
+          structureFactory:
+            this.userSettings.getSelectedStructureFactory() ?? undefined,
+          structureMissilesilo:
+            this.userSettings.getSelectedStructureMissilesilo() ?? undefined,
+          structureDefensepost:
+            this.userSettings.getSelectedStructureDefensepost() ?? undefined,
+          structureSamlauncher:
+            this.userSettings.getSelectedStructureSamlauncher() ?? undefined,
+
+          spriteTransportship:
+            this.userSettings.getSelectedSpriteTransportship() ?? undefined,
+          spriteWarship:
+            this.userSettings.getSelectedSpriteWarship() ?? undefined,
+          spriteSammissile:
+            this.userSettings.getSelectedSpriteSammissile() ?? undefined,
+          spriteAtombomb:
+            this.userSettings.getSelectedSpriteAtombomb() ?? undefined,
+          spriteHydrogenbomb:
+            this.userSettings.getSelectedSpriteHydrogenbomb() ?? undefined,
+          spriteTradeship:
+            this.userSettings.getSelectedSpriteTradeship() ?? undefined,
+          spriteMirv: this.userSettings.getSelectedSpriteMirv() ?? undefined,
+          spriteEngine:
+            this.userSettings.getSelectedSpriteEngine() ?? undefined,
+          spriteCarriage:
+            this.userSettings.getSelectedSpriteCarriage() ?? undefined,
+          spriteLoadedcarriage:
+            this.userSettings.getSelectedSpriteLoadedcarriage() ?? undefined,
         },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
