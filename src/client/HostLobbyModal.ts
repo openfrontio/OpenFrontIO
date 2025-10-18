@@ -604,7 +604,6 @@ export class HostLobbyModal extends LitElement {
         <div class="start-game-button-container">
           <button
             @click=${this.startGame}
-            ?disabled=${this.clients.length < 2}
             class="start-game-button"
           >
             ${
