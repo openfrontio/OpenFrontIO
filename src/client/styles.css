@@ -243,6 +243,59 @@ label.option-card:hover {
 }
 
 /* Firefox */
+#nations-count::-moz-range-track,
+#private-lobby-nations-count::-moz-range-track {
+  height: 8px;
+  background: white;
+}
+
+#nations-count::-moz-range-progress,
+#private-lobby-nations-count::-moz-range-progress {
+  height: 8px;
+  background-color: #0075ff;
+}
+
+#nations-count::-moz-range-thumb,
+#private-lobby-nations-count::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  background: #0075ff;
+  border: none;
+  border-radius: 50%;
+}
+
+/* Chrome */
+#nations-count::-webkit-slider-runnable-track,
+#private-lobby-nations-count::-webkit-slider-runnable-track {
+  height: 8px;
+  background: linear-gradient(
+    to right,
+    #0075ff var(--progress, 0%),
+    white var(--progress, 0%)
+  );
+}
+
+#nations-count::-webkit-slider-thumb,
+#private-lobby-nations-count::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  background: #0075ff;
+  border: none;
+  border-radius: 50%;
+  margin-top: -4px;
+}
+
+#nations-count,
+#private-lobby-nations-count {
+  width: 80%;
+  height: 16px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Firefox */
 #bots-count::-moz-range-track,
 #private-lobby-bots-count::-moz-range-track {
   height: 8px;

@@ -155,6 +155,19 @@ export async function startWorker() {
       );
       return;
     }
+
+    // Validate player count for HumansVsNations mode
+    const maxPlayers = game.gameConfig.maxPlayers;
+    const numPlayers = game.activeClients.length;
+    if (maxPlayers !== undefined && numPlayers > maxPlayers) {
+      log.warn(
+        `cannot start game ${game.id}, player count (${numPlayers}) exceeds map limit (${maxPlayers})`,
+      );
+      return res.status(400).json({
+        error: `Cannot start game: ${numPlayers} players exceeds the map limit of ${maxPlayers} players`,
+      });
+    }
+
     game.start();
     res.status(200).json({ success: true });
   });

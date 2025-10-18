@@ -7,6 +7,7 @@ import {
   Attack,
   Cell,
   Game,
+  GameMode,
   GameUpdates,
   NameViewData,
   Nation,
@@ -58,7 +59,7 @@ export async function createGameRunner(
       ),
   );
 
-  const nations = gameStart.config.disableNPCs
+  let nations = gameStart.config.disableNPCs
     ? []
     : gameMap.nations.map(
         (n) =>
@@ -68,6 +69,30 @@ export async function createGameRunner(
             new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
           ),
       );
+
+  if (
+    gameStart.config.gameMode === GameMode.HumansVsNations &&
+    nations.length > 0
+  ) {
+    const matchToPlayers = gameStart.config.matchNationsToPlayers ?? true;
+    const requested = matchToPlayers
+      ? humans.length
+      : (gameStart.config.nations ?? 10);
+    const targetNationCount = Math.max(1, Math.min(requested, nations.length));
+    if (
+      !matchToPlayers &&
+      gameStart.config.nations !== null &&
+      gameStart.config.nations !== targetNationCount
+    ) {
+      console.warn(
+        `Requested nations (${gameStart.config.nations}) exceed available (${nations.length}); clamped to ${targetNationCount}.`,
+      );
+    }
+
+    if (nations.length > targetNationCount) {
+      nations = random.shuffleArray(nations).slice(0, targetNationCount);
+    }
+  }
 
   const game: Game = createGame(
     humans,
@@ -100,7 +125,11 @@ export class GameRunner {
   ) {}
 
   init() {
-    if (this.game.config().bots() > 0) {
+    const isHumansVsNations =
+      this.game.config().gameConfig().gameMode === GameMode.HumansVsNations;
+
+    // Don't spawn bots in HumansVsNations mode
+    if (this.game.config().bots() > 0 && !isHumansVsNations) {
       this.game.addExecution(
         ...this.execManager.spawnBots(this.game.config().numBots()),
       );

@@ -97,13 +97,22 @@ export class GameImpl implements Game {
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
 
-    if (_config.gameConfig().gameMode === GameMode.Team) {
+    if (
+      _config.gameConfig().gameMode === GameMode.Team ||
+      _config.gameConfig().gameMode === GameMode.HumansVsNations
+    ) {
       this.populateTeams();
     }
     this.addPlayers();
   }
 
   private populateTeams() {
+    // HumansVsNations mode always has exactly 2 teams
+    if (this._config.gameConfig().gameMode === GameMode.HumansVsNations) {
+      this.playerTeams = ["Humans", "Nations"];
+      return;
+    }
+
     let numPlayerTeams = this._config.playerTeams();
     if (typeof numPlayerTeams !== "number") {
       const players = this._humans.length + this._nations.length;
@@ -139,11 +148,23 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    if (this.config().gameConfig().gameMode !== GameMode.Team) {
+    const gameMode = this.config().gameConfig().gameMode;
+
+    if (gameMode === GameMode.FFA) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
     }
+
+    if (gameMode === GameMode.HumansVsNations) {
+      // All humans go to "Humans" team
+      this._humans.forEach((p) => this.addPlayer(p, "Humans"));
+      // All nations go to "Nations" team
+      this._nations.forEach((n) => this.addPlayer(n.playerInfo, "Nations"));
+      return;
+    }
+
+    // Team mode
     const allPlayers = [
       ...this._humans,
       ...this._nations.map((n) => n.playerInfo),
@@ -441,7 +462,8 @@ export class GameImpl implements Game {
   }
 
   private maybeAssignTeam(player: PlayerInfo): Team | null {
-    if (this._config.gameConfig().gameMode !== GameMode.Team) {
+    const gameMode = this._config.gameConfig().gameMode;
+    if (gameMode !== GameMode.Team && gameMode !== GameMode.HumansVsNations) {
       return null;
     }
     if (player.playerType === PlayerType.Bot) {
@@ -665,7 +687,8 @@ export class GameImpl implements Game {
   }
 
   teams(): Team[] {
-    if (this._config.gameConfig().gameMode !== GameMode.Team) {
+    const gameMode = this._config.gameConfig().gameMode;
+    if (gameMode !== GameMode.Team && gameMode !== GameMode.HumansVsNations) {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];

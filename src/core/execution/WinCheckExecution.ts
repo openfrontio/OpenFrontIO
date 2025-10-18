@@ -29,9 +29,13 @@ export class WinCheckExecution implements Execution {
     }
     if (this.mg === null) throw new Error("Not initialized");
 
-    if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
+    const gameMode = this.mg.config().gameConfig().gameMode;
+    if (gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
-    } else {
+    } else if (
+      gameMode === GameMode.Team ||
+      gameMode === GameMode.HumansVsNations
+    ) {
       this.checkWinnerTeam();
     }
   }

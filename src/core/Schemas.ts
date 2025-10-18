@@ -160,6 +160,8 @@ export const GameConfigSchema = z.object({
   gameMapSize: z.enum(GameMapSize),
   disableNPCs: z.boolean(),
   bots: z.number().int().min(0).max(400),
+  nations: z.number().int().min(1).max(400).optional(),
+  matchNationsToPlayers: z.boolean().optional(),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),

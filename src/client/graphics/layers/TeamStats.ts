@@ -36,7 +36,9 @@ export class TeamStats extends LitElement implements Layer {
   init() {}
 
   tick() {
-    if (this.game.config().gameConfig().gameMode !== GameMode.Team) return;
+    const gameMode = this.game.config().gameConfig().gameMode;
+    if (gameMode !== GameMode.Team && gameMode !== GameMode.HumansVsNations)
+      return;
 
     if (!this._shownOnInit && !this.game.inSpawnPhase()) {
       this._shownOnInit = true;
