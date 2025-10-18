@@ -244,7 +244,7 @@ export class SendResourceModal extends LitElement {
   private renderHeader() {
     const name = this.target?.name?.() ?? "";
     return html`
-      <div class="mb-3 flex items-center justify-between">
+      <div class="mb-3 flex items-center justify-between relative">
         <h2
           id="send-title"
           class="text-lg font-semibold tracking-tight text-zinc-100"
