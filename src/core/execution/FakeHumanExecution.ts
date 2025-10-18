@@ -170,6 +170,7 @@ export class FakeHumanExecution implements Execution {
     this.behavior.handleAllianceExtensionRequests();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
+    this.considerMIRV();
     this.maybeAttack();
   }
 
@@ -244,7 +245,6 @@ export class FakeHumanExecution implements Execution {
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
 
-    if (this.considerMIRV()) return;
     const enemy = this.behavior.selectEnemy(enemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
@@ -695,19 +695,8 @@ export class FakeHumanExecution implements Execution {
     return false;
   }
 
-  private countStructures(p: Player): number {
-    // Consider key structures that contribute to board control
-    const importantTypes: UnitType[] = [
-      UnitType.City,
-      UnitType.Factory,
-      UnitType.Port,
-      UnitType.DefensePost,
-      UnitType.SAMLauncher,
-      UnitType.MissileSilo,
-    ];
-    let total = 0;
-    for (const t of importantTypes) total += p.units(t).length;
-    return total;
+  private countCities(p: Player): number {
+    return p.unitCount(UnitType.City);
   }
 
   private calculateTerritoryCenter(target: Player): TileRef | null {
@@ -803,12 +792,7 @@ export class FakeHumanExecution implements Execution {
   private getValidMirvTargetPlayers(): Player[] {
     if (this.player === null) throw new Error("not initialized");
     return this.mg.players().filter((p) => {
-      return (
-        p !== this.player &&
-        p.isPlayer() &&
-        !this.player!.isOnSameTeam(p) &&
-        p.type() !== PlayerType.Bot
-      );
+      return p !== this.player && p.isPlayer() && !this.player!.isOnSameTeam(p);
     });
   }
 
@@ -849,25 +833,44 @@ export class FakeHumanExecution implements Execution {
     }
     return best ? best.p : null;
   }
-
   private selectSteamrollStopTarget(): Player | null {
     if (this.player === null) throw new Error("not initialized");
-    // Choose the structure-dominant player (>=n% ahead of next best)
-    const cmp = this.getValidMirvTargetPlayers().map((p) => ({
-      p,
-      c: this.countStructures(p),
-    }));
-    if (cmp.length < 2) return null;
-    cmp.sort((a, b) => b.c - a.c);
-    const [top, second] = [cmp[0], cmp[1]];
-    if (
-      second.c > 0 &&
-      top.c >=
-        Math.ceil(
-          second.c * FakeHumanExecution.STEAMROLL_STRUCTURE_GAP_MULTIPLIER,
-        )
-    )
-      return top.p;
+
+    // Get all valid MIRV target players (excluding self and teammates) and sort by city count
+    const validTargets = this.getValidMirvTargetPlayers()
+      .map((p) => ({ p, cityCount: this.countCities(p) }))
+      .sort((a, b) => b.cityCount - a.cityCount);
+
+    if (validTargets.length === 0) return null;
+
+    const topTarget = validTargets[0];
+
+    // Get all players (including self) for comparison
+    const allPlayers = this.mg
+      .players()
+      .filter((p) => p.isPlayer())
+      .map((p) => ({ p, cityCount: this.countCities(p) }))
+      .sort((a, b) => b.cityCount - a.cityCount);
+
+    if (allPlayers.length < 2) return null;
+
+    // Find the second highest city count (excluding the top target)
+    let secondHighest = 0;
+    for (const { p, cityCount } of allPlayers) {
+      if (p !== topTarget.p) {
+        secondHighest = cityCount;
+        break;
+      }
+    }
+
+    // Target should have n% more cities than the next best player
+    const threshold =
+      secondHighest * FakeHumanExecution.STEAMROLL_STRUCTURE_GAP_MULTIPLIER;
+
+    if (topTarget.cityCount >= threshold) {
+      return topTarget.p;
+    }
+
     return null;
   }
 
