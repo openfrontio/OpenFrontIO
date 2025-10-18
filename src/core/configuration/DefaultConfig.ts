@@ -21,6 +21,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
+import { getNationCount } from "../game/MapNationCounts";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
@@ -179,6 +180,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
     mode: GameMode,
     numPlayerTeams: TeamCountConfig | undefined,
   ): number {
+    if (mode === GameMode.HumansVsNations) {
+      return getNationCount(map);
+    }
+
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;

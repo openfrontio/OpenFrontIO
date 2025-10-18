@@ -70,7 +70,6 @@ export async function createGameRunner(
           ),
       );
 
-  // For HumansVsNations mode, filter nations based on configuration
   if (
     gameStart.config.gameMode === GameMode.HumansVsNations &&
     nations.length > 0
@@ -81,7 +80,6 @@ export async function createGameRunner(
       : (gameStart.config.nations ?? 10);
 
     if (nations.length > targetNationCount) {
-      // Randomly select nations to match the target count
       nations = random.shuffleArray(nations).slice(0, targetNationCount);
     }
   }
