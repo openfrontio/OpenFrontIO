@@ -105,7 +105,7 @@ class Client {
 
   constructor() {}
 
-  initialize(): void {
+  async initialize(): Promise<void> {
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;
@@ -360,12 +360,11 @@ class Client {
       }
     };
 
-    if (isLoggedIn() === false) {
+    if ((await isLoggedIn()) === false) {
       // Not logged in
       onUserMe(false);
     } else {
       // JWT appears to be valid
-      // TODO: Add caching
       getUserMe().then(onUserMe);
     }
 
@@ -573,7 +572,7 @@ class Client {
               : this.flagInput.getCurrentFlag(),
         },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: getPlayToken(),
+        token: await getPlayToken(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
@@ -697,15 +696,15 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // WARNING: DO NOT EXPOSE THIS ID
-function getPlayToken(): string {
-  const result = isLoggedIn();
+async function getPlayToken(): Promise<string> {
+  const result = await isLoggedIn();
   if (result !== false) return result.token;
   return getPersistentIDFromCookie();
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
-export function getPersistentID(): string {
-  const result = isLoggedIn();
+export async function getPersistentID(): Promise<string> {
+  const result = await isLoggedIn();
   if (result !== false) return result.claims.sub;
   return getPersistentIDFromCookie();
 }

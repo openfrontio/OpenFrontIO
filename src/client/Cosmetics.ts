@@ -24,7 +24,7 @@ export async function handlePurchase(
       headers: {
         "Content-Type": "application/json",
         authorization: getAuthHeader(),
-        "X-Persistent-Id": getPersistentID(),
+        "X-Persistent-Id": await getPersistentID(),
       },
       body: JSON.stringify({
         priceId: pattern.product.priceId,
