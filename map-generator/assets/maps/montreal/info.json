@@ -3,20 +3,74 @@
   "nations": [
     {
       "coordinates": [800, 430],
-      "flag": "ca",
+      "flag": "quebec",
       "name": "Laval",
       "strength": 2
     },
     {
       "coordinates": [1110, 930],
-      "flag": "ca",
-      "name": "Montreal",
-      "strength": 2
+      "flag": "quebec",
+      "name": "Royal Mount park",
+      "strength": 1
     },
     {
       "coordinates": [1220, 1360],
-      "flag": "ca",
+      "flag": "quebec",
       "name": "Hochelaga Archipelago",
+      "strength": 2
+    },
+    {
+      "coordinates": [1080, 980],
+      "flag": "ca",
+      "name": "Westmount",
+      "strength": 1
+    },
+    {
+      "coordinates": [1400, 1000],
+      "flag": "quebec",
+      "name": "Saint-Lambert",
+      "strength": 2
+    },
+    {
+      "coordinates": [500, 130],
+      "flag": "quebec",
+      "name": "Blainville",
+      "strength": 2
+    },
+    {
+      "coordinates": [350, 650],
+      "flag": "quebec",
+      "name": "Saint-Eustache",
+      "strength": 2
+    },
+    {
+      "coordinates": [200, 1350],
+      "flag": "quebec",
+      "name": "Perrot Island",
+      "strength": 2
+    },
+    {
+      "coordinates": [25, 950],
+      "flag": "quebec",
+      "name": "Kanesatake Lands",
+      "strength": 3
+    },
+    {
+      "coordinates": [50, 450],
+      "flag": "quebec",
+      "name": "Mirabel",
+      "strength": 2
+    },
+    {
+      "coordinates": [650, 1450],
+      "flag": "quebec",
+      "name": "Chateauguay",
+      "strength": 2
+    },
+    {
+      "coordinates": [1330, 300],
+      "flag": "quebec",
+      "name": "Pointe-aux-Trembles",
       "strength": 2
     }
   ]
