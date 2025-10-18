@@ -194,40 +194,41 @@ export class FakeHumanExecution implements Execution {
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
 
+    let borderingEnemies: Player[] = [];
     if (enemyborder.length === 0) {
-      if (this.random.chance(10)) {
+      if (this.random.chance(5)) {
         this.sendBoatRandomly();
       }
-      return;
-    }
-    if (this.random.chance(20)) {
-      this.sendBoatRandomly();
-      return;
-    }
+    } else {
+      if (this.random.chance(10)) {
+        this.sendBoatRandomly();
+        return;
+      }
 
-    const borderPlayers = enemyborder.map((t) =>
-      this.mg.playerBySmallID(this.mg.ownerID(t)),
-    );
-    if (borderPlayers.some((o) => !o.isPlayer())) {
-      this.behavior.sendAttack(this.mg.terraNullius());
-      return;
-    }
+      const borderPlayers = enemyborder.map((t) =>
+        this.mg.playerBySmallID(this.mg.ownerID(t)),
+      );
+      if (borderPlayers.some((o) => !o.isPlayer())) {
+        this.behavior.sendAttack(this.mg.terraNullius());
+        return;
+      }
 
-    const enemies = borderPlayers
-      .filter((o) => o.isPlayer())
-      .sort((a, b) => a.troops() - b.troops());
+      borderingEnemies = borderPlayers
+        .filter((o) => o.isPlayer())
+        .sort((a, b) => a.troops() - b.troops());
 
-    // 5% chance to send a random alliance request
-    if (this.random.chance(20)) {
-      const toAlly = this.random.randElement(enemies);
-      if (this.player.canSendAllianceRequest(toAlly)) {
-        this.player.createAllianceRequest(toAlly);
+      // 5% chance to send a random alliance request
+      if (this.random.chance(20)) {
+        const toAlly = this.random.randElement(borderingEnemies);
+        if (this.player.canSendAllianceRequest(toAlly)) {
+          this.player.createAllianceRequest(toAlly);
+        }
       }
     }
 
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
-    const enemy = this.behavior.selectEnemy(enemies);
+    const enemy = this.behavior.selectEnemy(borderingEnemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
     this.maybeSendNuke(enemy);
@@ -586,9 +587,14 @@ export class FakeHumanExecution implements Execution {
 
     const src = this.random.randElement(oceanShore);
 
-    const dst = this.randomBoatTarget(src, 150);
+    // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
+    let dst = this.randomBoatTarget(src, 150, true);
     if (dst === null) {
-      return;
+      // None found? Then look for players
+      dst = this.randomBoatTarget(src, 150, false);
+      if (dst === null) {
+        return;
+      }
     }
 
     this.mg.addExecution(
@@ -628,7 +634,11 @@ export class FakeHumanExecution implements Execution {
     return null;
   }
 
-  private randomBoatTarget(tile: TileRef, dist: number): TileRef | null {
+  private randomBoatTarget(
+    tile: TileRef,
+    dist: number,
+    highInterestOnly: boolean = false,
+  ): TileRef | null {
     if (this.player === null) throw new Error("not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
@@ -643,11 +653,23 @@ export class FakeHumanExecution implements Execution {
         continue;
       }
       const owner = this.mg.owner(randTile);
-      if (!owner.isPlayer()) {
-        return randTile;
+      if (owner === this.player) {
+        continue;
       }
-      if (!owner.isFriendly(this.player)) {
-        return randTile;
+      // Don't spam boats into players that are more than twice as large as us
+      if (owner.isPlayer() && owner.troops() > this.player.troops() * 2) {
+        continue;
+      }
+      // High-interest targeting: prioritize unowned tiles or tiles owned by bots
+      if (highInterestOnly) {
+        if (!owner.isPlayer() || owner.type() === PlayerType.Bot) {
+          return randTile;
+        }
+      } else {
+        // Normal targeting: return unowned tiles or tiles owned by non-friendly players
+        if (!owner.isPlayer() || !owner.isFriendly(this.player)) {
+          return randTile;
+        }
       }
     }
     return null;
