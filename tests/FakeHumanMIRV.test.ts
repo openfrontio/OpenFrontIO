@@ -301,4 +301,311 @@ describe("FakeHuman MIRV Retaliation", () => {
       expect(targetOwner).toBe(dominantPlayer);
     }
   });
+
+  test("fakehuman launches MIRV to stop steamrolling player with excessive cities", async () => {
+    // Setup game
+    const game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
+
+    // Create three players
+    const steamrollerInfo = new PlayerInfo(
+      "steamroller",
+      PlayerType.Human,
+      null,
+      "steamroller_id",
+    );
+    const secondPlayerInfo = new PlayerInfo(
+      "second_player",
+      PlayerType.Human,
+      null,
+      "second_id",
+    );
+    const fakehumanInfo = new PlayerInfo(
+      "defender_fakehuman",
+      PlayerType.FakeHuman,
+      null,
+      "fakehuman_id",
+    );
+
+    game.addPlayer(steamrollerInfo);
+    game.addPlayer(secondPlayerInfo);
+    game.addPlayer(fakehumanInfo);
+
+    // Skip spawn phase
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
+
+    const steamroller = game.player("steamroller_id");
+    const secondPlayer = game.player("second_id");
+    const fakehuman = game.player("fakehuman_id");
+
+    // Give fakehuman a small territory and missile silo
+    for (let x = 45; x < 55; x++) {
+      for (let y = 45; y < 55; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile) && !game.map().hasOwner(tile)) {
+          fakehuman.conquer(tile);
+        }
+      }
+    }
+    const fakehumanTile = Array.from(fakehuman.tiles())[0];
+    if (fakehumanTile) {
+      fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
+    }
+
+    // Give second player some territory and cities
+    for (let x = 20; x < 30; x++) {
+      for (let y = 20; y < 30; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile) && !game.map().hasOwner(tile)) {
+          secondPlayer.conquer(tile);
+        }
+      }
+    }
+    // Give second player 5 cities
+    for (let i = 0; i < 5; i++) {
+      const secondPlayerTile = Array.from(secondPlayer.tiles())[0];
+      if (secondPlayerTile) {
+        secondPlayer.buildUnit(UnitType.City, secondPlayerTile, {});
+      }
+    }
+
+    // Give steamroller territory and many cities (1.8x more than second player)
+    for (let x = 5; x < 25; x++) {
+      for (let y = 5; y < 25; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile) && !game.map().hasOwner(tile)) {
+          steamroller.conquer(tile);
+        }
+      }
+    }
+    // Give steamroller 7 cities (5 * 1.8 = 9, so 7+ should trigger)
+    for (let i = 0; i < 9; i++) {
+      const steamrollerTile = Array.from(steamroller.tiles())[0];
+      if (steamrollerTile) {
+        steamroller.buildUnit(UnitType.City, steamrollerTile, {});
+      }
+    }
+
+    // Give all players enough gold for MIRVs
+    steamroller.addGold(100_000_000n);
+    secondPlayer.addGold(100_000_000n);
+    fakehuman.addGold(100_000_000n);
+
+    // Verify preconditions
+    expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
+    expect(steamroller.unitCount(UnitType.City)).toBe(9);
+    expect(secondPlayer.unitCount(UnitType.City)).toBe(5);
+    expect(fakehuman.units(UnitType.MIRV)).toHaveLength(0);
+
+    // Track MIRVs before fakehuman considers steamroll stop
+    const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
+
+    // Initialize fakehuman with FakeHumanExecution to enable steamroll stop logic
+    const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
+
+    // Try different game IDs to find one that passes the 35% MIRV failure rate
+    const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
+    let steamrollStopSuccessful = false;
+
+    for (const gameId of gameIds) {
+      const testExecution = new FakeHumanExecution(gameId, fakehumanNation);
+      testExecution.init(game);
+
+      for (let tick = 0; tick < 200; tick++) {
+        testExecution.tick(game.ticks() + tick);
+        // Allow the game to process executions
+        if (tick % 10 === 0) {
+          game.executeNextTick();
+        }
+        if (fakehuman.units(UnitType.MIRV).length > mirvCountBefore) {
+          steamrollStopSuccessful = true;
+          break;
+        }
+      }
+
+      if (steamrollStopSuccessful) break;
+    }
+
+    // Assert that steamroll stop was successful
+    expect(steamrollStopSuccessful).toBe(true);
+
+    // Process the steamroll stop MIRV
+    executeTicks(game, 2);
+
+    // Assert: Fakehuman launched a steamroll stop MIRV
+    const mirvCountAfter = fakehuman.units(UnitType.MIRV).length;
+    expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
+
+    // Verify the steamroll stop MIRV targets the steamroller's territory
+    const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
+    expect(fakehumanMirvs.length).toBeGreaterThan(0);
+
+    const steamrollStopMirv = fakehumanMirvs[fakehumanMirvs.length - 1];
+    const steamrollStopTarget = steamrollStopMirv.targetTile();
+    expect(steamrollStopTarget).toBeDefined();
+
+    if (steamrollStopTarget) {
+      const targetOwner = game.owner(steamrollStopTarget);
+      expect(targetOwner).toBe(steamroller);
+    }
+  });
+
+  test("fakehuman launches MIRV to prevent team victory when team approaches 85% threshold", async () => {
+    // Setup game
+    const game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
+
+    // Create players - two on a team, one fakehuman
+    const teamPlayer1Info = new PlayerInfo(
+      "team_player_1",
+      PlayerType.Human,
+      "team_alpha", // Same team
+      "team1_id",
+    );
+    const teamPlayer2Info = new PlayerInfo(
+      "team_player_2",
+      PlayerType.Human,
+      "team_alpha", // Same team
+      "team2_id",
+    );
+    const fakehumanInfo = new PlayerInfo(
+      "defender_fakehuman",
+      PlayerType.FakeHuman,
+      null,
+      "fakehuman_id",
+    );
+
+    game.addPlayer(teamPlayer1Info);
+    game.addPlayer(teamPlayer2Info);
+    game.addPlayer(fakehumanInfo);
+
+    // Skip spawn phase
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
+
+    const teamPlayer1 = game.player("team1_id");
+    const teamPlayer2 = game.player("team2_id");
+    const fakehuman = game.player("fakehuman_id");
+
+    // Give fakehuman a small territory and missile silo
+    for (let x = 45; x < 55; x++) {
+      for (let y = 45; y < 55; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile) && !game.map().hasOwner(tile)) {
+          fakehuman.conquer(tile);
+        }
+      }
+    }
+    const fakehumanTile = Array.from(fakehuman.tiles())[0];
+    if (fakehumanTile) {
+      fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
+    }
+
+    // Give team players a large amount of territory (85%+ of total land combined)
+    // This should trigger the team victory denial threshold (85% team threshold)
+    const totalLandTiles = game.map().numLandTiles();
+    const targetTiles = Math.floor(totalLandTiles * 0.87); // 87% of land
+
+    let conqueredTiles = 0;
+    for (
+      let x = 0;
+      x < game.map().width() && conqueredTiles < targetTiles;
+      x++
+    ) {
+      for (
+        let y = 0;
+        y < game.map().height() && conqueredTiles < targetTiles;
+        y++
+      ) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile) && !game.map().hasOwner(tile)) {
+          // Alternate between team players
+          const teamPlayer =
+            conqueredTiles % 2 === 0 ? teamPlayer1 : teamPlayer2;
+          teamPlayer.conquer(tile);
+          conqueredTiles++;
+        }
+      }
+    }
+
+    // Give all players enough gold for MIRVs
+    teamPlayer1.addGold(100_000_000n);
+    teamPlayer2.addGold(100_000_000n);
+    fakehuman.addGold(100_000_000n);
+
+    // Verify preconditions
+    expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
+    expect(fakehuman.units(UnitType.MIRV)).toHaveLength(0);
+    expect(teamPlayer1.gold()).toBeGreaterThan(35_000_000n);
+    expect(teamPlayer2.gold()).toBeGreaterThan(35_000_000n);
+    expect(fakehuman.gold()).toBeGreaterThan(35_000_000n);
+    expect(fakehuman.isAlive()).toBe(true);
+    expect(fakehuman.numTilesOwned()).toBeGreaterThan(0);
+
+    // Verify team has enough territory to trigger team victory denial
+    const teamTerritory =
+      teamPlayer1.numTilesOwned() + teamPlayer2.numTilesOwned();
+    const teamShare = teamTerritory / game.map().numLandTiles();
+    expect(teamShare).toBeGreaterThan(0.85); // Above 85% team threshold
+
+    // Track MIRVs before fakehuman considers team victory denial
+    const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
+
+    // Initialize fakehuman with FakeHumanExecution to enable team victory denial logic
+    const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
+
+    // Try different game IDs to find one that passes the 35% MIRV failure rate
+    const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
+    let teamVictoryDenialSuccessful = false;
+
+    for (const gameId of gameIds) {
+      const testExecution = new FakeHumanExecution(gameId, fakehumanNation);
+      testExecution.init(game);
+
+      for (let tick = 0; tick < 200; tick++) {
+        testExecution.tick(game.ticks() + tick);
+        // Allow the game to process executions
+        if (tick % 10 === 0) {
+          game.executeNextTick();
+        }
+        if (fakehuman.units(UnitType.MIRV).length > mirvCountBefore) {
+          teamVictoryDenialSuccessful = true;
+          break;
+        }
+      }
+
+      if (teamVictoryDenialSuccessful) break;
+    }
+
+    // Assert that team victory denial was successful
+    expect(teamVictoryDenialSuccessful).toBe(true);
+
+    // Process the team victory denial MIRV
+    executeTicks(game, 2);
+
+    // Assert: Fakehuman launched a team victory denial MIRV
+    const mirvCountAfter = fakehuman.units(UnitType.MIRV).length;
+    expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
+
+    // Verify the team victory denial MIRV targets one of the team players' territory
+    const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
+    expect(fakehumanMirvs.length).toBeGreaterThan(0);
+
+    const teamVictoryDenialMirv = fakehumanMirvs[fakehumanMirvs.length - 1];
+    const teamVictoryDenialTarget = teamVictoryDenialMirv.targetTile();
+    expect(teamVictoryDenialTarget).toBeDefined();
+
+    if (teamVictoryDenialTarget) {
+      const targetOwner = game.owner(teamVictoryDenialTarget);
+      // Should target one of the team players
+      expect([teamPlayer1, teamPlayer2]).toContain(targetOwner);
+    }
+  });
 });
