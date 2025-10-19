@@ -29,8 +29,7 @@ import { closestTwoTiles } from "./Util";
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
-  // MIRV cooldown in ticks (600 ticks = 10 minutes at 1 tick/second)
-  private static readonly MIRV_COOLDOWN_TICKS = 600;
+  private static readonly MIRV_COOLDOWN_TICKS = 10 * 10 * 60; // 6000 ticks = 10 minutes
 
   // Victory denial thresholds (lower than win conditions for strategic timing)
   private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.85; // 85% of total land
