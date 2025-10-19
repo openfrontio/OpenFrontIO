@@ -30,7 +30,7 @@ import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private static readonly MIRV_COOLDOWN_TICKS = 10 * 10 * 60; // 6000 ticks = 10 minutes
-  private static readonly MIRV_FAILURE_RATE = 35;
+  private static readonly MIRV_FAILURE_ODDS = 3; // 1/3 ≈ 33.33% failure rate
 
   // Victory denial thresholds (lower than win conditions for strategic timing)
   private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.85; // 85% of total land
@@ -679,7 +679,7 @@ export class FakeHumanExecution implements Execution {
     this.removeOldMIRVEvents();
     if (this.lastMIRVSent.length > 0) return false;
 
-    if (this.random.chance(FakeHumanExecution.MIRV_FAILURE_RATE)) {
+    if (this.random.chance(FakeHumanExecution.MIRV_FAILURE_ODDS)) {
       this.triggerMIRVCooldown();
       return false;
     }
