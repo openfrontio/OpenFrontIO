@@ -1,0 +1,144 @@
+import { FakeHumanExecution } from "../src/core/execution/FakeHumanExecution";
+import { MirvExecution } from "../src/core/execution/MIRVExecution";
+import {
+  Cell,
+  Nation,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../src/core/game/Game";
+import { setup } from "./util/Setup";
+import { executeTicks } from "./util/utils";
+
+describe("FakeHuman MIRV Retaliation", () => {
+  test("fakehuman retaliates with MIRV when attacked by MIRV", async () => {
+    // Setup game
+    const game = await setup("big_plains", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
+
+    // Create two players
+    const attackerInfo = new PlayerInfo(
+      "attacker",
+      PlayerType.Human,
+      null,
+      "attacker_id",
+    );
+    const fakehumanInfo = new PlayerInfo(
+      "defender_fakehuman",
+      PlayerType.FakeHuman,
+      null,
+      "fakehuman_id",
+    );
+
+    game.addPlayer(attackerInfo);
+    game.addPlayer(fakehumanInfo);
+
+    // Skip spawn phase
+    while (game.inSpawnPhase()) {
+      game.executeNextTick();
+    }
+
+    const attacker = game.player("attacker_id");
+    const fakehuman = game.player("fakehuman_id");
+
+    // Give attacker territory and missile silo
+    for (let x = 5; x < 15; x++) {
+      for (let y = 5; y < 15; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile)) {
+          attacker.conquer(tile);
+        }
+      }
+    }
+    attacker.buildUnit(UnitType.MissileSilo, game.ref(10, 10), {});
+
+    // Give fakehuman territory and missile silo
+    for (let x = 45; x < 55; x++) {
+      for (let y = 45; y < 55; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile)) {
+          fakehuman.conquer(tile);
+        }
+      }
+    }
+    fakehuman.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+
+    // Give both players enough gold for MIRVs
+    attacker.addGold(100_000_000n);
+    fakehuman.addGold(100_000_000n);
+
+    // Verify preconditions
+    expect(attacker.units(UnitType.MissileSilo)).toHaveLength(1);
+    expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
+    expect(attacker.gold()).toBeGreaterThan(35_000_000n);
+    expect(fakehuman.gold()).toBeGreaterThan(35_000_000n);
+
+    // Attacker launches a MIRV at the fakehuman
+    const targetTile = Array.from(fakehuman.tiles())[0];
+    game.addExecution(new MirvExecution(attacker, targetTile));
+
+    // Execute a few ticks so the MIRV is in flight
+    executeTicks(game, 5);
+
+    // Verify attacker's MIRV is in flight
+    expect(attacker.units(UnitType.MIRV).length).toBeGreaterThan(0);
+
+    // Track MIRVs before fakehuman retaliates
+    const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
+
+    // Initialize fakehuman with FakeHumanExecution to enable retaliation logic
+    const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
+
+    // Try different game IDs to find one that passes the 35% MIRV failure rate
+    // Since random is seeded, we try multiple seeds to ensure at least one passes
+    const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
+    let retaliationSuccessful = false;
+
+    for (const gameId of gameIds) {
+      const testExecution = new FakeHumanExecution(gameId, fakehumanNation);
+      testExecution.init(game);
+
+      // Execute fakehuman's tick logic - need to run many iterations because:
+      // 1. Fakehuman only runs on ticks matching attackRate/attackTick pattern
+      // 2. First run initializes behavior, subsequent runs execute MIRV logic
+      for (let tick = 0; tick < 200; tick++) {
+        testExecution.tick(game.ticks() + tick);
+        // Allow the game to process executions
+        if (tick % 10 === 0) {
+          game.executeNextTick();
+        }
+        if (fakehuman.units(UnitType.MIRV).length > mirvCountBefore) {
+          retaliationSuccessful = true;
+          break;
+        }
+      }
+
+      if (retaliationSuccessful) break;
+    }
+
+    // Assert that retaliation was successful
+    expect(retaliationSuccessful).toBe(true);
+
+    // Process the retaliation
+    executeTicks(game, 2);
+
+    // Assert: Fakehuman launched a retaliatory MIRV
+    const mirvCountAfter = fakehuman.units(UnitType.MIRV).length;
+    expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
+
+    // Verify the retaliatory MIRV targets the attacker's territory
+    const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
+    expect(fakehumanMirvs.length).toBeGreaterThan(0);
+
+    const retaliationMirv = fakehumanMirvs[fakehumanMirvs.length - 1];
+    const retaliationTarget = retaliationMirv.targetTile();
+    expect(retaliationTarget).toBeDefined();
+
+    if (retaliationTarget) {
+      const targetOwner = game.owner(retaliationTarget);
+      expect(targetOwner).toBe(attacker);
+    }
+  });
+});
