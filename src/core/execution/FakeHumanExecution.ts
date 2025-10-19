@@ -30,6 +30,7 @@ import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private static readonly MIRV_COOLDOWN_TICKS = 10 * 10 * 60; // 6000 ticks = 10 minutes
+  private static readonly MIRV_FAILURE_RATE = 35;
 
   // Victory denial thresholds (lower than win conditions for strategic timing)
   private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.85; // 85% of total land
@@ -678,6 +679,11 @@ export class FakeHumanExecution implements Execution {
     this.removeOldMIRVEvents();
     if (this.lastMIRVSent.length > 0) return false;
 
+    if (this.random.chance(FakeHumanExecution.MIRV_FAILURE_RATE)) {
+      this.triggerMIRVCooldown();
+      return false;
+    }
+
     const inboundMIRVSender = this.selectCounterMirvTarget();
     if (inboundMIRVSender) {
       this.maybeSendMIRV(inboundMIRVSender);
@@ -849,10 +855,18 @@ export class FakeHumanExecution implements Execution {
 
   private sendMIRV(tile: TileRef): void {
     if (this.player === null) throw new Error("not initialized");
+    this.triggerMIRVCooldown(tile);
+    this.mg.addExecution(new MirvExecution(this.player, tile));
+  }
+
+  private triggerMIRVCooldown(tile?: TileRef): void {
+    if (this.player === null) throw new Error("not initialized");
     this.removeOldMIRVEvents();
     const tick = this.mg.ticks();
-    this.lastMIRVSent.push([tick, tile]);
-    this.mg.addExecution(new MirvExecution(this.player, tile));
+    // Use provided tile or any tile from player's territory for cooldown tracking
+    const cooldownTile =
+      tile ?? Array.from(this.player.tiles())[0] ?? this.mg.ref(0, 0);
+    this.lastMIRVSent.push([tick, cooldownTile]);
   }
 
   private removeOldMIRVEvents() {
