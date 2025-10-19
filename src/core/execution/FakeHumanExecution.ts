@@ -779,11 +779,28 @@ export class FakeHumanExecution implements Execution {
   }
 
   // MIRV Helper Methods
+  private mirvTargetsCache: {
+    tick: number;
+    players: Player[];
+  } | null = null;
+
   private getValidMirvTargetPlayers(): Player[] {
+    const MIRV_TARGETS_CACHE_TICKS = 2 * 10; // 2 seconds
     if (this.player === null) throw new Error("not initialized");
-    return this.mg.players().filter((p) => {
+
+    if (
+      this.mirvTargetsCache &&
+      this.mg.ticks() - this.mirvTargetsCache.tick < MIRV_TARGETS_CACHE_TICKS
+    ) {
+      return this.mirvTargetsCache.players;
+    }
+
+    const players = this.mg.players().filter((p) => {
       return p !== this.player && p.isPlayer() && !this.player!.isOnSameTeam(p);
     });
+
+    this.mirvTargetsCache = { tick: this.mg.ticks(), players };
+    return players;
   }
 
   private isInboundMIRVFrom(attacker: Player): boolean {
@@ -813,19 +830,21 @@ export class FakeHumanExecution implements Execution {
       sumX += this.mg.x(tile);
       sumY += this.mg.y(tile);
     }
-    const centerX = Math.round(sumX / tiles.length);
-    const centerY = Math.round(sumY / tiles.length);
+    const centerX = sumX / tiles.length;
+    const centerY = sumY / tiles.length;
 
+    // Find closest in single pass
     let closestTile: TileRef | null = null;
-    let closestDistance = Infinity;
+    let closestDistanceSquared = Infinity;
 
     for (const tile of tiles) {
-      const distance = Math.hypot(
-        this.mg.x(tile) - centerX,
-        this.mg.y(tile) - centerY,
-      );
-      if (distance < closestDistance) {
-        closestDistance = distance;
+      // Use squared distance to avoid sqrt
+      const dx = this.mg.x(tile) - centerX;
+      const dy = this.mg.y(tile) - centerY;
+      const distSquared = dx * dx + dy * dy;
+
+      if (distSquared < closestDistanceSquared) {
+        closestDistanceSquared = distSquared;
         closestTile = tile;
       }
     }
