@@ -72,6 +72,13 @@ This document provides comprehensive licensing information for the OpenFront.io 
   - Added additional Section 7 attribution requirements to the LICENSE
   - Removed trademark notice from LICENSE file as it's unnecessary
 
+### Phase 7: Update AGPL Additional Attribution Terms
+
+- **Starting After:** f161c94ff475092811fc49be79138fc37a446179
+- **Date:** October 18, 2025
+- **Changes:**
+  - Updated Section 7 attribution requirements in the LICENSE
+
 ## Important Notes
 
 ### For Code:
