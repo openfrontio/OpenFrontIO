@@ -12,7 +12,6 @@ import { executeTicks } from "./util/utils";
 
 describe("FakeHuman MIRV Retaliation", () => {
   test("fakehuman retaliates with MIRV when attacked by MIRV", async () => {
-    // Setup game
     const game = await setup("big_plains", {
       infiniteGold: true,
       instantBuild: true,
