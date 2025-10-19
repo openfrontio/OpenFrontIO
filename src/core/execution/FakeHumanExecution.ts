@@ -820,9 +820,9 @@ export class FakeHumanExecution implements Execution {
     let closestDistance = Infinity;
 
     for (const tile of tiles) {
-      const distance = Math.sqrt(
-        Math.pow(this.mg.x(tile) - centerX, 2) +
-          Math.pow(this.mg.y(tile) - centerY, 2),
+      const distance = Math.hypot(
+        this.mg.x(tile) - centerX,
+        this.mg.y(tile) - centerY,
       );
       if (distance < closestDistance) {
         closestDistance = distance;
