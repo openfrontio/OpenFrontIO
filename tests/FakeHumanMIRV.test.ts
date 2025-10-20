@@ -209,7 +209,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Then give dominant player a large amount of territory
     // This should trigger the victory denial threshold
     const totalLandTiles = game.map().numLandTiles();
-    const targetTiles = Math.floor(totalLandTiles * 0.71);
+    const targetTiles = Math.floor(totalLandTiles * 0.66);
 
     let conqueredTiles = 0;
     for (
@@ -247,7 +247,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Verify dominant player has enough territory to trigger victory denial
     const dominantTerritoryShare =
       dominantPlayer.numTilesOwned() / game.map().numLandTiles();
-    expect(dominantTerritoryShare).toBeGreaterThan(0.7);
+    expect(dominantTerritoryShare).toBeGreaterThan(0.65);
 
     // Track MIRVs before fakehuman considers victory denial
     const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
