@@ -187,8 +187,11 @@ export class TerritoryLayer implements Layer {
       let color = this.theme.spawnHighlightColor();
       const myPlayer = this.game.myPlayer();
       if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
+        // In FFA games (when team === null), use default yellow spawn highlight color
         color = this.theme.spawnHighlightColor();
       } else if (myPlayer !== null && myPlayer !== human) {
+        // In Team games, the spawn highlight color becomes that player's team color
+        // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
         const team = human.team();
         if (team !== null) color = this.theme.teamColor(team);
       }
@@ -228,7 +231,7 @@ export class TerritoryLayer implements Layer {
       center.x,
       center.y,
       breathingPadding,
-      this.theme.spawnHighlightSelfColor(),
+      this.theme.spawnHighlightSelfColor(), // Always draw breathing ring with self spawn highlight color
     );
   }
 
