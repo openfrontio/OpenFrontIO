@@ -8,6 +8,9 @@ export interface Stats {
 
   numMirvsLaunched(): bigint;
 
+  // Update max tiles tracking for a player (called when tile ownership changes)
+  updateMaxTiles(player: Player): void;
+
   // Player attacks target
   attack(
     player: Player,

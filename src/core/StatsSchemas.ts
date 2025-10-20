@@ -101,6 +101,7 @@ export const PlayerStatsSchema = z
     betrayals: BigIntStringSchema.optional(),
     killedAt: BigIntStringSchema.optional(),
     conquests: BigIntStringSchema.optional(),
+    maxTilesOwned: BigIntStringSchema.optional(),
     boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),
