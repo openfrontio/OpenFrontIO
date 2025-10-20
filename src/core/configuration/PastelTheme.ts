@@ -35,7 +35,7 @@ export class PastelTheme implements Theme {
   private _enemyColor = colord("rgb(255,0,0)");
 
   private _spawnHighlightColor = colord("rgb(255,213,79)");
-  private _spawnHighlightSelfColor = colord("rgb(0,255,255)");
+  private _spawnHighlightSelfColor = colord("rgb(255,255,255)");
   private _spawnHighlightTeamColor = colord("rgb(0,255,0)");
   private _spawnHighlightEnemyColor = colord("rgb(255,0,0)");
 
@@ -149,11 +149,5 @@ export class PastelTheme implements Theme {
   }
   spawnHighlightSelfColor(): Colord {
     return this._spawnHighlightSelfColor;
-  }
-  spawnHighlightTeamColor(): Colord {
-    return this._spawnHighlightTeamColor;
-  }
-  spawnHighlightEnemyColor(): Colord {
-    return this._spawnHighlightEnemyColor;
   }
 }
