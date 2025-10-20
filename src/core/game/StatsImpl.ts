@@ -41,6 +41,7 @@ function _bigint(value: BigIntLike): bigint {
 
 export class StatsImpl implements Stats {
   private readonly data: AllPlayersStats = {};
+  private readonly maxTilesTracking: Map<string, bigint> = new Map();
 
   private _numMirvLaunched: bigint = 0n;
 
@@ -56,6 +57,28 @@ export class StatsImpl implements Stats {
 
   stats() {
     return this.data;
+  }
+
+  /**
+   * Update max tiles tracking for a player
+   * Called whenever player's tile count changes
+   */
+  updateMaxTiles(player: Player): void {
+    const clientID = player.clientID();
+    if (clientID === null) return;
+
+    const currentTiles = _bigint(player.numTilesOwned());
+    const maxTiles = this.maxTilesTracking.get(clientID) ?? 0n;
+
+    if (currentTiles > maxTiles) {
+      this.maxTilesTracking.set(clientID, currentTiles);
+
+      // Update the player stats
+      const p = this._makePlayerStats(player);
+      if (p !== undefined) {
+        p.maxTilesOwned = currentTiles;
+      }
+    }
   }
 
   private _makePlayerStats(player: Player): PlayerStats {
