@@ -10,49 +10,49 @@ describe("LobbyMaxPlayers", () => {
   });
 
   describe("HumansVsNations mode", () => {
-    test("should return nation count for World map", () => {
+    test("should return human count based on formula for World map", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.World,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(61);
+      expect(maxPlayers).toBe(56);
     });
 
-    test("should return nation count for Europe map", () => {
+    test("should return human count based on formula for Europe map", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.Europe,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(49);
+      expect(maxPlayers).toBe(45);
     });
 
-    test("should return nation count for Mars map", () => {
+    test("should return human count based on formula for Mars map", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.Mars,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(6);
+      expect(maxPlayers).toBe(4);
     });
 
-    test("should return nation count for Montreal map", () => {
+    test("should return human count based on formula for Montreal map", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.Montreal,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(3);
+      expect(maxPlayers).toBe(2);
     });
 
-    test("should return nation count for GiantWorldMap", () => {
+    test("should return human count based on formula for GiantWorldMap", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.GiantWorldMap,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(97);
+      expect(maxPlayers).toBe(90);
     });
   });
 

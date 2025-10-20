@@ -10,49 +10,49 @@ describe("HumansVsNations Player Limit Validation", () => {
   });
 
   describe("Map player limits for HumansVsNations mode", () => {
-    test("Montreal map should have max 3 players", () => {
+    test("Montreal map should have max 2 players", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.Montreal,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(3);
+      expect(maxPlayers).toBe(2);
     });
 
-    test("Mars map should have max 6 players", () => {
+    test("Mars map should have max 4 players", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.Mars,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(6);
+      expect(maxPlayers).toBe(4);
     });
 
-    test("World map should have max 61 players", () => {
+    test("World map should have max 56 players", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.World,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(61);
+      expect(maxPlayers).toBe(56);
     });
 
-    test("FaroeIslands map should have max 6 players", () => {
+    test("FaroeIslands map should have max 4 players", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.FaroeIslands,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(6);
+      expect(maxPlayers).toBe(4);
     });
 
-    test("Japan map should have max 12 players", () => {
+    test("Japan map should have max 10 players", () => {
       const maxPlayers = config.lobbyMaxPlayers(
         GameMapType.Japan,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(12);
+      expect(maxPlayers).toBe(10);
     });
   });
 

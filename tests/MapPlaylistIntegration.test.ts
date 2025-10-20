@@ -7,29 +7,29 @@ describe("MapPlaylist with HumansVsNations", () => {
     await initMapNationCounts();
   });
 
-  test("gameConfig should set maxPlayers to nation count for HumansVsNations mode", () => {
+  test("gameConfig should set maxPlayers to human count based on formula for HumansVsNations mode", () => {
     // We can't directly test MapPlaylist because it only generates FFA and Team modes
     // However, we can verify the logic would work by testing the lobbyMaxPlayers function
     // which is what MapPlaylist.gameConfig() calls to set maxPlayers
 
     const config = getServerConfigFromServer();
 
-    // Test various maps to ensure nation count is returned for HumansVsNations
+    // Test various maps to ensure human count (based on formula) is returned for HumansVsNations
     const testCases = [
-      { map: GameMapType.World, expectedNations: 61 },
-      { map: GameMapType.Europe, expectedNations: 49 },
-      { map: GameMapType.Mars, expectedNations: 6 },
-      { map: GameMapType.GiantWorldMap, expectedNations: 97 },
-      { map: GameMapType.Montreal, expectedNations: 3 },
+      { map: GameMapType.World, expectedHumans: 56 },
+      { map: GameMapType.Europe, expectedHumans: 45 },
+      { map: GameMapType.Mars, expectedHumans: 4 },
+      { map: GameMapType.GiantWorldMap, expectedHumans: 90 },
+      { map: GameMapType.Montreal, expectedHumans: 2 },
     ];
 
-    testCases.forEach(({ map, expectedNations }) => {
+    testCases.forEach(({ map, expectedHumans }) => {
       const maxPlayers = config.lobbyMaxPlayers(
         map,
         GameMode.HumansVsNations,
         undefined,
       );
-      expect(maxPlayers).toBe(expectedNations);
+      expect(maxPlayers).toBe(expectedHumans);
     });
   });
 

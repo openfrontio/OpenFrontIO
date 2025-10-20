@@ -181,7 +181,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
     numPlayerTeams: TeamCountConfig | undefined,
   ): number {
     if (mode === GameMode.HumansVsNations) {
-      return getNationCount(map);
+      const nationCount = getNationCount(map);
+      // Formula for calculating max human players from nation count:
+      // H = floor(0.944194 * N - 0.819457)
+      return Math.max(1, Math.floor(0.944194 * nationCount - 0.819457));
     }
 
     const [l, m, s] = numPlayersConfig[map] ?? [50, 30, 20];

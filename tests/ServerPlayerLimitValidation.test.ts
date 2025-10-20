@@ -11,12 +11,12 @@ describe("Server-side HumansVsNations Player Limit Configuration", () => {
 
   test("lobbyMaxPlayers should return correct values for HumansVsNations mode", () => {
     const testCases = [
-      { map: GameMapType.Montreal, expected: 3 },
-      { map: GameMapType.Mars, expected: 6 },
-      { map: GameMapType.FaroeIslands, expected: 6 },
-      { map: GameMapType.Japan, expected: 12 },
-      { map: GameMapType.World, expected: 61 },
-      { map: GameMapType.Europe, expected: 49 },
+      { map: GameMapType.Montreal, expected: 2 },
+      { map: GameMapType.Mars, expected: 4 },
+      { map: GameMapType.FaroeIslands, expected: 4 },
+      { map: GameMapType.Japan, expected: 10 },
+      { map: GameMapType.World, expected: 56 },
+      { map: GameMapType.Europe, expected: 45 },
     ];
 
     testCases.forEach(({ map, expected }) => {
@@ -58,9 +58,9 @@ describe("Server-side HumansVsNations Player Limit Configuration", () => {
       undefined,
     );
 
-    // Montreal has 3 nations, World has 61 nations
+    // Montreal has 3 nations (2 humans), World has 61 nations (56 humans)
     expect(montrealMax).toBeLessThan(worldMax);
-    expect(montrealMax).toBe(3);
-    expect(worldMax).toBe(61);
+    expect(montrealMax).toBe(2);
+    expect(worldMax).toBe(56);
   });
 });
