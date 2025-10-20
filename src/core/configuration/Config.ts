@@ -198,4 +198,7 @@ export interface Theme {
   neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
+  spawnHighlightSelfColor(): Colord;
+  spawnHighlightTeamColor(): Colord;
+  spawnHighlightEnemyColor(): Colord;
 }

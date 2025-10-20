@@ -186,13 +186,22 @@ export class TerritoryLayer implements Layer {
       }
       let color = this.theme.spawnHighlightColor();
       const myPlayer = this.game.myPlayer();
-      if (
+      if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
+        color = this.theme.spawnHighlightColor();
+      } else if (
         myPlayer !== null &&
         myPlayer !== human &&
-        myPlayer.isFriendly(human)
+        myPlayer.isOnSameTeam(human)
       ) {
-        color = this.theme.selfColor();
+        color = this.theme.spawnHighlightTeamColor();
+      } else if (
+        myPlayer !== null &&
+        myPlayer !== human &&
+        !myPlayer.isOnSameTeam(human)
+      ) {
+        color = this.theme.spawnHighlightEnemyColor();
       }
+
       for (const tile of this.game.bfs(
         centerTile,
         euclDistFN(centerTile, 9, true),
@@ -228,7 +237,7 @@ export class TerritoryLayer implements Layer {
       center.x,
       center.y,
       breathingPadding,
-      this.theme.spawnHighlightColor(),
+      this.theme.spawnHighlightSelfColor(),
     );
   }
 
