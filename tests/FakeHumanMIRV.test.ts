@@ -2,6 +2,7 @@ import { FakeHumanExecution } from "../src/core/execution/FakeHumanExecution";
 import { MirvExecution } from "../src/core/execution/MIRVExecution";
 import {
   Cell,
+  GameMode,
   Nation,
   PlayerInfo,
   PlayerType,
@@ -454,24 +455,18 @@ describe("FakeHuman MIRV Retaliation", () => {
     }
   });
 
-  test("fakehuman launches MIRV to prevent team victory when team approaches victory denial threshold", async () => {
+  test("fakehuman launches MIRV to prevent team victory when team approaches victory denial threshold (targets biggest team member)", async () => {
     // Setup game
-    const game = await setup("big_plains", {
-      infiniteGold: true,
-      instantBuild: true,
-    });
-
-    // Create players - two on a team, one fakehuman
     const teamPlayer1Info = new PlayerInfo(
-      "team_player_1",
+      "[ALPHA]team_player_1",
       PlayerType.Human,
-      "team_alpha", // Same team
+      null,
       "team1_id",
     );
     const teamPlayer2Info = new PlayerInfo(
-      "team_player_2",
+      "[ALPHA]team_player_2",
       PlayerType.Human,
-      "team_alpha", // Same team
+      null,
       "team2_id",
     );
     const fakehumanInfo = new PlayerInfo(
@@ -480,10 +475,18 @@ describe("FakeHuman MIRV Retaliation", () => {
       null,
       "fakehuman_id",
     );
+    const game = await setup(
+      "big_plains",
+      {
+        infiniteGold: true,
+        instantBuild: true,
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+      },
+      [teamPlayer1Info, teamPlayer2Info, fakehumanInfo],
+    );
 
-    game.addPlayer(teamPlayer1Info);
-    game.addPlayer(teamPlayer2Info);
-    game.addPlayer(fakehumanInfo);
+    // Players already added via setup() with Team mode and shared clan for humans
 
     // Skip spawn phase
     while (game.inSpawnPhase()) {
@@ -508,27 +511,27 @@ describe("FakeHuman MIRV Retaliation", () => {
       fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
     }
 
-    // Give team players a large amount of territory
-    // This should trigger the team victory denial threshold
+    // Give team players a large amount of territory to exceed team threshold,
+    // but skew so teamPlayer1 is clearly the largest member
     const totalLandTiles = game.map().numLandTiles();
-    const targetTiles = Math.floor(totalLandTiles * 0.81);
+    const teamTargetTiles = Math.floor(totalLandTiles * 0.82);
 
     let conqueredTiles = 0;
     for (
       let x = 0;
-      x < game.map().width() && conqueredTiles < targetTiles;
+      x < game.map().width() && conqueredTiles < teamTargetTiles;
       x++
     ) {
       for (
         let y = 0;
-        y < game.map().height() && conqueredTiles < targetTiles;
+        y < game.map().height() && conqueredTiles < teamTargetTiles;
         y++
       ) {
         const tile = game.ref(x, y);
         if (game.map().isLand(tile) && !game.map().hasOwner(tile)) {
-          // Alternate between team players
+          // 3:1 bias towards teamPlayer1 to ensure largest-member targeting is well-defined
           const teamPlayer =
-            conqueredTiles % 2 === 0 ? teamPlayer1 : teamPlayer2;
+            conqueredTiles % 4 === 0 ? teamPlayer2 : teamPlayer1;
           teamPlayer.conquer(tile);
           conqueredTiles++;
         }
@@ -594,7 +597,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     const mirvCountAfter = fakehuman.units(UnitType.MIRV).length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
-    // Verify the team victory denial MIRV targets one of the team players' territory
+    // Verify the team victory denial MIRV targets the largest member of the team
     const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
     expect(fakehumanMirvs.length).toBeGreaterThan(0);
 
@@ -604,8 +607,12 @@ describe("FakeHuman MIRV Retaliation", () => {
 
     if (teamVictoryDenialTarget) {
       const targetOwner = game.owner(teamVictoryDenialTarget);
-      // Should target one of the team players
-      expect([teamPlayer1, teamPlayer2]).toContain(targetOwner);
+      // Should target the biggest member of the team
+      const biggest =
+        teamPlayer1.numTilesOwned() >= teamPlayer2.numTilesOwned()
+          ? teamPlayer1
+          : teamPlayer2;
+      expect(targetOwner).toBe(biggest);
     }
   });
 });

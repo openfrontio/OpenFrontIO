@@ -732,13 +732,30 @@ export class FakeHumanExecution implements Execution {
       let severity = 0;
       const team = p.team();
       if (team !== null) {
-        const teamMembers = this.mg.players().filter((x) => x.team() === team);
+        const teamMembers = this.mg
+          .players()
+          .filter((x) => x.team() === team && x.isPlayer());
         const teamTerritory = teamMembers
           .map((x) => x.numTilesOwned())
           .reduce((a, b) => a + b, 0);
         const teamShare = teamTerritory / totalLand;
-        if (teamShare >= FakeHumanExecution.VICTORY_DENIAL_TEAM_THRESHOLD)
-          severity = teamShare;
+        if (teamShare >= FakeHumanExecution.VICTORY_DENIAL_TEAM_THRESHOLD) {
+          // Only consider the largest team member as the target when team exceeds threshold
+          let largestMember: Player | null = null;
+          let largestTiles = -1;
+          for (const member of teamMembers) {
+            const tiles = member.numTilesOwned();
+            if (tiles > largestTiles) {
+              largestTiles = tiles;
+              largestMember = member;
+            }
+          }
+          if (largestMember === p) {
+            severity = teamShare;
+          } else {
+            severity = 0; // Skip non-largest members
+          }
+        }
       } else {
         const share = p.numTilesOwned() / totalLand;
         if (share >= FakeHumanExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
