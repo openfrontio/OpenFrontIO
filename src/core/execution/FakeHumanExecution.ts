@@ -820,7 +820,12 @@ export class FakeHumanExecution implements Execution {
     }
 
     const players = this.mg.players().filter((p) => {
-      return p !== this.player && p.isPlayer() && !this.player!.isOnSameTeam(p);
+      return (
+        p !== this.player &&
+        p.isPlayer() &&
+        p.type() !== PlayerType.Bot &&
+        !this.player!.isOnSameTeam(p)
+      );
     });
 
     this.mirvTargetsCache = { tick: this.mg.ticks(), players };
