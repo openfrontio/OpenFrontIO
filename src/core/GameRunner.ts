@@ -93,6 +93,7 @@ export async function createGameRunner(
     }
     if (
       !matchToPlayers &&
+      gameStart.config?.nations !== undefined &&
       gameStart.config.nations !== null &&
       gameStart.config.nations !== targetNationCount
     ) {
