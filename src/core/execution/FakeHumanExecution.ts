@@ -29,16 +29,6 @@ import { closestTwoTiles } from "./Util";
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
-  private static readonly MIRV_COOLDOWN_TICKS = 10 * 10 * 60; // 6000 ticks = 10 minutes
-  private static readonly MIRV_HESITATION_ODDS = 3; // 1/3 ≈ 33.33% hesitation rate
-
-  // Victory denial thresholds (lower than win conditions for strategic timing)
-  private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.8; // 85% of total land
-  private static readonly VICTORY_DENIAL_INDIVIDUAL_THRESHOLD = 0.65; // 70% of total land
-
-  // Steamroll city gap threshold (n% ahead of next best player)
-  private static readonly STEAMROLL_CITY_GAP_MULTIPLIER = 1.8;
-
   private active = true;
   private random: PseudoRandom;
   private behavior: BotBehavior | null = null; // Shared behavior logic for both bots and fakehumans
@@ -55,6 +45,23 @@ export class FakeHumanExecution implements Execution {
   private readonly lastNukeSent: [Tick, TileRef][] = [];
   private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
+
+  /** MIRV Strategy Constants */
+
+  /** Ticks until MIRV can be attempted again */
+  private static readonly MIRV_COOLDOWN_TICKS = 3 * 600;
+
+  /** Odds of aborting a MIRV attempt */
+  private static readonly MIRV_HESITATION_ODDS = 3;
+
+  /** Threshold for team victory denial */
+  private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.8;
+
+  /** Threshold for individual victory denial */
+  private static readonly VICTORY_DENIAL_INDIVIDUAL_THRESHOLD = 0.65;
+
+  /** Multiplier for steamroll city gap threshold */
+  private static readonly STEAMROLL_CITY_GAP_MULTIPLIER = 1.8;
 
   constructor(
     gameID: GameID,
