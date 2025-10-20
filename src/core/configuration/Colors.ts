@@ -262,104 +262,255 @@ export const botColors: Colord[] = [
 
 // Fallback colors for when the color palette is exhausted. Currently 100 colors.
 export const fallbackColors: Colord[] = [
-  colord("rgb(0,5,0)"), // Black Mint
-  colord("rgb(0,15,0)"), // Deep Forest
-  colord("rgb(0,25,0)"), // Jungle
-  colord("rgb(0,35,0)"), // Dark Emerald
-  colord("rgb(0,45,0)"), // Green Moss
-  colord("rgb(0,55,0)"), // Moss Shadow
-  colord("rgb(0,65,0)"), // Dark Meadow
-  colord("rgb(0,75,0)"), // Forest Fern
-  colord("rgb(0,85,0)"), // Pine Leaf
-  colord("rgb(0,95,0)"), // Shadow Grass
-  colord("rgb(0,105,0)"), // Classic Green
-  colord("rgb(0,115,0)"), // Deep Lime
-  colord("rgb(0,125,0)"), // Dense Leaf
-  colord("rgb(0,135,0)"), // Basil Green
-  colord("rgb(0,145,0)"), // Organic Green
-  colord("rgb(0,155,0)"), // Bitter Herb
-  colord("rgb(0,165,0)"), // Raw Spinach
-  colord("rgb(0,175,0)"), // Woodland
-  colord("rgb(0,185,0)"), // Spring Weed
-  colord("rgb(0,195,5)"), // Apple Stem
-  colord("rgb(0,205,10)"), // Crisp Lettuce
-  colord("rgb(0,215,15)"), // Vibrant Green
-  colord("rgb(0,225,20)"), // Bright Herb
-  colord("rgb(0,235,25)"), // Green Splash
-  colord("rgb(0,245,30)"), // Mint Leaf
-  colord("rgb(0,255,35)"), // Fresh Mint
-  colord("rgb(10,255,45)"), // Neon Grass
-  colord("rgb(20,255,55)"), // Lemon Balm
-  colord("rgb(30,255,65)"), // Juicy Green
-  colord("rgb(40,255,75)"), // Pear Tint
-  colord("rgb(50,255,85)"), // Avocado Pastel
-  colord("rgb(60,255,95)"), // Lime Glow
-  colord("rgb(70,255,105)"), // Light Leaf
-  colord("rgb(80,255,115)"), // Soft Fern
-  colord("rgb(90,255,125)"), // Pastel Green
-  colord("rgb(100,255,135)"), // Green Melon
-  colord("rgb(110,255,145)"), // Herbal Mist
-  colord("rgb(120,255,155)"), // Kiwi Foam
-  colord("rgb(130,255,165)"), // Aloe Fresh
-  colord("rgb(140,255,175)"), // Light Mint
-  colord("rgb(150,200,255)"), // Cornflower Mist
-  colord("rgb(150,255,185)"), // Green Sorbet
-  colord("rgb(160,215,255)"), // Powder Blue
-  colord("rgb(160,255,195)"), // Pastel Apple
-  colord("rgb(170,190,255)"), // Periwinkle Ice
-  colord("rgb(170,225,255)"), // Baby Sky
-  colord("rgb(170,255,205)"), // Aloe Breeze
-  colord("rgb(180,180,255)"), // Pale Indigo
-  colord("rgb(180,235,250)"), // Aqua Pastel
-  colord("rgb(180,255,215)"), // Pale Mint
-  colord("rgb(190,140,195)"), // Fuchsia Tint
-  colord("rgb(190,245,240)"), // Ice Mint
-  colord("rgb(190,255,225)"), // Mint Water
-  colord("rgb(195,145,200)"), // Dusky Rose
-  colord("rgb(200,150,205)"), // Plum Frost
-  colord("rgb(200,170,255)"), // Lilac Bloom
-  colord("rgb(200,255,215)"), // Cool Aloe
-  colord("rgb(200,255,235)"), // Cool Mist
-  colord("rgb(205,155,210)"), // Berry Foam
-  colord("rgb(210,160,215)"), // Grape Cloud
-  colord("rgb(210,255,245)"), // Sea Mist
-  colord("rgb(215,165,220)"), // Light Bloom
-  colord("rgb(215,255,200)"), // Fresh Mint
-  colord("rgb(220,160,255)"), // Violet Mist
-  colord("rgb(220,170,225)"), // Cherry Blossom
-  colord("rgb(220,255,255)"), // Pale Aqua
-  colord("rgb(225,175,230)"), // Faded Rose
-  colord("rgb(225,255,175)"), // Soft Lime
-  colord("rgb(230,180,235)"), // Dreamy Mauve
-  colord("rgb(230,250,255)"), // Sky Haze
-  colord("rgb(235,150,255)"), // Orchid Glow
-  colord("rgb(235,185,240)"), // Powder Violet
-  colord("rgb(240,190,245)"), // Pastel Violet
-  colord("rgb(240,240,255)"), // Frosted Lilac
-  colord("rgb(240,250,160)"), // Citrus Wash
-  colord("rgb(245,160,240)"), // Rose Lilac
-  colord("rgb(245,195,250)"), // Soft Magenta
-  colord("rgb(245,245,175)"), // Lemon Mist
-  colord("rgb(250,200,255)"), // Lilac Cream
-  colord("rgb(250,230,255)"), // Misty Mauve
-  colord("rgb(255,170,225)"), // Bubblegum Pink
-  colord("rgb(255,185,215)"), // Blush Mist
-  colord("rgb(255,195,235)"), // Faded Fuchsia
-  colord("rgb(255,200,220)"), // Cotton Rose
-  colord("rgb(255,205,245)"), // Pastel Orchid
-  colord("rgb(255,205,255)"), // Violet Bloom
-  colord("rgb(255,210,230)"), // Pastel Blush
-  colord("rgb(255,210,250)"), // Lavender Mist
-  colord("rgb(255,210,255)"), // Orchid Mist
-  colord("rgb(255,215,195)"), // Apricot Glow
-  colord("rgb(255,215,245)"), // Rose Whisper
-  colord("rgb(255,220,235)"), // Pink Mist
-  colord("rgb(255,220,250)"), // Powder Petal
-  colord("rgb(255,225,180)"), // Butter Peach
-  colord("rgb(255,225,255)"), // Petal Mist
-  colord("rgb(255,230,245)"), // Light Rose
-  colord("rgb(255,235,200)"), // Cream Peach
-  colord("rgb(255,235,235)"), // Blushed Petal
-  colord("rgb(255,240,220)"), // Pastel Sand
-  colord("rgb(255,245,210)"), // Soft Banana
+  colord("rgb(35,0,0)"),
+  colord("rgb(45,0,0)"),
+  colord("rgb(55,0,0)"),
+  colord("rgb(65,0,0)"),
+  colord("rgb(75,0,0)"),
+  colord("rgb(85,0,0)"),
+  colord("rgb(95,0,0)"),
+  colord("rgb(105,0,0)"),
+  colord("rgb(115,0,0)"),
+  colord("rgb(125,0,0)"),
+  colord("rgb(135,0,0)"),
+  colord("rgb(145,0,0)"),
+  colord("rgb(155,0,0)"),
+  colord("rgb(165,0,0)"),
+  colord("rgb(175,0,0)"),
+  colord("rgb(185,0,0)"),
+  colord("rgb(195,0,5)"),
+  colord("rgb(205,0,10)"),
+  colord("rgb(215,0,15)"),
+  colord("rgb(225,0,20)"),
+  colord("rgb(235,0,25)"),
+  colord("rgb(245,0,30)"),
+  colord("rgb(255,0,35)"),
+  colord("rgb(255,10,45)"),
+  colord("rgb(255,20,55)"),
+  colord("rgb(255,30,65)"),
+  colord("rgb(255,40,75)"),
+  colord("rgb(255,50,85)"),
+  colord("rgb(255,60,95)"),
+  colord("rgb(255,70,105)"),
+  colord("rgb(255,80,115)"),
+  colord("rgb(255,90,125)"),
+  colord("rgb(255,100,135)"),
+  colord("rgb(255,110,145)"),
+  colord("rgb(255,120,155)"),
+  colord("rgb(255,130,165)"),
+  colord("rgb(255,140,175)"),
+  colord("rgb(255,150,185)"),
+  colord("rgb(255,160,195)"),
+  colord("rgb(255,170,205)"),
+  colord("rgb(255,180,215)"),
+  colord("rgb(255,190,225)"),
+  colord("rgb(255,200,235)"),
+  colord("rgb(0,45,0)"),
+  colord("rgb(0,55,0)"),
+  colord("rgb(0,65,0)"),
+  colord("rgb(0,75,0)"),
+  colord("rgb(0,85,0)"),
+  colord("rgb(0,95,0)"),
+  colord("rgb(0,105,0)"),
+  colord("rgb(0,115,0)"),
+  colord("rgb(0,125,0)"),
+  colord("rgb(0,135,0)"),
+  colord("rgb(0,145,0)"),
+  colord("rgb(0,155,0)"),
+  colord("rgb(0,165,0)"),
+  colord("rgb(0,175,0)"),
+  colord("rgb(0,185,0)"),
+  colord("rgb(0,195,5)"),
+  colord("rgb(0,205,10)"),
+  colord("rgb(0,215,15)"),
+  colord("rgb(0,225,20)"),
+  colord("rgb(0,235,25)"),
+  colord("rgb(0,245,30)"),
+  colord("rgb(0,255,35)"),
+  colord("rgb(10,255,45)"),
+  colord("rgb(20,255,55)"),
+  colord("rgb(30,255,65)"),
+  colord("rgb(40,255,75)"),
+  colord("rgb(50,255,85)"),
+  colord("rgb(60,255,95)"),
+  colord("rgb(70,255,105)"),
+  colord("rgb(80,255,115)"),
+  colord("rgb(90,255,125)"),
+  colord("rgb(100,255,135)"),
+  colord("rgb(110,255,145)"),
+  colord("rgb(120,255,155)"),
+  colord("rgb(130,255,165)"),
+  colord("rgb(140,255,175)"),
+  colord("rgb(150,255,185)"),
+  colord("rgb(160,255,195)"),
+  colord("rgb(170,255,205)"),
+  colord("rgb(180,255,215)"),
+  colord("rgb(190,255,225)"),
+  colord("rgb(200,255,235)"),
+  colord("rgb(0,0,35)"),
+  colord("rgb(0,0,45)"),
+  colord("rgb(0,0,55)"),
+  colord("rgb(0,0,65)"),
+  colord("rgb(0,0,75)"),
+  colord("rgb(0,0,85)"),
+  colord("rgb(0,0,95)"),
+  colord("rgb(0,0,105)"),
+  colord("rgb(0,0,115)"),
+  colord("rgb(0,0,125)"),
+  colord("rgb(0,0,135)"),
+  colord("rgb(0,0,145)"),
+  colord("rgb(0,0,155)"),
+  colord("rgb(0,0,165)"),
+  colord("rgb(0,0,175)"),
+  colord("rgb(0,0,185)"),
+  colord("rgb(5,0,195)"),
+  colord("rgb(10,0,205)"),
+  colord("rgb(15,0,215)"),
+  colord("rgb(20,0,225)"),
+  colord("rgb(25,0,235)"),
+  colord("rgb(30,0,245)"),
+  colord("rgb(35,0,255)"),
+  colord("rgb(45,10,255)"),
+  colord("rgb(55,20,255)"),
+  colord("rgb(65,30,255)"),
+  colord("rgb(75,40,255)"),
+  colord("rgb(85,50,255)"),
+  colord("rgb(95,60,255)"),
+  colord("rgb(105,70,255)"),
+  colord("rgb(115,80,255)"),
+  colord("rgb(125,90,255)"),
+  colord("rgb(135,100,255)"),
+  colord("rgb(145,110,255)"),
+  colord("rgb(155,120,255)"),
+  colord("rgb(165,130,255)"),
+  colord("rgb(175,140,255)"),
+  colord("rgb(185,150,255)"),
+  colord("rgb(195,160,255)"),
+  colord("rgb(205,170,255)"),
+  colord("rgb(215,180,255)"),
+  colord("rgb(225,190,255)"),
+  colord("rgb(235,200,255)"),
+  colord("rgb(35,0,35)"),
+  colord("rgb(45,0,45)"),
+  colord("rgb(55,0,55)"),
+  colord("rgb(65,0,65)"),
+  colord("rgb(75,0,75)"),
+  colord("rgb(85,0,85)"),
+  colord("rgb(95,0,95)"),
+  colord("rgb(105,0,105)"),
+  colord("rgb(115,0,115)"),
+  colord("rgb(125,0,125)"),
+  colord("rgb(135,0,135)"),
+  colord("rgb(145,0,145)"),
+  colord("rgb(155,0,155)"),
+  colord("rgb(165,0,165)"),
+  colord("rgb(175,0,175)"),
+  colord("rgb(185,0,185)"),
+  colord("rgb(195,5,195)"),
+  colord("rgb(205,10,205)"),
+  colord("rgb(215,15,215)"),
+  colord("rgb(225,20,225)"),
+  colord("rgb(235,25,235)"),
+  colord("rgb(245,30,245)"),
+  colord("rgb(255,35,255)"),
+  colord("rgb(255,45,255)"),
+  colord("rgb(255,55,255)"),
+  colord("rgb(255,65,255)"),
+  colord("rgb(255,75,255)"),
+  colord("rgb(255,85,255)"),
+  colord("rgb(255,95,255)"),
+  colord("rgb(255,105,255)"),
+  colord("rgb(255,115,255)"),
+  colord("rgb(255,125,255)"),
+  colord("rgb(255,135,255)"),
+  colord("rgb(255,145,255)"),
+  colord("rgb(255,155,255)"),
+  colord("rgb(255,165,255)"),
+  colord("rgb(255,175,255)"),
+  colord("rgb(255,185,255)"),
+  colord("rgb(255,195,255)"),
+  colord("rgb(255,205,255)"),
+  colord("rgb(255,215,255)"),
+  colord("rgb(0,35,35)"),
+  colord("rgb(0,45,45)"),
+  colord("rgb(0,55,55)"),
+  colord("rgb(0,65,65)"),
+  colord("rgb(0,75,75)"),
+  colord("rgb(0,85,85)"),
+  colord("rgb(0,95,95)"),
+  colord("rgb(0,105,105)"),
+  colord("rgb(0,115,115)"),
+  colord("rgb(0,125,125)"),
+  colord("rgb(0,135,135)"),
+  colord("rgb(0,145,145)"),
+  colord("rgb(0,155,155)"),
+  colord("rgb(0,165,165)"),
+  colord("rgb(0,175,175)"),
+  colord("rgb(0,185,185)"),
+  colord("rgb(5,195,195)"),
+  colord("rgb(10,205,205)"),
+  colord("rgb(15,215,215)"),
+  colord("rgb(20,225,225)"),
+  colord("rgb(25,235,235)"),
+  colord("rgb(30,245,245)"),
+  colord("rgb(35,255,255)"),
+  colord("rgb(45,255,255)"),
+  colord("rgb(55,255,255)"),
+  colord("rgb(65,255,255)"),
+  colord("rgb(75,255,255)"),
+  colord("rgb(85,255,255)"),
+  colord("rgb(95,255,255)"),
+  colord("rgb(105,255,255)"),
+  colord("rgb(115,255,255)"),
+  colord("rgb(125,255,255)"),
+  colord("rgb(135,255,255)"),
+  colord("rgb(145,255,255)"),
+  colord("rgb(155,255,255)"),
+  colord("rgb(165,255,255)"),
+  colord("rgb(175,255,255)"),
+  colord("rgb(185,255,255)"),
+  colord("rgb(195,255,255)"),
+  colord("rgb(205,255,255)"),
+  colord("rgb(215,255,255)"),
+  colord("rgb(35,35,0)"),
+  colord("rgb(45,45,0)"),
+  colord("rgb(55,55,0)"),
+  colord("rgb(65,65,0)"),
+  colord("rgb(75,75,0)"),
+  colord("rgb(85,85,0)"),
+  colord("rgb(95,95,0)"),
+  colord("rgb(105,105,0)"),
+  colord("rgb(115,115,0)"),
+  colord("rgb(125,125,0)"),
+  colord("rgb(135,135,0)"),
+  colord("rgb(145,145,0)"),
+  colord("rgb(155,155,0)"),
+  colord("rgb(165,165,0)"),
+  colord("rgb(175,175,0)"),
+  colord("rgb(185,185,0)"),
+  colord("rgb(195,195,5)"),
+  colord("rgb(205,205,10)"),
+  colord("rgb(215,215,15)"),
+  colord("rgb(225,225,20)"),
+  colord("rgb(235,235,25)"),
+  colord("rgb(245,245,30)"),
+  colord("rgb(255,255,35)"),
+  colord("rgb(255,255,45)"),
+  colord("rgb(255,255,55)"),
+  colord("rgb(255,255,65)"),
+  colord("rgb(255,255,75)"),
+  colord("rgb(255,255,85)"),
+  colord("rgb(255,255,95)"),
+  colord("rgb(255,255,105)"),
+  colord("rgb(255,255,115)"),
+  colord("rgb(255,255,125)"),
+  colord("rgb(255,255,135)"),
+  colord("rgb(255,255,145)"),
+  colord("rgb(255,255,155)"),
+  colord("rgb(255,255,165)"),
+  colord("rgb(255,255,175)"),
+  colord("rgb(255,255,185)"),
+  colord("rgb(255,255,195)"),
+  colord("rgb(255,255,205)"),
+  colord("rgb(255,255,215)"),
 ];
