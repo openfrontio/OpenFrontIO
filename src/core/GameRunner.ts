@@ -86,6 +86,11 @@ export async function createGameRunner(
       requested = gameStart.config.nations ?? 10;
     }
     const targetNationCount = Math.max(1, Math.min(requested, nations.length));
+    if (matchToPlayers && requested !== targetNationCount) {
+      console.warn(
+        `matchNationsToPlayers requested ${requested} nations but only ${nations.length} available; clamped to ${targetNationCount}.`,
+      );
+    }
     if (
       !matchToPlayers &&
       gameStart.config.nations !== null &&
