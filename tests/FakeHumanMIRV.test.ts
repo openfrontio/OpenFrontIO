@@ -90,7 +90,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Initialize fakehuman with FakeHumanExecution to enable retaliation logic
     const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
 
-    // Try different game IDs to find one that passes the 35% MIRV failure rate
+    // Try different game IDs to find one that passes the MIRV failure rate
     // Since random is seeded, we try multiple seeds to ensure at least one passes
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
     let retaliationSuccessful = false;
@@ -206,10 +206,10 @@ describe("FakeHuman MIRV Retaliation", () => {
       fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
     }
 
-    // Then give dominant player a large amount of territory (70%+ of total land)
-    // This should trigger the victory denial threshold (70% individual threshold)
+    // Then give dominant player a large amount of territory
+    // This should trigger the victory denial threshold
     const totalLandTiles = game.map().numLandTiles();
-    const targetTiles = Math.floor(totalLandTiles * 0.75); // 75% of land
+    const targetTiles = Math.floor(totalLandTiles * 0.71);
 
     let conqueredTiles = 0;
     for (
@@ -247,7 +247,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Verify dominant player has enough territory to trigger victory denial
     const dominantTerritoryShare =
       dominantPlayer.numTilesOwned() / game.map().numLandTiles();
-    expect(dominantTerritoryShare).toBeGreaterThan(0.7); // Above 70% threshold
+    expect(dominantTerritoryShare).toBeGreaterThan(0.7);
 
     // Track MIRVs before fakehuman considers victory denial
     const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
@@ -255,7 +255,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Initialize fakehuman with FakeHumanExecution to enable victory denial logic
     const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
 
-    // Try different game IDs to find one that passes the 35% MIRV failure rate
+    // Try different game IDs to find one that passes the MIRV failure rate
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
     let victoryDenialSuccessful = false;
 
@@ -373,7 +373,7 @@ describe("FakeHuman MIRV Retaliation", () => {
       }
     }
 
-    // Give steamroller territory and many cities (1.8x more than second player)
+    // Give steamroller territory and many cities
     for (let x = 5; x < 25; x++) {
       for (let y = 5; y < 25; y++) {
         const tile = game.ref(x, y);
@@ -382,7 +382,7 @@ describe("FakeHuman MIRV Retaliation", () => {
         }
       }
     }
-    // Give steamroller 7 cities (5 * 1.8 = 9, so 7+ should trigger)
+    // Give steamroller cities
     for (let i = 0; i < 9; i++) {
       const steamrollerTile = Array.from(steamroller.tiles())[0];
       if (steamrollerTile) {
@@ -407,7 +407,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Initialize fakehuman with FakeHumanExecution to enable steamroll stop logic
     const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
 
-    // Try different game IDs to find one that passes the 35% MIRV failure rate
+    // Try different game IDs to find one that passes the MIRV failure rate
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
     let steamrollStopSuccessful = false;
 
@@ -454,7 +454,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     }
   });
 
-  test("fakehuman launches MIRV to prevent team victory when team approaches 85% threshold", async () => {
+  test("fakehuman launches MIRV to prevent team victory when team approaches victory denial threshold", async () => {
     // Setup game
     const game = await setup("big_plains", {
       infiniteGold: true,
@@ -508,10 +508,10 @@ describe("FakeHuman MIRV Retaliation", () => {
       fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
     }
 
-    // Give team players a large amount of territory (85%+ of total land combined)
-    // This should trigger the team victory denial threshold (85% team threshold)
+    // Give team players a large amount of territory
+    // This should trigger the team victory denial threshold
     const totalLandTiles = game.map().numLandTiles();
-    const targetTiles = Math.floor(totalLandTiles * 0.87); // 87% of land
+    const targetTiles = Math.floor(totalLandTiles * 0.81);
 
     let conqueredTiles = 0;
     for (
@@ -553,7 +553,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     const teamTerritory =
       teamPlayer1.numTilesOwned() + teamPlayer2.numTilesOwned();
     const teamShare = teamTerritory / game.map().numLandTiles();
-    expect(teamShare).toBeGreaterThan(0.85); // Above 85% team threshold
+    expect(teamShare).toBeGreaterThan(0.8); //
 
     // Track MIRVs before fakehuman considers team victory denial
     const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
@@ -561,7 +561,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Initialize fakehuman with FakeHumanExecution to enable team victory denial logic
     const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
 
-    // Try different game IDs to find one that passes the 35% MIRV failure rate
+    // Try different game IDs to find one that passes the MIRV failure rate
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
     let teamVictoryDenialSuccessful = false;
 
