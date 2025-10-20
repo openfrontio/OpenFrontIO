@@ -150,4 +150,10 @@ export class PastelTheme implements Theme {
   spawnHighlightSelfColor(): Colord {
     return this._spawnHighlightSelfColor;
   }
+  spawnHighlightTeamColor(): Colord {
+    return this._spawnHighlightTeamColor;
+  }
+  spawnHighlightEnemyColor(): Colord {
+    return this._spawnHighlightEnemyColor;
+  }
 }
