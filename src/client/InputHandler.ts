@@ -214,9 +214,20 @@ export class InputHandler {
     );
     window.addEventListener("pointermove", this.onPointerMove.bind(this));
     this.canvas.addEventListener("contextmenu", (e) => this.onContextMenu(e));
+    let pendingMouseMove: MouseEvent | null = null;
+    let mouseMoveFrame = false;
     window.addEventListener("mousemove", (e) => {
-      if (e.movementX || e.movementY) {
-        this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
+      pendingMouseMove = e;
+      if (!mouseMoveFrame) {
+        mouseMoveFrame = true;
+        requestAnimationFrame(() => {
+          mouseMoveFrame = false;
+          const evt = pendingMouseMove;
+          pendingMouseMove = null;
+          if (evt && (evt.movementX || evt.movementY)) {
+            this.eventBus.emit(new MouseMoveEvent(evt.clientX, evt.clientY));
+          }
+        });
       }
     });
     this.pointers.clear();
