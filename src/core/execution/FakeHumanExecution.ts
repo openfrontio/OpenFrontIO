@@ -49,10 +49,10 @@ export class FakeHumanExecution implements Execution {
   /** MIRV Strategy Constants */
 
   /** Ticks until MIRV can be attempted again */
-  private static readonly MIRV_COOLDOWN_TICKS = 3 * 600;
+  private static readonly MIRV_COOLDOWN_TICKS = 5 * 600;
 
   /** Odds of aborting a MIRV attempt */
-  private static readonly MIRV_HESITATION_ODDS = 3;
+  private static readonly MIRV_HESITATION_ODDS = 5;
 
   /** Threshold for team victory denial */
   private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.8;
