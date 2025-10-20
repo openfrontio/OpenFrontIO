@@ -188,18 +188,9 @@ export class TerritoryLayer implements Layer {
       const myPlayer = this.game.myPlayer();
       if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
         color = this.theme.spawnHighlightColor();
-      } else if (
-        myPlayer !== null &&
-        myPlayer !== human &&
-        myPlayer.isOnSameTeam(human)
-      ) {
-        color = this.theme.selfColor();
-      } else if (
-        myPlayer !== null &&
-        myPlayer !== human &&
-        !myPlayer.isOnSameTeam(human)
-      ) {
-        color = this.theme.enemyColor();
+      } else if (myPlayer !== null && myPlayer !== human) {
+        const team = human.team();
+        if (team !== null) color = this.theme.teamColor(team);
       }
 
       for (const tile of this.game.bfs(
