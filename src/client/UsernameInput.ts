@@ -3,11 +3,11 @@ import { customElement, property, state } from "lit/decorators.js";
 import { v4 as uuidv4 } from "uuid";
 import { translateText } from "../client/Utils";
 import { UserSettings } from "../core/game/UserSettings";
+import { getRandomUsername } from "../core/utilities/UsernameGenerator";
 import {
   MAX_USERNAME_LENGTH,
   validateUsername,
 } from "../core/validations/username";
-import { getRandomUsername } from "../core/utilities/UsernameGenerator";
 
 const usernameKey: string = "username";
 
@@ -95,7 +95,7 @@ export class UsernameInput extends LitElement {
   }
 
   private generateNewUsername(): string {
-    const newUsername = getRandomUsername(Math.random())
+    const newUsername = getRandomUsername(Math.random());
     this.storeUsername(newUsername);
     return newUsername;
   }
