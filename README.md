@@ -157,7 +157,8 @@ How to help?
 4. Join the project
 5. Select the language you want to translate in. If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
 6. Translate the strings
-*. Feel free to ask questions in the translation discord server!
+
+Feel free to ask questions in the translation Discord server!
 
 ### Project Governance
 
