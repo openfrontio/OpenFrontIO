@@ -1,4 +1,6 @@
 name: 🧹 Auto-Cleanup
+permissions:
+  contents: write
 
 on:
   schedule:
