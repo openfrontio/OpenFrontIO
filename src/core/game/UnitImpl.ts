@@ -39,6 +39,7 @@ export class UnitImpl implements Unit {
   // Nuke only
   private _trajectoryIndex: number = 0;
   private _trajectory: TrajectoryTile[];
+  private _deletionAt: number | null = null;
 
   constructor(
     private _type: UnitType,
@@ -126,6 +127,7 @@ export class UnitImpl implements Unit {
       reachedTarget: this._reachedTarget,
       retreating: this._retreating,
       pos: this._tile,
+      markedForDeletion: this._deletionAt ?? false,
       targetable: this._targetable,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
@@ -182,6 +184,7 @@ export class UnitImpl implements Unit {
   }
 
   setOwner(newOwner: PlayerImpl): void {
+    this.clearPendingDeletion();
     switch (this._type) {
       case UnitType.Warship:
       case UnitType.Port:
@@ -219,6 +222,30 @@ export class UnitImpl implements Unit {
     if (this._health === 0n) {
       this.delete(true, attacker);
     }
+  }
+
+  clearPendingDeletion(): void {
+    this._deletionAt = null;
+  }
+
+  isMarkedForDeletion(): boolean {
+    return this._deletionAt !== null;
+  }
+
+  markForDeletion(): void {
+    if (!this.isActive()) {
+      return;
+    }
+    this._deletionAt =
+      this.mg.ticks() + this.mg.config().deletionMarkDuration();
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  isOverdueDeletion(): boolean {
+    if (!this.isActive()) {
+      return false;
+    }
+    return this._deletionAt !== null && this.mg.ticks() - this._deletionAt > 0;
   }
 
   delete(displayMessage?: boolean, destroyer?: Player): void {
