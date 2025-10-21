@@ -131,6 +131,7 @@ export interface Config {
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
   embargoAllCooldown(): Tick;
+  deletionMarkDuration(): Tick;
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;

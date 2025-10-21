@@ -46,6 +46,10 @@ export class TestConfig extends DefaultConfig {
     return 20;
   }
 
+  deletionMarkDuration(): number {
+    return 5;
+  }
+
   defaultSamRange(): number {
     return 20;
   }

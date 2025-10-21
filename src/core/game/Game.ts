@@ -430,6 +430,9 @@ export interface Unit {
   type(): UnitType;
   owner(): Player;
   info(): UnitInfo;
+  isMarkedForDeletion(): boolean;
+  markForDeletion(): void;
+  isOverdueDeletion(): boolean;
   delete(displayMessage?: boolean, destroyer?: Player): void;
   tile(): TileRef;
   lastTile(): TileRef;
@@ -571,7 +574,7 @@ export interface Player {
   // New units of the same type can upgrade existing units.
   // e.g. if a place a new city here, can it upgrade an existing city?
   findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false;
-  canUpgradeUnit(unitType: UnitType): boolean;
+  canUpgradeUnit(unit: Unit): boolean;
   upgradeUnit(unit: Unit): void;
   captureUnit(unit: Unit): void;
 

@@ -575,6 +575,9 @@ export class DefaultConfig implements Config {
   embargoAllCooldown(): Tick {
     return 10 * 10;
   }
+  deletionMarkDuration(): Tick {
+    return 15 * 10;
+  }
   deleteUnitCooldown(): Tick {
     return 5 * 10;
   }
