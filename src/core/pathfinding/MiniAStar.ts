@@ -38,7 +38,8 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
       // Allow shore tiles ONLY at source/destination endpoints (not intermediate waypoints)
       // This prevents boats from visually appearing to travel on land
       const isDestination = this.dst !== undefined && to === this.dst;
-      const isSource = this.src !== undefined &&
+      const isSource =
+        this.src !== undefined &&
         (Array.isArray(this.src) ? this.src.includes(to) : to === this.src);
 
       if ((isSource || isDestination) && this.gameMap.isShore(to)) {
