@@ -623,7 +623,23 @@ export class DefaultConfig implements Config {
       ? this.pastelThemeDark
       : this.pastelTheme;
   }
-
+largeAttackerSpeedThresholdDebuff(attacker: Player, totalLandTiles: number): number {
+  const territoryPercentage = (attacker.numTilesOwned() / totalLandTiles) * 100;
+  
+  if (territoryPercentage < 15) {
+    return 1.0;
+  } else if (territoryPercentage < 30) {
+    return 0.90;
+  } else if (territoryPercentage < 45) {
+    return 0.70;
+  } else if (territoryPercentage < 70) {
+    return 0.45;
+  } else if (territoryPercentage < 95) {
+    return 0.25;
+  } else {
+    return 0.10;
+  }
+}
   attackLogic(
     gm: Game,
     attackTroops: number,
@@ -714,6 +730,11 @@ export class DefaultConfig implements Config {
         largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
       }
 
+const thresholdDebuff = this.largeAttackerSpeedThresholdDebuff(
+      attacker,
+      gm.numLandTiles()
+    );
+
       return {
         attackerTroopLoss:
           within(defender.troops() / attackTroops, 0.6, 2) *
@@ -728,6 +749,7 @@ export class DefaultConfig implements Config {
           speed *
           largeDefenderSpeedDebuff *
           largeAttackerSpeedBonus *
+	thresholdDebuff *
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
