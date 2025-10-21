@@ -52,6 +52,7 @@ export type Team = string;
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
 export const Quads = "Quads" as const;
+export const HumansVsNations = "Humans Vs Nations" as const;
 
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
@@ -149,7 +150,6 @@ export const isGameType = (value: unknown): value is GameType =>
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
-  HumansVsNations = "Humans Vs Nations",
 }
 export const isGameMode = (value: unknown): value is GameMode =>
   isEnumValue(GameMode, value);
