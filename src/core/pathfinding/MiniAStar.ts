@@ -8,6 +8,8 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
   constructor(
     private gameMap: GameMap,
     private waterPath: boolean,
+    private src?: TileRef | TileRef[],
+    private dst?: TileRef,
   ) {}
 
   neighbors(node: TileRef): TileRef[] {
@@ -30,7 +32,20 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
   isTraversable(from: TileRef, to: TileRef): boolean {
     const toWater = this.gameMap.isWater(to);
     if (this.waterPath) {
-      return toWater;
+      // Allow water tiles for all movements
+      if (toWater) return true;
+
+      // Allow shore tiles ONLY at source/destination endpoints (not intermediate waypoints)
+      // This prevents boats from visually appearing to travel on land
+      const isDestination = this.dst !== undefined && to === this.dst;
+      const isSource = this.src !== undefined &&
+        (Array.isArray(this.src) ? this.src.includes(to) : to === this.src);
+
+      if ((isSource || isDestination) && this.gameMap.isShore(to)) {
+        return true;
+      }
+
+      return false;
     }
     // Allow water access from/to shore
     const fromShore = this.gameMap.isShoreline(from);
@@ -69,7 +84,7 @@ export class MiniAStar implements AStar<TileRef> {
       miniDst,
       iterations,
       maxTries,
-      new GameMapAdapter(miniMap, waterPath),
+      new GameMapAdapter(miniMap, waterPath, miniSrc, miniDst),
       directionChangePenalty,
     );
   }
