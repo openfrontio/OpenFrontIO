@@ -217,4 +217,5 @@ To ensure code quality and project stability, we use a progressive contribution 
 
 Remember that maintaining this project requires significant effort. The maintainer appreciates your contributions but must prioritize long-term project health and stability. Not all contributions will be accepted, and that's okay.
 
-Thank you for helping make OpenFront better!
+Thank you for helping make OpenFront better! 
+Restart was here :D
