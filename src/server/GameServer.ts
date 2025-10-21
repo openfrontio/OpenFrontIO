@@ -109,6 +109,9 @@ export class GameServer {
     if (gameConfig.donateTroops !== undefined) {
       this.gameConfig.donateTroops = gameConfig.donateTroops;
     }
+    if (gameConfig.maxTimerValue !== undefined) {
+      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue;
+    }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
     }

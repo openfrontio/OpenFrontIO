@@ -54,6 +54,7 @@ export class GameManager {
         disableNPCs: false,
         infiniteGold: false,
         infiniteTroops: false,
+        maxTimerValue: undefined,
         instantBuild: false,
         gameMode: GameMode.FFA,
         bots: 400,

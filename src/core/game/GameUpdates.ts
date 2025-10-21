@@ -123,6 +123,7 @@ export interface UnitUpdate {
   reachedTarget: boolean;
   retreating: boolean;
   targetable: boolean;
+  markedForDeletion: number | false;
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
