@@ -590,41 +590,17 @@ export class HostLobbyModal extends LitElement {
         </div>
 
         <div class="start-game-button-container">
-          ${
-            this.teamCount === HumansVsNations &&
-            this.maxPlayers !== undefined &&
-            this.clients.length > this.maxPlayers
-              ? html`
-                  <div
-                    class="text-yellow-500 text-center mb-2 font-semibold"
-                    style="color: #f59e0b;"
-                  >
-                    ${translateText("host_modal.too_many_players", {
-                      current: this.clients.length,
-                      max: this.maxPlayers,
-                    })}
-                  </div>
-                `
-              : ""
-          }
           <button
             @click=${this.startGame}
             class="start-game-button"
             ?disabled=${
-              this.clients.length === 1 ||
-              (this.teamCount === HumansVsNations &&
-                this.maxPlayers !== undefined &&
-                this.clients.length > this.maxPlayers)
+              this.clients.length < 2 && this.teamCount !== HumansVsNations
             }
           >
             ${
-              this.clients.length === 1
+              this.clients.length < 2 && this.teamCount !== HumansVsNations
                 ? translateText("host_modal.waiting")
-                : this.teamCount === HumansVsNations &&
-                    this.maxPlayers !== undefined &&
-                    this.clients.length > this.maxPlayers
-                  ? translateText("host_modal.too_many_players_button")
-                  : translateText("host_modal.start")
+                : translateText("host_modal.start")
             }
           </button>
         </div>

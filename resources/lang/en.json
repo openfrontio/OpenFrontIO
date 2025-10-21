@@ -140,7 +140,6 @@
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
     "nations": "Nations: ",
-    "match_nations_to_players": "Match nations to player count",
     "disable_nations": "Disable Nations",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
@@ -240,7 +239,6 @@
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
     "nations": "Nations: ",
-    "match_nations_to_players": "Match nations to player count",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
     "instant_build": "Instant build",
@@ -254,9 +252,7 @@
     "players": "Players",
     "waiting": "Waiting for players...",
     "start": "Start Game",
-    "host_badge": "Host",
-    "too_many_players": "Too many players! This map supports a maximum of {max} players, but you have {current}.",
-    "too_many_players_button": "Too Many Players"
+    "host_badge": "Host"
   },
   "team_colors": {
     "red": "Red",
@@ -282,8 +278,7 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams",
-    "humans_vs_nations": "Humans Vs Nations"
+    "teams": "Teams"
   },
   "select_lang": {
     "title": "Select Language"
