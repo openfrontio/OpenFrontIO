@@ -1,0 +1,51 @@
+name: 🧹 Auto-Cleanup
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour (adjust as needed)
+
+jobs:
+  auto-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔑 Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: 📥 Fetch deployment logs from external repo
+        run: |
+          git clone https://github.com/your-username/deployment-logs-repo.git
+          cd deployment-logs-repo
+          git pull
+          DEPLOYMENT_FILE="deployments.json"
+
+      - name: 🧹 Cleanup old deployments
+        run: |
+          now=$(date -u +%s)
+          cutoff=$((now - 86400)) # 24 hours ago
+          
+          # Filter out deployments older than 24 hours
+          jq "[.[] | select((.timestamp | fromdateiso8601) >= $cutoff)]" $DEPLOYMENT_FILE > tmp.$$.json && mv tmp.$$.json $DEPLOYMENT_FILE
+
+          # Now, for each subdomain that was removed (older deployments), stop and remove the associated Docker containers.
+          # Read the updated deployments file
+          jq -c '.[]' $DEPLOYMENT_FILE | while read line; do
+            subdomain=$(echo $line | jq -r '.subdomain')
+            ts=$(echo $line | jq -r '.timestamp' | xargs -I {} date -d {} +%s)
+            if [ "$ts" -lt "$cutoff" ]; then
+              echo "Cleaning up $subdomain"
+              ssh -o StrictHostKeyChecking=no user@host "docker stop $subdomain && docker rm $subdomain"
+            fi
+          done
+
+      - name: 📤 Push updated deployment log
+        run: |
+          # Commit and push the cleaned deployments.json back to the repo
+          cd deployment-logs-repo
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Actions"
+          git add $DEPLOYMENT_FILE
+          git commit -m "Cleanup old deployments (older than 24 hours)"
+          git push origin main

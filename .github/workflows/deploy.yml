@@ -160,6 +160,31 @@ jobs:
 
           Deployed from $GITHUB_REF to $FQDN
           EOF
+      - name: 📝 Log deployment timestamp to external repo
+        run: |
+          DEPLOYMENT_FILE="deployments.json"
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          NEW_ENTRY="{\"subdomain\": \"$SUBDOMAIN\", \"timestamp\": \"$TIMESTAMP\"}"
+
+          # If the deployments.json file doesn't exist, create it and add the first entry.
+          if [ ! -f "$DEPLOYMENT_FILE" ]; then
+            echo "[$NEW_ENTRY]" > $DEPLOYMENT_FILE
+          else
+            # Append the new entry to the existing JSON array
+            jq ". += [$NEW_ENTRY]" $DEPLOYMENT_FILE > tmp.$$.json && mv tmp.$$.json $DEPLOYMENT_FILE
+          fi
+
+          # Clone the external deployment logs repository
+          git clone https://github.com/your-username/deployment-logs-repo.git
+          cd deployment-logs-repo
+
+          # Add the updated deployments.json and commit changes
+          cp ../$DEPLOYMENT_FILE .
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Actions"
+          git add $DEPLOYMENT_FILE
+          git commit -m "Log deployment timestamp for $SUBDOMAIN"
+          git push origin main
       - name: ❌ Update deployment status
         if: failure()
         uses: chrnorm/deployment-status@v2
