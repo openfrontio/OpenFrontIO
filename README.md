@@ -153,7 +153,7 @@ How to help?
 
 1. Join the translation [Discord](https://discord.gg/3zZzacjWFr)
 2. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
-3. Login if you already have an account/ Sign up if you don't have one
+3. Login if you already have an account / Sign up if you don't have one
 4. Join the project
 5. Select the language you want to translate in. If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
 6. Translate the strings
