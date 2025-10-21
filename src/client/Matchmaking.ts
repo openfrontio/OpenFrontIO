@@ -9,10 +9,9 @@ import { translateText } from "./Utils";
 
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends LitElement {
-  private gameCheckInterval: NodeJS.Timeout | null = null;
+  private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   @state() private gameID: string | null = null;
-
   @query("o-modal") private modalEl!: HTMLElement & {
     open: () => void;
     close: () => void;
