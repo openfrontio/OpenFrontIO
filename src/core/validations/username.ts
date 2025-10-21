@@ -1,22 +1,45 @@
 import {
+  DataSet,
   RegExpMatcher,
   collapseDuplicatesTransformer,
   englishDataset,
-  englishRecommendedTransformers,
+  pattern,
   resolveConfusablesTransformer,
   resolveLeetSpeakTransformer,
   skipNonAlphabeticTransformer,
+  toAsciiLowerCaseTransformer,
 } from "obscenity";
 import { translateText } from "../../client/Utils";
 import { simpleHash } from "../Util";
+import { getRandomUsername } from "../utilities/UsernameGenerator";
+
+const customDataset = new DataSet()
+  .addAll(englishDataset)
+  .addPhrase((phrase) => 
+    phrase.setMetadata({ originalWord: 'nigg' })
+    /* Not used by any english words */
+    .addPattern(pattern`niqq`))
 
 const matcher = new RegExpMatcher({
-  ...englishDataset.build(),
-  ...englishRecommendedTransformers,
-  ...resolveConfusablesTransformer(),
-  ...skipNonAlphabeticTransformer(),
-  ...collapseDuplicatesTransformer(),
-  ...resolveLeetSpeakTransformer(),
+  ...customDataset.build(),
+
+  blacklistMatcherTransformers: [
+    resolveConfusablesTransformer(),
+    resolveLeetSpeakTransformer(),
+    skipNonAlphabeticTransformer(),
+    toAsciiLowerCaseTransformer(),
+    collapseDuplicatesTransformer({
+    customThresholds: new Map([
+      ['b', 2],
+      ['e', 2],
+      ['o', 2],
+      ['l', 2],
+      ['s', 2],
+      ['g', 2],
+      ['q', 2]
+    ]),
+  })
+  ]
 });
 
 export const MIN_USERNAME_LENGTH = 3;
@@ -36,7 +59,7 @@ const shadowNames = [
 
 export function fixProfaneUsername(username: string): string {
   if (isProfaneUsername(username)) {
-    return shadowNames[simpleHash(username) % shadowNames.length];
+    return getRandomUsername(simpleHash(username));
   }
   return username;
 }
