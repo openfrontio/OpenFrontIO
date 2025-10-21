@@ -74,8 +74,7 @@ export class MapPlaylist {
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
-    const isTeamBased =
-      mode === GameMode.Team || mode === GameMode.HumansVsNations;
+    const isTeamBased = mode === GameMode.Team;
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
@@ -95,7 +94,7 @@ export class MapPlaylist {
       disableNPCs: isTeamBased,
       gameMode: mode,
       playerTeams,
-      bots: mode === GameMode.HumansVsNations ? 0 : 400,
+      bots: 400,
       disabledUnits: [],
     } satisfies GameConfig;
   }

@@ -32,10 +32,7 @@ export class WinCheckExecution implements Execution {
     const gameMode = this.mg.config().gameConfig().gameMode;
     if (gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
-    } else if (
-      gameMode === GameMode.Team ||
-      gameMode === GameMode.HumansVsNations
-    ) {
+    } else if (gameMode === GameMode.Team) {
       this.checkWinnerTeam();
     }
   }

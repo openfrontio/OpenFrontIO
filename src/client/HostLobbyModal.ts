@@ -9,6 +9,7 @@ import {
   GameMapSize,
   GameMapType,
   GameMode,
+  HumansVsNations,
   Quads,
   Trios,
   UnitType,
@@ -41,7 +42,6 @@ export class HostLobbyModal extends LitElement {
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number | undefined = 400;
   @state() private nations: number | undefined = 10;
-  @state() private matchNationsToPlayers: boolean | undefined = true;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -228,31 +228,41 @@ export class HostLobbyModal extends LitElement {
             </div>
           </div>
 
-          <!-- Difficulty Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("difficulty.difficulty")}</div>
-            <div class="option-cards">
-              ${Object.entries(Difficulty)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
-                    >
-                      <difficulty-display
-                        .difficultyKey=${key}
-                      ></difficulty-display>
-                      <p class="option-card-title">
-                        ${translateText(`difficulty.${key}`)}
-                      </p>
+          ${
+            this.teamCount !== HumansVsNations
+              ? html`
+                  <!-- Difficulty Selection -->
+                  <div class="options-section">
+                    <div class="option-title">
+                      ${translateText("difficulty.difficulty")}
                     </div>
-                  `,
-                )}
-            </div>
-          </div>
+                    <div class="option-cards">
+                      ${Object.entries(Difficulty)
+                        .filter(([key]) => isNaN(Number(key)))
+                        .map(
+                          ([key, value]) => html`
+                            <div
+                              class="option-card ${this.selectedDifficulty ===
+                              value
+                                ? "selected"
+                                : ""}"
+                              @click=${() =>
+                                this.handleDifficultySelection(value)}
+                            >
+                              <difficulty-display
+                                .difficultyKey=${key}
+                              ></difficulty-display>
+                              <p class="option-card-title">
+                                ${translateText(`difficulty.${key}`)}
+                              </p>
+                            </div>
+                          `,
+                        )}
+                    </div>
+                  </div>
+                `
+              : ""
+          }
 
           <!-- Game Mode Selection -->
           <div class="options-section">
@@ -274,20 +284,11 @@ export class HostLobbyModal extends LitElement {
                   ${translateText("game_mode.teams")}
                 </div>
               </div>
-              <div
-                class="option-card ${this.gameMode === GameMode.HumansVsNations ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.HumansVsNations)}
-              >
-                <div class="option-card-title">
-                  ${translateText("game_mode.humans_vs_nations")}
-                </div>
-              </div>
             </div>
           </div>
 
           ${
-            this.gameMode === GameMode.FFA ||
-            this.gameMode === GameMode.HumansVsNations
+            this.gameMode === GameMode.FFA
               ? ""
               : html`
                   <!-- Team Count Selection -->
@@ -296,7 +297,18 @@ export class HostLobbyModal extends LitElement {
                       ${translateText("host_modal.team_count")}
                     </div>
                     <div class="option-cards">
-                      ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
+                      ${[
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        Quads,
+                        Trios,
+                        Duos,
+                        HumansVsNations,
+                      ].map(
                         (o) => html`
                           <div
                             class="option-card ${this.teamCount === o
@@ -326,49 +338,24 @@ export class HostLobbyModal extends LitElement {
             </div>
             <div class="option-cards">
               ${
-                this.gameMode === GameMode.HumansVsNations
+                this.teamCount === HumansVsNations
                   ? html`
-                      <label
-                        for="match-nations-to-players"
-                        class="option-card ${this.matchNationsToPlayers
-                          ? "selected"
-                          : ""}"
-                      >
-                        <div class="checkbox-icon"></div>
+                      <label for="nations-count" class="option-card">
                         <input
-                          type="checkbox"
-                          id="match-nations-to-players"
-                          @change=${this.handleMatchNationsToPlayersChange}
-                          .checked=${this.matchNationsToPlayers}
+                          type="range"
+                          id="nations-count"
+                          min="1"
+                          max="400"
+                          step="1"
+                          @input=${this.handleNationsChange}
+                          @change=${this.handleNationsChange}
+                          .value="${String(this.nations)}"
                         />
                         <div class="option-card-title">
-                          ${translateText(
-                            "host_modal.match_nations_to_players",
-                          )}
+                          <span>${translateText("host_modal.nations")}</span
+                          >${this.nations}
                         </div>
                       </label>
-
-                      ${!this.matchNationsToPlayers
-                        ? html`
-                            <label for="nations-count" class="option-card">
-                              <input
-                                type="range"
-                                id="nations-count"
-                                min="1"
-                                max="400"
-                                step="1"
-                                @input=${this.handleNationsChange}
-                                @change=${this.handleNationsChange}
-                                .value="${String(this.nations)}"
-                              />
-                              <div class="option-card-title">
-                                <span
-                                  >${translateText("host_modal.nations")}</span
-                                >${this.nations}
-                              </div>
-                            </label>
-                          `
-                        : ""}
                     `
                   : html`
                       <label for="bots-count" class="option-card">
@@ -393,7 +380,7 @@ export class HostLobbyModal extends LitElement {
               }
 
                 ${
-                  this.gameMode !== GameMode.HumansVsNations
+                  this.teamCount !== HumansVsNations
                     ? html`
                         <label
                           for="disable-npcs"
@@ -604,7 +591,7 @@ export class HostLobbyModal extends LitElement {
 
         <div class="start-game-button-container">
           ${
-            this.gameMode === GameMode.HumansVsNations &&
+            this.teamCount === HumansVsNations &&
             this.maxPlayers !== undefined &&
             this.clients.length > this.maxPlayers
               ? html`
@@ -625,7 +612,7 @@ export class HostLobbyModal extends LitElement {
             class="start-game-button"
             ?disabled=${
               this.clients.length === 1 ||
-              (this.gameMode === GameMode.HumansVsNations &&
+              (this.teamCount === HumansVsNations &&
                 this.maxPlayers !== undefined &&
                 this.clients.length > this.maxPlayers)
             }
@@ -633,7 +620,7 @@ export class HostLobbyModal extends LitElement {
             ${
               this.clients.length === 1
                 ? translateText("host_modal.waiting")
-                : this.gameMode === GameMode.HumansVsNations &&
+                : this.teamCount === HumansVsNations &&
                     this.maxPlayers !== undefined &&
                     this.clients.length > this.maxPlayers
                   ? translateText("host_modal.too_many_players_button")
@@ -752,13 +739,6 @@ export class HostLobbyModal extends LitElement {
     }, 300);
   }
 
-  private handleMatchNationsToPlayersChange(e: Event) {
-    this.matchNationsToPlayers = Boolean(
-      (e.target as HTMLInputElement).checked,
-    );
-    this.putGameConfig();
-  }
-
   private handleInstantBuildChange(e: Event) {
     this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -847,10 +827,9 @@ export class HostLobbyModal extends LitElement {
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
-          ...(this.gameMode === GameMode.HumansVsNations
+          ...(this.teamCount === HumansVsNations
             ? {
-                matchNationsToPlayers: this.matchNationsToPlayers,
-                nations: this.matchNationsToPlayers ? undefined : this.nations,
+                nations: this.nations,
                 bots: undefined,
                 disableNPCs: undefined,
               }
@@ -858,7 +837,6 @@ export class HostLobbyModal extends LitElement {
                 bots: this.bots,
                 disableNPCs: this.disableNPCs,
                 nations: undefined,
-                matchNationsToPlayers: undefined,
               }),
           maxTimerValue:
             this.maxTimer === true ? this.maxTimerValue : undefined,

@@ -1,35 +1,30 @@
 import { getServerConfigFromServer } from "../src/core/configuration/ConfigLoader";
-import { GameMapType, GameMode } from "../src/core/game/Game";
-import { initMapNationCounts } from "../src/core/game/MapNationCounts";
+import { GameMapType, GameMode, HumansVsNations } from "../src/core/game/Game";
 
 describe("MapPlaylist with HumansVsNations", () => {
-  beforeAll(async () => {
-    await initMapNationCounts();
-  });
-
-  test("gameConfig should set maxPlayers to human count based on formula for HumansVsNations mode", () => {
-    // We can't directly test MapPlaylist because it only generates FFA and Team modes
-    // However, we can verify the logic would work by testing the lobbyMaxPlayers function
-    // which is what MapPlaylist.gameConfig() calls to set maxPlayers
-
+  test("gameConfig should use normal player count for HumansVsNations team config", () => {
+    // HumansVsNations no longer uses the linear regression formula
+    // It now uses the standard player count like Team mode
     const config = getServerConfigFromServer();
 
-    // Test various maps to ensure human count (based on formula) is returned for HumansVsNations
+    // Test that HumansVsNations returns a valid player count from the map config
     const testCases = [
-      { map: GameMapType.World, expectedHumans: 56 },
-      { map: GameMapType.Europe, expectedHumans: 45 },
-      { map: GameMapType.Mars, expectedHumans: 4 },
-      { map: GameMapType.GiantWorldMap, expectedHumans: 90 },
-      { map: GameMapType.Montreal, expectedHumans: 2 },
+      { map: GameMapType.World },
+      { map: GameMapType.Europe },
+      { map: GameMapType.Mars },
+      { map: GameMapType.GiantWorldMap },
+      { map: GameMapType.Montreal },
     ];
 
-    testCases.forEach(({ map, expectedHumans }) => {
+    testCases.forEach(({ map }) => {
       const maxPlayers = config.lobbyMaxPlayers(
         map,
-        GameMode.HumansVsNations,
-        undefined,
+        GameMode.Team,
+        HumansVsNations,
       );
-      expect(maxPlayers).toBe(expectedHumans);
+      // Should return a valid number from the numPlayersConfig
+      expect(maxPlayers).toBeGreaterThan(0);
+      expect(maxPlayers).toBeLessThanOrEqual(150);
     });
   });
 

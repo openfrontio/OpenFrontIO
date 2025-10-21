@@ -1,9 +1,14 @@
-import { Game, GameMode, PlayerType } from "../src/core/game/Game";
+import {
+  Game,
+  GameMode,
+  HumansVsNations,
+  PlayerType,
+} from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
 
-describe("HumansVsNations Game Mode", () => {
+describe("HumansVsNations Team Configuration", () => {
   test("humans and nations are on separate teams", async () => {
     const humans = [
       playerInfo("human1", PlayerType.Human),
@@ -13,7 +18,8 @@ describe("HumansVsNations Game Mode", () => {
     game = await setup(
       "plains",
       {
-        gameMode: GameMode.HumansVsNations,
+        gameMode: GameMode.Team,
+        playerTeams: HumansVsNations,
         disableNPCs: false,
       },
       humans,
@@ -30,7 +36,8 @@ describe("HumansVsNations Game Mode", () => {
 
   test("no bots spawn in HumansVsNations mode", async () => {
     game = await setup("plains", {
-      gameMode: GameMode.HumansVsNations,
+      gameMode: GameMode.Team,
+      playerTeams: HumansVsNations,
       bots: 10,
     });
 
@@ -50,7 +57,8 @@ describe("HumansVsNations Game Mode", () => {
     game = await setup(
       "plains",
       {
-        gameMode: GameMode.HumansVsNations,
+        gameMode: GameMode.Team,
+        playerTeams: HumansVsNations,
       },
       humans,
     );
@@ -69,7 +77,8 @@ describe("HumansVsNations Game Mode", () => {
     game = await setup(
       "plains",
       {
-        gameMode: GameMode.HumansVsNations,
+        gameMode: GameMode.Team,
+        playerTeams: HumansVsNations,
       },
       humans,
     );

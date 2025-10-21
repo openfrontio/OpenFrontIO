@@ -28,7 +28,7 @@ export class SpawnTimer implements Layer {
     this.colors = [];
 
     const gameMode = this.game.config().gameConfig().gameMode;
-    if (gameMode !== GameMode.Team && gameMode !== GameMode.HumansVsNations) {
+    if (gameMode !== GameMode.Team) {
       return;
     }
 
@@ -62,11 +62,7 @@ export class SpawnTimer implements Layer {
     const barWidth = this.transformHandler.width();
 
     const gameMode = this.game.config().gameConfig().gameMode;
-    if (
-      !this.game.inSpawnPhase() &&
-      gameMode !== GameMode.Team &&
-      gameMode !== GameMode.HumansVsNations
-    ) {
+    if (!this.game.inSpawnPhase() && gameMode !== GameMode.Team) {
       return;
     }
 

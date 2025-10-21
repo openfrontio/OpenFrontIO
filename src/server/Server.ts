@@ -2,7 +2,6 @@ import cluster from "cluster";
 import * as dotenv from "dotenv";
 import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { initMapNationCounts } from "../core/game/MapNationCounts";
 import { Cloudflare, TunnelConfig } from "./Cloudflare";
 import { startMaster } from "./Master";
 import { startWorker } from "./Worker";
@@ -13,9 +12,6 @@ dotenv.config();
 
 // Main entry point of the application
 async function main() {
-  // Initialize nation counts from map manifests before starting server
-  await initMapNationCounts();
-
   // Check if this is the primary (master) process
   if (cluster.isPrimary) {
     if (config.env() !== GameEnv.Dev) {

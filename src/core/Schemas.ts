@@ -14,6 +14,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Quads,
   Trios,
   UnitType,
@@ -147,6 +148,7 @@ const TeamCountConfigSchema = z.union([
   z.literal(Duos),
   z.literal(Trios),
   z.literal(Quads),
+  z.literal(HumansVsNations),
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
@@ -161,7 +163,6 @@ export const GameConfigSchema = z.object({
   disableNPCs: z.boolean(),
   bots: z.number().int().min(0).max(400),
   nations: z.number().int().min(1).max(400).optional(),
-  matchNationsToPlayers: z.boolean().optional(),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
