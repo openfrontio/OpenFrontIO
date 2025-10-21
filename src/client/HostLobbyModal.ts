@@ -228,7 +228,10 @@ export class HostLobbyModal extends LitElement {
           </div>
 
           ${
-            this.teamCount !== HumansVsNations
+            !(
+              this.gameMode === GameMode.Team &&
+              this.teamCount === HumansVsNations
+            )
               ? html`
                   <!-- Difficulty Selection -->
                   <div class="options-section">
@@ -317,7 +320,9 @@ export class HostLobbyModal extends LitElement {
                           >
                             <div class="option-card-title">
                               ${typeof o === "string"
-                                ? translateText(`public_lobby.teams_${o}`)
+                                ? o === HumansVsNations
+                                  ? translateText("public_lobby.teams_hvn")
+                                  : translateText(`public_lobby.teams_${o}`)
                                 : translateText("public_lobby.teams", {
                                     num: o,
                                   })}
@@ -337,6 +342,7 @@ export class HostLobbyModal extends LitElement {
             </div>
             <div class="option-cards">
               ${
+                this.gameMode === GameMode.Team &&
                 this.teamCount === HumansVsNations
                   ? html`
                       <label for="nations-count" class="option-card">
@@ -379,7 +385,10 @@ export class HostLobbyModal extends LitElement {
               }
 
                 ${
-                  this.teamCount !== HumansVsNations
+                  !(
+                    this.gameMode === GameMode.Team &&
+                    this.teamCount === HumansVsNations
+                  )
                     ? html`
                         <label
                           for="disable-npcs"
@@ -593,11 +602,19 @@ export class HostLobbyModal extends LitElement {
             @click=${this.startGame}
             class="start-game-button"
             ?disabled=${
-              this.clients.length < 2 && this.teamCount !== HumansVsNations
+              this.clients.length < 2 &&
+              !(
+                this.gameMode === GameMode.Team &&
+                this.teamCount === HumansVsNations
+              )
             }
           >
             ${
-              this.clients.length < 2 && this.teamCount !== HumansVsNations
+              this.clients.length < 2 &&
+              !(
+                this.gameMode === GameMode.Team &&
+                this.teamCount === HumansVsNations
+              )
                 ? translateText("host_modal.waiting")
                 : translateText("host_modal.start")
             }
@@ -802,7 +819,8 @@ export class HostLobbyModal extends LitElement {
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
-          ...(this.teamCount === HumansVsNations
+          ...(this.gameMode === GameMode.Team &&
+          this.teamCount === HumansVsNations
             ? {
                 nations: this.nations,
                 bots: undefined,
