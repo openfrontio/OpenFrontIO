@@ -222,8 +222,9 @@
   },
   "matchmaking_modal": {
     "title": "Matchmaking",
+    "connecting": "Connecting to matchmaking server...",
     "searching": "Searching for game...",
-    "connecting": "Connecting to game..."
+    "waiting_for_game": "Waiting for game to start..."
   },
   "username": {
     "enter_username": "Enter your username",

@@ -10,6 +10,8 @@ import { translateText } from "./Utils";
 @customElement("matchmaking-modal")
 export class MatchmakingModal extends LitElement {
   private gameCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private connected = false;
+  @state() private socket: WebSocket | null = null;
 
   @state() private gameID: string | null = null;
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -29,7 +31,7 @@ export class MatchmakingModal extends LitElement {
     return html`
       <o-modal
         id="matchmaking-modal"
-        title="${translateText("matchmaking_modal.title") || "Matchmaking"}"
+        title="${translateText("matchmaking_modal.title")}"
       >
         ${this.renderInner()}
       </o-modal>
@@ -37,43 +39,55 @@ export class MatchmakingModal extends LitElement {
   }
 
   private renderInner() {
+    if (!this.connected) {
+      return html`${translateText("matchmaking_modal.connecting")}`;
+    }
     if (this.gameID === null) {
       return html`${translateText("matchmaking_modal.searching")}`;
     } else {
-      return html`${translateText("matchmaking_modal.connecting")}`;
+      return html`${translateText("matchmaking_modal.waiting_for_game")}`;
     }
   }
 
   private async connect() {
     const config = await getServerConfigFromClient();
 
-    const url = `${config.jwtIssuer() + "/matchmaking/join"}`;
-
-    const socket = new WebSocket(url, [`token.${getPlayToken()}`]);
-    socket.onopen = () => {
+    this.socket = new WebSocket(`${config.jwtIssuer()}/matchmaking/join`);
+    this.socket.onopen = () => {
       console.log("Connected to matchmaking server");
+      setTimeout(() => {
+        // Set a delay so the user can see the "connecting" message,
+        // otherwise the "searching" message will be shown immediately.
+        this.connected = true;
+        this.requestUpdate();
+      }, 1000);
+      this.socket?.send(
+        JSON.stringify({
+          type: "auth",
+          playToken: getPlayToken(),
+        }),
+      );
     };
-    socket.onmessage = (event) => {
+    this.socket.onmessage = (event) => {
       console.log(event.data);
       const data = JSON.parse(event.data);
       if (data.type === "match-assignment") {
-        socket.close();
-        console.log(`got game ID: ${data.gameId}`);
+        this.socket?.close();
+        console.log(`matchmaking: got game ID: ${data.gameId}`);
         this.gameID = data.gameId;
       }
     };
-    socket.onerror = (event: ErrorEvent) => {
-      console.error("WebSocket error occurred:");
-      console.error("Error event:", event);
-      console.error("Event type:", event.type);
-      console.error("Event target:", event.target);
+    this.socket.onerror = (event: ErrorEvent) => {
+      console.error("WebSocket error occurred:", event);
     };
-    socket.onclose = (event) => {
+    this.socket.onclose = (event) => {
       console.log("Matchmaking server closed connection");
     };
   }
 
   public close() {
+    this.connected = false;
+    this.socket?.close();
     this.modalEl?.close();
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
@@ -159,7 +173,7 @@ export class MatchmakingButton extends LitElement {
         <button
           @click="${this.open}"
           class="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center text-xl focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-4"
-          title="Test"
+          title="${translateText("matchmaking_modal.title")}"
         >
           Matchmaking
         </button>

@@ -467,14 +467,16 @@ export async function startWorker() {
 }
 
 async function pollLobby(gm: GameManager) {
-  const url = `${config.jwtIssuer() + "/matchmaking/checkin"}`;
-  const gameId = generateGameIdForWorker();
-  if (gameId === null) {
-    log.warn(`Failed to generate game ID for worker ${workerId}`);
-    return;
-  }
-
   try {
+    const url = `${config.jwtIssuer() + "/matchmaking/checkin"}`;
+    const gameId = generateGameIdForWorker();
+    if (gameId === null) {
+      log.warn(`Failed to generate game ID for worker ${workerId}`);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     const response = await fetch(url, {
       method: "POST",
       headers: {
@@ -486,7 +488,10 @@ async function pollLobby(gm: GameManager) {
         gameId: gameId,
         ccu: gm.activeClients(),
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       log.warn(
@@ -499,9 +504,11 @@ async function pollLobby(gm: GameManager) {
     log.info(`Lobby poll successful:`, data);
 
     if (data.assignment) {
+      // TODO: Only allow specified players to join the game.
       console.log(`Creating game ${gameId}`);
       const game = gm.createGame(gameId, playlist.gameConfig());
       setTimeout(() => {
+        // Wait a few seconds to allow clients to connect.
         console.log(`Starting game ${gameId}`);
         game.start();
       }, 5000);
@@ -518,6 +525,8 @@ async function pollLobby(gm: GameManager) {
   }
 }
 
+// TODO: This is a hack to generate a game ID for the worker.
+// It should be replaced with a more robust solution.
 function generateGameIdForWorker(): GameID | null {
   let attempts = 1000;
   while (attempts > 0) {
