@@ -133,7 +133,10 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
-          ${this.teamCount !== HumansVsNations
+          ${!(
+            this.gameMode === GameMode.Team &&
+            this.teamCount === HumansVsNations
+          )
             ? html`
                 <!-- Difficulty Selection -->
                 <div class="options-section">
@@ -242,7 +245,8 @@ export class SinglePlayerModal extends LitElement {
               ${translateText("single_modal.options_title")}
             </div>
             <div class="option-cards">
-              ${this.teamCount === HumansVsNations
+              ${this.gameMode === GameMode.Team &&
+              this.teamCount === HumansVsNations
                 ? html`
                     <label for="nations-count" class="option-card">
                       <input
@@ -289,7 +293,10 @@ export class SinglePlayerModal extends LitElement {
                       </div>
                     </label>
                   `}
-              ${this.teamCount !== HumansVsNations
+              ${!(
+                this.gameMode === GameMode.Team &&
+                this.teamCount === HumansVsNations
+              )
                 ? html`
                     <label
                       for="singleplayer-modal-disable-npcs"
