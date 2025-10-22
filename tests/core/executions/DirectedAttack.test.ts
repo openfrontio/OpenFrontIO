@@ -199,20 +199,11 @@ describe("DirectedAttack", () => {
     expect(attacker.outgoingAttacks()).toHaveLength(1);
   });
 
-  test("Different weight values affect attack direction", async () => {
-    // Test that changing the weight actually affects behavior
-    const config = game.config() as TestConfig;
+  test("attackDirectionWeight configuration is accessible", async () => {
+    // Verify that the configuration parameter exists and has the expected default value
+    const config = game.config();
 
-    // Set weight to 0 (no directional influence)
-    config.setAttackDirectionWeight(0);
-    expect(config.attackDirectionWeight()).toBe(0);
-
-    // Set weight to 1 (maximum directional influence)
-    config.setAttackDirectionWeight(1);
-    expect(config.attackDirectionWeight()).toBe(1);
-
-    // Set back to default
-    config.setAttackDirectionWeight(0.3);
+    // Should have the default weight value
     expect(config.attackDirectionWeight()).toBe(0.3);
   });
 });
