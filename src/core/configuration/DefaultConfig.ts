@@ -769,7 +769,7 @@ const thresholdDebuff = this.largeAttackerSpeedThresholdDebuff(
           speed *
           largeDefenderSpeedDebuff *
           largeAttackerSpeedBonus *
-	thresholdDebuff *
+          thresholdDebuff *
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
