@@ -619,7 +619,7 @@ class Client {
           };
           if (modal?.close) {
             modal.close();
-          } else if ("isModalOpen" in modal) {
+          } else if (modal && "isModalOpen" in modal) {
             modal.isModalOpen = false;
           }
         });
