@@ -112,7 +112,7 @@ describe("DirectedAttack", () => {
 
     // The attack should have been created
     const initialAttacks = attacker.outgoingAttacks();
-    expect(initialAttacks.length).toBeGreaterThanOrEqual(0);
+    expect(initialAttacks).toHaveLength(1);
 
     // Execute some more ticks to let the attack progress
     for (let i = 0; i < 5; i++) {
@@ -123,9 +123,8 @@ describe("DirectedAttack", () => {
     expect(attacker.numTilesOwned()).toBeGreaterThan(tilesBeforeAttack);
   });
 
-  test("Priority calculation correctly balances defensibility and distance", async () => {
-    // This test verifies the internal priority calculation
-    // We'll set up a scenario where we can observe the effect of both factors
+  test("Attack with clickTile uses configured direction weight", async () => {
+    // Verify that attacks with clickTile parameter use the direction weight configuration
 
     const config = game.config() as TestConfig;
     expect(config.attackDirectionWeight()).toBe(0.3); // Default value
@@ -143,7 +142,7 @@ describe("DirectedAttack", () => {
     game.addExecution(attackExecution);
     game.executeNextTick();
 
-    // Verify attack was created
+    // Verify attack was created successfully
     expect(attacker.outgoingAttacks()).toHaveLength(1);
   });
 
