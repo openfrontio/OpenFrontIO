@@ -785,6 +785,10 @@ export class DefaultConfig implements Config {
     }
   }
 
+  attackDirectionWeight(): number {
+    return 0.3;
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;

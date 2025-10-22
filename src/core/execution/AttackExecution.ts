@@ -33,6 +33,7 @@ export class AttackExecution implements Execution {
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
     private removeTroops: boolean = true,
+    private clickTile: TileRef | null = null,
   ) {}
 
   public targetID(): PlayerID | null {
@@ -326,9 +327,19 @@ export class AttackExecution implements Execution {
           break;
       }
 
-      const priority =
-        (this.random.nextInt(0, 7) + 10) * (1 - numOwnedByMe * 0.5 + mag / 2) +
-        tickNow;
+      const defensibilityWeight =
+        (this.random.nextInt(0, 7) + 10) * (1 - numOwnedByMe * 0.5 + mag / 2);
+
+      let priority = defensibilityWeight + tickNow;
+
+      if (this.clickTile !== null) {
+        const dx = this.mg.x(neighbor) - this.mg.x(this.clickTile);
+        const dy = this.mg.y(neighbor) - this.mg.y(this.clickTile);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distanceWeight =
+          distance * this.mg.config().attackDirectionWeight();
+        priority += distanceWeight;
+      }
 
       this.toConquer.enqueue(neighbor, priority);
     }
