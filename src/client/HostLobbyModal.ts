@@ -356,9 +356,17 @@ export class HostLobbyModal extends LitElement {
                           @change=${this.handleNationsChange}
                           .value="${String(this.nations)}"
                         />
+                        <input
+                          type="number"
+                          id="nations-count-input"
+                          min="1"
+                          max="400"
+                          .value=${String(this.nations)}
+                          style="width: 60px; color: black; text-align: right; border-radius: 8px; margin-left: 8px;"
+                          @input=${this.handleNationsChange}
+                        />
                         <div class="option-card-title">
-                          <span>${translateText("host_modal.nations")}</span
-                          >${this.nations}
+                          <span>${translateText("host_modal.nations")}</span>
                         </div>
                       </label>
                     `

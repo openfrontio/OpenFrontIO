@@ -97,6 +97,9 @@ export class GameServer {
     if (gameConfig.bots !== undefined) {
       this.gameConfig.bots = gameConfig.bots;
     }
+    if (gameConfig.nations !== undefined) {
+      this.gameConfig.nations = gameConfig.nations;
+    }
     if (gameConfig.infiniteGold !== undefined) {
       this.gameConfig.infiniteGold = gameConfig.infiniteGold;
     }

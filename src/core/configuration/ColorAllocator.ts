@@ -47,6 +47,10 @@ export class ColorAllocator {
         return greenTeamColors;
       case ColoredTeams.Bot:
         return botTeamColors;
+      case "Humans":
+        return redTeamColors;
+      case "Nations":
+        return blueTeamColors;
       default:
         return [this.assignColor(team)];
     }
