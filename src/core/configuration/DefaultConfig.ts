@@ -626,18 +626,38 @@ export class DefaultConfig implements Config {
 largeAttackerSpeedThresholdDebuff(attacker: Player, totalLandTiles: number): number {
   const territoryPercentage = (attacker.numTilesOwned() / totalLandTiles) * 100;
   
-  if (territoryPercentage < 15) {
+  if (territoryPercentage < 10) {
     return 1.0;
-  } else if (territoryPercentage < 30) {
-    return 0.90;
-  } else if (territoryPercentage < 45) {
+  } else if (territoryPercentage < 15) {
+    return 0.76;
+  } else if (territoryPercentage < 20) {
     return 0.70;
+  } else if (territoryPercentage < 25) {
+    return 0.64;
+  } else if (territoryPercentage < 30) {
+    return 0.56;
+  } else if (territoryPercentage < 35) {
+    return 0.46;
+  } else if (territoryPercentage < 40) {
+    return 0.36;
+  } else if (territoryPercentage < 45) {
+    return 0.28;
+  } else if (territoryPercentage < 50) {
+    return 0.21;
+  } else if (territoryPercentage < 55) {
+    return 0.16;
+  } else if (territoryPercentage < 60) {
+    return 0.12;
+  } else if (territoryPercentage < 65) {
+    return 0.09;
   } else if (territoryPercentage < 70) {
-    return 0.45;
-  } else if (territoryPercentage < 95) {
-    return 0.25;
+    return 0.06;
+  } else if (territoryPercentage < 75) {
+    return 0.05;
+  } else if (territoryPercentage < 80) {
+    return 0.03;
   } else {
-    return 0.10;
+    return 0.02;
   }
 }
   attackLogic(
