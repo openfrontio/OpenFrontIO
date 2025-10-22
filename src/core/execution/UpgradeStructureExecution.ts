@@ -19,7 +19,7 @@ export class UpgradeStructureExecution implements Execution {
       return;
     }
 
-    if (!this.player.canUpgradeUnit(this.structure.type())) {
+    if (!this.player.canUpgradeUnit(this.structure)) {
       console.warn(
         `[UpgradeStructureExecution] unit type ${this.structure.type()} cannot be upgraded`,
       );

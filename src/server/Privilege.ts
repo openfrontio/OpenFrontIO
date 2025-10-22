@@ -1,6 +1,7 @@
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
+  FlagSchema,
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
@@ -42,10 +43,14 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       }
     }
     if (refs.flag) {
-      cosmetics.flag = cosmetics.flag = refs.flag.replace(
-        /[^a-z0-9-_ ()]/gi,
-        "",
-      );
+      const result = FlagSchema.safeParse(refs.flag);
+      if (!result.success) {
+        return {
+          type: "forbidden",
+          reason: "invalid flag: " + result.error.message,
+        };
+      }
+      cosmetics.flag = result.data;
     }
 
     return { type: "allowed", cosmetics };
