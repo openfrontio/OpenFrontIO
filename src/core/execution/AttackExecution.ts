@@ -391,11 +391,15 @@ export class AttackExecution implements Execution {
     const coarseX = Math.round(x / downsampleFactor) * downsampleFactor;
     const coarseY = Math.round(y / downsampleFactor) * downsampleFactor;
 
-    // Clamp to valid map coordinates
+    // Clamp to last coarse grid coordinate (not map bounds)
     const mapWidth = this.mg.width();
     const mapHeight = this.mg.height();
-    const clampedX = Math.max(0, Math.min(mapWidth - 1, coarseX));
-    const clampedY = Math.max(0, Math.min(mapHeight - 1, coarseY));
+    const maxCoarseX =
+      Math.floor((mapWidth - 1) / downsampleFactor) * downsampleFactor;
+    const maxCoarseY =
+      Math.floor((mapHeight - 1) / downsampleFactor) * downsampleFactor;
+    const clampedX = Math.max(0, Math.min(maxCoarseX, coarseX));
+    const clampedY = Math.max(0, Math.min(maxCoarseY, coarseY));
 
     return this.mg.ref(clampedX, clampedY);
   }
@@ -589,8 +593,18 @@ export class AttackExecution implements Execution {
                 // Use downscaled BFS distance (topologically correct, ±5-10 tile accuracy)
                 distance = bfsDistance;
               } else {
-                // BFS not available or tile unreachable, use Euclidean
-                // Calculate neighbor->click Euclidean distance
+                // DISABLED: Euclidean fallback
+                // With the clamping bug fixed, this should never happen for rectangular maps.
+                // If this error occurs, it indicates either:
+                // 1. Non-rectangular map with holes in coordinate space
+                // 2. Future terrain-aware BFS creating disconnected regions
+                // 3. A regression of the clamping bug
+                console.error(
+                  `[DirectedAttack] BFS distance is null for neighbor tile (${neighborX}, ${neighborY}). ` +
+                    `This should never happen with the clamping fix. Using fallback.`,
+                );
+
+                // Fallback to Euclidean (kept for defensive programming)
                 const neighborToClickX = clickX - neighborX;
                 const neighborToClickY = clickY - neighborY;
                 distance = Math.sqrt(
