@@ -837,10 +837,14 @@ export class DefaultConfig implements Config {
 
   troopIncreaseRate(player: Player): number {
     const max = this.maxTroops(player);
+    const onShips = player
+      .units(UnitType.TransportShip)
+      .reduce((sum, ship) => sum + ship.troops(), 0);
+    const current = player.troops() + onShips;
 
-    let toAdd = 10 + Math.pow(player.troops(), 0.73) / 4;
+    let toAdd = 10 + Math.pow(current, 0.73) / 4;
 
-    const ratio = 1 - player.troops() / max;
+    const ratio = 1 - current / max;
     toAdd *= ratio;
 
     if (player.type() === PlayerType.Bot) {
@@ -864,7 +868,7 @@ export class DefaultConfig implements Config {
       }
     }
 
-    return Math.min(player.troops() + toAdd, max) - player.troops();
+    return Math.max(0, Math.min(current + toAdd, max) - current);
   }
 
   goldAdditionRate(player: Player): Gold {
