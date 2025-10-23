@@ -504,22 +504,27 @@ describe("DirectedAttack", () => {
     const conquestData: Array<{ tick: number; x: number; y: number }> = [];
     const initialTiles = attacker.numTilesOwned();
 
+    // Track previously conquered tiles to identify new conquests
+    const previouslyConquered = new Set<TileRef>(attacker.tiles());
+
     // Run attack for limited time to observe early triangular convergence
     for (let i = 0; i < 100; i++) {
-      const beforeTiles = attacker.numTilesOwned();
       game.executeNextTick();
-      const afterTiles = attacker.numTilesOwned();
 
-      // Record newly conquered tiles
-      if (afterTiles > beforeTiles) {
-        // Get all attacker tiles and find new ones (simplified tracking)
-        for (const tile of attacker.tiles()) {
-          conquestData.push({
-            tick: game.ticks(),
-            x: game.x(tile),
-            y: game.y(tile),
-          });
-        }
+      // Identify newly conquered tiles
+      const currentTiles = new Set<TileRef>(attacker.tiles());
+      const newlyConquered = Array.from(currentTiles).filter(
+        (tile) => !previouslyConquered.has(tile),
+      );
+
+      // Record only newly conquered tiles
+      for (const tile of newlyConquered) {
+        conquestData.push({
+          tick: game.ticks(),
+          x: game.x(tile),
+          y: game.y(tile),
+        });
+        previouslyConquered.add(tile);
       }
 
       if (attacker.outgoingAttacks().length === 0) {
