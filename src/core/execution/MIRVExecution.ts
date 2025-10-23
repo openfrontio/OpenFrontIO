@@ -68,7 +68,9 @@ export class MirvExecution implements Execution {
         this.active = false;
         return;
       }
-      this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {});
+      this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
+        targetTile: this.dst,
+      });
       const x = Math.floor(
         (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
       );

@@ -15,7 +15,7 @@ import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
-import { FakeHumanExecution } from "./FakeHumanExecution";
+import { FakeHumanCoordinator } from "./fakehuman/core/FakeHumanCoordinator";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
@@ -131,7 +131,7 @@ export class Executor {
   fakeHumanExecutions(): Execution[] {
     const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
-      execs.push(new FakeHumanExecution(this.gameID, nation));
+      execs.push(new FakeHumanCoordinator(this.gameID, nation));
     }
     return execs;
   }
