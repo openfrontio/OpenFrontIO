@@ -14,16 +14,16 @@ export function canBuildTransportShip(
     return false;
   }
 
-  const dst = targetTransportTile(game, tile);
-  if (dst === null) {
-    return false;
-  }
-
   const other = game.owner(tile);
   if (other === player) {
     return false;
   }
   if (other.isPlayer() && player.isFriendly(other)) {
+    return false;
+  }
+
+  const dst = targetTransportTile(game, tile);
+  if (dst === null) {
     return false;
   }
 
@@ -36,27 +36,12 @@ export function canBuildTransportShip(
       }
     }
 
-    let otherPlayerBordersOcean = false;
-    if (!game.hasOwner(tile)) {
-      otherPlayerBordersOcean = true;
-    } else {
-      for (const bt of (other as Player).borderTiles()) {
-        if (game.isOceanShore(bt)) {
-          otherPlayerBordersOcean = true;
-          break;
-        }
-      }
-    }
-
-    if (myPlayerBordersOcean && otherPlayerBordersOcean) {
+    if (myPlayerBordersOcean) {
       return transportShipSpawn(game, player, dst);
     } else {
       return false;
     }
   }
-
-  // Now we are boating in a lake, so do a bfs from target until we find
-  // a border tile owned by the player
 
   const tiles = game.bfs(
     dst,
@@ -91,22 +76,6 @@ function transportShipSpawn(
     return false;
   }
   return spawn;
-}
-
-export function sourceDstOceanShore(
-  gm: Game,
-  src: Player,
-  tile: TileRef,
-): [TileRef | null, TileRef | null] {
-  const dst = gm.owner(tile);
-  const srcTile = closestShoreFromPlayer(gm, src, tile);
-  let dstTile: TileRef | null = null;
-  if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
-  } else {
-    dstTile = closestShoreTN(gm, tile, 50);
-  }
-  return [srcTile, dstTile];
 }
 
 export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {

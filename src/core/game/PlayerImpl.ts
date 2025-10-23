@@ -33,6 +33,7 @@ import {
   Team,
   TerraNullius,
   Tick,
+  TransportShipFilter,
   Unit,
   UnitParams,
   UnitType,
@@ -879,26 +880,58 @@ export class PlayerImpl implements Player {
     this.recordUnitConstructed(unit.type());
   }
 
-  public buildableUnits(tile: TileRef | null): BuildableUnit[] {
+  public buildableUnits(
+    tile: TileRef | null,
+    transportShipFilter: TransportShipFilter = TransportShipFilter.Default,
+  ): BuildableUnit[] {
+    const inSpawnPhase = this.mg.inSpawnPhase();
+
+    if (transportShipFilter === TransportShipFilter.Only) {
+      const u = UnitType.TransportShip;
+      return [
+        {
+          type: u,
+          canBuild:
+            inSpawnPhase || tile === null
+              ? false
+              : this.canBuild(u, tile, null),
+          canUpgrade: !this.mg.config().unitInfo(u).upgradable ? false : 0,
+          cost: this.mg.config().unitInfo(u).cost(this),
+        } as BuildableUnit,
+      ];
+    }
+
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
+    const result: BuildableUnit[] = [];
+
+    for (const u of Object.values(UnitType)) {
+      if (
+        u === UnitType.TransportShip &&
+        transportShipFilter === TransportShipFilter.Exclude
+      ) {
+        continue;
+      }
+
       let canUpgrade: number | false = false;
-      if (!this.mg.inSpawnPhase()) {
-        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
+      if (!inSpawnPhase && tile !== null) {
+        const existingUnit = this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
         }
       }
-      return {
+
+      result.push({
         type: u,
         canBuild:
-          this.mg.inSpawnPhase() || tile === null
+          inSpawnPhase || tile === null
             ? false
             : this.canBuild(u, tile, validTiles),
-        canUpgrade: canUpgrade,
+        canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
-      } as BuildableUnit;
-    });
+      } as BuildableUnit);
+    }
+
+    return result;
   }
 
   canBuild(

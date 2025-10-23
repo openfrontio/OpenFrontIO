@@ -4,6 +4,7 @@ import {
   PlayerBorderTiles,
   PlayerID,
   PlayerProfile,
+  TransportShipFilter,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
@@ -162,6 +163,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
+    TransportShipFilter?: TransportShipFilter,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -186,6 +188,7 @@ export class WorkerClient {
         playerID: playerID,
         x: x,
         y: y,
+        TransportShipFilter: TransportShipFilter,
       });
     });
   }

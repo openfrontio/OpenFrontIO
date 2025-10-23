@@ -17,6 +17,7 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
+  TransportShipFilter,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
@@ -181,13 +182,14 @@ export class GameRunner {
     playerID: PlayerID,
     x?: number,
     y?: number,
+    TransportShipFilter?: TransportShipFilter,
   ): PlayerActions {
     const player = this.game.player(playerID);
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
       canAttack: tile !== null && player.canAttack(tile),
-      buildableUnits: player.buildableUnits(tile),
+      buildableUnits: player.buildableUnits(tile, TransportShipFilter),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 

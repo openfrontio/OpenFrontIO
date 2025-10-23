@@ -10,6 +10,7 @@ import {
   Cell,
   PlayerActions,
   PlayerID,
+  TransportShipFilter,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -249,7 +250,7 @@ export class StructureIconsLayer implements Layer {
 
     this.game
       ?.myPlayer()
-      ?.actions(tileRef)
+      ?.actions(tileRef, TransportShipFilter.Exclude)
       .then((actions) => {
         if (this.potentialUpgrade) {
           this.potentialUpgrade.iconContainer.filters = [];

@@ -560,7 +560,10 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
-  buildableUnits(tile: TileRef | null): BuildableUnit[];
+  buildableUnits(
+    tile: TileRef | null,
+    TransportShipFilter?: TransportShipFilter,
+  ): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
     type: T,
@@ -856,4 +859,10 @@ export interface NameViewData {
   x: number;
   y: number;
   size: number;
+}
+
+export enum TransportShipFilter {
+  Default = "default", // Include TransportShip with all units
+  Exclude = "exclude", // Skip TransportShip in the unit list
+  Only = "only", // Only check TransportShip
 }

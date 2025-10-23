@@ -22,6 +22,7 @@ import {
   TerraNullius,
   Tick,
   TrainType,
+  TransportShipFilter,
   UnitInfo,
   UnitType,
 } from "./Game";
@@ -272,11 +273,15 @@ export class PlayerView {
       : this._defendedBorderColors.dark;
   }
 
-  async actions(tile?: TileRef): Promise<PlayerActions> {
+  async actions(
+    tile?: TileRef,
+    TransportShipFilter?: TransportShipFilter,
+  ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
+      TransportShipFilter,
     );
   }
 

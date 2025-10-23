@@ -12,7 +12,11 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import {
+  PlayerActions,
+  TransportShipFilter,
+  UnitType,
+} from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -414,13 +418,14 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
-    this.myPlayer.actions(tile).then((actions) => {
-      if (this.myPlayer === null) return;
+    this.myPlayer.actions(tile, TransportShipFilter.Only).then((actions) => {
+      // if (this.myPlayer === null) return; //--> redundant check as set above?, but need to add ! below to stop error 'can be null'
       if (actions.canAttack) {
+        //-->maybe only get actions.canAttack + transportship from buildableunits? Not everything else?
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
           ),
         );
       } else if (this.canAutoBoat(actions, tile)) {
@@ -511,7 +516,8 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile).then((actions) => {
+    this.myPlayer.actions(tile, TransportShipFilter.Only).then((actions) => {
+      //-->> maybe only get transportship from buildableunits? Not everything else?
       if (this.canBoatAttack(actions) !== false) {
         this.sendBoatAttackIntent(tile);
       }
