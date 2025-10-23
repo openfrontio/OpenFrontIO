@@ -189,6 +189,7 @@ export class GameRunner {
       canAttack: tile !== null && player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
+      canEmbargoAll: player.canEmbargoAll(true),
     } as PlayerActions;
 
     if (tile !== null && this.game.hasOwner(tile)) {

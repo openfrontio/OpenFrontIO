@@ -94,6 +94,7 @@ export class PlayerImpl implements Player {
   private relations = new Map<Player, number>();
 
   private lastDeleteUnitTick: Tick = -1;
+  private lastEmbargoAllTick: Tick = -1;
 
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
@@ -687,6 +688,30 @@ export class PlayerImpl implements Player {
 
   recordDeleteUnit(): void {
     this.lastDeleteUnitTick = this.mg.ticks();
+  }
+
+  canEmbargoAll(excludeTeammates: boolean): boolean {
+    // Cooldown gate
+    if (
+      this.mg.ticks() - this.lastEmbargoAllTick <
+      this.mg.config().embargoAllCooldown()
+    ) {
+      return false;
+    }
+    // At least one eligible player exists
+    for (const p of this.mg.players()) {
+      if (!p.isPlayer()) continue;
+      if (!p.isAlive()) continue;
+      if (p.id() === this.id()) continue;
+      if (p.type() === PlayerType.Bot) continue;
+      if (excludeTeammates && this.isOnSameTeam(p)) continue;
+      return true;
+    }
+    return false;
+  }
+
+  recordEmbargoAll(): void {
+    this.lastEmbargoAllTick = this.mg.ticks();
   }
 
   hasEmbargoAgainst(other: Player): boolean {
