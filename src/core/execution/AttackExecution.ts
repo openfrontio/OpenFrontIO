@@ -292,6 +292,29 @@ export class AttackExecution implements Execution {
     }
   }
 
+  /**
+   * Calculate the centroid (center point) of the attacker's border tiles.
+   * This serves as the reference point for directional attack calculations.
+   * @returns {x: number, y: number} The centroid coordinates
+   */
+  private getAttackerCentroid(): { x: number; y: number } {
+    const borderTiles = Array.from(this._owner.borderTiles());
+    if (borderTiles.length === 0) {
+      // Fallback: use all tiles if no border tiles exist
+      const allTiles = Array.from(this._owner.tiles());
+      if (allTiles.length === 0) {
+        return { x: 0, y: 0 }; // Ultimate fallback
+      }
+      const sumX = allTiles.reduce((sum, tile) => sum + this.mg.x(tile), 0);
+      const sumY = allTiles.reduce((sum, tile) => sum + this.mg.y(tile), 0);
+      return { x: sumX / allTiles.length, y: sumY / allTiles.length };
+    }
+
+    const sumX = borderTiles.reduce((sum, tile) => sum + this.mg.x(tile), 0);
+    const sumY = borderTiles.reduce((sum, tile) => sum + this.mg.y(tile), 0);
+    return { x: sumX / borderTiles.length, y: sumY / borderTiles.length };
+  }
+
   private addNeighbors(tile: TileRef) {
     if (this.attack === null) {
       throw new Error("Attack not initialized");
@@ -333,12 +356,44 @@ export class AttackExecution implements Execution {
       let priority = defensibilityWeight + tickNow;
 
       if (this.clickTile !== null) {
-        const dx = this.mg.x(neighbor) - this.mg.x(this.clickTile);
-        const dy = this.mg.y(neighbor) - this.mg.y(this.clickTile);
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const distanceWeight =
-          distance * this.mg.config().attackDirectionWeight();
-        priority += distanceWeight;
+        // Direction-based attack: use dot product to favor tiles aligned with click direction
+        const attackerPos = this.getAttackerCentroid();
+
+        // Calculate direction vector from attacker to clickTile
+        const dirX = this.mg.x(this.clickTile) - attackerPos.x;
+        const dirY = this.mg.y(this.clickTile) - attackerPos.y;
+        const dirMag = Math.sqrt(dirX * dirX + dirY * dirY);
+
+        // Avoid division by zero
+        if (dirMag > 0.001) {
+          // Normalize direction vector
+          const dirNormX = dirX / dirMag;
+          const dirNormY = dirY / dirMag;
+
+          // Calculate vector from attacker to neighbor
+          const neighborX = this.mg.x(neighbor) - attackerPos.x;
+          const neighborY = this.mg.y(neighbor) - attackerPos.y;
+          const neighborMag = Math.sqrt(
+            neighborX * neighborX + neighborY * neighborY,
+          );
+
+          if (neighborMag > 0.001) {
+            // Normalize neighbor vector
+            const neighborNormX = neighborX / neighborMag;
+            const neighborNormY = neighborY / neighborMag;
+
+            // Dot product measures alignment (-1 to 1)
+            // 1.0 = same direction, 0.0 = perpendicular, -1.0 = opposite
+            const dotProduct =
+              dirNormX * neighborNormX + dirNormY * neighborNormY;
+
+            // Convert to bias: lower value = better alignment = higher priority (min-heap)
+            // (1.0 - dotProduct) gives us 0.0 for perfect alignment, 2.0 for opposite direction
+            const directionBias =
+              (1.0 - dotProduct) * this.mg.config().attackDirectionWeight();
+            priority += directionBias;
+          }
+        }
       }
 
       this.toConquer.enqueue(neighbor, priority);

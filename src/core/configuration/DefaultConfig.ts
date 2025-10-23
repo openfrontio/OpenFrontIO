@@ -786,7 +786,7 @@ export class DefaultConfig implements Config {
   }
 
   attackDirectionWeight(): number {
-    return 0.3;
+    return 0.8;
   }
 
   startManpower(playerInfo: PlayerInfo): number {
