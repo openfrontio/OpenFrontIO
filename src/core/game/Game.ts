@@ -621,7 +621,7 @@ export interface Player {
   donateGold(recipient: Player, gold: Gold): boolean;
   canDeleteUnit(): boolean;
   recordDeleteUnit(): void;
-  canEmbargoAll(excludeTeammates: boolean): boolean;
+  canEmbargoAll(): boolean;
   recordEmbargoAll(): void;
 
   // Embargo

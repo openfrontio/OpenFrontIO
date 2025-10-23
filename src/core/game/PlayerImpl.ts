@@ -690,7 +690,7 @@ export class PlayerImpl implements Player {
     this.lastDeleteUnitTick = this.mg.ticks();
   }
 
-  canEmbargoAll(excludeTeammates: boolean): boolean {
+  canEmbargoAll(): boolean {
     // Cooldown gate
     if (
       this.mg.ticks() - this.lastEmbargoAllTick <
@@ -700,11 +700,9 @@ export class PlayerImpl implements Player {
     }
     // At least one eligible player exists
     for (const p of this.mg.players()) {
-      if (!p.isPlayer()) continue;
-      if (!p.isAlive()) continue;
       if (p.id() === this.id()) continue;
       if (p.type() === PlayerType.Bot) continue;
-      if (excludeTeammates && this.isOnSameTeam(p)) continue;
+      if (this.isOnSameTeam(p)) continue;
       return true;
     }
     return false;

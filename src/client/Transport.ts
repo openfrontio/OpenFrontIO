@@ -133,10 +133,7 @@ export class SendEmbargoIntentEvent implements GameEvent {
 }
 
 export class SendEmbargoAllIntentEvent implements GameEvent {
-  constructor(
-    public readonly action: "start" | "stop",
-    public readonly excludeTeammates: boolean = true,
-  ) {}
+  constructor(public readonly action: "start" | "stop") {}
 }
 
 export class SendDeleteUnitIntentEvent implements GameEvent {
@@ -543,7 +540,6 @@ export class Transport {
       type: "embargo_all",
       clientID: this.lobbyConfig.clientID,
       action: event.action,
-      excludeTeammates: event.excludeTeammates,
     });
   }
 

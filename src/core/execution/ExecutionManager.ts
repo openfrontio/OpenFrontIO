@@ -102,11 +102,7 @@ export class Executor {
       case "embargo":
         return new EmbargoExecution(player, intent.targetID, intent.action);
       case "embargo_all":
-        return new EmbargoAllExecution(
-          player,
-          intent.action,
-          intent.excludeTeammates,
-        );
+        return new EmbargoAllExecution(player, intent.action);
       case "build_unit":
         return new ConstructionExecution(player, intent.unit, intent.tile);
       case "allianceExtension": {

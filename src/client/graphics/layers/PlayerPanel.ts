@@ -225,12 +225,12 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private onStopTradingAllClick(e: Event) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoAllIntentEvent("start", true));
+    this.eventBus.emit(new SendEmbargoAllIntentEvent("start"));
   }
 
   private onStartTradingAllClick(e: Event) {
     e.stopPropagation();
-    this.eventBus.emit(new SendEmbargoAllIntentEvent("stop", true));
+    this.eventBus.emit(new SendEmbargoAllIntentEvent("stop"));
   }
 
   private handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView) {

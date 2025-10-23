@@ -281,7 +281,6 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
 export const EmbargoAllIntentSchema = BaseIntentSchema.extend({
   type: z.literal("embargo_all"),
   action: z.union([z.literal("start"), z.literal("stop")]),
-  excludeTeammates: z.boolean().default(true),
 });
 
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
