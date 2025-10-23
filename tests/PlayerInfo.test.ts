@@ -42,34 +42,34 @@ describe("PlayerInfo", () => {
       expect(playerInfo.clan).toBe("ABCDE");
     });
 
-    test("should extract clan from name when format contains [xxxxx]", () => {
+    test("should extract uppercase clan from name when format contains [xxxxx]", () => {
       const playerInfo = new PlayerInfo(
         "[abcde]PlayerName",
         PlayerType.Human,
         null,
         "player_id",
       );
-      expect(playerInfo.clan).toBe("abcde");
+      expect(playerInfo.clan).toBe("ABCDE");
     });
 
-    test("should extract clan from name when format contains [XxXxX]", () => {
+    test("should extract uppercase clan from name when format contains [XxXxX]", () => {
       const playerInfo = new PlayerInfo(
         "[AbCdE]PlayerName",
         PlayerType.Human,
         null,
         "player_id",
       );
-      expect(playerInfo.clan).toBe("AbCdE");
+      expect(playerInfo.clan).toBe("ABCDE");
     });
 
-    test("should extract clan from name when format contains [Xx#xX]", () => {
+    test("should extract uppercase clan from name when format contains [Xx#xX]", () => {
       const playerInfo = new PlayerInfo(
         "[Ab1cD]PlayerName",
         PlayerType.Human,
         null,
         "player_id",
       );
-      expect(playerInfo.clan).toBe("Ab1cD");
+      expect(playerInfo.clan).toBe("AB1CD");
     });
 
     test("should return null when name doesn't contain [", () => {
@@ -122,14 +122,14 @@ describe("PlayerInfo", () => {
       expect(playerInfo.clan).toBeNull();
     });
 
-    test("should extract clan name from any location in the player name", () => {
+    test("should extract uppercase clan name from any location in the player name", () => {
       const playerInfo = new PlayerInfo(
         "Player[aa]Name",
         PlayerType.Human,
         null,
         "player_id",
       );
-      expect(playerInfo.clan).toBe("aa");
+      expect(playerInfo.clan).toBe("AA");
     });
 
     test("should extract only the first occurrence of a clan name match", () => {
@@ -139,17 +139,17 @@ describe("PlayerInfo", () => {
         null,
         "player_id",
       );
-      expect(playerInfo.clan).toBe("Ab1cD");
+      expect(playerInfo.clan).toBe("AB1CD");
     });
 
-    test("should extract only the first occurrence of a valid clan name match", () => {
+    test("should extract only the first occurrence of a valid clan name match and extract as uppercase", () => {
       const playerInfo = new PlayerInfo(
         "[Ab1cDEF]Player[aa]Name",
         PlayerType.Human,
         null,
         "player_id",
       );
-      expect(playerInfo.clan).toBe("aa");
+      expect(playerInfo.clan).toBe("AA");
     });
 
     test("should extract numeric-only clan names", () => {
@@ -192,24 +192,24 @@ describe("PlayerInfo", () => {
       expect(playerInfo.clan).toBe("012");
     });
 
-    test("should extract alphanumeric clan names from anywhere within the name", () => {
+    test("should extract uppercase alphanumeric clan names from anywhere within the name", () => {
       const playerInfo = new PlayerInfo(
         "Player[0a1B2]Name",
         PlayerType.Human,
         null,
         "player_id",
       );
-      expect(playerInfo.clan).toBe("0a1B2");
+      expect(playerInfo.clan).toBe("0A1B2");
     });
 
-    test("should extract alphanumeric clan names from the end of the name", () => {
+    test("should extract uppercase alphanumeric clan names from the end of the name", () => {
       const playerInfo = new PlayerInfo(
         "PlayerName[0a1B2]",
         PlayerType.Human,
         null,
         "player_id",
       );
-      expect(playerInfo.clan).toBe("0a1B2");
+      expect(playerInfo.clan).toBe("0A1B2");
     });
   });
 });

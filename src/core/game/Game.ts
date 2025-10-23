@@ -409,7 +409,7 @@ export class PlayerInfo {
       this.clan = null;
     } else {
       const clanMatch = name.match(/\[([a-zA-Z0-9]{2,5})\]/);
-      this.clan = clanMatch ? clanMatch[1] : null;
+      this.clan = clanMatch ? clanMatch[1].toUpperCase() : null;
     }
   }
 }
