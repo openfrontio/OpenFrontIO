@@ -29,6 +29,10 @@ export class AttackExecution implements Execution {
 
   private attackStartTick: number = 0;
 
+  // Centroid caching to avoid redundant computation (called many times per tick with same result)
+  private cachedCentroid: { x: number; y: number } | null = null;
+  private cachedCentroidTick: number = -1;
+
   constructor(
     private startTroops: number | null = null,
     private _owner: Player,
@@ -298,24 +302,52 @@ export class AttackExecution implements Execution {
   /**
    * Calculate the centroid (center point) of the attacker's border tiles.
    * This serves as the reference point for directional attack calculations.
+   *
+   * Performance optimization: Results are cached per tick since addNeighbors() is called
+   * many times per tick (once per border tile in refreshToConquer, once per conquered tile)
+   * but the centroid remains constant within a single tick.
+   *
    * @returns {x: number, y: number} The centroid coordinates
    */
   private getAttackerCentroid(): { x: number; y: number } {
+    const currentTick = this.mg.ticks();
+
+    // Return cached value if available for current tick
+    if (
+      this.cachedCentroid !== null &&
+      this.cachedCentroidTick === currentTick
+    ) {
+      return this.cachedCentroid;
+    }
+
+    // Calculate new centroid
     const borderTiles = Array.from(this._owner.borderTiles());
+    let centroid: { x: number; y: number };
+
     if (borderTiles.length === 0) {
       // Fallback: use all tiles if no border tiles exist
       const allTiles = Array.from(this._owner.tiles());
       if (allTiles.length === 0) {
-        return { x: 0, y: 0 }; // Ultimate fallback
+        // This should never happen during a valid attack - a player with no tiles cannot attack.
+        // Throwing an error helps catch bugs rather than silently biasing toward map origin (0,0).
+        throw new Error(
+          `getAttackerCentroid: Player ${this._owner.id()} has no tiles`,
+        );
       }
       const sumX = allTiles.reduce((sum, tile) => sum + this.mg.x(tile), 0);
       const sumY = allTiles.reduce((sum, tile) => sum + this.mg.y(tile), 0);
-      return { x: sumX / allTiles.length, y: sumY / allTiles.length };
+      centroid = { x: sumX / allTiles.length, y: sumY / allTiles.length };
+    } else {
+      const sumX = borderTiles.reduce((sum, tile) => sum + this.mg.x(tile), 0);
+      const sumY = borderTiles.reduce((sum, tile) => sum + this.mg.y(tile), 0);
+      centroid = { x: sumX / borderTiles.length, y: sumY / borderTiles.length };
     }
 
-    const sumX = borderTiles.reduce((sum, tile) => sum + this.mg.x(tile), 0);
-    const sumY = borderTiles.reduce((sum, tile) => sum + this.mg.y(tile), 0);
-    return { x: sumX / borderTiles.length, y: sumY / borderTiles.length };
+    // Cache the result
+    this.cachedCentroid = centroid;
+    this.cachedCentroidTick = currentTick;
+
+    return centroid;
   }
 
   private addNeighbors(tile: TileRef) {
