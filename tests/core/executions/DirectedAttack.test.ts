@@ -127,7 +127,7 @@ describe("DirectedAttack", () => {
     // Verify that attacks with clickTile parameter use the direction weight configuration
 
     const config = game.config() as TestConfig;
-    expect(config.attackDirectionWeight()).toBe(0.5); // Scaled by defensibility weight for consistent influence
+    expect(config.attackDirectionWeight()).toBe(0.5);
 
     // Create attack with clickTile
     const clickTile = game.ref(10, 15);
