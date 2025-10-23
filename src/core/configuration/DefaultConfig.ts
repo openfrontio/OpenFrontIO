@@ -740,17 +740,11 @@ largeAttackerSpeedThresholdDebuff(attacker: Player, totalLandTiles: number): num
 
       const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
       const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
+      
+      const largeAttackBonus = 1;
+      const largeAttackerSpeedBonus = 1;
 
-      let largeAttackBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackBonus = Math.sqrt(100_000 / attacker.numTilesOwned()) ** 0.7;
-      }
-      let largeAttackerSpeedBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
-      }
-
-const thresholdDebuff = this.largeAttackerSpeedThresholdDebuff(
+      const thresholdDebuff = this.largeAttackerSpeedThresholdDebuff(
       attacker,
       gm.numLandTiles()
     );
@@ -761,14 +755,12 @@ const thresholdDebuff = this.largeAttackerSpeedThresholdDebuff(
           mag *
           0.8 *
           largeDefenderAttackDebuff *
-          largeAttackBonus *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
           largeDefenderSpeedDebuff *
-          largeAttackerSpeedBonus *
           thresholdDebuff *
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
