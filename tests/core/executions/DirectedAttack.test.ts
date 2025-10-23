@@ -202,37 +202,127 @@ describe("DirectedAttack", () => {
     // Verify that clicking at different distances in the same direction
     // produces similar expansion patterns (distance-independent behavior)
 
-    // Give defender more territory
-    for (let i = 0; i < 50; i++) {
-      game.executeNextTick();
-    }
+    // Helper function to measure directional bias for a given click point coordinates
+    const measureDirectionalBias = async (
+      clickX: number,
+      clickY: number,
+    ): Promise<number> => {
+      // Reset to clean state for each measurement
+      const gameLocal = await setup("ocean_and_land", {
+        infiniteGold: true,
+        instantBuild: true,
+        infiniteTroops: true,
+      });
+      const attackerInfo = new PlayerInfo(
+        "attacker dude",
+        PlayerType.Human,
+        null,
+        "attacker_id",
+      );
+      gameLocal.addPlayer(attackerInfo);
+      const defenderInfo = new PlayerInfo(
+        "defender dude",
+        PlayerType.Human,
+        null,
+        "defender_id",
+      );
+      gameLocal.addPlayer(defenderInfo);
 
-    // Test clicking in the same direction (east) but at different distances
-    // Both should favor eastward expansion since they're in the same direction
+      const defenderSpawnLocal = gameLocal.ref(5, 15);
+      const attackerSpawnLocal = gameLocal.ref(5, 10);
 
-    const clickTileEast = game.ref(8, 15); // East of attacker
+      gameLocal.addExecution(
+        new SpawnExecution(
+          gameLocal.player(attackerInfo.id).info(),
+          attackerSpawnLocal,
+        ),
+        new SpawnExecution(
+          gameLocal.player(defenderInfo.id).info(),
+          defenderSpawnLocal,
+        ),
+      );
 
-    // With direction-based logic, the expansion should favor tiles in the eastward direction
-    // The distance from the attacker to the click point shouldn't matter,
-    // only the direction matters
+      while (gameLocal.inSpawnPhase()) {
+        gameLocal.executeNextTick();
+      }
 
-    const attackExecution = new AttackExecution(
-      100,
-      attacker,
-      defender.id(),
-      null,
-      true,
-      clickTileEast,
-    );
-    game.addExecution(attackExecution);
-    game.executeNextTick();
+      const attackerLocal = gameLocal.player(attackerInfo.id);
+      const defenderLocal = gameLocal.player(defenderInfo.id);
 
-    // Verify attack was created successfully
-    expect(attacker.outgoingAttacks()).toHaveLength(1);
+      // Give defender territory
+      gameLocal.addExecution(
+        new AttackExecution(100, defenderLocal, gameLocal.terraNullius().id()),
+      );
+      gameLocal.executeNextTick();
+      while (defenderLocal.outgoingAttacks().length > 0) {
+        gameLocal.executeNextTick();
+      }
 
-    // The key insight: with direction-based (not distance-based) logic,
-    // the expansion should favor tiles in the eastward direction,
-    // regardless of whether we click close or far in that direction
+      // Give defender more territory spreading in multiple directions
+      for (let i = 0; i < 50; i++) {
+        gameLocal.executeNextTick();
+      }
+
+      const attackerSpawnX = gameLocal.x(attackerSpawnLocal);
+
+      // Create click tile reference for this game instance
+      const clickTile = gameLocal.ref(clickX, clickY);
+
+      // Run attack with the given click point
+      const attackExecution = new AttackExecution(
+        200,
+        attackerLocal,
+        defenderLocal.id(),
+        null,
+        true,
+        clickTile,
+      );
+      gameLocal.addExecution(attackExecution);
+      gameLocal.executeNextTick();
+
+      // Run attack for a fixed number of ticks
+      for (let i = 0; i < 30; i++) {
+        gameLocal.executeNextTick();
+        if (attackerLocal.outgoingAttacks().length === 0) break;
+      }
+
+      // Measure conquered tiles by direction
+      let conqueredEast = 0;
+      let conqueredWest = 0;
+
+      for (const tile of attackerLocal.tiles()) {
+        const tileX = gameLocal.x(tile);
+        const deltaX = tileX - attackerSpawnX;
+
+        if (deltaX > 1) {
+          conqueredEast++;
+        } else if (deltaX < -1) {
+          conqueredWest++;
+        }
+      }
+
+      // Return east-to-west ratio as directional bias metric
+      return conqueredEast / Math.max(conqueredWest, 1);
+    };
+
+    // Test clicking at NEAR distance (close to attacker) in east direction
+    const biasNear = await measureDirectionalBias(6, 15);
+
+    // Test clicking at FAR distance (far from attacker) in east direction
+    const biasFar = await measureDirectionalBias(12, 15);
+
+    // Verify both attacks made conquests in either direction
+    expect(biasNear).toBeGreaterThan(0);
+    expect(biasFar).toBeGreaterThan(0);
+
+    // The key assertion: near and far clicks in the same direction should
+    // produce similar directional biases (within 50% tolerance)
+    // This demonstrates distance-independence: only direction matters, not distance
+    // The actual direction of bias depends on terrain/territory distribution,
+    // but both clicks in the same direction should produce similar patterns
+    const ratioOfBiases =
+      Math.max(biasNear, biasFar) / Math.min(biasNear, biasFar);
+    expect(ratioOfBiases).toBeLessThan(1.5);
   });
 
   test("Wave front effect: earlier tiles are conquered before later tiles", async () => {

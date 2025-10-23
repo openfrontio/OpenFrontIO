@@ -344,89 +344,65 @@ export class AttackExecution implements Execution {
         const neighborX = this.mg.x(neighbor);
         const neighborY = this.mg.y(neighbor);
 
-        // Find the best-aligned border tile adjacent to this neighbor
-        let bestDotProduct = -Infinity;
-        let bestDistance = Infinity;
+        // Use the current border tile directly (tile parameter)
+        // Since neighbor comes from this.mg.neighbors(tile), tile is already adjacent to neighbor
+        const borderX = this.mg.x(tile);
+        const borderY = this.mg.y(tile);
 
-        // Check border tiles adjacent to this neighbor
-        for (const borderTile of this._owner.borderTiles()) {
-          // Only consider border tiles adjacent to the neighbor
-          // Check if neighbor is in the borderTile's neighbor list
-          let isAdjacent = false;
-          for (const n of this.mg.neighbors(borderTile)) {
-            if (n === neighbor) {
-              isAdjacent = true;
-              break;
-            }
-          }
-          if (!isAdjacent) {
-            continue;
-          }
+        // Vector from border tile -> click point
+        const dirX = clickX - borderX;
+        const dirY = clickY - borderY;
+        const dirMag = Math.sqrt(dirX * dirX + dirY * dirY);
 
-          const borderX = this.mg.x(borderTile);
-          const borderY = this.mg.y(borderTile);
+        if (dirMag > 0.001) {
+          // Normalize direction vector
+          const dirNormX = dirX / dirMag;
+          const dirNormY = dirY / dirMag;
 
-          // Vector from border tile -> click point
-          const dirX = clickX - borderX;
-          const dirY = clickY - borderY;
-          const dirMag = Math.sqrt(dirX * dirX + dirY * dirY);
+          // Vector from border tile -> neighbor
+          const toNeighborX = neighborX - borderX;
+          const toNeighborY = neighborY - borderY;
+          const toNeighborMag = Math.sqrt(
+            toNeighborX * toNeighborX + toNeighborY * toNeighborY,
+          );
 
-          if (dirMag > 0.001) {
-            // Normalize direction vector
-            const dirNormX = dirX / dirMag;
-            const dirNormY = dirY / dirMag;
+          if (toNeighborMag > 0.001) {
+            // Normalize neighbor vector
+            const toNeighborNormX = toNeighborX / toNeighborMag;
+            const toNeighborNormY = toNeighborY / toNeighborMag;
 
-            // Vector from border tile -> neighbor
-            const toNeighborX = neighborX - borderX;
-            const toNeighborY = neighborY - borderY;
-            const toNeighborMag = Math.sqrt(
-              toNeighborX * toNeighborX + toNeighborY * toNeighborY,
+            // Dot product measures alignment (-1 to 1)
+            const dotProduct =
+              dirNormX * toNeighborNormX + dirNormY * toNeighborNormY;
+
+            // Apply direction bias with explicit exponential time decay
+            // Calculate explicit exponential time decay
+            // Direction influence fades naturally as attack progresses
+            const timeSinceStart = tickNow - this.attackStartTick;
+            const timeDecayConstant = this.mg.config().attackTimeDecay();
+            const timeDecayFactor = Math.exp(
+              -timeSinceStart / timeDecayConstant,
             );
 
-            if (toNeighborMag > 0.001) {
-              // Normalize neighbor vector
-              const toNeighborNormX = toNeighborX / toNeighborMag;
-              const toNeighborNormY = toNeighborY / toNeighborMag;
-
-              // Dot product measures alignment (-1 to 1)
-              const dotProduct =
-                dirNormX * toNeighborNormX + dirNormY * toNeighborNormY;
-
-              // Track best alignment among adjacent border tiles
-              if (dotProduct > bestDotProduct) {
-                bestDotProduct = dotProduct;
-                bestDistance = dirMag;
-              }
-            }
-          }
-        }
-
-        // Apply direction bias with explicit exponential time decay
-        if (bestDotProduct > -Infinity) {
-          // Calculate explicit exponential time decay
-          // Direction influence fades naturally as attack progresses
-          const timeSinceStart = tickNow - this.attackStartTick;
-          const timeDecayConstant = this.mg.config().attackTimeDecay();
-          const timeDecayFactor = Math.exp(-timeSinceStart / timeDecayConstant);
-
-          // Apply direction offset with time decay (additive approach)
-          // (1.0 - dotProduct) gives 0.0 for perfect alignment, 2.0 for opposite
-          const directionOffset =
-            (1.0 - bestDotProduct) *
-            this.mg.config().attackDirectionWeight() *
-            timeDecayFactor;
-          priority += directionOffset;
-
-          // Optional: Add magnitude-based proximity bonus (distance decay)
-          // Tiles closer to click point get additional priority boost
-          const magnitudeWeight = this.mg.config().attackMagnitudeWeight();
-          if (magnitudeWeight > 0) {
-            const distanceDecayConstant = 20.0; // Tiles 20+ units away get minimal bonus
-            const proximityBonus =
-              Math.exp(-bestDistance / distanceDecayConstant) *
-              magnitudeWeight *
+            // Apply direction offset with time decay (additive approach)
+            // (1.0 - dotProduct) gives 0.0 for perfect alignment, 2.0 for opposite
+            const directionOffset =
+              (1.0 - dotProduct) *
+              this.mg.config().attackDirectionWeight() *
               timeDecayFactor;
-            priority -= proximityBonus; // Lower priority = better (min-heap)
+            priority += directionOffset;
+
+            // Optional: Add magnitude-based proximity bonus (distance decay)
+            // Tiles closer to click point get additional priority boost
+            const magnitudeWeight = this.mg.config().attackMagnitudeWeight();
+            if (magnitudeWeight > 0) {
+              const distanceDecayConstant = 20.0; // Tiles 20+ units away get minimal bonus
+              const proximityBonus =
+                Math.exp(-dirMag / distanceDecayConstant) *
+                magnitudeWeight *
+                timeDecayFactor;
+              priority -= proximityBonus; // Lower priority = better (min-heap)
+            }
           }
         }
       }
