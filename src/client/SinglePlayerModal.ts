@@ -38,7 +38,6 @@ export class SinglePlayerModal extends LitElement {
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs: boolean = false;
   @state() private bots: number = 400;
-  @state() private nations: number = 10;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
   @state() private compactMap: boolean = false;
@@ -469,14 +468,6 @@ export class SinglePlayerModal extends LitElement {
     this.bots = value;
   }
 
-  private handleNationsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
-    if (isNaN(value) || value < 1 || value > 400) {
-      return;
-    }
-    this.nations = value;
-  }
-
   private handleInstantBuildChange(e: Event) {
     this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
   }
@@ -604,7 +595,6 @@ export class SinglePlayerModal extends LitElement {
               disableNPCs: this.disableNPCs,
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
               bots: this.bots,
-              nations: this.nations,
               infiniteGold: this.infiniteGold,
               donateGold: true,
               donateTroops: true,
