@@ -63,6 +63,7 @@ export interface ServerConfig {
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
+  enableMatchmaking(): boolean;
 }
 
 export interface NukeMagnitude {
@@ -130,6 +131,7 @@ export interface Config {
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  deletionMarkDuration(): Tick;
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;

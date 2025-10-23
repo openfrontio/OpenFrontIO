@@ -71,6 +71,8 @@ const TEAM_COUNTS = [
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
 
+  constructor(private disableTeams: boolean = false) {}
+
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
@@ -88,6 +90,7 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
+      maxTimerValue: undefined,
       instantBuild: false,
       disableNPCs: mode === GameMode.Team,
       gameMode: mode,
@@ -134,8 +137,10 @@ export class MapPlaylist {
       if (!this.addNextMap(this.mapsPlaylist, ffa, GameMode.FFA)) {
         return false;
       }
-      if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {
-        return false;
+      if (!this.disableTeams) {
+        if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {
+          return false;
+        }
       }
     }
     return true;

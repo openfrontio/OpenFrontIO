@@ -44,6 +44,8 @@ export class HostLobbyModal extends LitElement {
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
   @state() private donateTroops: boolean = false;
+  @state() private maxTimer: boolean = false;
+  @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
   @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
@@ -442,6 +444,42 @@ export class HostLobbyModal extends LitElement {
                 </div>
               </label>
 
+                <label
+                  for="max-timer"
+                class="option-card ${this.maxTimer ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="max-timer"
+                    @change=${(e: Event) => {
+                      const checked = (e.target as HTMLInputElement).checked;
+                      if (!checked) {
+                        this.maxTimerValue = undefined;
+                      }
+                      this.maxTimer = checked;
+                      this.putGameConfig();
+                    }}
+                    .checked=${this.maxTimer}
+                  />
+                    ${
+                      this.maxTimer === false
+                        ? ""
+                        : html`<input
+                            type="number"
+                            id="end-timer-value"
+                            min="0"
+                            max="120"
+                            .value=${String(this.maxTimerValue ?? "")}
+                            style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                            @input=${this.handleMaxTimerValueChanges}
+                            @keydown=${this.handleMaxTimerValueKeyDown}
+                          />`
+                    }
+                  <div class="option-card-title">
+                    ${translateText("host_modal.max_timer")}
+                  </div>
+                </label>
                 <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
 
                 <!-- Individual disables for structures/weapons -->
@@ -630,6 +668,25 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleMaxTimerValueChanges(e: Event) {
+    (e.target as HTMLInputElement).value = (
+      e.target as HTMLInputElement
+    ).value.replace(/[e+-]/gi, "");
+    const value = parseInt((e.target as HTMLInputElement).value);
+
+    if (isNaN(value) || value < 0 || value > 120) {
+      return;
+    }
+    this.maxTimerValue = value;
+    this.putGameConfig();
+  }
+
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
     console.log(`updating disable npcs to ${this.disableNPCs}`);
@@ -671,6 +728,8 @@ export class HostLobbyModal extends LitElement {
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
+          maxTimerValue:
+            this.maxTimer === true ? this.maxTimerValue : undefined,
         } satisfies Partial<GameConfig>),
       },
     );
