@@ -644,7 +644,7 @@ largeAttackerSpeedThresholdDebuff(attacker: Player, totalLandTiles: number): num
     { max: 75, value: 0.01 },
     { max: 80, value: 0.007 },
   ];
-  
+  //
   for (const threshold of thresholds) {
     if (territoryPercentage < threshold.max) {
       return threshold.value;
