@@ -12,6 +12,7 @@ import { TileRef } from "../../src/core/game/GameMap";
 export class TestConfig extends DefaultConfig {
   private _proximityBonusPortsNb: number = 0;
   private _defaultNukeSpeed: number = 4;
+  private _attackDirectionWeight: number | null = null;
 
   samHittingChance(): number {
     return 1;
@@ -40,6 +41,17 @@ export class TestConfig extends DefaultConfig {
 
   defaultNukeSpeed(): number {
     return this._defaultNukeSpeed;
+  }
+
+  setAttackDirectionWeight(weight: number): void {
+    this._attackDirectionWeight = weight;
+  }
+
+  attackDirectionWeight(): number {
+    if (this._attackDirectionWeight !== null) {
+      return this._attackDirectionWeight;
+    }
+    return super.attackDirectionWeight();
   }
 
   defaultNukeTargetableRange(): number {

@@ -811,13 +811,30 @@ export class DefaultConfig implements Config {
   /**
    * Weight for magnitude-based proximity bonus (distance decay).
    * Tiles closer to the clicked point receive additional priority bonus.
+   * Uses BFS (topological) distance when available, falls back to Euclidean.
    * - 0.0: Disabled - pure directional bias only
+   * - 0.3: Subtle - minor locality preference
    * - 1.0: Balanced - moderate proximity bonus (recommended)
    * - 2.0+: Strong locality preference
    * This creates triangular convergence toward the clicked point.
    */
   attackMagnitudeWeight(): number {
     return 1.0;
+  }
+
+  /**
+   * Distance decay constant for proximity bonus (in tiles for BFS, coordinate units for Euclidean).
+   * Controls how quickly the proximity bonus fades with distance from click point.
+   *
+   * For BFS distances (topological):
+   * - 30 tiles: Bonus decays to ~37% at 30 tiles, ~5% at 90 tiles (recommended)
+   * - 50 tiles: Slower decay - bonus persists longer
+   * - 20 tiles: Faster decay - only very close tiles get significant bonus
+   *
+   * Lower values = faster fade, Higher values = proximity persists longer
+   */
+  attackDistanceDecayConstant(): number {
+    return 30.0;
   }
 
   startManpower(playerInfo: PlayerInfo): number {

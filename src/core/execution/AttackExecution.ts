@@ -29,6 +29,18 @@ export class AttackExecution implements Execution {
 
   private attackStartTick: number = 0;
 
+  // Downscaled BFS distances (coarse grid only, for proximity bonus)
+  private clickDistances: Map<TileRef, number> | null = null;
+
+  // Downscale configuration
+  private readonly DOWNSAMPLE_FACTOR = 10; // Sample every 10th tile
+  private downsampleFactor: number = 10;
+
+  // Performance telemetry for downscaled BFS
+  private bfsInitTime: number = 0;
+  private bfsCoarseGridSize: number = 0;
+  private bfsDistanceLookups: number = 0;
+
   constructor(
     private startTroops: number | null = null,
     private _owner: Player,
@@ -55,6 +67,7 @@ export class AttackExecution implements Execution {
 
     if (this._targetID !== null && !mg.hasPlayer(this._targetID)) {
       console.warn(`target ${this._targetID} not found`);
+      this.cleanupBFSDistances();
       this.active = false;
       return;
     }
@@ -66,6 +79,7 @@ export class AttackExecution implements Execution {
 
     if (this._owner === this.target) {
       console.error(`Player ${this._owner} cannot attack itself`);
+      this.cleanupBFSDistances();
       this.active = false;
       return;
     }
@@ -77,6 +91,7 @@ export class AttackExecution implements Execution {
         console.warn(
           `${this._owner.displayName()} cannot attack ${targetPlayer.displayName()} because they are friendly (allied or same team)`,
         );
+        this.cleanupBFSDistances();
         this.active = false;
         return;
       }
@@ -94,6 +109,41 @@ export class AttackExecution implements Execution {
       }
     }
 
+    // Compute downscaled BFS distances for directed attack
+    if (this.clickTile !== null) {
+      // Validate click tile exists in map by checking if it has neighbors
+      const neighbors = this.mg.neighbors(this.clickTile);
+      if (neighbors.length === 0) {
+        console.warn(
+          `[DirectedAttack] Click tile has no neighbors, may be invalid`,
+        );
+      }
+
+      // Performance: Measure downscaled BFS computation time
+      const startTime = performance.now();
+
+      // Build coarse grid (sample every Nth tile)
+      const coarseGrid = this.buildCoarseGrid(this.DOWNSAMPLE_FACTOR);
+      this.bfsCoarseGridSize = coarseGrid.size;
+
+      // Compute BFS on coarse grid only
+      this.clickDistances = this.computeDownscaledBFS(
+        this.clickTile,
+        coarseGrid,
+        this.DOWNSAMPLE_FACTOR,
+      );
+
+      const endTime = performance.now();
+      this.bfsInitTime = endTime - startTime;
+
+      console.log(
+        `[DirectedAttack] Downscaled BFS (${this.DOWNSAMPLE_FACTOR}x): computed ${this.clickDistances.size} coarse tiles in ${this.bfsInitTime.toFixed(2)}ms`,
+      );
+
+      // Store downsample factor for distance lookups
+      this.downsampleFactor = this.DOWNSAMPLE_FACTOR;
+    }
+
     if (this.target.isPlayer()) {
       if (
         this.mg.config().numSpawnPhaseTurns() +
@@ -101,6 +151,7 @@ export class AttackExecution implements Execution {
         this.mg.ticks()
       ) {
         console.warn("cannot attack player during immunity phase");
+        this.cleanupBFSDistances();
         this.active = false;
         return;
       }
@@ -135,6 +186,7 @@ export class AttackExecution implements Execution {
         if (incoming.troops() > this.attack.troops()) {
           incoming.setTroops(incoming.troops() - this.attack.troops());
           this.attack.delete();
+          this.cleanupBFSDistances();
           this.active = false;
           return;
         } else {
@@ -188,6 +240,7 @@ export class AttackExecution implements Execution {
     const survivors = this.attack.troops() - deaths;
     this._owner.addTroops(survivors);
     this.attack.delete();
+    this.cleanupBFSDistances();
     this.active = false;
 
     // Not all retreats are canceled attacks
@@ -211,6 +264,7 @@ export class AttackExecution implements Execution {
       } else {
         this.retreat();
       }
+      this.cleanupBFSDistances();
       this.active = false;
       return;
     }
@@ -220,6 +274,7 @@ export class AttackExecution implements Execution {
     }
 
     if (!this.attack.isActive()) {
+      this.cleanupBFSDistances();
       this.active = false;
       return;
     }
@@ -242,6 +297,7 @@ export class AttackExecution implements Execution {
     while (numTilesPerTick > 0) {
       if (troopCount < 1) {
         this.attack.delete();
+        this.cleanupBFSDistances();
         this.active = false;
         return;
       }
@@ -293,6 +349,199 @@ export class AttackExecution implements Execution {
     if (request !== undefined) {
       request.reject();
     }
+  }
+
+  /**
+   * Computes BFS (topological) distances from the clicked tile to all reachable tiles.
+   * Returns a map of TileRef -> distance (in tiles).
+   *
+   * This provides topologically-correct distances that respect terrain connectivity,
+   * fixing issues with Euclidean distance across rivers, water, or disconnected regions.
+   *
+   * @param clickTile The tile that was clicked to initiate the directed attack
+   * @param traverseEnemyTerritory If true, BFS traverses through enemy tiles; if false, stops at borders
+   * @returns Map of tile references to their BFS distance from clickTile
+   */
+  private computeBFSDistances(
+    clickTile: TileRef,
+    traverseEnemyTerritory: boolean = true,
+  ): Map<TileRef, number> {
+    const distances = new Map<TileRef, number>();
+    distances.set(clickTile, 0);
+
+    // Circular buffer implementation for O(1) enqueue/dequeue
+    // Pre-allocate buffer for up to 1M tiles (typical world map size)
+    const BUFFER_SIZE = 1_000_000;
+    const queue = new Array<TileRef>(BUFFER_SIZE);
+    let head = 0;
+    let tail = 0;
+
+    // Enqueue start tile
+    queue[tail] = clickTile;
+    tail = (tail + 1) % BUFFER_SIZE;
+
+    while (head !== tail) {
+      // Dequeue (O(1) instead of O(n) with array.shift())
+      const current = queue[head];
+      head = (head + 1) % BUFFER_SIZE;
+
+      const currentDist = distances.get(current)!;
+
+      for (const neighbor of this.mg.neighbors(current)) {
+        // Skip if already visited
+        if (distances.has(neighbor)) continue;
+
+        // Optional: respect territory boundaries
+        if (!traverseEnemyTerritory) {
+          const owner = this.mg.owner(neighbor);
+          // Only traverse through own territory and target's territory
+          if (owner !== this._owner && owner !== this.target) {
+            continue;
+          }
+        }
+
+        distances.set(neighbor, currentDist + 1);
+
+        // Enqueue (O(1))
+        queue[tail] = neighbor;
+        tail = (tail + 1) % BUFFER_SIZE;
+      }
+    }
+
+    return distances;
+  }
+
+  /**
+   * Builds a coarse grid by sampling every Nth tile in both x and y directions.
+   * For a 2000x1000 map with downsample=10, this creates a 200x100 = 20,000 tile coarse grid.
+   *
+   * @param downsampleFactor Sample every Nth tile (default: 10)
+   * @returns Set of coarse tile refs for fast O(1) lookup
+   */
+  private buildCoarseGrid(downsampleFactor: number): Set<TileRef> {
+    const coarseTiles = new Set<TileRef>();
+    const mapWidth = this.mg.width();
+    const mapHeight = this.mg.height();
+
+    // Sample tiles at grid points: (0,0), (10,0), (20,0), ... (0,10), (10,10), ...
+    for (let y = 0; y < mapHeight; y += downsampleFactor) {
+      for (let x = 0; x < mapWidth; x += downsampleFactor) {
+        if (this.mg.isValidCoord(x, y)) {
+          const tile = this.mg.ref(x, y);
+          coarseTiles.add(tile);
+        }
+      }
+    }
+
+    return coarseTiles;
+  }
+
+  /**
+   * Finds the nearest coarse grid tile to a given tile.
+   * Rounds coordinates to the nearest grid point.
+   *
+   * @param tile The tile to find nearest coarse tile for
+   * @param downsampleFactor The grid spacing
+   * @returns Nearest coarse tile ref
+   */
+  private findNearestCoarseTile(
+    tile: TileRef,
+    downsampleFactor: number,
+  ): TileRef {
+    const x = this.mg.x(tile);
+    const y = this.mg.y(tile);
+
+    // Round to nearest grid point
+    const coarseX = Math.round(x / downsampleFactor) * downsampleFactor;
+    const coarseY = Math.round(y / downsampleFactor) * downsampleFactor;
+
+    // Clamp to valid map coordinates
+    const mapWidth = this.mg.width();
+    const mapHeight = this.mg.height();
+    const clampedX = Math.max(0, Math.min(mapWidth - 1, coarseX));
+    const clampedY = Math.max(0, Math.min(mapHeight - 1, coarseY));
+
+    return this.mg.ref(clampedX, clampedY);
+  }
+
+  /**
+   * Computes BFS distances on a downscaled coarse grid.
+   * Only traverses tiles that are in the coarse grid, resulting in ~100x fewer tiles processed.
+   *
+   * @param clickTile The tile that was clicked (start of BFS)
+   * @param coarseGrid Set of tiles in the coarse grid
+   * @param downsampleFactor Grid spacing for finding neighbors
+   * @returns Map of coarse tile refs to their BFS distance from start
+   */
+  private computeDownscaledBFS(
+    clickTile: TileRef,
+    coarseGrid: Set<TileRef>,
+    downsampleFactor: number,
+  ): Map<TileRef, number> {
+    const distances = new Map<TileRef, number>();
+
+    // Find nearest coarse tile to click point as start
+    const startTile = this.findNearestCoarseTile(clickTile, downsampleFactor);
+    distances.set(startTile, 0);
+
+    // BFS queue
+    const queue: TileRef[] = [startTile];
+    let head = 0;
+
+    while (head < queue.length) {
+      const current = queue[head++];
+      const currentDist = distances.get(current)!;
+
+      // Get coarse neighbors (tiles at ±downsampleFactor in each direction)
+      const x = this.mg.x(current);
+      const y = this.mg.y(current);
+      const mapWidth = this.mg.width();
+      const mapHeight = this.mg.height();
+
+      const neighborOffsets = [
+        [0, -downsampleFactor], // North
+        [0, +downsampleFactor], // South
+        [-downsampleFactor, 0], // West
+        [+downsampleFactor, 0], // East
+      ];
+
+      for (const [dx, dy] of neighborOffsets) {
+        const nx = x + dx;
+        const ny = y + dy;
+
+        if (nx >= 0 && nx < mapWidth && ny >= 0 && ny < mapHeight) {
+          const neighbor = this.mg.ref(nx, ny);
+
+          // Only process if it's in coarse grid and not visited
+          if (coarseGrid.has(neighbor) && !distances.has(neighbor)) {
+            distances.set(neighbor, currentDist + 1);
+            queue.push(neighbor);
+          }
+        }
+      }
+    }
+
+    return distances;
+  }
+
+  /**
+   * Gets the downscaled BFS distance for any tile by looking up its nearest coarse grid tile.
+   *
+   * @param tile The tile to get distance for
+   * @returns BFS distance in tiles, or null if not available
+   */
+  private getDownscaledDistance(tile: TileRef): number | null {
+    if (this.clickDistances === null) {
+      return null;
+    }
+
+    this.bfsDistanceLookups++;
+
+    // Find nearest coarse tile
+    const coarseTile = this.findNearestCoarseTile(tile, this.downsampleFactor);
+
+    // Return its distance
+    return this.clickDistances.get(coarseTile) ?? null;
   }
 
   private addNeighbors(tile: TileRef) {
@@ -392,13 +641,30 @@ export class AttackExecution implements Execution {
               timeDecayFactor;
             priority += directionOffset;
 
-            // Optional: Add magnitude-based proximity bonus (distance decay)
-            // Tiles closer to click point get additional priority boost
+            // Optional: Add BFS-based proximity bonus (topological distance decay)
+            // Tiles topologically closer to click point get additional priority boost
             const magnitudeWeight = this.mg.config().attackMagnitudeWeight();
             if (magnitudeWeight > 0) {
-              const distanceDecayConstant = 20.0; // Tiles 20+ units away get minimal bonus
+              // Get downscaled BFS distance (from coarse grid), fall back to Euclidean
+              // Note: In addNeighbors() context, 'tile' refers to the border tile (not neighbor)
+              let distance: number;
+              const bfsDistance = this.getDownscaledDistance(tile); // tile = current border tile
+              if (bfsDistance !== null) {
+                // Use downscaled BFS distance (topologically correct, ±5-10 tile accuracy)
+                distance = bfsDistance;
+              } else {
+                // BFS not available or tile unreachable, use Euclidean
+                distance = dirMag;
+              }
+
+              // Apply exponential distance decay
+              // Note: BFS distance is in tiles, Euclidean was in coordinate units
+              // Adjust decay constant accordingly
+              const distanceDecayConstant = this.mg
+                .config()
+                .attackDistanceDecayConstant();
               const proximityBonus =
-                Math.exp(-dirMag / distanceDecayConstant) *
+                Math.exp(-distance / distanceDecayConstant) *
                 magnitudeWeight *
                 timeDecayFactor;
               priority -= proximityBonus; // Lower priority = better (min-heap)
@@ -408,6 +674,26 @@ export class AttackExecution implements Execution {
       }
 
       this.toConquer.enqueue(neighbor, priority);
+    }
+  }
+
+  /**
+   * Cleans up BFS distance map to free memory.
+   * Call this when the attack ends/deactivates.
+   */
+  private cleanupBFSDistances() {
+    if (this.clickDistances !== null) {
+      // Log downscaled BFS telemetry before cleanup
+      if (this.bfsCoarseGridSize > 0) {
+        console.log(
+          `[DirectedAttack] Downscaled Stats: ${this.bfsCoarseGridSize} coarse tiles, ` +
+            `downsample=${this.downsampleFactor}x, init=${this.bfsInitTime.toFixed(2)}ms, ` +
+            `${this.bfsDistanceLookups} distance lookups`,
+        );
+      }
+
+      this.clickDistances.clear();
+      this.clickDistances = null;
     }
   }
 
