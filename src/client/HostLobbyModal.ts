@@ -57,6 +57,7 @@ export class HostLobbyModal extends LitElement {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
+  @state() private automaticDifficulty: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
@@ -228,10 +229,7 @@ export class HostLobbyModal extends LitElement {
           </div>
 
           ${
-            !(
-              this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations
-            )
+            !this.automaticDifficulty
               ? html`
                   <!-- Difficulty Selection -->
                   <div class="options-section">
@@ -388,6 +386,31 @@ export class HostLobbyModal extends LitElement {
                           />
                           <div class="option-card-title">
                             ${translateText("host_modal.disable_nations")}
+                          </div>
+                        </label>
+                      `
+                    : ""
+                }
+
+                ${
+                  this.gameMode === GameMode.Team &&
+                  this.teamCount === HumansVsNations
+                    ? html`
+                        <label
+                          for="automatic-difficulty"
+                          class="option-card ${this.automaticDifficulty
+                            ? "selected"
+                            : ""}"
+                        >
+                          <div class="checkbox-icon"></div>
+                          <input
+                            type="checkbox"
+                            id="automatic-difficulty"
+                            @change=${this.handleAutomaticDifficultyChange}
+                            .checked=${this.automaticDifficulty}
+                          />
+                          <div class="option-card-title">
+                            ${translateText("host_modal.automatic_difficulty")}
                           </div>
                         </label>
                       `
@@ -744,6 +767,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleAutomaticDifficultyChange(e: Event) {
+    this.automaticDifficulty = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
     if (["-", "+", "e"].includes(e.key)) {
       e.preventDefault();
@@ -805,8 +833,10 @@ export class HostLobbyModal extends LitElement {
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
             ? {
+                nations: this.nations,
                 bots: undefined,
                 disableNPCs: undefined,
+                automaticDifficulty: this.automaticDifficulty,
               }
             : {
                 bots: this.bots,

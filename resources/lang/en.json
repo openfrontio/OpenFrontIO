@@ -147,6 +147,7 @@
     "compact_map": "Mini Map",
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
+    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "start": "Start Game"
   },
@@ -253,6 +254,7 @@
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
     "compact_map": "Mini Map",
+    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",

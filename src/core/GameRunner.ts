@@ -90,23 +90,25 @@ export async function createGameRunner(
       nations = random.shuffleArray(nations).slice(0, targetNationCount);
     }
 
-    // Calculate difficulty based on human percentage
-    const totalPlayers = humans.length + nations.length;
-    const humanPercentage = humans.length / totalPlayers;
+    // Only calculate difficulty based on human percentage if automaticDifficulty is enabled
+    if (gameStart.config.automaticDifficulty) {
+      const totalPlayers = humans.length + nations.length;
+      const humanPercentage = humans.length / totalPlayers;
 
-    let calculatedDifficulty: Difficulty;
-    if (humanPercentage < 0.25) {
-      calculatedDifficulty = Difficulty.Easy;
-    } else if (humanPercentage < 0.5) {
-      calculatedDifficulty = Difficulty.Medium;
-    } else if (humanPercentage < 0.75) {
-      calculatedDifficulty = Difficulty.Hard;
-    } else {
-      calculatedDifficulty = Difficulty.Impossible;
+      let calculatedDifficulty: Difficulty;
+      if (humanPercentage < 0.25) {
+        calculatedDifficulty = Difficulty.Easy;
+      } else if (humanPercentage < 0.5) {
+        calculatedDifficulty = Difficulty.Medium;
+      } else if (humanPercentage < 0.75) {
+        calculatedDifficulty = Difficulty.Hard;
+      } else {
+        calculatedDifficulty = Difficulty.Impossible;
+      }
+
+      // Override the game config difficulty for HumansVsNations mode
+      gameStart.config.difficulty = calculatedDifficulty;
     }
-
-    // Override the game config difficulty for HumansVsNations mode
-    gameStart.config.difficulty = calculatedDifficulty;
   }
 
   const game: Game = createGame(

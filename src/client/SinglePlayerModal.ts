@@ -48,6 +48,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
+  @state() private automaticDifficulty: boolean = false;
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -133,10 +134,7 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
-          ${!(
-            this.gameMode === GameMode.Team &&
-            this.teamCount === HumansVsNations
-          )
+          ${!this.automaticDifficulty
             ? html`
                 <!-- Difficulty Selection -->
                 <div class="options-section">
@@ -286,6 +284,28 @@ export class SinglePlayerModal extends LitElement {
                       />
                       <div class="option-card-title">
                         ${translateText("single_modal.disable_nations")}
+                      </div>
+                    </label>
+                  `
+                : ""}
+              ${this.gameMode === GameMode.Team &&
+              this.teamCount === HumansVsNations
+                ? html`
+                    <label
+                      for="singleplayer-modal-automatic-difficulty"
+                      class="option-card ${this.automaticDifficulty
+                        ? "selected"
+                        : ""}"
+                    >
+                      <div class="checkbox-icon"></div>
+                      <input
+                        type="checkbox"
+                        id="singleplayer-modal-automatic-difficulty"
+                        @change=${this.handleAutomaticDifficultyChange}
+                        .checked=${this.automaticDifficulty}
+                      />
+                      <div class="option-card-title">
+                        ${translateText("single_modal.automatic_difficulty")}
                       </div>
                     </label>
                   `
@@ -495,6 +515,10 @@ export class SinglePlayerModal extends LitElement {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
   }
 
+  private handleAutomaticDifficultyChange(e: Event) {
+    this.automaticDifficulty = Boolean((e.target as HTMLInputElement).checked);
+  }
+
   private handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
   }
@@ -586,6 +610,7 @@ export class SinglePlayerModal extends LitElement {
               donateTroops: true,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
+              automaticDifficulty: this.automaticDifficulty,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
