@@ -27,6 +27,8 @@ export class AttackExecution implements Execution {
 
   private attack: Attack | null = null;
 
+  private attackStartTick: number = 0;
+
   constructor(
     private startTroops: number | null = null,
     private _owner: Player,
@@ -49,6 +51,7 @@ export class AttackExecution implements Execution {
       return;
     }
     this.mg = mg;
+    this.attackStartTick = ticks;
 
     if (this._targetID !== null && !mg.hasPlayer(this._targetID)) {
       console.warn(`target ${this._targetID} not found`);
@@ -353,7 +356,7 @@ export class AttackExecution implements Execution {
       const defensibilityWeight =
         (this.random.nextInt(0, 7) + 10) * (1 - numOwnedByMe * 0.5 + mag / 2);
 
-      let priority = defensibilityWeight + tickNow;
+      let priority = defensibilityWeight + (tickNow - this.attackStartTick);
 
       if (this.clickTile !== null) {
         // Direction-based attack: use dot product to favor tiles aligned with click direction
