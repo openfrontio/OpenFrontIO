@@ -866,6 +866,22 @@ export class DefaultConfig implements Config {
     return 300.0;
   }
 
+  /**
+   * Maximum BFS radius for neutral territory attacks (in tiles).
+   * Limits how far the BFS can traverse when attacking empty/neutral territory.
+   * This prevents performance issues on large maps where neutral regions can be enormous.
+   *
+   * - 200 tiles: Balanced - large enough for strategic attacks, prevents stuttering (recommended)
+   * - 150 tiles: Faster - smaller search area, better performance
+   * - 300 tiles: Slower - larger search area, more accurate but may cause stuttering
+   *
+   * Only applies to neutral/empty territory attacks. Player attacks remain unbounded
+   * (naturally limited by empire size).
+   */
+  attackBFSMaxRadius(): number {
+    return 200.0;
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;

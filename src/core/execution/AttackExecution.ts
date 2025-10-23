@@ -357,6 +357,9 @@ export class AttackExecution implements Execution {
    * Builds coarse grid via BFS from clicked tile through connected target-owned tiles.
    * Returns distance map directly - no separate adjacency graph needed.
    *
+   * For neutral territory attacks, applies a maximum radius limit to prevent performance
+   * issues on large maps. Player attacks remain unbounded (naturally limited by empire size).
+   *
    * @param clickTile Starting point for BFS (where user clicked)
    * @param downsampleFactor Sample every Nth distance bucket
    * @returns Map of coarse tile refs to their BFS distance from click
@@ -370,12 +373,23 @@ export class AttackExecution implements Execution {
     const queue: Array<{ tile: TileRef; dist: number }> = [
       { tile: clickTile, dist: 0 },
     ];
-    const targetOwner = this.mg.owner(clickTile);
+    // Always use attack target, not clickTile owner
+    // This ensures we traverse target's territory even if player clicks their own territory
+    const targetOwner = this.target;
+
+    // Detect neutral territory attacks and get max radius
+    const isNeutralAttack = !targetOwner.isPlayer();
+    const maxRadius = isNeutralAttack
+      ? this.mg.config().attackBFSMaxRadius()
+      : Number.POSITIVE_INFINITY;
 
     visited.add(clickTile);
 
     while (queue.length > 0) {
       const { tile, dist } = queue.shift()!;
+
+      // Stop expanding if we've reached max radius (only for neutral attacks)
+      if (dist >= maxRadius) continue;
 
       // Downsample: only keep every Nth distance bucket
       if (dist % downsampleFactor === 0) {
