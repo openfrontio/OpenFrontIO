@@ -805,7 +805,6 @@ export class HostLobbyModal extends LitElement {
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
             ? {
-                nations: this.nations,
                 bots: undefined,
                 disableNPCs: undefined,
               }

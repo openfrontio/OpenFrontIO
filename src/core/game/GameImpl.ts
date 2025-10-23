@@ -158,10 +158,10 @@ export class GameImpl implements Game {
     }
 
     if (playerTeams === HumansVsNations) {
-      // All humans go to "Humans" team
-      this._humans.forEach((p) => this.addPlayer(p, "Humans"));
-      // All nations go to "Nations" team
-      this._nations.forEach((n) => this.addPlayer(n.playerInfo, "Nations"));
+      this._humans.forEach((p) => this.addPlayer(p, ColoredTeams.Humans));
+      this._nations.forEach((n) =>
+        this.addPlayer(n.playerInfo, ColoredTeams.Nations),
+      );
       return;
     }
 
