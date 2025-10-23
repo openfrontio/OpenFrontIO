@@ -90,6 +90,13 @@
       document.documentElement.className = "preload";
     </script>
 
+    <!-- Cloudflare Turnstile -->
+    <script
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+      async
+      defer
+    ></script>
+
     <!-- Publift/Fuse ads -->
     <script
       async
@@ -222,6 +229,7 @@
           <news-button class="w-[20%] component-hideable"></news-button>
         </div>
         <div></div>
+        <div id="turnstile-container" class="flex justify-center py-7"></div>
         <div>
           <public-lobby class="block"></public-lobby>
         </div>

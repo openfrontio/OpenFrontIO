@@ -25,11 +25,13 @@ export class PublicLobby extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.fetchAndUpdateLobbies();
-    this.lobbiesInterval = window.setInterval(
-      () => this.fetchAndUpdateLobbies(),
-      1000,
-    );
+    document.addEventListener("turnstile-verified", () => {
+      this.fetchAndUpdateLobbies();
+      this.lobbiesInterval = window.setInterval(
+        () => this.fetchAndUpdateLobbies(),
+        1000,
+      );
+    });
   }
 
   disconnectedCallback() {

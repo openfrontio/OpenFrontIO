@@ -389,6 +389,18 @@ export async function startWorker() {
           return;
         }
 
+        // Verify turnstile token for new clients.
+        if (
+          clientMsg.lastTurn === 0 &&
+          !(await isTurnstileVerified(persistentId))
+        ) {
+          log.warn("Unauthorized: Turnstile token rejected", {
+            clientID: clientMsg.clientID,
+          });
+          ws.close(1002, "Unauthorized");
+          return;
+        }
+
         // Create client and add to game
         const client = new Client(
           clientMsg.clientID,
@@ -464,6 +476,30 @@ export async function startWorker() {
   process.on("unhandledRejection", (reason, promise) => {
     log.error(`unhandled rejection at:`, promise, "reason:", reason);
   });
+}
+
+async function isTurnstileVerified(persistentID: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${config.jwtIssuer()}/turnstile/check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        persistentID,
+      }),
+      signal: AbortSignal.timeout(1000),
+    });
+    if (response.status === 403) {
+      return false;
+    }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return true;
+  } catch (error) {
+    log.error("Error verifying turnstile tokens", error);
+    // Fail open.
+    return true;
+  }
 }
 
 async function pollLobby(gm: GameManager) {
