@@ -796,6 +796,30 @@ export class DefaultConfig implements Config {
     return 3.0;
   }
 
+  /**
+   * Time constant (in ticks) for exponential decay of directional influence.
+   * Direction bias fades exponentially as: exp(-timeSinceStart / timeDecayConstant)
+   * - 300 ticks (30s): Direction decays to ~37% after 30s, ~5% after 90s (recommended)
+   * - 600 ticks (60s): Slower decay - direction persists longer
+   * - 200 ticks (20s): Faster decay - direction fades quickly
+   * Lower values = faster fade, Higher values = direction persists longer
+   */
+  attackTimeDecay(): number {
+    return 300.0;
+  }
+
+  /**
+   * Weight for magnitude-based proximity bonus (distance decay).
+   * Tiles closer to the clicked point receive additional priority bonus.
+   * - 0.0: Disabled - pure directional bias only
+   * - 1.0: Balanced - moderate proximity bonus (recommended)
+   * - 2.0+: Strong locality preference
+   * This creates triangular convergence toward the clicked point.
+   */
+  attackMagnitudeWeight(): number {
+    return 1.0;
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;

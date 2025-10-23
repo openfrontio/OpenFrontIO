@@ -29,10 +29,6 @@ export class AttackExecution implements Execution {
 
   private attackStartTick: number = 0;
 
-  // Centroid caching to avoid redundant computation (called many times per tick with same result)
-  private cachedCentroid: { x: number; y: number } | null = null;
-  private cachedCentroidTick: number = -1;
-
   constructor(
     private startTroops: number | null = null,
     private _owner: Player,
@@ -299,57 +295,6 @@ export class AttackExecution implements Execution {
     }
   }
 
-  /**
-   * Calculate the centroid (center point) of the attacker's border tiles.
-   * This serves as the reference point for directional attack calculations.
-   *
-   * Performance optimization: Results are cached per tick since addNeighbors() is called
-   * many times per tick (once per border tile in refreshToConquer, once per conquered tile)
-   * but the centroid remains constant within a single tick.
-   *
-   * @returns {x: number, y: number} The centroid coordinates
-   */
-  private getAttackerCentroid(): { x: number; y: number } {
-    const currentTick = this.mg.ticks();
-
-    // Return cached value if available for current tick
-    if (
-      this.cachedCentroid !== null &&
-      this.cachedCentroidTick === currentTick
-    ) {
-      return this.cachedCentroid;
-    }
-
-    // Calculate new centroid
-    const borderTiles = Array.from(this._owner.borderTiles());
-    let centroid: { x: number; y: number };
-
-    if (borderTiles.length === 0) {
-      // Fallback: use all tiles if no border tiles exist
-      const allTiles = Array.from(this._owner.tiles());
-      if (allTiles.length === 0) {
-        // This should never happen during a valid attack - a player with no tiles cannot attack.
-        // Throwing an error helps catch bugs rather than silently biasing toward map origin (0,0).
-        throw new Error(
-          `getAttackerCentroid: Player ${this._owner.id()} has no tiles`,
-        );
-      }
-      const sumX = allTiles.reduce((sum, tile) => sum + this.mg.x(tile), 0);
-      const sumY = allTiles.reduce((sum, tile) => sum + this.mg.y(tile), 0);
-      centroid = { x: sumX / allTiles.length, y: sumY / allTiles.length };
-    } else {
-      const sumX = borderTiles.reduce((sum, tile) => sum + this.mg.x(tile), 0);
-      const sumY = borderTiles.reduce((sum, tile) => sum + this.mg.y(tile), 0);
-      centroid = { x: sumX / borderTiles.length, y: sumY / borderTiles.length };
-    }
-
-    // Cache the result
-    this.cachedCentroid = centroid;
-    this.cachedCentroidTick = currentTick;
-
-    return centroid;
-  }
-
   private addNeighbors(tile: TileRef) {
     if (this.attack === null) {
       throw new Error("Attack not initialized");
@@ -392,44 +337,96 @@ export class AttackExecution implements Execution {
         defensibilityWeight + 0.2 * (tickNow - this.attackStartTick);
 
       if (this.clickTile !== null) {
-        // Direction-based attack: use dot product to favor tiles aligned with click direction
-        const attackerPos = this.getAttackerCentroid();
+        // Per-tile vector approach: each border tile calculates its own direction to click
+        // This creates triangular convergence toward the clicked point
+        const clickX = this.mg.x(this.clickTile);
+        const clickY = this.mg.y(this.clickTile);
+        const neighborX = this.mg.x(neighbor);
+        const neighborY = this.mg.y(neighbor);
 
-        // Calculate direction vector from attacker to clickTile
-        const dirX = this.mg.x(this.clickTile) - attackerPos.x;
-        const dirY = this.mg.y(this.clickTile) - attackerPos.y;
-        const dirMag = Math.sqrt(dirX * dirX + dirY * dirY);
+        // Find the best-aligned border tile adjacent to this neighbor
+        let bestDotProduct = -Infinity;
+        let bestDistance = Infinity;
 
-        // Avoid division by zero
-        if (dirMag > 0.001) {
-          // Normalize direction vector
-          const dirNormX = dirX / dirMag;
-          const dirNormY = dirY / dirMag;
+        // Check border tiles adjacent to this neighbor
+        for (const borderTile of this._owner.borderTiles()) {
+          // Only consider border tiles adjacent to the neighbor
+          // Check if neighbor is in the borderTile's neighbor list
+          let isAdjacent = false;
+          for (const n of this.mg.neighbors(borderTile)) {
+            if (n === neighbor) {
+              isAdjacent = true;
+              break;
+            }
+          }
+          if (!isAdjacent) {
+            continue;
+          }
 
-          // Calculate vector from attacker to neighbor
-          const neighborX = this.mg.x(neighbor) - attackerPos.x;
-          const neighborY = this.mg.y(neighbor) - attackerPos.y;
-          const neighborMag = Math.sqrt(
-            neighborX * neighborX + neighborY * neighborY,
-          );
+          const borderX = this.mg.x(borderTile);
+          const borderY = this.mg.y(borderTile);
 
-          if (neighborMag > 0.001) {
-            // Normalize neighbor vector
-            const neighborNormX = neighborX / neighborMag;
-            const neighborNormY = neighborY / neighborMag;
+          // Vector from border tile -> click point
+          const dirX = clickX - borderX;
+          const dirY = clickY - borderY;
+          const dirMag = Math.sqrt(dirX * dirX + dirY * dirY);
 
-            // Dot product measures alignment (-1 to 1)
-            // 1.0 = same direction, 0.0 = perpendicular, -1.0 = opposite
-            const dotProduct =
-              dirNormX * neighborNormX + dirNormY * neighborNormY;
+          if (dirMag > 0.001) {
+            // Normalize direction vector
+            const dirNormX = dirX / dirMag;
+            const dirNormY = dirY / dirMag;
 
-            // Convert to offset: additive approach for consistent directional behavior
-            // (1.0 - dotProduct) gives us 0.0 for perfect alignment, 2.0 for opposite direction
-            // Unlike the multiplicative approach, this adds a fixed offset regardless of defensibility
-            // This makes direction equally noticeable for both empty and owned territories
-            const directionOffset =
-              (1.0 - dotProduct) * this.mg.config().attackDirectionWeight();
-            priority += directionOffset;
+            // Vector from border tile -> neighbor
+            const toNeighborX = neighborX - borderX;
+            const toNeighborY = neighborY - borderY;
+            const toNeighborMag = Math.sqrt(
+              toNeighborX * toNeighborX + toNeighborY * toNeighborY,
+            );
+
+            if (toNeighborMag > 0.001) {
+              // Normalize neighbor vector
+              const toNeighborNormX = toNeighborX / toNeighborMag;
+              const toNeighborNormY = toNeighborY / toNeighborMag;
+
+              // Dot product measures alignment (-1 to 1)
+              const dotProduct =
+                dirNormX * toNeighborNormX + dirNormY * toNeighborNormY;
+
+              // Track best alignment among adjacent border tiles
+              if (dotProduct > bestDotProduct) {
+                bestDotProduct = dotProduct;
+                bestDistance = dirMag;
+              }
+            }
+          }
+        }
+
+        // Apply direction bias with explicit exponential time decay
+        if (bestDotProduct > -Infinity) {
+          // Calculate explicit exponential time decay
+          // Direction influence fades naturally as attack progresses
+          const timeSinceStart = tickNow - this.attackStartTick;
+          const timeDecayConstant = this.mg.config().attackTimeDecay();
+          const timeDecayFactor = Math.exp(-timeSinceStart / timeDecayConstant);
+
+          // Apply direction offset with time decay (additive approach)
+          // (1.0 - dotProduct) gives 0.0 for perfect alignment, 2.0 for opposite
+          const directionOffset =
+            (1.0 - bestDotProduct) *
+            this.mg.config().attackDirectionWeight() *
+            timeDecayFactor;
+          priority += directionOffset;
+
+          // Optional: Add magnitude-based proximity bonus (distance decay)
+          // Tiles closer to click point get additional priority boost
+          const magnitudeWeight = this.mg.config().attackMagnitudeWeight();
+          if (magnitudeWeight > 0) {
+            const distanceDecayConstant = 20.0; // Tiles 20+ units away get minimal bonus
+            const proximityBonus =
+              Math.exp(-bestDistance / distanceDecayConstant) *
+              magnitudeWeight *
+              timeDecayFactor;
+            priority -= proximityBonus; // Lower priority = better (min-heap)
           }
         }
       }
