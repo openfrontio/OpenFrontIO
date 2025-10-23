@@ -677,7 +677,7 @@ describe("DirectedAttack", () => {
 
     // Verify log contains expected information
     const initLog = bfsLogs[0][0];
-    expect(initLog).toContain("coarse tiles");
+    expect(initLog).toContain("connected target-owned tiles");
     expect(initLog).toContain("ms");
 
     // Cleanup spy

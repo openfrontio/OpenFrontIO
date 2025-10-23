@@ -32,9 +32,6 @@ export class AttackExecution implements Execution {
   // Downscaled BFS distances (coarse grid only, for proximity bonus)
   private clickDistances: Map<TileRef, number> | null = null;
 
-  // Coarse grid adjacency graph (terrain-validated connections)
-  private coarseAdjacency: Map<TileRef, Set<TileRef>> | null = null;
-
   // Downscale configuration
   private readonly DOWNSAMPLE_FACTOR = 10; // Sample every 10th tile
 
@@ -131,36 +128,19 @@ export class AttackExecution implements Execution {
         // Performance: Measure downscaled BFS computation time
         const startTime = performance.now();
 
-        // Build coarse grid (sample every Nth tile)
-        const coarseGrid = this.buildCoarseGrid(this.DOWNSAMPLE_FACTOR);
-        this.bfsCoarseGridSize = coarseGrid.size;
-
-        // Build adjacency graph with terrain connectivity validation
-        this.coarseAdjacency = this.buildCoarseAdjacency(
-          coarseGrid,
-          this.DOWNSAMPLE_FACTOR,
-        );
-
-        // Compute BFS on coarse grid only
-        this.clickDistances = this.computeDownscaledBFS(
+        // Build coarse grid via BFS from clicked tile (single pass)
+        this.clickDistances = this.buildCoarseGrid(
           this.clickTile,
           this.DOWNSAMPLE_FACTOR,
         );
+        this.bfsCoarseGridSize = this.clickDistances.size;
 
         const endTime = performance.now();
         this.bfsInitTime = endTime - startTime;
 
-        // Calculate total adjacency graph edges
-        let totalEdges = 0;
-        if (this.coarseAdjacency) {
-          for (const neighbors of this.coarseAdjacency.values()) {
-            totalEdges += neighbors.size;
-          }
-        }
-
         console.log(
           `[DirectedAttack] Downscaled BFS (${this.DOWNSAMPLE_FACTOR}x): ` +
-            `${this.clickDistances.size} coarse tiles, ${totalEdges} terrain-validated edges, ` +
+            `${this.clickDistances.size} connected target-owned tiles, ` +
             `${this.bfsInitTime.toFixed(2)}ms init time`,
         );
       }
@@ -374,116 +354,45 @@ export class AttackExecution implements Execution {
   }
 
   /**
-   * Builds a coarse grid by sampling every Nth tile in both x and y directions.
-   * For a 2000x1000 map with downsample=10, this creates a 200x100 = 20,000 tile coarse grid.
+   * Builds coarse grid via BFS from clicked tile through connected target-owned tiles.
+   * Returns distance map directly - no separate adjacency graph needed.
    *
-   * @param downsampleFactor Sample every Nth tile (default: 10)
-   * @returns Set of coarse tile refs for fast O(1) lookup
+   * @param clickTile Starting point for BFS (where user clicked)
+   * @param downsampleFactor Sample every Nth distance bucket
+   * @returns Map of coarse tile refs to their BFS distance from click
    */
-  private buildCoarseGrid(downsampleFactor: number): Set<TileRef> {
-    const coarseTiles = new Set<TileRef>();
-    const mapWidth = this.mg.width();
-    const mapHeight = this.mg.height();
-
-    // Sample tiles at grid points: (0,0), (10,0), (20,0), ... (0,10), (10,10), ...
-    for (let y = 0; y < mapHeight; y += downsampleFactor) {
-      for (let x = 0; x < mapWidth; x += downsampleFactor) {
-        if (this.mg.isValidCoord(x, y)) {
-          const tile = this.mg.ref(x, y);
-          coarseTiles.add(tile);
-        }
-      }
-    }
-
-    return coarseTiles;
-  }
-
-  /**
-   * Builds an adjacency graph for the coarse grid, validating terrain connectivity.
-   * Only connects coarse tiles that have passable terrain between them.
-   *
-   * @param coarseGrid Set of coarse tile refs
-   * @param downsampleFactor Grid spacing for neighbor calculation
-   * @returns Map of coarse tile to its passable neighbors
-   */
-  private buildCoarseAdjacency(
-    coarseGrid: Set<TileRef>,
+  private buildCoarseGrid(
+    clickTile: TileRef,
     downsampleFactor: number,
-  ): Map<TileRef, Set<TileRef>> {
-    const adjacency = new Map<TileRef, Set<TileRef>>();
-    const mapWidth = this.mg.width();
-    const mapHeight = this.mg.height();
+  ): Map<TileRef, number> {
+    const distances = new Map<TileRef, number>();
+    const visited = new Set<TileRef>();
+    const queue: Array<{ tile: TileRef; dist: number }> = [
+      { tile: clickTile, dist: 0 },
+    ];
+    const targetOwner = this.mg.owner(clickTile);
 
-    // For each coarse tile, check its 4 directional neighbors
-    for (const tile of coarseGrid) {
-      const neighbors = new Set<TileRef>();
-      const x = this.mg.x(tile);
-      const y = this.mg.y(tile);
+    visited.add(clickTile);
 
-      const neighborOffsets = [
-        [0, -downsampleFactor], // North
-        [0, +downsampleFactor], // South
-        [-downsampleFactor, 0], // West
-        [+downsampleFactor, 0], // East
-      ];
+    while (queue.length > 0) {
+      const { tile, dist } = queue.shift()!;
 
-      for (const [dx, dy] of neighborOffsets) {
-        const nx = x + dx;
-        const ny = y + dy;
-
-        // Check if neighbor is within bounds and in coarse grid
-        if (nx >= 0 && nx < mapWidth && ny >= 0 && ny < mapHeight) {
-          const neighbor = this.mg.ref(nx, ny);
-
-          // Only add if neighbor is in coarse grid and terrain is passable
-          if (
-            coarseGrid.has(neighbor) &&
-            this.isCoarseTileConnected(tile, neighbor)
-          ) {
-            neighbors.add(neighbor);
-          }
-        }
+      // Downsample: only keep every Nth distance bucket
+      if (dist % downsampleFactor === 0) {
+        distances.set(tile, dist);
       }
 
-      adjacency.set(tile, neighbors);
-    }
+      // Traverse neighbors with same owner (connected component only)
+      for (const neighbor of this.mg.neighbors(tile)) {
+        if (visited.has(neighbor)) continue;
+        if (this.mg.owner(neighbor) !== targetOwner) continue;
 
-    return adjacency;
-  }
-
-  /**
-   * Checks if two coarse tiles are connected by passable terrain.
-   * Samples intermediate points along the straight line between tiles to detect water barriers.
-   *
-   * @param from Starting coarse tile
-   * @param to Destination coarse tile
-   * @returns true if tiles are connected by passable terrain, false if water blocks the path
-   */
-  private isCoarseTileConnected(from: TileRef, to: TileRef): boolean {
-    const x1 = this.mg.x(from);
-    const y1 = this.mg.y(from);
-    const x2 = this.mg.x(to);
-    const y2 = this.mg.y(to);
-
-    // Sample 5 intermediate points along the line between tiles
-    const samples = 5;
-    for (let i = 1; i < samples; i++) {
-      const t = i / samples;
-      const sampleX = Math.round(x1 + (x2 - x1) * t);
-      const sampleY = Math.round(y1 + (y2 - y1) * t);
-
-      // Check if sample point is valid and not water
-      if (!this.mg.isValidCoord(sampleX, sampleY)) {
-        return false;
-      }
-
-      const sampleTile = this.mg.ref(sampleX, sampleY);
-      if (this.mg.isWater(sampleTile)) {
-        return false;
+        visited.add(neighbor);
+        queue.push({ tile: neighbor, dist: dist + 1 });
       }
     }
 
-    return true;
+    return distances;
   }
 
   /**
@@ -516,54 +425,6 @@ export class AttackExecution implements Execution {
     const clampedY = Math.max(0, Math.min(maxCoarseY, coarseY));
 
     return this.mg.ref(clampedX, clampedY);
-  }
-
-  /**
-   * Computes BFS distances on a downscaled coarse grid using precomputed adjacency graph.
-   * Only traverses terrain-validated edges, ensuring topological correctness.
-   *
-   * @param clickTile The tile that was clicked (start of BFS)
-   * @param downsampleFactor Grid spacing for finding start tile
-   * @returns Map of coarse tile refs to their BFS distance from start
-   */
-  private computeDownscaledBFS(
-    clickTile: TileRef,
-    downsampleFactor: number,
-  ): Map<TileRef, number> {
-    const distances = new Map<TileRef, number>();
-
-    if (!this.coarseAdjacency) {
-      throw new Error("Coarse adjacency graph not initialized");
-    }
-
-    // Find nearest coarse tile to click point as start
-    const startTile = this.findNearestCoarseTile(clickTile, downsampleFactor);
-    distances.set(startTile, 0);
-
-    // BFS queue
-    const queue: TileRef[] = [startTile];
-    let head = 0;
-
-    while (head < queue.length) {
-      const current = queue[head++];
-      const currentDist = distances.get(current)!;
-
-      // Get terrain-validated neighbors from adjacency graph
-      const neighbors = this.coarseAdjacency.get(current);
-      if (!neighbors) {
-        continue;
-      }
-
-      // Process each passable neighbor
-      for (const neighbor of neighbors) {
-        if (!distances.has(neighbor)) {
-          distances.set(neighbor, currentDist + 1);
-          queue.push(neighbor);
-        }
-      }
-    }
-
-    return distances;
   }
 
   /**
@@ -704,11 +565,11 @@ export class AttackExecution implements Execution {
                 distance = bfsDistance;
               } else {
                 // Euclidean fallback for disconnected regions
-                // With topology-correct BFS (v2.3), this is EXPECTED behavior when:
-                // 1. Terrain creates disconnected regions (water barriers, islands)
-                // 2. Non-rectangular maps with holes in coordinate space
+                // BFS only traverses target-owned tiles, so this occurs when:
+                // 1. Tile is in disconnected territory (islands, separate landmasses)
+                // 2. Tile became owned by target after attack started (conquest during attack)
                 // 3. Small test maps where coarse grid is very sparse
-                // This is not an error - it's the terrain-aware pathfinding working correctly
+                // This is expected behavior - fallback to geometric distance
 
                 // Fallback to Euclidean distance for disconnected tiles
                 const neighborToClickX = clickX - neighborX;
@@ -756,12 +617,6 @@ export class AttackExecution implements Execution {
 
       this.clickDistances.clear();
       this.clickDistances = null;
-    }
-
-    // Release adjacency graph memory
-    if (this.coarseAdjacency !== null) {
-      this.coarseAdjacency.clear();
-      this.coarseAdjacency = null;
     }
   }
 
