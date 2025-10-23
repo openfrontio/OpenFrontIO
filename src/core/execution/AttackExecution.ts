@@ -352,66 +352,6 @@ export class AttackExecution implements Execution {
   }
 
   /**
-   * Computes BFS (topological) distances from the clicked tile to all reachable tiles.
-   * Returns a map of TileRef -> distance (in tiles).
-   *
-   * This provides topologically-correct distances that respect terrain connectivity,
-   * fixing issues with Euclidean distance across rivers, water, or disconnected regions.
-   *
-   * @param clickTile The tile that was clicked to initiate the directed attack
-   * @param traverseEnemyTerritory If true, BFS traverses through enemy tiles; if false, stops at borders
-   * @returns Map of tile references to their BFS distance from clickTile
-   */
-  private computeBFSDistances(
-    clickTile: TileRef,
-    traverseEnemyTerritory: boolean = true,
-  ): Map<TileRef, number> {
-    const distances = new Map<TileRef, number>();
-    distances.set(clickTile, 0);
-
-    // Circular buffer implementation for O(1) enqueue/dequeue
-    // Pre-allocate buffer for up to 1M tiles (typical world map size)
-    const BUFFER_SIZE = 1_000_000;
-    const queue = new Array<TileRef>(BUFFER_SIZE);
-    let head = 0;
-    let tail = 0;
-
-    // Enqueue start tile
-    queue[tail] = clickTile;
-    tail = (tail + 1) % BUFFER_SIZE;
-
-    while (head !== tail) {
-      // Dequeue (O(1) instead of O(n) with array.shift())
-      const current = queue[head];
-      head = (head + 1) % BUFFER_SIZE;
-
-      const currentDist = distances.get(current)!;
-
-      for (const neighbor of this.mg.neighbors(current)) {
-        // Skip if already visited
-        if (distances.has(neighbor)) continue;
-
-        // Optional: respect territory boundaries
-        if (!traverseEnemyTerritory) {
-          const owner = this.mg.owner(neighbor);
-          // Only traverse through own territory and target's territory
-          if (owner !== this._owner && owner !== this.target) {
-            continue;
-          }
-        }
-
-        distances.set(neighbor, currentDist + 1);
-
-        // Enqueue (O(1))
-        queue[tail] = neighbor;
-        tail = (tail + 1) % BUFFER_SIZE;
-      }
-    }
-
-    return distances;
-  }
-
-  /**
    * Builds a coarse grid by sampling every Nth tile in both x and y directions.
    * For a 2000x1000 map with downsample=10, this creates a 200x100 = 20,000 tile coarse grid.
    *
