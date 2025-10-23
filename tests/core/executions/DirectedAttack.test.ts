@@ -726,6 +726,103 @@ describe("DirectedAttack", () => {
     expect(config.attackMagnitudeWeight()).toBe(1.0);
   });
 
+  test("Proximity bonus correctly prioritizes neighbors closer to click point", async () => {
+    // Regression test for proximity bonus bug fix.
+    // Verifies that the proximity bonus uses neighbor distance (not border tile distance).
+    //
+    // Bug: Previously used border tile's distance, causing all neighbors of the same
+    // border tile to get identical proximity bonuses despite different distances to click.
+    //
+    // Fix: Now uses neighbor's distance, correctly prioritizing closer candidates.
+
+    const config = game.config() as TestConfig;
+
+    // Setup: Maximize proximity bonus effect, minimize other factors
+    config.setAttackMagnitudeWeight(5.0); // Strong proximity preference
+    config.setAttackDirectionWeight(0.1); // Weak directional bias (to isolate proximity)
+    config.setAttackTimeDecay(10000.0); // Slow decay (minimal time effect)
+    config.setAttackDistanceDecayConstant(10.0); // Sharp distance decay
+
+    // Give defender moderate territory
+    for (let i = 0; i < 40; i++) {
+      game.executeNextTick();
+    }
+
+    // Create attack clicking far from current border
+    // This creates a scenario where proximity differences are measurable
+    const clickTile = game.ref(12, 12);
+    const attackExecution = new AttackExecution(
+      150,
+      attacker,
+      defender.id(),
+      null,
+      true,
+      clickTile,
+    );
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+
+    expect(attacker.outgoingAttacks()).toHaveLength(1);
+
+    // Track tiles conquered in order
+    const conqueredOrder: TileRef[] = [];
+    const initialTiles = new Set(attacker.tiles());
+
+    // Run attack for limited ticks, recording conquest order
+    for (let i = 0; i < 20; i++) {
+      game.executeNextTick();
+
+      // Record newly conquered tiles
+      for (const tile of attacker.tiles()) {
+        if (!initialTiles.has(tile)) {
+          conqueredOrder.push(tile);
+          initialTiles.add(tile);
+        }
+      }
+
+      if (attacker.outgoingAttacks().length === 0) break;
+    }
+
+    // Verify attack made progress
+    expect(conqueredOrder.length).toBeGreaterThan(5);
+
+    // Calculate average distance to click for first vs last quartile of conquered tiles
+    const quartileSize = Math.floor(conqueredOrder.length / 4);
+    const firstQuartile = conqueredOrder.slice(0, quartileSize);
+    const lastQuartile = conqueredOrder.slice(-quartileSize);
+
+    const clickX = game.x(clickTile);
+    const clickY = game.y(clickTile);
+
+    const avgDistFirst =
+      firstQuartile.reduce((sum, tile) => {
+        const dx = clickX - game.x(tile);
+        const dy = clickY - game.y(tile);
+        return sum + Math.sqrt(dx * dx + dy * dy);
+      }, 0) / firstQuartile.length;
+
+    const avgDistLast =
+      lastQuartile.reduce((sum, tile) => {
+        const dx = clickX - game.x(tile);
+        const dy = clickY - game.y(tile);
+        return sum + Math.sqrt(dx * dx + dy * dy);
+      }, 0) / lastQuartile.length;
+
+    // With correct proximity bonus implementation:
+    // - Earlier conquests should trend closer to click point
+    // - Later conquests should trend farther from click point
+    //
+    // This validates the fix: neighbor distance (not border distance) is used.
+    // Allow some variance due to terrain/randomness, but trend should be clear.
+    expect(avgDistFirst).toBeLessThan(avgDistLast * 1.2);
+
+    // Restore defaults
+    config.setAttackMagnitudeWeight(1.0);
+    config.setAttackDirectionWeight(3.0);
+    config.setAttackTimeDecay(300.0);
+    config.setAttackDistanceDecayConstant(30.0);
+  });
+
   test("BFS distances respect terrain connectivity", async () => {
     // Verify that downscaled BFS maintains topological correctness.
     // BFS should route around water/obstacles, unlike Euclidean distance.

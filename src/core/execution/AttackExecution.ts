@@ -582,15 +582,21 @@ export class AttackExecution implements Execution {
             const magnitudeWeight = this.mg.config().attackMagnitudeWeight();
             if (magnitudeWeight > 0) {
               // Get downscaled BFS distance (from coarse grid), fall back to Euclidean
-              // Note: In addNeighbors() context, 'tile' refers to the border tile (not neighbor)
+              // Measure distance from neighbor (candidate tile) to click point
               let distance: number;
-              const bfsDistance = this.getDownscaledDistance(tile); // tile = current border tile
+              const bfsDistance = this.getDownscaledDistance(neighbor); // neighbor = candidate to conquer
               if (bfsDistance !== null) {
                 // Use downscaled BFS distance (topologically correct, ±5-10 tile accuracy)
                 distance = bfsDistance;
               } else {
                 // BFS not available or tile unreachable, use Euclidean
-                distance = dirMag;
+                // Calculate neighbor->click Euclidean distance
+                const neighborToClickX = clickX - neighborX;
+                const neighborToClickY = clickY - neighborY;
+                distance = Math.sqrt(
+                  neighborToClickX * neighborToClickX +
+                    neighborToClickY * neighborToClickY,
+                );
               }
 
               // Apply exponential distance decay
