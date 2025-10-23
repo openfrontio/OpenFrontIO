@@ -387,15 +387,13 @@ export class AttackExecution implements Execution {
             const dotProduct =
               dirNormX * neighborNormX + dirNormY * neighborNormY;
 
-            // Convert to bias: lower value = better alignment = higher priority (min-heap)
+            // Convert to offset: additive approach for consistent directional behavior
             // (1.0 - dotProduct) gives us 0.0 for perfect alignment, 2.0 for opposite direction
-            // Scale by defensibility weight to maintain consistent relative influence
-            // across different target types (empty vs occupied territories with varied terrain)
-            const directionBias =
-              (1.0 - dotProduct) *
-              this.mg.config().attackDirectionWeight() *
-              defensibilityWeight;
-            priority += directionBias;
+            // Unlike the multiplicative approach, this adds a fixed offset regardless of defensibility
+            // This makes direction equally noticeable for both empty and owned territories
+            const directionOffset =
+              (1.0 - dotProduct) * this.mg.config().attackDirectionWeight();
+            priority += directionOffset;
           }
         }
       }

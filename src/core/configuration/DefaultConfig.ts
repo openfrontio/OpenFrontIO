@@ -785,8 +785,15 @@ export class DefaultConfig implements Config {
     }
   }
 
+  /**
+   * Controls the strength of directional attack bias (additive approach).
+   * This value determines the fixed point offset added/subtracted based on alignment.
+   * - Value of 10.0 creates a 0-20 point swing (0 for aligned, 20 for opposite direction)
+   * - Higher values make direction more influential
+   * - Lower values make direction less noticeable
+   */
   attackDirectionWeight(): number {
-    return 0.3;
+    return 10.0;
   }
 
   startManpower(playerInfo: PlayerInfo): number {

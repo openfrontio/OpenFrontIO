@@ -127,7 +127,7 @@ describe("DirectedAttack", () => {
     // Verify that attacks with clickTile parameter use the direction weight configuration
 
     const config = game.config() as TestConfig;
-    expect(config.attackDirectionWeight()).toBe(0.3);
+    expect(config.attackDirectionWeight()).toBe(10.0);
 
     // Create attack with clickTile
     const clickTile = game.ref(10, 15);
@@ -203,7 +203,7 @@ describe("DirectedAttack", () => {
     const config = game.config();
 
     // Should have the default weight value
-    expect(config.attackDirectionWeight()).toBe(0.3);
+    expect(config.attackDirectionWeight()).toBe(10.0);
   });
 
   test("Direction-based attack is distance-independent", async () => {
