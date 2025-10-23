@@ -63,6 +63,8 @@ export const ColoredTeams: Record<string, Team> = {
   Orange: "Orange",
   Green: "Green",
   Bot: "Bot",
+  Humans: "Humans",
+  Nations: "Nations",
 } as const;
 
 export enum GameMapType {

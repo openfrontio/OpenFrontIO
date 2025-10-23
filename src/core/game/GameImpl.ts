@@ -110,7 +110,7 @@ export class GameImpl implements Game {
 
     // HumansVsNations mode always has exactly 2 teams
     if (numPlayerTeams === HumansVsNations) {
-      this.playerTeams = ["Humans", "Nations"];
+      this.playerTeams = [ColoredTeams.Humans, ColoredTeams.Nations];
       return;
     }
 
