@@ -41,7 +41,6 @@ export class HostLobbyModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number | undefined = 400;
-  @state() private nations: number | undefined = 10;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -716,27 +715,6 @@ export class HostLobbyModal extends LitElement {
     }, 300);
   }
 
-  private handleNationsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
-    if (isNaN(value) || value < 1 || value > 400) {
-      return;
-    }
-
-    // Update the display value immediately
-    this.nations = value;
-
-    // Clear any existing timer
-    if (this.botsUpdateTimer !== null) {
-      clearTimeout(this.botsUpdateTimer);
-    }
-
-    // Set a new timer to call putGameConfig after 300ms of inactivity
-    this.botsUpdateTimer = window.setTimeout(() => {
-      this.putGameConfig();
-      this.botsUpdateTimer = null;
-    }, 300);
-  }
-
   private handleInstantBuildChange(e: Event) {
     this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -833,7 +811,6 @@ export class HostLobbyModal extends LitElement {
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
             ? {
-                nations: this.nations,
                 bots: undefined,
                 disableNPCs: undefined,
                 automaticDifficulty: this.automaticDifficulty,
@@ -841,7 +818,6 @@ export class HostLobbyModal extends LitElement {
             : {
                 bots: this.bots,
                 disableNPCs: this.disableNPCs,
-                nations: undefined,
               }),
           maxTimerValue:
             this.maxTimer === true ? this.maxTimerValue : undefined,
