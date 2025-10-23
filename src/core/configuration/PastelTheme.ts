@@ -17,35 +17,35 @@ export class PastelTheme implements Theme {
   private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
   private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
-  private background = colord("rgb(60,60,60)");
-  private shore = colord("rgb(204,203,158)");
+  private background = colord({ r: 60, g: 60, b: 60 });
+  private shore = colord({ r: 204, g: 203, b: 158 });
   private falloutColors = [
-    colord("rgb(120,255,71)"), // Original color
-    colord("rgb(130,255,85)"), // Slightly lighter
-    colord("rgb(110,245,65)"), // Slightly darker
-    colord("rgb(125,255,75)"), // Warmer tint
-    colord("rgb(115,250,68)"), // Cooler tint
+    colord({ r: 120, g: 255, b: 71 }), // Original color
+    colord({ r: 130, g: 255, b: 85 }), // Slightly lighter
+    colord({ r: 110, g: 245, b: 65 }), // Slightly darker
+    colord({ r: 125, g: 255, b: 75 }), // Warmer tint
+    colord({ r: 115, g: 250, b: 68 }), // Cooler tint
   ];
-  private water = colord("rgb(70,132,180)");
-  private shorelineWater = colord("rgb(100,143,255)");
+  private water = colord({ r: 70, g: 132, b: 180 });
+  private shorelineWater = colord({ r: 100, g: 143, b: 255 });
 
   /** Alternate View colors for self, green */
-  private _selfColor = colord("rgb(0,255,0)");
+  private _selfColor = colord({ r: 0, g: 255, b: 0 });
   /** Alternate View colors for allies, yellow */
-  private _allyColor = colord("rgb(255,255,0)");
+  private _allyColor = colord({ r: 255, g: 255, b: 0 });
   /** Alternate View colors for neutral, gray */
-  private _neutralColor = colord("rgb(128,128,128)");
+  private _neutralColor = colord({ r: 128, g: 128, b: 128 });
   /** Alternate View colors for enemies, red */
-  private _enemyColor = colord("rgb(255,0,0)");
+  private _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
   /** Default spawn highlight colors for other players in FFA, yellow */
-  private _spawnHighlightColor = colord("rgb(255,213,79)");
+  private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
   /** Added non-default spawn highlight colors for self, full white */
-  private _spawnHighlightSelfColor = colord("rgb(255,255,255)");
+  private _spawnHighlightSelfColor = colord({ r: 255, g: 255, b: 255 });
   /** Added non-default spawn highlight colors for teammates, green */
-  private _spawnHighlightTeamColor = colord("rgb(0,255,0)");
+  private _spawnHighlightTeamColor = colord({ r: 0, g: 255, b: 0 });
   /** Added non-default spawn highlight colors for enemies, red */
-  private _spawnHighlightEnemyColor = colord("rgb(255,0,0)");
+  private _spawnHighlightEnemyColor = colord({ r: 255, g: 0, b: 0 });
 
   teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
@@ -81,7 +81,7 @@ export class PastelTheme implements Theme {
   }
 
   focusedBorderColor(): Colord {
-    return colord("rgb(230,230,230)");
+    return colord({ r: 230, g: 230, b: 230 });
   }
 
   textColor(player: PlayerView): string {
