@@ -34,7 +34,6 @@ export class AttackExecution implements Execution {
 
   // Downscale configuration
   private readonly DOWNSAMPLE_FACTOR = 10; // Sample every 10th tile
-  private downsampleFactor: number = 10;
 
   // Performance telemetry for downscaled BFS
   private bfsInitTime: number = 0;
@@ -139,9 +138,6 @@ export class AttackExecution implements Execution {
       console.log(
         `[DirectedAttack] Downscaled BFS (${this.DOWNSAMPLE_FACTOR}x): computed ${this.clickDistances.size} coarse tiles in ${this.bfsInitTime.toFixed(2)}ms`,
       );
-
-      // Store downsample factor for distance lookups
-      this.downsampleFactor = this.DOWNSAMPLE_FACTOR;
     }
 
     if (this.target.isPlayer()) {
@@ -478,7 +474,7 @@ export class AttackExecution implements Execution {
     this.bfsDistanceLookups++;
 
     // Find nearest coarse tile
-    const coarseTile = this.findNearestCoarseTile(tile, this.downsampleFactor);
+    const coarseTile = this.findNearestCoarseTile(tile, this.DOWNSAMPLE_FACTOR);
 
     // Return its distance
     return this.clickDistances.get(coarseTile) ?? null;
@@ -627,7 +623,7 @@ export class AttackExecution implements Execution {
       if (this.bfsCoarseGridSize > 0) {
         console.log(
           `[DirectedAttack] Downscaled Stats: ${this.bfsCoarseGridSize} coarse tiles, ` +
-            `downsample=${this.downsampleFactor}x, init=${this.bfsInitTime.toFixed(2)}ms, ` +
+            `downsample=${this.DOWNSAMPLE_FACTOR}x, init=${this.bfsInitTime.toFixed(2)}ms, ` +
             `${this.bfsDistanceLookups} distance lookups`,
         );
       }
