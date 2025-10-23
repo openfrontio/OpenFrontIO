@@ -110,34 +110,42 @@ export class AttackExecution implements Execution {
 
     // Compute downscaled BFS distances for directed attack
     if (this.clickTile !== null) {
-      // Validate click tile exists in map by checking if it has neighbors
-      const neighbors = this.mg.neighbors(this.clickTile);
-      if (neighbors.length === 0) {
+      // Validate click tile is within map bounds
+      if (!this.mg.isValidRef(this.clickTile)) {
         console.warn(
-          `[DirectedAttack] Click tile has no neighbors, may be invalid`,
+          `[DirectedAttack] Invalid click tile reference: ${this.clickTile}, disabling directed attack`,
+        );
+        this.clickTile = null;
+      } else {
+        // Secondary check: warn if tile is isolated (has no neighbors)
+        const neighbors = this.mg.neighbors(this.clickTile);
+        if (neighbors.length === 0) {
+          console.warn(
+            `[DirectedAttack] Click tile is isolated (no neighbors), may affect directed attack`,
+          );
+        }
+
+        // Performance: Measure downscaled BFS computation time
+        const startTime = performance.now();
+
+        // Build coarse grid (sample every Nth tile)
+        const coarseGrid = this.buildCoarseGrid(this.DOWNSAMPLE_FACTOR);
+        this.bfsCoarseGridSize = coarseGrid.size;
+
+        // Compute BFS on coarse grid only
+        this.clickDistances = this.computeDownscaledBFS(
+          this.clickTile,
+          coarseGrid,
+          this.DOWNSAMPLE_FACTOR,
+        );
+
+        const endTime = performance.now();
+        this.bfsInitTime = endTime - startTime;
+
+        console.log(
+          `[DirectedAttack] Downscaled BFS (${this.DOWNSAMPLE_FACTOR}x): computed ${this.clickDistances.size} coarse tiles in ${this.bfsInitTime.toFixed(2)}ms`,
         );
       }
-
-      // Performance: Measure downscaled BFS computation time
-      const startTime = performance.now();
-
-      // Build coarse grid (sample every Nth tile)
-      const coarseGrid = this.buildCoarseGrid(this.DOWNSAMPLE_FACTOR);
-      this.bfsCoarseGridSize = coarseGrid.size;
-
-      // Compute BFS on coarse grid only
-      this.clickDistances = this.computeDownscaledBFS(
-        this.clickTile,
-        coarseGrid,
-        this.DOWNSAMPLE_FACTOR,
-      );
-
-      const endTime = performance.now();
-      this.bfsInitTime = endTime - startTime;
-
-      console.log(
-        `[DirectedAttack] Downscaled BFS (${this.DOWNSAMPLE_FACTOR}x): computed ${this.clickDistances.size} coarse tiles in ${this.bfsInitTime.toFixed(2)}ms`,
-      );
     }
 
     if (this.target.isPlayer()) {

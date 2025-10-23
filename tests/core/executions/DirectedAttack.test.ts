@@ -908,4 +908,68 @@ describe("DirectedAttack", () => {
     // Cleanup spy
     consoleSpy.mockRestore();
   });
+
+  test("Attack with invalid clickTile falls back to standard attack", async () => {
+    // Regression test: verify that passing an invalid (out-of-bounds) clickTile
+    // doesn't crash the attack - it should fall back to standard non-directed attack.
+
+    // Give defender some territory
+    for (let i = 0; i < 30; i++) {
+      game.executeNextTick();
+    }
+
+    // Spy on console to capture warning
+    const consoleWarnSpy = jest.spyOn(console, "warn");
+
+    // Test various invalid tile references
+    const invalidTiles = [
+      -1, // Negative
+      game.width() * game.height(), // Exactly out of bounds
+      game.width() * game.height() + 100, // Far out of bounds
+      999999, // Very large invalid ref
+    ];
+
+    for (const invalidTile of invalidTiles) {
+      consoleWarnSpy.mockClear();
+
+      // Create attack with invalid clickTile
+      const attackExecution = new AttackExecution(
+        50,
+        attacker,
+        defender.id(),
+        null,
+        true,
+        invalidTile as TileRef,
+      );
+      game.addExecution(attackExecution);
+      game.executeNextTick();
+
+      // Should still create a valid attack (fallback to standard attack)
+      expect(attacker.outgoingAttacks()).toHaveLength(1);
+
+      // Verify warning was logged
+      const warnings = consoleWarnSpy.mock.calls.filter((call) =>
+        call[0]?.includes("Invalid click tile reference"),
+      );
+      expect(warnings.length).toBeGreaterThan(0);
+
+      // Run attack briefly to verify it progresses normally
+      const initialTiles = attacker.numTilesOwned();
+      for (let i = 0; i < 10; i++) {
+        game.executeNextTick();
+        if (attacker.outgoingAttacks().length === 0) break;
+      }
+
+      // Attack should make progress (standard attack behavior)
+      expect(attacker.numTilesOwned()).toBeGreaterThanOrEqual(initialTiles);
+
+      // Clean up attack if still active
+      if (attacker.outgoingAttacks().length > 0) {
+        attacker.outgoingAttacks()[0].delete();
+      }
+    }
+
+    // Cleanup spy
+    consoleWarnSpy.mockRestore();
+  });
 });
