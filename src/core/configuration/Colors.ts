@@ -513,4 +513,58 @@ export const fallbackColors: Colord[] = [
   colord("rgb(255,255,195)"),
   colord("rgb(255,255,205)"),
   colord("rgb(255,255,215)"),
+  colord("rgb(215,255,200)"), // Fresh Mint
+  colord("rgb(225,255,175)"), // Soft Lime
+  colord("rgb(240,250,160)"), // Citrus Wash
+  colord("rgb(245,245,175)"), // Lemon Mist
+  colord("rgb(150,200,255)"), // Cornflower Mist
+  colord("rgb(160,215,255)"), // Powder Blue
+  colord("rgb(170,225,255)"), // Baby Sky
+  colord("rgb(180,235,250)"), // Aqua Pastel
+  colord("rgb(190,245,240)"), // Ice Mint
+  colord("rgb(210,255,245)"), // Sea Mist
+  colord("rgb(220,255,255)"), // Pale Aqua
+  colord("rgb(230,250,255)"), // Sky Haze
+  colord("rgb(240,240,255)"), // Frosted Lilac
+  colord("rgb(250,230,255)"), // Misty Mauve
+  colord("rgb(170,190,255)"), // Periwinkle Ice
+  colord("rgb(180,180,255)"), // Pale Indigo
+  colord("rgb(200,170,255)"), // Lilac Bloom
+  colord("rgb(190,140,195)"), // Fuchsia Tint
+  colord("rgb(195,145,200)"), // Dusky Rose
+  colord("rgb(200,150,205)"), // Plum Frost
+  colord("rgb(205,155,210)"), // Berry Foam
+  colord("rgb(210,160,215)"), // Grape Cloud
+  colord("rgb(215,165,220)"), // Light Bloom
+  colord("rgb(220,170,225)"), // Cherry Blossom
+  colord("rgb(225,175,230)"), // Faded Rose
+  colord("rgb(230,180,235)"), // Dreamy Mauve
+  colord("rgb(235,185,240)"), // Powder Violet
+  colord("rgb(240,190,245)"), // Pastel Violet
+  colord("rgb(245,195,250)"), // Soft Magenta
+  colord("rgb(250,200,255)"), // Lilac Cream
+  colord("rgb(255,205,255)"), // Violet Bloom
+  colord("rgb(255,210,255)"), // Orchid Mist
+  colord("rgb(255,210,250)"), // Lavender Mist
+  colord("rgb(255,205,245)"), // Pastel Orchid
+  colord("rgb(255,215,245)"), // Rose Whisper
+  colord("rgb(220,160,255)"), // Violet Mist
+  colord("rgb(235,150,255)"), // Orchid Glow
+  colord("rgb(245,160,240)"), // Rose Lilac
+  colord("rgb(255,170,225)"), // Bubblegum Pink
+  colord("rgb(255,185,215)"), // Blush Mist
+  colord("rgb(255,195,235)"), // Faded Fuchsia
+  colord("rgb(255,200,220)"), // Cotton Rose
+  colord("rgb(255,210,230)"), // Pastel Blush
+  colord("rgb(255,220,235)"), // Pink Mist
+  colord("rgb(255,220,250)"), // Powder Petal
+  colord("rgb(255,225,255)"), // Petal Mist
+  colord("rgb(255,230,245)"), // Light Rose
+  colord("rgb(255,235,235)"), // Blushed Petal
+  colord("rgb(255,215,195)"), // Apricot Glow
+  colord("rgb(255,225,180)"), // Butter Peach
+  colord("rgb(255,230,190)"),
+  colord("rgb(255,235,200)"), // Cream Peach
+  colord("rgb(255,245,210)"), // Soft Banana
+  colord("rgb(255,240,220)"), // Pastel Sand
 ];
