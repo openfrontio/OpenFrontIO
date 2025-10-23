@@ -388,7 +388,8 @@ export class AttackExecution implements Execution {
       const defensibilityWeight =
         (this.random.nextInt(0, 7) + 10) * (1 - numOwnedByMe * 0.5 + mag / 2);
 
-      let priority = defensibilityWeight + (tickNow - this.attackStartTick);
+      let priority =
+        defensibilityWeight + 0.2 * (tickNow - this.attackStartTick);
 
       if (this.clickTile !== null) {
         // Direction-based attack: use dot product to favor tiles aligned with click direction

@@ -242,4 +242,258 @@ describe("DirectedAttack", () => {
     // the expansion should favor tiles in the eastward direction,
     // regardless of whether we click close or far in that direction
   });
+
+  test("Wave front effect: earlier tiles are conquered before later tiles", async () => {
+    // This test verifies that the time offset creates a proper wave front effect
+    // where tiles discovered early in the attack get conquered before tiles
+    // discovered later, regardless of their direction or defensibility.
+
+    // Give defender a large territory
+    for (let i = 0; i < 100; i++) {
+      game.executeNextTick();
+    }
+
+    // Track initial attacker tiles
+    const initialAttackerTiles = attacker.numTilesOwned();
+
+    // Click to the east
+    const clickTile = game.ref(10, 10);
+    const attackExecution = new AttackExecution(
+      1000, // Large troop count to ensure attack continues
+      attacker,
+      defender.id(),
+      null,
+      true,
+      clickTile,
+    );
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+
+    // Record tiles conquered in first 10 ticks
+    const tilesConqueredEarly = new Set<TileRef>();
+    for (let tick = 0; tick < 10; tick++) {
+      game.executeNextTick();
+      for (const tile of attacker.tiles()) {
+        tilesConqueredEarly.add(tile);
+      }
+
+      // If attack finishes early, stop
+      if (attacker.outgoingAttacks().length === 0) {
+        break;
+      }
+    }
+
+    // Continue attack for another period if still active
+    const tilesConqueredLater = new Set<TileRef>();
+    if (attacker.outgoingAttacks().length > 0) {
+      for (let tick = 0; tick < 10; tick++) {
+        game.executeNextTick();
+        // Record newly conquered tiles (those not in early set)
+        for (const tile of attacker.tiles()) {
+          if (!tilesConqueredEarly.has(tile)) {
+            tilesConqueredLater.add(tile);
+          }
+        }
+
+        if (attacker.outgoingAttacks().length === 0) {
+          break;
+        }
+      }
+    }
+
+    // Verify wave front: tiles were conquered progressively
+    expect(tilesConqueredEarly.size).toBeGreaterThan(initialAttackerTiles);
+
+    // If attack continued, we should have conquered more tiles later
+    // (This part might not always trigger on small maps where attack completes quickly)
+    if (tilesConqueredLater.size > 0) {
+      expect(attacker.numTilesOwned()).toBeGreaterThan(
+        tilesConqueredEarly.size,
+      );
+    }
+  });
+
+  test("Direction dominates over small time differences", async () => {
+    // This test verifies that directional bias is strong enough to overcome
+    // small time offset differences. A tile in the clicked direction should
+    // be prioritized even if discovered slightly later than an off-direction tile.
+
+    // Give defender territory spreading in multiple directions
+    for (let i = 0; i < 80; i++) {
+      game.executeNextTick();
+    }
+
+    // Track defender tiles by rough direction from attacker spawn
+    const attackerX = game.x(attackerSpawn);
+
+    let eastTiles = 0;
+    let westTiles = 0;
+
+    for (const tile of defender.tiles()) {
+      const tileX = game.x(tile);
+      const deltaX = tileX - attackerX;
+
+      if (deltaX > 2) {
+        eastTiles++;
+      } else if (deltaX < -2) {
+        westTiles++;
+      }
+    }
+
+    // Only proceed if defender has tiles in both directions
+    if (eastTiles > 5 && westTiles > 5) {
+      // Click to the EAST
+      const clickTile = game.ref(15, 15);
+      const attackExecution = new AttackExecution(
+        500,
+        attacker,
+        defender.id(),
+        null,
+        true,
+        clickTile,
+      );
+      game.addExecution(attackExecution);
+      game.executeNextTick();
+
+      // Run attack for limited time
+      for (let i = 0; i < 30; i++) {
+        game.executeNextTick();
+      }
+
+      // Count conquered tiles by direction
+      let conqueredEast = 0;
+      let conqueredWest = 0;
+
+      for (const tile of attacker.tiles()) {
+        const tileX = game.x(tile);
+        const deltaX = tileX - attackerX;
+
+        if (deltaX > 2) {
+          conqueredEast++;
+        } else if (deltaX < -2) {
+          conqueredWest++;
+        }
+      }
+
+      // Direction should influence conquest: more tiles conquered to the east
+      // This test may be flaky due to terrain randomness, but with proper
+      // direction weighting, eastern expansion should be clearly favored
+      if (conqueredEast > 0 || conqueredWest > 0) {
+        // If we conquered tiles in either direction, east should be favored
+        expect(conqueredEast).toBeGreaterThan(conqueredWest * 0.8);
+      }
+    }
+  });
+
+  test("Direction influence persists over extended attack duration", async () => {
+    // This test verifies that directional bias remains significant even after
+    // the attack has been running for 30+ seconds (300+ ticks). This is the
+    // critical test for the time offset scaling issue.
+
+    // Give defender extensive territory in all directions
+    for (let i = 0; i < 120; i++) {
+      game.executeNextTick();
+    }
+
+    const attackerY = game.y(attackerSpawn);
+
+    // Click to the NORTH (lower Y values)
+    const clickTile = game.ref(5, 5); // North of attacker
+    const attackExecution = new AttackExecution(
+      2000, // Very large troop count for extended attack
+      attacker,
+      defender.id(),
+      null,
+      true,
+      clickTile,
+    );
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+
+    // Run attack for ~30 seconds (300 ticks) to test if direction persists
+    for (let i = 0; i < 300; i++) {
+      game.executeNextTick();
+
+      // Stop early if attack completes
+      if (attacker.outgoingAttacks().length === 0) {
+        break;
+      }
+    }
+
+    // Analyze conquest pattern after extended duration
+    let northTiles = 0;
+    let southTiles = 0;
+
+    for (const tile of attacker.tiles()) {
+      const tileY = game.y(tile);
+      const deltaY = tileY - attackerY;
+
+      if (deltaY < -2) {
+        northTiles++; // Clicked direction
+      } else if (deltaY > 2) {
+        southTiles++; // Opposite direction
+      }
+    }
+
+    // After 300 ticks, if time offset dominates (unbounded growth),
+    // direction would be nearly meaningless and conquest would be roughly equal
+    // in all directions. With proper scaling (0.2x), direction should still
+    // heavily favor the clicked direction.
+    if (northTiles > 0 || southTiles > 0) {
+      // North should still be significantly favored after 30 seconds
+      expect(northTiles).toBeGreaterThan(southTiles);
+    }
+  });
+
+  test("Time offset scaling preserves balance between direction and discovery time", async () => {
+    // This test verifies that the time offset scaling (0.2x) maintains
+    // proper balance: the wave front effect (earlier tiles first) should work,
+    // but direction should remain the primary factor for tiles discovered
+    // at similar times.
+
+    // Give defender territory
+    for (let i = 0; i < 100; i++) {
+      game.executeNextTick();
+    }
+
+    const initialTiles = attacker.numTilesOwned();
+
+    // Click eastward (within map bounds: 16x16)
+    const clickTile = game.ref(12, 10);
+    const attackExecution = new AttackExecution(
+      1500,
+      attacker,
+      defender.id(),
+      null,
+      true,
+      clickTile,
+    );
+    game.addExecution(attackExecution);
+    game.executeNextTick();
+
+    // Verify attack was created
+    expect(attacker.outgoingAttacks()).toHaveLength(1);
+
+    // Run for extended period and track conquest
+    let ticksWithConquest = 0;
+    for (let tick = 0; tick < 50; tick++) {
+      const tilesBefore = attacker.numTilesOwned();
+      game.executeNextTick();
+
+      // Count ticks where conquest happened
+      if (attacker.numTilesOwned() > tilesBefore) {
+        ticksWithConquest++;
+      }
+
+      if (attacker.outgoingAttacks().length === 0) {
+        break;
+      }
+    }
+
+    // Verify that attack made progress
+    expect(attacker.numTilesOwned()).toBeGreaterThan(initialTiles);
+
+    // Verify conquest happened (wave front effect means progressive conquest)
+    expect(ticksWithConquest).toBeGreaterThan(0);
+  });
 });

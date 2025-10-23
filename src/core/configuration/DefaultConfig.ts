@@ -793,7 +793,7 @@ export class DefaultConfig implements Config {
    * - Lower values make direction less noticeable
    */
   attackDirectionWeight(): number {
-    return 10.0;
+    return 3.0;
   }
 
   startManpower(playerInfo: PlayerInfo): number {
