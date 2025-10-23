@@ -76,14 +76,13 @@ export class MapPlaylist {
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
-    const isTeamBased = mode === GameMode.Team;
     const playerTeams =
       mode === GameMode.Team ? this.getTeamCount() : undefined;
 
     // Create the default public game config (from your GameManager)
     return {
-      donateGold: isTeamBased,
-      donateTroops: isTeamBased,
+      donateGold: mode === GameMode.Team,
+      donateTroops: mode === GameMode.Team,
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
@@ -93,7 +92,7 @@ export class MapPlaylist {
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
-      disableNPCs: isTeamBased,
+      disableNPCs: mode === GameMode.Team,
       gameMode: mode,
       playerTeams,
       bots: 400,
