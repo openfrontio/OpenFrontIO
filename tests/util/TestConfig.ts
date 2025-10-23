@@ -13,6 +13,9 @@ export class TestConfig extends DefaultConfig {
   private _proximityBonusPortsNb: number = 0;
   private _defaultNukeSpeed: number = 4;
   private _attackDirectionWeight: number | null = null;
+  private _attackTimeDecay: number | null = null;
+  private _attackMagnitudeWeight: number | null = null;
+  private _attackDistanceDecayConstant: number | null = null;
 
   samHittingChance(): number {
     return 1;
@@ -52,6 +55,39 @@ export class TestConfig extends DefaultConfig {
       return this._attackDirectionWeight;
     }
     return super.attackDirectionWeight();
+  }
+
+  setAttackTimeDecay(decay: number): void {
+    this._attackTimeDecay = decay;
+  }
+
+  attackTimeDecay(): number {
+    if (this._attackTimeDecay !== null) {
+      return this._attackTimeDecay;
+    }
+    return super.attackTimeDecay();
+  }
+
+  setAttackMagnitudeWeight(weight: number): void {
+    this._attackMagnitudeWeight = weight;
+  }
+
+  attackMagnitudeWeight(): number {
+    if (this._attackMagnitudeWeight !== null) {
+      return this._attackMagnitudeWeight;
+    }
+    return super.attackMagnitudeWeight();
+  }
+
+  setAttackDistanceDecayConstant(constant: number): void {
+    this._attackDistanceDecayConstant = constant;
+  }
+
+  attackDistanceDecayConstant(): number {
+    if (this._attackDistanceDecayConstant !== null) {
+      return this._attackDistanceDecayConstant;
+    }
+    return super.attackDistanceDecayConstant();
   }
 
   defaultNukeTargetableRange(): number {
