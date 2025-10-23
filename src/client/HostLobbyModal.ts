@@ -344,32 +344,7 @@ export class HostLobbyModal extends LitElement {
               ${
                 this.gameMode === GameMode.Team &&
                 this.teamCount === HumansVsNations
-                  ? html`
-                      <label for="nations-count" class="option-card">
-                        <input
-                          type="range"
-                          id="nations-count"
-                          min="1"
-                          max="400"
-                          step="1"
-                          @input=${this.handleNationsChange}
-                          @change=${this.handleNationsChange}
-                          .value="${String(this.nations)}"
-                        />
-                        <input
-                          type="number"
-                          id="nations-count-input"
-                          min="1"
-                          max="400"
-                          .value=${String(this.nations)}
-                          style="width: 60px; color: black; text-align: right; border-radius: 8px; margin-left: 8px;"
-                          @input=${this.handleNationsChange}
-                        />
-                        <div class="option-card-title">
-                          <span>${translateText("host_modal.nations")}</span>
-                        </div>
-                      </label>
-                    `
+                  ? html``
                   : html`
                       <label for="bots-count" class="option-card">
                         <input
