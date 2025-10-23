@@ -623,42 +623,37 @@ export class DefaultConfig implements Config {
       ? this.pastelThemeDark
       : this.pastelTheme;
   }
+
 largeAttackerSpeedThresholdDebuff(attacker: Player, totalLandTiles: number): number {
   const territoryPercentage = (attacker.numTilesOwned() / totalLandTiles) * 100;
   
-  if (territoryPercentage < 10) {
-    return 1.0;
-  } else if (territoryPercentage < 15) {
-    return 0.50;
-  } else if (territoryPercentage < 20) {
-    return 0.38;
-  } else if (territoryPercentage < 25) {
-    return 0.28;
-  } else if (territoryPercentage < 30) {
-    return 0.20;
-  } else if (territoryPercentage < 35) {
-    return 0.14;
-  } else if (territoryPercentage < 40) {
-    return 0.10;
-  } else if (territoryPercentage < 45) {
-    return 0.07;
-  } else if (territoryPercentage < 50) {
-    return 0.05;
-  } else if (territoryPercentage < 55) {
-    return 0.04;
-  } else if (territoryPercentage < 60) {
-    return 0.03;
-  } else if (territoryPercentage < 65) {
-    return 0.02;
-  } else if (territoryPercentage < 70) {
-    return 0.015;
-  } else if (territoryPercentage < 75) {
-    return 0.01;
-  } else if (territoryPercentage < 80) {
-    return 0.007;
-  } else {
-    return 0.005;
+  const thresholds: Array<{ max: number; value: number }> = [
+    { max: 10, value: 1.0 },
+    { max: 15, value: 0.50 },
+    { max: 20, value: 0.38 },
+    { max: 25, value: 0.28 },
+    { max: 30, value: 0.20 },
+    { max: 35, value: 0.14 },
+    { max: 40, value: 0.10 },
+    { max: 45, value: 0.07 },
+    { max: 50, value: 0.05 },
+    { max: 55, value: 0.04 },
+    { max: 60, value: 0.03 },
+    { max: 65, value: 0.02 },
+    { max: 70, value: 0.015 },
+    { max: 75, value: 0.01 },
+    { max: 80, value: 0.007 },
+  ];
+  
+  for (const threshold of thresholds) {
+    if (territoryPercentage < threshold.max) {
+      return threshold.value;
+    }
   }
+  
+  return 0.005;
+}
+
 }
   attackLogic(
     gm: Game,
