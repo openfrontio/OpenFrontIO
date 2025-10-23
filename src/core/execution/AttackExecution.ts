@@ -522,8 +522,16 @@ export class AttackExecution implements Execution {
       const defensibilityWeight =
         (this.random.nextInt(0, 7) + 10) * (1 - numOwnedByMe * 0.5 + mag / 2);
 
-      let priority =
-        defensibilityWeight + 0.2 * (tickNow - this.attackStartTick);
+      // Wave front offset with exponential saturation
+      // Grows quickly early to ensure coherent expansion, then saturates
+      // to prevent dominating terrain considerations in long attacks
+      const elapsedTicks = tickNow - this.attackStartTick;
+      const maxWaveOffset = this.mg.config().attackWaveFrontSaturation();
+      const waveTimeConstant = this.mg.config().attackWaveFrontTimeConstant();
+      const waveOffset =
+        maxWaveOffset * (1 - Math.exp(-elapsedTicks / waveTimeConstant));
+
+      let priority = defensibilityWeight + waveOffset;
 
       if (this.clickTile !== null) {
         // Per-tile vector approach: each border tile calculates its own direction to click

@@ -837,6 +837,35 @@ export class DefaultConfig implements Config {
     return 30.0;
   }
 
+  /**
+   * Maximum offset for wave front effect (in priority points).
+   * Wave front ensures tiles discovered earlier are conquered before tiles discovered later.
+   * This creates coherent territorial expansion instead of random jumping.
+   *
+   * - 50: Balanced - wave front matters but never completely dominates terrain (recommended)
+   * - 30: Weaker wave front - terrain has more influence throughout
+   * - 75: Stronger wave front - more rigid expansion pattern
+   *
+   * Must be tuned relative to defensibility range (~15-35 points)
+   */
+  attackWaveFrontSaturation(): number {
+    return 50.0;
+  }
+
+  /**
+   * Time constant (in ticks) for wave front saturation.
+   * Controls how quickly the wave front offset reaches its maximum.
+   *
+   * - 300 ticks (30s): Wave front reaches ~63% of max after 30s (recommended)
+   * - 200 ticks (20s): Faster saturation - more aggressive early expansion
+   * - 600 ticks (60s): Slower saturation - gradual wave front building
+   *
+   * Matches attackTimeDecay() by default for consistent temporal behavior.
+   */
+  attackWaveFrontTimeConstant(): number {
+    return 300.0;
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
