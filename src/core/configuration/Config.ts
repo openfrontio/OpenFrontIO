@@ -117,8 +117,6 @@ export interface Config {
   attackTimeDecay(): number;
   attackMagnitudeWeight(): number;
   attackDistanceDecayConstant(): number;
-  attackWaveFrontSaturation(): number;
-  attackWaveFrontTimeConstant(): number;
   attackBFSMaxRadius(): number;
   radiusPortSpawn(): number;
   // When computing likelihood of trading for any given port, the X closest port

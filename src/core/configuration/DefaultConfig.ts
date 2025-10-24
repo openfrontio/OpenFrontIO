@@ -844,37 +844,6 @@ export class DefaultConfig implements Config {
   }
 
   /**
-   * Maximum offset for wave front effect (in priority points).
-   * Wave front ensures tiles discovered earlier are conquered before tiles discovered later.
-   * This creates coherent territorial expansion instead of random jumping.
-   *
-   * NOTE: Currently unused - wave front uses linear growth (matches original behavior).
-   * Kept for backward compatibility with custom configurations.
-   *
-   * - 50: Balanced - wave front matters but never completely dominates terrain (recommended)
-   * - 30: Weaker wave front - terrain has more influence throughout
-   * - 75: Stronger wave front - more rigid expansion pattern
-   */
-  attackWaveFrontSaturation(): number {
-    return 40.0;
-  }
-
-  /**
-   * Time constant (in ticks) for wave front saturation.
-   * Controls how quickly the wave front offset reaches its maximum.
-   *
-   * NOTE: Currently unused - wave front uses linear growth (matches original behavior).
-   * Kept for backward compatibility with custom configurations.
-   *
-   * - 300 ticks (30s): Wave front reaches ~63% of max after 30s
-   * - 200 ticks (20s): Faster saturation - more aggressive early expansion
-   * - 600 ticks (60s): Slower saturation - gradual wave front building
-   */
-  attackWaveFrontTimeConstant(): number {
-    return 150.0;
-  }
-
-  /**
    * Maximum BFS radius for neutral territory attacks (in tiles).
    * Limits how far the BFS can traverse when attacking empty/neutral territory.
    * This prevents performance issues on large maps where neutral regions can be enormous.
