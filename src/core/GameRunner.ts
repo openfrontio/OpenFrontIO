@@ -6,9 +6,7 @@ import {
   AllPlayers,
   Attack,
   Cell,
-  Difficulty,
   Game,
-  GameMode,
   GameUpdates,
   HumansVsNations,
   NameViewData,
@@ -41,7 +39,7 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  let config = await getConfig(gameStart.config, null);
+  const config = await getConfig(gameStart.config, null);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
@@ -71,36 +69,6 @@ export async function createGameRunner(
             new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
           ),
       );
-
-  if (
-    gameStart.config.gameMode === GameMode.Team &&
-    gameStart.config.playerTeams === HumansVsNations &&
-    nations.length > 0
-  ) {
-    // Only calculate difficulty based on human percentage if automaticDifficulty is enabled
-    if (gameStart.config.automaticDifficulty) {
-      const totalPlayers = humans.length + nations.length;
-      const humanPercentage =
-        totalPlayers > 0 ? humans.length / totalPlayers : 0.5;
-
-      let calculatedDifficulty: Difficulty;
-      if (humanPercentage < 0.25) {
-        calculatedDifficulty = Difficulty.Easy;
-      } else if (humanPercentage < 0.5) {
-        calculatedDifficulty = Difficulty.Medium;
-      } else if (humanPercentage < 0.75) {
-        calculatedDifficulty = Difficulty.Hard;
-      } else {
-        calculatedDifficulty = Difficulty.Impossible;
-      }
-
-      // Override the game config difficulty for HumansVsNations mode
-      config = await getConfig(
-        { ...gameStart.config, difficulty: calculatedDifficulty },
-        null,
-      );
-    }
-  }
 
   const game: Game = createGame(
     humans,

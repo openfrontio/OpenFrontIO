@@ -47,7 +47,6 @@ export class SinglePlayerModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
-  @state() private automaticDifficulty: boolean = false;
 
   @state() private disabledUnits: UnitType[] = [];
 
@@ -132,44 +131,6 @@ export class SinglePlayerModal extends LitElement {
               </div>
             </div>
           </div>
-
-          ${!(
-            this.gameMode === GameMode.Team &&
-            this.teamCount === HumansVsNations &&
-            this.automaticDifficulty
-          )
-            ? html`
-                <!-- Difficulty Selection -->
-                <div class="options-section">
-                  <div class="option-title">
-                    ${translateText("difficulty.difficulty")}
-                  </div>
-                  <div class="option-cards">
-                    ${Object.entries(Difficulty)
-                      .filter(([key]) => isNaN(Number(key)))
-                      .map(
-                        ([key, value]) => html`
-                          <div
-                            class="option-card ${this.selectedDifficulty ===
-                            value
-                              ? "selected"
-                              : ""}"
-                            @click=${() =>
-                              this.handleDifficultySelection(value)}
-                          >
-                            <difficulty-display
-                              .difficultyKey=${key}
-                            ></difficulty-display>
-                            <p class="option-card-title">
-                              ${translateText(`difficulty.${key}`)}
-                            </p>
-                          </div>
-                        `,
-                      )}
-                  </div>
-                </div>
-              `
-            : ""}
 
           <!-- Game Mode Selection -->
           <div class="options-section">
@@ -291,28 +252,7 @@ export class SinglePlayerModal extends LitElement {
                     </label>
                   `
                 : ""}
-              ${this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations
-                ? html`
-                    <label
-                      for="singleplayer-modal-automatic-difficulty"
-                      class="option-card ${this.automaticDifficulty
-                        ? "selected"
-                        : ""}"
-                    >
-                      <div class="checkbox-icon"></div>
-                      <input
-                        type="checkbox"
-                        id="singleplayer-modal-automatic-difficulty"
-                        @change=${this.handleAutomaticDifficultyChange}
-                        .checked=${this.automaticDifficulty}
-                      />
-                      <div class="option-card-title">
-                        ${translateText("single_modal.automatic_difficulty")}
-                      </div>
-                    </label>
-                  `
-                : ""}
+
               <label
                 for="singleplayer-modal-instant-build"
                 class="option-card ${this.instantBuild ? "selected" : ""}"
@@ -510,10 +450,6 @@ export class SinglePlayerModal extends LitElement {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
   }
 
-  private handleAutomaticDifficultyChange(e: Event) {
-    this.automaticDifficulty = Boolean((e.target as HTMLInputElement).checked);
-  }
-
   private handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
   }
@@ -608,15 +544,12 @@ export class SinglePlayerModal extends LitElement {
               ...(this.gameMode === GameMode.Team &&
               this.teamCount === HumansVsNations
                 ? {
-                    automaticDifficulty: this.automaticDifficulty,
-                    // HVN: omit bots/disableNPCs
-                    bots: 0,
+                    bots: this.bots,
                     disableNPCs: false,
                   }
                 : {
                     bots: this.bots,
                     disableNPCs: this.disableNPCs,
-                    automaticDifficulty: undefined,
                   }),
             },
           },

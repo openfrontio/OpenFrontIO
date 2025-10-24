@@ -40,7 +40,7 @@ export class HostLobbyModal extends LitElement {
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
-  @state() private bots: number | undefined = 400;
+  @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -56,7 +56,6 @@ export class HostLobbyModal extends LitElement {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
-  @state() private automaticDifficulty: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
@@ -227,46 +226,6 @@ export class HostLobbyModal extends LitElement {
             </div>
           </div>
 
-          ${
-            !(
-              this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations &&
-              this.automaticDifficulty
-            )
-              ? html`
-                  <!-- Difficulty Selection -->
-                  <div class="options-section">
-                    <div class="option-title">
-                      ${translateText("difficulty.difficulty")}
-                    </div>
-                    <div class="option-cards">
-                      ${Object.entries(Difficulty)
-                        .filter(([key]) => isNaN(Number(key)))
-                        .map(
-                          ([key, value]) => html`
-                            <div
-                              class="option-card ${this.selectedDifficulty ===
-                              value
-                                ? "selected"
-                                : ""}"
-                              @click=${() =>
-                                this.handleDifficultySelection(value)}
-                            >
-                              <difficulty-display
-                                .difficultyKey=${key}
-                              ></difficulty-display>
-                              <p class="option-card-title">
-                                ${translateText(`difficulty.${key}`)}
-                              </p>
-                            </div>
-                          `,
-                        )}
-                    </div>
-                  </div>
-                `
-              : ""
-          }
-
           <!-- Game Mode Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("host_modal.mode")}</div>
@@ -389,31 +348,6 @@ export class HostLobbyModal extends LitElement {
                           />
                           <div class="option-card-title">
                             ${translateText("host_modal.disable_nations")}
-                          </div>
-                        </label>
-                      `
-                    : ""
-                }
-
-                ${
-                  this.gameMode === GameMode.Team &&
-                  this.teamCount === HumansVsNations
-                    ? html`
-                        <label
-                          for="automatic-difficulty"
-                          class="option-card ${this.automaticDifficulty
-                            ? "selected"
-                            : ""}"
-                        >
-                          <div class="checkbox-icon"></div>
-                          <input
-                            type="checkbox"
-                            id="automatic-difficulty"
-                            @change=${this.handleAutomaticDifficultyChange}
-                            .checked=${this.automaticDifficulty}
-                          />
-                          <div class="option-card-title">
-                            ${translateText("host_modal.automatic_difficulty")}
                           </div>
                         </label>
                       `
@@ -749,11 +683,6 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private handleAutomaticDifficultyChange(e: Event) {
-    this.automaticDifficulty = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
-
   private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
     if (["-", "+", "e"].includes(e.key)) {
       e.preventDefault();
@@ -815,9 +744,8 @@ export class HostLobbyModal extends LitElement {
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
             ? {
-                bots: undefined,
-                disableNPCs: undefined,
-                automaticDifficulty: this.automaticDifficulty,
+                bots: this.bots,
+                disableNPCs: false,
               }
             : {
                 bots: this.bots,
