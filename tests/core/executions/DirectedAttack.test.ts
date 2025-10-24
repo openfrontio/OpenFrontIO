@@ -36,10 +36,10 @@ describe("DirectedAttack", () => {
   // - Telemetry tracking (init time, coarse grid size, lookups)
   //
   // Configuration Parameters (all 4 validated):
-  // - attackDirectionWeight (3.0) - directional bias strength
-  // - attackTimeDecay (300.0) - time decay constant
-  // - attackMagnitudeWeight (1.0) - proximity bonus weight
-  // - attackDistanceDecayConstant (30.0) - distance decay constant
+  // - attackDirectionWeight (2.5) - directional bias strength
+  // - attackTimeDecay (150.0) - time decay constant
+  // - attackMagnitudeWeight (0.6) - proximity bonus weight
+  // - attackDistanceDecayConstant (25.0) - distance decay constant
   //
   // Edge Cases:
   // - Backward compatibility (attacks without clickTile)
@@ -156,10 +156,10 @@ describe("DirectedAttack", () => {
     const config = game.config() as TestConfig;
 
     // Validate all 4 directed attack configuration parameters
-    expect(config.attackDirectionWeight()).toBe(3.0);
-    expect(config.attackTimeDecay()).toBe(300.0);
-    expect(config.attackMagnitudeWeight()).toBe(1.0);
-    expect(config.attackDistanceDecayConstant()).toBe(30.0);
+    expect(config.attackDirectionWeight()).toBe(2.5);
+    expect(config.attackTimeDecay()).toBe(150.0);
+    expect(config.attackMagnitudeWeight()).toBe(0.6);
+    expect(config.attackDistanceDecayConstant()).toBe(25.0);
 
     // Create attack with clickTile
     const clickTile = game.ref(10, 15);
@@ -336,7 +336,7 @@ describe("DirectedAttack", () => {
     // Verify attack made progress (directional influence allowed conquest)
     expect(attacker.numTilesOwned()).toBeGreaterThan(initialTiles);
 
-    // Note: With weight=3.0, direction provides subtle influence.
+    // Note: With weight=2.5, direction provides subtle influence.
     // The fact that attack progressed successfully confirms directional bias is working.
     // More specific directional assertions are covered by other tests.
   });
@@ -456,7 +456,7 @@ describe("DirectedAttack", () => {
     // Test 2: Verify direction weight configuration is accessible and modifiable
     const config = game.config() as TestConfig;
     const originalWeight = config.attackDirectionWeight();
-    expect(originalWeight).toBe(3.0); // Default value
+    expect(originalWeight).toBe(2.5); // Default value
 
     // Verify we can modify it
     config.setAttackDirectionWeight(10.0);
@@ -468,7 +468,7 @@ describe("DirectedAttack", () => {
 
     // Test 3: Verify magnitude weight (proximity bonus) configuration is modifiable
     const originalMagnitude = config.attackMagnitudeWeight();
-    expect(originalMagnitude).toBe(1.0); // Default value
+    expect(originalMagnitude).toBe(0.6); // Default value
 
     // Verify we can modify it
     config.setAttackMagnitudeWeight(2.0);
@@ -727,8 +727,8 @@ describe("DirectedAttack", () => {
     expect(tilesWithZeroMagnitude).toBeGreaterThan(0);
 
     // Restore default
-    config.setAttackMagnitudeWeight(1.0);
-    expect(config.attackMagnitudeWeight()).toBe(1.0);
+    config.setAttackMagnitudeWeight(0.6);
+    expect(config.attackMagnitudeWeight()).toBe(0.6);
   });
 
   test("Proximity bonus correctly prioritizes neighbors closer to click point", async () => {
@@ -822,10 +822,10 @@ describe("DirectedAttack", () => {
     expect(avgDistFirst).toBeLessThan(avgDistLast * 1.2);
 
     // Restore defaults
-    config.setAttackMagnitudeWeight(1.0);
-    config.setAttackDirectionWeight(3.0);
-    config.setAttackTimeDecay(300.0);
-    config.setAttackDistanceDecayConstant(30.0);
+    config.setAttackMagnitudeWeight(0.6);
+    config.setAttackDirectionWeight(2.5);
+    config.setAttackTimeDecay(150.0);
+    config.setAttackDistanceDecayConstant(25.0);
   });
 
   test("BFS distances respect terrain connectivity", async () => {
@@ -877,7 +877,7 @@ describe("DirectedAttack", () => {
     const consoleSpy = jest.spyOn(console, "log");
 
     // Create directed attack
-    const clickTile = game.ref(8, 8);
+    const clickTile = game.ref(10, 10);
     const attackExecution = new AttackExecution(
       50, // Small troop count so attack completes quickly
       attacker,
