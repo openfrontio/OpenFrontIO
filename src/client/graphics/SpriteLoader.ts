@@ -1,9 +1,6 @@
 import { Colord } from "colord";
-import atomBombSprite from "../../../resources/sprites/atombomb.png";
-import eyeSprite from "../../../resources/sprites/halloween/eye.png";
-import potion from "../../../resources/sprites/halloween/potion.png";
+import miniPumpkin from "../../../resources/sprites/halloween/miniPumpkin.png";
 import pumpkin from "../../../resources/sprites/halloween/pumpkin.png";
-import hydrogenBombSprite from "../../../resources/sprites/hydrogenbomb.png";
 import mirvSprite from "../../../resources/sprites/mirv2.png";
 import samMissileSprite from "../../../resources/sprites/samMissile.png";
 import tradeShipSprite from "../../../resources/sprites/tradeship.png";
@@ -29,22 +26,7 @@ const SPRITE_CONFIG: Partial<Record<UnitType | TrainTypeSprite, string>> = {
   [UnitType.TransportShip]: transportShipSprite,
   [UnitType.Warship]: warshipSprite,
   [UnitType.SAMMissile]: samMissileSprite,
-  [UnitType.AtomBomb]: atomBombSprite,
-  [UnitType.HydrogenBomb]: hydrogenBombSprite,
-  [UnitType.TradeShip]: tradeShipSprite,
-  [UnitType.MIRV]: mirvSprite,
-  [TrainTypeSprite.Engine]: trainEngineSprite,
-  [TrainTypeSprite.Carriage]: trainCarriageSprite,
-  [TrainTypeSprite.LoadedCarriage]: trainLoadedCarriageSprite,
-};
-
-const HALLOWEEN_SPRITE_CONFIG: Partial<
-  Record<UnitType | TrainTypeSprite, string>
-> = {
-  [UnitType.TransportShip]: transportShipSprite,
-  [UnitType.Warship]: eyeSprite,
-  [UnitType.SAMMissile]: samMissileSprite,
-  [UnitType.AtomBomb]: potion,
+  [UnitType.AtomBomb]: miniPumpkin,
   [UnitType.HydrogenBomb]: pumpkin,
   [UnitType.TradeShip]: tradeShipSprite,
   [UnitType.MIRV]: mirvSprite,
@@ -57,7 +39,7 @@ const spriteMap: Map<UnitType | TrainTypeSprite, ImageBitmap> = new Map();
 
 // preload all images
 export const loadAllSprites = async (): Promise<void> => {
-  const entries = Object.entries(HALLOWEEN_SPRITE_CONFIG);
+  const entries = Object.entries(SPRITE_CONFIG);
   const totalSprites = entries.length;
   let loadedCount = 0;
 
