@@ -610,8 +610,8 @@ export class SinglePlayerModal extends LitElement {
                 ? {
                     automaticDifficulty: this.automaticDifficulty,
                     // HVN: omit bots/disableNPCs
-                    bots: undefined,
-                    disableNPCs: undefined,
+                    bots: 0,
+                    disableNPCs: false,
                   }
                 : {
                     bots: this.bots,

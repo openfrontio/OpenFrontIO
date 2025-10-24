@@ -8,6 +8,7 @@ import {
   Cell,
   Difficulty,
   Game,
+  GameMode,
   GameUpdates,
   HumansVsNations,
   NameViewData,
@@ -60,7 +61,7 @@ export async function createGameRunner(
       ),
   );
 
-  let nations = gameStart.config.disableNPCs
+  const nations = gameStart.config.disableNPCs
     ? []
     : gameMap.nations.map(
         (n) =>
@@ -76,28 +77,11 @@ export async function createGameRunner(
     gameStart.config.playerTeams === HumansVsNations &&
     nations.length > 0
   ) {
-    // For HumansVsNations mode, use the nations config or default
-    const requested = gameStart.config.nations ?? nations.length;
-    const targetNationCount = Math.max(1, Math.min(requested, nations.length));
-
-    if (
-      gameStart.config?.nations !== undefined &&
-      gameStart.config.nations !== null &&
-      gameStart.config.nations !== targetNationCount
-    ) {
-      console.warn(
-        `Requested nations (${gameStart.config.nations}) exceed available (${nations.length}); clamped to ${targetNationCount}.`,
-      );
-    }
-
-    if (nations.length > targetNationCount) {
-      nations = random.shuffleArray(nations).slice(0, targetNationCount);
-    }
-
     // Only calculate difficulty based on human percentage if automaticDifficulty is enabled
     if (gameStart.config.automaticDifficulty) {
       const totalPlayers = humans.length + nations.length;
-      const humanPercentage = humans.length / totalPlayers;
+      const humanPercentage =
+        totalPlayers > 0 ? humans.length / totalPlayers : 0.5;
 
       let calculatedDifficulty: Difficulty;
       if (humanPercentage < 0.25) {
