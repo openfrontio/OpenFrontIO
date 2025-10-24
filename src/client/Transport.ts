@@ -353,7 +353,7 @@ export class Transport {
         // TODO: make this a modal
         alert(`connection refused: ${event.reason}`);
       } else if (event.code !== 1000) {
-        console.log(`recieved error code ${event.code}, reconnecting`);
+        console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();
       }
     };
@@ -377,11 +377,7 @@ export class Transport {
       lastTurn: numTurns,
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
-      cosmetics: {
-        flag: this.lobbyConfig.flag,
-        patternName: this.lobbyConfig.pattern?.name,
-        patternColorPaletteName: this.lobbyConfig.pattern?.colorPalette?.name,
-      },
+      cosmetics: this.lobbyConfig.cosmetics,
     } satisfies ClientJoinMessage);
   }
 
@@ -394,15 +390,15 @@ export class Transport {
     if (this.socket === null) return;
     if (this.socket.readyState === WebSocket.OPEN) {
       console.log("on stop: leaving game");
-      this.socket.close();
+      this.killExistingSocket();
     } else {
       console.log(
         "WebSocket is not open. Current state:",
         this.socket.readyState,
       );
       console.error("attempting reconnect");
+      this.killExistingSocket();
     }
-    this.socket.onclose = (event: CloseEvent) => {};
   }
 
   private onSendAllianceRequest(event: SendAllianceRequestIntentEvent) {
@@ -500,7 +496,7 @@ export class Transport {
       type: "donate_gold",
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
-      gold: event.gold,
+      gold: event.gold ? Number(event.gold) : null,
     });
   }
 

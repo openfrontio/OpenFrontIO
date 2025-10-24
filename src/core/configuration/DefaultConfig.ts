@@ -213,6 +213,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   workerPortByIndex(index: number): number {
     return 3001 + index;
   }
+  enableMatchmaking(): boolean {
+    return false;
+  }
 }
 
 export class DefaultConfig implements Config {
@@ -568,6 +571,9 @@ export class DefaultConfig implements Config {
   }
   donateCooldown(): Tick {
     return 10 * 10;
+  }
+  deletionMarkDuration(): Tick {
+    return 15 * 10;
   }
   deleteUnitCooldown(): Tick {
     return 5 * 10;

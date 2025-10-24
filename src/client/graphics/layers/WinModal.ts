@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
+import { isInIframe, translateText } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -35,6 +35,8 @@ export class WinModal extends LitElement implements Layer {
   private patternContent: TemplateResult | null = null;
 
   private _title: string;
+
+  private rand = Math.random();
 
   // Override to prevent shadow DOM creation
   createRenderRoot() {
@@ -98,6 +100,9 @@ export class WinModal extends LitElement implements Layer {
   }
 
   innerHtml() {
+    if (isInIframe() || this.rand < 0.25) {
+      return this.steamWishlist();
+    }
     return this.renderPatternButton();
   }
 
@@ -127,12 +132,7 @@ export class WinModal extends LitElement implements Layer {
     for (const pattern of Object.values(patterns?.patterns ?? {})) {
       for (const colorPalette of pattern.colorPalettes ?? []) {
         if (
-          patternRelationship(
-            pattern,
-            colorPalette,
-            me !== false ? me : null,
-            null,
-          ) === "purchasable"
+          patternRelationship(pattern, colorPalette, me, null) === "purchasable"
         ) {
           const palette = patterns?.colorPalettes?.[colorPalette.name];
           if (palette) {

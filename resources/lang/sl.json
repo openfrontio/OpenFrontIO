@@ -130,9 +130,8 @@
     "disable_nations": "Deaktiviraj nacije",
     "instant_build": "Instantna gradnja",
     "infinite_gold": "Neomejeno zlata",
-    "donate_gold": "Doniraj zlato",
     "infinite_troops": "Neomejene enote",
-    "donate_troops": "Doniraj enote",
+    "compact_map": "Mini mapa",
     "disable_nukes": "Deaktiviraj bombe",
     "enables_title": "Aktiviraj nastavitve",
     "start": "Začni igro"
@@ -177,8 +176,10 @@
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Gibraltarska ožina",
     "italia": "Italija",
+    "japan": "Japonska",
     "yenisei": "Jenisej",
-    "pluto": "Pluto"
+    "pluto": "Pluto",
+    "montreal": "Montreal"
   },
   "map_categories": {
     "continental": "Celinska",
@@ -196,8 +197,9 @@
     "join_lobby": "Pridruži se sobi",
     "checking": "Preverjanje sobe...",
     "not_found": "Sobe ni mogoče najti. Prosimo preverite ID in poskusite znova.",
-    "error": "Prišlo je do napake. Prosimo, poskusite znova.",
-    "joined_waiting": "Uspešna pridružitev! Čakanje na začetek igre..."
+    "error": "Prišlo je do napake. Poskusite znova ali se obrnite na podporo.",
+    "joined_waiting": "Uspešna pridružitev! Čakanje na začetek igre...",
+    "version_mismatch": "Ta soba je bila ustvarjena z drugo verzijo igre. Napaka pridružitve."
   },
   "public_lobby": {
     "join": "Pridruži se naslednji igri",
@@ -227,6 +229,7 @@
     "donate_gold": "Doniraj zlato",
     "infinite_troops": "Neomejene enote",
     "donate_troops": "Doniraj enote",
+    "compact_map": "Mini mapa",
     "enables_title": "Aktiviraj nastavitve",
     "player": "Igralec",
     "players": "Igralci",
@@ -314,6 +317,8 @@
     "territory_patterns_desc": "Izberite, ali želite v igri prikazati vzorce ozemlja",
     "performance_overlay_label": "Prekrivni sloj zmogljivosti",
     "performance_overlay_desc": "Preklopi prekrivni sloj zmogljivosti. Ko je omogočen, bo prikazan prekrivni sloj zmogljivosti. Med igro pritisnite shift-D za preklop.",
+    "performance_overlay_enabled": "Prekrivanje zmogljivosti je omogočeno",
+    "performance_overlay_disabled": "Prekrivanje zmogljivosti je onemogočeno",
     "easter_writing_speed_label": "Množitelj hitrosti pisanja",
     "easter_writing_speed_desc": "Prilagodite hitrost pretvarjanja, da programirate (x1–x100)",
     "easter_bug_count_label": "Število hroščev",
@@ -494,7 +499,8 @@
     "nation": "Narod",
     "player": "Igralec",
     "team": "Ekipa",
-    "d_troops": "Obrambne enote",
+    "alliance_timeout": "Zavezništvo poteče čez",
+    "troops": "Enote",
     "a_troops": "Napadalne enote",
     "gold": "Zlato",
     "ports": "Luka",
@@ -585,7 +591,7 @@
     "choose_spawn": "Izberite začetno lokacijo"
   },
   "territory_patterns": {
-    "title": "Izberite vzorec ozemlja",
+    "title": "Izberi poslikavo območja",
     "purchase": "Nakup",
     "blocked": {
       "login": "Za dostop do tega vzorca morate biti prijavljeni.",
@@ -644,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "Pobriši enoto",
     "delete_unit_description": "Pritisni za odstranitev najbližjih enot"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Avatar"
+  },
+  "player_stats_table": {
+    "building_stats": "Statistika zgradbe",
+    "ship_arrivals": "Prihajajoče ladje",
+    "nuke_stats": "Statistika bomb",
+    "player_metrics": "Metrika igralca",
+    "building": "Zgradba",
+    "ship_type": "Vrsta ladje",
+    "weapon": "Orožje",
+    "built": "Zgrajeno",
+    "destroyed": "Uničeno",
+    "captured": "Ujeto",
+    "lost": "Zgubljeno",
+    "hits": "Zadetki",
+    "launched": "Izstreljeno",
+    "landed": "Pristanek",
+    "sent": "Poslano",
+    "arrived": "Prišlo",
+    "attack": "Napad",
+    "received": "Prejeto",
+    "cancelled": "Prekinjeno",
+    "count": "Število",
+    "gold": "Zlato",
+    "workers": "Delavci",
+    "war": "Vojna",
+    "trade": "Trgovanje",
+    "steal": "Kraja",
+    "unit": {
+      "city": "Mesto",
+      "port": "Luka",
+      "defp": "Obrambni stolp",
+      "saml": "SAM Izstreljevalec",
+      "silo": "Izstreljevalec raket",
+      "wshp": "Bojna ladja",
+      "fact": "Tovarna",
+      "trade": "Trgovska ladja",
+      "trans": "Transportna ladja",
+      "abomb": "Atomska bomba",
+      "hbomb": "Vodikova bomba",
+      "mirv": "MIRV",
+      "mirvw": "MIRV bojna glava"
+    }
+  },
+  "game_list": {
+    "recent_games": "Nedavne igre",
+    "game_id": "ID sobe",
+    "mode": "Način",
+    "mode_ffa": "Prosto za vse",
+    "mode_team": "Ekipe",
+    "view": "Poglej",
+    "details": "Detajli",
+    "started": "Začeto",
+    "map": "Mapa",
+    "difficulty": "Težavnost",
+    "type": "Tip"
   }
 }

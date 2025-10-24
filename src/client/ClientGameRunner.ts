@@ -5,7 +5,7 @@ import {
   GameID,
   GameRecord,
   GameStartInfo,
-  PlayerPattern,
+  PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
 } from "../core/Schemas";
@@ -51,8 +51,7 @@ import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
-  pattern: PlayerPattern | undefined;
-  flag: string;
+  cosmetics: PlayerCosmeticRefs;
   playerName: string;
   clientID: ClientID;
   gameID: GameID;
@@ -424,15 +423,8 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (this.canBoatAttack(actions, tile)) {
+      } else if (this.canAutoBoat(actions, tile)) {
         this.sendBoatAttackIntent(tile);
-      }
-
-      const owner = this.gameView.owner(tile);
-      if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
       }
     });
   }
@@ -520,7 +512,7 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      if (!actions.canAttack && this.canBoatAttack(actions, tile)) {
+      if (this.canBoatAttack(actions) !== false) {
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -568,7 +560,7 @@ export class ClientGameRunner {
     return this.gameView.ref(cell.x, cell.y);
   }
 
-  private canBoatAttack(actions: PlayerActions, tile: TileRef): boolean {
+  private canBoatAttack(actions: PlayerActions): false | TileRef {
     const bu = actions.buildableUnits.find(
       (bu) => bu.type === UnitType.TransportShip,
     );
@@ -576,11 +568,7 @@ export class ClientGameRunner {
       console.warn(`no transport ship buildable units`);
       return false;
     }
-    return (
-      bu.canBuild !== false &&
-      this.shouldBoat(tile, bu.canBuild) &&
-      this.gameView.isLand(tile)
-    );
+    return bu.canBuild;
   }
 
   private sendBoatAttackIntent(tile: TileRef) {
@@ -599,59 +587,24 @@ export class ClientGameRunner {
     });
   }
 
-  private shouldBoat(tile: TileRef, src: TileRef) {
+  private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {
+    if (!this.gameView.isLand(tile)) return false;
+
+    const canBuild = this.canBoatAttack(actions);
+    if (canBuild === false) return false;
+
     // TODO: Global enable flag
     // TODO: Global limit autoboat to nearby shore flag
     // if (!enableAutoBoat) return false;
     // if (!limitAutoBoatNear) return true;
-    const distanceSquared = this.gameView.euclideanDistSquared(tile, src);
+    const distanceSquared = this.gameView.euclideanDistSquared(tile, canBuild);
     const limit = 100;
     const limitSquared = limit * limit;
-    if (distanceSquared > limitSquared) return false;
-    return true;
+    return distanceSquared < limitSquared;
   }
 
   private onMouseMove(event: MouseMoveEvent) {
     this.lastMousePosition = { x: event.x, y: event.y };
-    this.checkTileUnderCursor();
-  }
-
-  private checkTileUnderCursor() {
-    if (!this.lastMousePosition || !this.renderer.transformHandler) return;
-
-    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
-      this.lastMousePosition.x,
-      this.lastMousePosition.y,
-    );
-
-    if (!cell || !this.gameView.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-
-    const tile = this.gameView.ref(cell.x, cell.y);
-
-    if (this.gameView.isLand(tile)) {
-      const owner = this.gameView.owner(tile);
-      if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
-      }
-    } else {
-      const units = this.gameView
-        .nearbyUnits(tile, 50, [
-          UnitType.Warship,
-          UnitType.TradeShip,
-          UnitType.TransportShip,
-        ])
-        .sort((a, b) => a.distSquared - b.distSquared);
-
-      if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
-      }
-    }
   }
 
   private onConnectionCheck() {

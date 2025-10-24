@@ -28,8 +28,6 @@ import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
-  SendDonateGoldIntentEvent,
-  SendDonateTroopsIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
@@ -44,6 +42,7 @@ import { UIState } from "../UIState";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
+import "./SendResourceModal";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -51,21 +50,17 @@ export class PlayerPanel extends LitElement implements Layer {
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
   public uiState: UIState;
+
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
   private _profileForPlayerId: number | null = null;
 
-  @state()
-  public isVisible: boolean = false;
-
-  @state()
-  private allianceExpiryText: string | null = null;
-
-  @state()
-  private allianceExpirySeconds: number | null = null;
-
-  @state()
-  private otherProfile: PlayerProfile | null = null;
+  @state() private sendTarget: PlayerView | null = null;
+  @state() private sendMode: "troops" | "gold" | "none" = "none";
+  @state() public isVisible: boolean = false;
+  @state() private allianceExpiryText: string | null = null;
+  @state() private allianceExpirySeconds: number | null = null;
+  @state() private otherProfile: PlayerProfile | null = null;
 
   private ctModal: ChatModal;
 
@@ -138,6 +133,8 @@ export class PlayerPanel extends LitElement implements Layer {
 
   public hide() {
     this.isVisible = false;
+    this.sendMode = "none";
+    this.sendTarget = null;
     this.requestUpdate();
   }
 
@@ -166,19 +163,23 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
+  private openSendTroops(target: PlayerView) {
+    this.sendTarget = target;
+    this.sendMode = "troops";
+  }
+
+  private openSendGold(target: PlayerView) {
+    this.sendTarget = target;
+    this.sendMode = "gold";
+  }
+
   private handleDonateTroopClick(
     e: Event,
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(
-      new SendDonateTroopsIntentEvent(
-        other,
-        myPlayer.troops() * this.uiState.attackRatio,
-      ),
-    );
-    this.hide();
+    this.openSendTroops(other);
   }
 
   private handleDonateGoldClick(
@@ -187,9 +188,20 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendDonateGoldIntentEvent(other, null));
-    this.hide();
+    this.openSendGold(other);
   }
+
+  private closeSend = () => {
+    this.sendTarget = null;
+    this.sendMode = "none";
+  };
+
+  private confirmSend = (
+    e: CustomEvent<{ amount: number; closePanel?: boolean }>,
+  ) => {
+    this.closeSend();
+    if (e.detail?.closePanel) this.hide();
+  };
 
   private handleEmbargoClick(
     e: Event,
@@ -312,10 +324,11 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private getExpiryColorClass(seconds: number | null): string {
-    if (seconds === null) return "text-white";
-    if (seconds <= 30) return "text-red-400";
-    if (seconds <= 60) return "text-yellow-400";
-    return "text-emerald-400";
+    if (seconds === null) return "text-white"; // Default color
+
+    if (seconds <= 30) return "text-red-400"; // Last 30 seconds: Red
+    if (seconds <= 60) return "text-yellow-400"; // Last 60 seconds: Yellow
+    return "text-emerald-400"; // More than 60 seconds: Green
   }
 
   private getTraitorRemainingSeconds(player: PlayerView): number | null {
@@ -406,10 +419,15 @@ export class PlayerPanel extends LitElement implements Layer {
               }}
             />`
           : ""}
-        <h1 class="text-2xl font-bold tracking-[-0.01em] truncate text-zinc-50">
-          ${other.name()}
-        </h1>
 
+        <div class="flex-1 min-w-0">
+          <h2
+            class="text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
+            title=${other.name()}
+          >
+            ${other.name()}
+          </h2>
+        </div>
         ${chip
           ? html`<span
               class=${`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold ${chip.classes}`}
@@ -433,32 +451,28 @@ export class PlayerPanel extends LitElement implements Layer {
     return html`
       <div class="mb-1 flex justify-between gap-2">
         <div
-          class="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1
-                    text-lg font-semibold text-zinc-100"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
+                    text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">💰</span>
-          <span
-            translate="no"
-            class="inline-block w-[45px] text-right text-zinc-50"
-          >
+          <span translate="no" class="tabular-nums w-[5ch]font-semibold">
             ${renderNumber(other.gold() || 0)}
           </span>
-          <span class="opacity-95">${translateText("player_panel.gold")}</span>
+          <span class="text-zinc-200 whitespace-nowrap">
+            ${translateText("player_panel.gold")}</span
+          >
         </div>
 
         <div
-          class="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1
-                    text-lg font-semibold text-zinc-100"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 
+                    text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">🛡️</span>
-          <span
-            translate="no"
-            class="inline-block w-[45px] text-right text-zinc-50"
-          >
+          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
             ${renderTroops(other.troops() || 0)}
           </span>
-          <span class="opacity-95"
-            >${translateText("player_panel.troops")}</span
+          <span class="text-zinc-200 whitespace-nowrap">
+            ${translateText("player_panel.troops")}</span
           >
         </div>
       </div>
@@ -468,32 +482,34 @@ export class PlayerPanel extends LitElement implements Layer {
   private renderStats(other: PlayerView, my: PlayerView) {
     return html`
       <!-- Betrayals -->
-      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
+      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2">
         <div
-          class="flex items-center gap-2 font-semibold text-zinc-300 leading-snug"
+          class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
         >
           <span aria-hidden="true">⚠️</span>
           <span>${translateText("player_panel.betrayals")}</span>
         </div>
-        <div class="text-right font-semibold text-zinc-200">
+        <div class="text-right text-[14px] font-semibold text-zinc-200">
           ${other.data.betrayals ?? 0}
         </div>
       </div>
 
       <!-- Trading / Embargo -->
-      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
+      <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2">
         <div
-          class="flex items-center gap-2 font-semibold text-zinc-300 leading-snug"
+          class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
         >
           <span aria-hidden="true">⚓</span>
           <span>${translateText("player_panel.trading")}</span>
         </div>
-        <div class="flex items-center justify-end gap-2 font-semibold">
+        <div
+          class="flex items-center justify-end gap-2 text-[14px] font-semibold"
+        >
           ${other.hasEmbargoAgainst(my)
-            ? html`<span class="text-[#f59e0b]"
+            ? html`<span class="text-amber-400"
                 >${translateText("player_panel.stopped")}</span
               >`
-            : html`<span class="text-emerald-400"
+            : html`<span class="text-blue-400"
                 >${translateText("player_panel.active")}</span
               >`}
         </div>
@@ -504,60 +520,57 @@ export class PlayerPanel extends LitElement implements Layer {
   private renderAlliances(other: PlayerView) {
     const allies = other.allies();
 
+    const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
+    const alliesSorted = [...allies].sort((a, b) =>
+      nameCollator.compare(a.name(), b.name()),
+    );
+
     return html`
-      <div class="text-base select-none">
-        <!-- Header -->
+      <div class="select-none">
         <div class="flex items-center justify-between mb-2">
-          <div class="font-semibold text-zinc-300 text-base">
+          <div
+            id="alliances-title"
+            class="text-[15px] font-medium text-zinc-200"
+          >
             ${translateText("player_panel.alliances")}
           </div>
           <span
-            aria-label="Alliance count"
-            class="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-[10px] 
-              text-[12px] text-zinc-100 bg-white/10 border border-white/20"
+            aria-labelledby="alliances-title"
+            class="inline-flex items-center justify-center min-w-[20px] h-5 px-[6px] rounded-[10px]
+                 text-[12px] text-zinc-100 bg-white/10 border border-white/20"
           >
             ${allies.length}
           </span>
         </div>
 
-        <div class="mt-1 rounded-lg border border-zinc-600 bg-zinc-800/80">
-          <div
-            class="max-h-[72px] overflow-y-auto p-2 text-zinc-200 text-[12.5px] leading-relaxed"
+        <div
+          class="rounded-lg bg-zinc-800/70 ring-1 ring-zinc-700/60 w-full min-w-0"
+        >
+          <ul
+            class="max-h-[120px] overflow-y-auto p-2
+                 flex flex-wrap gap-1.5
+                 scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-zinc-800"
             role="list"
-            aria-label="Alliance list"
+            aria-labelledby="alliances-title"
             translate="no"
           >
-            ${allies.length > 0
-              ? allies.map((p) => {
-                  const color = p.territoryColor().toHex();
-                  return html`
-                    <div
-                      role="listitem"
-                      class="grid grid-cols-[16px_1fr] items-center gap-2 w-full h-[30px]
-                            px-2 rounded-lg border border-transparent text-left
-                            hover:bg-[#141821] hover:border-white/30 transition-colors"
+            ${alliesSorted.length === 0
+              ? html`<li class="text-zinc-400 text-[14px] px-1">
+                  ${translateText("common.none")}
+                </li>`
+              : alliesSorted.map(
+                  (p) =>
+                    html`<li
+                      class="max-w-full inline-flex items-center gap-1.5
+                             rounded-md border border-white/10 bg-white/[0.05]
+                             px-2.5 py-1 text-[14px] text-zinc-100
+                             hover:bg-white/[0.08] active:scale-[0.99] transition"
                       title=${p.name()}
                     >
-                      <span
-                        class="inline-block w-3 h-3 rounded-full mr-2"
-                        style="background-color: ${color}"
-                      >
-                      </span>
-
-                      <span
-                        class="truncate select-none pointer-events-none font-medium"
-                      >
-                        ${p.name()}
-                      </span>
-                    </div>
-                  `;
-                })
-              : html`
-                  <div class="py-2 text-zinc-300">
-                    ${translateText("player_panel.none")}
-                  </div>
-                `}
-          </div>
+                      <span class="truncate">${p.name()}</span>
+                    </li>`,
+                )}
+          </ul>
         </div>
       </div>
     `;
@@ -567,12 +580,12 @@ export class PlayerPanel extends LitElement implements Layer {
     if (this.allianceExpiryText === null) return html``;
     return html`
       <div class="grid grid-cols-[auto,1fr] gap-x-6 gap-y-2 text-base">
-        <div class="font-semibold text-zinc-400">
+        <div class="font-semibold text-zinc-300">
           ${translateText("player_panel.alliance_time_remaining")}
         </div>
         <div class="text-right font-semibold">
           <span
-            class="inline-flex items-center rounded-full px-2 py-0.5 text-base font-bold ${this.getExpiryColorClass(
+            class="inline-flex items-center rounded-full px-2 py-0.5 text-[14px] font-bold ${this.getExpiryColorClass(
               this.allianceExpirySeconds,
             )}"
             >${this.allianceExpiryText}</span
@@ -597,7 +610,7 @@ export class PlayerPanel extends LitElement implements Layer {
     const canEmbargo = this.actions?.interaction?.canEmbargo;
 
     return html`
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2.5">
         <div class="grid auto-cols-fr grid-flow-col gap-1">
           ${actionButton({
             onClick: (e: MouseEvent) => this.handleChat(e, my, other),
@@ -649,6 +662,7 @@ export class PlayerPanel extends LitElement implements Layer {
               })
             : ""}
         </div>
+        <ui-divider></ui-divider>
 
         <div class="grid auto-cols-fr grid-flow-col gap-1">
           ${other !== my
@@ -713,6 +727,8 @@ export class PlayerPanel extends LitElement implements Layer {
       return html``;
     }
     const other = owner as PlayerView;
+    const myGoldNum = my.gold();
+    const myTroopsNum = Number(my.troops());
 
     return html`
       <style>
@@ -744,59 +760,85 @@ export class PlayerPanel extends LitElement implements Layer {
 
       <div
         class="fixed inset-0 z-[1001] flex items-center justify-center overflow-auto
-               bg-black/40 backdrop-blur-sm backdrop-brightness-110 pointer-events-auto"
+               bg-black/15 backdrop-brightness-110 pointer-events-auto"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @wheel=${(e: MouseEvent) => e.stopPropagation()}
         @click=${() => this.hide()}
       >
-        <!-- Stop clicks inside the panel from closing it -->
         <div
-          class="pointer-events-auto max-h-[90vh] overflow-y-auto min-w-[240px] w-auto px-4 py-2"
+          class="pointer-events-auto max-h-[90vh] min-w-[300px] max-w-[400px] px-4 py-2"
           @click=${(e: MouseEvent) => e.stopPropagation()}
         >
-          <div
-            class=${`relative mt-2 w-full bg-zinc-900/90 backdrop-blur-sm p-5 shadow-2xl rounded-xl text-zinc-200
-                     ${other.isTraitor() ? "traitor-ring" : "ring-1 ring-zinc-700"}`}
-          >
-            <!-- Close button -->
-            <button
-              @click=${this.handleClose}
-              class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center
-                     rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
-              aria-label=${translateText("player_panel.close") || "Close"}
-              title=${translateText("player_panel.close") || "Close"}
-            >
-              ✕
-            </button>
-
+          <div class="relative">
             <div
-              class="flex flex-col gap-2 font-sans antialiased text-[14px] leading-relaxed"
+              class="absolute inset-2 -z-10 rounded-2xl bg-black/25 backdrop-blur-[2px]"
+            ></div>
+            <div
+              class=${`relative w-full bg-zinc-900/95 p-6 rounded-2xl text-zinc-100 overflow-visible shadow-2xl shadow-black/50
+                 ${other.isTraitor() ? "traitor-ring" : "ring-1 ring-white/5"}`}
             >
-              <!-- Identity (flag, name, type, traitor, relation) -->
-              <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
+              <!-- Close button -->
+              <button
+                @click=${this.handleClose}
+                class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center
+                     rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
+                aria-label=${translateText("common.close") || "Close"}
+                title=${translateText("common.close") || "Close"}
+              >
+                ✕
+              </button>
 
-              <ui-divider></ui-divider>
+              <div
+                class="flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
+              >
+                <!-- Identity (flag, name, type, traitor, relation) -->
+                <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
 
-              <!-- Resources -->
-              ${this.renderResources(other)}
+                ${this.sendTarget
+                  ? html`
+                      <send-resource-modal
+                        .open=${this.sendMode !== "none"}
+                        .mode=${this.sendMode}
+                        .total=${this.sendMode === "troops"
+                          ? myTroopsNum
+                          : myGoldNum}
+                        .uiState=${this.uiState}
+                        .myPlayer=${my}
+                        .target=${this.sendTarget}
+                        .gameView=${this.g}
+                        .eventBus=${this.eventBus}
+                        .format=${this.sendMode === "troops"
+                          ? renderTroops
+                          : renderNumber}
+                        @confirm=${this.confirmSend}
+                        @close=${this.closeSend}
+                      ></send-resource-modal>
+                    `
+                  : ""}
 
-              <ui-divider></ui-divider>
+                <ui-divider></ui-divider>
 
-              <!-- Stats: betrayals / trading -->
-              ${this.renderStats(other, my)}
+                <!-- Resources -->
+                ${this.renderResources(other)}
 
-              <ui-divider></ui-divider>
+                <ui-divider></ui-divider>
 
-              <!-- Alliances list -->
-              ${this.renderAlliances(other)}
+                <!-- Stats: betrayals / trading -->
+                ${this.renderStats(other, my)}
 
-              <!-- Alliance time remaining -->
-              ${this.renderAllianceExpiry()}
+                <ui-divider></ui-divider>
 
-              <ui-divider></ui-divider>
+                <!-- Alliances list -->
+                ${this.renderAlliances(other)}
 
-              <!-- Actions -->
-              ${this.renderActions(my, other)}
+                <!-- Alliance time remaining -->
+                ${this.renderAllianceExpiry()}
+
+                <ui-divider class="mt-1"></ui-divider>
+
+                <!-- Actions -->
+                ${this.renderActions(my, other)}
+              </div>
             </div>
           </div>
         </div>

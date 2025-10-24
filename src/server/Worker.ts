@@ -11,14 +11,12 @@ import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
+  GameID,
   ID,
   PartialGameRecordSchema,
-  PlayerCosmeticRefs,
-  PlayerCosmetics,
-  PlayerPattern,
   ServerErrorMessage,
 } from "../core/Schemas";
-import { replacer } from "../core/Util";
+import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
@@ -26,7 +24,7 @@ import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
-import { assertNever } from "../core/Util";
+import { MapPlaylist } from "./MapPlaylist";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -34,10 +32,23 @@ const config = getServerConfigFromServer();
 
 const workerId = parseInt(process.env.WORKER_ID ?? "0");
 const log = logger.child({ comp: `w_${workerId}` });
+const playlist = new MapPlaylist(true);
 
 // Worker setup
 export async function startWorker() {
   log.info(`Worker starting...`);
+
+  if (config.enableMatchmaking()) {
+    log.info("Starting matchmaking");
+    setTimeout(
+      () => {
+        pollLobby(gm);
+      },
+      1000 + Math.random() * 2000,
+    );
+  } else {
+    log.info("Matchmaking disabled");
+  }
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
@@ -366,15 +377,15 @@ export async function startWorker() {
           }
         }
 
-        const { perm, cosmetics, error } = checkCosmetics(
-          clientMsg.cosmetics,
-          flares ?? [],
-        );
-        if (perm === "forbidden") {
-          log.warn(`Forbidden: ${error}`, {
+        const cosmeticResult = privilegeRefresher
+          .get()
+          .isAllowed(flares ?? [], clientMsg.cosmetics ?? {});
+
+        if (cosmeticResult.type === "forbidden") {
+          log.warn(`Forbidden: ${cosmeticResult.reason}`, {
             clientID: clientMsg.clientID,
           });
-          ws.close(1002, error);
+          ws.close(1002, cosmeticResult.reason);
           return;
         }
 
@@ -388,7 +399,7 @@ export async function startWorker() {
           ip,
           clientMsg.username,
           ws,
-          cosmetics,
+          cosmeticResult.cosmetics,
         );
 
         const wasFound = gm.addClient(
@@ -424,76 +435,6 @@ export async function startWorker() {
     });
   });
 
-  function checkCosmetics(
-    cosmetics: PlayerCosmeticRefs | undefined,
-    flares: readonly string[],
-  ): {
-    perm: "forbidden" | "allowed";
-    cosmetics?: PlayerCosmetics | undefined;
-    error?: string;
-  } {
-    if (cosmetics === undefined) {
-      return {
-        perm: "allowed",
-        cosmetics: undefined,
-      };
-    }
-    // Check if the flag is allowed
-    if (cosmetics.flag !== undefined) {
-      if (cosmetics.flag.startsWith("!")) {
-        const allowed = privilegeRefresher
-          .get()
-          .isCustomFlagAllowed(cosmetics.flag, flares);
-        if (allowed !== true) {
-          log.warn(`Custom flag ${allowed}: ${cosmetics.flag}`);
-          return {
-            perm: "forbidden",
-            error: `Custom flag ${allowed}`,
-          };
-        }
-      }
-    }
-
-    let pattern: PlayerPattern | undefined;
-    // Check if the pattern is allowed
-    if (cosmetics.patternName !== undefined) {
-      const result = privilegeRefresher
-        .get()
-        .isPatternAllowed(
-          flares,
-          cosmetics.patternName,
-          cosmetics.patternColorPaletteName ?? null,
-        );
-      switch (result.type) {
-        case "allowed":
-          pattern = result.pattern;
-          break;
-        case "unknown":
-          log.warn(`Pattern ${cosmetics.patternName} unknown`);
-          return {
-            perm: "forbidden",
-            error: "Could not look up pattern, backend may be offline",
-          };
-        case "forbidden":
-          log.warn(`Pattern ${cosmetics.patternName}: ${result.reason}`);
-          return {
-            perm: "forbidden",
-            error: `Pattern ${cosmetics.patternName}: ${result.reason}`,
-          };
-        default:
-          assertNever(result);
-      }
-    }
-
-    return {
-      perm: "allowed",
-      cosmetics: {
-        flag: cosmetics.flag,
-        pattern: pattern,
-      },
-    };
-  }
-
   // The load balancer will handle routing to this server based on path
   const PORT = config.workerPortByIndex(workerId);
   server.listen(PORT, () => {
@@ -523,4 +464,78 @@ export async function startWorker() {
   process.on("unhandledRejection", (reason, promise) => {
     log.error(`unhandled rejection at:`, promise, "reason:", reason);
   });
+}
+
+async function pollLobby(gm: GameManager) {
+  try {
+    const url = `${config.jwtIssuer() + "/matchmaking/checkin"}`;
+    const gameId = generateGameIdForWorker();
+    if (gameId === null) {
+      log.warn(`Failed to generate game ID for worker ${workerId}`);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": config.apiKey(),
+      },
+      body: JSON.stringify({
+        id: workerId,
+        gameId: gameId,
+        ccu: gm.activeClients(),
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      log.warn(
+        `Failed to poll lobby: ${response.status} ${response.statusText}`,
+      );
+      return;
+    }
+
+    const data = await response.json();
+    log.info(`Lobby poll successful:`, data);
+
+    if (data.assignment) {
+      // TODO: Only allow specified players to join the game.
+      console.log(`Creating game ${gameId}`);
+      const game = gm.createGame(gameId, playlist.gameConfig());
+      setTimeout(() => {
+        // Wait a few seconds to allow clients to connect.
+        console.log(`Starting game ${gameId}`);
+        game.start();
+      }, 5000);
+    }
+  } catch (error) {
+    log.error(`Error polling lobby:`, error);
+  } finally {
+    setTimeout(
+      () => {
+        pollLobby(gm);
+      },
+      5000 + Math.random() * 1000,
+    );
+  }
+}
+
+// TODO: This is a hack to generate a game ID for the worker.
+// It should be replaced with a more robust solution.
+function generateGameIdForWorker(): GameID | null {
+  let attempts = 1000;
+  while (attempts > 0) {
+    const gameId = generateID();
+    if (workerId === config.workerIndex(gameId)) {
+      return gameId;
+    }
+    attempts--;
+  }
+  log.warn(`Failed to generate game ID for worker ${workerId}`);
+  return null;
 }
