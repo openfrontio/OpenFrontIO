@@ -735,15 +735,14 @@ export class HostLobbyModal extends LitElement {
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
+          bots: this.bots,
           playerTeams: this.teamCount,
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
             ? {
-                bots: this.bots,
                 disableNPCs: false,
               }
             : {
-                bots: this.bots,
                 disableNPCs: this.disableNPCs,
               }),
           maxTimerValue:

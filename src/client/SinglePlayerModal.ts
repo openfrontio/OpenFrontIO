@@ -535,17 +535,16 @@ export class SinglePlayerModal extends LitElement {
               donateTroops: true,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
+              bots: this.bots,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
               ...(this.gameMode === GameMode.Team &&
               this.teamCount === HumansVsNations
                 ? {
-                    bots: this.bots,
                     disableNPCs: false,
                   }
                 : {
-                    bots: this.bots,
                     disableNPCs: this.disableNPCs,
                   }),
             },
