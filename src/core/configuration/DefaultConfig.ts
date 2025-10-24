@@ -788,24 +788,28 @@ export class DefaultConfig implements Config {
   /**
    * Controls the strength of directional attack bias (additive approach).
    * This value determines the fixed point offset added/subtracted based on alignment.
-   * - Value of 3.0 creates a subtle 0-6 point swing (0 for aligned, 6 for opposite direction)
-   * - Higher values make direction more influential (e.g., 10.0 creates 0-20 swing)
+   * - Value of 1.5 creates a subtle 0-3 point swing (0 for aligned, 3 for opposite direction)
+   * - Higher values make direction more influential (e.g., 6.0 creates 0-12 swing)
    * - Lower values make direction less noticeable
+   *
+   * With exponential time decay: ~16% influence at start, fading to ~1% by 6 seconds
    */
   attackDirectionWeight(): number {
-    return 2.5;
+    return 1.5;
   }
 
   /**
    * Time constant (in ticks) for exponential decay of directional influence.
    * Direction bias fades exponentially as: exp(-timeSinceStart / timeDecayConstant)
-   * - 300 ticks (30s): Direction decays to ~37% after 30s, ~5% after 90s (recommended)
-   * - 600 ticks (60s): Slower decay - direction persists longer
-   * - 200 ticks (20s): Faster decay - direction fades quickly
-   * Lower values = faster fade, Higher values = direction persists longer
+   * - 20 ticks (2s): Fast decay - noticeable in first 3s, gone by 6s (recommended)
+   * - 15 ticks (1.5s): Faster decay - gone by 4-5s
+   * - 25 ticks (2.5s): Slower decay - gentle falloff over 6-8s
+   * - 999999: Effectively disabled - direction persists throughout attack
+   *
+   * Direction fades naturally: 100% at start → 22% at 3s → 5% at 6s
    */
   attackTimeDecay(): number {
-    return 150.0;
+    return 20.0;
   }
 
   /**
@@ -814,12 +818,14 @@ export class DefaultConfig implements Config {
    * Uses BFS (topological) distance when available, falls back to Euclidean.
    * - 0.0: Disabled - pure directional bias only
    * - 0.3: Subtle - minor locality preference
-   * - 1.0: Balanced - moderate proximity bonus (recommended)
-   * - 2.0+: Strong locality preference
+   * - 0.75: Subtle with time decay - gentle convergence that fades (recommended)
+   * - 1.0: Balanced - moderate proximity bonus
+   * - 2.0: Strong - creates noticeable convergence
+   * - 5.0+: Very strong locality preference
    * This creates triangular convergence toward the clicked point.
    */
   attackMagnitudeWeight(): number {
-    return 0.6;
+    return 0.75;
   }
 
   /**
@@ -842,11 +848,12 @@ export class DefaultConfig implements Config {
    * Wave front ensures tiles discovered earlier are conquered before tiles discovered later.
    * This creates coherent territorial expansion instead of random jumping.
    *
+   * NOTE: Currently unused - wave front uses linear growth (matches original behavior).
+   * Kept for backward compatibility with custom configurations.
+   *
    * - 50: Balanced - wave front matters but never completely dominates terrain (recommended)
    * - 30: Weaker wave front - terrain has more influence throughout
    * - 75: Stronger wave front - more rigid expansion pattern
-   *
-   * Must be tuned relative to defensibility range (~15-35 points)
    */
   attackWaveFrontSaturation(): number {
     return 40.0;
@@ -856,11 +863,12 @@ export class DefaultConfig implements Config {
    * Time constant (in ticks) for wave front saturation.
    * Controls how quickly the wave front offset reaches its maximum.
    *
-   * - 300 ticks (30s): Wave front reaches ~63% of max after 30s (recommended)
+   * NOTE: Currently unused - wave front uses linear growth (matches original behavior).
+   * Kept for backward compatibility with custom configurations.
+   *
+   * - 300 ticks (30s): Wave front reaches ~63% of max after 30s
    * - 200 ticks (20s): Faster saturation - more aggressive early expansion
    * - 600 ticks (60s): Slower saturation - gradual wave front building
-   *
-   * Matches attackTimeDecay() by default for consistent temporal behavior.
    */
   attackWaveFrontTimeConstant(): number {
     return 150.0;

@@ -156,9 +156,9 @@ describe("DirectedAttack", () => {
     const config = game.config() as TestConfig;
 
     // Validate all 4 directed attack configuration parameters
-    expect(config.attackDirectionWeight()).toBe(2.5);
-    expect(config.attackTimeDecay()).toBe(150.0);
-    expect(config.attackMagnitudeWeight()).toBe(0.6);
+    expect(config.attackDirectionWeight()).toBe(1.5);
+    expect(config.attackTimeDecay()).toBe(20.0);
+    expect(config.attackMagnitudeWeight()).toBe(0.75);
     expect(config.attackDistanceDecayConstant()).toBe(25.0);
 
     // Create attack with clickTile
@@ -456,7 +456,7 @@ describe("DirectedAttack", () => {
     // Test 2: Verify direction weight configuration is accessible and modifiable
     const config = game.config() as TestConfig;
     const originalWeight = config.attackDirectionWeight();
-    expect(originalWeight).toBe(2.5); // Default value
+    expect(originalWeight).toBe(1.5); // Default value
 
     // Verify we can modify it
     config.setAttackDirectionWeight(10.0);
@@ -468,7 +468,7 @@ describe("DirectedAttack", () => {
 
     // Test 3: Verify magnitude weight (proximity bonus) configuration is modifiable
     const originalMagnitude = config.attackMagnitudeWeight();
-    expect(originalMagnitude).toBe(0.6); // Default value
+    expect(originalMagnitude).toBe(0.75); // Default value
 
     // Verify we can modify it
     config.setAttackMagnitudeWeight(2.0);

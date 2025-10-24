@@ -361,7 +361,7 @@ export class AttackExecution implements Execution {
    * issues on large maps. Player attacks remain unbounded (naturally limited by empire size).
    *
    * @param clickTile Starting point for BFS (where user clicked)
-   * @param downsampleFactor Sample every Nth distance bucket
+   * @param downsampleFactor Sample tiles at grid coordinates (multiples of N)
    * @returns Map of coarse tile refs to their BFS distance from click
    */
   private buildCoarseGrid(
@@ -391,8 +391,10 @@ export class AttackExecution implements Execution {
       // Stop expanding if we've reached max radius (only for neutral attacks)
       if (dist >= maxRadius) continue;
 
-      // Downsample: only keep every Nth distance bucket
-      if (dist % downsampleFactor === 0) {
+      // Downsample: only keep tiles at grid coordinates
+      const x = this.mg.x(tile);
+      const y = this.mg.y(tile);
+      if (x % downsampleFactor === 0 && y % downsampleFactor === 0) {
         distances.set(tile, dist);
       }
 
@@ -499,16 +501,10 @@ export class AttackExecution implements Execution {
       const defensibilityWeight =
         (this.random.nextInt(0, 7) + 10) * (1 - numOwnedByMe * 0.5 + mag / 2);
 
-      // Wave front offset with exponential saturation
-      // Grows quickly early to ensure coherent expansion, then saturates
-      // to prevent dominating terrain considerations in long attacks
+      // Wave front offset (linear growth, matches original attack behavior)
+      // Tiles discovered earlier get priority over tiles discovered later
       const elapsedTicks = tickNow - this.attackStartTick;
-      const maxWaveOffset = this.mg.config().attackWaveFrontSaturation();
-      const waveTimeConstant = this.mg.config().attackWaveFrontTimeConstant();
-      const waveOffset =
-        maxWaveOffset * (1 - Math.exp(-elapsedTicks / waveTimeConstant));
-
-      let priority = defensibilityWeight + waveOffset;
+      let priority = defensibilityWeight + elapsedTicks;
 
       if (this.clickTile !== null) {
         // Per-tile vector approach: each border tile calculates its own direction to click
