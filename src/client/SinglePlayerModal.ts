@@ -596,18 +596,28 @@ export class SinglePlayerModal extends LitElement {
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
-              disableNPCs: this.disableNPCs,
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
-              bots: this.bots,
               infiniteGold: this.infiniteGold,
               donateGold: true,
               donateTroops: true,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
-              automaticDifficulty: this.automaticDifficulty,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
+              ...(this.gameMode === GameMode.Team &&
+              this.teamCount === HumansVsNations
+                ? {
+                    automaticDifficulty: this.automaticDifficulty,
+                    // HVN: omit bots/disableNPCs
+                    bots: undefined,
+                    disableNPCs: undefined,
+                  }
+                : {
+                    bots: this.bots,
+                    disableNPCs: this.disableNPCs,
+                    automaticDifficulty: undefined,
+                  }),
             },
           },
         } satisfies JoinLobbyEvent,

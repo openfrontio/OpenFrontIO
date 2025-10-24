@@ -71,7 +71,11 @@ export async function createGameRunner(
           ),
       );
 
-  if (gameStart.config.playerTeams === HumansVsNations && nations.length > 0) {
+  if (
+    gameStart.config.gameMode === GameMode.Team &&
+    gameStart.config.playerTeams === HumansVsNations &&
+    nations.length > 0
+  ) {
     // For HumansVsNations mode, use the nations config or default
     const requested = gameStart.config.nations ?? nations.length;
     const targetNationCount = Math.max(1, Math.min(requested, nations.length));
