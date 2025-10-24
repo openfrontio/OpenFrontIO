@@ -32,6 +32,7 @@ export class UnitImpl implements Unit {
   private _missileTimerQueue: number[] = [];
   private _hasTrainStation: boolean = false;
   private _patrolTile: TileRef | undefined;
+  private _estimatedArrivalTick: number | null | undefined;
   private _level: number = 1;
   private _targetable: boolean = true;
   private _loaded: boolean | undefined;
@@ -134,6 +135,7 @@ export class UnitImpl implements Unit {
       constructionType: this._constructionType,
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
+      estimatedArrivalTick: this._estimatedArrivalTick,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
       hasTrainStation: this._hasTrainStation,
@@ -449,5 +451,14 @@ export class UnitImpl implements Unit {
       this._loaded = loaded;
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  setEstimatedArrivalTick(tick: number | null): void {
+    this._estimatedArrivalTick = tick;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  estimatedArrivalTick(): number | null | undefined {
+    return this._estimatedArrivalTick;
   }
 }

@@ -40,7 +40,7 @@ import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
-import { renderNumber, renderTroops } from "../../Utils";
+import { renderDuration, renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
@@ -825,17 +825,52 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
+  private calculateBoatCountdown(boat: UnitView): number | null {
+    const currentTick = this.game.ticks();
+    const estimatedArrivalTick = boat.estimatedArrivalTick();
+
+    if (estimatedArrivalTick !== undefined && estimatedArrivalTick !== null) {
+      const remaining = Math.max(0, estimatedArrivalTick - currentTick);
+      return remaining;
+    }
+
+    // If no estimate available, show "Calculating..." status
+    return null; // Return null to indicate "Calculating..." status
+  }
+
+  private formatCountdown(ticks: number | null): string {
+    if (ticks === null) {
+      return translateText("events_display.boat_countdown.calculating");
+    }
+
+    // Convert ticks to seconds (10 ticks per second) and use existing formatter
+    // Use Math.floor to avoid flickering between "Arriving..." and "1s"
+    const seconds = Math.max(0, Math.floor(ticks / 10));
+
+    if (seconds <= 0) {
+      return translateText("events_display.boat_countdown.arriving");
+    }
+
+    return renderDuration(seconds);
+  }
+
   private renderBoats() {
     return html`
       ${this.outgoingBoats.length > 0
         ? html`
             <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingBoats.map(
-                (boat) => html`
+              ${this.outgoingBoats.map((boat) => {
+                const countdown = this.calculateBoatCountdown(boat);
+                const countdownText = this.formatCountdown(countdown);
+
+                return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
                       content: html`${translateText("events_display.boat")}:
-                      ${renderTroops(boat.troops())}`,
+                        ${renderTroops(boat.troops())}
+                        <span class="text-yellow-400 ml-1"
+                          >(${countdownText})</span
+                        >`,
                       onClick: () => this.emitGoToUnitEvent(boat),
                       className: "text-left text-blue-400",
                       translate: false,
@@ -853,8 +888,8 @@ export class EventsDisplay extends LitElement implements Layer {
                           )}...)</span
                         >`}
                   </div>
-                `,
-              )}
+                `;
+              })}
             </div>
           `
         : ""}
