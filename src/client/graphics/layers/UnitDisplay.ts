@@ -103,7 +103,6 @@ export class UnitDisplay extends LitElement implements Layer {
   tick() {
     const player = this.game?.myPlayer();
     player?.actions(undefined, TransportShipFilter.Exclude).then((actions) => {
-      // player?.actions(undefined, TransportShipFilter.Default).then((actions) => {
       this.playerActions = actions;
     });
     if (!player) return;

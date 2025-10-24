@@ -419,9 +419,7 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
     this.myPlayer.actions(tile, TransportShipFilter.Only).then((actions) => {
-      // if (this.myPlayer === null) return; //--> redundant check as set above?, but need to add ! below to stop error 'can be null'
       if (actions.canAttack) {
-        //-->maybe only get actions.canAttack + transportship from buildableunits? Not everything else?
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
@@ -517,7 +515,6 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile, TransportShipFilter.Only).then((actions) => {
-      //-->> maybe only get transportship from buildableunits? Not everything else?
       if (this.canBoatAttack(actions) !== false) {
         this.sendBoatAttackIntent(tile);
       }
