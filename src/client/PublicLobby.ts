@@ -17,6 +17,7 @@ export class PublicLobby extends LitElement {
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
+  private lobbiesFetchInFlight: Promise<GameInfo[]> | null = null;
 
   createRenderRoot() {
     return this;
@@ -73,16 +74,26 @@ export class PublicLobby extends LitElement {
   }
 
   async fetchLobbies(): Promise<GameInfo[]> {
-    try {
-      const response = await fetch(`/api/public_lobbies`);
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      return data.lobbies;
-    } catch (error) {
-      console.error("Error fetching lobbies:", error);
-      throw error;
+    if (this.lobbiesFetchInFlight) {
+      return this.lobbiesFetchInFlight;
     }
+
+    this.lobbiesFetchInFlight = (async () => {
+      try {
+        const response = await fetch(`/api/public_lobbies`);
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        return data.lobbies as GameInfo[];
+      } catch (error) {
+        console.error("Error fetching lobbies:", error);
+        throw error;
+      } finally {
+        this.lobbiesFetchInFlight = null;
+      }
+    })();
+
+    return this.lobbiesFetchInFlight;
   }
 
   public stop() {
