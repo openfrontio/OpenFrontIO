@@ -40,7 +40,7 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = await getConfig(gameStart.config, null);
+  let config = await getConfig(gameStart.config, null);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
@@ -107,7 +107,10 @@ export async function createGameRunner(
       }
 
       // Override the game config difficulty for HumansVsNations mode
-      gameStart.config.difficulty = calculatedDifficulty;
+      config = await getConfig(
+        { ...gameStart.config, difficulty: calculatedDifficulty },
+        null,
+      );
     }
   }
 

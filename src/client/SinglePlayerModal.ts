@@ -133,7 +133,11 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
-          ${!this.automaticDifficulty
+          ${!(
+            this.gameMode === GameMode.Team &&
+            this.teamCount === HumansVsNations &&
+            this.automaticDifficulty
+          )
             ? html`
                 <!-- Difficulty Selection -->
                 <div class="options-section">
