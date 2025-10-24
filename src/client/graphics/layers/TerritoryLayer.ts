@@ -1,5 +1,6 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
-import { Colord } from "colord";
+import { Colord, extend, LabaColor } from "colord";
+import labPlugin from "colord/plugins/lab";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -228,14 +229,33 @@ export class TerritoryLayer implements Layer {
     const radius =
       minRad + (maxRad - minRad) * (0.5 + 0.5 * Math.sin(this.borderAnimTime));
 
-    let color = this.theme.spawnHighlightSelfColor();
+    extend([labPlugin]);
+
+    const baseColor = this.theme.spawnHighlightSelfColor().toLab();
+    let teamColor: LabaColor | null = null;
+
     let team: string | null = null;
     team = focusedPlayer.team();
     if (team !== null && team in ColoredTeams)
-      color = this.theme.teamColor(team);
+      teamColor = this.theme.teamColor(team).toLab();
     else if (team !== null) {
-      color = focusedPlayer.territoryColor();
+      teamColor = focusedPlayer.territoryColor().toLab();
     }
+
+    let color: Colord;
+
+    if (teamColor !== null) {
+      console.log(teamColor);
+      const x = (3 * baseColor.l + teamColor.l) / 4;
+      const y = (3 * baseColor.a + teamColor.a) / 4;
+      const z = (3 * baseColor.b + teamColor.b) / 4;
+      const lab = { l: x, a: y, b: z };
+      color = new Colord(lab);
+    } else {
+      color = this.theme.spawnHighlightSelfColor();
+    }
+
+    console.log(color);
 
     this.drawBreathingRing(
       center.x,
