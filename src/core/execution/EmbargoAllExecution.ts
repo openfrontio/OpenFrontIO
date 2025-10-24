@@ -12,8 +12,6 @@ export class EmbargoAllExecution implements Execution {
     }
     const me = this.player;
     for (const p of mg.players()) {
-      if (!p.isPlayer()) continue;
-      if (!p.isAlive()) continue;
       if (p.id() === me.id()) continue;
       if (p.type() === PlayerType.Bot) continue;
       if (me.isOnSameTeam(p)) continue;
