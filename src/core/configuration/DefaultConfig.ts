@@ -654,7 +654,6 @@ largeAttackerSpeedThresholdDebuff(attacker: Player, totalLandTiles: number): num
   return 0.005;
 }
 
-}
   attackLogic(
     gm: Game,
     attackTroops: number,
@@ -735,14 +734,11 @@ largeAttackerSpeedThresholdDebuff(attacker: Player, totalLandTiles: number): num
 
       const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
       const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
-      
-      const largeAttackBonus = 1;
-      const largeAttackerSpeedBonus = 1;
 
       const thresholdDebuff = this.largeAttackerSpeedThresholdDebuff(
-      attacker,
-      gm.numLandTiles()
-    );
+         attacker,
+         gm.numLandTiles()
+       );
 
       return {
         attackerTroopLoss:
