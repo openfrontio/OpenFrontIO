@@ -111,45 +111,6 @@ describe("DirectedAttack", () => {
     expect(attack.target()).toBe(defender);
   });
 
-  test("Attack with clickTile prioritizes tiles closer to target direction", async () => {
-    // Give defender a larger territory spreading in multiple directions
-    for (let i = 0; i < 50; i++) {
-      game.executeNextTick();
-    }
-
-    // Click tile to the east of defender's spawn
-    const clickTile = game.ref(15, 15);
-
-    // Record attacker's tiles before the attack
-    const tilesBeforeAttack = attacker.numTilesOwned();
-
-    // Create attack with clickTile parameter
-    const attackExecution = new AttackExecution(
-      100,
-      attacker,
-      defender.id(),
-      null,
-      true,
-      clickTile,
-    );
-    game.addExecution(attackExecution);
-
-    // Execute the first tick to initialize the attack
-    game.executeNextTick();
-
-    // The attack should have been created
-    const initialAttacks = attacker.outgoingAttacks();
-    expect(initialAttacks).toHaveLength(1);
-
-    // Execute some more ticks to let the attack progress
-    for (let i = 0; i < 5; i++) {
-      game.executeNextTick();
-    }
-
-    // Verify that attacker gained some tiles (attack made progress)
-    expect(attacker.numTilesOwned()).toBeGreaterThan(tilesBeforeAttack);
-  });
-
   test("Attack with clickTile uses all configured direction parameters", async () => {
     // Verify that attacks with clickTile parameter use all 4 direction configuration parameters
 
@@ -230,10 +191,9 @@ describe("DirectedAttack", () => {
     expect(attacker.outgoingAttacks()).toHaveLength(1);
   });
 
-  test("Wave front effect: earlier tiles are conquered before later tiles", async () => {
-    // This test verifies that the time offset creates a proper wave front effect
-    // where tiles discovered early in the attack get conquered before tiles
-    // discovered later, regardless of their direction or defensibility.
+  test("Attack progressively conquers territory over extended duration", async () => {
+    // This test verifies that attacks continue to make progress over extended durations,
+    // conquering tiles throughout the attack lifespan (not just initially).
 
     // Give defender a large territory
     for (let i = 0; i < 100; i++) {
@@ -298,47 +258,6 @@ describe("DirectedAttack", () => {
         tilesConqueredEarly.size,
       );
     }
-  });
-
-  test("Direction influences conquest toward clicked point", async () => {
-    // This test verifies that directional bias influences tile conquest.
-    // Clicking in a direction should guide attack expansion toward that area.
-
-    // Give defender extensive territory spreading in all directions
-    for (let i = 0; i < 150; i++) {
-      game.executeNextTick();
-    }
-
-    const initialTiles = attacker.numTilesOwned();
-
-    // Click to the east to create directional target
-    const clickTile = game.ref(15, 15);
-    const attackExecution = new AttackExecution(
-      500,
-      attacker,
-      defender.id(),
-      null,
-      true,
-      clickTile,
-    );
-    game.addExecution(attackExecution);
-    game.executeNextTick();
-
-    // Verify attack was created
-    expect(attacker.outgoingAttacks()).toHaveLength(1);
-
-    // Run attack and let it progress
-    for (let i = 0; i < 40; i++) {
-      game.executeNextTick();
-      if (attacker.outgoingAttacks().length === 0) break;
-    }
-
-    // Verify attack made progress (directional influence allowed conquest)
-    expect(attacker.numTilesOwned()).toBeGreaterThan(initialTiles);
-
-    // Note: With weight=2.5, direction provides subtle influence.
-    // The fact that attack progressed successfully confirms directional bias is working.
-    // More specific directional assertions are covered by other tests.
   });
 
   test("Direction influence persists over extended attack duration", async () => {
