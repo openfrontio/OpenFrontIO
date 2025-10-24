@@ -22,7 +22,7 @@ export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
   private lastRandomEvent: number = 0;
-  private randomEventRate: number = 7;
+  private randomEventRate: number = 8;
 
   private lastRefresh: number = 0;
   private refreshRate: number = 10;
@@ -42,6 +42,9 @@ export class FxLayer implements Layer {
   }
 
   tick() {
+    if (!this.game.config().userSettings()?.fxLayer()) {
+      return;
+    }
     this.lastRandomEvent += 1;
     if (this.lastRandomEvent > this.randomEventRate) {
       this.lastRandomEvent = 0;
@@ -128,7 +131,7 @@ export class FxLayer implements Layer {
     const randY = Math.floor(Math.random() * this.game.height());
     const ref = this.game.ref(randX, randY);
     if (this.game.isOcean(ref) && !this.game.isShoreline(ref)) {
-      const animation = Math.floor(Math.random() * 5);
+      const animation = Math.floor(Math.random() * 4);
       if (animation === 0) {
         const fx = new SpriteFx(
           this.animatedSpriteLoader,
@@ -145,7 +148,7 @@ export class FxLayer implements Layer {
           FxType.Bubble,
         );
         this.allFx.push(fx);
-      } else if (animation === 3) {
+      } else if (animation === 2) {
         const fx = new MoveSpriteFx(
           new SpriteFx(
             this.animatedSpriteLoader,
@@ -160,7 +163,7 @@ export class FxLayer implements Layer {
           0.8,
         );
         this.allFx.push(fx);
-      } else if (animation === 4) {
+      } else if (animation === 3) {
         const fx = new FadeFx(
           new SpriteFx(
             this.animatedSpriteLoader,

@@ -1,6 +1,4 @@
-import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
 import buildingExplosion from "../../../resources/sprites/buildingExplosion.png";
-import conquestSword from "../../../resources/sprites/conquestSword.png";
 import dust from "../../../resources/sprites/dust.png";
 import miniExplosion from "../../../resources/sprites/miniExplosion.png";
 import SAMExplosion from "../../../resources/sprites/samExplosion.png";
