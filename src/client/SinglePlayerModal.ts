@@ -207,29 +207,26 @@ export class SinglePlayerModal extends LitElement {
               ${translateText("single_modal.options_title")}
             </div>
             <div class="option-cards">
-              ${this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations
-                ? html``
-                : html`
-                    <label for="bots-count" class="option-card">
-                      <input
-                        type="range"
-                        id="bots-count"
-                        min="0"
-                        max="400"
-                        step="1"
-                        @input=${this.handleBotsChange}
-                        @change=${this.handleBotsChange}
-                        .value="${String(this.bots)}"
-                      />
-                      <div class="option-card-title">
-                        <span>${translateText("single_modal.bots")}</span>${this
-                          .bots === 0
-                          ? translateText("single_modal.bots_disabled")
-                          : this.bots}
-                      </div>
-                    </label>
-                  `}
+              ${html`
+                <label for="bots-count" class="option-card">
+                  <input
+                    type="range"
+                    id="bots-count"
+                    min="0"
+                    max="400"
+                    step="1"
+                    @input=${this.handleBotsChange}
+                    @change=${this.handleBotsChange}
+                    .value="${String(this.bots)}"
+                  />
+                  <div class="option-card-title">
+                    <span>${translateText("single_modal.bots")}</span>${this
+                      .bots === 0
+                      ? translateText("single_modal.bots_disabled")
+                      : this.bots}
+                  </div>
+                </label>
+              `}
               ${!(
                 this.gameMode === GameMode.Team &&
                 this.teamCount === HumansVsNations

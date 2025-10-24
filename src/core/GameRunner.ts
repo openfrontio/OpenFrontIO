@@ -8,7 +8,6 @@ import {
   Cell,
   Game,
   GameUpdates,
-  HumansVsNations,
   NameViewData,
   Nation,
   Player,
@@ -101,15 +100,9 @@ export class GameRunner {
   ) {}
 
   init() {
-    const isHumansVsNations =
-      this.game.config().playerTeams() === HumansVsNations;
-
-    // Don't spawn bots in HumansVsNations mode
-    if (this.game.config().bots() > 0 && !isHumansVsNations) {
-      this.game.addExecution(
-        ...this.execManager.spawnBots(this.game.config().numBots()),
-      );
-    }
+    this.game.addExecution(
+      ...this.execManager.spawnBots(this.game.config().numBots()),
+    );
     if (this.game.config().spawnNPCs()) {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
