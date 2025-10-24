@@ -2,7 +2,12 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
+import {
+  Cell,
+  ColoredTeams,
+  PlayerType,
+  UnitType,
+} from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -223,13 +228,22 @@ export class TerritoryLayer implements Layer {
     const radius =
       minRad + (maxRad - minRad) * (0.5 + 0.5 * Math.sin(this.borderAnimTime));
 
+    let color = this.theme.spawnHighlightSelfColor();
+    let team: string | null = null;
+    team = focusedPlayer.team();
+    if (team !== null && team in ColoredTeams)
+      color = this.theme.teamColor(team);
+    else if (team !== null) {
+      color = focusedPlayer.territoryColor();
+    }
+
     this.drawBreathingRing(
       center.x,
       center.y,
       minRad,
       maxRad,
       radius,
-      this.theme.spawnHighlightSelfColor(), // Always draw breathing ring with self spawn highlight color
+      color, // Always draw breathing ring with self spawn highlight color
     );
   }
 
@@ -574,17 +588,16 @@ export class TerritoryLayer implements Layer {
     // Draw a semi-transparent ring around the starting location
     ctx.beginPath();
     // Transparency matches the highlight color provided
-    const transparent = color.toHex() + "00";
-    const c = color.toHex();
+    const transparent = color.alpha(0);
     const radGrad = ctx.createRadialGradient(cx, cy, minRad, cx, cy, maxRad);
 
     // Pixels with radius < minRad are transparent
-    radGrad.addColorStop(0, transparent);
+    radGrad.addColorStop(0, transparent.toHex());
     // The ring then starts with solid highlight color
-    radGrad.addColorStop(0.01, c);
-    radGrad.addColorStop(0.1, c);
+    radGrad.addColorStop(0.01, color.toHex());
+    radGrad.addColorStop(0.1, color.toHex());
     // The outer edge of the ring is transparent
-    radGrad.addColorStop(1, transparent);
+    radGrad.addColorStop(1, transparent.toHex());
 
     // Draw an arc at the max radius and fill with the created radial gradient
     ctx.arc(cx, cy, maxRad, 0, Math.PI * 2);
@@ -596,11 +609,11 @@ export class TerritoryLayer implements Layer {
     ctx.beginPath();
     const radGrad2 = ctx.createRadialGradient(cx, cy, minRad, cx, cy, radius);
     // Pixels with radius < minRad are transparent
-    radGrad2.addColorStop(0, transparent);
+    radGrad2.addColorStop(0, transparent.toHex());
     // The ring then starts with solid highlight color
-    radGrad2.addColorStop(0.01, c);
+    radGrad2.addColorStop(0.01, color.toHex());
     // The ring is solid throughout
-    radGrad2.addColorStop(1, c);
+    radGrad2.addColorStop(1, color.toHex());
 
     // Draw an arc at the current breathing radius and fill with the created "gradient"
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
