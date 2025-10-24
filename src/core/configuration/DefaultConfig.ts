@@ -793,7 +793,7 @@ export class DefaultConfig implements Config {
    * - Lower values make direction less noticeable
    */
   attackDirectionWeight(): number {
-    return 3.0;
+    return 2.5;
   }
 
   /**
@@ -805,7 +805,7 @@ export class DefaultConfig implements Config {
    * Lower values = faster fade, Higher values = direction persists longer
    */
   attackTimeDecay(): number {
-    return 300.0;
+    return 150.0;
   }
 
   /**
@@ -819,7 +819,7 @@ export class DefaultConfig implements Config {
    * This creates triangular convergence toward the clicked point.
    */
   attackMagnitudeWeight(): number {
-    return 1.0;
+    return 0.6;
   }
 
   /**
@@ -834,7 +834,7 @@ export class DefaultConfig implements Config {
    * Lower values = faster fade, Higher values = proximity persists longer
    */
   attackDistanceDecayConstant(): number {
-    return 30.0;
+    return 25.0;
   }
 
   /**
@@ -849,7 +849,7 @@ export class DefaultConfig implements Config {
    * Must be tuned relative to defensibility range (~15-35 points)
    */
   attackWaveFrontSaturation(): number {
-    return 50.0;
+    return 40.0;
   }
 
   /**
@@ -863,7 +863,7 @@ export class DefaultConfig implements Config {
    * Matches attackTimeDecay() by default for consistent temporal behavior.
    */
   attackWaveFrontTimeConstant(): number {
-    return 300.0;
+    return 150.0;
   }
 
   /**
