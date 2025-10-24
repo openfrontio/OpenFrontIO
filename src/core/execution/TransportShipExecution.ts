@@ -33,15 +33,17 @@ export class TransportShipExecution implements Execution {
 
   private pathFinder: PathFinder;
 
+  private originalOwner: Player;
+
   constructor(
     private attacker: Player,
     private targetID: PlayerID | null,
     private ref: TileRef,
     private startTroops: number,
     private src: TileRef | null,
-  ) {}
-
-  private originalOwner = this.attacker;
+  ) {
+    this.originalOwner = this.attacker;
+  }
 
   activeDuringSpawnPhase(): boolean {
     return false;
