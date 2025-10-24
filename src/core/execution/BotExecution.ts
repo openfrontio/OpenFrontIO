@@ -31,6 +31,7 @@ export class BotExecution implements Execution {
 
   init(mg: Game) {
     this.mg = mg;
+    this.bot.setTargetTroopRatio(0.7);
   }
 
   tick(ticks: number) {

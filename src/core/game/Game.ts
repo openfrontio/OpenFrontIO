@@ -550,11 +550,17 @@ export interface Player {
   conquer(tile: TileRef): void;
   relinquish(tile: TileRef): void;
 
-  // Resources & Troops
+  // Resources & Population
   gold(): Gold;
+  population(): number;
+  workers(): number;
+  troops(): number;
+  targetTroopRatio(): number;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
-  troops(): number;
+  addWorkers(toAdd: number): void;
+  removeWorkers(toRemove: number): void;
+  setTargetTroopRatio(target: number): void;
   setTroops(troops: number): void;
   addTroops(troops: number): void;
   removeTroops(troops: number): number;

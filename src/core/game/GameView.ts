@@ -362,6 +362,15 @@ export class PlayerView {
   gold(): Gold {
     return this.data.gold;
   }
+  population(): number {
+    return this.data.population;
+  }
+  workers(): number {
+    return this.data.workers;
+  }
+  targetTroopRatio(): number {
+    return this.data.targetTroopRatio;
+  }
 
   troops(): number {
     return this.data.troops;
