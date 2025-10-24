@@ -27,7 +27,6 @@ function sendBoat(target: TileRef, source: TileRef, troops: number) {
       target,
       troops,
       source,
-      defender,
     ),
   );
 }

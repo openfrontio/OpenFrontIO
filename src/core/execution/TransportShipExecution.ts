@@ -39,7 +39,7 @@ export class TransportShipExecution implements Execution {
     private ref: TileRef,
     private startTroops: number,
     private src: TileRef | null,
-    private originalOwner: Player,
+    private originalOwner = attacker,
   ) {}
 
   activeDuringSpawnPhase(): boolean {

@@ -397,7 +397,6 @@ export class FakeHumanExecution implements Execution {
         closest.y,
         this.player.troops() / 5,
         null,
-        this.player,
       ),
     );
   }
@@ -599,7 +598,6 @@ export class FakeHumanExecution implements Execution {
         dst,
         this.player.troops() / 5,
         null,
-        this.player,
       ),
     );
     return;

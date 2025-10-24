@@ -75,7 +75,6 @@ export class Executor {
           intent.dst,
           intent.troops,
           intent.src,
-          player,
         );
       case "allianceRequest":
         return new AllianceRequestExecution(player, intent.recipient);

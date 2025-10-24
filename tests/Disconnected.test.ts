@@ -333,7 +333,6 @@ describe("Disconnected", () => {
           enemyShoreTile,
           100,
           game.map().ref(coastX, 1),
-          player2,
         ),
       );
 
@@ -370,7 +369,6 @@ describe("Disconnected", () => {
           enemyShoreTile,
           100,
           game.map().ref(coastX, 1),
-          player2,
         ),
       );
       executeTicks(game, 1);
@@ -409,7 +407,6 @@ describe("Disconnected", () => {
           enemyShoreTile,
           boatTroops,
           game.map().ref(coastX, 1),
-          player2,
         ),
       );
       executeTicks(game, 1);
