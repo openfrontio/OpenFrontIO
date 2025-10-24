@@ -137,7 +137,6 @@ export function renderPatternPreview(
   width: number,
   height: number,
 ): TemplateResult {
-  console.log("renderPatternPreview", pattern);
   if (pattern === null) {
     return renderBlankPreview(width, height);
   }

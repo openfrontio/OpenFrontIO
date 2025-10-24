@@ -118,7 +118,7 @@ export class PlayerExecution implements Execution {
     if (main === undefined) throw new Error("No clusters");
     this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
     const surroundedBy = this.surroundedBySamePlayer(main);
-    if (surroundedBy && !this.player.isFriendly(surroundedBy)) {
+    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
       this.removeCluster(main);
     }
 

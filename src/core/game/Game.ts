@@ -205,6 +205,7 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
+  UnitType.Factory,
 ]);
 
 export function isStructureType(type: UnitType): boolean {
