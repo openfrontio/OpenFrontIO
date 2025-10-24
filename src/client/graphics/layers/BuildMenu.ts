@@ -121,6 +121,11 @@ export const buildTable: BuildItemDisplay[][] = [
 
 export const flattenedBuildTable = buildTable.flat();
 
+/**
+ * Build menu overlay that surfaces all structures/units a player can spawn on
+ * the currently selected tile. It handles affordability highlighting, counts,
+ * and dispatches the appropriate build/upgrade intents.
+ */
 @customElement("build-menu")
 export class BuildMenu extends LitElement implements Layer {
   public game: GameView;
@@ -130,6 +135,10 @@ export class BuildMenu extends LitElement implements Layer {
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
 
+  /**
+   * Subscribes to build menu related events and toggles the menu visibility in
+   * response to input handler signals.
+   */
   init() {
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
       if (!this.game.myPlayer()?.isAlive()) {
@@ -158,6 +167,10 @@ export class BuildMenu extends LitElement implements Layer {
     this.eventBus.on(MouseDownEvent, () => this.hideMenu());
   }
 
+  /**
+   * Refreshes build actions while the menu is visible so that gold totals and
+   * action availability stay in sync with the current game tick.
+   */
   tick() {
     if (!this._hidden) {
       this.refresh();
@@ -212,6 +225,10 @@ export class BuildMenu extends LitElement implements Layer {
       padding: 10px;
       gap: 5px;
     }
+    .build-button--available {
+      border-color: rgba(251, 191, 36, 0.7);
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+    }
     .build-button:not(:disabled):hover {
       background-color: #3a3a3a;
       transform: scale(1.05);
@@ -233,6 +250,9 @@ export class BuildMenu extends LitElement implements Layer {
     .build-button:disabled .build-cost {
       color: #ff4444;
     }
+    .build-button--available .build-cost {
+      color: #fbbf24;
+    }
     .build-icon {
       font-size: 40px;
       margin-bottom: 5px;
@@ -245,6 +265,18 @@ export class BuildMenu extends LitElement implements Layer {
     }
     .build-cost {
       font-size: 14px;
+    }
+    .build-affordable {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      background-color: rgba(251, 191, 36, 0.18);
+      color: #fbbf24;
+      letter-spacing: 0.02em;
     }
     .hidden {
       display: none !important;
@@ -356,6 +388,10 @@ export class BuildMenu extends LitElement implements Layer {
   @state()
   private _hidden = true;
 
+  /**
+   * Returns whether the player can build or upgrade the unit represented by
+   * the supplied display item.
+   */
   public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
     if (this.game?.myPlayer() === null || this.playerActions === null) {
       return false;
@@ -368,6 +404,9 @@ export class BuildMenu extends LitElement implements Layer {
     return unit[0].canBuild !== false || unit[0].canUpgrade !== false;
   }
 
+  /**
+   * Looks up the gold cost for the given build menu item.
+   */
   public cost(item: BuildItemDisplay): Gold {
     for (const bu of this.playerActions?.buildableUnits ?? []) {
       if (bu.type === item.unitType) {
@@ -377,6 +416,10 @@ export class BuildMenu extends LitElement implements Layer {
     return 0n;
   }
 
+  /**
+   * Outputs the current number of owned instances (across levels) for the
+   * given unit type.
+   */
   public count(item: BuildItemDisplay): string {
     const player = this.game?.myPlayer();
     if (!player) {
@@ -386,6 +429,10 @@ export class BuildMenu extends LitElement implements Layer {
     return player.totalUnitLevels(item.unitType).toString();
   }
 
+  /**
+   * Sends an intent event either to upgrade an existing structure or build a
+   * new one on the specified tile.
+   */
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
     if (buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
@@ -398,6 +445,43 @@ export class BuildMenu extends LitElement implements Layer {
       this.eventBus.emit(new BuildUnitIntentEvent(buildableUnit.type, tile));
     }
     this.hideMenu();
+  }
+
+  /**
+   * Computes the "×N" badge that indicates how many copies a player can afford
+   * with their current gold. Returns `null` when no badge should be rendered.
+   */
+  private affordableCountLabel(
+    item: BuildItemDisplay,
+    buildableUnit: BuildableUnit,
+  ): string | null {
+    const player = this.game?.myPlayer();
+    if (!player) {
+      return null;
+    }
+
+    if (buildableUnit.canBuild === false) {
+      return null;
+    }
+
+    const cost = this.cost(item);
+    if (cost <= 0n) {
+      return null;
+    }
+
+    const gold = player.gold();
+    if (gold < cost) {
+      return null;
+    }
+
+    const affordable = gold / cost;
+    if (affordable <= 1n) {
+      return null;
+    }
+    if (affordable > 99n) {
+      return "×99+";
+    }
+    return `×${affordable.toString()}`;
   }
 
   render() {
@@ -419,19 +503,32 @@ export class BuildMenu extends LitElement implements Layer {
                 const enabled =
                   buildableUnit.canBuild !== false ||
                   buildableUnit.canUpgrade !== false;
+                const affordability = this.affordableCountLabel(
+                  item,
+                  buildableUnit,
+                );
+                const buttonClass = `build-button${
+                  affordability ? " build-button--available" : ""
+                }`;
+                const showMoneyWarning =
+                  !enabled && buildableUnit.canBuild !== false;
                 return html`
                   <button
-                    class="build-button"
+                    class=${buttonClass}
                     @click=${() =>
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
                     title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
+                      ? showMoneyWarning
+                        ? translateText("build_menu.not_enough_money")
+                        : translateText("build_menu.unavailable")
                       : ""}
                   >
                     <img
                       src=${item.icon}
-                      alt="${item.unitType}"
+                      alt="${item.key
+                        ? translateText(item.key)
+                        : String(item.unitType)}"
                       width="40"
                       height="40"
                     />
@@ -454,6 +551,11 @@ export class BuildMenu extends LitElement implements Layer {
                         style="vertical-align: middle;"
                       />
                     </span>
+                    ${affordability
+                      ? html`<span class="build-affordable" translate="no">
+                          ${affordability}
+                        </span>`
+                      : ""}
                     ${item.countable
                       ? html`<div class="build-count-chip">
                           <span class="build-count">${this.count(item)}</span>
@@ -469,17 +571,27 @@ export class BuildMenu extends LitElement implements Layer {
     `;
   }
 
+  /**
+   * Hides the build menu overlay.
+   */
   hideMenu() {
     this._hidden = true;
     this.requestUpdate();
   }
 
+  /**
+   * Shows the build menu anchored to the tile the player clicked.
+   */
   showMenu(clickedTile: TileRef) {
     this.clickedTile = clickedTile;
     this._hidden = false;
     this.refresh();
   }
 
+  /**
+   * Refreshes the computed list of buildable units and the latest player
+   * actions for the active tile.
+   */
   private refresh() {
     this.game
       .myPlayer()
@@ -493,6 +605,9 @@ export class BuildMenu extends LitElement implements Layer {
     this.filteredBuildTable = this.getBuildableUnits();
   }
 
+  /**
+   * Filters out any disabled units from the static build table.
+   */
   private getBuildableUnits(): BuildItemDisplay[][] {
     return buildTable.map((row) =>
       row.filter((item) => !this.game?.config()?.isUnitDisabled(item.unitType)),
