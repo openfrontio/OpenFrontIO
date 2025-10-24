@@ -39,8 +39,9 @@ export class TransportShipExecution implements Execution {
     private ref: TileRef,
     private startTroops: number,
     private src: TileRef | null,
-    private originalOwner = attacker,
   ) {}
+
+  private originalOwner = this.attacker;
 
   activeDuringSpawnPhase(): boolean {
     return false;
