@@ -89,9 +89,7 @@ export class WarshipExecution implements Execution {
       if (
         unit.owner() === this.warship.owner() ||
         unit === this.warship ||
-        // Don't use isFriendly, Disconnected player ships should not attack allies/team or vice versa
-        unit.owner().isOnSameTeam(this.warship.owner()) ||
-        unit.owner().isAlliedWith(this.warship.owner()) ||
+        unit.owner().isFriendly(this.warship.owner(), true)||
         this.alreadySentShell.has(unit)
       ) {
         continue;
