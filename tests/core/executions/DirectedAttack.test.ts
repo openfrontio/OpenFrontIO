@@ -727,8 +727,8 @@ describe("DirectedAttack", () => {
     expect(tilesWithZeroMagnitude).toBeGreaterThan(0);
 
     // Restore default
-    config.setAttackMagnitudeWeight(0.6);
-    expect(config.attackMagnitudeWeight()).toBe(0.6);
+    config.setAttackMagnitudeWeight(0.75);
+    expect(config.attackMagnitudeWeight()).toBe(0.75);
   });
 
   test("Proximity bonus correctly prioritizes neighbors closer to click point", async () => {
@@ -822,9 +822,9 @@ describe("DirectedAttack", () => {
     expect(avgDistFirst).toBeLessThan(avgDistLast * 1.2);
 
     // Restore defaults
-    config.setAttackMagnitudeWeight(0.6);
-    config.setAttackDirectionWeight(2.5);
-    config.setAttackTimeDecay(150.0);
+    config.setAttackMagnitudeWeight(0.75);
+    config.setAttackDirectionWeight(1.5);
+    config.setAttackTimeDecay(20.0);
     config.setAttackDistanceDecayConstant(25.0);
   });
 
