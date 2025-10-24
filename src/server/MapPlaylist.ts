@@ -7,6 +7,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -66,6 +67,7 @@ const TEAM_COUNTS = [
   Duos,
   Trios,
   Quads,
+  HumansVsNations,
 ] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
@@ -95,7 +97,7 @@ export class MapPlaylist {
       disableNPCs: mode === GameMode.Team,
       gameMode: mode,
       playerTeams,
-      bots: 400,
+      bots: playerTeams === HumansVsNations ? 0 : 400,
       disabledUnits: [],
     } satisfies GameConfig;
   }
