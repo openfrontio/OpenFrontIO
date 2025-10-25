@@ -564,16 +564,13 @@ describe("DirectedAttack", () => {
   });
 
   test("Downscaled BFS optimization is active for directed attacks", async () => {
-    // This test verifies that the downscaled BFS optimization is actually being used
+    // This test verifies that the downscaled BFS optimization doesn't break attacks
     // when a directed attack is created with clickTile parameter.
 
     // Give defender some territory
     for (let i = 0; i < 50; i++) {
       game.executeNextTick();
     }
-
-    // Spy on console.log to capture BFS initialization message
-    const consoleSpy = jest.spyOn(console, "log");
 
     // Create directed attack with clickTile
     const clickTile = game.ref(10, 10);
@@ -588,22 +585,17 @@ describe("DirectedAttack", () => {
     game.addExecution(attackExecution);
     game.executeNextTick();
 
-    // Verify downscaled BFS initialization message was logged
-    const bfsLogs = consoleSpy.mock.calls.filter((call) =>
-      call[0]?.includes("Downscaled BFS"),
-    );
-    expect(bfsLogs.length).toBeGreaterThan(0);
-
-    // Verify log contains expected information
-    const initLog = bfsLogs[0][0];
-    expect(initLog).toContain("connected target-owned tiles");
-    expect(initLog).toContain("ms");
-
-    // Cleanup spy
-    consoleSpy.mockRestore();
-
     // Verify attack was created successfully
     expect(attacker.outgoingAttacks()).toHaveLength(1);
+
+    // Run attack for several ticks to verify BFS-based proximity bonus works
+    const initialTiles = attacker.numTilesOwned();
+    for (let i = 0; i < 20; i++) {
+      game.executeNextTick();
+    }
+
+    // Verify attack is making progress (conquering tiles)
+    expect(attacker.numTilesOwned()).toBeGreaterThan(initialTiles);
   });
 
   test("Proximity bonus respects magnitude weight parameter", async () => {
@@ -781,56 +773,6 @@ describe("DirectedAttack", () => {
 
     // The fact that attack progressed successfully confirms BFS is topologically sound
     // (if BFS had connectivity issues, attack would fail to find valid paths)
-  });
-
-  test("Attack cleanup logs telemetry on completion", async () => {
-    // Verify that when a directed attack ends, it logs performance telemetry
-    // including coarse grid size, downsample factor, init time, and lookup count.
-
-    // Give defender some territory
-    for (let i = 0; i < 30; i++) {
-      game.executeNextTick();
-    }
-
-    // Spy on console.log to capture telemetry
-    const consoleSpy = jest.spyOn(console, "log");
-
-    // Create directed attack
-    const clickTile = game.ref(10, 10);
-    const attackExecution = new AttackExecution(
-      50, // Small troop count so attack completes quickly
-      attacker,
-      defender.id(),
-      null,
-      true,
-      clickTile,
-    );
-    game.addExecution(attackExecution);
-    game.executeNextTick();
-
-    // Run until attack completes
-    for (let i = 0; i < 50; i++) {
-      game.executeNextTick();
-      if (attacker.outgoingAttacks().length === 0) break;
-    }
-
-    // Find telemetry log (should be logged on cleanup)
-    const telemetryLogs = consoleSpy.mock.calls.filter((call) =>
-      call[0]?.includes("Downscaled Stats"),
-    );
-
-    // Verify telemetry was logged
-    expect(telemetryLogs.length).toBeGreaterThan(0);
-
-    // Verify log contains expected metrics
-    const statsLog = telemetryLogs[0][0];
-    expect(statsLog).toContain("coarse tiles");
-    expect(statsLog).toContain("downsample=");
-    expect(statsLog).toContain("init=");
-    expect(statsLog).toContain("distance lookups");
-
-    // Cleanup spy
-    consoleSpy.mockRestore();
   });
 
   test("Attack with invalid clickTile falls back to standard attack", async () => {

@@ -15,6 +15,8 @@ import { PseudoRandom } from "../PseudoRandom";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
 const malusForRetreat = 25;
+const MIN_VECTOR_MAGNITUDE = 0.001;
+
 export class AttackExecution implements Execution {
   private active: boolean = true;
   private toConquer = new FlatBinaryHeap();
@@ -32,8 +34,9 @@ export class AttackExecution implements Execution {
   // Downscaled BFS distances (coarse grid only, for proximity bonus)
   private clickDistances: Map<TileRef, number> | null = null;
 
-  // Downscale configuration
-  private readonly DOWNSAMPLE_FACTOR = 10; // Sample every 10th tile
+  // Cached click tile coordinates (computed once per attack)
+  private clickX: number = 0;
+  private clickY: number = 0;
 
   // Performance telemetry for downscaled BFS
   private bfsInitTime: number = 0;
@@ -125,24 +128,30 @@ export class AttackExecution implements Execution {
           );
         }
 
+        // Cache click coordinates once per attack (performance optimization)
+        this.clickX = this.mg.x(this.clickTile);
+        this.clickY = this.mg.y(this.clickTile);
+
         // Performance: Measure downscaled BFS computation time
         const startTime = performance.now();
 
         // Build coarse grid via BFS from clicked tile (single pass)
         this.clickDistances = this.buildCoarseGrid(
           this.clickTile,
-          this.DOWNSAMPLE_FACTOR,
+          this.mg.config().attackBFSDownsampleFactor(),
         );
         this.bfsCoarseGridSize = this.clickDistances.size;
 
         const endTime = performance.now();
         this.bfsInitTime = endTime - startTime;
 
-        console.log(
-          `[DirectedAttack] Downscaled BFS (${this.DOWNSAMPLE_FACTOR}x): ` +
-            `${this.clickDistances.size} connected target-owned tiles, ` +
-            `${this.bfsInitTime.toFixed(2)}ms init time`,
-        );
+        if (this.mg.config().debugDirectedAttacks()) {
+          console.log(
+            `[DirectedAttack] Downscaled BFS (${this.mg.config().attackBFSDownsampleFactor()}x): ` +
+              `${this.clickDistances.size} connected target-owned tiles, ` +
+              `${this.bfsInitTime.toFixed(2)}ms init time`,
+          );
+        }
       }
     }
 
@@ -411,6 +420,106 @@ export class AttackExecution implements Execution {
   }
 
   /**
+   * Calculates proximity bonus based on BFS distance from click point.
+   * Returns negative value (bonus reduces priority in min-heap).
+   *
+   * @param neighbor The tile being evaluated for conquest
+   * @param elapsedTicks Time since attack started (for decay factor)
+   * @returns Proximity bonus (negative value, or 0 if not available)
+   */
+  private calculateProximityBonus(
+    neighbor: TileRef,
+    elapsedTicks: number,
+  ): number {
+    const magnitudeWeight = this.mg.config().attackMagnitudeWeight();
+    if (magnitudeWeight <= 0) {
+      return 0;
+    }
+
+    const bfsDistance = this.getDownscaledDistance(neighbor);
+    if (bfsDistance === null) {
+      return 0;
+    }
+
+    // Calculate time decay factor
+    const timeDecayConstant = this.mg.config().attackTimeDecay();
+    const timeDecayFactor = Math.exp(-elapsedTicks / timeDecayConstant);
+
+    // Apply exponential distance decay
+    const distanceDecayConstant = this.mg
+      .config()
+      .attackDistanceDecayConstant();
+    const proximityBonus =
+      Math.exp(-bfsDistance / distanceDecayConstant) *
+      magnitudeWeight *
+      timeDecayFactor;
+
+    return -proximityBonus; // Negative because lower priority = better (min-heap)
+  }
+
+  /**
+   * Calculates directional priority offset based on alignment with click point.
+   * Returns 0 for tiles aligned toward the click, higher values for misaligned tiles.
+   *
+   * @param neighbor The tile being evaluated for conquest
+   * @param border The current border tile (owned by attacker)
+   * @param elapsedTicks Time since attack started (for decay factor)
+   * @returns Priority offset (0-6 range, higher = lower priority)
+   */
+  private calculateDirectionOffset(
+    neighbor: TileRef,
+    border: TileRef,
+    elapsedTicks: number,
+  ): number {
+    const neighborX = this.mg.x(neighbor);
+    const neighborY = this.mg.y(neighbor);
+    const borderX = this.mg.x(border);
+    const borderY = this.mg.y(border);
+
+    // Vector from border tile -> click point
+    const dirX = this.clickX - borderX;
+    const dirY = this.clickY - borderY;
+    const dirMag = Math.sqrt(dirX * dirX + dirY * dirY);
+
+    if (dirMag <= MIN_VECTOR_MAGNITUDE) {
+      return 0;
+    }
+
+    // Normalize direction vector
+    const dirNormX = dirX / dirMag;
+    const dirNormY = dirY / dirMag;
+
+    // Vector from border tile -> neighbor
+    const toNeighborX = neighborX - borderX;
+    const toNeighborY = neighborY - borderY;
+    const toNeighborMag = Math.sqrt(
+      toNeighborX * toNeighborX + toNeighborY * toNeighborY,
+    );
+
+    if (toNeighborMag <= MIN_VECTOR_MAGNITUDE) {
+      return 0;
+    }
+
+    // Normalize neighbor vector
+    const toNeighborNormX = toNeighborX / toNeighborMag;
+    const toNeighborNormY = toNeighborY / toNeighborMag;
+
+    // Dot product measures alignment (-1 to 1)
+    const dotProduct = dirNormX * toNeighborNormX + dirNormY * toNeighborNormY;
+
+    // Calculate exponential time decay for direction influence
+    const timeDecayConstant = this.mg.config().attackTimeDecay();
+    const timeDecayFactor = Math.exp(-elapsedTicks / timeDecayConstant);
+
+    // (1.0 - dotProduct) gives 0.0 for perfect alignment, 2.0 for opposite
+    return (
+      (1.0 - dotProduct) *
+      this.mg.config().attackDirectionWeight() *
+      timeDecayFactor
+    );
+  }
+
+  /**
    * Finds the nearest coarse grid tile to a given tile.
    * Rounds coordinates to the nearest grid point.
    *
@@ -456,7 +565,10 @@ export class AttackExecution implements Execution {
     this.bfsDistanceLookups++;
 
     // Find nearest coarse tile
-    const coarseTile = this.findNearestCoarseTile(tile, this.DOWNSAMPLE_FACTOR);
+    const coarseTile = this.findNearestCoarseTile(
+      tile,
+      this.mg.config().attackBFSDownsampleFactor(),
+    );
 
     // Return its distance
     return this.clickDistances.get(coarseTile) ?? null;
@@ -500,7 +612,7 @@ export class AttackExecution implements Execution {
       const defensibilityWeight =
         (this.random.nextInt(0, 7) + 10) * (1 - numOwnedByMe * 0.5 + mag / 2);
 
-      // Wave front offset (linear growth, matches original attack behavior)
+      // Wave front offset (linear growth)
       // Tiles discovered earlier get priority over tiles discovered later
       const elapsedTicks = tickNow - this.attackStartTick;
       let priority = defensibilityWeight + elapsedTicks;
@@ -508,80 +620,19 @@ export class AttackExecution implements Execution {
       if (this.clickTile !== null) {
         // Per-tile vector approach: each border tile calculates its own direction to click
         // This creates triangular convergence toward the clicked point
-        const clickX = this.mg.x(this.clickTile);
-        const clickY = this.mg.y(this.clickTile);
-        const neighborX = this.mg.x(neighbor);
-        const neighborY = this.mg.y(neighbor);
+        const directionOffset = this.calculateDirectionOffset(
+          neighbor,
+          tile,
+          elapsedTicks,
+        );
+        priority += directionOffset;
 
-        // Use the current border tile directly (tile parameter)
-        // Since neighbor comes from this.mg.neighbors(tile), tile is already adjacent to neighbor
-        const borderX = this.mg.x(tile);
-        const borderY = this.mg.y(tile);
-
-        // Vector from border tile -> click point
-        const dirX = clickX - borderX;
-        const dirY = clickY - borderY;
-        const dirMag = Math.sqrt(dirX * dirX + dirY * dirY);
-
-        if (dirMag > 0.001) {
-          // Normalize direction vector
-          const dirNormX = dirX / dirMag;
-          const dirNormY = dirY / dirMag;
-
-          // Vector from border tile -> neighbor
-          const toNeighborX = neighborX - borderX;
-          const toNeighborY = neighborY - borderY;
-          const toNeighborMag = Math.sqrt(
-            toNeighborX * toNeighborX + toNeighborY * toNeighborY,
-          );
-
-          if (toNeighborMag > 0.001) {
-            // Normalize neighbor vector
-            const toNeighborNormX = toNeighborX / toNeighborMag;
-            const toNeighborNormY = toNeighborY / toNeighborMag;
-
-            // Dot product measures alignment (-1 to 1)
-            const dotProduct =
-              dirNormX * toNeighborNormX + dirNormY * toNeighborNormY;
-
-            // Calculate exponential time decay for direction influence
-            // Direction influence fades naturally as attack progresses
-            const timeSinceStart = tickNow - this.attackStartTick;
-            const timeDecayConstant = this.mg.config().attackTimeDecay();
-            const timeDecayFactor = Math.exp(
-              -timeSinceStart / timeDecayConstant,
-            );
-
-            // Apply direction offset with time decay (additive approach)
-            // (1.0 - dotProduct) gives 0.0 for perfect alignment, 2.0 for opposite
-            const directionOffset =
-              (1.0 - dotProduct) *
-              this.mg.config().attackDirectionWeight() *
-              timeDecayFactor;
-            priority += directionOffset;
-
-            // Optional: Add BFS-based proximity bonus (topological distance decay)
-            // Tiles topologically closer to click point get additional priority boost
-            // Only applies to tiles in the same connected component (no fallback for disconnected regions)
-            const magnitudeWeight = this.mg.config().attackMagnitudeWeight();
-            if (magnitudeWeight > 0) {
-              const bfsDistance = this.getDownscaledDistance(neighbor); // neighbor = candidate to conquer
-              if (bfsDistance !== null) {
-                // Apply exponential distance decay to prioritize tiles closer to click point
-                const distanceDecayConstant = this.mg
-                  .config()
-                  .attackDistanceDecayConstant();
-                const proximityBonus =
-                  Math.exp(-bfsDistance / distanceDecayConstant) *
-                  magnitudeWeight *
-                  timeDecayFactor;
-                priority -= proximityBonus; // Lower priority = better (min-heap)
-              }
-              // else: No proximity bonus for disconnected regions
-              // Disconnected tiles still use direction + defensibility + wave front
-            }
-          }
-        }
+        // Add BFS-based proximity bonus (topological distance decay)
+        const proximityBonus = this.calculateProximityBonus(
+          neighbor,
+          elapsedTicks,
+        );
+        priority += proximityBonus;
       }
 
       this.toConquer.enqueue(neighbor, priority);
@@ -595,10 +646,13 @@ export class AttackExecution implements Execution {
   private cleanupBFSDistances() {
     if (this.clickDistances !== null) {
       // Log downscaled BFS telemetry before cleanup
-      if (this.bfsCoarseGridSize > 0) {
+      if (
+        this.mg.config().debugDirectedAttacks() &&
+        this.bfsCoarseGridSize > 0
+      ) {
         console.log(
           `[DirectedAttack] Downscaled Stats: ${this.bfsCoarseGridSize} coarse tiles, ` +
-            `downsample=${this.DOWNSAMPLE_FACTOR}x, init=${this.bfsInitTime.toFixed(2)}ms, ` +
+            `downsample=${this.mg.config().attackBFSDownsampleFactor()}x, init=${this.bfsInitTime.toFixed(2)}ms, ` +
             `${this.bfsDistanceLookups} distance lookups`,
         );
       }

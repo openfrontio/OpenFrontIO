@@ -860,6 +860,27 @@ export class DefaultConfig implements Config {
     return 200.0;
   }
 
+  /**
+   * Downsample factor for BFS distance calculations in directed attacks.
+   * Only tiles at grid coordinates (multiples of this factor) are stored in the distance map.
+   * - 10: Balanced - good performance with minimal accuracy loss (recommended)
+   * - 5: Higher precision - more memory, slower BFS initialization
+   * - 15-20: Lower precision - faster BFS, less memory, may reduce proximity bonus effectiveness
+   */
+  attackBFSDownsampleFactor(): number {
+    return 10;
+  }
+
+  /**
+   * Enable debug logging for directed attack telemetry.
+   * When enabled, logs BFS initialization and performance metrics to console.
+   * - false: Production mode - no telemetry logs (recommended)
+   * - true: Debug mode - log BFS performance and statistics
+   */
+  debugDirectedAttacks(): boolean {
+    return false;
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
