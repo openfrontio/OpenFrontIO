@@ -323,12 +323,9 @@ export class DefaultConfig implements Config {
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
-<<<<<<< Updated upstream
-=======
     if (this._gameConfig.gameMode === GameMode.NukeWars) {
       return unitType === UnitType.MIRV;
     }
->>>>>>> Stashed changes
     return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
   }
 
@@ -622,8 +619,6 @@ export class DefaultConfig implements Config {
   numSpawnPhaseTurns(): number {
     return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
   }
-<<<<<<< Updated upstream
-=======
 
   numPreparationPhaseTurns(): number {
     if (this._gameConfig.gameMode === GameMode.NukeWars) {
@@ -631,7 +626,6 @@ export class DefaultConfig implements Config {
     }
     return 0;
   }
->>>>>>> Stashed changes
   numBots(): number {
     return this.bots();
   }

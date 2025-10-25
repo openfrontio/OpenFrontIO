@@ -29,13 +29,10 @@ export class WinCheckExecution implements Execution {
     }
     if (this.mg === null) throw new Error("Not initialized");
 
-    if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
+    const gameMode = this.mg.config().gameConfig().gameMode;
+    if (gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
-<<<<<<< Updated upstream
     } else {
-=======
-    } else if (gameMode === GameMode.NukeWars || gameMode === GameMode.Team) {
->>>>>>> Stashed changes
       this.checkWinnerTeam();
     }
   }
@@ -91,8 +88,6 @@ export class WinCheckExecution implements Execution {
     }
   }
 
-<<<<<<< Updated upstream
-=======
   private checkNukeWarsWinCondition(sorted: [Team, number][]): void {
     if (this.mg === null) throw new Error("Not initialized");
     const numTilesWithoutFallout =
@@ -153,7 +148,6 @@ export class WinCheckExecution implements Execution {
     return maxTimerValue !== undefined && timeElapsed >= maxTimerValue * 60;
   }
 
->>>>>>> Stashed changes
   isActive(): boolean {
     return this.active;
   }

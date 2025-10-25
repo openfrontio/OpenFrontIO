@@ -53,13 +53,7 @@ export class HostLobbyModal extends LitElement {
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
-<<<<<<< Updated upstream
-=======
-
-  private readonly nukeWarsDisabledUnits = [
-    UnitType.MIRV,
-  ];
->>>>>>> Stashed changes
+  private readonly nukeWarsDisabledUnits = [UnitType.MIRV];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
 
@@ -276,6 +270,14 @@ export class HostLobbyModal extends LitElement {
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.teams")}
+                </div>
+              </div>
+              <div
+                class="option-card ${this.gameMode === GameMode.NukeWars ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.NukeWars)}
+              >
+                <div class="option-card-title">
+                  ${translateText("game_mode.nukewars")}
                 </div>
               </div>
             </div>
@@ -702,6 +704,14 @@ export class HostLobbyModal extends LitElement {
 
   private async handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
+    if (value === GameMode.NukeWars) {
+      // Enforce Nuke Wars settings
+      this.selectedMap = GameMapType.Baikal;
+      this.teamCount = 2;
+      this.disabledUnits = Array.from(new Set([...this.disabledUnits, ...this.nukeWarsDisabledUnits]));
+      this.donateGold = true;
+      this.donateTroops = true;
+    }
     this.putGameConfig();
   }
 

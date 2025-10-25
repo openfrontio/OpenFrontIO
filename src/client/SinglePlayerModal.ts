@@ -514,6 +514,13 @@ export class SinglePlayerModal extends LitElement {
 
     const selectedColor = this.userSettings.getSelectedColor();
 
+    if (this.gameMode === GameMode.NukeWars) {
+      // Enforce Nuke Wars defaults for singleplayer
+      this.selectedMap = GameMapType.Baikal;
+      this.teamCount = 2;
+      this.disabledUnits = Array.from(new Set([...this.disabledUnits, ...this.nukeWarsDisabledUnits]));
+    }
+
     this.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {

@@ -96,12 +96,10 @@ export class GameImpl implements Game {
     this._width = _map.width();
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
-<<<<<<< Updated upstream
 
-    if (_config.gameConfig().gameMode === GameMode.Team) {
-=======
-    if (this.isTeamBasedGame()) {
->>>>>>> Stashed changes
+    // Handle team population for Team and NukeWars modes
+    const gameMode = _config.gameConfig().gameMode;
+    if (gameMode === GameMode.Team || gameMode === GameMode.NukeWars) {
       this.populateTeams();
     }
     this.addPlayers();
@@ -338,15 +336,12 @@ export class GameImpl implements Game {
     return this._ticks <= this.config().numSpawnPhaseTurns();
   }
 
-<<<<<<< Updated upstream
-=======
   inPreparationPhase(): boolean {
     const spawn = this.config().numSpawnPhaseTurns();
     const prep = this.config().numPreparationPhaseTurns();
     return this._ticks > spawn && this._ticks <= spawn + prep;
   }
 
->>>>>>> Stashed changes
   ticks(): number {
     return this._ticks;
   }
@@ -689,11 +684,8 @@ export class GameImpl implements Game {
   }
 
   teams(): Team[] {
-<<<<<<< Updated upstream
-    if (this._config.gameConfig().gameMode !== GameMode.Team) {
-=======
-    if (!this.isTeamBasedGame()) {
->>>>>>> Stashed changes
+    const gameMode = this._config.gameConfig().gameMode;
+    if (gameMode !== GameMode.Team && gameMode !== GameMode.NukeWars) {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];
