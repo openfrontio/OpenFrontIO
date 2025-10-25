@@ -157,6 +157,7 @@
   "account_modal": {
     "title": "Account",
     "logged_in_as": "Logged in as {email}",
+    "fetching_account": "Fetching account information...",
     "logged_in_with_discord": "Logged in with Discord",
     "recovery_email_sent": "Recovery email sent to {email}"
   },
@@ -192,7 +193,8 @@
     "japan": "Japan",
     "yenisei": "Yenisei",
     "pluto": "Pluto",
-    "montreal": "Montreal"
+    "montreal": "Montreal",
+    "achiran": "Achiran"
   },
   "map_categories": {
     "continental": "Continental",

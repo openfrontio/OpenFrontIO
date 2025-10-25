@@ -29,12 +29,23 @@ export class PastelTheme implements Theme {
   private water = colord({ r: 70, g: 132, b: 180 });
   private shorelineWater = colord({ r: 100, g: 143, b: 255 });
 
+  /** Alternate View colors for self, green */
   private _selfColor = colord({ r: 0, g: 255, b: 0 });
+  /** Alternate View colors for allies, yellow */
   private _allyColor = colord({ r: 255, g: 255, b: 0 });
+  /** Alternate View colors for neutral, gray */
   private _neutralColor = colord({ r: 128, g: 128, b: 128 });
+  /** Alternate View colors for enemies, red */
   private _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
+  /** Default spawn highlight colors for other players in FFA, yellow */
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
+  /** Added non-default spawn highlight colors for self, full white */
+  private _spawnHighlightSelfColor = colord({ r: 255, g: 255, b: 255 });
+  /** Added non-default spawn highlight colors for teammates, green */
+  private _spawnHighlightTeamColor = colord({ r: 0, g: 255, b: 0 });
+  /** Added non-default spawn highlight colors for enemies, red */
+  private _spawnHighlightEnemyColor = colord({ r: 255, g: 0, b: 0 });
 
   teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
@@ -143,5 +154,17 @@ export class PastelTheme implements Theme {
 
   spawnHighlightColor(): Colord {
     return this._spawnHighlightColor;
+  }
+  /** Return spawn highlight color for self */
+  spawnHighlightSelfColor(): Colord {
+    return this._spawnHighlightSelfColor;
+  }
+  /** Return spawn highlight color for teammates */
+  spawnHighlightTeamColor(): Colord {
+    return this._spawnHighlightTeamColor;
+  }
+  /** Return spawn highlight color for enemies */
+  spawnHighlightEnemyColor(): Colord {
+    return this._spawnHighlightEnemyColor;
   }
 }
