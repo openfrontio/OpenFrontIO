@@ -377,11 +377,8 @@ export class AttackExecution implements Execution {
     // This ensures we traverse target's territory even if player clicks their own territory
     const targetOwner = this.target;
 
-    // Detect neutral territory attacks and get max radius
-    const isNeutralAttack = !targetOwner.isPlayer();
-    const maxRadius = isNeutralAttack
-      ? this.mg.config().attackBFSMaxRadius()
-      : Number.POSITIVE_INFINITY;
+    // Apply BFS radius limit to all attacks (prevents performance issues with large empires)
+    const maxRadius = this.mg.config().attackBFSMaxRadius();
 
     visited.add(clickTile);
 

@@ -844,16 +844,17 @@ export class DefaultConfig implements Config {
   }
 
   /**
-   * Maximum BFS radius for neutral territory attacks (in tiles).
-   * Limits how far the BFS can traverse when attacking empty/neutral territory.
-   * This prevents performance issues on large maps where neutral regions can be enormous.
+   * Maximum BFS radius for all directed attacks (in tiles).
+   * Limits how far the BFS can traverse from the click point.
+   * This prevents performance issues on large maps and large late-game empires.
    *
-   * - 200 tiles: Balanced - large enough for strategic attacks, prevents stuttering (recommended)
-   * - 150 tiles: Faster - smaller search area, better performance
-   * - 300 tiles: Slower - larger search area, more accurate but may cause stuttering
+   * - 100 tiles: Very fast - minimal search area, sufficient for most cases
+   * - 200 tiles: Balanced - optimal performance, proximity bonus negligible beyond this (current)
+   * - 500 tiles: Large - handles extreme scenarios, may cause stuttering on large attacks
    *
-   * Only applies to neutral/empty territory attacks. Player attacks remain unbounded
-   * (naturally limited by empire size).
+   * Applies to all attacks (neutral and player). Beyond this radius, tiles fall back to
+   * Euclidean distance for proximity calculations. Note: proximity bonus decays to ~0.03%
+   * at 200 tiles (exp(-200/25)), making larger radii unnecessary.
    */
   attackBFSMaxRadius(): number {
     return 200.0;
