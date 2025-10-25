@@ -606,6 +606,8 @@
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start Trading",
     "stop_trade": "Stop Trading",
+    "stop_trade_all": "Stop Trading with All",
+    "start_trade_all": "Start Trading with All",
     "alliances": "Alliances",
     "flag": "Flag",
     "chat": "Chat",

@@ -573,6 +573,9 @@ export class DefaultConfig implements Config {
   donateCooldown(): Tick {
     return 10 * 10;
   }
+  embargoAllCooldown(): Tick {
+    return 10 * 10;
+  }
   deletionMarkDuration(): Tick {
     return 15 * 10;
   }
