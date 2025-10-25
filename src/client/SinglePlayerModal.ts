@@ -48,14 +48,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private teamCount: TeamCountConfig = 2;
 
   @state() private disabledUnits: UnitType[] = [];
-
-<<<<<<< Updated upstream
-=======
-  private readonly nukeWarsDisabledUnits = [
-    UnitType.MIRV,
-  ];
-
->>>>>>> Stashed changes
+  private readonly nukeWarsDisabledUnits = [UnitType.MIRV];
   private userSettings: UserSettings = new UserSettings();
 
   connectedCallback() {
