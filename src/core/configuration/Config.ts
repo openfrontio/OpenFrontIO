@@ -113,6 +113,13 @@ export interface Config {
     tilesPerTickUsed: number;
   };
   attackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  attackDirectionWeight(): number;
+  attackTimeDecay(): number;
+  attackMagnitudeWeight(): number;
+  attackDistanceDecayConstant(): number;
+  attackBFSMaxRadius(): number;
+  attackBFSDownsampleFactor(): number;
+  debugDirectedAttacks(): boolean;
   radiusPortSpawn(): number;
   // When computing likelihood of trading for any given port, the X closest port
   // are twice more likely to be selected. X is determined below.
