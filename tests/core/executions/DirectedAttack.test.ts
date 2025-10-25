@@ -709,7 +709,7 @@ describe("DirectedAttack", () => {
 
     // Restore defaults
     config.setAttackMagnitudeWeight(0.75);
-    config.setAttackDirectionWeight(1.5);
+    config.setAttackDirectionWeight(2.5);
     config.setAttackTimeDecay(20.0);
     config.setAttackDistanceDecayConstant(25.0);
   });
