@@ -354,6 +354,8 @@
     "build_atom_bomb_desc": "Build an Atom Bomb under your cursor.",
     "build_hydrogen_bomb": "Build Hydrogen Bomb",
     "build_hydrogen_bomb_desc": "Build a Hydrogen Bomb under your cursor.",
+    "build_mirv": "Build MIRV",
+    "build_mirv_desc": "Build a MIRV under your cursor.",
     "attack_ratio_controls": "Attack Ratio Controls",
     "attack_ratio_up": "Increase Attack Ratio",
     "attack_ratio_up_desc": "Increase attack ratio by 10%",
