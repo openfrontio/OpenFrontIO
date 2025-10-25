@@ -459,8 +459,8 @@ describe("DirectedAttack", () => {
     const clickX = game.x(clickTile);
     const clickY = game.y(clickTile);
 
-    // Early conquests (first 25%)
-    const earlyCount = Math.floor(conquestData.length * 0.25);
+    // Early conquests (first 25%) — at least 1 sample
+    const earlyCount = Math.max(1, Math.floor(conquestData.length * 0.25));
     const earlyData = conquestData.slice(0, earlyCount);
     const earlyAvgDist =
       earlyData.reduce((sum, tile) => {
@@ -478,10 +478,9 @@ describe("DirectedAttack", () => {
         return sum + Math.sqrt(dx * dx + dy * dy);
       }, 0) / lateData.length;
 
-    // With triangular convergence, early tiles should be closer to click on average
-    // This verifies locality - tiles near the click point are prioritized
-    // Allow variance for: terrain randomness + downscaled BFS (±5-10 tile accuracy)
-    expect(earlyAvgDist).toBeLessThanOrEqual(lateAvgDist * 1.5);
+    // Directional wave moves toward click: late distances should be smaller
+    // Allow 5% slack for randomness + coarse BFS
+    expect(lateAvgDist).toBeLessThanOrEqual(earlyAvgDist * 0.95);
   });
 
   test("Explicit time decay causes direction to fade over attack duration", async () => {
@@ -490,8 +489,13 @@ describe("DirectedAttack", () => {
       game.executeNextTick();
     }
 
-    // Note: This test uses default config (attackTimeDecay = 300)
-    // Time decay is observable even with default settings over 200+ ticks
+    // Note: This test explicitly sets attackTimeDecay = 300 for predictable math
+    // Time decay is observable with this setting over 200+ ticks
+
+    // Use a long decay horizon to make the ratio gap predictable in test math
+    const config = game.config() as TestConfig;
+    const originalDecay = config.attackTimeDecay();
+    config.setAttackTimeDecay(300.0);
 
     // Click to the east
     const clickTile = game.ref(15, 15);
@@ -526,7 +530,9 @@ describe("DirectedAttack", () => {
       }
 
       // Return ratio of east to total (should be higher early, lower late)
-      return eastCount / (eastCount + westCount + 1);
+      const total = eastCount + westCount;
+      expect(total).toBeGreaterThan(0); // ensure non-vacuous
+      return eastCount / total;
     };
 
     // Early conquest (first 50 ticks) - direction should be strong
@@ -561,6 +567,9 @@ describe("DirectedAttack", () => {
 
     // Verify attack made progress (allow for equal in edge cases)
     expect(attacker.numTilesOwned()).toBeGreaterThanOrEqual(earlyTiles.length);
+
+    // Restore original config
+    config.setAttackTimeDecay(originalDecay);
   });
 
   test("Downscaled BFS optimization is active for directed attacks", async () => {
