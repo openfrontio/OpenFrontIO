@@ -930,17 +930,13 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    // Prevent crossing midpoint with ships/boats at any time in Nuke Wars.
+    // In Nuke Wars on Baikal, prevent ships from crossing the midpoint but allow them within team zones
     const gc = this.mg.config().gameConfig();
     if (
       gc.gameMode === GameMode.NukeWars &&
       gc.gameMap === GameMapType.Baikal
     ) {
-      if (
-        unitType === UnitType.TransportShip ||
-        unitType === UnitType.Warship ||
-        unitType === UnitType.TradeShip
-      ) {
+      if (unitType === UnitType.Warship || unitType === UnitType.TradeShip) {
         if (!this.isInTeamSpawnZone(targetTile)) return false;
       }
 

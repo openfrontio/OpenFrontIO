@@ -1,6 +1,8 @@
 import {
   Execution,
   Game,
+  GameMapType,
+  GameMode,
   MessageType,
   Player,
   PlayerID,
@@ -101,6 +103,27 @@ export class TransportShipExecution implements Execution {
       );
       this.active = false;
       return;
+    }
+
+    // In Nuke Wars on Baikal, prevent transport ships from crossing the midpoint
+    const gc = this.mg.config().gameConfig();
+    if (
+      gc.gameMode === GameMode.NukeWars &&
+      gc.gameMap === GameMapType.Baikal
+    ) {
+      const mapWidth = this.mg.width();
+      const wantLeft = this.attacker.smallID() % 2 === 1;
+      const dstX = this.mg.x(this.dst);
+      const dstLeft = dstX < Math.floor(mapWidth / 2);
+      if (wantLeft !== dstLeft) {
+        this.mg.displayMessage(
+          "Transport ships cannot cross the midpoint in Nuke Wars",
+          MessageType.ATTACK_FAILED,
+          this.attacker.id(),
+        );
+        this.active = false;
+        return;
+      }
     }
 
     const closestTileSrc = this.attacker.canBuild(
