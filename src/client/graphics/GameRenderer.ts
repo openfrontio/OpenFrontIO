@@ -38,6 +38,7 @@ import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { GameRecapCapture } from "./recapCapture/GameRecapCapture";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -266,6 +267,23 @@ export function createRenderer(
     fpsDisplay,
   ];
 
+  const captureLayers = layers.filter(
+    (layer) =>
+      layer instanceof TerrainLayer ||
+      layer instanceof TerritoryLayer ||
+      layer instanceof RailroadLayer ||
+      layer instanceof StructureIconsLayer ||
+      layer instanceof UnitLayer,
+  );
+
+  const recapCapture = new GameRecapCapture(
+    game,
+    transformHandler,
+    captureLayers,
+  );
+
+  winModal.attachRecapCapture(recapCapture);
+
   return new GameRenderer(
     game,
     eventBus,
@@ -274,6 +292,7 @@ export function createRenderer(
     uiState,
     layers,
     fpsDisplay,
+    recapCapture,
   );
 }
 
@@ -288,6 +307,7 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Layer[],
     private fpsDisplay: FPSDisplay,
+    private recapCapture?: GameRecapCapture,
   ) {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
@@ -297,6 +317,7 @@ export class GameRenderer {
   initialize() {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
+    this.recapCapture?.start();
 
     document.body.appendChild(this.canvas);
     window.addEventListener("resize", () => this.resizeCanvas());
@@ -319,6 +340,7 @@ export class GameRenderer {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
     this.transformHandler.updateCanvasBoundingRect();
+    this.recapCapture?.onViewportResize();
     //this.redraw()
   }
 
@@ -332,6 +354,10 @@ export class GameRenderer {
 
   renderGame() {
     const start = performance.now();
+    if (this.recapCapture?.isCapturing()) {
+      requestAnimationFrame(() => this.renderGame());
+      return;
+    }
     // Set background
     this.context.fillStyle = this.game
       .config()
@@ -382,6 +408,7 @@ export class GameRenderer {
 
   tick() {
     this.layers.forEach((l) => l.tick?.());
+    this.recapCapture?.tick();
   }
 
   resize(width: number, height: number): void {
