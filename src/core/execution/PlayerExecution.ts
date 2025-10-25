@@ -1,6 +1,5 @@
 import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
-import { GameImpl } from "../game/GameImpl";
 import { GameMap, TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
@@ -279,7 +278,7 @@ export class PlayerExecution implements Execution {
         if (curr === undefined) throw new Error("curr is undefined");
         cluster.add(curr);
 
-        const neighbors = (this.mg as GameImpl).neighborsWithDiag(curr);
+        const neighbors = this.mg.neighborsWithDiag(curr);
         for (const neighbor of neighbors) {
           if (border.has(neighbor) && !seen.has(neighbor)) {
             queue.push(neighbor);

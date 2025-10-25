@@ -30,6 +30,7 @@ export interface GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
+  neighborsWithDiag(ref: TileRef): TileRef[];
   isWater(ref: TileRef): boolean;
   isLake(ref: TileRef): boolean;
   isShore(ref: TileRef): boolean;
@@ -270,6 +271,28 @@ export class GameMapImpl implements GameMap {
     if (x !== w - 1) neighbors.push(ref + 1);
 
     return neighbors;
+  }
+
+  neighborsWithDiag(tile: TileRef): TileRef[] {
+    const x = this.x(tile);
+    const y = this.y(tile);
+    const ns: TileRef[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue; // Skip the center tile
+        const newX = x + dx;
+        const newY = y + dy;
+        if (
+          newX >= 0 &&
+          newX < this.width_ &&
+          newY >= 0 &&
+          newY < this.height_
+        ) {
+          ns.push(this.ref(newX, newY));
+        }
+      }
+    }
+    return ns;
   }
 
   forEachTile(fn: (tile: TileRef) => void): void {

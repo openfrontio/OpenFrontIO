@@ -534,10 +534,7 @@ export class GameView implements GameMap {
         if (pu.initialSpawnTile !== undefined) {
           newPlayerView.setInitialSpawnTile(pu.initialSpawnTile);
         }
-        this._players.set(
-          pu.id,
-          newPlayerView,
-        );
+        this._players.set(pu.id, newPlayerView);
       }
     });
 
@@ -737,6 +734,10 @@ export class GameView implements GameMap {
   }
   neighbors(ref: TileRef): TileRef[] {
     return this._map.neighbors(ref);
+  }
+
+  neighborsWithDiag(tile: TileRef): TileRef[] {
+    return this._map.neighborsWithDiag(tile);
   }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
