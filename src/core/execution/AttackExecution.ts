@@ -611,7 +611,7 @@ export class AttackExecution implements Execution {
       Math.floor((mapHeight - 1) / downsampleFactor) * downsampleFactor;
 
     // Generate candidates with bounds checking
-    const candidates = [];
+    const candidates: Array<{ ref: number; x: number; y: number }> = [];
     for (const dx of [0, downsampleFactor]) {
       for (const dy of [0, downsampleFactor]) {
         const cx = baseX + dx;
