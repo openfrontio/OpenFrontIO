@@ -191,7 +191,8 @@ export class TransportShipExecution implements Execution {
     if (this.boat.retreating()) {
       // Ensure retreat source is valid for the new owner
       if (this.mg.owner(this.src!) !== this.attacker) {
-        const newSrc = this.attacker.canBuild(UnitType.TransportShip, this.dst);
+        // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
+        const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
         if (newSrc === false) {
           this.src = null;
         } else {
