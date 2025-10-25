@@ -357,8 +357,8 @@ export class AttackExecution implements Execution {
    * Builds coarse grid via BFS from clicked tile through connected target-owned tiles.
    * Returns distance map directly - no separate adjacency graph needed.
    *
-   * For neutral territory attacks, applies a maximum radius limit to prevent performance
-   * issues on large maps. Player attacks remain unbounded (naturally limited by empire size).
+   * Applies a maximum radius limit to all attacks to prevent performance issues
+   * with large empires on huge maps.
    *
    * @param clickTile Starting point for BFS (where user clicked)
    * @param downsampleFactor Sample tiles at grid coordinates (multiples of N)
@@ -385,7 +385,7 @@ export class AttackExecution implements Execution {
     while (queue.length > 0) {
       const { tile, dist } = queue.shift()!;
 
-      // Stop expanding if we've reached max radius (only for neutral attacks)
+      // Stop expanding if we've reached max radius
       if (dist >= maxRadius) continue;
 
       // Downsample: only keep tiles at grid coordinates
@@ -542,8 +542,7 @@ export class AttackExecution implements Execution {
             const dotProduct =
               dirNormX * toNeighborNormX + dirNormY * toNeighborNormY;
 
-            // Apply direction bias with explicit exponential time decay
-            // Calculate explicit exponential time decay
+            // Calculate exponential time decay for direction influence
             // Direction influence fades naturally as attack progresses
             const timeSinceStart = tickNow - this.attackStartTick;
             const timeDecayConstant = this.mg.config().attackTimeDecay();
@@ -577,8 +576,6 @@ export class AttackExecution implements Execution {
                 // 2. Tile became owned by target after attack started (conquest during attack)
                 // 3. Small test maps where coarse grid is very sparse
                 // This is expected behavior - fallback to geometric distance
-
-                // Fallback to Euclidean distance for disconnected tiles
                 const neighborToClickX = clickX - neighborX;
                 const neighborToClickY = clickY - neighborY;
                 distance = Math.sqrt(
@@ -587,9 +584,7 @@ export class AttackExecution implements Execution {
                 );
               }
 
-              // Apply exponential distance decay
-              // Note: BFS distance is in tiles, Euclidean was in coordinate units
-              // Adjust decay constant accordingly
+              // Apply exponential distance decay to prioritize tiles closer to click point
               const distanceDecayConstant = this.mg
                 .config()
                 .attackDistanceDecayConstant();
@@ -608,7 +603,7 @@ export class AttackExecution implements Execution {
   }
 
   /**
-   * Cleans up BFS distance map and adjacency graph to free memory.
+   * Cleans up BFS distance map to free memory.
    * Call this when the attack ends/deactivates.
    */
   private cleanupBFSDistances() {
