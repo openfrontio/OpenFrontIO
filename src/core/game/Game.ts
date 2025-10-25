@@ -151,6 +151,7 @@ export const isGameType = (value: unknown): value is GameType =>
 export enum GameMode {
   FFA = "Free For All",
   Team = "Team",
+  NukeWars = "Nuke Wars"
 }
 export const isGameMode = (value: unknown): value is GameMode =>
   isEnumValue(GameMode, value);
