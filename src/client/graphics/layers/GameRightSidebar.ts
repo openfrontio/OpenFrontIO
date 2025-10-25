@@ -7,7 +7,7 @@ import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhi
 import replaySolidIcon from "../../../../resources/images/ReplaySolidIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, GameType } from "../../../core/game/Game";
+import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { PauseGameEvent } from "../../Transport";
@@ -52,42 +52,23 @@ export class GameRightSidebar extends LitElement implements Layer {
   }
 
   tick() {
+    // Timer logic
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
-
-    if (this.hasWinner) {
-      return;
-    }
-
-    const isNukeWars =
-      this.game.config().gameConfig().gameMode === GameMode.NukeWars;
-    const spawnTurns = this.game.config().numSpawnPhaseTurns();
-    const prepTurns = this.game.config().numPreparationPhaseTurns();
-    const ticks = this.game.ticks();
-
-    if (ticks <= spawnTurns) {
-      // Spawn phase
-      const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
-      if (maxTimerValue !== undefined) {
+    const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
+    if (maxTimerValue !== undefined) {
+      if (this.game.inSpawnPhase()) {
         this.timer = maxTimerValue * 60;
-      } else {
-        this.timer = 0;
+      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
+        this.timer = Math.max(0, this.timer - 1);
       }
-    } else if (isNukeWars && ticks <= spawnTurns + prepTurns) {
-      // Nuke Wars Prep phase
-      const elapsedInPrep = ticks - spawnTurns;
-      this.timer = Math.max(0, (prepTurns - elapsedInPrep) / 10);
     } else {
-      // Main game phase
-      if (this.game.ticks() % 10 === 0) {
-        const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
-        if (maxTimerValue !== undefined) {
-          this.timer = Math.max(0, this.timer - 1);
-        } else {
-          this.timer++;
-        }
+      if (this.game.inSpawnPhase()) {
+        this.timer = 0;
+      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
+        this.timer++;
       }
     }
   }

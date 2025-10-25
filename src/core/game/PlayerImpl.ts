@@ -903,10 +903,7 @@ export class PlayerImpl implements Player {
       }
       return {
         type: u,
-        canBuild:
-          this.mg.inSpawnPhase() || tile === null
-            ? false
-            : this.canBuild(u, tile, validTiles),
+        canBuild: tile === null ? false : this.canBuild(u, tile, validTiles),
         canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;

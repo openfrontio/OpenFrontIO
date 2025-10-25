@@ -23,6 +23,7 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { NukeWarsPrepTimer } from "./layers/NukeWarsPrepTimer";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -222,6 +223,14 @@ export function createRenderer(
   spawnTimer.game = game;
   spawnTimer.transformHandler = transformHandler;
 
+  const nukewarsPrepTimer = document.querySelector(
+    "nukewars-prep-timer",
+  ) as NukeWarsPrepTimer;
+  if (!(nukewarsPrepTimer instanceof NukeWarsPrepTimer)) {
+    console.error("NukeWarsPrepTimer not found");
+  }
+  nukewarsPrepTimer.game = game;
+
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -248,6 +257,7 @@ export function createRenderer(
       playerPanel,
     ),
     spawnTimer,
+    nukewarsPrepTimer,
     leaderboard,
     gameLeftSidebar,
     unitDisplay,

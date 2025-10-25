@@ -2,13 +2,7 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import {
-  Cell,
-  GameMapType,
-  GameMode,
-  PlayerType,
-  UnitType,
-} from "../../../core/game/Game";
+import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -157,36 +151,6 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  private drawTeamSpawnBox(
-    context: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    text: string,
-    color: string,
-  ) {
-    context.font = "bold 16px Arial";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillStyle = color;
-    context.strokeStyle = "black";
-    context.lineWidth = 1;
-
-    const textWidth = context.measureText(text).width;
-    const padding = 10;
-    const boxWidth = textWidth + 2 * padding;
-    const boxHeight = 20 + 2 * padding; // Assuming font size 20
-
-    context.fillRect(x - boxWidth / 2, y - boxHeight / 2, boxWidth, boxHeight);
-    context.strokeRect(
-      x - boxWidth / 2,
-      y - boxHeight / 2,
-      boxWidth,
-      boxHeight,
-    );
-    context.fillStyle = "white";
-    context.fillText(text, x, y);
-  }
-
   private spawnHighlight() {
     if (this.game.ticks() % 5 === 0) {
       return;
@@ -199,77 +163,43 @@ export class TerritoryLayer implements Layer {
       this.game.height(),
     );
 
-    const isNukeWars =
-      this.game.config().gameConfig().gameMode === GameMode.NukeWars;
-    const isBaikal =
-      this.game.config().gameConfig().gameMap === GameMapType.Baikal;
+    this.drawFocusedPlayerHighlight();
 
-    if (isNukeWars && isBaikal && this.game.inSpawnPhase()) {
-      // The map is centered, so coordinates are from -width/2 to width/2
-      // The midpoint is at x=0
-      // Left box at -width/4, right box at width/4
-      // Y coordinate is 0 (center of the map)
+    const humans = this.game
+      .playerViews()
+      .filter((p) => p.type() === PlayerType.Human);
 
-      // Red Team Spawn (Left Side)
-      this.drawTeamSpawnBox(
-        this.highlightContext,
-        -this.game.width() / 4,
-        0,
-        "Red Team Spawn",
-        "rgba(255, 0, 0, 0.5)",
-      );
+    const focusedPlayer = this.game.focusedPlayer();
+    for (const human of humans) {
+      if (human === focusedPlayer) {
+        continue;
+      }
+      const center = human.nameLocation();
+      if (!center) {
+        continue;
+      }
+      const centerTile = this.game.ref(center.x, center.y);
+      if (!centerTile) {
+        continue;
+      }
+      let color = this.theme.spawnHighlightColor();
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
+        // In FFA games (when team === null), use default yellow spawn highlight color
+        color = this.theme.spawnHighlightColor();
+      } else if (myPlayer !== null && myPlayer !== human) {
+        // In Team games, the spawn highlight color becomes that player's team color
+        // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
+        const team = human.team();
+        if (team !== null) color = this.theme.teamColor(team);
+      }
 
-      // Blue Team Spawn (Right Side)
-      this.drawTeamSpawnBox(
-        this.highlightContext,
-        this.game.width() / 4,
-        0,
-        "Blue Team Spawn",
-        "rgba(0, 0, 255, 0.5)",
-      );
-    } else {
-      this.drawFocusedPlayerHighlight();
-
-      const humans = this.game
-        .playerViews()
-        .filter((p) => p.type() === PlayerType.Human);
-
-      const focusedPlayer = this.game.focusedPlayer();
-      for (const human of humans) {
-        if (human === focusedPlayer) {
-          continue;
-        }
-        const center = human.nameLocation();
-        if (!center) {
-          continue;
-        }
-        const centerTile = this.game.ref(center.x, center.y);
-        if (!centerTile) {
-          continue;
-        }
-        let color = this.theme.spawnHighlightColor();
-        const myPlayer = this.game.myPlayer();
-        if (
-          myPlayer !== null &&
-          myPlayer !== human &&
-          myPlayer.team() === null
-        ) {
-          // In FFA games (when team === null), use default yellow spawn highlight color
-          color = this.theme.spawnHighlightColor();
-        } else if (myPlayer !== null && myPlayer !== human) {
-          // In Team games, the spawn highlight color becomes that player's team color
-          // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
-          const team = human.team();
-          if (team !== null) color = this.theme.teamColor(team);
-        }
-
-        for (const tile of this.game.bfs(
-          centerTile,
-          euclDistFN(centerTile, 9, true),
-        )) {
-          if (!this.game.hasOwner(tile)) {
-            this.paintHighlightTile(tile, color, 255);
-          }
+      for (const tile of this.game.bfs(
+        centerTile,
+        euclDistFN(centerTile, 9, true),
+      )) {
+        if (!this.game.hasOwner(tile)) {
+          this.paintHighlightTile(tile, color, 255);
         }
       }
     }
