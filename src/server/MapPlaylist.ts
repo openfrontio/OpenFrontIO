@@ -24,6 +24,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Africa: 7,
   Asia: 6,
   Australia: 4,
+  Achiran: 14,
   Baikal: 5,
   BetweenTwoSeas: 5,
   BlackSea: 6,
@@ -71,6 +72,8 @@ const TEAM_COUNTS = [
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
 
+  constructor(private disableTeams: boolean = false) {}
+
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
@@ -79,8 +82,8 @@ export class MapPlaylist {
 
     // Create the default public game config (from your GameManager)
     return {
-      donateGold: false,
-      donateTroops: false,
+      donateGold: mode === GameMode.Team,
+      donateTroops: mode === GameMode.Team,
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
@@ -88,6 +91,7 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
+      maxTimerValue: undefined,
       instantBuild: false,
       disableNPCs: mode === GameMode.Team,
       gameMode: mode,
@@ -126,20 +130,18 @@ export class MapPlaylist {
 
     const rand = new PseudoRandom(Date.now());
 
-    const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
-    const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
+    const ffa: GameMapType[] = rand.shuffleArray([...maps]);
     const team: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
     for (let i = 0; i < maps.length; i++) {
-      if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
+      if (!this.addNextMap(this.mapsPlaylist, ffa, GameMode.FFA)) {
         return false;
       }
-      if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
-        return false;
-      }
-      if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {
-        return false;
+      if (!this.disableTeams) {
+        if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {
+          return false;
+        }
       }
     }
     return true;

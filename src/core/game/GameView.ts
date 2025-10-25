@@ -87,6 +87,10 @@ export class UnitView {
     return this.data.targetable;
   }
 
+  markedForDeletion(): number | false {
+    return this.data.markedForDeletion;
+  }
+
   type(): UnitType {
     return this.data.unitType;
   }
@@ -197,36 +201,44 @@ export class PlayerView {
       );
     }
 
+    const defaultTerritoryColor = this.game
+      .config()
+      .theme()
+      .territoryColor(this);
+    const defaultBorderColor = this.game
+      .config()
+      .theme()
+      .borderColor(defaultTerritoryColor);
+
     const pattern = this.cosmetics.pattern;
     if (pattern) {
-      const territoryColor = this.game.config().theme().territoryColor(this);
       pattern.colorPalette ??= {
         name: "",
-        primaryColor: territoryColor.toHex(),
-        secondaryColor: territoryColor.darken(0.125).toHex(),
+        primaryColor: defaultTerritoryColor.toHex(),
+        secondaryColor: defaultBorderColor.toHex(),
       } satisfies ColorPalette;
     }
 
-    if (
-      this.team() === null &&
-      this.cosmetics.pattern?.colorPalette?.primaryColor !== undefined
-    ) {
+    if (this.team() === null) {
       this._territoryColor = colord(
-        this.cosmetics.pattern.colorPalette.primaryColor,
+        this.cosmetics.color?.color ??
+          this.cosmetics.pattern?.colorPalette?.primaryColor ??
+          defaultTerritoryColor.toHex(),
       );
     } else {
-      this._territoryColor = this.game.config().theme().territoryColor(this);
+      this._territoryColor = defaultTerritoryColor;
     }
 
-    if (this.cosmetics.pattern?.colorPalette?.secondaryColor !== undefined) {
-      this._borderColor = colord(
-        this.cosmetics.pattern.colorPalette.secondaryColor,
-      );
-    } else if (this.game.myClientID() === this.data.clientID) {
-      this._borderColor = this.game.config().theme().focusedBorderColor();
-    } else {
-      this._borderColor = this.game.config().theme().borderColor(this);
-    }
+    const maybeFocusedBorderColor =
+      this.game.myClientID() === this.data.clientID
+        ? this.game.config().theme().focusedBorderColor()
+        : defaultBorderColor;
+
+    this._borderColor = new Colord(
+      pattern?.colorPalette?.secondaryColor ??
+        this.cosmetics.color?.color ??
+        maybeFocusedBorderColor.toHex(),
+    );
 
     this._defendedBorderColors = this.game
       .config()
@@ -418,8 +430,18 @@ export class PlayerView {
     return this.data.isDisconnected;
   }
 
-  canDeleteUnit(): boolean {
-    return true;
+  lastDeleteUnitTick(): Tick {
+    return this.data.lastDeleteUnitTick;
+  }
+
+  deleteUnitCooldown(): number {
+    return (
+      Math.max(
+        0,
+        this.game.config().deleteUnitCooldown() -
+          (this.game.ticks() + 1 - this.lastDeleteUnitTick()),
+      ) / 10
+    );
   }
 }
 
@@ -431,7 +453,6 @@ export class GameView implements GameMap {
   private updatedTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
-  private _focusedPlayer: PlayerView | null = null;
 
   private unitGrid: UnitGrid;
 
@@ -559,7 +580,7 @@ export class GameView implements GameMap {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ) {
     return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
   }
@@ -748,10 +769,6 @@ export class GameView implements GameMap {
   }
 
   focusedPlayer(): PlayerView | null {
-    // TODO: renable when performance issues are fixed.
     return this.myPlayer();
-  }
-  setFocusedPlayer(player: PlayerView | null): void {
-    this._focusedPlayer = player;
   }
 }

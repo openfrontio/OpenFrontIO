@@ -29,12 +29,23 @@ export class PastelTheme implements Theme {
   private water = colord({ r: 70, g: 132, b: 180 });
   private shorelineWater = colord({ r: 100, g: 143, b: 255 });
 
+  /** Alternate View colors for self, green */
   private _selfColor = colord({ r: 0, g: 255, b: 0 });
+  /** Alternate View colors for allies, yellow */
   private _allyColor = colord({ r: 255, g: 255, b: 0 });
+  /** Alternate View colors for neutral, gray */
   private _neutralColor = colord({ r: 128, g: 128, b: 128 });
+  /** Alternate View colors for enemies, red */
   private _enemyColor = colord({ r: 255, g: 0, b: 0 });
 
+  /** Default spawn highlight colors for other players in FFA, yellow */
   private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
+  /** Added non-default spawn highlight colors for self, full white */
+  private _spawnHighlightSelfColor = colord({ r: 255, g: 255, b: 255 });
+  /** Added non-default spawn highlight colors for teammates, green */
+  private _spawnHighlightTeamColor = colord({ r: 0, g: 255, b: 0 });
+  /** Added non-default spawn highlight colors for enemies, red */
+  private _spawnHighlightEnemyColor = colord({ r: 255, g: 0, b: 0 });
 
   teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
@@ -55,19 +66,8 @@ export class PastelTheme implements Theme {
   }
 
   // Don't call directly, use PlayerView
-  borderColor(player: PlayerView): Colord {
-    if (this.borderColorCache.has(player.id())) {
-      return this.borderColorCache.get(player.id())!;
-    }
-    const tc = this.territoryColor(player).rgba;
-    const color = colord({
-      r: Math.max(tc.r - 40, 0),
-      g: Math.max(tc.g - 40, 0),
-      b: Math.max(tc.b - 40, 0),
-    });
-
-    this.borderColorCache.set(player.id(), color);
-    return color;
+  borderColor(territoryColor: Colord): Colord {
+    return territoryColor.darken(0.125);
   }
 
   defendedBorderColors(territoryColor: Colord): {
@@ -154,5 +154,17 @@ export class PastelTheme implements Theme {
 
   spawnHighlightColor(): Colord {
     return this._spawnHighlightColor;
+  }
+  /** Return spawn highlight color for self */
+  spawnHighlightSelfColor(): Colord {
+    return this._spawnHighlightSelfColor;
+  }
+  /** Return spawn highlight color for teammates */
+  spawnHighlightTeamColor(): Colord {
+    return this._spawnHighlightTeamColor;
+  }
+  /** Return spawn highlight color for enemies */
+  spawnHighlightEnemyColor(): Colord {
+    return this._spawnHighlightEnemyColor;
   }
 }

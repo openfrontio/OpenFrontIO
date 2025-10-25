@@ -5,6 +5,7 @@ import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
+import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -16,7 +17,6 @@ import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
-import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -28,7 +28,6 @@ import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
 import { SettingsModal } from "./layers/SettingsModal";
-import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
@@ -210,25 +209,18 @@ export function createRenderer(
   fpsDisplay.eventBus = eventBus;
   fpsDisplay.userSettings = userSettings;
 
-  const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
-  if (!(spawnAd instanceof SpawnAd)) {
-    console.error("spawn ad not found");
-  }
-  spawnAd.g = game;
-
-  const gutterAdModal = document.querySelector(
-    "gutter-ad-modal",
-  ) as GutterAdModal;
-  if (!(gutterAdModal instanceof GutterAdModal)) {
-    console.error("gutter ad modal not found");
-  }
-  gutterAdModal.eventBus = eventBus;
-
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
   }
   alertFrame.game = game;
+
+  const spawnTimer = document.querySelector("spawn-timer") as SpawnTimer;
+  if (!(spawnTimer instanceof SpawnTimer)) {
+    console.error("spawn timer not found");
+  }
+  spawnTimer.game = game;
+  spawnTimer.transformHandler = transformHandler;
 
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
@@ -255,7 +247,7 @@ export function createRenderer(
       uiState,
       playerPanel,
     ),
-    new SpawnTimer(game, transformHandler),
+    spawnTimer,
     leaderboard,
     gameLeftSidebar,
     unitDisplay,
@@ -269,8 +261,7 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    spawnAd,
-    gutterAdModal,
+    new AdTimer(game),
     alertFrame,
     fpsDisplay,
   ];

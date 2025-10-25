@@ -1,10 +1,24 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
+import {
+  PlayerGame,
+  PlayerStatsTree,
+  UserMeResponse,
+} from "../core/ApiSchemas";
+import "./components/baseComponents/stats/DiscordUserHeader";
+import "./components/baseComponents/stats/GameList";
+import "./components/baseComponents/stats/PlayerStatsTable";
+import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { discordLogin, getApiBase, getUserMe, logOut } from "./jwt";
-import { translateText } from "./Utils";
+import {
+  discordLogin,
+  fetchPlayerById,
+  getApiBase,
+  getUserMe,
+  logOut,
+} from "./jwt";
+import { isInIframe, translateText } from "./Utils";
 
 @customElement("account-modal")
 export class AccountModal extends LitElement {
@@ -14,12 +28,33 @@ export class AccountModal extends LitElement {
   };
 
   @state() private email: string = "";
+  @state() private isLoadingUser: boolean = false;
 
   private loggedInEmail: string | null = null;
   private loggedInDiscord: string | null = null;
+  private userMeResponse: UserMeResponse | null = null;
+  private playerId: string | null = null;
+  private statsTree: PlayerStatsTree | null = null;
+  private recentGames: PlayerGame[] = [];
 
   constructor() {
     super();
+
+    document.addEventListener("userMeResponse", (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail) {
+        this.userMeResponse = customEvent.detail as UserMeResponse;
+        this.playerId = this.userMeResponse?.player?.publicId;
+        if (this.playerId === undefined) {
+          this.statsTree = null;
+          this.recentGames = [];
+        }
+      } else {
+        this.statsTree = null;
+        this.recentGames = [];
+        this.requestUpdate();
+      }
+    });
   }
 
   createRenderRoot() {
@@ -38,6 +73,16 @@ export class AccountModal extends LitElement {
   }
 
   private renderInner() {
+    if (this.isLoadingUser) {
+      return html`
+        <div class="flex flex-col items-center justify-center p-6 text-white">
+          <p class="mb-2">${translateText("account_modal.fetching_account")}</p>
+          <div
+            class="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"
+          ></div>
+        </div>
+      `;
+    }
     if (this.loggedInDiscord) {
       return this.renderLoggedInDiscord();
     } else if (this.loggedInEmail) {
@@ -47,15 +92,39 @@ export class AccountModal extends LitElement {
     }
   }
 
+  private viewGame(gameId: string): void {
+    this.close();
+    const path = location.pathname;
+    const { search } = location;
+    const hash = `#join=${encodeURIComponent(gameId)}`;
+    const newUrl = `${path}${search}${hash}`;
+
+    history.pushState({ join: gameId }, "", newUrl);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  }
+
   private renderLoggedInDiscord() {
     return html`
       <div class="p-6">
-        <div class="mb-4">
-          <p class="text-white text-center mb-4">
+        <div class="mb-4 text-center">
+          <p class="text-white mb-4">
             Logged in with Discord as ${this.loggedInDiscord}
           </p>
+          ${this.logoutButton()}
         </div>
-        ${this.logoutButton()}
+        <div class="flex flex-col items-center mt-2 mb-4">
+          <discord-user-header
+            .data=${this.userMeResponse?.user?.discord ?? null}
+          ></discord-user-header>
+          <player-stats-tree-view
+            .statsTree=${this.statsTree}
+          ></player-stats-tree-view>
+          <hr class="w-2/3 border-gray-600 my-2" />
+          <game-list
+            .games=${this.recentGames}
+            .onViewGame=${(id: string) => this.viewGame(id)}
+          ></game-list>
+        </div>
       </div>
     `;
   }
@@ -208,13 +277,30 @@ export class AccountModal extends LitElement {
     discordLogin();
   }
 
-  public async open() {
-    const userMe = await getUserMe();
-    if (userMe) {
-      this.loggedInEmail = userMe.user.email ?? null;
-      this.loggedInDiscord = userMe.user.discord?.global_name ?? null;
-    }
+  public open() {
     this.modalEl?.open();
+    this.isLoadingUser = true;
+
+    void getUserMe()
+      .then((userMe) => {
+        if (userMe) {
+          this.loggedInEmail = userMe.user.email ?? null;
+          this.loggedInDiscord = userMe.user.discord?.global_name ?? null;
+          if (this.playerId) {
+            this.loadFromApi(this.playerId);
+          }
+        } else {
+          this.loggedInEmail = null;
+          this.loggedInDiscord = null;
+        }
+        this.isLoadingUser = false;
+        this.requestUpdate();
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch user info in AccountModal.open():", err);
+        this.isLoadingUser = false;
+        this.requestUpdate();
+      });
     this.requestUpdate();
   }
 
@@ -227,6 +313,24 @@ export class AccountModal extends LitElement {
     this.close();
     // Refresh the page after logout to update the UI state
     window.location.reload();
+  }
+
+  private async loadFromApi(playerId: string): Promise<void> {
+    try {
+      const data = await fetchPlayerById(playerId);
+      if (!data) {
+        this.requestUpdate();
+        return;
+      }
+
+      this.recentGames = data.games;
+      this.statsTree = data.stats;
+
+      this.requestUpdate();
+    } catch (err) {
+      console.warn("Failed to load player data:", err);
+      this.requestUpdate();
+    }
   }
 }
 
@@ -268,6 +372,10 @@ export class AccountButton extends LitElement {
   }
 
   render() {
+    if (isInIframe()) {
+      return html``;
+    }
+
     if (!this.isVisible) {
       return html``;
     }

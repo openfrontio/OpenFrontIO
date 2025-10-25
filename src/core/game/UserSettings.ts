@@ -169,6 +169,20 @@ export class UserSettings {
     }
   }
 
+  getSelectedColor(): string | undefined {
+    const data = localStorage.getItem("settings.territoryColor") ?? undefined;
+    if (data === undefined) return undefined;
+    return data;
+  }
+
+  setSelectedColor(color: string | undefined): void {
+    if (color === undefined) {
+      localStorage.removeItem("settings.territoryColor");
+    } else {
+      localStorage.setItem("settings.territoryColor", color);
+    }
+  }
+
   backgroundMusicVolume(): number {
     return this.getFloat("settings.backgroundMusicVolume", 0);
   }

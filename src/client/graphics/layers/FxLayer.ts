@@ -122,7 +122,7 @@ export class FxLayer implements Layer {
         const my = this.game.myPlayer();
         if (!my) return;
         if (unit.owner() !== my) return;
-        if (!unit.isActive()) return;
+        if (!unit.isActive() || unit.retreating()) return;
         if (this.boatTargetFxByUnitId.has(unit.id())) return;
         const t = unit.targetTile();
         if (t !== undefined) {
@@ -150,6 +150,14 @@ export class FxLayer implements Layer {
         break;
       case UnitType.Train:
         this.onTrainEvent(unit);
+        break;
+      case UnitType.DefensePost:
+      case UnitType.City:
+      case UnitType.Port:
+      case UnitType.MissileSilo:
+      case UnitType.SAMLauncher:
+      case UnitType.Factory:
+        this.onStructureEvent(unit);
         break;
     }
   }
@@ -243,6 +251,20 @@ export class FxLayer implements Layer {
         this.theme,
       );
       this.allFx.push(sinkingShip);
+    }
+  }
+
+  onStructureEvent(unit: UnitView) {
+    if (!unit.isActive()) {
+      const x = this.game.x(unit.lastTile());
+      const y = this.game.y(unit.lastTile());
+      const explosion = new SpriteFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        FxType.BuildingExplosion,
+      );
+      this.allFx.push(explosion);
     }
   }
 

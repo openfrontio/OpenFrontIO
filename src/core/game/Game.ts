@@ -95,6 +95,7 @@ export enum GameMapType {
   Yenisei = "Yenisei",
   Pluto = "Pluto",
   Montreal = "Montreal",
+  Achiran = "Achiran",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -135,6 +136,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
+    GameMapType.Achiran,
   ],
 };
 
@@ -202,6 +204,7 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
+  UnitType.Factory,
 ]);
 
 export function isStructureType(type: UnitType): boolean {
@@ -405,11 +408,11 @@ export class PlayerInfo {
     public readonly nation?: Nation | null,
   ) {
     // Compute clan from name
-    if (!name.startsWith("[") || !name.includes("]")) {
+    if (!name.includes("[") || !name.includes("]")) {
       this.clan = null;
     } else {
-      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
-      this.clan = clanMatch ? clanMatch[1] : null;
+      const clanMatch = name.match(/\[([a-zA-Z0-9]{2,5})\]/);
+      this.clan = clanMatch ? clanMatch[1].toUpperCase() : null;
     }
   }
 }
@@ -432,6 +435,9 @@ export interface Unit {
   type(): UnitType;
   owner(): Player;
   info(): UnitInfo;
+  isMarkedForDeletion(): boolean;
+  markForDeletion(): void;
+  isOverdueDeletion(): boolean;
   delete(displayMessage?: boolean, destroyer?: Player): void;
   tile(): TileRef;
   lastTile(): TileRef;
@@ -573,7 +579,7 @@ export interface Player {
   // New units of the same type can upgrade existing units.
   // e.g. if a place a new city here, can it upgrade an existing city?
   findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false;
-  canUpgradeUnit(unitType: UnitType): boolean;
+  canUpgradeUnit(unit: Unit): boolean;
   upgradeUnit(unit: Unit): void;
   captureUnit(unit: Unit): void;
 

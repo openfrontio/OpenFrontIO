@@ -1,18 +1,34 @@
+import { LitElement, html } from "lit";
+import { customElement } from "lit/decorators.js";
 import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-export class SpawnTimer implements Layer {
+@customElement("spawn-timer")
+export class SpawnTimer extends LitElement implements Layer {
+  public game: GameView;
+  public transformHandler: TransformHandler;
+
   private ratios = [0];
   private colors = ["rgba(0, 128, 255, 0.7)", "rgba(0, 0, 0, 0.5)"];
 
-  constructor(
-    private game: GameView,
-    private transformHandler: TransformHandler,
-  ) {}
+  private isVisible = false;
 
-  init() {}
+  createRenderRoot() {
+    this.style.position = "fixed";
+    this.style.top = "0";
+    this.style.left = "0";
+    this.style.width = "100%";
+    this.style.height = "7px";
+    this.style.zIndex = "1000";
+    this.style.pointerEvents = "none";
+    return this;
+  }
+
+  init() {
+    this.isVisible = true;
+  }
 
   tick() {
     if (this.game.inSpawnPhase()) {
@@ -21,6 +37,7 @@ export class SpawnTimer implements Layer {
         this.game.ticks() / this.game.config().numSpawnPhaseTurns(),
       ];
       this.colors = ["rgba(0, 128, 255, 0.7)"];
+      this.requestUpdate();
       return;
     }
 
@@ -28,6 +45,7 @@ export class SpawnTimer implements Layer {
     this.colors = [];
 
     if (this.game.config().gameConfig().gameMode !== GameMode.Team) {
+      this.requestUpdate();
       return;
     }
 
@@ -41,44 +59,52 @@ export class SpawnTimer implements Layer {
 
     const theme = this.game.config().theme();
     const total = sumIterator(teamTiles.values());
-    if (total === 0) return;
+    if (total === 0) {
+      this.requestUpdate();
+      return;
+    }
 
     for (const [team, count] of teamTiles) {
       const ratio = count / total;
       this.ratios.push(ratio);
       this.colors.push(theme.teamColor(team).toRgbString());
     }
+    this.requestUpdate();
   }
 
   shouldTransform(): boolean {
     return false;
   }
 
-  renderLayer(context: CanvasRenderingContext2D) {
-    if (this.ratios.length === 0 || this.colors.length === 0) return;
+  render() {
+    if (!this.isVisible) {
+      return html``;
+    }
 
-    const barHeight = 10;
-    const barWidth = this.transformHandler.width();
+    if (this.ratios.length === 0 || this.colors.length === 0) {
+      return html``;
+    }
 
     if (
       !this.game.inSpawnPhase() &&
       this.game.config().gameConfig().gameMode !== GameMode.Team
     ) {
-      return;
+      return html``;
     }
 
-    let x = 0;
-    let filledRatio = 0;
-    for (let i = 0; i < this.ratios.length && i < this.colors.length; i++) {
-      const ratio = this.ratios[i] ?? 1 - filledRatio;
-      const segmentWidth = barWidth * ratio;
-
-      context.fillStyle = this.colors[i];
-      context.fillRect(x, 0, segmentWidth, barHeight);
-
-      x += segmentWidth;
-      filledRatio += ratio;
-    }
+    return html`
+      <div class="w-full h-full flex z-[999]">
+        ${this.ratios.map((ratio, i) => {
+          const color = this.colors[i] || "rgba(0, 0, 0, 0.5)";
+          return html`
+            <div
+              class="h-full transition-all duration-100 ease-in-out"
+              style="width: ${ratio * 100}%; background-color: ${color};"
+            ></div>
+          `;
+        })}
+      </div>
+    `;
   }
 }
 
