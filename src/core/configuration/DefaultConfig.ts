@@ -795,7 +795,7 @@ export class DefaultConfig implements Config {
    * With exponential time decay: ~16% influence at start, fading to ~1% by 6 seconds
    */
   attackDirectionWeight(): number {
-    return 1.5;
+    return 2.5;
   }
 
   /**
