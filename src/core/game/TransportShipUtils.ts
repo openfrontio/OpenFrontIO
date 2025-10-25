@@ -1,6 +1,6 @@
 import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
-import { Game, Player, UnitType } from "./Game";
+import { Game, GameMapType, GameMode, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
 
 export function canBuildTransportShip(
@@ -49,6 +49,18 @@ export function canBuildTransportShip(
     }
 
     if (myPlayerBordersOcean && otherPlayerBordersOcean) {
+      // In Nuke Wars on Baikal, ensure transport source/destination are on same half.
+      const gc = game.config().gameConfig();
+      if (
+        gc.gameMode === GameMode.NukeWars &&
+        gc.gameMap === GameMapType.Baikal
+      ) {
+        const mapWidth = game.width();
+        const wantLeft = player.smallID() % 2 === 1;
+        const dstX = game.x(dst);
+        const dstLeft = dstX < Math.floor(mapWidth / 2);
+        if (wantLeft !== dstLeft) return false;
+      }
       return transportShipSpawn(game, player, dst);
     } else {
       return false;
@@ -72,6 +84,18 @@ export function canBuildTransportShip(
 
   for (const t of sorted) {
     if (game.owner(t) === player) {
+      // Block cross-midpoint lake deployments in Nuke Wars on Baikal
+      const gc = game.config().gameConfig();
+      if (
+        gc.gameMode === GameMode.NukeWars &&
+        gc.gameMap === GameMapType.Baikal
+      ) {
+        const mapWidth = game.width();
+        const wantLeft = player.smallID() % 2 === 1;
+        const tX = game.x(t);
+        const tLeft = tX < Math.floor(mapWidth / 2);
+        if (wantLeft !== tLeft) return false;
+      }
       return transportShipSpawn(game, player, t);
     }
   }

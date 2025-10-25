@@ -59,18 +59,24 @@ export class SpawnExecution implements Execution {
       const wantLeft = player.smallID() % 2 === 1;
       const isLeft = tx < Math.floor(mapWidth / 2);
       if (wantLeft !== isLeft) {
-        // Find nearest valid tile on the correct half
+        // Find nearest valid tile on the correct half. Bias selection toward
+        // tiles closer to the midpoint so both sides get spawn tiles that
+        // produce more balanced territory when map land distribution is uneven.
         let best: TileRef | null = null;
-        let bestDist = Infinity;
+        let bestScore = Infinity;
+        const midpoint = Math.floor(mapWidth / 2);
         this.mg.forEachTile((t) => {
           const xt = this.mg.x(t);
-          const onCorrectHalf = wantLeft
-            ? xt < Math.floor(mapWidth / 2)
-            : xt >= Math.floor(mapWidth / 2);
+          const onCorrectHalf = wantLeft ? xt < midpoint : xt >= midpoint;
           if (onCorrectHalf && !this.mg.hasOwner(t) && this.mg.isLand(t)) {
             const d = this.mg.manhattanDist(this.tile, t);
-            if (d < bestDist) {
-              bestDist = d;
+            // score combines distance from original tile and distance from midpoint
+            // biasFactor controls how strongly we prefer midline tiles (0.0-1.0)
+            const biasFactor = 0.5;
+            const centerDistance = Math.abs(xt - midpoint);
+            const score = d + centerDistance * biasFactor;
+            if (score < bestScore) {
+              bestScore = score;
               best = t;
             }
           }

@@ -930,19 +930,23 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    // Check spawn zone restrictions in Nuke Wars mode
-    if (this.mg.config().gameConfig().gameMode === GameMode.NukeWars) {
-      // During spawn phase, enforce strict spawn zones
-      if (this.mg.inSpawnPhase() && !this.isInTeamSpawnZone(targetTile)) {
-        return false;
+    // Prevent crossing midpoint with ships/boats at any time in Nuke Wars.
+    const gc = this.mg.config().gameConfig();
+    if (
+      gc.gameMode === GameMode.NukeWars &&
+      gc.gameMap === GameMapType.Baikal
+    ) {
+      if (
+        unitType === UnitType.TransportShip ||
+        unitType === UnitType.Warship ||
+        unitType === UnitType.TradeShip
+      ) {
+        if (!this.isInTeamSpawnZone(targetTile)) return false;
       }
 
-      // After spawn phase, only allow missiles to cross the midpoint
-      if (!this.mg.inSpawnPhase() && !this.isInTeamSpawnZone(targetTile)) {
-        const allowedTypes = [UnitType.AtomBomb, UnitType.HydrogenBomb];
-        if (!allowedTypes.includes(unitType)) {
-          return false;
-        }
+      // During spawn phase we enforce that regular land spawns happen on-team.
+      if (this.mg.inSpawnPhase() && !this.isInTeamSpawnZone(targetTile)) {
+        return false;
       }
     }
 

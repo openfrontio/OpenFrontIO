@@ -319,20 +319,12 @@ export class DefaultConfig implements Config {
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
-    // First check game mode specific restrictions
+    // Nuke Wars: only MIRV is blocked explicitly. Keep any server-configured
+    // disabledUnits in the check as well.
     if (this._gameConfig.gameMode === GameMode.NukeWars) {
-      const allowedUnits = [
-        UnitType.MissileSilo,
-        UnitType.SAMLauncher,
-        UnitType.AtomBomb,
-        UnitType.HydrogenBomb,
-      ];
-      if (!allowedUnits.includes(unitType)) {
-        return true;
-      }
+      if (unitType === UnitType.MIRV) return true;
     }
 
-    // Then check manually disabled units
     return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
   }
 
