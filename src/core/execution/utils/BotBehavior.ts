@@ -269,20 +269,20 @@ export class BotBehavior {
   }
 
   selectNearestIslandEnemy() {
-    const allPlayers = this.game.players();
-    const filteredPlayers = allPlayers.filter(
-      (p) =>
-        // Don't spam boats into players that are more than twice as large as us
-        p.troops() <= this.player.troops() * 2 &&
-        !this.player.isFriendly(p) &&
-        p !== this.player,
-    );
+    const myBorder = this.player.borderTiles();
+    if (myBorder.size === 0) return;
+
+    const filteredPlayers = this.game.players().filter((p) => {
+      if (p === this.player) return false;
+      if (!p.isAlive()) return false;
+      if (p.borderTiles().size === 0) return false;
+      if (this.player.isFriendly(p)) return false;
+      // Don't spam boats into players more than 2x our troops
+      return p.troops() <= this.player.troops() * 2;
+    });
 
     if (filteredPlayers.length > 0) {
-      const playerCenter = calculateBoundingBoxCenter(
-        this.game,
-        this.player.borderTiles(),
-      );
+      const playerCenter = calculateBoundingBoxCenter(this.game, myBorder);
 
       const sortedPlayers = filteredPlayers
         .map((filteredPlayer) => {
