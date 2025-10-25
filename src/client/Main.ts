@@ -42,8 +42,9 @@ import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import "./graphics/layers/NukeWarsPrepTimer";
+import "./graphics/layers/PlayerInfoOverlay";
 import { getUserMe, isLoggedIn } from "./jwt";
-import "./styles.css";
 
 declare global {
   interface Window {

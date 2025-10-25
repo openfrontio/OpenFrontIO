@@ -2,6 +2,7 @@ import {
   Cell,
   Execution,
   Game,
+  GameMode,
   Gold,
   Nation,
   Player,
@@ -262,7 +263,8 @@ export class FakeHumanExecution implements Execution {
     if (
       silos.length === 0 ||
       this.player.gold() < this.cost(UnitType.AtomBomb) ||
-      other.type() === PlayerType.Bot ||
+      (this.mg.config().gameConfig().gameMode !== GameMode.NukeWars &&
+        other.type() === PlayerType.Bot) ||
       this.player.isOnSameTeam(other)
     ) {
       return;
