@@ -107,7 +107,33 @@ export class SpawnExecution implements Execution {
               ? -minDistToTeam * spreadFactor
               : 0;
 
-            const score = d + centerDistance * biasFactor + teamDistanceScore;
+            // Additionally, distribute spawns vertically into bands so we avoid
+            // many spawns congregating at the top or bottom of the map.
+            let bandScore = 0;
+            try {
+              const team = player.team();
+              if (team) {
+                const teamPlayers = this.mg
+                  .players()
+                  .filter((pp) => pp.team() === team)
+                  .sort((a, b) => a.smallID() - b.smallID());
+                const teamIndex = teamPlayers.findIndex((pp) => pp === player);
+                const teamCount = Math.max(1, teamPlayers.length);
+                const numBands = Math.max(1, Math.round(Math.sqrt(teamCount)));
+                const desiredBand = Math.floor(
+                  (teamIndex / teamCount) * numBands,
+                );
+                const y = this.mg.y(t);
+                const bandIndex = Math.floor((y / this.mg.height()) * numBands);
+                const bandPenalty = 24; // tunes vertical spread strength
+                bandScore = Math.abs(bandIndex - desiredBand) * bandPenalty;
+              }
+            } catch (e) {
+              bandScore = 0;
+            }
+
+            const score =
+              d + centerDistance * biasFactor + teamDistanceScore + bandScore;
             if (score < bestScore) {
               bestScore = score;
               best = t;
