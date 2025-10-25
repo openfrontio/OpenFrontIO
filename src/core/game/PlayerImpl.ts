@@ -937,12 +937,28 @@ export class PlayerImpl implements Player {
       gc.gameMap === GameMapType.Baikal
     ) {
       // Ships must stay on their team's side
-      if (unitType === UnitType.Warship || unitType === UnitType.TradeShip) {
-        if (!this.isInTeamSpawnZone(targetTile)) return false;
+      if (
+        unitType === UnitType.Warship ||
+        unitType === UnitType.TradeShip ||
+        unitType === UnitType.TransportShip
+      ) {
+        if (!this.isInTeamSpawnZone(targetTile)) {
+          this.mg.displayMessage(
+            "Ships cannot cross the midpoint in Nuke Wars",
+            MessageType.ATTACK_FAILED,
+            this.id(),
+          );
+          return false;
+        }
       }
 
       // During preparation phase, only build in own territory
       if (this.mg.inPreparationPhase() && !this.isInTeamSpawnZone(targetTile)) {
+        this.mg.displayMessage(
+          "During preparation phase, you can only build in your own territory",
+          MessageType.ATTACK_FAILED,
+          this.id(),
+        );
         return false;
       }
     }

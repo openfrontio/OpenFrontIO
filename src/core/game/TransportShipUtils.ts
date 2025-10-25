@@ -49,18 +49,7 @@ export function canBuildTransportShip(
     }
 
     if (myPlayerBordersOcean && otherPlayerBordersOcean) {
-      // In Nuke Wars on Baikal, ensure transport source/destination are on same half.
-      const gc = game.config().gameConfig();
-      if (
-        gc.gameMode === GameMode.NukeWars &&
-        gc.gameMap === GameMapType.Baikal
-      ) {
-        const mapWidth = game.width();
-        const wantLeft = player.smallID() % 2 === 1;
-        const dstX = game.x(dst);
-        const dstLeft = dstX < Math.floor(mapWidth / 2);
-        if (wantLeft !== dstLeft) return false;
-      }
+      // Note: Nuke Wars midpoint restrictions are now handled in PlayerImpl.canBuild
       return transportShipSpawn(game, player, dst);
     } else {
       return false;
