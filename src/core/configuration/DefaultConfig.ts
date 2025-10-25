@@ -48,6 +48,7 @@ const numPlayersConfig = {
   [GameMapType.Africa]: [100, 70, 50],
   [GameMapType.Asia]: [50, 40, 30],
   [GameMapType.Australia]: [70, 40, 30],
+  [GameMapType.Achiran]: [40, 36, 30],
   [GameMapType.Baikal]: [100, 70, 50],
   [GameMapType.BetweenTwoSeas]: [70, 50, 40],
   [GameMapType.BlackSea]: [50, 30, 30],

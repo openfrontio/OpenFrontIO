@@ -95,6 +95,7 @@ export enum GameMapType {
   Yenisei = "Yenisei",
   Pluto = "Pluto",
   Montreal = "Montreal",
+  Achiran = "Achiran",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -135,6 +136,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
+    GameMapType.Achiran,
   ],
 };
 
@@ -406,11 +408,11 @@ export class PlayerInfo {
     public readonly nation?: Nation | null,
   ) {
     // Compute clan from name
-    if (!name.startsWith("[") || !name.includes("]")) {
+    if (!name.includes("[") || !name.includes("]")) {
       this.clan = null;
     } else {
-      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
-      this.clan = clanMatch ? clanMatch[1] : null;
+      const clanMatch = name.match(/\[([a-zA-Z0-9]{2,5})\]/);
+      this.clan = clanMatch ? clanMatch[1].toUpperCase() : null;
     }
   }
 }
