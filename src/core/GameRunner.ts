@@ -100,11 +100,9 @@ export class GameRunner {
   ) {}
 
   init() {
-    if (this.game.config().bots() > 0) {
-      this.game.addExecution(
-        ...this.execManager.spawnBots(this.game.config().numBots()),
-      );
-    }
+    this.game.addExecution(
+      ...this.execManager.spawnBots(this.game.config().numBots()),
+    );
     if (this.game.config().spawnNPCs()) {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
