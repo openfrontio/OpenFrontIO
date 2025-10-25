@@ -357,6 +357,7 @@ export class AttackExecution implements Execution {
    * Builds coarse grid via BFS from clicked tile through connected target-owned tiles.
    * Returns distance map directly - no separate adjacency graph needed.
    *
+   * Excludes water tiles to ensure topologically correct distances.
    * Applies a maximum radius limit to all attacks to prevent performance issues
    * with large empires on huge maps.
    *
@@ -399,6 +400,7 @@ export class AttackExecution implements Execution {
       for (const neighbor of this.mg.neighbors(tile)) {
         if (visited.has(neighbor)) continue;
         if (this.mg.owner(neighbor) !== targetOwner) continue;
+        if (this.mg.isWater(neighbor)) continue;
 
         visited.add(neighbor);
         queue.push({ tile: neighbor, dist: dist + 1 });
@@ -560,39 +562,23 @@ export class AttackExecution implements Execution {
 
             // Optional: Add BFS-based proximity bonus (topological distance decay)
             // Tiles topologically closer to click point get additional priority boost
+            // Only applies to tiles in the same connected component (no fallback for disconnected regions)
             const magnitudeWeight = this.mg.config().attackMagnitudeWeight();
             if (magnitudeWeight > 0) {
-              // Get downscaled BFS distance (from coarse grid), fall back to Euclidean
-              // Measure distance from neighbor (candidate tile) to click point
-              let distance: number;
               const bfsDistance = this.getDownscaledDistance(neighbor); // neighbor = candidate to conquer
               if (bfsDistance !== null) {
-                // Use downscaled BFS distance (topologically correct, ±5-10 tile accuracy)
-                distance = bfsDistance;
-              } else {
-                // Euclidean fallback for disconnected regions
-                // BFS only traverses target-owned tiles, so this occurs when:
-                // 1. Tile is in disconnected territory (islands, separate landmasses)
-                // 2. Tile became owned by target after attack started (conquest during attack)
-                // 3. Small test maps where coarse grid is very sparse
-                // This is expected behavior - fallback to geometric distance
-                const neighborToClickX = clickX - neighborX;
-                const neighborToClickY = clickY - neighborY;
-                distance = Math.sqrt(
-                  neighborToClickX * neighborToClickX +
-                    neighborToClickY * neighborToClickY,
-                );
+                // Apply exponential distance decay to prioritize tiles closer to click point
+                const distanceDecayConstant = this.mg
+                  .config()
+                  .attackDistanceDecayConstant();
+                const proximityBonus =
+                  Math.exp(-bfsDistance / distanceDecayConstant) *
+                  magnitudeWeight *
+                  timeDecayFactor;
+                priority -= proximityBonus; // Lower priority = better (min-heap)
               }
-
-              // Apply exponential distance decay to prioritize tiles closer to click point
-              const distanceDecayConstant = this.mg
-                .config()
-                .attackDistanceDecayConstant();
-              const proximityBonus =
-                Math.exp(-distance / distanceDecayConstant) *
-                magnitudeWeight *
-                timeDecayFactor;
-              priority -= proximityBonus; // Lower priority = better (min-heap)
+              // else: No proximity bonus for disconnected regions
+              // Disconnected tiles still use direction + defensibility + wave front
             }
           }
         }
