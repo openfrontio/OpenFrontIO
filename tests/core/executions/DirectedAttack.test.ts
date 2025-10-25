@@ -36,7 +36,7 @@ describe("DirectedAttack", () => {
   // - Telemetry tracking (init time, coarse grid size, lookups)
   //
   // Configuration Parameters (all 4 validated):
-  // - attackDirectionWeight (1.5) - directional bias strength
+  // - attackDirectionWeight (2.5) - directional bias strength
   // - attackTimeDecay (20.0) - time decay constant
   // - attackMagnitudeWeight (0.75) - proximity bonus weight
   // - attackDistanceDecayConstant (25.0) - distance decay constant
