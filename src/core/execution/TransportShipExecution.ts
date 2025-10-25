@@ -105,19 +105,20 @@ export class TransportShipExecution implements Execution {
       return;
     }
 
-    // In Nuke Wars on Baikal, prevent transport ships from crossing the midpoint
+    // In Nuke Wars on Baikal, prevent transport ships from entering enemy territory
     const gc = this.mg.config().gameConfig();
     if (
       gc.gameMode === GameMode.NukeWars &&
-      gc.gameMap === GameMapType.Baikal
+      gc.gameMap === GameMapType.Baikal &&
+      this.dst !== null
     ) {
-      const mapWidth = this.mg.width();
-      const wantLeft = this.attacker.smallID() % 2 === 1;
-      const dstX = this.mg.x(this.dst);
-      const dstLeft = dstX < Math.floor(mapWidth / 2);
-      if (wantLeft !== dstLeft) {
+      const dstOwner = this.mg.owner(this.dst);
+      if (
+        dstOwner.isPlayer() &&
+        !this.attacker.isOnSameTeam(dstOwner as Player)
+      ) {
         this.mg.displayMessage(
-          "Transport ships cannot cross the midpoint in Nuke Wars",
+          "Transport ships cannot enter enemy team territory in Nuke Wars",
           MessageType.ATTACK_FAILED,
           this.attacker.id(),
         );

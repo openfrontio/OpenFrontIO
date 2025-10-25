@@ -20,11 +20,20 @@ export function canBuildTransportShip(
   }
 
   const other = game.owner(tile);
-  if (other === player) {
-    return false;
-  }
-  if (other.isPlayer() && player.isFriendly(other)) {
-    return false;
+  // During NukeWars, don't block transport ships between team members
+  const gc = game.config().gameConfig();
+  if (gc.gameMode !== GameMode.NukeWars) {
+    if (other === player) {
+      return false;
+    }
+    if (other.isPlayer() && player.isFriendly(other)) {
+      return false;
+    }
+  } else {
+    // In NukeWars, only block sending to enemy teams
+    if (other.isPlayer() && player.isOnSameTeam(other as Player)) {
+      return false;
+    }
   }
 
   if (game.isOceanShore(dst)) {
@@ -73,17 +82,16 @@ export function canBuildTransportShip(
 
   for (const t of sorted) {
     if (game.owner(t) === player) {
-      // Block cross-midpoint lake deployments in Nuke Wars on Baikal
+      // Block lake deployments into enemy team territory in Nuke Wars
       const gc = game.config().gameConfig();
       if (
         gc.gameMode === GameMode.NukeWars &&
         gc.gameMap === GameMapType.Baikal
       ) {
-        const mapWidth = game.width();
-        const wantLeft = player.smallID() % 2 === 1;
-        const tX = game.x(t);
-        const tLeft = tX < Math.floor(mapWidth / 2);
-        if (wantLeft !== tLeft) return false;
+        const tileOwner = game.owner(t);
+        if (tileOwner.isPlayer() && !player.isOnSameTeam(tileOwner as Player)) {
+          return false;
+        }
       }
       return transportShipSpawn(game, player, t);
     }

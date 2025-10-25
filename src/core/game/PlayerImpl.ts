@@ -909,14 +909,17 @@ export class PlayerImpl implements Player {
       return true;
     }
 
+    const team = this.team();
+    if (!team) return false;
+
+    // Simple geometric split:
+    // Team 1 (first team) gets left half (x < width/2)
+    // Team 2 (second team) gets right half (x >= width/2)
     const x = this.mg.x(tile);
     const mapWidth = this.mg.width();
     const midpoint = Math.floor(mapWidth / 2);
-    const team = this.team();
 
-    if (!team) return false;
-
-    // Team 1 spawns on left side, Team 2 on right side
+    // Team 1 gets left half, Team 2 gets right half
     const isTeam1 = team === this.mg.teams()[0];
     return isTeam1 ? x < midpoint : x >= midpoint;
   }
@@ -936,15 +939,19 @@ export class PlayerImpl implements Player {
       gc.gameMode === GameMode.NukeWars &&
       gc.gameMap === GameMapType.Baikal
     ) {
-      // Ships must stay on their team's side
+      // Ships cannot enter enemy team spawn zones
       if (
         unitType === UnitType.Warship ||
         unitType === UnitType.TradeShip ||
         unitType === UnitType.TransportShip
       ) {
-        if (!this.isInTeamSpawnZone(targetTile)) {
+        const targetOwner = this.mg.owner(targetTile);
+        if (
+          targetOwner.isPlayer() &&
+          !this.isOnSameTeam(targetOwner as Player)
+        ) {
           this.mg.displayMessage(
-            "Ships cannot cross the midpoint in Nuke Wars",
+            "Ships cannot enter enemy team territory in Nuke Wars",
             MessageType.ATTACK_FAILED,
             this.id(),
           );
@@ -1087,9 +1094,17 @@ export class PlayerImpl implements Player {
   }
 
   private validStructureSpawnTiles(tile: TileRef): TileRef[] {
-    if (this.mg.owner(tile) !== this) {
+    const owner = this.mg.owner(tile);
+    const gc = this.mg.config().gameConfig();
+    // In NukeWars prep phase, allow building in team territory
+    if (gc.gameMode === GameMode.NukeWars && this.mg.inPreparationPhase()) {
+      if (!owner.isPlayer() || !this.isOnSameTeam(owner as Player)) {
+        return [];
+      }
+    } else if (owner !== this) {
       return [];
     }
+
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
     const types = Object.values(UnitType).filter((unitTypeValue) => {
