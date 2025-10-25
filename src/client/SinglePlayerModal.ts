@@ -190,12 +190,21 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("game_mode.teams")}
                 </div>
               </div>
+                <div
+                  class="option-card ${this.gameMode === GameMode.NukeWars
+                    ? "selected"
+                    : ""}"
+                  @click=${() => this.handleGameModeSelection(GameMode.NukeWars)}
+                >
+                  <div class="option-card-title">
+                    ${translateText("game_mode.nukewars")}
+                  </div>
+                </div>
             </div>
           </div>
 
-          ${this.gameMode === GameMode.FFA
-            ? ""
-            : html`
+          ${this.gameMode === GameMode.Team
+            ? html`
                 <!-- Team Count Selection -->
                 <div class="options-section">
                   <div class="option-title">
@@ -220,7 +229,8 @@ export class SinglePlayerModal extends LitElement {
                     )}
                   </div>
                 </div>
-              `}
+              `
+            : ""}
 
           <!-- Game Options -->
           <div class="options-section">
