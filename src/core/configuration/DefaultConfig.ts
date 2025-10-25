@@ -843,6 +843,8 @@ export class DefaultConfig implements Config {
         return maxTroops * 1.5;
       case Difficulty.Impossible:
         return maxTroops * 2;
+      default:
+        return maxTroops * 1; // Default to Medium difficulty behavior
     }
   }
 

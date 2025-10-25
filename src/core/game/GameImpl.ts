@@ -112,12 +112,9 @@ export class GameImpl implements Game {
 
   private populateTeams() {
     let numPlayerTeams = this._config.playerTeams();
-<<<<<<< Updated upstream
-=======
     if (this._config.gameConfig().gameMode === GameMode.NukeWars) {
       numPlayerTeams = 2;
     }
->>>>>>> Stashed changes
     if (typeof numPlayerTeams !== "number") {
       const players = this._humans.length + this._nations.length;
       switch (numPlayerTeams) {
@@ -359,7 +356,10 @@ export class GameImpl implements Game {
     const inited: Execution[] = [];
     const unInited: Execution[] = [];
     this.unInitExecs.forEach((e) => {
-      if (!this.inSpawnPhase() || (e.activeDuringSpawnPhase && e.activeDuringSpawnPhase())) {
+      if (
+        !this.inSpawnPhase() ||
+        (e.activeDuringSpawnPhase && e.activeDuringSpawnPhase())
+      ) {
         e.init(this, this._ticks);
         inited.push(e);
       } else {
@@ -881,8 +881,8 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.bfs(tile, filter);
   }
-  toTileUpdate(tile: TileRef): bigint {
-    return this._map.toTileUpdate(tile);
+  toTileUpdate(tu: TileUpdate): bigint {
+    return this._map.toTileUpdate(tu);
   }
   updateTile(tu: TileUpdate): TileRef {
     return this._map.updateTile(tu);

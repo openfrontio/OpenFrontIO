@@ -1,4 +1,12 @@
-import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
+import {
+  Execution,
+  Game,
+  GameMapType,
+  GameMode,
+  Player,
+  PlayerInfo,
+  PlayerType,
+} from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
@@ -37,15 +45,12 @@ export class SpawnExecution implements Execution {
       player = this.mg.addPlayer(this.playerInfo);
     }
 
-<<<<<<< Updated upstream
-=======
     const spawnTile = this.isNukeWarsAndBaikal(player)
       ? this.findBestNukeWarsSpawn(player)
       : this.tile;
 
->>>>>>> Stashed changes
     player.tiles().forEach((t) => player.relinquish(t));
-    getSpawnTiles(this.mg, this.tile).forEach((t) => {
+    getSpawnTiles(this.mg, spawnTile).forEach((t) => {
       player.conquer(t);
     });
 
@@ -66,7 +71,7 @@ export class SpawnExecution implements Execution {
     return true;
   }
 
-    private isNukeWarsAndBaikal(player: Player): boolean {
+  private isNukeWarsAndBaikal(player: Player): boolean {
     const gc = this.mg.config().gameConfig();
     return (
       gc.gameMode === GameMode.NukeWars && gc.gameMap === GameMapType.Baikal
