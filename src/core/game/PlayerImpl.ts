@@ -930,18 +930,19 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    // In Nuke Wars on Baikal, prevent ships from crossing the midpoint but allow them within team zones
+    // Nuke Wars restrictions on Baikal map
     const gc = this.mg.config().gameConfig();
     if (
       gc.gameMode === GameMode.NukeWars &&
       gc.gameMap === GameMapType.Baikal
     ) {
+      // Ships must stay on their team's side
       if (unitType === UnitType.Warship || unitType === UnitType.TradeShip) {
         if (!this.isInTeamSpawnZone(targetTile)) return false;
       }
 
-      // During spawn phase we enforce that regular land spawns happen on-team.
-      if (this.mg.inSpawnPhase() && !this.isInTeamSpawnZone(targetTile)) {
+      // During preparation phase, only build in own territory
+      if (this.mg.inPreparationPhase() && !this.isInTeamSpawnZone(targetTile)) {
         return false;
       }
     }
