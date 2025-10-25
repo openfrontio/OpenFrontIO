@@ -43,9 +43,6 @@ export class AttackExecution implements Execution {
   private bfsCoarseGridSize: number = 0;
   private bfsDistanceLookups: number = 0;
 
-  // Debug: All tiles visited during BFS (for visualization)
-  private bfsVisitedTiles: Set<TileRef> | null = null;
-
   constructor(
     private startTroops: number | null = null,
     private _owner: Player,
@@ -57,14 +54,6 @@ export class AttackExecution implements Execution {
 
   public targetID(): PlayerID | null {
     return this._targetID;
-  }
-
-  /**
-   * Debug: Returns all tiles visited during BFS for visualization
-   * Only populated when debugDirectedAttacks() is enabled
-   */
-  public getDebugBFSTiles(): Set<TileRef> | null {
-    return this.bfsVisitedTiles;
   }
 
   activeDuringSpawnPhase(): boolean {
@@ -155,14 +144,6 @@ export class AttackExecution implements Execution {
 
         const endTime = performance.now();
         this.bfsInitTime = endTime - startTime;
-
-        if (this.mg.config().debugDirectedAttacks()) {
-          console.log(
-            `[DirectedAttack] Downscaled BFS (${this.mg.config().attackBFSDownsampleFactor()}x): ` +
-              `${this.clickDistances.size} connected target-owned tiles, ` +
-              `${this.bfsInitTime.toFixed(2)}ms init time`,
-          );
-        }
       }
     }
 
@@ -429,11 +410,6 @@ export class AttackExecution implements Execution {
         visited.add(neighbor);
         queue.push({ tile: neighbor, dist: dist + 1 });
       }
-    }
-
-    // Debug: Store all visited tiles for visualization
-    if (this.mg.config().debugDirectedAttacks()) {
-      this.bfsVisitedTiles = visited;
     }
 
     return distances;
@@ -716,18 +692,6 @@ export class AttackExecution implements Execution {
    */
   private cleanupBFSDistances() {
     if (this.clickDistances !== null) {
-      // Log downscaled BFS telemetry before cleanup
-      if (
-        this.mg.config().debugDirectedAttacks() &&
-        this.bfsCoarseGridSize > 0
-      ) {
-        console.log(
-          `[DirectedAttack] Downscaled Stats: ${this.bfsCoarseGridSize} coarse tiles, ` +
-            `downsample=${this.mg.config().attackBFSDownsampleFactor()}x, init=${this.bfsInitTime.toFixed(2)}ms, ` +
-            `${this.bfsDistanceLookups} distance lookups`,
-        );
-      }
-
       this.clickDistances.clear();
       this.clickDistances = null;
     }
