@@ -31,7 +31,11 @@ export class WinCheckExecution implements Execution {
 
     if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
+<<<<<<< Updated upstream
+    } else {
+=======
     } else if (gameMode === GameMode.NukeWars || gameMode === GameMode.Team) {
+>>>>>>> Stashed changes
       this.checkWinnerTeam();
     }
   }
