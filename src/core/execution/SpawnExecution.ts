@@ -72,7 +72,11 @@ export class SpawnExecution implements Execution {
             const d = this.mg.manhattanDist(this.tile, t);
             // score combines distance from original tile and distance from midpoint
             // biasFactor controls how strongly we prefer midline tiles (0.0-1.0)
-            const biasFactor = 0.5;
+            // Previously we biased toward the midpoint which caused many
+            // spawns to cluster near the center line. Prefer tiles that are
+            // slightly further from the midpoint to spread spawns across the
+            // team's half and avoid tight clumps near the border.
+            const biasFactor = -0.5;
             const centerDistance = Math.abs(xt - midpoint);
             const score = d + centerDistance * biasFactor;
             if (score < bestScore) {
