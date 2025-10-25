@@ -388,8 +388,9 @@ export class AttackExecution implements Execution {
     // This ensures accurate proximity calculation near the click point
     distances.set(clickTile, 0);
 
-    while (queue.length > 0) {
-      const { tile, dist } = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const { tile, dist } = queue[head++];
 
       // Downsample: only keep tiles at grid coordinates
       const x = this.mg.x(tile);
