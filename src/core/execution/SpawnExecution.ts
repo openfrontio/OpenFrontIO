@@ -78,7 +78,36 @@ export class SpawnExecution implements Execution {
             // team's half and avoid tight clumps near the border.
             const biasFactor = -0.5;
             const centerDistance = Math.abs(xt - midpoint);
-            const score = d + centerDistance * biasFactor;
+            // Compute distance to existing team-owned tiles (if any) so we prefer
+            // tiles that are farther away from already-assigned spawns. This
+            // helps avoid clustering near the midpoint or other crowded areas.
+            let minDistToTeam = Infinity;
+            try {
+              const team = player.team();
+              if (team) {
+                for (const p of this.mg.players()) {
+                  if (p.team() !== team) continue;
+                  // skip the current player
+                  if (p === player) continue;
+                  for (const owned of p.tiles()) {
+                    const dd = this.mg.manhattanDist(owned, t);
+                    if (dd < minDistToTeam) minDistToTeam = dd;
+                    if (minDistToTeam === 0) break;
+                  }
+                  if (minDistToTeam === 0) break;
+                }
+              }
+            } catch (e) {
+              // defensive: if anything goes wrong, fall back to no team-distance bias
+              minDistToTeam = Infinity;
+            }
+
+            const spreadFactor = 0.9;
+            const teamDistanceScore = isFinite(minDistToTeam)
+              ? -minDistToTeam * spreadFactor
+              : 0;
+
+            const score = d + centerDistance * biasFactor + teamDistanceScore;
             if (score < bestScore) {
               bestScore = score;
               best = t;
