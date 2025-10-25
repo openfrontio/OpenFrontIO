@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { GameMode, Team } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
@@ -14,6 +14,19 @@ export class SpawnTimer extends LitElement implements Layer {
   private colors = ["rgba(0, 128, 255, 0.7)", "rgba(0, 0, 0, 0.5)"];
 
   private isVisible = false;
+
+  @state()
+  private timerText: string = "";
+
+  private secondsToHms = (d: number): string => {
+    const h = Math.floor(d / 3600);
+    const m = Math.floor((d % 3600) / 60);
+    const s = Math.floor((d % 3600) % 60);
+    let time = d === 0 ? "-" : `${s}s`;
+    if (m > 0) time = `${m}m` + time;
+    if (h > 0) time = `${h}h` + time;
+    return time;
+  };
 
   createRenderRoot() {
     this.style.position = "fixed";
@@ -31,16 +44,28 @@ export class SpawnTimer extends LitElement implements Layer {
   }
 
   tick() {
-    if (this.game.inSpawnPhase()) {
+    const isNukeWars =
+      this.game.config().gameConfig().gameMode === GameMode.NukeWars;
+    const spawnTurns = this.game.config().numSpawnPhaseTurns();
+    const prepTurns = this.game.config().numPreparationPhaseTurns();
+    const ticks = this.game.ticks();
+
+    if (ticks <= spawnTurns) {
       // During spawn phase, only one segment filling full width
-      this.ratios = [
-        this.game.ticks() / this.game.config().numSpawnPhaseTurns(),
-      ];
+      this.ratios = [ticks / spawnTurns];
       this.colors = ["rgba(0, 128, 255, 0.7)"];
+      this.requestUpdate();
+      return;
+    } else if (isNukeWars && ticks <= spawnTurns + prepTurns) {
+      // Nuke Wars Prep phase
+      const elapsedInPrep = ticks - spawnTurns;
+      const remainingSeconds = Math.max(0, (prepTurns - elapsedInPrep) / 10);
+      this.timerText = this.secondsToHms(remainingSeconds);
       this.requestUpdate();
       return;
     }
 
+    // Existing logic for team territory ratios
     this.ratios = [];
     this.colors = [];
 
@@ -79,6 +104,23 @@ export class SpawnTimer extends LitElement implements Layer {
   render() {
     if (!this.isVisible) {
       return html``;
+    }
+
+    const isNukeWars =
+      this.game.config().gameConfig().gameMode === GameMode.NukeWars;
+    const spawnTurns = this.game.config().numSpawnPhaseTurns();
+    const prepTurns = this.game.config().numPreparationPhaseTurns();
+    const ticks = this.game.ticks();
+
+    if (isNukeWars && ticks > spawnTurns && ticks <= spawnTurns + prepTurns) {
+      // Display countdown timer for Nuke Wars Prep phase
+      return html`
+        <div
+          class="w-full h-full flex justify-center items-center bg-gray-800/70 text-white text-lg font-bold"
+        >
+          ${this.timerText}
+        </div>
+      `;
     }
 
     if (this.ratios.length === 0 || this.colors.length === 0) {

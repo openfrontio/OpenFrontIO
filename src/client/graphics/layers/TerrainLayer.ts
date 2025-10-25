@@ -1,5 +1,4 @@
 import { Theme } from "../../../core/configuration/Config";
-import { GameMapType, GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -74,20 +73,5 @@ export class TerrainLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
-
-    if (
-      this.game.config().gameConfig().gameMode === GameMode.NukeWars &&
-      this.game.config().gameConfig().gameMap === GameMapType.Baikal
-    ) {
-      const height = this.game.height();
-      const midpoint = 0; // The map is centered, so midpoint is at x=0
-
-      context.beginPath();
-      context.moveTo(midpoint, -height / 2);
-      context.lineTo(midpoint, height / 2);
-      context.strokeStyle = "white";
-      context.lineWidth = 2 / this.transformHandler.scale; // Make the line width independent of zoom
-      context.stroke();
-    }
   }
 }
