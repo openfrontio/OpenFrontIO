@@ -47,6 +47,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import { GoToPositionEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -194,6 +195,7 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private hasZoomedToSpawn = false;
 
   private turnsSeen = 0;
   private hasJoined = false;
@@ -291,6 +293,16 @@ export class ClientGameRunner {
       });
       this.gameView.update(gu);
       this.renderer.tick();
+
+      const myPlayer = this.gameView.myPlayer();
+      if (!this.hasZoomedToSpawn && myPlayer && myPlayer.numTilesOwned() > 0) {
+        const initialSpawnTile = myPlayer.initialSpawnTile();
+        if (initialSpawnTile) {
+          const cell = this.gameView.cell(initialSpawnTile);
+          this.eventBus.emit(new GoToPositionEvent(cell.x, cell.y));
+          this.hasZoomedToSpawn = true;
+        }
+      }
 
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);

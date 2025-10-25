@@ -635,7 +635,7 @@ export interface Player {
   canTrade(other: Player): boolean;
 
   // Attacking.
-  canAttack(tile: TileRef): boolean;
+  canAttack(tile: TileRef, unitType: UnitType): boolean;
 
   createAttack(
     target: Player | TerraNullius,

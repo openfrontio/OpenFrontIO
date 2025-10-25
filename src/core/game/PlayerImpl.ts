@@ -66,6 +66,7 @@ class Donation {
 export class PlayerImpl implements Player {
   public _lastTileChange: number = 0;
   public _pseudo_random: PseudoRandom;
+  public _initialSpawnTile: TileRef | null = null;
 
   private _gold: bigint;
   private _troops: bigint;
@@ -175,6 +176,7 @@ export class PlayerImpl implements Player {
       hasSpawned: this.hasSpawned(),
       betrayals: stats?.betrayals,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
+      initialSpawnTile: this._initialSpawnTile ?? undefined,
     };
   }
 
@@ -307,6 +309,9 @@ export class PlayerImpl implements Player {
     this._troops = toInt(troops);
   }
   conquer(tile: TileRef) {
+    if (this._initialSpawnTile === null && this._tiles.size === 0) {
+      this._initialSpawnTile = tile;
+    }
     this.mg.conquer(this, tile);
   }
   orderRetreat(id: string) {
@@ -911,6 +916,79 @@ export class PlayerImpl implements Player {
     });
   }
 
+<<<<<<< Updated upstream
+=======
+  private isInTeamSpawnZone(tile: TileRef): boolean {
+    const gameMode = this.mg.config().gameConfig().gameMode;
+    if (gameMode !== GameMode.NukeWars) {
+      return true;
+    }
+
+    const team = this.team();
+    if (!team) return false;
+
+    // Simple geometric split:
+    // Team 1 (first team) gets left half (x < width/2)
+    // Team 2 (second team) gets right half (x >= width/2)
+    const x = this.mg.x(tile);
+    const mapWidth = this.mg.width();
+    const midpoint = Math.floor(mapWidth / 2);
+
+    // Team 1 gets left half, Team 2 gets right half
+    const isTeam1 = team === this.mg.teams()[0];
+    return isTeam1 ? x < midpoint : x >= midpoint;
+  }
+
+  private isNukeWars(): boolean {
+    return this.mg.config().gameConfig().gameMode === GameMode.NukeWars;
+  }
+
+  private isNukeWarsAndBaikal(): boolean {
+    const gc = this.mg.config().gameConfig();
+    return (
+      gc.gameMode === GameMode.NukeWars && gc.gameMap === GameMapType.Baikal
+    );
+  }
+
+  private canBuildShipNukeWars(
+    unitType: UnitType,
+    targetTile: TileRef,
+  ): boolean {
+    // Transport ships cannot enter enemy team territory
+    if (unitType === UnitType.TransportShip) {
+      const targetOwner = this.mg.owner(targetTile);
+      if (
+        targetOwner.isPlayer() &&
+        !this.isOnSameTeam(targetOwner as Player)
+      ) {
+        this.mg.displayMessage(
+          "Transport ships cannot enter enemy team territory in Nuke Wars",
+          MessageType.ATTACK_FAILED,
+          this.id(),
+        );
+        return false;
+      }
+    }
+    // Warships and TradeShips are allowed to go over to the enemy's spawn
+    return true;
+  }
+
+  private canBuildNukeNukeWars(unitType: UnitType): boolean {
+    if (
+      (unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb) &&
+      this.mg.inPreparationPhase()
+    ) {
+      this.mg.displayMessage(
+        "Nuclear weapons cannot be launched during the preparation phase",
+        MessageType.ATTACK_FAILED,
+        this.id(),
+      );
+      return false;
+    }
+    return true;
+  }
+
+>>>>>>> Stashed changes
   canBuild(
     unitType: UnitType,
     targetTile: TileRef,
@@ -920,10 +998,31 @@ export class PlayerImpl implements Player {
       return false;
     }
 
+<<<<<<< Updated upstream
+=======
+    if (this.isNukeWarsAndBaikal()) {
+      if (!this.canBuildShipNukeWars(unitType, targetTile)) {
+        return false;
+      }
+      if (
+        this.mg.inPreparationPhase() &&
+        !this.isInTeamSpawnZone(targetTile)
+      ) {
+        this.mg.displayMessage(
+          "During preparation phase, you can only build in your own territory",
+          MessageType.ATTACK_FAILED,
+          this.id(),
+        );
+        return false;
+      }
+    }
+
+>>>>>>> Stashed changes
     const cost = this.mg.unitInfo(unitType).cost(this);
     if (!this.isAlive() || this.gold() < cost) {
       return false;
     }
+
     switch (unitType) {
       case UnitType.MIRV:
         if (!this.mg.hasOwner(targetTile)) {
@@ -932,6 +1031,12 @@ export class PlayerImpl implements Player {
         return this.nukeSpawn(targetTile);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+<<<<<<< Updated upstream
+=======
+        if (this.isNukeWars() && !this.canBuildNukeNukeWars(unitType)) {
+          return false;
+        }
+>>>>>>> Stashed changes
         return this.nukeSpawn(targetTile);
       case UnitType.MIRVWarhead:
         return targetTile;
@@ -1033,7 +1138,16 @@ export class PlayerImpl implements Player {
   }
 
   private validStructureSpawnTiles(tile: TileRef): TileRef[] {
+<<<<<<< Updated upstream
     if (this.mg.owner(tile) !== this) {
+=======
+    const owner = this.mg.owner(tile);
+    if (this.isNukeWars() && this.mg.inPreparationPhase()) {
+      if (!owner.isPlayer() || !this.isOnSameTeam(owner as Player)) {
+        return [];
+      }
+    } else if (owner !== this) {
+>>>>>>> Stashed changes
       return [];
     }
     const searchRadius = 15;
@@ -1145,7 +1259,7 @@ export class PlayerImpl implements Player {
     return this._incomingAttacks;
   }
 
-  public canAttack(tile: TileRef): boolean {
+  public canAttack(tile: TileRef, unitType: UnitType): boolean {
     if (
       this.mg.hasOwner(tile) &&
       this.mg.config().numSpawnPhaseTurns() +
@@ -1168,6 +1282,38 @@ export class PlayerImpl implements Player {
     if (!this.mg.isLand(tile)) {
       return false;
     }
+<<<<<<< Updated upstream
+=======
+
+    // Nuke Wars specific attack rules
+    if (this.isNukeWarsAndBaikal()) {
+      const mapWidth = this.mg.width();
+      const tx = this.mg.x(tile);
+      const attackerLeft = this.smallID() % 2 === 1;
+      const tileLeft = tx < Math.floor(mapWidth / 2);
+
+      // During spawn phase, only attack within own half
+      if (this.mg.inSpawnPhase()) {
+        if (attackerLeft !== tileLeft) {
+          return false;
+        }
+      } else {
+        // After spawn phase, only nuclear missiles, warships, and tradeships can cross the midpoint
+        const canCross =
+          unitType === UnitType.AtomBomb ||
+          unitType === UnitType.HydrogenBomb ||
+          unitType === UnitType.MIRV ||
+          unitType === UnitType.MIRVWarhead ||
+          unitType === UnitType.Warship ||
+          unitType === UnitType.TradeShip;
+
+        if (attackerLeft !== tileLeft && !canCross) {
+          return false;
+        }
+      }
+    }
+
+>>>>>>> Stashed changes
     if (this.mg.hasOwner(tile)) {
       return this.sharesBorderWith(other);
     } else {

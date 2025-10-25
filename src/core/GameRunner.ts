@@ -17,6 +17,7 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
+  UnitType,
 } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
@@ -186,7 +187,7 @@ export class GameRunner {
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
-      canAttack: tile !== null && player.canAttack(tile),
+      canAttack: tile !== null && player.canAttack(tile, UnitType.City),
       buildableUnits: player.buildableUnits(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;

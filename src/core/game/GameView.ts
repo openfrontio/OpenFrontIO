@@ -181,6 +181,7 @@ export class UnitView {
 export class PlayerView {
   public anonymousName: string | null = null;
   private decoder?: PatternDecoder;
+  private _initialSpawnTile: TileRef | null = null;
 
   private _territoryColor: Colord;
   private _borderColor: Colord;
@@ -430,6 +431,14 @@ export class PlayerView {
     return this.data.isDisconnected;
   }
 
+  initialSpawnTile(): TileRef | null {
+    return this._initialSpawnTile;
+  }
+
+  setInitialSpawnTile(tile: TileRef) {
+    this._initialSpawnTile = tile;
+  }
+
   lastDeleteUnitTick(): Tick {
     return this.data.lastDeleteUnitTick;
   }
@@ -513,17 +522,21 @@ export class GameView implements GameMap {
         player.data = pu;
         player.nameData = gu.playerNameViewData[pu.id];
       } else {
+        const newPlayerView = new PlayerView(
+          this,
+          pu,
+          gu.playerNameViewData[pu.id],
+          // First check human by clientID, then check nation by name.
+          this._cosmetics.get(pu.clientID ?? "") ??
+            this._cosmetics.get(pu.name) ??
+            {},
+        );
+        if (pu.initialSpawnTile !== undefined) {
+          newPlayerView.setInitialSpawnTile(pu.initialSpawnTile);
+        }
         this._players.set(
           pu.id,
-          new PlayerView(
-            this,
-            pu,
-            gu.playerNameViewData[pu.id],
-            // First check human by clientID, then check nation by name.
-            this._cosmetics.get(pu.clientID ?? "") ??
-              this._cosmetics.get(pu.name) ??
-              {},
-          ),
+          newPlayerView,
         );
       }
     });

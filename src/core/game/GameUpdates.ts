@@ -171,6 +171,7 @@ export interface PlayerUpdate {
   hasSpawned: boolean;
   betrayals?: bigint;
   lastDeleteUnitTick: Tick;
+  initialSpawnTile?: TileRef;
 }
 
 export interface AllianceView {

@@ -53,6 +53,13 @@ export class HostLobbyModal extends LitElement {
   @state() private clients: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
+<<<<<<< Updated upstream
+=======
+
+  private readonly nukeWarsDisabledUnits = [
+    UnitType.MIRV,
+  ];
+>>>>>>> Stashed changes
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
 
