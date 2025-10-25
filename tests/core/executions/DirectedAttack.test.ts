@@ -36,9 +36,9 @@ describe("DirectedAttack", () => {
   // - Telemetry tracking (init time, coarse grid size, lookups)
   //
   // Configuration Parameters (all 4 validated):
-  // - attackDirectionWeight (2.5) - directional bias strength
-  // - attackTimeDecay (150.0) - time decay constant
-  // - attackMagnitudeWeight (0.6) - proximity bonus weight
+  // - attackDirectionWeight (1.5) - directional bias strength
+  // - attackTimeDecay (20.0) - time decay constant
+  // - attackMagnitudeWeight (0.75) - proximity bonus weight
   // - attackDistanceDecayConstant (25.0) - distance decay constant
   //
   // Edge Cases:
@@ -427,7 +427,8 @@ describe("DirectedAttack", () => {
     const previouslyConquered = new Set<TileRef>(attacker.tiles());
 
     // Run attack for limited time to observe early triangular convergence
-    for (let i = 0; i < 100; i++) {
+    // (40 ticks keeps directional influence at ~13% vs <1% at 100 ticks)
+    for (let i = 0; i < 40; i++) {
       game.executeNextTick();
 
       // Identify newly conquered tiles
@@ -557,6 +558,10 @@ describe("DirectedAttack", () => {
 
     const allTiles = Array.from(attacker.tiles());
     const lateTiles = allTiles.filter((tile) => !earlyTiles.includes(tile));
+
+    // Ensure we have late tiles to measure (attack continued long enough)
+    expect(lateTiles.length).toBeGreaterThan(0);
+
     const lateBias = measureDirectionalBias(lateTiles);
 
     // With explicit time decay, early bias should be noticeably higher than late bias
@@ -712,7 +717,7 @@ describe("DirectedAttack", () => {
     expect(conqueredOrder.length).toBeGreaterThan(5);
 
     // Calculate average distance to click for first vs last quartile of conquered tiles
-    const quartileSize = Math.floor(conqueredOrder.length / 4);
+    const quartileSize = Math.max(1, Math.floor(conqueredOrder.length / 4));
     const firstQuartile = conqueredOrder.slice(0, quartileSize);
     const lastQuartile = conqueredOrder.slice(-quartileSize);
 
