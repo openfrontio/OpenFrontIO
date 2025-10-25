@@ -43,6 +43,9 @@ export class AttackExecution implements Execution {
   private bfsCoarseGridSize: number = 0;
   private bfsDistanceLookups: number = 0;
 
+  // Debug: All tiles visited during BFS (for visualization)
+  private bfsVisitedTiles: Set<TileRef> | null = null;
+
   constructor(
     private startTroops: number | null = null,
     private _owner: Player,
@@ -54,6 +57,14 @@ export class AttackExecution implements Execution {
 
   public targetID(): PlayerID | null {
     return this._targetID;
+  }
+
+  /**
+   * Debug: Returns all tiles visited during BFS for visualization
+   * Only populated when debugDirectedAttacks() is enabled
+   */
+  public getDebugBFSTiles(): Set<TileRef> | null {
+    return this.bfsVisitedTiles;
   }
 
   activeDuringSpawnPhase(): boolean {
@@ -392,11 +403,12 @@ export class AttackExecution implements Execution {
 
     visited.add(clickTile);
 
+    // Always include click tile in distances, regardless of grid alignment
+    // This ensures accurate proximity calculation near the click point
+    distances.set(clickTile, 0);
+
     while (queue.length > 0) {
       const { tile, dist } = queue.shift()!;
-
-      // Stop expanding if we've reached max radius
-      if (dist >= maxRadius) continue;
 
       // Downsample: only keep tiles at grid coordinates
       const x = this.mg.x(tile);
@@ -404,6 +416,9 @@ export class AttackExecution implements Execution {
       if (x % downsampleFactor === 0 && y % downsampleFactor === 0) {
         distances.set(tile, dist);
       }
+
+      // Stop expanding if we've reached max radius (after storing tile)
+      if (dist >= maxRadius) continue;
 
       // Traverse neighbors with same owner (connected component only)
       for (const neighbor of this.mg.neighbors(tile)) {
@@ -414,6 +429,11 @@ export class AttackExecution implements Execution {
         visited.add(neighbor);
         queue.push({ tile: neighbor, dist: dist + 1 });
       }
+    }
+
+    // Debug: Store all visited tiles for visualization
+    if (this.mg.config().debugDirectedAttacks()) {
+      this.bfsVisitedTiles = visited;
     }
 
     return distances;
@@ -553,6 +573,8 @@ export class AttackExecution implements Execution {
 
   /**
    * Gets the downscaled BFS distance for any tile by looking up its nearest coarse grid tile.
+   * If the nearest coarse tile is missing (e.g., water), searches the 4 corners of the grid cell
+   * for the nearest valid tile.
    *
    * @param tile The tile to get distance for
    * @returns BFS distance in tiles, or null if not available
@@ -564,14 +586,63 @@ export class AttackExecution implements Execution {
 
     this.bfsDistanceLookups++;
 
-    // Find nearest coarse tile
-    const coarseTile = this.findNearestCoarseTile(
-      tile,
-      this.mg.config().attackBFSDownsampleFactor(),
-    );
+    const downsampleFactor = this.mg.config().attackBFSDownsampleFactor();
 
-    // Return its distance
-    return this.clickDistances.get(coarseTile) ?? null;
+    // Fast path: try nearest coarse tile first (handles most cases)
+    const nearestCoarse = this.findNearestCoarseTile(tile, downsampleFactor);
+    const nearestDistance = this.clickDistances.get(nearestCoarse);
+    if (nearestDistance !== undefined) {
+      return nearestDistance;
+    }
+
+    // Fallback: nearest coarse tile is missing (likely water or disconnected region)
+    // Search the 4 corners of the grid cell containing this tile
+    const x = this.mg.x(tile);
+    const y = this.mg.y(tile);
+    const baseX = Math.floor(x / downsampleFactor) * downsampleFactor;
+    const baseY = Math.floor(y / downsampleFactor) * downsampleFactor;
+
+    // Calculate valid bounds for coarse grid coordinates (same logic as findNearestCoarseTile)
+    const mapWidth = this.mg.width();
+    const mapHeight = this.mg.height();
+    const maxCoarseX =
+      Math.floor((mapWidth - 1) / downsampleFactor) * downsampleFactor;
+    const maxCoarseY =
+      Math.floor((mapHeight - 1) / downsampleFactor) * downsampleFactor;
+
+    // Generate candidates with bounds checking
+    const candidates = [];
+    for (const dx of [0, downsampleFactor]) {
+      for (const dy of [0, downsampleFactor]) {
+        const cx = baseX + dx;
+        const cy = baseY + dy;
+
+        // Only add candidate if within valid coarse grid bounds
+        if (cx >= 0 && cx <= maxCoarseX && cy >= 0 && cy <= maxCoarseY) {
+          candidates.push({ ref: this.mg.ref(cx, cy), x: cx, y: cy });
+        }
+      }
+    }
+
+    // Find the nearest candidate that exists in the distances map
+    let bestDistance: number | null = null;
+    let minDistSq = Infinity;
+
+    for (const { ref, x: cx, y: cy } of candidates) {
+      const dist = this.clickDistances.get(ref);
+      if (dist !== undefined) {
+        const dx = cx - x;
+        const dy = cy - y;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < minDistSq) {
+          minDistSq = distSq;
+          bestDistance = dist;
+        }
+      }
+    }
+
+    return bestDistance;
   }
 
   private addNeighbors(tile: TileRef) {
