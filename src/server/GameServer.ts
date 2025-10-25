@@ -3,7 +3,7 @@ import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
+import { GameMapType, GameMode, GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
@@ -125,6 +125,21 @@ export class GameServer {
 
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
+    }
+
+    // Enforce Nuke Wars only on Baikal at server side.
+    try {
+      if (
+        this.gameConfig.gameMode === GameMode.NukeWars &&
+        this.gameConfig.gameMap !== GameMapType.Baikal
+      ) {
+        this.log.warn(
+          "Nuke Wars selected but map is not Baikal; forcing Baikal map",
+        );
+        this.gameConfig.gameMap = GameMapType.Baikal;
+      }
+    } catch (e) {
+      // ignore if config incomplete
     }
   }
 

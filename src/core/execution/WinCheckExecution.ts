@@ -29,8 +29,11 @@ export class WinCheckExecution implements Execution {
     }
     if (this.mg === null) throw new Error("Not initialized");
 
-    if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
+    const gameMode = this.mg.config().gameConfig().gameMode;
+    if (gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
+    } else if (gameMode === GameMode.NukeWars) {
+      this.checkWinnerNukeWars();
     } else {
       this.checkWinnerTeam();
     }
@@ -94,6 +97,69 @@ export class WinCheckExecution implements Execution {
       this.mg.setWinner(max[0], this.mg.stats().stats());
       console.log(`${max[0]} has won the game`);
       this.active = false;
+    }
+  }
+
+  checkWinnerNukeWars(): void {
+    if (this.mg === null) throw new Error("Not initialized");
+    const teamToTiles = new Map<Team, number>();
+    for (const player of this.mg.players()) {
+      const team = player.team();
+      // In Nuke Wars we require teams
+      if (team === null) continue;
+      teamToTiles.set(
+        team,
+        (teamToTiles.get(team) ?? 0) + player.numTilesOwned(),
+      );
+    }
+
+    const numTilesWithoutFallout =
+      this.mg.numLandTiles() - this.mg.numTilesWithFallout();
+
+    // Check if any team has less than 5% territory
+    const sorted = Array.from(teamToTiles.entries());
+    for (const [team, tiles] of sorted) {
+      const percentage = (tiles / numTilesWithoutFallout) * 100;
+      if (percentage < 5 && team !== ColoredTeams.Bot) {
+        // Find the other team (non-bot) that has more territory
+        const otherTeam = sorted.find(
+          ([t, _]) => t !== team && t !== ColoredTeams.Bot,
+        );
+        if (otherTeam) {
+          this.mg.setWinner(otherTeam[0], this.mg.stats().stats());
+          console.log(
+            `${otherTeam[0]} has won the game by reducing ${team} territory below 5%`,
+          );
+          this.active = false;
+          return;
+        }
+      }
+    }
+
+    // Also check if time has elapsed (inherited from team mode)
+    const timeElapsed =
+      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
+    if (
+      this.mg.config().gameConfig().maxTimerValue !== undefined &&
+      timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0
+    ) {
+      // When time runs out, team with most territory wins
+      const winner = sorted.reduce(
+        (prev, curr) => {
+          if (curr[0] === ColoredTeams.Bot) return prev;
+          if (!prev || curr[1] > prev[1]) return curr;
+          return prev;
+        },
+        null as [Team, number] | null,
+      );
+
+      if (winner) {
+        this.mg.setWinner(winner[0], this.mg.stats().stats());
+        console.log(
+          `${winner[0]} has won the game by having most territory when time elapsed`,
+        );
+        this.active = false;
+      }
     }
   }
 

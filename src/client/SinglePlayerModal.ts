@@ -49,6 +49,18 @@ export class SinglePlayerModal extends LitElement {
 
   @state() private disabledUnits: UnitType[] = [];
 
+  private readonly nukeWarsDisabledUnits = [
+    UnitType.City,
+    UnitType.Construction,
+    UnitType.DefensePost,
+    UnitType.Port,
+    UnitType.TransportShip,
+    UnitType.Warship,
+    UnitType.Train,
+    UnitType.TradeShip,
+    UnitType.MIRV,
+  ];
+
   private userSettings: UserSettings = new UserSettings();
 
   connectedCallback() {
@@ -182,6 +194,14 @@ export class SinglePlayerModal extends LitElement {
                 <div class="option-card-title">
                   ${translateText("game_mode.teams")}
                 </div>
+              </div>
+              <div
+                class="option-card ${this.gameMode === GameMode.NukeWars
+                  ? "selected"
+                  : ""}"
+                @click=${() => this.handleGameModeSelection(GameMode.NukeWars)}
+              >
+                <div class="option-card-title">Nuke Wars</div>
               </div>
             </div>
           </div>
@@ -454,6 +474,21 @@ export class SinglePlayerModal extends LitElement {
 
   private handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
+
+    // Enforce Nuke Wars restrictions
+    if (value === GameMode.NukeWars) {
+      // Force Baikal map
+      if (this.selectedMap !== GameMapType.Baikal) {
+        this.selectedMap = GameMapType.Baikal;
+        this.useRandomMap = false;
+      }
+
+      // Disable all units except missiles and SAMs
+      this.disabledUnits = [...this.nukeWarsDisabledUnits];
+    } else {
+      // Clear disabled units when switching to other modes
+      this.disabledUnits = [];
+    }
   }
 
   private handleTeamCountSelection(value: TeamCountConfig) {
@@ -477,6 +512,16 @@ export class SinglePlayerModal extends LitElement {
     // If random map is selected, choose a random map now
     if (this.useRandomMap) {
       this.selectedMap = this.getRandomMap();
+    }
+    // Enforce Nuke Wars availability only on Baikal for single player as well
+    if (
+      this.gameMode === GameMode.NukeWars &&
+      this.selectedMap !== GameMapType.Baikal
+    ) {
+      alert(
+        "Nuke Wars is only available on the Baikal map. Switching to Baikal.",
+      );
+      this.selectedMap = GameMapType.Baikal;
     }
 
     console.log(

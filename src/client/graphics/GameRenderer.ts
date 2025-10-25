@@ -22,6 +22,7 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { NukeWarsTopBanner } from "./layers/NukeWarsTopBanner";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -247,6 +248,7 @@ export function createRenderer(
       playerPanel,
     ),
     new SpawnTimer(game, transformHandler),
+    new NukeWarsTopBanner(game),
     leaderboard,
     gameLeftSidebar,
     unitDisplay,

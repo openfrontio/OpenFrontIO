@@ -319,6 +319,20 @@ export class DefaultConfig implements Config {
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
+    // First check game mode specific restrictions
+    if (this._gameConfig.gameMode === GameMode.NukeWars) {
+      const allowedUnits = [
+        UnitType.MissileSilo,
+        UnitType.SAMLauncher,
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      ];
+      if (!allowedUnits.includes(unitType)) {
+        return true;
+      }
+    }
+
+    // Then check manually disabled units
     return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
   }
 
@@ -607,6 +621,11 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
+    // Nuke Wars uses a 3 minute preparation phase (3 minutes = 180 seconds)
+    // Server tick is 100ms => 10 ticks per second -> 180 * 10 = 1800 ticks
+    if (this._gameConfig.gameMode === GameMode.NukeWars) {
+      return 180 * 10;
+    }
     return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
   }
   numBots(): number {

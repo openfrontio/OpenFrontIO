@@ -21,6 +21,8 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMapType,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -901,6 +903,24 @@ export class PlayerImpl implements Player {
     });
   }
 
+  private isInTeamSpawnZone(tile: TileRef): boolean {
+    const gameMode = this.mg.config().gameConfig().gameMode;
+    if (gameMode !== GameMode.NukeWars) {
+      return true;
+    }
+
+    const x = this.mg.x(tile);
+    const mapWidth = this.mg.width();
+    const midpoint = Math.floor(mapWidth / 2);
+    const team = this.team();
+
+    if (!team) return false;
+
+    // Team 1 spawns on left side, Team 2 on right side
+    const isTeam1 = team === this.mg.teams()[0];
+    return isTeam1 ? x < midpoint : x >= midpoint;
+  }
+
   canBuild(
     unitType: UnitType,
     targetTile: TileRef,
@@ -908,6 +928,22 @@ export class PlayerImpl implements Player {
   ): TileRef | false {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
+    }
+
+    // Check spawn zone restrictions in Nuke Wars mode
+    if (this.mg.config().gameConfig().gameMode === GameMode.NukeWars) {
+      // During spawn phase, enforce strict spawn zones
+      if (this.mg.inSpawnPhase() && !this.isInTeamSpawnZone(targetTile)) {
+        return false;
+      }
+
+      // After spawn phase, only allow missiles to cross the midpoint
+      if (!this.mg.inSpawnPhase() && !this.isInTeamSpawnZone(targetTile)) {
+        const allowedTypes = [UnitType.AtomBomb, UnitType.HydrogenBomb];
+        if (!allowedTypes.includes(unitType)) {
+          return false;
+        }
+      }
     }
 
     const cost = this.mg.unitInfo(unitType).cost(this);
@@ -1157,6 +1193,24 @@ export class PlayerImpl implements Player {
 
     if (!this.mg.isLand(tile)) {
       return false;
+    }
+
+    // In Nuke Wars on Baikal, during the spawn (prep) phase disallow attacks
+    // that cross the midpoint (enforce 50/50 split). We determine the player's
+    // side deterministically by smallID parity (odd = left, even = right).
+    const gameCfg = this.mg.config().gameConfig();
+    if (
+      gameCfg.gameMode === GameMode.NukeWars &&
+      gameCfg.gameMap === GameMapType.Baikal &&
+      this.mg.inSpawnPhase()
+    ) {
+      const mapWidth = this.mg.width();
+      const tx = this.mg.x(tile);
+      const attackerLeft = this.smallID() % 2 === 1;
+      const tileLeft = tx < Math.floor(mapWidth / 2);
+      if (attackerLeft !== tileLeft) {
+        return false;
+      }
     }
     if (this.mg.hasOwner(tile)) {
       return this.sharesBorderWith(other);
