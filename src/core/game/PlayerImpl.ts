@@ -975,6 +975,17 @@ export class PlayerImpl implements Player {
         return this.nukeSpawn(targetTile);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+        // In Nuke Wars, AtomBomb and HydrogenBomb cannot be launched during the
+        // preparation phase, but are allowed afterwards. Other build restrictions
+        // (like team spawn zones) are handled above.
+        if (gc.gameMode === GameMode.NukeWars && this.mg.inPreparationPhase()) {
+          this.mg.displayMessage(
+            "Nuclear weapons cannot be launched during the preparation phase",
+            MessageType.ATTACK_FAILED,
+            this.id(),
+          );
+          return false;
+        }
         return this.nukeSpawn(targetTile);
       case UnitType.MIRVWarhead:
         return targetTile;
@@ -1004,12 +1015,6 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
-    // During the Nuke Wars preparation phase nukes cannot be launched across
-    // to enemy territory. Block all nuke launches while in the preparation phase.
-    const gc = this.mg.config().gameConfig();
-    if (gc.gameMode === GameMode.NukeWars && this.mg.inPreparationPhase()) {
-      return false;
-    }
     const owner = this.mg.owner(tile);
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner)) {
