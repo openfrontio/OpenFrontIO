@@ -96,7 +96,12 @@ export class GameImpl implements Game {
     this._width = _map.width();
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
+<<<<<<< Updated upstream
+
+    if (_config.gameConfig().gameMode === GameMode.Team) {
+=======
     if (this.isTeamBasedGame()) {
+>>>>>>> Stashed changes
       this.populateTeams();
     }
     this.addPlayers();
@@ -109,9 +114,12 @@ export class GameImpl implements Game {
 
   private populateTeams() {
     let numPlayerTeams = this._config.playerTeams();
+<<<<<<< Updated upstream
+=======
     if (this._config.gameConfig().gameMode === GameMode.NukeWars) {
       numPlayerTeams = 2;
     }
+>>>>>>> Stashed changes
     if (typeof numPlayerTeams !== "number") {
       const players = this._humans.length + this._nations.length;
       switch (numPlayerTeams) {
@@ -330,11 +338,15 @@ export class GameImpl implements Game {
     return this._ticks <= this.config().numSpawnPhaseTurns();
   }
 
+<<<<<<< Updated upstream
+=======
   inPreparationPhase(): boolean {
     const spawn = this.config().numSpawnPhaseTurns();
     const prep = this.config().numPreparationPhaseTurns();
     return this._ticks > spawn && this._ticks <= spawn + prep;
   }
+
+>>>>>>> Stashed changes
   ticks(): number {
     return this._ticks;
   }

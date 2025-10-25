@@ -950,22 +950,6 @@ export class PlayerImpl implements Player {
     );
   }
 
-  private isInTeamSpawnZone(tile: TileRef): boolean {
-    const team = this.team();
-    if (!team) return false;
-
-    // Simple geometric split:
-    // Team 1 gets left half (x < width/2)
-    // Team 2 gets right half (x >= width/2)
-    const x = this.mg.x(tile);
-    const mapWidth = this.mg.width();
-    const midpoint = Math.floor(mapWidth / 2);
-    
-    // Team 1 gets left half, Team 2 gets right half
-    const isTeam1 = team === this.mg.teams()[0];
-    return isTeam1 ? x < midpoint : x >= midpoint;
-  }
-
   private canBuildShipNukeWars(
     unitType: UnitType,
     targetTile: TileRef,
@@ -990,17 +974,6 @@ export class PlayerImpl implements Player {
   }
 
   private canBuildNukeNukeWars(unitType: UnitType): boolean {
-    // Always block MIRVs in NukeWars
-    if (unitType === UnitType.MIRV) {
-      this.mg.displayMessage(
-        "MIRVs are not allowed in Nuke Wars mode",
-        MessageType.ATTACK_FAILED,
-        this.id(),
-      );
-      return false;
-    }
-
-    // Block nuclear weapons during preparation phase
     if (
       (unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb) &&
       this.mg.inPreparationPhase()
@@ -1025,6 +998,8 @@ export class PlayerImpl implements Player {
       return false;
     }
 
+<<<<<<< Updated upstream
+=======
     if (this.isNukeWarsAndBaikal()) {
       if (!this.canBuildShipNukeWars(unitType, targetTile)) {
         return false;
@@ -1042,6 +1017,7 @@ export class PlayerImpl implements Player {
       }
     }
 
+>>>>>>> Stashed changes
     const cost = this.mg.unitInfo(unitType).cost(this);
     if (!this.isAlive() || this.gold() < cost) {
       return false;
@@ -1055,9 +1031,12 @@ export class PlayerImpl implements Player {
         return this.nukeSpawn(targetTile);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+<<<<<<< Updated upstream
+=======
         if (this.isNukeWars() && !this.canBuildNukeNukeWars(unitType)) {
           return false;
         }
+>>>>>>> Stashed changes
         return this.nukeSpawn(targetTile);
       case UnitType.MIRVWarhead:
         return targetTile;
