@@ -1,6 +1,8 @@
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
+  GameMapType,
+  GameMode,
   MessageType,
   Player,
   Tick,
@@ -151,6 +153,33 @@ export class UnitImpl implements Unit {
   }
 
   move(tile: TileRef): void {
+    if (
+      this.mg.config().gameConfig().gameMode === GameMode.NukeWars &&
+      this.mg.config().gameConfig().gameMap === GameMapType.Baikal
+    ) {
+      const midpoint = this.mg.width() / 2;
+      const currentX = this.mg.x(this._tile);
+      const nextX = this.mg.x(tile);
+      const crossesMidpoint =
+        (currentX < midpoint && nextX >= midpoint) ||
+        (currentX >= midpoint && nextX < midpoint);
+
+      if (crossesMidpoint) {
+        const allowedTypes = [
+          UnitType.Warship,
+          UnitType.TradeShip,
+          UnitType.AtomBomb,
+          UnitType.HydrogenBomb,
+          UnitType.MIRV,
+          UnitType.MIRVWarhead,
+          UnitType.Shell,
+        ];
+        if (!allowedTypes.includes(this._type)) {
+          return; // Block movement
+        }
+      }
+    }
+
     if (tile === null) {
       throw new Error("tile cannot be null");
     }

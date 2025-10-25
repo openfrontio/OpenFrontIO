@@ -21,6 +21,8 @@ import {
   ColoredTeams,
   Embargo,
   EmojiMessage,
+  GameMapType,
+  GameMode,
   Gold,
   MessageType,
   MutableAlliance,
@@ -920,6 +922,23 @@ export class PlayerImpl implements Player {
       return false;
     }
 
+    if (
+      this.mg.config().gameConfig().gameMode === GameMode.NukeWars &&
+      this.mg.config().gameConfig().gameMap === GameMapType.Baikal &&
+      this.mg.inPreparationPhase()
+    ) {
+      const midpoint = this.mg.width() / 2;
+      const targetX = this.mg.x(targetTile);
+      const isTeam1 = this.smallID() % 2 === 1; // Team 1 is on the left
+
+      if (isTeam1 && targetX >= midpoint) {
+        return false;
+      }
+      if (!isTeam1 && targetX < midpoint) {
+        return false;
+      }
+    }
+
     const cost = this.mg.unitInfo(unitType).cost(this);
     if (!this.isAlive() || this.gold() < cost) {
       return false;
@@ -961,6 +980,9 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
+    if (this.mg.inPreparationPhase()) {
+      return false;
+    }
     const owner = this.mg.owner(tile);
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner)) {
