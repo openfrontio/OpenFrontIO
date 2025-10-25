@@ -637,6 +637,12 @@ export class GameView implements GameMap {
   inSpawnPhase(): boolean {
     return this.ticks() <= this._config.numSpawnPhaseTurns();
   }
+
+  inPreparationPhase(): boolean {
+    const spawn = this._config.numSpawnPhaseTurns();
+    const prep = this._config.numPreparationPhaseTurns();
+    return this.ticks() > spawn && this.ticks() <= spawn + prep;
+  }
   config(): Config {
     return this._config;
   }

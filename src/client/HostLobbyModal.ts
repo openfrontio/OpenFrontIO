@@ -269,9 +269,8 @@ export class HostLobbyModal extends LitElement {
           </div>
 
           ${
-            this.gameMode === GameMode.FFA
-              ? ""
-              : html`
+            this.gameMode === GameMode.Team
+              ? html`
                   <!-- Team Count Selection -->
                   <div class="options-section">
                     <div class="option-title">
@@ -299,6 +298,7 @@ export class HostLobbyModal extends LitElement {
                     </div>
                   </div>
                 `
+              : ""
           }
 
           <!-- Game Options -->
@@ -692,6 +692,8 @@ export class HostLobbyModal extends LitElement {
 
     // Enforce Nuke Wars restrictions
     if (value === GameMode.NukeWars) {
+      // Force 2 teams for Nuke Wars
+      this.teamCount = 2;
       // Force Baikal map
       if (this.selectedMap !== GameMapType.Baikal) {
         this.selectedMap = GameMapType.Baikal;

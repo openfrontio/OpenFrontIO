@@ -613,12 +613,16 @@ export class DefaultConfig implements Config {
     return 3;
   }
   numSpawnPhaseTurns(): number {
-    // Nuke Wars uses a 3 minute preparation phase (3 minutes = 180 seconds)
-    // Server tick is 100ms => 10 ticks per second -> 180 * 10 = 1800 ticks
-    if (this._gameConfig.gameMode === GameMode.NukeWars) {
-      return 180 * 10;
-    }
+    // Spawn phase (choosing spawn points) defaults
     return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+  }
+
+  numPreparationPhaseTurns(): number {
+    // Preparation phase duration (Nuke Wars uses a 3 minute prep phase)
+    if (this._gameConfig.gameMode === GameMode.NukeWars) {
+      return 180 * 10; // 180 seconds * 10 ticks/sec
+    }
+    return 0;
   }
   numBots(): number {
     return this.bots();

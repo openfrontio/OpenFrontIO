@@ -206,9 +206,8 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
-          ${this.gameMode === GameMode.FFA
-            ? ""
-            : html`
+          ${this.gameMode === GameMode.Team
+            ? html`
                 <!-- Team Count Selection -->
                 <div class="options-section">
                   <div class="option-title">
@@ -233,7 +232,8 @@ export class SinglePlayerModal extends LitElement {
                     )}
                   </div>
                 </div>
-              `}
+              `
+            : ""}
 
           <!-- Game Options -->
           <div class="options-section">
@@ -477,6 +477,8 @@ export class SinglePlayerModal extends LitElement {
 
     // Enforce Nuke Wars restrictions
     if (value === GameMode.NukeWars) {
+      // Force 2 teams for Nuke Wars
+      this.teamCount = 2;
       // Force Baikal map
       if (this.selectedMap !== GameMapType.Baikal) {
         this.selectedMap = GameMapType.Baikal;

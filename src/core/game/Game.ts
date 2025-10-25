@@ -656,6 +656,7 @@ export interface Game extends GameMap {
   isOnMap(cell: Cell): boolean;
   width(): number;
   height(): number;
+  inPreparationPhase(): boolean;
   map(): GameMap;
   miniMap(): GameMap;
   forEachTile(fn: (tile: TileRef) => void): void;

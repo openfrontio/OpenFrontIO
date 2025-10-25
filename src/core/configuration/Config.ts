@@ -88,6 +88,7 @@ export interface Config {
   donateTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
+  numPreparationPhaseTurns(): number;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
 
