@@ -1,19 +1,19 @@
 import { colord, Colord } from "colord";
-import { Theme } from "../../../core/configuration/Config";
-import { EventBus } from "../../../core/EventBus";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
-
 import cityIcon from "../../../../resources/images/buildings/cityAlt1.png";
 import factoryIcon from "../../../../resources/images/buildings/factoryAlt1.png";
 import shieldIcon from "../../../../resources/images/buildings/fortAlt3.png";
 import anchorIcon from "../../../../resources/images/buildings/port1.png";
 import missileSiloIcon from "../../../../resources/images/buildings/silo1.png";
 import SAMMissileIcon from "../../../../resources/images/buildings/silo4.png";
+import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { Cell, UnitType } from "../../../core/game/Game";
 import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { PlayerPack } from "../../../core/Schemas";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 
@@ -25,6 +25,7 @@ const ZOOM_THRESHOLD = 4.3; // below this zoom level, structures are not rendere
 
 interface UnitRenderConfig {
   icon: string;
+  key: string;
   borderRadius: number;
   territoryRadius: number;
 }
@@ -34,38 +35,46 @@ export class StructureLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private unitIcons: Map<string, HTMLImageElement> = new Map();
   private theme: Theme;
+  private pack: PlayerPack;
+  private structureLoaded = false;
   private tempCanvas: HTMLCanvasElement;
   private tempContext: CanvasRenderingContext2D;
 
   // Configuration for supported unit types only
-  private readonly unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
+  private unitConfigs: Partial<Record<UnitType, UnitRenderConfig>> = {
     [UnitType.Port]: {
       icon: anchorIcon,
+      key: "structurePort",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.City]: {
       icon: cityIcon,
+      key: "structureCity",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.Factory]: {
       icon: factoryIcon,
+      key: "structureFactory",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.MissileSilo]: {
       icon: missileSiloIcon,
+      key: "structureMissilesilo",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.DefensePost]: {
       icon: shieldIcon,
+      key: "structureDefensepost",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
     [UnitType.SAMLauncher]: {
       icon: SAMMissileIcon,
+      key: "structureSamlauncher",
       borderRadius: BASE_BORDER_RADIUS * RADIUS_SCALE_FACTOR,
       territoryRadius: BASE_TERRITORY_RADIUS * RADIUS_SCALE_FACTOR,
     },
@@ -86,6 +95,7 @@ export class StructureLayer implements Layer {
 
   private loadIcon(unitType: string, config: UnitRenderConfig) {
     const image = new Image();
+    console.log(`loading icon for ${unitType} from ${config.icon}`);
     image.src = config.icon;
     image.onload = () => {
       this.unitIcons.set(unitType, image);
@@ -98,8 +108,9 @@ export class StructureLayer implements Layer {
     };
   }
 
-  private loadIconData() {
+  private async loadIconData() {
     Object.entries(this.unitConfigs).forEach(([unitType, config]) => {
+      config.icon = this.pack?.[config.key] ?? config.icon;
       this.loadIcon(unitType, config);
     });
   }
@@ -115,6 +126,14 @@ export class StructureLayer implements Layer {
       const unit = this.game.unit(u.id);
       if (unit === undefined) continue;
       this.handleUnitRendering(unit);
+    }
+    if (!this.structureLoaded) {
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer) {
+        this.pack = myPlayer.cosmetics.pack ?? {};
+        this.loadIconData();
+        this.structureLoaded = true;
+      }
     }
   }
 
