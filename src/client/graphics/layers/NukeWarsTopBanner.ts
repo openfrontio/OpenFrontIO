@@ -1,4 +1,4 @@
-import { GameMapType, GameMode } from "../../../core/game/Game";
+import { GameMapType, GameMode, TeamGameType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 
@@ -19,7 +19,7 @@ export class NukeWarsTopBanner implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     const config = this.game.config().gameConfig();
-    if (config.gameMode !== GameMode.NukeWars) return;
+    if (!(config.gameMode === GameMode.Team && config.teamGameType === TeamGameType.NukeWars)) return;
     if (config.gameMap !== GameMapType.Baikal) return;
     const canvasWidth = context.canvas.width;
     const padding = 12;

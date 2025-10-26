@@ -13,6 +13,7 @@ import {
   Trios,
   UnitType,
   mapCategories,
+  TeamGameType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import {
@@ -38,6 +39,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private teamGameType: TeamGameType = TeamGameType.Standard;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -54,791 +56,1546 @@ export class HostLobbyModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
 
-  private readonly nukeWarsDisabledUnits = [
-    UnitType.City,
-    UnitType.Construction,
-    UnitType.DefensePost,
-    UnitType.Port,
-    UnitType.TransportShip,
-    UnitType.Warship,
-    UnitType.Train,
-    UnitType.TradeShip,
-    UnitType.MIRV,
-  ];
-  @state() private lobbyCreatorClientID: string = "";
-  @state() private lobbyIdVisible: boolean = true;
+    @state() private lobbyCreatorClientID: string = "";
 
-  private playersInterval: NodeJS.Timeout | null = null;
-  // Add a new timer for debouncing bot changes
-  private botsUpdateTimer: number | null = null;
-  private userSettings: UserSettings = new UserSettings();
+    @state() private lobbyIdVisible: boolean = true;
 
-  connectedCallback() {
-    super.connectedCallback();
-    window.addEventListener("keydown", this.handleKeyDown);
-  }
+  
 
-  disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyDown);
-    super.disconnectedCallback();
-  }
+    private playersInterval: NodeJS.Timeout | null = null;
 
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === "Escape") {
-      e.preventDefault();
-      this.close();
-    }
-  };
+    // Add a new timer for debouncing bot changes
 
-  render() {
-    return html`
-      <o-modal title=${translateText("host_modal.title")}>
-        <div class="lobby-id-box">
-          <button class="lobby-id-button">
-            <!-- Visibility toggle icon on the left -->
-            ${
-              this.lobbyIdVisible
-                ? html`<svg
-                    class="visibility-icon"
-                    @click=${() => {
-                      this.lobbyIdVisible = !this.lobbyIdVisible;
-                      this.requestUpdate();
-                    }}
-                    style="margin-right: 8px; cursor: pointer;"
-                    stroke="currentColor"
-                    fill="currentColor"
-                    stroke-width="0"
-                    viewBox="0 0 512 512"
-                    height="18px"
-                    width="18px"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
-                    ></path>
-                  </svg>`
-                : html`<svg
-                    class="visibility-icon"
-                    @click=${() => {
-                      this.lobbyIdVisible = !this.lobbyIdVisible;
-                      this.requestUpdate();
-                    }}
-                    style="margin-right: 8px; cursor: pointer;"
-                    stroke="currentColor"
-                    fill="currentColor"
-                    stroke-width="0"
-                    viewBox="0 0 512 512"
-                    height="18px"
-                    width="18px"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="32"
-                    ></path>
-                    <path
-                      d="M144 256l224 0"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="32"
-                      stroke-linecap="round"
-                    ></path>
-                  </svg>`
-            }
-            <!-- Lobby ID (conditionally shown) -->
-            <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
-              ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
-            </span>
-          </button>
-        </div>
-        <div class="options-layout">
-          <!-- Map Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("map.map")}</div>
-            <div class="option-cards flex-col">
-              <!-- Use the imported mapCategories -->
-              ${Object.entries(mapCategories).map(
-                ([categoryKey, maps]) => html`
-                  <div class="w-full mb-4">
-                    <h3
-                      class="text-lg font-semibold mb-2 text-center text-gray-300"
-                    >
-                      ${translateText(`map_categories.${categoryKey}`)}
-                    </h3>
-                    <div class="flex flex-row flex-wrap justify-center gap-4">
-                      ${maps.map((mapValue) => {
-                        const mapKey = Object.keys(GameMapType).find(
-                          (key) =>
-                            GameMapType[key as keyof typeof GameMapType] ===
-                            mapValue,
-                        );
-                        return html`
-                          <div
-                            @click=${() => this.handleMapSelection(mapValue)}
-                          >
-                            <map-display
-                              .mapKey=${mapKey}
-                              .selected=${!this.useRandomMap &&
-                              this.selectedMap === mapValue}
-                              .translation=${translateText(
-                                `map.${mapKey?.toLowerCase()}`,
-                              )}
-                            ></map-display>
-                          </div>
-                        `;
-                      })}
-                    </div>
-                  </div>
-                `,
-              )}
-              <div
-                class="option-card random-map ${
-                  this.useRandomMap ? "selected" : ""
-                }"
-                @click=${this.handleRandomMapToggle}
-              >
-                <div class="option-image">
-                  <img
-                    src=${randomMap}
-                    alt="Random Map"
-                    style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
-                  />
-                </div>
-                <div class="option-card-title">
-                  ${translateText("map.random")}
-                </div>
-              </div>
-            </div>
-          </div>
+    private botsUpdateTimer: number | null = null;
 
-          <!-- Difficulty Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("difficulty.difficulty")}</div>
-            <div class="option-cards">
-              ${Object.entries(Difficulty)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
-                    >
-                      <difficulty-display
-                        .difficultyKey=${key}
-                      ></difficulty-display>
-                      <p class="option-card-title">
-                        ${translateText(`difficulty.${key}`)}
-                      </p>
-                    </div>
-                  `,
-                )}
-            </div>
-          </div>
+    private userSettings: UserSettings = new UserSettings();
 
-          <!-- Game Mode Selection -->
-          <div class="options-section">
-            <div class="option-title">${translateText("host_modal.mode")}</div>
-            <div class="option-cards">
-              <div
-                class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
-              >
-                <div class="option-card-title">
-                  ${translateText("game_mode.ffa")}
-                </div>
-              </div>
-              <div
-                class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.Team)}
-              >
-                <div class="option-card-title">
-                  ${translateText("game_mode.teams")}
-                </div>
-              </div>
-              <div
-                class="option-card ${this.gameMode === GameMode.NukeWars ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.NukeWars)}
-              >
-                <div class="option-card-title">Nuke Wars</div>
-              </div>
-            </div>
-          </div>
+  
 
-          ${
-            this.gameMode === GameMode.Team
-              ? html`
-                  <!-- Team Count Selection -->
-                  <div class="options-section">
-                    <div class="option-title">
-                      ${translateText("host_modal.team_count")}
-                    </div>
-                    <div class="option-cards">
-                      ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
-                        (o) => html`
-                          <div
-                            class="option-card ${this.teamCount === o
-                              ? "selected"
-                              : ""}"
-                            @click=${() => this.handleTeamCountSelection(o)}
-                          >
-                            <div class="option-card-title">
-                              ${typeof o === "string"
-                                ? translateText(`public_lobby.teams_${o}`)
-                                : translateText("public_lobby.teams", {
-                                    num: o,
-                                  })}
-                            </div>
-                          </div>
-                        `,
-                      )}
-                    </div>
-                  </div>
-                `
-              : ""
-          }
+    connectedCallback() {
 
-          <!-- Game Options -->
-          <div class="options-section">
-            <div class="option-title">
-              ${translateText("host_modal.options_title")}
-            </div>
-            <div class="option-cards">
-              <label for="bots-count" class="option-card">
-                <input
-                  type="range"
-                  id="bots-count"
-                  min="0"
-                  max="400"
-                  step="1"
-                  @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
-                />
-                <div class="option-card-title">
-                  <span>${translateText("host_modal.bots")}</span>${
-                    this.bots === 0
-                      ? translateText("host_modal.bots_disabled")
-                      : this.bots
-                  }
-                </div>
-              </label>
+      super.connectedCallback();
 
-                <label
-                  for="disable-npcs"
-                  class="option-card ${this.disableNPCs ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="disable-npcs"
-                    @change=${this.handleDisableNPCsChange}
-                    .checked=${this.disableNPCs}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.disable_nations")}
-                  </div>
-                </label>
+      window.addEventListener("keydown", this.handleKeyDown);
 
-                <label
-                  for="instant-build"
-                  class="option-card ${this.instantBuild ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="instant-build"
-                    @change=${this.handleInstantBuildChange}
-                    .checked=${this.instantBuild}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.instant_build")}
-                  </div>
-                </label>
-
-                <label
-                  for="donate-gold"
-                  class="option-card ${this.donateGold ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="donate-gold"
-                    @change=${this.handleDonateGoldChange}
-                    .checked=${this.donateGold}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.donate_gold")}
-                  </div>
-                </label>
-
-                <label
-                  for="donate-troops"
-                  class="option-card ${this.donateTroops ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="donate-troops"
-                    @change=${this.handleDonateTroopsChange}
-                    .checked=${this.donateTroops}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.donate_troops")}
-                  </div>
-                </label>
-
-                <label
-                  for="infinite-gold"
-                  class="option-card ${this.infiniteGold ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-gold"
-                    @change=${this.handleInfiniteGoldChange}
-                    .checked=${this.infiniteGold}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_gold")}
-                  </div>
-                </label>
-
-                <label
-                  for="infinite-troops"
-                  class="option-card ${this.infiniteTroops ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="infinite-troops"
-                    @change=${this.handleInfiniteTroopsChange}
-                    .checked=${this.infiniteTroops}
-                  />
-                  <div class="option-card-title">
-                    ${translateText("host_modal.infinite_troops")}
-                  </div>
-                </label>
-                <label
-                for="host-modal-compact-map"
-                class="option-card ${this.compactMap ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="host-modal-compact-map"
-                  @change=${this.handleCompactMapChange}
-                  .checked=${this.compactMap}
-                />
-                <div class="option-card-title">
-                  ${translateText("host_modal.compact_map")}
-                </div>
-              </label>
-
-                <label
-                  for="max-timer"
-                class="option-card ${this.maxTimer ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
-                  <input
-                    type="checkbox"
-                    id="max-timer"
-                    @change=${(e: Event) => {
-                      const checked = (e.target as HTMLInputElement).checked;
-                      if (!checked) {
-                        this.maxTimerValue = undefined;
-                      }
-                      this.maxTimer = checked;
-                      this.putGameConfig();
-                    }}
-                    .checked=${this.maxTimer}
-                  />
-                    ${
-                      this.maxTimer === false
-                        ? ""
-                        : html`<input
-                            type="number"
-                            id="end-timer-value"
-                            min="0"
-                            max="120"
-                            .value=${String(this.maxTimerValue ?? "")}
-                            style="width: 60px; color: black; text-align: right; border-radius: 8px;"
-                            @input=${this.handleMaxTimerValueChanges}
-                            @keydown=${this.handleMaxTimerValueKeyDown}
-                          />`
-                    }
-                  <div class="option-card-title">
-                    ${translateText("host_modal.max_timer")}
-                  </div>
-                </label>
-                <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
-
-                <!-- Individual disables for structures/weapons -->
-                <div
-                  style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
-                >
-                  ${translateText("host_modal.enables_title")}
-                </div>
-                <div
-                  style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
-                >
-                   ${renderUnitTypeOptions({
-                     disabledUnits: this.disabledUnits,
-                     toggleUnit: this.toggleUnit.bind(this),
-                   })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        <!-- Lobby Selection -->
-        <div class="options-section">
-          <div class="option-title">
-            ${this.clients.length}
-            ${
-              this.clients.length === 1
-                ? translateText("host_modal.player")
-                : translateText("host_modal.players")
-            }
-          </div>
-
-          <div class="players-list">
-            ${this.clients.map(
-              (client) => html`
-                <span class="player-tag">
-                  ${client.username}
-                  ${client.clientID === this.lobbyCreatorClientID
-                    ? html`<span class="host-badge"
-                        >(${translateText("host_modal.host_badge")})</span
-                      >`
-                    : html`
-                        <button
-                          class="remove-player-btn"
-                          @click=${() => this.kickPlayer(client.clientID)}
-                          title="Remove ${client.username}"
-                        >
-                          ×
-                        </button>
-                      `}
-                </span>
-              `,
-            )}
-        </div>
-
-        <div class="start-game-button-container">
-          <button
-            @click=${this.startGame}
-            ?disabled=${this.clients.length < 2}
-            class="start-game-button"
-          >
-            ${
-              this.clients.length === 1
-                ? translateText("host_modal.waiting")
-                : translateText("host_modal.start")
-            }
-          </button>
-        </div>
-
-      </div>
-    </o-modal>
-    `;
-  }
-
-  createRenderRoot() {
-    return this;
-  }
-
-  public open() {
-    this.lobbyCreatorClientID = generateID();
-    this.lobbyIdVisible = this.userSettings.get(
-      "settings.lobbyIdVisibility",
-      true,
-    );
-
-    createLobby(this.lobbyCreatorClientID)
-      .then((lobby) => {
-        this.lobbyId = lobby.gameID;
-        // join lobby
-      })
-      .then(() => {
-        this.dispatchEvent(
-          new CustomEvent("join-lobby", {
-            detail: {
-              gameID: this.lobbyId,
-              clientID: this.lobbyCreatorClientID,
-            } as JoinLobbyEvent,
-            bubbles: true,
-            composed: true,
-          }),
-        );
-      });
-    this.modalEl?.open();
-    this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
-  }
-
-  public close() {
-    this.modalEl?.close();
-    this.copySuccess = false;
-    if (this.playersInterval) {
-      clearInterval(this.playersInterval);
-      this.playersInterval = null;
-    }
-    // Clear any pending bot updates
-    if (this.botsUpdateTimer !== null) {
-      clearTimeout(this.botsUpdateTimer);
-      this.botsUpdateTimer = null;
-    }
-  }
-
-  private async handleRandomMapToggle() {
-    this.useRandomMap = true;
-    this.putGameConfig();
-  }
-
-  private async handleMapSelection(value: GameMapType) {
-    this.selectedMap = value;
-    this.useRandomMap = false;
-    this.putGameConfig();
-  }
-
-  private async handleDifficultySelection(value: Difficulty) {
-    this.selectedDifficulty = value;
-    this.putGameConfig();
-  }
-
-  // Modified to include debouncing
-  private handleBotsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
-    if (isNaN(value) || value < 0 || value > 400) {
-      return;
     }
 
-    // Update the display value immediately
-    this.bots = value;
+  
 
-    // Clear any existing timer
-    if (this.botsUpdateTimer !== null) {
-      clearTimeout(this.botsUpdateTimer);
+    disconnectedCallback() {
+
+      window.removeEventListener("keydown", this.handleKeyDown);
+
+      super.disconnectedCallback();
+
     }
 
-    // Set a new timer to call putGameConfig after 300ms of inactivity
-    this.botsUpdateTimer = window.setTimeout(() => {
-      this.putGameConfig();
-      this.botsUpdateTimer = null;
-    }, 300);
-  }
+  
 
-  private handleInstantBuildChange(e: Event) {
-    this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
+    private handleKeyDown = (e: KeyboardEvent) => {
 
-  private handleInfiniteGoldChange(e: Event) {
-    this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
+      if (e.code === "Escape") {
 
-  private handleDonateGoldChange(e: Event) {
-    this.donateGold = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
+        e.preventDefault();
 
-  private handleInfiniteTroopsChange(e: Event) {
-    this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
+        this.close();
 
-  private handleCompactMapChange(e: Event) {
-    this.compactMap = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
-
-  private handleDonateTroopsChange(e: Event) {
-    this.donateTroops = Boolean((e.target as HTMLInputElement).checked);
-    this.putGameConfig();
-  }
-
-  private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
-
-  private handleMaxTimerValueChanges(e: Event) {
-    (e.target as HTMLInputElement).value = (
-      e.target as HTMLInputElement
-    ).value.replace(/[e+-]/gi, "");
-    const value = parseInt((e.target as HTMLInputElement).value);
-
-    if (isNaN(value) || value < 0 || value > 120) {
-      return;
-    }
-    this.maxTimerValue = value;
-    this.putGameConfig();
-  }
-
-  private async handleDisableNPCsChange(e: Event) {
-    this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
-    console.log(`updating disable npcs to ${this.disableNPCs}`);
-    this.putGameConfig();
-  }
-
-  private async handleGameModeSelection(value: GameMode) {
-    this.gameMode = value;
-
-    // Enforce Nuke Wars restrictions
-    if (value === GameMode.NukeWars) {
-      // Force 2 teams for Nuke Wars
-      this.teamCount = 2;
-      // Force Baikal map
-      if (this.selectedMap !== GameMapType.Baikal) {
-        this.selectedMap = GameMapType.Baikal;
-        this.useRandomMap = false;
       }
 
-      // Disable all units except missiles and SAMs
-      this.disabledUnits = [...this.nukeWarsDisabledUnits];
-    } else {
+    };
+
+  
+
+    render() {
+
+      return html`
+
+        <o-modal title=${translateText("host_modal.title")}>
+
+          <div class="lobby-id-box">
+
+            <button class="lobby-id-button">
+
+              <!-- Visibility toggle icon on the left -->
+
+              ${
+
+                this.lobbyIdVisible
+
+                  ? html`<svg
+
+                      class="visibility-icon"
+
+                      @click=${() => {
+
+                        this.lobbyIdVisible = !this.lobbyIdVisible;
+
+                        this.requestUpdate();
+
+                      }}
+
+                      style="margin-right: 8px; cursor: pointer;"
+
+                      stroke="currentColor"
+
+                      fill="currentColor"
+
+                      stroke-width="0"
+
+                      viewBox="0 0 512 512"
+
+                      height="18px"
+
+                      width="18px"
+
+                      xmlns="http://www.w3.org/2000/svg"
+
+                    >
+
+                      <path
+
+                        d="M256 105c-101.8 0-188.4 62.7-224 151 35.6 88.3 122.2 151 224 151s188.4-62.7 224-151c-35.6-88.3-122.2-151-224-151zm0 251.7c-56 0-101.7-45.7-101.7-101.7S200 153.3 256 153.3 357.7 199 357.7 255 312 356.7 256 356.7zm0-161.1c-33 0-59.4 26.4-59.4 59.4s26.4 59.4 59.4 59.4 59.4-26.4 59.4-59.4-26.4-59.4-59.4-59.4z"
+
+                      ></path>
+
+                    </svg>`
+
+                  : html`<svg
+
+                      class="visibility-icon"
+
+                      @click=${() => {
+
+                        this.lobbyIdVisible = !this.lobbyIdVisible;
+
+                        this.requestUpdate();
+
+                      }}
+
+                      style="margin-right: 8px; cursor: pointer;"
+
+                      stroke="currentColor"
+
+                      fill="currentColor"
+
+                      stroke-width="0"
+
+                      viewBox="0 0 512 512"
+
+                      height="18px"
+
+                      width="18px"
+
+                      xmlns="http://www.w3.org/2000/svg"
+
+                    >
+
+                      <path
+
+                        d="M448 256s-64-128-192-128S64 256 64 256c32 64 96 128 192 128s160-64 192-128z"
+
+                        fill="none"
+
+                        stroke="currentColor"
+
+                        stroke-width="32"
+
+                        ></path>
+
+                      <path
+
+                        d="M144 256l224 0"
+
+                        fill="none"
+
+                        stroke="currentColor"
+
+                        stroke-width="32"
+
+                        stroke-linecap="round"
+
+                      ></path>
+
+                    </svg>`
+
+              }
+
+              <!-- Lobby ID (conditionally shown) -->
+
+              <span class="lobby-id" @click=${this.copyToClipboard} style="cursor: pointer;">
+
+                ${this.lobbyIdVisible ? this.lobbyId : "••••••••"}
+
+              </span>
+
+            </button>
+
+          </div>
+
+          <div class="options-layout">
+
+            <!-- Map Selection -->
+
+            <div class="options-section">
+
+              <div class="option-title">${translateText("map.map")}</div>
+
+              <div class="option-cards flex-col">
+
+                <!-- Use the imported mapCategories -->
+
+                ${Object.entries(mapCategories).map(
+
+                  ([categoryKey, maps]) => html`
+
+                    <div class="w-full mb-4">
+
+                      <h3
+
+                        class="text-lg font-semibold mb-2 text-center text-gray-300"
+
+                      >
+
+                        ${translateText(`map_categories.${categoryKey}`)}
+
+                      </h3>
+
+                      <div class="flex flex-row flex-wrap justify-center gap-4">
+
+                        ${maps.map((mapValue) => {
+
+                          const mapKey = Object.keys(GameMapType).find(
+
+                            (key) =>
+
+                              GameMapType[key as keyof typeof GameMapType] ===
+
+                              mapValue,
+
+                          );
+
+                          return html`
+
+                            <div
+
+                              @click=${() => this.handleMapSelection(mapValue)}
+
+                            >
+
+                              <map-display
+
+                                .mapKey=${mapKey}
+
+                                .selected=${!this.useRandomMap &&
+
+                                this.selectedMap === mapValue}
+
+                                .translation=${translateText(
+
+                                  `map.${mapKey?.toLowerCase()}`,
+
+                                )}
+
+                              ></map-display>
+
+                            </div>
+
+                          `;
+
+                        })}
+
+                      </div>
+
+                    </div>
+
+                  `,
+
+                )}
+
+                <div
+
+                  class="option-card random-map ${this.useRandomMap ? "selected" : ""}"
+
+                  @click=${this.handleRandomMapToggle}
+
+                >
+
+                  <div class="option-image">
+
+                    <img
+
+                      src=${randomMap}
+
+                      alt="Random Map"
+
+                      style="width:100%; aspect-ratio: 4/2; object-fit:cover; border-radius:8px;"
+
+                    />
+
+                  </div>
+
+                  <div class="option-card-title">
+
+                    ${translateText("map.random")}
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+  
+
+            <!-- Difficulty Selection -->
+
+            <div class="options-section">
+
+              <div class="option-title">${translateText("difficulty.difficulty")}</div>
+
+              <div class="option-cards">
+
+                ${Object.entries(Difficulty)
+
+                  .filter(([key]) => isNaN(Number(key)))
+
+                  .map(
+
+                    ([key, value]) => html`
+
+                      <div
+
+                        class="option-card ${this.selectedDifficulty === value
+
+                          ? "selected" : ""}"
+
+                        @click=${() => this.handleDifficultySelection(value)}
+
+                      >
+
+                        <difficulty-display
+
+                          .difficultyKey=${key}
+
+                        ></difficulty-display>
+
+                        <p class="option-card-title">
+
+                          ${translateText(`difficulty.${key}`)}
+
+                        </p>
+
+                      </div>
+
+                    `,
+
+                  )}
+
+              </div>
+
+            </div>
+
+  
+
+            <!-- Game Mode Selection -->
+
+            <div class="options-section">
+
+              <div class="option-title">${translateText("host_modal.mode")}</div>
+
+              <div class="option-cards">
+
+                <div
+
+                  class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
+
+                  @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+
+                >
+
+                  <div class="option-card-title">
+
+                    ${translateText("game_mode.ffa")}
+
+                  </div>
+
+                </div>
+
+                <div
+
+                  class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
+
+                  @click=${() => this.handleGameModeSelection(GameMode.Team)}
+
+                >
+
+                  <div class="option-card-title">
+
+                    ${translateText("game_mode.teams")}
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+  
+
+            ${
+
+              this.gameMode === GameMode.Team
+
+                ? html`
+
+                    <!-- Team Game Type Selection -->
+
+                    <div class="options-section">
+
+                      <div class="option-title">Team Game Type</div>
+
+                      <div class="option-cards">
+
+                        <div
+
+                          class="option-card ${this.teamGameType === TeamGameType.Standard ? "selected" : ""}"
+
+                          @click=${() => this.handleTeamGameTypeSelection(TeamGameType.Standard)}
+
+                        >
+
+                          <div class="option-card-title">Standard Team</div>
+
+                        </div>
+
+                        <div
+
+                          class="option-card ${this.teamGameType === TeamGameType.NukeWars ? "selected" : ""}"
+
+                          @click=${() => this.handleTeamGameTypeSelection(TeamGameType.NukeWars)}
+
+                        >
+
+                          <div class="option-card-title">Nuke Wars</div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                    <!-- Team Count Selection -->
+
+                    <div class="options-section">
+
+                      <div class="option-title">
+
+                        ${translateText("host_modal.team_count")}
+
+                      </div>
+
+                      <div class="option-cards">
+
+                        ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
+
+                          (o) => html`
+
+                            <div
+
+                              class="option-card ${this.teamCount === o
+
+                                ? "selected" : ""}"
+
+                              @click=${() => this.handleTeamCountSelection(o)}
+
+                            >
+
+                              <div class="option-card-title">
+
+                                ${typeof o === "string"
+
+                                  ? translateText(`public_lobby.teams_${o}`)
+
+                                  : translateText("public_lobby.teams", {
+
+                                      num: o,
+
+                                    })}
+
+                              </div>
+
+                            </div>
+
+                          `,
+
+                        )}
+
+                      </div>
+
+                    </div>
+
+                  `
+
+                : ""
+
+            }
+
+  
+
+            <!-- Game Options -->
+
+            <div class="options-section">
+
+              <div class="option-title">
+
+                ${translateText("host_modal.options_title")}
+
+              </div>
+
+              <div class="option-cards">
+
+                <label for="bots-count" class="option-card">
+
+                  <input
+
+                    type="range"
+
+                    id="bots-count"
+
+                    min="0"
+
+                    max="400"
+
+                    step="1"
+
+                    @input=${this.handleBotsChange}
+
+                    @change=${this.handleBotsChange}
+
+                    .value="${String(this.bots)}"
+
+                  />
+
+                  <div class="option-card-title">
+
+                    <span>${translateText("host_modal.bots")}</span>${
+
+                      this.bots === 0
+
+                        ? translateText("host_modal.bots_disabled")
+
+                        : this.bots
+
+                    }
+
+                  </div>
+
+                </label>
+
+  
+
+                  <label
+
+                    for="disable-npcs"
+
+                    class="option-card ${this.disableNPCs ? "selected" : ""}"
+
+                  >
+
+                    <div class="checkbox-icon"></div>
+
+                    <input
+
+                      type="checkbox"
+
+                      id="disable-npcs"
+
+                      @change=${this.handleDisableNPCsChange}
+
+                      .checked=${this.disableNPCs}
+
+                    />
+
+                    <div class="option-card-title">
+
+                      ${translateText("host_modal.disable_nations")}
+
+                    </div>
+
+                  </label>
+
+  
+
+                  <label
+
+                    for="instant-build"
+
+                    class="option-card ${this.instantBuild ? "selected" : ""}"
+
+                  >
+
+                    <div class="checkbox-icon"></div>
+
+                    <input
+
+                      type="checkbox"
+
+                      id="instant-build"
+
+                      @change=${this.handleInstantBuildChange}
+
+                      .checked=${this.instantBuild}
+
+                    />
+
+                    <div class="option-card-title">
+
+                      ${translateText("host_modal.instant_build")}
+
+                    </div>
+
+                  </label>
+
+  
+
+                  <label
+
+                    for="donate-gold"
+
+                    class="option-card ${this.donateGold ? "selected" : ""}"
+
+                  >
+
+                    <div class="checkbox-icon"></div>
+
+                    <input
+
+                      type="checkbox"
+
+                      id="donate-gold"
+
+                      @change=${this.handleDonateGoldChange}
+
+                      .checked=${this.donateGold}
+
+                    />
+
+                    <div class="option-card-title">
+
+                      ${translateText("host_modal.donate_gold")}
+
+                    }
+
+                  </label>
+
+  
+
+                  <label
+
+                    for="donate-troops"
+
+                    class="option-card ${this.donateTroops ? "selected" : ""}"
+
+                  >
+
+                    <div class="checkbox-icon"></div>
+
+                    <input
+
+                      type="checkbox"
+
+                      id="donate-troops"
+
+                      @change=${this.handleDonateTroopsChange}
+
+                      .checked=${this.donateTroops}
+
+                    />
+
+                    <div class="option-card-title">
+
+                      ${translateText("host_modal.donate_troops")}
+
+                    }
+
+                  </label>
+
+  
+
+                  <label
+
+                    for="infinite-gold"
+
+                    class="option-card ${this.infiniteGold ? "selected" : ""}"
+
+                  >
+
+                    <div class="checkbox-icon"></div>
+
+                    <input
+
+                      type="checkbox"
+
+                      id="infinite-gold"
+
+                      @change=${this.handleInfiniteGoldChange}
+
+                      .checked=${this.infiniteGold}
+
+                    />
+
+                    <div class="option-card-title">
+
+                      ${translateText("host_modal.infinite_gold")}
+
+                    }
+
+                  </label>
+
+  
+
+                  <label
+
+                    for="infinite-troops"
+
+                    class="option-card ${this.infiniteTroops ? "selected" : ""}"
+
+                  >
+
+                    <div class="checkbox-icon"></div>
+
+                    <input
+
+                      type="checkbox"
+
+                      id="infinite-troops"
+
+                      @change=${this.handleInfiniteTroopsChange}
+
+                      .checked=${this.infiniteTroops}
+
+                    />
+
+                    <div class="option-card-title">
+
+                      ${translateText("host_modal.infinite_troops")}
+
+                    }
+
+                  </label>
+
+                  <label
+
+                  for="host-modal-compact-map"
+
+                  class="option-card ${this.compactMap ? "selected" : ""}"
+
+                >
+
+                  <div class="checkbox-icon"></div>
+
+                  <input
+
+                    type="checkbox"
+
+                    id="host-modal-compact-map"
+
+                    @change=${this.handleCompactMapChange}
+
+                    .checked=${this.compactMap}
+
+                  />
+
+                  <div class="option-card-title">
+
+                    ${translateText("host_modal.compact_map")}
+
+                  </div>
+
+                </label>
+
+  
+
+                  <label
+
+                    for="max-timer"
+
+                  class="option-card ${this.maxTimer ? "selected" : ""}"
+
+                  >
+
+                    <div class="checkbox-icon"></div>
+
+                    <input
+
+                      type="checkbox"
+
+                      id="max-timer"
+
+                      @change=${(e: Event) => {
+
+                        const checked = (e.target as HTMLInputElement).checked;
+
+                        if (!checked) {
+
+                          this.maxTimerValue = undefined;
+
+                        }
+
+                        this.maxTimer = checked;
+
+                        this.putGameConfig();
+
+                      }}
+
+                      .checked=${this.maxTimer}
+
+                    />
+
+                      ${
+
+                        this.maxTimer === false
+
+                          ? ""
+
+                          : html`<input
+
+                              type="number"
+
+                              id="end-timer-value"
+
+                              min="0"
+
+                              max="120"
+
+                              .value=${String(this.maxTimerValue ?? "")}
+
+                              style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+
+                              @input=${this.handleMaxTimerValueChanges}
+
+                              @keydown=${this.handleMaxTimerValueKeyDown}
+
+                            />`
+
+                      }
+
+                    <div class="option-card-title">
+
+                      ${translateText("host_modal.max_timer")}
+
+                    }
+
+                  </label>
+
+                  <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
+
+  
+
+                  <!-- Individual disables for structures/weapons -->
+
+                  <div
+
+                    style="margin: 8px 0 12px 0; font-weight: bold; color: #ccc; text-align: center;"
+
+                  >
+
+                    ${translateText("host_modal.enables_title")}
+
+                  </div>
+
+                  <div
+
+                    style="display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;"
+
+                  >
+
+                     ${renderUnitTypeOptions({
+
+                       disabledUnits: this.disabledUnits,
+
+                       toggleUnit: this.toggleUnit.bind(this),
+
+                     })}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+  
+
+          <!-- Lobby Selection -->
+
+          <div class="options-section">
+
+            <div class="option-title">
+
+              ${this.clients.length}
+
+              ${
+
+                this.clients.length === 1
+
+                  ? translateText("host_modal.player")
+
+                  : translateText("host_modal.players")}
+
+            </div>
+
+  
+
+            <div class="players-list">
+
+              ${this.clients.map(
+
+                (client) => html`
+
+                  <span class="player-tag">
+
+                    ${client.username}
+
+                    ${client.clientID === this.lobbyCreatorClientID
+
+                      ? html`<span class="host-badge"
+
+                          >((${translateText("host_modal.host_badge")}))</span
+
+                        >`
+
+                      : html`
+
+                          <button
+
+                            class="remove-player-btn"
+
+                            @click=${() => this.kickPlayer(client.clientID)}
+
+                            title="Remove ${client.username}"
+
+                          >
+
+                            ×
+
+                          </button>
+
+                        `}
+
+                  </span>
+
+                `,
+
+              )}
+
+          </div>
+
+  
+
+          <div class="start-game-button-container">
+
+            <button
+
+              @click=${this.startGame}
+
+              ?disabled=${this.clients.length < 2}
+
+              class="start-game-button"
+
+            >
+
+              ${
+
+                this.clients.length === 1
+
+                  ? translateText("host_modal.waiting")
+
+                  : translateText("host_modal.start")}
+
+            </button>
+
+          </div>
+
+  
+
+        </div>
+
+      </o-modal>
+
+      `;
+
+    }
+
+  
+
+    createRenderRoot() {
+
+      return this;
+
+    }
+
+  
+
+    public open() {
+
+      this.lobbyCreatorClientID = generateID();
+
+      this.lobbyIdVisible = this.userSettings.get(
+
+        "settings.lobbyIdVisibility",
+
+        true,
+
+      );
+
+  
+
+      createLobby(this.lobbyCreatorClientID)
+
+        .then((lobby) => {
+
+          this.lobbyId = lobby.gameID;
+
+          // join lobby
+
+        })
+
+        .then(() => {
+
+          this.dispatchEvent(
+
+            new CustomEvent("join-lobby", {
+
+              detail: {
+
+                gameID: this.lobbyId,
+
+                clientID: this.lobbyCreatorClientID,
+
+              } as JoinLobbyEvent,
+
+              bubbles: true,
+
+              composed: true,
+
+            }),
+
+          );
+
+        });
+
+      this.modalEl?.open();
+
+      this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
+
+    }
+
+  
+
+    public close() {
+
+      this.modalEl?.close();
+
+      this.copySuccess = false;
+
+      if (this.playersInterval) {
+
+        clearInterval(this.playersInterval);
+
+        this.playersInterval = null;
+
+      }
+
+      // Clear any pending bot updates
+
+      if (this.botsUpdateTimer !== null) {
+
+        clearTimeout(this.botsUpdateTimer);
+
+        this.botsUpdateTimer = null;
+
+      }
+
+    }
+
+  
+
+    private async handleRandomMapToggle() {
+
+      this.useRandomMap = true;
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private async handleMapSelection(value: GameMapType) {
+
+      this.selectedMap = value;
+
+      this.useRandomMap = false;
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private async handleDifficultySelection(value: Difficulty) {
+
+      this.selectedDifficulty = value;
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    // Modified to include debouncing
+
+    private handleBotsChange(e: Event) {
+
+      const value = parseInt((e.target as HTMLInputElement).value);
+
+      if (isNaN(value) || value < 0 || value > 400) {
+
+        return;
+
+      }
+
+  
+
+      // Update the display value immediately
+
+      this.bots = value;
+
+  
+
+      // Clear any existing timer
+
+      if (this.botsUpdateTimer !== null) {
+
+        clearTimeout(this.botsUpdateTimer);
+
+      }
+
+  
+
+      // Set a new timer to call putGameConfig after 300ms of inactivity
+
+      this.botsUpdateTimer = window.setTimeout(() => {
+
+        this.putGameConfig();
+
+        this.botsUpdateTimer = null;
+
+      }, 300);
+
+    }
+
+  
+
+    private handleInstantBuildChange(e: Event) {
+
+      this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private handleInfiniteGoldChange(e: Event) {
+
+      this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private handleDonateGoldChange(e: Event) {
+
+      this.donateGold = Boolean((e.target as HTMLInputElement).checked);
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private handleInfiniteTroopsChange(e: Event) {
+
+      this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private handleCompactMapChange(e: Event) {
+
+      this.compactMap = Boolean((e.target as HTMLInputElement).checked);
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private handleDonateTroopsChange(e: Event) {
+
+      this.donateTroops = Boolean((e.target as HTMLInputElement).checked);
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
+
+      if (["-", "+", "e"].includes(e.key)) {
+
+        e.preventDefault();
+
+      }
+
+    }
+
+  
+
+    private handleMaxTimerValueChanges(e: Event) {
+
+      (e.target as HTMLInputElement).value = (
+
+        e.target as HTMLInputElement
+
+      ).value.replace(/[e+-]/gi, "");
+
+      const value = parseInt((e.target as HTMLInputElement).value);
+
+  
+
+      if (isNaN(value) || value < 0 || value > 120) {
+
+        return;
+
+      }
+
+      this.maxTimerValue = value;
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private async handleDisableNPCsChange(e: Event) {
+
+      this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
+
+      console.log(`updating disable npcs to ${this.disableNPCs}`);
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private async handleGameModeSelection(value: GameMode) {
+      this.gameMode = value;
+      if (value === GameMode.FFA) {
+        this.teamGameType = TeamGameType.Standard;
+      }
       // Clear disabled units when switching to other modes
       this.disabledUnits = [];
+      this.putGameConfig();
     }
 
-    this.putGameConfig();
-  }
-
-  private async handleTeamCountSelection(value: TeamCountConfig) {
-    this.teamCount = value;
-    this.putGameConfig();
-  }
-
-  private async putGameConfig() {
-    // Client-side validation: if Nuke Wars is selected, force Baikal map
-    if (
-      this.gameMode === GameMode.NukeWars &&
-      this.selectedMap !== GameMapType.Baikal
-    ) {
-      // Inform the host and switch map to Baikal automatically
-      alert(
-        "Nuke Wars is only available on the Baikal map. Switching to Baikal.",
-      );
-      this.selectedMap = GameMapType.Baikal;
+    private async handleTeamGameTypeSelection(value: TeamGameType) {
+      this.teamGameType = value;
+      // Enforce Nuke Wars restrictions
+      if (value === TeamGameType.NukeWars) {
+        // Force 2 teams for Nuke Wars
+        this.teamCount = 2;
+        // Force Baikal map
+        if (this.selectedMap !== GameMapType.Baikal) {
+          this.selectedMap = GameMapType.Baikal;
+          this.useRandomMap = false;
+        }
+      }
+      this.putGameConfig();
     }
-    const config = await getServerConfigFromClient();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+
+  
+
+    private async handleTeamCountSelection(value: TeamCountConfig) {
+
+      this.teamCount = value;
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private async putGameConfig() {
+
+      // Client-side validation: if Nuke Wars is selected, force Baikal map
+
+      if (
+
+        this.gameMode === GameMode.Team &&
+        this.teamGameType === TeamGameType.NukeWars &&
+
+        this.selectedMap !== GameMapType.Baikal
+
+      ) {
+
+        // Inform the host and switch map to Baikal automatically
+
+        alert(
+
+          "Nuke Wars is only available on the Baikal map. Switching to Baikal.",
+
+        );
+
+        this.selectedMap = GameMapType.Baikal;
+
+      }
+
+      const config = await getServerConfigFromClient();
+
+      const response = await fetch(
+
+        `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`,
+
+        {
+
+          method: "PUT",
+
+          headers: {
+
+            "Content-Type": "application/json",
+
+          },
+
+          body: JSON.stringify({
+
+            gameMap: this.selectedMap,
+
+            gameMapSize: this.compactMap
+
+              ? GameMapSize.Compact
+
+              : GameMapSize.Normal,
+
+            difficulty: this.selectedDifficulty,
+
+            disableNPCs: this.disableNPCs,
+
+            bots: this.bots,
+
+            infiniteGold: this.infiniteGold,
+
+            donateGold: this.donateGold,
+
+            infiniteTroops: this.infiniteTroops,
+
+            donateTroops: this.donateTroops,
+
+            instantBuild: this.instantBuild,
+
+            gameMode: this.gameMode,
+            teamGameType: this.gameMode === GameMode.Team ? this.teamGameType : undefined,
+
+            disabledUnits: this.disabledUnits,
+
+            playerTeams: this.teamCount,
+
+            maxTimerValue:
+
+              this.maxTimer === true ? this.maxTimerValue : undefined,
+
+          } satisfies Partial<GameConfig>),
+
         },
-        body: JSON.stringify({
-          gameMap: this.selectedMap,
-          gameMapSize: this.compactMap
-            ? GameMapSize.Compact
-            : GameMapSize.Normal,
-          difficulty: this.selectedDifficulty,
-          disableNPCs: this.disableNPCs,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          donateGold: this.donateGold,
-          infiniteTroops: this.infiniteTroops,
-          donateTroops: this.donateTroops,
-          instantBuild: this.instantBuild,
-          gameMode: this.gameMode,
-          disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
-          maxTimerValue:
-            this.maxTimer === true ? this.maxTimerValue : undefined,
-        } satisfies Partial<GameConfig>),
-      },
-    );
-    return response;
-  }
 
-  private toggleUnit(unit: UnitType, checked: boolean): void {
-    console.log(`Toggling unit type: ${unit} to ${checked}`);
-    this.disabledUnits = checked
-      ? [...this.disabledUnits, unit]
-      : this.disabledUnits.filter((u) => u !== unit);
-
-    this.putGameConfig();
-  }
-
-  private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
-    const randIdx = Math.floor(Math.random() * maps.length);
-    return maps[randIdx] as GameMapType;
-  }
-
-  private async startGame() {
-    if (this.useRandomMap) {
-      this.selectedMap = this.getRandomMap();
-    }
-
-    await this.putGameConfig();
-    console.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
-    );
-    this.close();
-    const config = await getServerConfigFromClient();
-    const response = await fetch(
-      `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    return response;
-  }
-
-  private async copyToClipboard() {
-    try {
-      //TODO: Convert id to url and copy
-      await navigator.clipboard.writeText(
-        `${location.origin}/#join=${this.lobbyId}`,
       );
-      this.copySuccess = true;
-      setTimeout(() => {
-        this.copySuccess = false;
-      }, 2000);
-    } catch (err) {
-      console.error(`Failed to copy text: ${err}`);
+
+      return response;
+
     }
-  }
 
-  private async pollPlayers() {
-    const config = await getServerConfigFromClient();
-    fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data: GameInfo) => {
-        console.log(`got game info response: ${JSON.stringify(data)}`);
+  
 
-        this.clients = data.clients ?? [];
-      });
-  }
+    private toggleUnit(unit: UnitType, checked: boolean): void {
 
-  private kickPlayer(clientID: string) {
-    // Dispatch event to be handled by WebSocket instead of HTTP
-    this.dispatchEvent(
-      new CustomEvent("kick-player", {
-        detail: { target: clientID },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+      console.log(`Toggling unit type: ${unit} to ${checked}`);
+
+      this.disabledUnits = checked
+
+        ? [...this.disabledUnits, unit]
+
+        : this.disabledUnits.filter((u) => u !== unit);
+
+  
+
+      this.putGameConfig();
+
+    }
+
+  
+
+    private getRandomMap(): GameMapType {
+
+      const maps = Object.values(GameMapType);
+
+      const randIdx = Math.floor(Math.random() * maps.length);
+
+      return maps[randIdx] as GameMapType;
+
+    }
+
+  
+
+    private async startGame() {
+
+      if (this.useRandomMap) {
+
+        this.selectedMap = this.getRandomMap();
+
+      }
+
+  
+
+      await this.putGameConfig();
+
+      console.log(
+
+        `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+
+      );
+
+      this.close();
+
+      const config = await getServerConfigFromClient();
+
+      const response = await fetch(
+
+        `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
+
+        {
+
+          method: "POST",
+
+          headers: {
+
+            "Content-Type": "application/json",
+
+          },
+
+        },
+
+      );
+
+      return response;
+
+    }
+
+  
+
+    private async copyToClipboard() {
+
+      try {
+
+        //TODO: Convert id to url and copy
+
+        await navigator.clipboard.writeText(
+
+          `${location.origin}/#join=${this.lobbyId}`,
+
+        );
+
+        this.copySuccess = true;
+
+        setTimeout(() => {
+
+          this.copySuccess = false;
+
+        }, 2000);
+
+      } catch (err) {
+
+        console.error(`Failed to copy text: ${err}`);
+
+      }
+
+    }
+
+  
+
+    private async pollPlayers() {
+
+      const config = await getServerConfigFromClient();
+
+      fetch(`/${config.workerPath(this.lobbyId)}/api/game/${this.lobbyId}`, {
+
+        method: "GET",
+
+        headers: {
+
+          "Content-Type": "application/json",
+
+        },
+
+      })
+
+        .then((response) => response.json())
+
+        .then((data: GameInfo) => {
+
+          console.log(`got game info response: ${JSON.stringify(data)}`);
+
+  
+
+          this.clients = data.clients ?? [];
+
+        });
+
+    }
+
+  
+
+    private kickPlayer(clientID: string) {
+
+      // Dispatch event to be handled by WebSocket instead of HTTP
+
+      this.dispatchEvent(
+
+        new CustomEvent("kick-player", {
+
+          detail: { target: clientID },
+
+          bubbles: true,
+
+          composed: true,
+
+        }),
+
+      );
+
+    }
+
   }
-}
 
 async function createLobby(creatorClientID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();

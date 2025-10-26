@@ -33,6 +33,7 @@ import {
   PlayerType,
   Relation,
   Team,
+  TeamGameType,
   TerraNullius,
   Tick,
   Unit,
@@ -905,7 +906,8 @@ export class PlayerImpl implements Player {
 
   private isInTeamSpawnZone(tile: TileRef): boolean {
     const gameMode = this.mg.config().gameConfig().gameMode;
-    if (gameMode !== GameMode.NukeWars) {
+    const teamGameType = this.mg.config().gameConfig().teamGameType;
+    if (!(gameMode === GameMode.Team && teamGameType === TeamGameType.NukeWars)) {
       return true;
     }
 
@@ -936,7 +938,8 @@ export class PlayerImpl implements Player {
     // Nuke Wars restrictions on Baikal map
     const gc = this.mg.config().gameConfig();
     if (
-      gc.gameMode === GameMode.NukeWars &&
+      gc.gameMode === GameMode.Team &&
+      gc.teamGameType === TeamGameType.NukeWars &&
       gc.gameMap === GameMapType.Baikal
     ) {
       // Ships cannot enter enemy team spawn zones
@@ -985,7 +988,7 @@ export class PlayerImpl implements Player {
         // In Nuke Wars, AtomBomb and HydrogenBomb cannot be launched during the
         // preparation phase, but are allowed afterwards. Other build restrictions
         // (like team spawn zones) are handled above.
-        if (gc.gameMode === GameMode.NukeWars && this.mg.inPreparationPhase()) {
+        if (gc.gameMode === GameMode.Team && gc.teamGameType === TeamGameType.NukeWars && this.mg.inPreparationPhase()) {
           this.mg.displayMessage(
             "Nuclear weapons cannot be launched during the preparation phase",
             MessageType.ATTACK_FAILED,
@@ -1097,7 +1100,7 @@ export class PlayerImpl implements Player {
     const owner = this.mg.owner(tile);
     const gc = this.mg.config().gameConfig();
     // In NukeWars prep phase, allow building in team territory
-    if (gc.gameMode === GameMode.NukeWars && this.mg.inPreparationPhase()) {
+    if (gc.gameMode === GameMode.Team && gc.teamGameType === TeamGameType.NukeWars && this.mg.inPreparationPhase()) {
       if (!owner.isPlayer() || !this.isOnSameTeam(owner as Player)) {
         return [];
       }
@@ -1243,7 +1246,8 @@ export class PlayerImpl implements Player {
     // side deterministically by smallID parity (odd = left, even = right).
     const gameCfg = this.mg.config().gameConfig();
     if (
-      gameCfg.gameMode === GameMode.NukeWars &&
+      gameCfg.gameMode === GameMode.Team &&
+      gameCfg.teamGameType === TeamGameType.NukeWars &&
       gameCfg.gameMap === GameMapType.Baikal &&
       this.mg.inSpawnPhase()
     ) {

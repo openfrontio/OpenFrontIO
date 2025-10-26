@@ -6,6 +6,7 @@ import {
   GameMode,
   Player,
   Team,
+  TeamGameType,
 } from "../game/Game";
 
 export class WinEvent implements GameEvent {
@@ -32,10 +33,13 @@ export class WinCheckExecution implements Execution {
     const gameMode = this.mg.config().gameConfig().gameMode;
     if (gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
-    } else if (gameMode === GameMode.NukeWars) {
-      this.checkWinnerNukeWars();
-    } else {
-      this.checkWinnerTeam();
+    } else if (gameMode === GameMode.Team) {
+      const teamGameType = this.mg.config().gameConfig().teamGameType;
+      if (teamGameType === TeamGameType.NukeWars) {
+        this.checkWinnerNukeWars();
+      } else {
+        this.checkWinnerTeam();
+      }
     }
   }
 
