@@ -288,7 +288,9 @@ export class UserSettingModal extends LitElement {
       <!-- Main Menu Music -->
       <setting-slider
         label="${translateText("user_setting.main_menu_music_volume")}"
-        description="${translateText("user_setting.main_menu_music_volume_desc")}"
+        description="${translateText(
+          "user_setting.main_menu_music_volume_desc",
+        )}"
         min="0"
         max="100"
         .value=${this.userSettings.mainMenuMusicVolume() * 100}

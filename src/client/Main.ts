@@ -33,7 +33,6 @@ import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import MenuSoundManager from "./sound/MenuSoundManager";
 import {
   generateCryptoRandomUUID,
   incrementGamesPlayed,
@@ -44,6 +43,7 @@ import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getUserMe, isLoggedIn } from "./jwt";
+import MenuSoundManager from "./sound/MenuSoundManager";
 import "./styles.css";
 
 declare global {

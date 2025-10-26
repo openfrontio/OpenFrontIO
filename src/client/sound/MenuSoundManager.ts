@@ -1,7 +1,7 @@
 import { Howl } from "howler";
 import ironHorizon from "../../../proprietary/sounds/music/iron-horizon.mp3";
-import worldDivided from "../../../proprietary/sounds/music/world-divided.mp3";
 import preludeToWar from "../../../proprietary/sounds/music/prelude-to-war.mp3";
+import worldDivided from "../../../proprietary/sounds/music/world-divided.mp3";
 
 class MenuSoundManager {
   private backgroundMusic: Howl[] = [];
