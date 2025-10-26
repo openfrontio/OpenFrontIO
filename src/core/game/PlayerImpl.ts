@@ -878,9 +878,9 @@ export class PlayerImpl implements Player {
   public findUnitToUpgrade(
     type: UnitType,
     targetTile: TileRef,
-    skipBuildCheck: boolean = false,
+    skipUnitTypeCheck: boolean = false,
   ): Unit | false {
-    if (!this.canUpgradeUnit(type, skipBuildCheck)) {
+    if (!this.canUpgradeUnitType(type, skipUnitTypeCheck)) {
       return false;
     }
 
@@ -891,24 +891,41 @@ export class PlayerImpl implements Player {
     if (existing.length === 0) {
       return false;
     }
+    const unit = existing[0].unit;
+    if (!this.canUpgradeUnit(unit, skipUnitTypeCheck)) {
+      return false;
+    }
 
-    return existing[0].unit;
+    return unit;
   }
 
-  public canUpgradeUnit(unit: Unit, skipBuildCheck: boolean = false): boolean {
+  public canUpgradeUnit(
+    unit: Unit,
+    skipUnitTypeCheck: boolean = false,
+  ): boolean {
     if (unit.isMarkedForDeletion()) {
       return false;
     }
-    if (!this.mg.config().unitInfo(unit.type()).upgradable) {
-      return false;
-    }
-    if (!skipBuildCheck && this.canBuildUnit(unit.type()) === false) {
+    if (!skipUnitTypeCheck && !this.canUpgradeUnitType(unit.type())) {
       return false;
     }
     return true;
   }
 
-  private canBuildUnit(unitType: UnitType): boolean {
+  private canUpgradeUnitType(
+    unitType: UnitType,
+    skipUnitTypeCheck: boolean = false,
+  ): boolean {
+    if (!this.mg.config().unitInfo(unitType).upgradable) {
+      return false;
+    }
+    if (!skipUnitTypeCheck && !this.canBuildUnitType(unitType)) {
+      return false;
+    }
+    return true;
+  }
+
+  private canBuildUnitType(unitType: UnitType): boolean {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
@@ -959,7 +976,7 @@ export class PlayerImpl implements Player {
       let canBuild: TileRef | false = false;
       let canUpgrade: number | false = false;
 
-      if (tile !== null && this.canBuildUnit(u) && notInSpawnPhase) {
+      if (tile !== null && this.canBuildUnitType(u) && notInSpawnPhase) {
         canBuild = this.canBuild(u, tile, validTiles, true);
 
         const existingUnit = this.findUnitToUpgrade(u, tile, true);
@@ -981,9 +998,9 @@ export class PlayerImpl implements Player {
     unitType: UnitType,
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
-    skipBuildCheck: boolean = false,
+    skipUnitTypeCheck: boolean = false,
   ): TileRef | false {
-    if (!skipBuildCheck && this.canBuildUnit(unitType) === false) {
+    if (!skipUnitTypeCheck && !this.canBuildUnitType(unitType)) {
       return false;
     }
 
