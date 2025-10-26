@@ -184,7 +184,7 @@ export class RailroadLayer implements Layer {
     const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
       ? recipient.borderColor()
-      : new Colord({ r: 255, g: 255, b: 255, a: 1 });
+      : new Colord("rgba(255,255,255,1)");
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(this.context, x, y, railType);
   }
