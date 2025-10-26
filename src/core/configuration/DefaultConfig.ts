@@ -307,8 +307,13 @@ export class DefaultConfig implements Config {
   }
 
   defensePostDefenseBonus(level: number): number {
+    if (level < 1) {
+      throw new Error(
+        `Invalid defense post level: ${level}. Level must be >= 1`,
+      );
+    }
     const baseValue = 5;
-    const maxIncrease = 10;
+    const maxIncrease = 5;
     const k = 2;
     return baseValue + maxIncrease * ((level - 1) / (level - 1 + k));
   }
