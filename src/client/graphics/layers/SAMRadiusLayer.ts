@@ -1,7 +1,7 @@
 import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import type { GameView, UnitView } from "../../../core/game/GameView";
+import type { GameView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -99,45 +99,224 @@ export class SAMRadiusLayer implements Layer {
     this.samLaunchers.clear();
     samLaunchers.forEach((sam) => this.samLaunchers.add(sam.id()));
 
-    // Draw radius for each SAM launcher
-    for (const sam of samLaunchers) {
-      this.drawSAMRadius(sam);
-    }
+    // Draw union of SAM radiuses. Collect circle data then draw union fill + outer arcs only
+    const circles = samLaunchers.map((sam) => {
+      const tile = sam.tile();
+      return {
+        x: this.game.x(tile),
+        y: this.game.y(tile),
+        r: this.game.config().defaultSamRange(),
+      };
+    });
+
+    this.drawCirclesUnion(circles);
   }
 
-  private drawSAMRadius(sam: UnitView) {
-    const samTile = sam.tile();
-    const centerX = this.game.x(samTile);
-    const centerY = this.game.y(samTile);
-    const radius = this.game.config().defaultSamRange(); // 70 pixels
+  /**
+   * Draw union of multiple circles: fill the union, then stroke only the outer arcs
+   * so overlapping circles appear as one combined shape.
+   */
+  private drawCirclesUnion(
+    circles: Array<{ x: number; y: number; r: number }>,
+  ) {
+    const ctx = this.context;
+    if (circles.length === 0) return;
 
-    // Set up the drawing style
-    this.context.save();
+    // styles
+    const fillStyle = "rgba(255, 255, 0, 0.15)";
+    const strokeStyleOuter = "rgba(255, 255, 0, 0.9)";
+    const strokeStyleInner = "rgba(255, 255, 0, 0.6)";
 
-    // Create a contrasting color that will be visible against any background
-    // Use a bright, highly visible color with good opacity
-    this.context.strokeStyle = "rgba(255, 255, 0, 0.9)"; // Bright yellow with high opacity
-    this.context.fillStyle = "rgba(255, 255, 0, 0.15)"; // Light yellow fill with more visibility
-    this.context.lineWidth = 3; // Thicker line for better visibility
-    this.context.setLineDash([8, 4]); // Larger dashed line for better visibility
+    // 1) Fill union simply by drawing all full circle paths and filling once
+    ctx.save();
+    ctx.fillStyle = fillStyle;
+    ctx.beginPath();
+    for (const c of circles) {
+      ctx.moveTo(c.x + c.r, c.y);
+      ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.restore();
 
-    // Draw the circle
-    this.context.beginPath();
-    this.context.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    // 2) For stroke, compute for each circle which angular segments are NOT covered by any other circle,
+    //    and stroke only those segments. This produces a union outline without overlapping inner strokes.
+    ctx.save();
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 4]);
+    ctx.strokeStyle = strokeStyleOuter;
 
-    // Fill first (very light), then stroke (more visible)
-    this.context.fill();
-    this.context.stroke();
+    const TWO_PI = Math.PI * 2;
 
-    // Also add a secondary inner ring for extra visibility
-    this.context.strokeStyle = "rgba(255, 255, 0, 0.6)";
-    this.context.lineWidth = 1;
-    this.context.setLineDash([4, 4]);
+    // helper functions
+    const normalize = (a: number) => {
+      while (a < 0) a += TWO_PI;
+      while (a >= TWO_PI) a -= TWO_PI;
+      return a;
+    };
 
-    this.context.beginPath();
-    this.context.arc(centerX, centerY, radius - 5, 0, 2 * Math.PI);
-    this.context.stroke();
+    // merge a list of intervals [s,e] (both between 0..2pi), taking wraparound into account
+    const mergeIntervals = (
+      intervals: Array<[number, number]>,
+    ): Array<[number, number]> => {
+      if (intervals.length === 0) return [];
+      // normalize to non-wrap intervals
+      const flat: Array<[number, number]> = [];
+      for (const [s, e] of intervals) {
+        const ns = normalize(s);
+        const ne = normalize(e);
+        if (ne < ns) {
+          // wraps, split
+          flat.push([ns, TWO_PI]);
+          flat.push([0, ne]);
+        } else {
+          flat.push([ns, ne]);
+        }
+      }
+      flat.sort((a, b) => a[0] - b[0]);
+      const merged: Array<[number, number]> = [];
+      let cur = flat[0].slice() as [number, number];
+      for (let i = 1; i < flat.length; i++) {
+        const it = flat[i];
+        if (it[0] <= cur[1] + 1e-9) {
+          cur[1] = Math.max(cur[1], it[1]);
+        } else {
+          merged.push([cur[0], cur[1]]);
+          cur = it.slice() as [number, number];
+        }
+      }
+      merged.push([cur[0], cur[1]]);
+      return merged;
+    };
 
-    this.context.restore();
+    for (let i = 0; i < circles.length; i++) {
+      const a = circles[i];
+      // collect intervals on circle a that are covered by other circles
+      const covered: Array<[number, number]> = [];
+      let fullyCovered = false;
+
+      for (let j = 0; j < circles.length; j++) {
+        if (i === j) continue;
+        const b = circles[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d = Math.hypot(dx, dy);
+        if (d + a.r <= b.r + 1e-9) {
+          // circle a is fully inside b
+          fullyCovered = true;
+          break;
+        }
+        if (d >= a.r + b.r - 1e-9) {
+          // no overlap
+          continue;
+        }
+        if (d <= 1e-9) {
+          // coincident centers but not fully covered (should be covered by previous check if radii differ)
+          if (b.r >= a.r) {
+            fullyCovered = true;
+            break;
+          }
+          continue;
+        }
+
+        // compute angular span on circle a that is inside circle b
+        const theta = Math.atan2(dy, dx);
+        // law of cosines for angle between center-line and intersection points
+        const cosPhi = (a.r * a.r + d * d - b.r * b.r) / (2 * a.r * d);
+        // numerical clamp
+        const clamp = Math.max(-1, Math.min(1, cosPhi));
+        const phi = Math.acos(clamp);
+        const start = theta - phi;
+        const end = theta + phi;
+        covered.push([start, end]);
+      }
+
+      if (fullyCovered) continue; // nothing to stroke for this circle
+
+      const merged = mergeIntervals(covered);
+
+      // subtract merged covered intervals from [0,2pi) to get uncovered intervals
+      const uncovered: Array<[number, number]> = [];
+      if (merged.length === 0) {
+        uncovered.push([0, TWO_PI]);
+      } else {
+        let cursor = 0;
+        for (const [s, e] of merged) {
+          if (s > cursor + 1e-9) {
+            uncovered.push([cursor, s]);
+          }
+          cursor = Math.max(cursor, e);
+        }
+        if (cursor < TWO_PI - 1e-9) uncovered.push([cursor, TWO_PI]);
+      }
+
+      // draw uncovered arcs
+      for (const [s, e] of uncovered) {
+        // skip tiny arcs
+        if (e - s < 1e-3) continue;
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, a.r, s, e);
+        ctx.stroke();
+      }
+    }
+
+    // inner thinner ring
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = strokeStyleInner;
+
+    for (let i = 0; i < circles.length; i++) {
+      const a = circles[i];
+      // repeat uncovered arc calculation for inner ring (slightly smaller radius)
+      const innerR = Math.max(0, a.r - 5);
+      const covered: Array<[number, number]> = [];
+      let fullyCovered = false;
+
+      for (let j = 0; j < circles.length; j++) {
+        if (i === j) continue;
+        const b = circles[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d = Math.hypot(dx, dy);
+        if (d + innerR <= b.r + 1e-9) {
+          fullyCovered = true;
+          break;
+        }
+        if (d >= innerR + b.r - 1e-9) continue;
+        if (d <= 1e-9) {
+          if (b.r >= innerR) {
+            fullyCovered = true;
+            break;
+          }
+          continue;
+        }
+        const theta = Math.atan2(dy, dx);
+        const cosPhi = (innerR * innerR + d * d - b.r * b.r) / (2 * innerR * d);
+        const clamp = Math.max(-1, Math.min(1, cosPhi));
+        const phi = Math.acos(clamp);
+        covered.push([theta - phi, theta + phi]);
+      }
+      if (fullyCovered) continue;
+      const merged = mergeIntervals(covered);
+      const uncovered: Array<[number, number]> = [];
+      if (merged.length === 0) {
+        uncovered.push([0, TWO_PI]);
+      } else {
+        let cursor = 0;
+        for (const [s, e] of merged) {
+          if (s > cursor + 1e-9) uncovered.push([cursor, s]);
+          cursor = Math.max(cursor, e);
+        }
+        if (cursor < TWO_PI - 1e-9) uncovered.push([cursor, TWO_PI]);
+      }
+
+      for (const [s, e] of uncovered) {
+        if (e - s < 1e-3) continue;
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, innerR, s, e);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
   }
 }
