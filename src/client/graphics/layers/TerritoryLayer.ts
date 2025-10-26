@@ -6,6 +6,7 @@ import {
   Cell,
   ColoredTeams,
   PlayerType,
+  Team,
   UnitType,
 } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
@@ -240,10 +241,8 @@ export class TerritoryLayer implements Layer {
     const baseColor = this.theme.spawnHighlightSelfColor(); //white
     let teamColor: Colord | null = null;
 
-    let team: string | null = null;
-    team = focusedPlayer.team();
-    const teamColors = Object.values(ColoredTeams);
-    if (team !== null && teamColors.includes(team)) {
+    const team: Team | null = focusedPlayer.team();
+    if (team !== null && Object.values(ColoredTeams).includes(team)) {
       teamColor = this.theme.teamColor(team).alpha(0.5);
     } else {
       teamColor = baseColor;
