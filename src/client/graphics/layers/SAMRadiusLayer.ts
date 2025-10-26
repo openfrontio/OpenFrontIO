@@ -2,6 +2,7 @@ import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type { GameView } from "../../../core/game/GameView";
+import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -13,6 +14,8 @@ export class SAMRadiusLayer implements Layer {
   private readonly context: CanvasRenderingContext2D;
   private readonly samLaunchers: Set<number> = new Set(); // Track SAM launcher IDs
   private needsRedraw = true;
+  // show stroke only when the UI indicates structures are being hovered/toggled
+  private showStroke: boolean = false;
 
   constructor(
     private readonly game: GameView,
@@ -31,6 +34,18 @@ export class SAMRadiusLayer implements Layer {
 
   init() {
     // Listen for game updates to detect SAM launcher changes
+    // Also listen for UI toggle structure events so we can show borders when
+    // the user is hovering the Atom/Hydrogen option (UnitDisplay emits
+    // ToggleStructureEvent with SAMLauncher included in the list).
+    this.eventBus.on(ToggleStructureEvent, (e) => {
+      try {
+        this.showStroke = !!e.structureTypes;
+      } catch (err) {
+        this.showStroke = false;
+      }
+      this.needsRedraw = true;
+    });
+
     this.redraw();
   }
 
@@ -123,26 +138,25 @@ export class SAMRadiusLayer implements Layer {
     if (circles.length === 0) return;
 
     // styles
-    const fillStyle = "rgba(255, 255, 0, 0.15)";
     const strokeStyleOuter = "rgba(255, 255, 0, 0.9)";
-    const strokeStyleInner = "rgba(255, 255, 0, 0.6)";
 
     // 1) Fill union simply by drawing all full circle paths and filling once
     ctx.save();
-    ctx.fillStyle = fillStyle;
     ctx.beginPath();
     for (const c of circles) {
       ctx.moveTo(c.x + c.r, c.y);
       ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
     }
-    ctx.fill();
     ctx.restore();
 
     // 2) For stroke, compute for each circle which angular segments are NOT covered by any other circle,
     //    and stroke only those segments. This produces a union outline without overlapping inner strokes.
+    // Only draw the stroke when UI toggle indicates SAM launchers are focused (e.g. hovering Atom/Hydrogen option).
+    if (!this.showStroke) return;
+
     ctx.save();
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 4]);
+    ctx.lineWidth = 1;
+    ctx.setLineDash([12, 6]);
     ctx.strokeStyle = strokeStyleOuter;
 
     const TWO_PI = Math.PI * 2;
@@ -258,65 +272,6 @@ export class SAMRadiusLayer implements Layer {
         ctx.stroke();
       }
     }
-
-    // inner thinner ring
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = strokeStyleInner;
-
-    for (let i = 0; i < circles.length; i++) {
-      const a = circles[i];
-      // repeat uncovered arc calculation for inner ring (slightly smaller radius)
-      const innerR = Math.max(0, a.r - 5);
-      const covered: Array<[number, number]> = [];
-      let fullyCovered = false;
-
-      for (let j = 0; j < circles.length; j++) {
-        if (i === j) continue;
-        const b = circles[j];
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const d = Math.hypot(dx, dy);
-        if (d + innerR <= b.r + 1e-9) {
-          fullyCovered = true;
-          break;
-        }
-        if (d >= innerR + b.r - 1e-9) continue;
-        if (d <= 1e-9) {
-          if (b.r >= innerR) {
-            fullyCovered = true;
-            break;
-          }
-          continue;
-        }
-        const theta = Math.atan2(dy, dx);
-        const cosPhi = (innerR * innerR + d * d - b.r * b.r) / (2 * innerR * d);
-        const clamp = Math.max(-1, Math.min(1, cosPhi));
-        const phi = Math.acos(clamp);
-        covered.push([theta - phi, theta + phi]);
-      }
-      if (fullyCovered) continue;
-      const merged = mergeIntervals(covered);
-      const uncovered: Array<[number, number]> = [];
-      if (merged.length === 0) {
-        uncovered.push([0, TWO_PI]);
-      } else {
-        let cursor = 0;
-        for (const [s, e] of merged) {
-          if (s > cursor + 1e-9) uncovered.push([cursor, s]);
-          cursor = Math.max(cursor, e);
-        }
-        if (cursor < TWO_PI - 1e-9) uncovered.push([cursor, TWO_PI]);
-      }
-
-      for (const [s, e] of uncovered) {
-        if (e - s < 1e-3) continue;
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, innerR, s, e);
-        ctx.stroke();
-      }
-    }
-
     ctx.restore();
   }
 }
