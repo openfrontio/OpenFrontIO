@@ -138,6 +138,7 @@ export class SAMRadiusLayer implements Layer {
         x: this.game.x(tile),
         y: this.game.y(tile),
         r: this.game.config().defaultSamRange(),
+        owner: sam.owner().smallID(),
       };
     });
 
@@ -149,7 +150,7 @@ export class SAMRadiusLayer implements Layer {
    * so overlapping circles appear as one combined shape.
    */
   private drawCirclesUnion(
-    circles: Array<{ x: number; y: number; r: number }>,
+    circles: Array<{ x: number; y: number; r: number; owner: number }>,
   ) {
     const ctx = this.context;
     if (circles.length === 0) return;
@@ -227,6 +228,8 @@ export class SAMRadiusLayer implements Layer {
 
       for (let j = 0; j < circles.length; j++) {
         if (i === j) continue;
+        // Only consider coverage from circles owned by the same player.
+        if (a.owner !== circles[j].owner) continue;
         const b = circles[j];
         const dx = b.x - a.x;
         const dy = b.y - a.y;
