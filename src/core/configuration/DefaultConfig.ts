@@ -306,8 +306,11 @@ export class DefaultConfig implements Config {
     return 30;
   }
 
-  defensePostDefenseBonus(): number {
-    return 5;
+  defensePostDefenseBonus(level: number): number {
+    const baseValue = 5;
+    const maxIncrease = 10;
+    const k = 2;
+    return baseValue + maxIncrease * ((level - 1) / (level - 1 + k));
   }
 
   defensePostSpeedBonus(): number {
@@ -496,6 +499,7 @@ export class DefaultConfig implements Config {
           ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
         };
       case UnitType.SAMLauncher:
         return {
@@ -665,7 +669,7 @@ export class DefaultConfig implements Config {
         UnitType.DefensePost,
       )) {
         if (dp.unit.owner() === defender) {
-          mag *= this.defensePostDefenseBonus();
+          mag *= this.defensePostDefenseBonus(dp.unit.level());
           speed *= this.defensePostSpeedBonus();
           break;
         }
