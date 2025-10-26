@@ -48,6 +48,7 @@ const numPlayersConfig = {
   [GameMapType.Africa]: [100, 70, 50],
   [GameMapType.Asia]: [50, 40, 30],
   [GameMapType.Australia]: [70, 40, 30],
+  [GameMapType.Achiran]: [40, 36, 30],
   [GameMapType.Baikal]: [100, 70, 50],
   [GameMapType.BetweenTwoSeas]: [70, 50, 40],
   [GameMapType.BlackSea]: [50, 30, 30],
@@ -212,6 +213,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   workerPortByIndex(index: number): number {
     return 3001 + index;
+  }
+  enableMatchmaking(): boolean {
+    return false;
   }
 }
 
@@ -568,6 +572,12 @@ export class DefaultConfig implements Config {
   }
   donateCooldown(): Tick {
     return 10 * 10;
+  }
+  embargoAllCooldown(): Tick {
+    return 10 * 10;
+  }
+  deletionMarkDuration(): Tick {
+    return 15 * 10;
   }
   deleteUnitCooldown(): Tick {
     return 5 * 10;

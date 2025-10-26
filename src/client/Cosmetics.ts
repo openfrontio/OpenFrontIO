@@ -74,10 +74,11 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
 export function patternRelationship(
   pattern: Pattern,
   colorPalette: { name: string; isArchived?: boolean } | null,
-  userMeResponse: UserMeResponse | null,
+  userMeResponse: UserMeResponse | false,
   affiliateCode: string | null,
 ): "owned" | "purchasable" | "blocked" {
-  const flares = userMeResponse?.player.flares ?? [];
+  const flares =
+    userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
   if (flares.includes("pattern:*")) {
     return "owned";
   }

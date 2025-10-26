@@ -157,6 +157,7 @@
   "account_modal": {
     "title": "Account",
     "logged_in_as": "Logged in as {email}",
+    "fetching_account": "Fetching account information...",
     "logged_in_with_discord": "Logged in with Discord",
     "recovery_email_sent": "Recovery email sent to {email}"
   },
@@ -192,7 +193,8 @@
     "japan": "Japan",
     "yenisei": "Yenisei",
     "pluto": "Pluto",
-    "montreal": "Montreal"
+    "montreal": "Montreal",
+    "achiran": "Achiran"
   },
   "map_categories": {
     "continental": "Continental",
@@ -221,6 +223,12 @@
     "teams_Trios": "Trios (teams of 3)",
     "teams_Quads": "Quads (teams of 4)",
     "teams": "{num} teams"
+  },
+  "matchmaking_modal": {
+    "title": "Matchmaking",
+    "connecting": "Connecting to matchmaking server...",
+    "searching": "Searching for game...",
+    "waiting_for_game": "Waiting for game to start..."
   },
   "username": {
     "enter_username": "Enter your username",
@@ -346,6 +354,8 @@
     "build_atom_bomb_desc": "Build an Atom Bomb under your cursor.",
     "build_hydrogen_bomb": "Build Hydrogen Bomb",
     "build_hydrogen_bomb_desc": "Build a Hydrogen Bomb under your cursor.",
+    "build_mirv": "Build MIRV",
+    "build_mirv_desc": "Build a MIRV under your cursor.",
     "attack_ratio_controls": "Attack Ratio Controls",
     "attack_ratio_up": "Increase Attack Ratio",
     "attack_ratio_up_desc": "Increase attack ratio by 10%",
@@ -596,6 +606,8 @@
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start Trading",
     "stop_trade": "Stop Trading",
+    "stop_trade_all": "Stop Trading with All",
+    "start_trade_all": "Start Trading with All",
     "alliances": "Alliances",
     "flag": "Flag",
     "chat": "Chat",
