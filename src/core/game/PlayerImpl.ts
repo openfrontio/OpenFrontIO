@@ -885,9 +885,11 @@ export class PlayerImpl implements Player {
     transportShipFilter: TransportShipFilter = TransportShipFilter.Default,
   ): BuildableUnit[] {
     const inSpawnPhase = this.mg.inSpawnPhase();
+    let canUpgrade: number | false = false;
 
     if (transportShipFilter === TransportShipFilter.Only) {
       const u = UnitType.TransportShip;
+      canUpgrade = !this.mg.config().unitInfo(u).upgradable ? false : 0;
       return [
         {
           type: u,
@@ -895,7 +897,7 @@ export class PlayerImpl implements Player {
             inSpawnPhase || tile === null
               ? false
               : this.canBuild(u, tile, null),
-          canUpgrade: !this.mg.config().unitInfo(u).upgradable ? false : 0,
+          canUpgrade: canUpgrade,
           cost: this.mg.config().unitInfo(u).cost(this),
         } as BuildableUnit,
       ];
@@ -912,7 +914,6 @@ export class PlayerImpl implements Player {
         continue;
       }
 
-      let canUpgrade: number | false = false;
       if (!inSpawnPhase && tile !== null) {
         const existingUnit = this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
