@@ -6,6 +6,7 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
+  TeamGameType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
@@ -49,7 +50,8 @@ export class SpawnExecution implements Execution {
     let spawnTile = this.tile;
     const gc = this.mg.config().gameConfig();
     if (
-      gc.gameMode === GameMode.NukeWars &&
+      gc.gameMode === GameMode.Team &&
+      gc.teamGameType === TeamGameType.NukeWars &&
       gc.gameMap === GameMapType.Baikal
     ) {
       const mapWidth = this.mg.width();

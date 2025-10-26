@@ -15,6 +15,7 @@ import {
   GameMode,
   GameType,
   Quads,
+  TeamGameType,
   Trios,
   UnitType,
 } from "./game/Game";
@@ -157,6 +158,7 @@ export const GameConfigSchema = z.object({
   donateTroops: z.boolean(), // Configures donations to humans only
   gameType: z.enum(GameType),
   gameMode: z.enum(GameMode),
+  teamGameType: z.enum(TeamGameType).optional(),
   gameMapSize: z.enum(GameMapSize),
   disableNPCs: z.boolean(),
   bots: z.number().int().min(0).max(400),

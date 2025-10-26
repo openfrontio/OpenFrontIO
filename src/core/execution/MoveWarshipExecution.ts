@@ -4,6 +4,7 @@ import {
   GameMapType,
   GameMode,
   Player,
+  TeamGameType,
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
@@ -34,7 +35,8 @@ export class MoveWarshipExecution implements Execution {
     // In Nuke Wars on Baikal, prevent assigning patrols that cross the midpoint.
     const gc = mg.config().gameConfig();
     if (
-      gc.gameMode === GameMode.NukeWars &&
+      gc.gameMode === GameMode.Team &&
+      gc.teamGameType === TeamGameType.NukeWars &&
       gc.gameMap === GameMapType.Baikal
     ) {
       const mapWidth = mg.width();

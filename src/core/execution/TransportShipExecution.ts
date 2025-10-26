@@ -7,6 +7,7 @@ import {
   Player,
   PlayerID,
   TerraNullius,
+  TeamGameType,
   Unit,
   UnitType,
 } from "../game/Game";
@@ -108,7 +109,8 @@ export class TransportShipExecution implements Execution {
     // In Nuke Wars on Baikal, prevent transport ships from entering enemy territory
     const gc = this.mg.config().gameConfig();
     if (
-      gc.gameMode === GameMode.NukeWars &&
+      gc.gameMode === GameMode.Team &&
+      gc.teamGameType === TeamGameType.NukeWars &&
       gc.gameMap === GameMapType.Baikal &&
       this.dst !== null
     ) {

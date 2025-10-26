@@ -13,6 +13,7 @@ import {
   Trios,
   UnitType,
   mapCategories,
+  TeamGameType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import { TeamCountConfig } from "../core/Schemas";
@@ -45,21 +46,9 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private teamGameType: TeamGameType = TeamGameType.Standard;
   @state() private teamCount: TeamCountConfig = 2;
-
   @state() private disabledUnits: UnitType[] = [];
-
-  private readonly nukeWarsDisabledUnits = [
-    UnitType.City,
-    UnitType.Construction,
-    UnitType.DefensePost,
-    UnitType.Port,
-    UnitType.TransportShip,
-    UnitType.Warship,
-    UnitType.Train,
-    UnitType.TradeShip,
-    UnitType.MIRV,
-  ];
 
   private userSettings: UserSettings = new UserSettings();
 
@@ -195,19 +184,29 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("game_mode.teams")}
                 </div>
               </div>
-              <div
-                class="option-card ${this.gameMode === GameMode.NukeWars
-                  ? "selected"
-                  : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.NukeWars)}
-              >
-                <div class="option-card-title">Nuke Wars</div>
-              </div>
             </div>
           </div>
 
           ${this.gameMode === GameMode.Team
             ? html`
+                <!-- Team Game Type Selection -->
+                <div class="options-section">
+                  <div class="option-title">Team Game Type</div>
+                  <div class="option-cards">
+                    <div
+                      class="option-card ${this.teamGameType === TeamGameType.Standard ? "selected" : ""}"
+                      @click=${() => this.handleTeamGameTypeSelection(TeamGameType.Standard)}
+                    >
+                      <div class="option-card-title">Standard Team</div>
+                    </div>
+                    <div
+                      class="option-card ${this.teamGameType === TeamGameType.NukeWars ? "selected" : ""}"
+                      @click=${() => this.handleTeamGameTypeSelection(TeamGameType.NukeWars)}
+                    >
+                      <div class="option-card-title">Nuke Wars</div>
+                    </div>
+                  </div>
+                </div>
                 <!-- Team Count Selection -->
                 <div class="options-section">
                   <div class="option-title">
@@ -474,9 +473,17 @@ export class SinglePlayerModal extends LitElement {
 
   private handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
+    if (value === GameMode.FFA) {
+      this.teamGameType = TeamGameType.Standard;
+    }
+    // Clear disabled units when switching to other modes
+    this.disabledUnits = [];
+  }
 
+  private handleTeamGameTypeSelection(value: TeamGameType) {
+    this.teamGameType = value;
     // Enforce Nuke Wars restrictions
-    if (value === GameMode.NukeWars) {
+    if (value === TeamGameType.NukeWars) {
       // Force 2 teams for Nuke Wars
       this.teamCount = 2;
       // Force Baikal map
@@ -484,12 +491,6 @@ export class SinglePlayerModal extends LitElement {
         this.selectedMap = GameMapType.Baikal;
         this.useRandomMap = false;
       }
-
-      // Disable all units except missiles and SAMs
-      this.disabledUnits = [...this.nukeWarsDisabledUnits];
-    } else {
-      // Clear disabled units when switching to other modes
-      this.disabledUnits = [];
     }
   }
 
@@ -517,7 +518,8 @@ export class SinglePlayerModal extends LitElement {
     }
     // Enforce Nuke Wars availability only on Baikal for single player as well
     if (
-      this.gameMode === GameMode.NukeWars &&
+      this.gameMode === GameMode.Team &&
+      this.teamGameType === TeamGameType.NukeWars &&
       this.selectedMap !== GameMapType.Baikal
     ) {
       alert(
@@ -579,6 +581,7 @@ export class SinglePlayerModal extends LitElement {
                 : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
+              teamGameType: this.gameMode === GameMode.Team ? this.teamGameType : undefined,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               disableNPCs: this.disableNPCs,

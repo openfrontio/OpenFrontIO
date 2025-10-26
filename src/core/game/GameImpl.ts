@@ -30,6 +30,7 @@ import {
   Unit,
   UnitInfo,
   UnitType,
+  TeamGameType,
 } from "./Game";
 import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
@@ -98,8 +99,7 @@ export class GameImpl implements Game {
     this.unitGrid = new UnitGrid(this._map);
     // Treat Team and NukeWars as team-based games (Nuke Wars is 2-team only)
     if (
-      _config.gameConfig().gameMode === GameMode.Team ||
-      _config.gameConfig().gameMode === GameMode.NukeWars
+      _config.gameConfig().gameMode === GameMode.Team
     ) {
       this.populateTeams();
     }
@@ -109,7 +109,7 @@ export class GameImpl implements Game {
   private populateTeams() {
     let numPlayerTeams = this._config.playerTeams();
     // Force 2 teams for NukeWars
-    if (this._config.gameConfig().gameMode === GameMode.NukeWars) {
+    if (this._config.gameConfig().gameMode === GameMode.Team && this._config.gameConfig().teamGameType === TeamGameType.NukeWars) {
       numPlayerTeams = 2;
     }
     if (typeof numPlayerTeams !== "number") {
@@ -681,10 +681,7 @@ export class GameImpl implements Game {
 
   teams(): Team[] {
     if (this._config.gameConfig().gameMode !== GameMode.Team) {
-      // Treat NukeWars as a team-based mode (2 teams)
-      if (this._config.gameConfig().gameMode !== GameMode.NukeWars) {
-        return [];
-      }
+      return [];
     }
     return [this.botTeam, ...this.playerTeams];
   }

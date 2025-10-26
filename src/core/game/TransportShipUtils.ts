@@ -1,6 +1,6 @@
 import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
-import { Game, GameMapType, GameMode, Player, UnitType } from "./Game";
+import { Game, GameMapType, GameMode, Player, TeamGameType, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
 
 export function canBuildTransportShip(
@@ -22,19 +22,19 @@ export function canBuildTransportShip(
   const other = game.owner(tile);
   // During NukeWars, don't block transport ships between team members
   const gc = game.config().gameConfig();
-  if (gc.gameMode !== GameMode.NukeWars) {
+  if (!(gc.gameMode === GameMode.Team && gc.teamGameType === TeamGameType.NukeWars)) {
     if (other === player) {
       return false;
     }
     if (other.isPlayer() && player.isFriendly(other)) {
       return false;
     }
-  } else {
-    // In NukeWars, only block sending to enemy teams
-    if (other.isPlayer() && player.isOnSameTeam(other as Player)) {
-      return false;
+      // In NukeWars, only block sending to enemy teams
+    } else if (gc.gameMode === GameMode.Team && gc.teamGameType === TeamGameType.NukeWars) {
+      if (other.isPlayer() && player.isOnSameTeam(other as Player)) {
+        return false;
+      }
     }
-  }
 
   if (game.isOceanShore(dst)) {
     let myPlayerBordersOcean = false;
@@ -85,7 +85,8 @@ export function canBuildTransportShip(
       // Block lake deployments into enemy team territory in Nuke Wars
       const gc = game.config().gameConfig();
       if (
-        gc.gameMode === GameMode.NukeWars &&
+        gc.gameMode === GameMode.Team &&
+        gc.teamGameType === TeamGameType.NukeWars &&
         gc.gameMap === GameMapType.Baikal
       ) {
         const tileOwner = game.owner(t);

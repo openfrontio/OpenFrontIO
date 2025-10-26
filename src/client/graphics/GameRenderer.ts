@@ -1,6 +1,6 @@
 import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
-import { UserSettings } from "../../core/game/UserSettings";
+import { GameMode, TeamGameType } from "../../core/game/Game";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
@@ -248,7 +248,11 @@ export function createRenderer(
       playerPanel,
     ),
     new SpawnTimer(game, transformHandler),
-    new NukeWarsTopBanner(game),
+    // Conditionally add NukeWarsTopBanner if it's a Nuke Wars game
+    ...(game.config().gameConfig().gameMode === GameMode.Team &&
+    game.config().gameConfig().teamGameType === TeamGameType.NukeWars
+      ? [new NukeWarsTopBanner(game)]
+      : []),
     leaderboard,
     gameLeftSidebar,
     unitDisplay,

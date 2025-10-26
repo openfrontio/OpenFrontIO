@@ -18,6 +18,7 @@ import {
   Trios,
   UnitInfo,
   UnitType,
+  TeamGameType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
@@ -316,13 +317,22 @@ export class DefaultConfig implements Config {
 
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
-  }
-
   isUnitDisabled(unitType: UnitType): boolean {
-    // Nuke Wars: only MIRV is blocked explicitly. Keep any server-configured
-    // disabledUnits in the check as well.
-    if (this._gameConfig.gameMode === GameMode.NukeWars) {
-      if (unitType === UnitType.MIRV) return true;
+    if (this._gameConfig.gameMode === GameMode.Team && this._gameConfig.teamGameType === TeamGameType.NukeWars) {
+      const allowedUnits = [
+        UnitType.City,
+        UnitType.Port,
+        UnitType.Factory,
+        UnitType.MissileSilo,
+        UnitType.SAMLauncher,
+        UnitType.DefensePost,
+        UnitType.Warship,
+        UnitType.TradeShip,
+        UnitType.TransportShip,
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+      ];
+      return !allowedUnits.includes(unitType);
     }
 
     return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
@@ -619,7 +629,7 @@ export class DefaultConfig implements Config {
 
   numPreparationPhaseTurns(): number {
     // Preparation phase duration (Nuke Wars uses a 3 minute prep phase)
-    if (this._gameConfig.gameMode === GameMode.NukeWars) {
+    if (this._gameConfig.gameMode === GameMode.Team && this._gameConfig.teamGameType === TeamGameType.NukeWars) {
       return 180 * 10; // 180 seconds * 10 ticks/sec
     }
     return 0;
