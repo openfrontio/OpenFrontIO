@@ -114,7 +114,7 @@ export class SAMRadiusLayer implements Layer {
     this.samLaunchers.clear();
     samLaunchers.forEach((sam) => this.samLaunchers.add(sam.id()));
 
-    // Draw union of SAM radiuses. Collect circle data then draw union fill + outer arcs only
+    // Draw union of SAM radiuses. Collect circle data then draw union outer arcs only
     const circles = samLaunchers.map((sam) => {
       const tile = sam.tile();
       return {
