@@ -903,6 +903,7 @@ export class PlayerImpl implements Player {
     transportShipFilter?: TransportShipFilter,
   ): BuildableUnit[] {
     const notInSpawnPhase = !this.mg.inSpawnPhase();
+    let foundShip = false;
     const result: BuildableUnit[] = [];
 
     const validTiles =
@@ -912,12 +913,17 @@ export class PlayerImpl implements Player {
 
     for (const u of Object.values(UnitType)) {
       if (
-        (u === UnitType.TransportShip &&
-          transportShipFilter === TransportShipFilter.Exclude) ||
-        (u !== UnitType.TransportShip &&
-          transportShipFilter === TransportShipFilter.Only)
+        u === UnitType.TransportShip &&
+        transportShipFilter === TransportShipFilter.Exclude
       ) {
         continue;
+      }
+
+      if (transportShipFilter === TransportShipFilter.Only) {
+        if (foundShip) break;
+
+        if (u !== UnitType.TransportShip) continue;
+        else foundShip = true;
       }
 
       let canBuild: TileRef | false = false;
