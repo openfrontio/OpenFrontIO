@@ -175,6 +175,7 @@ export class TerritoryLayer implements Layer {
       .filter((p) => p.type() === PlayerType.Human);
 
     const focusedPlayer = this.game.focusedPlayer();
+    const teamColors = Object.values(ColoredTeams);
     for (const human of humans) {
       if (human === focusedPlayer) {
         continue;
@@ -197,7 +198,6 @@ export class TerritoryLayer implements Layer {
         // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
         const team = human.team();
         if (team !== null) {
-          const teamColors = Object.values(ColoredTeams);
           if (teamColors.includes(team)) {
             color = this.theme.teamColor(team);
           } else {
