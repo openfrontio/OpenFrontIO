@@ -95,17 +95,18 @@ export class SAMRadiusLayer implements Layer {
       }
     }
 
-    // Redraw if transform changed or if we need to redraw
-    if (this.transformHandler.hasChanged() || this.needsRedraw) {
-      this.redraw();
-      this.needsRedraw = false;
-    }
     // show when in ghost mode for sam/atom/hydrogen
     this.ghostShow =
       this.uiState.ghostStructure === UnitType.SAMLauncher ||
       this.uiState.ghostStructure === UnitType.AtomBomb ||
       this.uiState.ghostStructure === UnitType.HydrogenBomb;
     this.updateStrokeVisibility();
+
+    // Redraw if transform changed or if we need to redraw
+    if (this.transformHandler.hasChanged() || this.needsRedraw) {
+      this.redraw();
+      this.needsRedraw = false;
+    }
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
