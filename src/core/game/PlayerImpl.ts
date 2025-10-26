@@ -892,7 +892,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     const unit = existing[0].unit;
-    if (!this.canUpgradeUnit(unit, skipUnitTypeCheck)) {
+    if (!this.canUpgradeUnit(unit, true)) {
       return false;
     }
 
