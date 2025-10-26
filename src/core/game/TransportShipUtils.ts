@@ -6,40 +6,23 @@ interface CacheEntry<T> {
   tick: number;
   value: T;
 }
-
 const transportTileCache = new Map<string, CacheEntry<TileRef | null>>();
-const buildTransportShipCache = new Map<string, CacheEntry<TileRef | false>>();
 
-function getTransportTileCacheKey(tile: TileRef, tick: number): string {
+function getTileCacheKey(tile: TileRef, tick: number): string {
   return `transport_${tile}_${tick}`;
-}
-
-function getBuildCacheKey(
-  playerId: string,
-  tile: TileRef,
-  tick: number,
-): string {
-  return `build_${playerId}_${tile}_${tick}`;
 }
 
 let lastCleanupTick = 0;
 
-function cleanupCache<T>(
-  cache: Map<string, CacheEntry<T>>,
-  currentTick: number,
-  cacheName: string, //TODO: remove after testing
-): void {
+function cleanupCache(currentTick: number): void {
   if (currentTick < lastCleanupTick + 20) {
     return;
   }
   lastCleanupTick = currentTick;
 
-  for (const [key, entry] of cache.entries()) {
+  for (const [key, entry] of transportTileCache.entries()) {
     if (entry.tick < currentTick) {
-      console.log(
-        `Cleaning up ${cacheName} cache for key ${key} at tick ${entry.tick}`,
-      );
-      cache.delete(key);
+      transportTileCache.delete(key);
     }
   }
 }
@@ -49,42 +32,24 @@ export function canBuildTransportShip(
   player: Player,
   tile: TileRef,
 ): TileRef | false {
-  const currentTick = game.ticks();
-  const key = getBuildCacheKey(player.id(), tile, currentTick);
-
-  const cached = buildTransportShipCache.get(key);
-  if (cached?.tick === currentTick) {
-    console.log(
-      "Using cached canBuildTransportShip for player " +
-        player.id() +
-        " tile " +
-        tile +
-        " at tick " +
-        currentTick,
-    ); //TODO: remove after testing
-    return cached.value;
-  }
-
   if (
     player.unitCount(UnitType.TransportShip) >= game.config().boatMaxNumber()
   ) {
-    buildTransportShipCache.set(key, { tick: currentTick, value: false });
     return false;
   }
 
   const other = game.owner(tile);
-  if (other === player || (other.isPlayer() && player.isFriendly(other))) {
-    buildTransportShipCache.set(key, { tick: currentTick, value: false });
+  if (other === player) {
+    return false;
+  }
+  if (other.isPlayer() && player.isFriendly(other)) {
     return false;
   }
 
   const dst = targetTransportTile(game, tile);
   if (dst === null) {
-    buildTransportShipCache.set(key, { tick: currentTick, value: false });
     return false;
   }
-
-  let result: TileRef | false = false;
 
   if (game.isOceanShore(dst)) {
     let myPlayerBordersOcean = false;
@@ -94,34 +59,35 @@ export function canBuildTransportShip(
         break;
       }
     }
+
     if (myPlayerBordersOcean) {
-      result = transportShipSpawn(game, player, dst);
-    }
-  } else {
-    // Now we are boating in a lake, so do a bfs from target until we find
-    // a border tile owned by the player
-    const tiles = game.bfs(
-      dst,
-      andFN(
-        manhattanDistFN(dst, 300),
-        (_, t: TileRef) => game.isLake(t) || game.isShore(t),
-      ),
-    );
-    const sorted = Array.from(tiles).sort(
-      (a, b) => game.manhattanDist(dst, a) - game.manhattanDist(dst, b),
-    );
-    for (const t of sorted) {
-      if (game.owner(t) === player) {
-        result = transportShipSpawn(game, player, t);
-        break;
-      }
+      return transportShipSpawn(game, player, dst);
+    } else {
+      return false;
     }
   }
 
-  buildTransportShipCache.set(key, { tick: currentTick, value: result });
-  cleanupCache(buildTransportShipCache, currentTick, "buildTransportShip"); //TODO: remove last param after testing
+  // Now we are boating in a lake, so do a bfs from target until we find
+  // a border tile owned by the player
 
-  return result;
+  const tiles = game.bfs(
+    dst,
+    andFN(
+      manhattanDistFN(dst, 300),
+      (_, t: TileRef) => game.isLake(t) || game.isShore(t),
+    ),
+  );
+
+  const sorted = Array.from(tiles).sort(
+    (a, b) => game.manhattanDist(dst, a) - game.manhattanDist(dst, b),
+  );
+
+  for (const t of sorted) {
+    if (game.owner(t) === player) {
+      return transportShipSpawn(game, player, t);
+    }
+  }
+  return false;
 }
 
 function transportShipSpawn(
@@ -141,13 +107,10 @@ function transportShipSpawn(
 
 export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
   const currentTick = gm.ticks();
-  const key = getTransportTileCacheKey(tile, currentTick);
+  const key = getTileCacheKey(tile, currentTick);
 
   const cached = transportTileCache.get(key);
   if (cached?.tick === currentTick) {
-    console.log(
-      "Using cached transport tile for " + tile + " at tick " + currentTick,
-    ); //TODO: remove after testing
     return cached.value;
   }
 
@@ -160,7 +123,7 @@ export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
   }
 
   transportTileCache.set(key, { tick: currentTick, value: dstTile });
-  cleanupCache(transportTileCache, currentTick, "transportTile"); //TODO: remove last param after testing
+  cleanupCache(currentTick);
 
   return dstTile;
 }
