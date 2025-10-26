@@ -196,7 +196,18 @@ export class TerritoryLayer implements Layer {
         // In Team games, the spawn highlight color becomes that player's team color
         // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
         const team = human.team();
-        if (team !== null) color = this.theme.teamColor(team);
+        if (team !== null) {
+          const teamColors = Object.values(ColoredTeams);
+          if (teamColors.includes(team)) {
+            color = this.theme.teamColor(team);
+          } else {
+            if (myPlayer.isFriendly(human)) {
+              color = this.theme.spawnHighlightTeamColor();
+            } else {
+              color = this.theme.spawnHighlightColor();
+            }
+          }
+        }
       }
 
       for (const tile of this.game.bfs(
