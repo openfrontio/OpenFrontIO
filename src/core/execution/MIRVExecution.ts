@@ -22,7 +22,7 @@ export class MirvExecution implements Execution {
 
   private mirvRange = 1500;
   private warheadCount = 350;
-  private MIRV_FIXED_TRAVEL_TIME = 5; // Ticks
+  private MIRV_FIXED_TRAVEL_TIME = 20; // Ticks
 
   private random: PseudoRandom;
 
