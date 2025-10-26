@@ -50,6 +50,7 @@ const numPlayersConfig = {
   [GameMapType.Australia]: [70, 40, 30],
   [GameMapType.Achiran]: [40, 36, 30],
   [GameMapType.Baikal]: [100, 70, 50],
+  [GameMapType.BaikalNukeWars]: [100, 70, 50],
   [GameMapType.BetweenTwoSeas]: [70, 50, 40],
   [GameMapType.BlackSea]: [50, 30, 30],
   [GameMapType.Britannia]: [50, 30, 20],
