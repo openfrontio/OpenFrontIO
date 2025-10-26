@@ -7,9 +7,9 @@ import {
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
+
 import { setup } from "../../util/Setup";
-import { constructionExecution, executeTicks } from "../../util/utils";
+import { constructionExecution } from "../../util/utils";
 
 let game: Game;
 let player: Player;

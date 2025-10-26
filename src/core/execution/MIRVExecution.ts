@@ -45,7 +45,6 @@ export class MirvExecution implements Execution {
     this.pathFinder = new ParabolaPathFinder(mg);
     this.targetPlayer = this.mg.owner(this.dst);
 
-
     // Record stats
     this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
 
@@ -77,7 +76,9 @@ export class MirvExecution implements Execution {
       this.separateDst = this.mg.ref(x, y);
       this.pathFinder.computeControlPoints(spawn, this.separateDst);
       // Calculate speed for fixed travel time
-      const distance = this.mg.euclideanDist(spawn, this.separateDst);
+      const distance = Math.sqrt(
+        this.mg.euclideanDistSquared(spawn, this.separateDst),
+      );
       this.speed = distance / this.MIRV_FIXED_TRAVEL_TIME;
 
       this.mg.displayIncomingUnit(
