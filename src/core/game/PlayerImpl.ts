@@ -900,7 +900,7 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(
     tile: TileRef | null,
-    transportShipFilter: TransportShipFilter = TransportShipFilter.Default,
+    transportShipFilter?: TransportShipFilter,
   ): BuildableUnit[] {
     const notInSpawnPhase = !this.mg.inSpawnPhase();
     const result: BuildableUnit[] = [];
@@ -914,7 +914,7 @@ export class PlayerImpl implements Player {
       if (
         (u === UnitType.TransportShip &&
           transportShipFilter === TransportShipFilter.Exclude) ||
-        (u !== UnitType.TradeShip &&
+        (u !== UnitType.TransportShip &&
           transportShipFilter === TransportShipFilter.Only)
       ) {
         continue;

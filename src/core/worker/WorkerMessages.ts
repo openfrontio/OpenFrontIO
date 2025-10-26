@@ -63,7 +63,7 @@ export interface PlayerActionsMessage extends BaseWorkerMessage {
   playerID: PlayerID;
   x?: number;
   y?: number;
-  TransportShipFilter?: TransportShipFilter;
+  transportShipFilter?: TransportShipFilter;
 }
 
 export interface PlayerActionsResultMessage extends BaseWorkerMessage {

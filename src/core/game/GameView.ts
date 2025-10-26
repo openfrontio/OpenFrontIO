@@ -275,13 +275,13 @@ export class PlayerView {
 
   async actions(
     tile?: TileRef,
-    TransportShipFilter?: TransportShipFilter,
+    transportShipFilter?: TransportShipFilter,
   ): Promise<PlayerActions> {
     return this.game.worker.playerInteraction(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
-      TransportShipFilter,
+      transportShipFilter,
     );
   }
 

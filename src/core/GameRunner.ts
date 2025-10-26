@@ -182,14 +182,14 @@ export class GameRunner {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    TransportShipFilter?: TransportShipFilter,
+    transportShipFilter?: TransportShipFilter,
   ): PlayerActions {
     const player = this.game.player(playerID);
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
       canAttack: tile !== null && player.canAttack(tile),
-      buildableUnits: player.buildableUnits(tile, TransportShipFilter),
+      buildableUnits: player.buildableUnits(tile, transportShipFilter),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 

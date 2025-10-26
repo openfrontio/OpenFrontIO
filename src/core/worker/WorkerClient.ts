@@ -163,7 +163,7 @@ export class WorkerClient {
     playerID: PlayerID,
     x?: number,
     y?: number,
-    TransportShipFilter?: TransportShipFilter,
+    transportShipFilter?: TransportShipFilter,
   ): Promise<PlayerActions> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -188,7 +188,7 @@ export class WorkerClient {
         playerID: playerID,
         x: x,
         y: y,
-        TransportShipFilter: TransportShipFilter,
+        transportShipFilter: transportShipFilter,
       });
     });
   }

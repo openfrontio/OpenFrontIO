@@ -863,7 +863,6 @@ export interface NameViewData {
 
 // Filter for buildableUnits
 export enum TransportShipFilter {
-  Default = "default", // Include
-  Exclude = "exclude", // Exclude
-  Only = "only", // TransportShip only
+  Exclude = "exclude",
+  Only = "only",
 }
