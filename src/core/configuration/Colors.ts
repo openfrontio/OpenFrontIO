@@ -5,14 +5,14 @@ import lchPlugin from "colord/plugins/lch";
 extend([lchPlugin]);
 extend([labPlugin]);
 
-export const red = colord("hsl(0,82,56)");
-export const blue = colord("hsl(224,100,58)");
-export const teal = colord("hsl(172,66,50)");
-export const purple = colord("hsl(271,81,56)");
-export const yellow = colord("hsl(45,93,47)");
-export const orange = colord("hsl(25,95,53)");
-export const green = colord("hsl(128,49,50)");
-export const botColor = colord("hsl(36,10,80)");
+export const red = colord("rgb(235,51,51)");
+export const blue = colord("rgb(41,98,255)");
+export const teal = colord("rgb(43,212,189)");
+export const purple = colord("rgb(146,52,234)");
+export const yellow = colord("rgb(231,176,8)");
+export const orange = colord("rgb(249,116,21)");
+export const green = colord("rgb(65,190,82)");
+export const botColor = colord("rgb(209,205,199)");
 
 export const redTeamColors: Colord[] = generateTeamColors(red);
 export const blueTeamColors: Colord[] = generateTeamColors(blue);
@@ -24,17 +24,17 @@ export const greenTeamColors: Colord[] = generateTeamColors(green);
 export const botTeamColors: Colord[] = [colord(botColor)];
 
 function generateTeamColors(baseColor: Colord): Colord[] {
-  const { h: baseHue, s: baseSaturation, l: baseLightness } = baseColor.toHsl();
+  const hsl = baseColor.toHsl();
   const colorCount = 64;
 
   return Array.from({ length: colorCount }, (_, index) => {
     const progression = index / (colorCount - 1);
 
-    const saturation = baseSaturation * (1.0 - 0.3 * progression);
-    const lightness = Math.min(100, baseLightness + progression * 30);
+    const saturation = hsl.s * (1.0 - 0.3 * progression);
+    const lightness = Math.min(100, hsl.l + progression * 30);
 
     return colord({
-      h: baseHue,
+      h: hsl.h,
       s: saturation,
       l: lightness,
     });
