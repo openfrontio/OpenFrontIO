@@ -244,10 +244,8 @@ export class TerritoryLayer implements Layer {
 
     let team: string | null = null;
     team = focusedPlayer.team();
-    if (team !== null && team in ColoredTeams)
+    if (team !== null && team in ColoredTeams) {
       teamColor = this.theme.teamColor(team).alpha(0.5);
-    else if (team !== null) {
-      teamColor = focusedPlayer.territoryColor().alpha(0.5);
     } else {
       teamColor = baseColor;
     }
