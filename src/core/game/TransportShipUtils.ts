@@ -98,6 +98,8 @@ export function canBuildTransportShip(
       result = transportShipSpawn(game, player, dst);
     }
   } else {
+    // Now we are boating in a lake, so do a bfs from target until we find
+    // a border tile owned by the player
     const tiles = game.bfs(
       dst,
       andFN(
