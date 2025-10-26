@@ -50,6 +50,7 @@
     "@types/sinon": "^17.0.3",
     "@types/systeminformation": "^3.23.1",
     "@types/ws": "^8.5.11",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "autoprefixer": "^10.4.20",
     "benchmark": "^2.1.4",
     "binary-base64-loader": "^1.0.0",

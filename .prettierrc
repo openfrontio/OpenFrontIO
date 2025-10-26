@@ -13,5 +13,9 @@
       }
     }
   ],
-  "plugins": ["prettier-plugin-organize-imports", "prettier-plugin-sh"]
+  "plugins": [
+    "prettier-plugin-organize-imports",
+    "prettier-plugin-sh",
+    "@trivago/prettier-plugin-sort-imports"
+  ]
 }
