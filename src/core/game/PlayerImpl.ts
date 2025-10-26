@@ -845,7 +845,15 @@ export class PlayerImpl implements Player {
     return b;
   }
 
-  public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+  public findUnitToUpgrade(
+    type: UnitType,
+    targetTile: TileRef,
+    skipBuildCheck: boolean = false,
+  ): Unit | false {
+    if (!this.canUpgradeUnit(type, skipBuildCheck)) {
+      return false;
+    }
+
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
       .nearbyUnits(targetTile, range, type)
@@ -853,21 +861,31 @@ export class PlayerImpl implements Player {
     if (existing.length === 0) {
       return false;
     }
-    const unit = existing[0].unit;
-    if (!this.canUpgradeUnit(unit.type())) {
-      return false;
-    }
-    return unit;
+
+    return existing[0].unit;
   }
 
-  public canUpgradeUnit(unitType: UnitType): boolean {
+  public canUpgradeUnit(
+    unitType: UnitType,
+    skipBuildCheck: boolean = false,
+  ): boolean {
     if (!this.mg.config().unitInfo(unitType).upgradable) {
       return false;
     }
+    if (!skipBuildCheck && this.canBuildUnit(unitType) === false) {
+      return false;
+    }
+    return true;
+  }
+
+  private canBuildUnit(unitType: UnitType): boolean {
     if (this.mg.config().isUnitDisabled(unitType)) {
       return false;
     }
     if (this._gold < this.mg.config().unitInfo(unitType).cost(this)) {
+      return false;
+    }
+    if (!this.isAlive()) {
       return false;
     }
     return true;
@@ -884,49 +902,37 @@ export class PlayerImpl implements Player {
     tile: TileRef | null,
     transportShipFilter: TransportShipFilter = TransportShipFilter.Default,
   ): BuildableUnit[] {
-    const inSpawnPhase = this.mg.inSpawnPhase();
-    let canUpgrade: number | false = false;
-
-    if (transportShipFilter === TransportShipFilter.Only) {
-      const u = UnitType.TransportShip;
-      canUpgrade = !this.mg.config().unitInfo(u).upgradable ? false : 0;
-      return [
-        {
-          type: u,
-          canBuild:
-            inSpawnPhase || tile === null
-              ? false
-              : this.canBuild(u, tile, null),
-          canUpgrade: canUpgrade,
-          cost: this.mg.config().unitInfo(u).cost(this),
-        } as BuildableUnit,
-      ];
-    }
-
-    const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
+    const notInSpawnPhase = !this.mg.inSpawnPhase();
     const result: BuildableUnit[] = [];
+
+    const validTiles =
+      tile !== null && transportShipFilter !== TransportShipFilter.Only
+        ? this.validStructureSpawnTiles(tile)
+        : [];
 
     for (const u of Object.values(UnitType)) {
       if (
-        u === UnitType.TransportShip &&
-        transportShipFilter === TransportShipFilter.Exclude
+        (u === UnitType.TransportShip &&
+          transportShipFilter === TransportShipFilter.Exclude) ||
+        (u !== UnitType.TradeShip &&
+          transportShipFilter === TransportShipFilter.Only)
       ) {
         continue;
       }
 
-      if (!inSpawnPhase && tile !== null) {
-        const existingUnit = this.findUnitToUpgrade(u, tile);
-        if (existingUnit !== false) {
-          canUpgrade = existingUnit.id();
-        }
+      let canBuild: TileRef | false = false;
+      let canUpgrade: number | false = false;
+
+      if (tile !== null && this.canBuildUnit(u) && notInSpawnPhase) {
+        canBuild = this.canBuild(u, tile, validTiles, true);
+
+        const existingUnit = this.findUnitToUpgrade(u, tile, true);
+        canUpgrade = existingUnit !== false ? existingUnit.id() : false;
       }
 
       result.push({
         type: u,
-        canBuild:
-          inSpawnPhase || tile === null
-            ? false
-            : this.canBuild(u, tile, validTiles),
+        canBuild: canBuild,
         canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit);
@@ -939,15 +945,12 @@ export class PlayerImpl implements Player {
     unitType: UnitType,
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
+    skipBuildCheck: boolean = false,
   ): TileRef | false {
-    if (this.mg.config().isUnitDisabled(unitType)) {
+    if (!skipBuildCheck && this.canBuildUnit(unitType) === false) {
       return false;
     }
 
-    const cost = this.mg.unitInfo(unitType).cost(this);
-    if (!this.isAlive() || this.gold() < cost) {
-      return false;
-    }
     switch (unitType) {
       case UnitType.MIRV:
         if (!this.mg.hasOwner(targetTile)) {
