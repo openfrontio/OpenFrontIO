@@ -51,6 +51,7 @@ export interface MenuElement {
   tooltipItems?: TooltipItem[];
   tooltipKeys?: TooltipKey[];
 
+  cooldown?: (params: MenuElementParams) => number;
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
@@ -425,6 +426,7 @@ export const attackMenuElement: MenuElement = {
 export const deleteUnitElement: MenuElement = {
   id: Slot.Delete,
   name: "delete",
+  cooldown: (params: MenuElementParams) => params.myPlayer.deleteUnitCooldown(),
   disabled: (params: MenuElementParams) => {
     const tileOwner = params.game.owner(params.tile);
     const isLand = params.game.isLand(params.tile);
@@ -441,7 +443,7 @@ export const deleteUnitElement: MenuElement = {
       return true;
     }
 
-    if (!params.myPlayer.canDeleteUnit()) {
+    if (params.myPlayer.deleteUnitCooldown() > 0) {
       return true;
     }
 
@@ -450,8 +452,10 @@ export const deleteUnitElement: MenuElement = {
       .units()
       .filter(
         (unit) =>
+          unit.constructionType() === undefined &&
+          unit.markedForDeletion() === false &&
           params.game.manhattanDist(unit.tile(), params.tile) <=
-          DELETE_SELECTION_RADIUS,
+            DELETE_SELECTION_RADIUS,
       );
 
     return myUnits.length === 0;

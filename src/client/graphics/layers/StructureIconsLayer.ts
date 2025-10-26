@@ -418,6 +418,7 @@ export class StructureIconsLayer implements Layer {
       const render = this.findRenderByUnit(unitView);
       if (render) {
         this.checkForConstructionState(render, unitView);
+        this.checkForDeletionState(render, unitView);
         this.checkForOwnershipChange(render, unitView);
         this.checkForLevelChange(render, unitView);
       }
@@ -464,6 +465,16 @@ export class StructureIconsLayer implements Layer {
         render.iconContainer.filters = [];
         render.dotContainer.filters = [];
       }
+    }
+  }
+
+  private checkForDeletionState(render: StructureRenderInfo, unit: UnitView) {
+    if (unit.markedForDeletion() !== false) {
+      render.iconContainer?.destroy();
+      render.dotContainer?.destroy();
+      render.iconContainer = this.createIconSprite(unit);
+      render.dotContainer = this.createDotSprite(unit);
+      this.modifyVisibility(render);
     }
   }
 

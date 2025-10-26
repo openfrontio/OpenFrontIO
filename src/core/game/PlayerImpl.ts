@@ -95,6 +95,7 @@ export class PlayerImpl implements Player {
   private relations = new Map<Player, number>();
 
   private lastDeleteUnitTick: Tick = -1;
+  private lastEmbargoAllTick: Tick = -1;
 
   public _incomingAttacks: Attack[] = [];
   public _outgoingAttacks: Attack[] = [];
@@ -391,6 +392,13 @@ export class PlayerImpl implements Player {
     if (other === this) {
       return false;
     }
+    if (this.isDisconnected() || other.isDisconnected()) {
+      // Disconnected players are marked as not-friendly even if they are allies,
+      // so we need to return early if either player is disconnected.
+      // Otherise we could end up sending an alliance request to someone
+      // we are already allied with.
+      return false;
+    }
     if (this.isFriendly(other) || !this.isAlive()) {
       return false;
     }
@@ -683,6 +691,28 @@ export class PlayerImpl implements Player {
     this.lastDeleteUnitTick = this.mg.ticks();
   }
 
+  canEmbargoAll(): boolean {
+    // Cooldown gate
+    if (
+      this.mg.ticks() - this.lastEmbargoAllTick <
+      this.mg.config().embargoAllCooldown()
+    ) {
+      return false;
+    }
+    // At least one eligible player exists
+    for (const p of this.mg.players()) {
+      if (p.id() === this.id()) continue;
+      if (p.type() === PlayerType.Bot) continue;
+      if (this.isOnSameTeam(p)) continue;
+      return true;
+    }
+    return false;
+  }
+
+  recordEmbargoAll(): void {
+    this.lastEmbargoAllTick = this.mg.ticks();
+  }
+
   hasEmbargoAgainst(other: Player): boolean {
     return this.embargoes.has(other.id());
   }
@@ -865,14 +895,14 @@ export class PlayerImpl implements Player {
     return existing[0].unit;
   }
 
-  public canUpgradeUnit(
-    unitType: UnitType,
-    skipBuildCheck: boolean = false,
-  ): boolean {
-    if (!this.mg.config().unitInfo(unitType).upgradable) {
+  public canUpgradeUnit(unit: Unit, skipBuildCheck: boolean = false): boolean {
+    if (unit.isMarkedForDeletion()) {
       return false;
     }
-    if (!skipBuildCheck && this.canBuildUnit(unitType) === false) {
+    if (!this.mg.config().unitInfo(unit.type()).upgradable) {
+      return false;
+    }
+    if (!skipBuildCheck && this.canBuildUnit(unit.type()) === false) {
       return false;
     }
     return true;

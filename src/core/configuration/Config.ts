@@ -63,6 +63,7 @@ export interface ServerConfig {
   cloudflareCredsPath(): string;
   stripePublishableKey(): string;
   allowedFlares(): string[] | undefined;
+  enableMatchmaking(): boolean;
 }
 
 export interface NukeMagnitude {
@@ -130,6 +131,8 @@ export interface Config {
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  embargoAllCooldown(): Tick;
+  deletionMarkDuration(): Tick;
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
@@ -198,4 +201,7 @@ export interface Theme {
   neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
+  spawnHighlightSelfColor(): Colord;
+  spawnHighlightTeamColor(): Colord;
+  spawnHighlightEnemyColor(): Colord;
 }
