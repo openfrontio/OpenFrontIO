@@ -33,6 +33,7 @@ import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
+import MenuSoundManager from "./sound/MenuSoundManager";
 import {
   generateCryptoRandomUUID,
   incrementGamesPlayed,
@@ -382,6 +383,10 @@ class Client {
       });
 
     this.initializeFuseTag();
+    MenuSoundManager.setBackgroundMusicVolume(
+      this.userSettings.mainMenuMusicVolume(),
+    );
+    MenuSoundManager.playBackgroundMusic();
   }
 
   private handleHash() {
@@ -506,6 +511,7 @@ class Client {
         gameRecord: lobby.gameRecord,
       },
       () => {
+        MenuSoundManager.stopBackgroundMusic();
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");
         document

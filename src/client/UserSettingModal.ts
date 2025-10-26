@@ -7,6 +7,7 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import MenuSoundManager from "./sound/MenuSoundManager";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
@@ -206,6 +207,17 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
+  private onMenuVolumeChange(e: CustomEvent<{ value: number }>) {
+    const value = e.detail?.value;
+    if (typeof value === "number") {
+      const volume = value / 100;
+      this.userSettings.setMainMenuMusicVolume(volume);
+      MenuSoundManager.setBackgroundMusicVolume(volume);
+    } else {
+      console.warn("Slider event missing detail.value", e);
+    }
+  }
+
   private handleKeybindChange(
     e: CustomEvent<{ action: string; value: string; key: string }>,
   ) {
@@ -273,6 +285,16 @@ export class UserSettingModal extends LitElement {
 
   private renderBasicSettings() {
     return html`
+      <!-- Main Menu Music -->
+      <setting-slider
+        label="${translateText("user_setting.main_menu_music_volume")}"
+        description="${translateText("user_setting.main_menu_music_volume_desc")}"
+        min="0"
+        max="100"
+        .value=${this.userSettings.mainMenuMusicVolume() * 100}
+        @change=${this.onMenuVolumeChange}
+      ></setting-slider>
+
       <!-- 🌙 Dark Mode -->
       <setting-toggle
         label="${translateText("user_setting.dark_mode_label")}"
