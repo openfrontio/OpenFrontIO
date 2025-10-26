@@ -21,7 +21,7 @@ export const purpleTeamColors: Colord[] = generateTeamColors(purple);
 export const yellowTeamColors: Colord[] = generateTeamColors(yellow);
 export const orangeTeamColors: Colord[] = generateTeamColors(orange);
 export const greenTeamColors: Colord[] = generateTeamColors(green);
-export const botTeamColors: Colord[] = [colord(botColor)];
+export const botTeamColors: Colord[] = [botColor];
 
 function generateTeamColors(baseColor: Colord): Colord[] {
   const hsl = baseColor.toHsl();
@@ -260,7 +260,7 @@ export const botColors: Colord[] = [
   colord("rgb(150,140,150)"), // Muted Dusty Rose
 ];
 
-// Fallback colors for when the color palette is exhausted. Currently 100 colors.
+// Fallback colors for when the color palette is exhausted.
 export const fallbackColors: Colord[] = [
   colord("rgb(35,0,0)"),
   colord("rgb(45,0,0)"),
