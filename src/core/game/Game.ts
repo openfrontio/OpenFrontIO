@@ -562,7 +562,7 @@ export interface Player {
   unitsOwned(type: UnitType): number;
   buildableUnits(
     tile: TileRef | null,
-    TransportShipFilter?: TransportShipFilter,
+    transportShipFilter?: TransportShipFilter,
   ): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
