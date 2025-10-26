@@ -4,6 +4,7 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type { GameView } from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 /**
@@ -14,13 +15,16 @@ export class SAMRadiusLayer implements Layer {
   private readonly context: CanvasRenderingContext2D;
   private readonly samLaunchers: Set<number> = new Set(); // Track SAM launcher IDs
   private needsRedraw = true;
-  // show stroke only when the UI indicates structures are being hovered/toggled
+  // track whether the stroke should be shown due to hover or due to an active build ghost
+  private hoveredShow: boolean = false;
+  private ghostShow: boolean = false;
   private showStroke: boolean = false;
 
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
     private readonly transformHandler: TransformHandler,
+    private readonly uiState: UIState,
   ) {
     this.canvas = document.createElement("canvas");
     const ctx = this.canvas.getContext("2d");
@@ -39,14 +43,21 @@ export class SAMRadiusLayer implements Layer {
     // ToggleStructureEvent with SAMLauncher included in the list).
     this.eventBus.on(ToggleStructureEvent, (e) => {
       try {
-        this.showStroke = !!e.structureTypes;
+        const types = e.structureTypes;
+        this.hoveredShow =
+          !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
       } catch (err) {
-        this.showStroke = false;
+        this.hoveredShow = false;
       }
-      this.needsRedraw = true;
+      this.updateStrokeVisibility();
     });
 
     this.redraw();
+  }
+
+  private updateStrokeVisibility() {
+    this.showStroke = this.hoveredShow || this.ghostShow;
+    this.needsRedraw = true;
   }
 
   shouldTransform(): boolean {
@@ -89,6 +100,12 @@ export class SAMRadiusLayer implements Layer {
       this.redraw();
       this.needsRedraw = false;
     }
+    // show when in ghost mode for sam/atom/hydrogen
+    this.ghostShow =
+      this.uiState.ghostStructure === UnitType.SAMLauncher ||
+      this.uiState.ghostStructure === UnitType.AtomBomb ||
+      this.uiState.ghostStructure === UnitType.HydrogenBomb;
+    this.updateStrokeVisibility();
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
