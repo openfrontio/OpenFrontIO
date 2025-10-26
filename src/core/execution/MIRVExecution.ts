@@ -70,7 +70,7 @@ export class MirvExecution implements Execution {
       }
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {});
       const x = Math.floor(
-        (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
+        (this.mg.x(this.dst) + this.mg.x(this.nuke.tile())) / 2,
       );
       const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
