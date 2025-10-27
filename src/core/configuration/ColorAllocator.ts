@@ -11,13 +11,13 @@ import {
   botTeamColors,
   generateTeamColors,
   greenColorblind,
-  greenTeamColors,
   orangeTeamColors,
   purpleTeamColors,
+  red,
   redColorblind,
-  redTeamColors,
   tealTeamColors,
   yellowTeamColors,
+  green,
 } from "./Colors";
 extend([lchPlugin]);
 extend([labPlugin]);
@@ -43,7 +43,9 @@ export class ColorAllocator {
       case ColoredTeams.Blue:
         return blueTeamColors;
       case ColoredTeams.Red:
-        return isColorblind ? generateTeamColors(redColorblind) : redTeamColors;
+        return isColorblind
+          ? generateTeamColors(redColorblind)
+          : generateTeamColors(red);
       case ColoredTeams.Teal:
         return tealTeamColors;
       case ColoredTeams.Purple:
@@ -55,7 +57,7 @@ export class ColorAllocator {
       case ColoredTeams.Green:
         return isColorblind
           ? generateTeamColors(greenColorblind)
-          : greenTeamColors;
+          : generateTeamColors(green);
       case ColoredTeams.Bot:
         return botTeamColors;
       default:
