@@ -42,7 +42,6 @@ export class FxLayer implements Layer {
 
   tick() {
     this.manageBoatTargetFx();
-    this.manageNukeTargetFx();
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -85,19 +84,6 @@ export class FxLayer implements Layer {
       ) {
         (fx as any).end?.();
         this.boatTargetFxByUnitId.delete(unitId);
-      }
-    }
-  }
-
-  private manageNukeTargetFx() {
-    // End markers for nukes that arrived or were intercepted
-    for (const [unitId, fx] of Array.from(
-      this.nukeTargetFxByUnitId.entries(),
-    )) {
-      const unit = this.game.unit(unitId);
-      if (!unit || !unit.isActive() || unit.reachedTarget()) {
-        (fx as any).end?.();
-        this.nukeTargetFxByUnitId.delete(unitId);
       }
     }
   }
@@ -326,6 +312,16 @@ export class FxLayer implements Layer {
   }
 
   onNukeEvent(unit: UnitView, radius: number) {
+    // Clean up any persistent nuke target FX when the unit either reached its
+    // target or became inactive.
+    if (this.nukeTargetFxByUnitId.has(unit.id())) {
+      const fx = this.nukeTargetFxByUnitId.get(unit.id());
+      if (fx && (unit.reachedTarget() || !unit.isActive())) {
+        (fx as any).end?.();
+        this.nukeTargetFxByUnitId.delete(unit.id());
+      }
+    }
+
     if (!unit.isActive()) {
       if (!unit.reachedTarget()) {
         this.handleSAMInterception(unit);
