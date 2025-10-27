@@ -131,6 +131,7 @@ export interface Config {
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  embargoAllCooldown(): Tick;
   deletionMarkDuration(): Tick;
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
@@ -200,4 +201,7 @@ export interface Theme {
   neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
+  spawnHighlightSelfColor(): Colord;
+  spawnHighlightTeamColor(): Colord;
+  spawnHighlightEnemyColor(): Colord;
 }
