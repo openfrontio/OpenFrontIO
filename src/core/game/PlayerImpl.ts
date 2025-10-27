@@ -906,6 +906,9 @@ export class PlayerImpl implements Player {
     if (unit.isMarkedForDeletion()) {
       return false;
     }
+    if (unit.owner() !== this) {
+      return false;
+    }
     if (!skipUnitTypeCheck && !this.canUpgradeUnitType(unit.type())) {
       return false;
     }
@@ -933,9 +936,6 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (!this.isAlive()) {
-      return false;
-    }
-    if (unit.owner() !== this) {
       return false;
     }
     return true;
