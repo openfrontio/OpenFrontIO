@@ -301,7 +301,7 @@ export class FxLayer implements Layer {
     if (!unit.isActive()) {
       const fx = this.nukeTargetFxByUnitId.get(unit.id());
       if (fx) {
-        (fx as any).end?.();
+        fx.end();
         this.nukeTargetFxByUnitId.delete(unit.id());
       }
       if (!unit.reachedTarget()) {
