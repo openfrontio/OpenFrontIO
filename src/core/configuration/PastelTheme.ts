@@ -3,6 +3,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
+import { UserSettings } from "../game/UserSettings";
 import { ColorAllocator } from "./ColorAllocator";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Config";
@@ -12,10 +13,33 @@ type ColorCache = Map<string, Colord>;
 export class PastelTheme implements Theme {
   private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
-  private humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
-  private botColorAllocator = new ColorAllocator(botColors, botColors);
-  private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
-  private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
+  private humanColorAllocator: ColorAllocator;
+  private botColorAllocator: ColorAllocator;
+  private teamColorAllocator: ColorAllocator;
+  private nationColorAllocator: ColorAllocator;
+
+  constructor(private userSettings: UserSettings) {
+    this.humanColorAllocator = new ColorAllocator(
+      humanColors,
+      fallbackColors,
+      userSettings,
+    );
+    this.botColorAllocator = new ColorAllocator(
+      botColors,
+      botColors,
+      userSettings,
+    );
+    this.teamColorAllocator = new ColorAllocator(
+      humanColors,
+      fallbackColors,
+      userSettings,
+    );
+    this.nationColorAllocator = new ColorAllocator(
+      nationColors,
+      nationColors,
+      userSettings,
+    );
+  }
 
   private background = colord({ r: 60, g: 60, b: 60 });
   private shore = colord({ r: 204, g: 203, b: 158 });

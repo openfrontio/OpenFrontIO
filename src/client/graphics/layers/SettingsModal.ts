@@ -136,6 +136,12 @@ export class SettingsModal extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleColorblindModeButtonClick() {
+    this.userSettings.toggleColorblindMode();
+    this.eventBus.emit(new RefreshGraphicsEvent());
+    this.requestUpdate();
+  }
+
   private onToggleRandomNameModeButtonClick() {
     this.userSettings.toggleRandomName();
     this.requestUpdate();
@@ -316,6 +322,31 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.darkMode()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleColorblindModeButtonClick}"
+            >
+              <img
+                src=${darkModeIcon}
+                alt="colorblindModeIcon"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.colorblind_mode_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.colorblind_mode_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.colorblindMode()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>

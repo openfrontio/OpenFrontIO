@@ -14,6 +14,9 @@ export const orange = colord({ h: 25, s: 95, l: 53 });
 export const green = colord({ h: 128, s: 49, l: 50 });
 export const botColor = colord({ h: 36, s: 10, l: 80 });
 
+export const redColorblind = colord({ h: 30, s: 100, l: 50 }); // Orange
+export const greenColorblind = colord({ h: 210, s: 100, l: 50 }); // Blue
+
 export const redTeamColors: Colord[] = generateTeamColors(red);
 export const blueTeamColors: Colord[] = generateTeamColors(blue);
 export const tealTeamColors: Colord[] = generateTeamColors(teal);
@@ -23,7 +26,7 @@ export const orangeTeamColors: Colord[] = generateTeamColors(orange);
 export const greenTeamColors: Colord[] = generateTeamColors(green);
 export const botTeamColors: Colord[] = [colord(botColor)];
 
-function generateTeamColors(baseColor: Colord): Colord[] {
+export function generateTeamColors(baseColor: Colord): Colord[] {
   const { h: baseHue, s: baseSaturation, l: baseLightness } = baseColor.toHsl();
   const colorCount = 64;
 

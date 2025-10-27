@@ -220,14 +220,17 @@ export abstract class DefaultServerConfig implements ServerConfig {
 }
 
 export class DefaultConfig implements Config {
-  private pastelTheme: PastelTheme = new PastelTheme();
-  private pastelThemeDark: PastelThemeDark = new PastelThemeDark();
+  private pastelTheme: PastelTheme;
+  private pastelThemeDark: PastelThemeDark;
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
-  ) {}
+  ) {
+    this.pastelTheme = new PastelTheme(this.userSettings());
+    this.pastelThemeDark = new PastelThemeDark(this.userSettings());
+  }
 
   stripePublishableKey(): string {
     return process.env.STRIPE_PUBLISHABLE_KEY ?? "";

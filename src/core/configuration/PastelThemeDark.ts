@@ -1,6 +1,7 @@
 import { Colord, colord } from "colord";
 import { TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
+import { UserSettings } from "../game/UserSettings";
 import { PastelTheme } from "./PastelTheme";
 
 export class PastelThemeDark extends PastelTheme {
@@ -8,6 +9,10 @@ export class PastelThemeDark extends PastelTheme {
 
   private darkWater = colord({ r: 14, g: 11, b: 30 });
   private darkShorelineWater = colord({ r: 50, g: 50, b: 50 });
+
+  constructor(userSettings: UserSettings) {
+    super(userSettings);
+  }
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
     const mag = gm.magnitude(tile);

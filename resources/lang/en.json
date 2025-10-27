@@ -306,6 +306,8 @@
     "tab_keybinds": "Keybinds",
     "dark_mode_label": "Dark Mode",
     "dark_mode_desc": "Toggle the site’s appearance between light and dark themes",
+    "user_setting.colorblind_mode_label": "Colorblind Mode",
+    "user_setting.colorblind_mode_desc": "Adjusts colors for red-green color blindness.",
     "emojis_label": "Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
     "alert_frame_label": "Alert Frame",

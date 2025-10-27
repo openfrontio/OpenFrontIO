@@ -128,6 +128,14 @@ export class UserSettings {
     }
   }
 
+  colorblindMode() {
+    return this.get("settings.colorblindMode", false);
+  }
+
+  toggleColorblindMode() {
+    this.set("settings.colorblindMode", !this.colorblindMode());
+  }
+
   // For development only. Used for testing patterns, set in the console manually.
   getDevOnlyPattern(): PlayerPattern | undefined {
     const data = localStorage.getItem("dev-pattern") ?? undefined;

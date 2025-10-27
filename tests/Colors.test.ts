@@ -14,6 +14,7 @@ import {
   yellow,
 } from "../src/core/configuration/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
+import { UserSettings } from "../src/core/game/UserSettings";
 
 const mockColors: Colord[] = [
   colord({ r: 255, g: 0, b: 0 }),
@@ -28,11 +29,19 @@ const fallbackMockColors: Colord[] = [
 
 const fallbackColors = [...fallbackMockColors, ...mockColors];
 
+const mockUserSettings = {
+  colorblindMode: () => false,
+} as UserSettings;
+
 describe("ColorAllocator", () => {
   let allocator: ColorAllocator;
 
   beforeEach(() => {
-    allocator = new ColorAllocator(mockColors, fallbackMockColors);
+    allocator = new ColorAllocator(
+      mockColors,
+      fallbackMockColors,
+      mockUserSettings,
+    );
   });
 
   test("returns a unique color for each new ID", () => {
@@ -67,7 +76,11 @@ describe("ColorAllocator", () => {
   });
 
   test("assignBotColor returns deterministic color from botColors", () => {
-    const allocator = new ColorAllocator(mockColors, mockColors);
+    const allocator = new ColorAllocator(
+      mockColors,
+      mockColors,
+      mockUserSettings,
+    );
 
     const id1 = "bot123";
     const id2 = "bot456";

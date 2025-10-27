@@ -3,14 +3,18 @@ import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import Color from "colorjs.io";
 import { ColoredTeams, Team } from "../game/Game";
+import { UserSettings } from "../game/UserSettings";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import {
   blueTeamColors,
   botTeamColors,
+  generateTeamColors,
+  greenColorblind,
   greenTeamColors,
   orangeTeamColors,
   purpleTeamColors,
+  redColorblind,
   redTeamColors,
   tealTeamColors,
   yellowTeamColors,
@@ -24,17 +28,22 @@ export class ColorAllocator {
   private assigned = new Map<string, Colord>();
   private teamPlayerColors = new Map<string, Colord>();
 
-  constructor(colors: Colord[], fallback: Colord[]) {
+  constructor(
+    colors: Colord[],
+    fallback: Colord[],
+    private userSettings: UserSettings,
+  ) {
     this.availableColors = [...colors];
     this.fallbackColors = [...colors, ...fallback];
   }
 
   private getTeamColorVariations(team: Team): Colord[] {
+    const isColorblind = this.userSettings.colorblindMode();
     switch (team) {
       case ColoredTeams.Blue:
         return blueTeamColors;
       case ColoredTeams.Red:
-        return redTeamColors;
+        return isColorblind ? generateTeamColors(redColorblind) : redTeamColors;
       case ColoredTeams.Teal:
         return tealTeamColors;
       case ColoredTeams.Purple:
@@ -44,7 +53,9 @@ export class ColorAllocator {
       case ColoredTeams.Orange:
         return orangeTeamColors;
       case ColoredTeams.Green:
-        return greenTeamColors;
+        return isColorblind
+          ? generateTeamColors(greenColorblind)
+          : greenTeamColors;
       case ColoredTeams.Bot:
         return botTeamColors;
       default:
