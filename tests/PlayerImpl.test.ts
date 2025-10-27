@@ -1,3 +1,4 @@
+import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -6,7 +7,6 @@ import {
   UnitType,
 } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 
 let game: Game;
 let player: Player;
@@ -25,7 +25,6 @@ describe("PlayerImpl", () => {
       ],
     );
 
-    // Add spawn executions to give players territory
     game.addExecution(
       new SpawnExecution(game.player("player_id").info(), game.ref(0, 0)),
       new SpawnExecution(game.player("other_id").info(), game.ref(20, 20)),
