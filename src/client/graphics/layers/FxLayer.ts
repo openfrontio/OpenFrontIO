@@ -298,17 +298,12 @@ export class FxLayer implements Layer {
   }
 
   onNukeEvent(unit: UnitView, radius: number) {
-    // Clean up any persistent nuke target FX when the unit either reached its
-    // target or became inactive.
-    if (this.nukeTargetFxByUnitId.has(unit.id())) {
+    if (!unit.isActive()) {
       const fx = this.nukeTargetFxByUnitId.get(unit.id());
-      if (fx && (unit.reachedTarget() || !unit.isActive())) {
+      if (fx) {
         (fx as any).end?.();
         this.nukeTargetFxByUnitId.delete(unit.id());
       }
-    }
-
-    if (!unit.isActive()) {
       if (!unit.reachedTarget()) {
         this.handleSAMInterception(unit);
       } else {
