@@ -21,7 +21,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
-import { UserSettings } from "../game/UserSettings";
+import { IUserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
@@ -225,7 +225,7 @@ export class DefaultConfig implements Config {
   constructor(
     private _serverConfig: ServerConfig,
     private _gameConfig: GameConfig,
-    private _userSettings: UserSettings | null,
+    private _userSettings: IUserSettings | null,
     private _isReplay: boolean,
   ) {
     this.pastelTheme = new PastelTheme(this.userSettings());
@@ -269,7 +269,7 @@ export class DefaultConfig implements Config {
     return this._serverConfig;
   }
 
-  userSettings(): UserSettings {
+  userSettings(): IUserSettings {
     if (this._userSettings === null) {
       throw new Error("userSettings is null");
     }

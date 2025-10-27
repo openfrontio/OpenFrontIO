@@ -3,7 +3,7 @@ import { PseudoRandom } from "../PseudoRandom";
 import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
-import { UserSettings } from "../game/UserSettings";
+import { IUserSettings } from "../game/UserSettings";
 import { ColorAllocator } from "./ColorAllocator";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Config";
@@ -18,7 +18,7 @@ export class PastelTheme implements Theme {
   private teamColorAllocator: ColorAllocator;
   private nationColorAllocator: ColorAllocator;
 
-  constructor(private userSettings: UserSettings) {
+  constructor(private userSettings: IUserSettings) {
     this.humanColorAllocator = new ColorAllocator(
       humanColors,
       fallbackColors,

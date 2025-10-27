@@ -1,4 +1,4 @@
-import { UserSettings } from "../game/UserSettings";
+import { IUserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { Config, GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig } from "./DefaultConfig";
@@ -10,7 +10,7 @@ export let cachedSC: ServerConfig | null = null;
 
 export async function getConfig(
   gameConfig: GameConfig,
-  userSettings: UserSettings | null,
+  userSettings: IUserSettings | null,
   isReplay: boolean = false,
 ): Promise<Config> {
   const sc = await getServerConfigFromClient();

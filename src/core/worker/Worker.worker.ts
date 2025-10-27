@@ -2,6 +2,7 @@ import version from "../../../resources/version.txt";
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { IUserSettings, UserSettingsData } from "../game/UserSettings";
 import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
@@ -16,6 +17,53 @@ import {
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
+
+class MockUserSettings implements IUserSettings {
+  constructor(private data: UserSettingsData) {}
+
+  emojis(): boolean {
+    return this.data.emojis;
+  }
+  performanceOverlay(): boolean {
+    return this.data.performanceOverlay;
+  }
+  alertFrame(): boolean {
+    return this.data.alertFrame;
+  }
+  anonymousNames(): boolean {
+    return this.data.anonymousNames;
+  }
+  lobbyIdVisibility(): boolean {
+    return this.data.lobbyIdVisibility;
+  }
+  fxLayer(): boolean {
+    return this.data.fxLayer;
+  }
+  structureSprites(): boolean {
+    return this.data.structureSprites;
+  }
+  darkMode(): boolean {
+    return this.data.darkMode;
+  }
+  leftClickOpensMenu(): boolean {
+    return this.data.leftClickOpensMenu;
+  }
+  territoryPatterns(): boolean {
+    return this.data.territoryPatterns;
+  }
+  focusLocked(): boolean {
+    return this.data.focusLocked;
+  }
+  colorblindMode(): boolean {
+    return this.data.colorblindMode;
+  }
+  backgroundMusicVolume(): number {
+    return this.data.backgroundMusicVolume;
+  }
+  soundEffectsVolume(): number {
+    return this.data.soundEffectsVolume;
+  }
+}
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -41,11 +89,13 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       break;
     case "init":
       try {
+        const userSettings = new MockUserSettings(message.userSettings);
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
           mapLoader,
           gameUpdate,
+          userSettings,
         ).then((gr) => {
           sendMessage({
             type: "initialized",

@@ -14,7 +14,7 @@ import {
   yellow,
 } from "../src/core/configuration/Colors";
 import { ColoredTeams } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
+import { IUserSettings } from "../src/core/game/UserSettings";
 
 const mockColors: Colord[] = [
   colord({ r: 255, g: 0, b: 0 }),
@@ -31,7 +31,7 @@ const fallbackColors = [...fallbackMockColors, ...mockColors];
 
 const mockUserSettings = {
   colorblindMode: () => false,
-} as UserSettings;
+} as IUserSettings;
 
 describe("ColorAllocator", () => {
   let allocator: ColorAllocator;
@@ -156,6 +156,24 @@ describe("ColorAllocator", () => {
     );
 
     expect(redColorPlayerOne.isEqual(redColorPlayerTwo)).toBe(false);
+  });
+
+  test("assignTeamColor returns colorblind-friendly colors when colorblind mode is enabled", () => {
+    const mockUserSettingsColorblind = {
+      colorblindMode: () => true,
+    } as IUserSettings;
+
+    const allocator = new ColorAllocator(
+      mockColors,
+      fallbackMockColors,
+      mockUserSettingsColorblind,
+    );
+
+    const redColor = allocator.assignTeamColor(ColoredTeams.Red);
+    const greenColor = allocator.assignTeamColor(ColoredTeams.Green);
+
+    expect(redColor.toHex()).toBe(colord({ h: 30, s: 100, l: 50 }).toHex()); // Orange
+    expect(greenColor.toHex()).toBe(colord({ h: 210, s: 100, l: 50 }).toHex()); // Blue
   });
 });
 

@@ -1,5 +1,5 @@
 import { UnitInfo, UnitType } from "../game/Game";
-import { UserSettings } from "../game/UserSettings";
+import { IUserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
@@ -52,7 +52,7 @@ export class DevConfig extends DefaultConfig {
   constructor(
     sc: ServerConfig,
     gc: GameConfig,
-    us: UserSettings | null,
+    us: IUserSettings | null,
     isReplay: boolean,
   ) {
     super(sc, gc, us, isReplay);

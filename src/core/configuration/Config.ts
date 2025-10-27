@@ -16,7 +16,7 @@ import {
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
-import { UserSettings } from "../game/UserSettings";
+import { IUserSettings } from "../game/UserSettings";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 
@@ -89,7 +89,7 @@ export interface Config {
   donateTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
-  userSettings(): UserSettings;
+  userSettings(): IUserSettings;
   playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;

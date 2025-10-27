@@ -6,6 +6,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
+import { UserSettingsData } from "../game/UserSettings";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
@@ -40,6 +41,7 @@ export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
   clientID: ClientID;
+  userSettings: UserSettingsData;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {

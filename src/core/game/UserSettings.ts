@@ -3,7 +3,41 @@ import { PlayerPattern } from "../Schemas";
 
 const PATTERN_KEY = "territoryPattern";
 
-export class UserSettings {
+export interface UserSettingsData {
+  emojis: boolean;
+  performanceOverlay: boolean;
+  alertFrame: boolean;
+  anonymousNames: boolean;
+  lobbyIdVisibility: boolean;
+  fxLayer: boolean;
+  structureSprites: boolean;
+  darkMode: boolean;
+  leftClickOpensMenu: boolean;
+  territoryPatterns: boolean;
+  focusLocked: boolean;
+  colorblindMode: boolean;
+  backgroundMusicVolume: number;
+  soundEffectsVolume: number;
+}
+
+export interface IUserSettings {
+  emojis(): boolean;
+  performanceOverlay(): boolean;
+  alertFrame(): boolean;
+  anonymousNames(): boolean;
+  lobbyIdVisibility(): boolean;
+  fxLayer(): boolean;
+  structureSprites(): boolean;
+  darkMode(): boolean;
+  leftClickOpensMenu(): boolean;
+  territoryPatterns(): boolean;
+  focusLocked(): boolean;
+  colorblindMode(): boolean;
+  backgroundMusicVolume(): number;
+  soundEffectsVolume(): number;
+}
+
+export class UserSettings implements IUserSettings {
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
     if (!value) return defaultValue;
@@ -31,6 +65,25 @@ export class UserSettings {
 
   setFloat(key: string, value: number) {
     localStorage.setItem(key, value.toString());
+  }
+
+  getData(): UserSettingsData {
+    return {
+      emojis: this.emojis(),
+      performanceOverlay: this.performanceOverlay(),
+      alertFrame: this.alertFrame(),
+      anonymousNames: this.anonymousNames(),
+      lobbyIdVisibility: this.lobbyIdVisibility(),
+      fxLayer: this.fxLayer(),
+      structureSprites: this.structureSprites(),
+      darkMode: this.darkMode(),
+      leftClickOpensMenu: this.leftClickOpensMenu(),
+      territoryPatterns: this.territoryPatterns(),
+      focusLocked: this.focusLocked(),
+      colorblindMode: this.colorblindMode(),
+      backgroundMusicVolume: this.backgroundMusicVolume(),
+      soundEffectsVolume: this.soundEffectsVolume(),
+    };
   }
 
   emojis() {

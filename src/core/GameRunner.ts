@@ -27,6 +27,7 @@ import {
   GameUpdateViewData,
 } from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
+import { IUserSettings } from "./game/UserSettings";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { sanitize, simpleHash } from "./Util";
@@ -37,8 +38,9 @@ export async function createGameRunner(
   clientID: ClientID,
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+  userSettings: IUserSettings,
 ): Promise<GameRunner> {
-  const config = await getConfig(gameStart.config, null);
+  const config = await getConfig(gameStart.config, userSettings);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,

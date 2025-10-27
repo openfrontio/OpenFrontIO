@@ -3,7 +3,7 @@ import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import Color from "colorjs.io";
 import { ColoredTeams, Team } from "../game/Game";
-import { UserSettings } from "../game/UserSettings";
+import { IUserSettings } from "../game/UserSettings";
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import {
@@ -31,7 +31,7 @@ export class ColorAllocator {
   constructor(
     colors: Colord[],
     fallback: Colord[],
-    private userSettings: UserSettings,
+    private userSettings: IUserSettings,
   ) {
     this.availableColors = [...colors];
     this.fallbackColors = [...colors, ...fallback];
