@@ -20,7 +20,11 @@ export class SAMRadiusLayer implements Layer {
   private ghostShow: boolean = false;
   private showStroke: boolean = false;
 
-  private handleToggleStructure!: (e: ToggleStructureEvent) => void;
+  private handleToggleStructure(e: ToggleStructureEvent) {
+    const types = e.structureTypes;
+    this.hoveredShow = !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
+    this.updateStrokeVisibility();
+  }
 
   constructor(
     private readonly game: GameView,
@@ -47,11 +51,6 @@ export class SAMRadiusLayer implements Layer {
     // Also listen for UI toggle structure events so we can show borders when
     // the user is hovering the Atom/Hydrogen option (UnitDisplay emits
     // ToggleStructureEvent with SAMLauncher included in the list).
-    this.handleToggleStructure = (e: ToggleStructureEvent) => {
-      const types = e.structureTypes;
-      this.hoveredShow = !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
-      this.updateStrokeVisibility();
-    };
     this.eventBus.on(ToggleStructureEvent, this.handleToggleStructure);
     this.redraw();
   }
