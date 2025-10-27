@@ -57,8 +57,11 @@ export class SAMRadiusLayer implements Layer {
   }
 
   private updateStrokeVisibility() {
-    this.showStroke = this.hoveredShow || this.ghostShow;
-    this.needsRedraw = true;
+    const next = this.hoveredShow || this.ghostShow;
+    if (next !== this.showStroke) {
+      this.showStroke = next;
+      this.needsRedraw = true;
+    }
   }
 
   shouldTransform(): boolean {
