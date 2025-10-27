@@ -162,7 +162,7 @@ async function createClientGame(
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
-    userSettings,
+    userSettings.getData(),
   );
   await worker.initialize();
   const gameView = new GameView(
