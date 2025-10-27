@@ -420,7 +420,6 @@ export const PlayerColorSchema = z.object({
   color: z.string(),
 });
 
-
 export const PlayerPackSchema = z.object({
   structurePort: z.string().optional(),
   structureCity: z.string().optional(),
