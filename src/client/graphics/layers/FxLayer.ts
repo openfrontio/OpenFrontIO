@@ -30,6 +30,7 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
+  private nukeTargetFxByUnitId: Map<number, TargetFx> = new Map();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -41,6 +42,7 @@ export class FxLayer implements Layer {
 
   tick() {
     this.manageBoatTargetFx();
+    this.manageNukeTargetFx();
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -83,6 +85,19 @@ export class FxLayer implements Layer {
       ) {
         (fx as any).end?.();
         this.boatTargetFxByUnitId.delete(unitId);
+      }
+    }
+  }
+
+  private manageNukeTargetFx() {
+    // End markers for nukes that arrived or were intercepted
+    for (const [unitId, fx] of Array.from(
+      this.nukeTargetFxByUnitId.entries(),
+    )) {
+      const unit = this.game.unit(unitId);
+      if (!unit || !unit.isActive() || unit.reachedTarget()) {
+        (fx as any).end?.();
+        this.nukeTargetFxByUnitId.delete(unitId);
       }
     }
   }
@@ -135,13 +150,55 @@ export class FxLayer implements Layer {
         }
         break;
       }
-      case UnitType.AtomBomb:
+      case UnitType.AtomBomb: {
+        const my = this.game.myPlayer();
+        if (my) {
+          // Show marker for nukes owned by the player or by players on the same team
+          if (
+            (unit.owner() === my || my.isOnSameTeam(unit.owner())) &&
+            unit.isActive()
+          ) {
+            if (!this.nukeTargetFxByUnitId.has(unit.id())) {
+              const t = unit.targetTile();
+              if (t !== undefined) {
+                const x = this.game.x(t);
+                const y = this.game.y(t);
+                const fx = new TargetFx(x, y, 0, true);
+                this.allFx.push(fx);
+                this.nukeTargetFxByUnitId.set(unit.id(), fx);
+              }
+            }
+          }
+        }
+        this.onNukeEvent(unit, 160);
+        break;
+      }
       case UnitType.MIRVWarhead:
         this.onNukeEvent(unit, 70);
         break;
-      case UnitType.HydrogenBomb:
+      case UnitType.HydrogenBomb: {
+        const my = this.game.myPlayer();
+        if (my) {
+          // Show marker for nukes owned by the player or by players on the same team
+          if (
+            (unit.owner() === my || my.isOnSameTeam(unit.owner())) &&
+            unit.isActive()
+          ) {
+            if (!this.nukeTargetFxByUnitId.has(unit.id())) {
+              const t = unit.targetTile();
+              if (t !== undefined) {
+                const x = this.game.x(t);
+                const y = this.game.y(t);
+                const fx = new TargetFx(x, y, 0, true);
+                this.allFx.push(fx);
+                this.nukeTargetFxByUnitId.set(unit.id(), fx);
+              }
+            }
+          }
+        }
         this.onNukeEvent(unit, 160);
         break;
+      }
       case UnitType.Warship:
         this.onWarshipEvent(unit);
         break;
