@@ -20,6 +20,8 @@ export class SAMRadiusLayer implements Layer {
   private ghostShow: boolean = false;
   private showStroke: boolean = false;
 
+  private handleToggleStructure!: (e: ToggleStructureEvent) => void;
+
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
@@ -36,22 +38,21 @@ export class SAMRadiusLayer implements Layer {
     this.canvas.height = this.game.height();
   }
 
+  cleanup() {
+    this.eventBus.off(ToggleStructureEvent, this.handleToggleStructure);
+  }
+
   init() {
     // Listen for game updates to detect SAM launcher changes
     // Also listen for UI toggle structure events so we can show borders when
     // the user is hovering the Atom/Hydrogen option (UnitDisplay emits
     // ToggleStructureEvent with SAMLauncher included in the list).
-    this.eventBus.on(ToggleStructureEvent, (e) => {
-      try {
-        const types = e.structureTypes;
-        this.hoveredShow =
-          !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
-      } catch (err) {
-        this.hoveredShow = false;
-      }
+    this.handleToggleStructure = (e: ToggleStructureEvent) => {
+      const types = e.structureTypes;
+      this.hoveredShow = !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
       this.updateStrokeVisibility();
-    });
-
+    };
+    this.eventBus.on(ToggleStructureEvent, this.handleToggleStructure);
     this.redraw();
   }
 
@@ -230,6 +231,8 @@ export class SAMRadiusLayer implements Layer {
       for (let j = 0; j < circles.length; j++) {
         if (i === j) continue;
         // Only consider coverage from circles owned by the same player.
+        // This shows separate boundaries for different players' SAM coverage,
+        // making contested areas visually distinct.
         if (a.owner !== circles[j].owner) continue;
         const b = circles[j];
         const dx = b.x - a.x;
