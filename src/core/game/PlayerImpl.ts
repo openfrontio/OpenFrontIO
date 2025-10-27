@@ -935,6 +935,9 @@ export class PlayerImpl implements Player {
     if (!this.isAlive()) {
       return false;
     }
+    if (unit.owner() !== this) {
+      return false;
+    }
     return true;
   }
 
