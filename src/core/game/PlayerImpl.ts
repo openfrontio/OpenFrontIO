@@ -903,7 +903,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (unit.owner() !== this) {
-		return false;
+	  return false;
     }
     return true;
   }
