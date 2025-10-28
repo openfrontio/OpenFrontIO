@@ -453,7 +453,8 @@ export class SpriteFactory {
     }
     circle
       .circle(0, 0, radius)
-      .stroke({ width: 1, color: 0xffffff, alpha: 0.2 });
+      .fill({ color: 0xffffff, alpha: 0.2 })
+      .stroke({ width: 1, color: 0xffffff, alpha: 0.5 });
     parentContainer.addChild(circle);
     parentContainer.position.set(pos.x, pos.y);
     parentContainer.scale.set(this.transformHandler.scale);
