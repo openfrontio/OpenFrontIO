@@ -1,4 +1,9 @@
 import { Howl } from "howler";
+import atomHitSound from "../../../proprietary/sounds/effects/atom_hit.mp3";
+import atomLaunchSound from "../../../proprietary/sounds/effects/atom_launch.mp3";
+import hydroHitSound from "../../../proprietary/sounds/effects/hydrogen_hit.mp3";
+import hydroLaunchSound from "../../../proprietary/sounds/effects/hydrogen_launch.mp3";
+import mirvLaunchSound from "../../../proprietary/sounds/effects/mirv_launch.mp3";
 import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
@@ -6,9 +11,15 @@ import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
 
 export enum SoundEffect {
   KaChing = "ka-ching",
+  AtomLaunch = "atom_launch",
+  AtomHit = "atom_hit",
+  HydroLaunch = "hydro_launch",
+  HydroHit = "hydro_hit",
+  MirvHit = "mirv_hit",
+  MirvLaunch = "mirv_launch",
 }
 
-class SoundManager {
+export class SoundManager {
   private backgroundMusic: Howl[] = [];
   private currentTrack: number = 0;
   private soundEffects: Map<SoundEffect, Howl> = new Map();
@@ -37,6 +48,12 @@ class SoundManager {
       }),
     ];
     this.loadSoundEffect(SoundEffect.KaChing, kaChingSound);
+    this.loadSoundEffect(SoundEffect.AtomLaunch, atomLaunchSound);
+    this.loadSoundEffect(SoundEffect.AtomHit, atomHitSound);
+    this.loadSoundEffect(SoundEffect.HydroLaunch, hydroLaunchSound);
+    this.loadSoundEffect(SoundEffect.HydroHit, hydroHitSound);
+    this.loadSoundEffect(SoundEffect.MirvHit, atomHitSound);
+    this.loadSoundEffect(SoundEffect.MirvLaunch, mirvLaunchSound);
   }
 
   public playBackgroundMusic(): void {
@@ -105,5 +122,3 @@ class SoundManager {
     }
   }
 }
-
-export default new SoundManager();
