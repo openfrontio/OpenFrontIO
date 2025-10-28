@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -95,6 +96,7 @@ export enum GameMapType {
   Yenisei = "Yenisei",
   Pluto = "Pluto",
   Montreal = "Montreal",
+  Achiran = "Achiran",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -135,6 +137,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
+    GameMapType.Achiran,
   ],
 };
 
@@ -405,13 +408,7 @@ export class PlayerInfo {
     public readonly id: PlayerID,
     public readonly nation?: Nation | null,
   ) {
-    // Compute clan from name
-    if (!name.startsWith("[") || !name.includes("]")) {
-      this.clan = null;
-    } else {
-      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
-      this.clan = clanMatch ? clanMatch[1] : null;
-    }
+    this.clan = getClanTag(name);
   }
 }
 
@@ -619,6 +616,8 @@ export interface Player {
   donateGold(recipient: Player, gold: Gold): boolean;
   canDeleteUnit(): boolean;
   recordDeleteUnit(): void;
+  canEmbargoAll(): boolean;
+  recordEmbargoAll(): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
@@ -741,6 +740,7 @@ export interface PlayerActions {
   canAttack: boolean;
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
+  canEmbargoAll?: boolean;
   interaction?: PlayerInteraction;
 }
 
