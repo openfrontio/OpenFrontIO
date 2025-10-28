@@ -274,20 +274,34 @@ describe("Disconnected", () => {
       player2.conquer(game.map().ref(coastX - 2, 3));
       player2.markDisconnected(true);
 
-      const attackTroops = 1000;
-      player1.addTroops(attackTroops);
-
-      const troopIncPerTick = game.config().troopIncreaseRate(player1);
-      const expectedTroopGrowth = toInt(troopIncPerTick * 1);
-      const expectedFinalTroops = Number(
-        toInt(player1.troops()) + expectedTroopGrowth,
-      );
+      const troopsBeforeAttack = player1.troops();
+      const attackRatioTroops = troopsBeforeAttack * 0.25;
 
       game.addExecution(
-        new AttackExecution(attackTroops, player1, player2.id(), null),
+        new AttackExecution(attackRatioTroops, player1, player2.id(), null),
       );
 
-      executeTicks(game, 2); // first tick is the initial tick, in 2nd troop growth happens
+      let expectedTotalGrowth = 0n;
+      let isTickZero = true;
+
+      while (player2.isAlive()) {
+        if (!isTickZero) {
+          // No growth on tick 0, troop additions start from tick 1
+          const troopIncThisTick = game.config().troopIncreaseRate(player1);
+          expectedTotalGrowth += toInt(troopIncThisTick);
+        }
+
+        game.executeNextTick();
+        isTickZero = false;
+      }
+
+      expect(player2.isAlive()).toBe(false);
+
+      const expectedFinalTroops = Number(
+        toInt(troopsBeforeAttack) + expectedTotalGrowth,
+      );
+
+      // Verify no troop loss
       expect(player1.troops()).toBe(expectedFinalTroops);
     });
 

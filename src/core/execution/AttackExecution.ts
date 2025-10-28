@@ -105,12 +105,18 @@ export class AttackExecution implements Execution {
     this.startTroops ??= this.mg
       .config()
       .attackAmount(this._owner, this.target);
-    const isDisconnectedTeammate =
+
+    if (
       this.target.isPlayer() &&
       (this.target as Player).isDisconnected() &&
-      this._owner.isOnSameTeam(this.target as Player);
-    if (this.removeTroops && !isDisconnectedTeammate) {
+      this._owner.isOnSameTeam(this.target as Player)
+    ) {
       // No troop loss if defender is disconnected and on same team
+      // No initial troop removal either so no troops are lost visually either
+      this.removeTroops = false;
+    }
+
+    if (this.removeTroops) {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
       this._owner.removeTroops(this.startTroops);
     }
@@ -186,7 +192,14 @@ export class AttackExecution implements Execution {
         this._owner.id(),
       );
     }
+    if (this.removeTroops === false) {
+      // startTroops are always added to attack troops at init but not always removed from owner troops
+      // subtract startTroops from attack troops so we don't give back startTroops to owner that were never removed
+      this.attack.setTroops(this.attack.troops() - (this.startTroops ?? 0));
+    }
+
     const survivors = this.attack.troops() - deaths;
+
     this._owner.addTroops(survivors);
     this.attack.delete();
     this.active = false;
