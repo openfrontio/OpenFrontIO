@@ -902,6 +902,9 @@ export class PlayerImpl implements Player {
     if (this._gold < this.mg.config().unitInfo(unit.type()).cost(this)) {
       return false;
     }
+    if (unit.owner() !== this) {
+      return false;
+    }
     return true;
   }
 
