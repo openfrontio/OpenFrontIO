@@ -72,7 +72,6 @@ export class RadialMenu implements Layer {
     string,
     d3.Selection<SVGImageElement, unknown, null, undefined>
   > = new Map();
-  private svgAspectRatioCache: Map<string, number> = new Map();
 
   private selectedItemId: string | null = null;
   private submenuHoverTimeout: number | null = null;
