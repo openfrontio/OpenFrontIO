@@ -902,18 +902,11 @@ export class EventsDisplay extends LitElement implements Layer {
       return bPrior - aPrior;
     });
 
-    const buttonsCategory: [string, MessageCategory][] = [
-      [swordIcon, MessageCategory.ATTACK],
-      [nukeIcon, MessageCategory.NUKE],
-      [donateGoldIcon, MessageCategory.TRADE],
-      [allianceIcon, MessageCategory.ALLIANCE],
-      [chatIcon, MessageCategory.CHAT],
-    ];
+
     const defaultButtonSize = 5;
 
-    let buttonsHtmlMap = new Map();
-    for (const [src, category] of buttonsCategory) {
-      const htmlString = this.renderButton({
+    const renderToggleButton = (src, category) => {
+		return this.renderButton({
         content: html`<img
           src="${src}"
           class="w-${defaultButtonSize} h-${defaultButtonSize}"
@@ -924,9 +917,8 @@ export class EventsDisplay extends LitElement implements Layer {
         onClick: () => this.toggleEventFilter(category),
         className: "cursor-pointer pointer-events-auto",
       });
-
-      buttonsHtmlMap.set(src, htmlString);
-    }
+	}
+    
 
     return html`
       ${styles}
@@ -961,7 +953,11 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
-                    ${Array.from(buttonsHtmlMap.values())}
+                    ${renderToggleButton(swordIcon, MessageCategory.ATTACK)}
+                    ${renderToggleButton(nukeIcon, MessageCategory.NUKE)}
+                    ${renderToggleButton(donateGoldIcon, MessageCategory.TRADE)}
+                    ${renderToggleButton(allianceIcon, MessageCategory.ALLIANCE)}
+                    ${renderToggleButton(chatIcon, MessageCategory.CHAT)}
                   </div>
                   <div class="flex items-center gap-3">
                     ${this.latestGoldAmount !== null
