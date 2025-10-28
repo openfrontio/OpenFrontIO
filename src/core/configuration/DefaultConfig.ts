@@ -319,6 +319,7 @@ export class DefaultConfig implements Config {
   }
 
   defensePostSpeedBonus(): number {
+    // This bonus is currently a fixed value.
     return 3;
   }
 
