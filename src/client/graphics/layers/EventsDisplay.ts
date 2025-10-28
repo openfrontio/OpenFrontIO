@@ -131,6 +131,22 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
+  private renderToggleButton(src: string, category: MessageCategory) {
+    // Adding the literal for the default size ensures tailwind will generate the class
+    const toggleButtonSizeMap = { default: "h-5" };
+    return this.renderButton({
+      content: html`<img
+        src="${src}"
+        class="${toggleButtonSizeMap["default"]}"
+        style="filter: ${this.eventsFilters.get(category)
+          ? "grayscale(1) opacity(0.5)"
+          : "none"}"
+      />`,
+      onClick: () => this.toggleEventFilter(category),
+      className: "cursor-pointer pointer-events-auto",
+    });
+  }
+
   private toggleHidden() {
     this._hidden = !this._hidden;
     if (this._hidden) {
@@ -902,23 +918,6 @@ export class EventsDisplay extends LitElement implements Layer {
       return bPrior - aPrior;
     });
 
-    // Adding the literal for the default size ensures tailwind will generate the class
-    const sizeMap = { default: "h-5" };
-
-    const renderToggleButton = (string: src, MessageCategory: category) => {
-      return this.renderButton({
-        content: html`<img
-          src="${src}"
-          class="${sizeMap["default"]}"
-          style="filter: ${this.eventsFilters.get(category)
-            ? "grayscale(1) opacity(0.5)"
-            : "none"}"
-        />`,
-        onClick: () => this.toggleEventFilter(category),
-        className: "cursor-pointer pointer-events-auto",
-      });
-    };
-
     return html`
       ${styles}
       <!-- Events Toggle (when hidden) -->
@@ -952,14 +951,20 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
-                    ${renderToggleButton(swordIcon, MessageCategory.ATTACK)}
-                    ${renderToggleButton(nukeIcon, MessageCategory.NUKE)}
-                    ${renderToggleButton(donateGoldIcon, MessageCategory.TRADE)}
-                    ${renderToggleButton(
+                    ${this.renderToggleButton(
+                      swordIcon,
+                      MessageCategory.ATTACK,
+                    )}
+                    ${this.renderToggleButton(nukeIcon, MessageCategory.NUKE)}
+                    ${this.renderToggleButton(
+                      donateGoldIcon,
+                      MessageCategory.TRADE,
+                    )}
+                    ${this.renderToggleButton(
                       allianceIcon,
                       MessageCategory.ALLIANCE,
                     )}
-                    ${renderToggleButton(chatIcon, MessageCategory.CHAT)}
+                    ${this.renderToggleButton(chatIcon, MessageCategory.CHAT)}
                   </div>
                   <div class="flex items-center gap-3">
                     ${this.latestGoldAmount !== null
