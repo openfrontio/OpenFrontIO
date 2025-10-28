@@ -47,7 +47,7 @@ import {
   GoToUnitEvent,
 } from "./Leaderboard";
 
-import { getMessageTypeClasses, translateText } from "../../Utils";
+import { getMessageTypeClasses, translateText, getSvgAspectRatio } from "../../Utils";
 
 interface GameEvent {
   description: string;
@@ -906,10 +906,11 @@ export class EventsDisplay extends LitElement implements Layer {
     const defaultButtonSize = 5;
 
     const renderToggleButton = (src, category) => {
+		const width = getSvgAspectRatio(src).then(aspect => {return defaultButtonSize * (aspect ?? 1)} );
 		return this.renderButton({
         content: html`<img
           src="${src}"
-          class="w-${defaultButtonSize} h-${defaultButtonSize}"
+          class="w-$width{width ?? defaultButtonSize} h-${defaultButtonSize}"
           style="filter: ${this.eventsFilters.get(category)
             ? "grayscale(1) opacity(0.5)"
             : "none"}"
