@@ -902,13 +902,14 @@ export class EventsDisplay extends LitElement implements Layer {
       return bPrior - aPrior;
     });
 
-    const defaultButtonSize = 5;
+    // Adding the literal for the default size ensures tailwind will generate the class
+    const sizeMap = { default: "h-5" };
 
-    const renderToggleButton = (src, category) => {
+    const renderToggleButton = (string: src, MessageCategory: category) => {
       return this.renderButton({
         content: html`<img
           src="${src}"
-          class="h-${defaultButtonSize}"
+          class="${sizeMap["default"]}"
           style="filter: ${this.eventsFilters.get(category)
             ? "grayscale(1) opacity(0.5)"
             : "none"}"
