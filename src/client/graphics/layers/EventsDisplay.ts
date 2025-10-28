@@ -902,6 +902,32 @@ export class EventsDisplay extends LitElement implements Layer {
       return bPrior - aPrior;
     });
 
+    const buttonsCategory: [string, MessageCategory][] = [
+      [swordIcon, MessageCategory.ATTACK],
+      [nukeIcon, MessageCategory.NUKE],
+      [donateGoldIcon, MessageCategory.TRADE],
+      [allianceIcon, MessageCategory.ALLIANCE],
+      [chatIcon, MessageCategory.CHAT],
+    ];
+    const defaultButtonSize = 5;
+
+    let buttonsHtmlMap = new Map();
+    for (const [src, category] of buttonsCategory) {
+      const htmlString = this.renderButton({
+        content: html`<img
+          src="${src}"
+          class="w-${defaultButtonSize} h-${defaultButtonSize}"
+          style="filter: ${this.eventsFilters.get(category)
+            ? "grayscale(1) opacity(0.5)"
+            : "none"}"
+        />`,
+        onClick: () => this.toggleEventFilter(category),
+        className: "cursor-pointer pointer-events-auto",
+      });
+
+      buttonsHtmlMap.set(src, htmlString);
+    }
+
     return html`
       ${styles}
       <!-- Events Toggle (when hidden) -->
@@ -935,76 +961,7 @@ export class EventsDisplay extends LitElement implements Layer {
               >
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
-                    ${this.renderButton({
-                      content: html`<img
-                        src="${swordIcon}"
-                        class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.ATTACK,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
-                      />`,
-                      onClick: () =>
-                        this.toggleEventFilter(MessageCategory.ATTACK),
-                      className: "cursor-pointer pointer-events-auto",
-                    })}
-                    ${this.renderButton({
-                      content: html`<img
-                        src="${nukeIcon}"
-                        class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.NUKE,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
-                      />`,
-                      onClick: () =>
-                        this.toggleEventFilter(MessageCategory.NUKE),
-                      className: "cursor-pointer pointer-events-auto",
-                    })}
-                    ${this.renderButton({
-                      content: html`<img
-                        src="${donateGoldIcon}"
-                        class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.TRADE,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
-                      />`,
-                      onClick: () =>
-                        this.toggleEventFilter(MessageCategory.TRADE),
-                      className: "cursor-pointer pointer-events-auto",
-                    })}
-                    ${this.renderButton({
-                      content: html`<img
-                        src="${allianceIcon}"
-                        class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.ALLIANCE,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
-                      />`,
-                      onClick: () =>
-                        this.toggleEventFilter(MessageCategory.ALLIANCE),
-                      className: "cursor-pointer pointer-events-auto",
-                    })}
-                    ${this.renderButton({
-                      content: html`<img
-                        src="${chatIcon}"
-                        class="w-5 h-5"
-                        style="filter: ${this.eventsFilters.get(
-                          MessageCategory.CHAT,
-                        )
-                          ? "grayscale(1) opacity(0.5)"
-                          : "none"}"
-                      />`,
-                      onClick: () =>
-                        this.toggleEventFilter(MessageCategory.CHAT),
-                      className: "cursor-pointer pointer-events-auto",
-                    })}
+                    ${Array.from(buttonsHtmlMap.values())}
                   </div>
                   <div class="flex items-center gap-3">
                     ${this.latestGoldAmount !== null
