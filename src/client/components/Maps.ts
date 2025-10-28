@@ -1,4 +1,4 @@
-import { LitElement, css, html } from "lit";
+import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
@@ -48,69 +48,43 @@ export class MapDisplay extends LitElement {
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
 
-  static styles = css`
-    .option-card {
-      width: 100%;
-      min-width: 100px;
-      max-width: 120px;
-      padding: 4px 4px 0 4px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(30, 30, 30, 0.95);
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-    }
-
-    .option-card:hover {
-      transform: translateY(-2px);
-      border-color: rgba(255, 255, 255, 0.3);
-      background: rgba(40, 40, 40, 0.95);
-    }
-
-    .option-card.selected {
-      border-color: #4a9eff;
-      background: rgba(74, 158, 255, 0.1);
-    }
-
-    .option-card-title {
-      font-size: 14px;
-      color: #aaa;
-      text-align: center;
-      margin: 0 0 4px 0;
-    }
-
-    .option-image {
-      width: 100%;
-      aspect-ratio: 4/2;
-      color: #aaa;
-      transition: transform 0.2s ease-in-out;
-      border-radius: 8px;
-      background-color: rgba(255, 255, 255, 0.1);
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  `;
+  private _loadToken = 0;
 
   connectedCallback() {
     super.connectedCallback();
     this.loadMapData();
   }
 
+  protected updated(changed: PropertyValues) {
+    if (changed.has("mapKey")) {
+      this.loadMapData();
+    }
+  }
+
+  createRenderRoot() {
+    return this;
+  }
+
   private async loadMapData() {
     if (!this.mapKey) return;
 
+    const myToken = ++this._loadToken;
+    this.isLoading = true;
+    this.mapWebpPath = null;
+
     try {
-      this.isLoading = true;
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
       const data = terrainMapFileLoader.getMapData(mapValue);
-      this.mapWebpPath = await data.webpPath();
-      this.mapName = (await data.manifest()).name;
+      const [webpPath, manifest] = await Promise.all([
+        data.webpPath(),
+        data.manifest(),
+      ]);
+
+      // if another load started after this one, ignore this result
+      if (myToken !== this._loadToken) return;
+
+      this.mapWebpPath = webpPath;
+      this.mapName = manifest.name;
     } catch (error) {
       console.error("Failed to load map data:", error);
     } finally {
@@ -120,19 +94,43 @@ export class MapDisplay extends LitElement {
 
   render() {
     return html`
-      <div class="option-card ${this.selected ? "selected" : ""}">
+      <div
+        class="relative flex h-full min-h-32 cursor-pointer flex-col items-start justify-end rounded-xl border bg-white/5 p-3 text-left outline-none transition-all duration-300 ease-in-out hover:border-white/20 focus-visible:ring-2 focus-visible:ring-blue-400
+        ${this.selected
+          ? "border-blue-400/60 ring-inset ring-2 ring-blue-400/50 shadow-[0_0_0_2px_rgba(59,130,246,0.5),0_4px_8px_rgba(0,0,0,0.2)] scale-[1.02]"
+          : "border-white/10 shadow-md"}"
+        role="option"
+        aria-selected=${this.selected}
+      >
         ${this.isLoading
-          ? html`<div class="option-image">
+          ? html`<div
+              class="flex h-full w-full items-center justify-center text-sm text-zinc-400"
+            >
               ${translateText("map_component.loading")}
             </div>`
           : this.mapWebpPath
             ? html`<img
                 src="${this.mapWebpPath}"
-                alt="${this.mapKey}"
-                class="option-image"
+                alt="${this.translation || this.mapName}"
+                class="absolute inset-0 h-full w-full rounded-xl object-cover opacity-70 z-0"
               />`
-            : html`<div class="option-image">Error</div>`}
-        <div class="option-card-title">${this.translation || this.mapName}</div>
+            : html`<div
+                class="flex h-full w-full items-center justify-center text-sm text-zinc-400"
+              >
+                Error
+              </div>`}
+
+        <div
+          class="absolute inset-0 z-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent rounded-xl"
+        ></div>
+        <div class="absolute inset-x-0 bottom-0 z-10 p-3">
+          <h3
+            class="font-semibold text-white leading-tight text-base sm:text-lg max-w-full line-clamp-2"
+            title="${this.translation ?? this.mapName ?? "Untitled"}"
+          >
+            ${this.translation ?? this.mapName ?? "Untitled"}
+          </h3>
+        </div>
       </div>
     `;
   }

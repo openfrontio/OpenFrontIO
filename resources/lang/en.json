@@ -7,6 +7,7 @@
   },
   "common": {
     "close": "Close",
+    "all": "All",
     "available": "Available",
     "preset_max": "Max",
     "summary_send": "Send",
@@ -17,7 +18,22 @@
     "cap_tooltip": "Recipient’s remaining capacity",
     "target_dead": "Target eliminated",
     "target_dead_note": "You can't send resources to an eliminated player.",
-    "none": "None"
+    "none": "None",
+    "search": "Search...",
+    "expand_panel": "Expand",
+    "collapse_panel": "Collapse"
+  },
+  "game_options": {
+    "advanced_options": "Advanced Options",
+    "rules": "Rules",
+    "units_and_buildings": "Units & Buildings",
+    "donate_gold": "Donate gold",
+    "donate_troops": "Donate troops",
+    "disable_nations": "Disable Nations",
+    "instant_build": "Instant build",
+    "infinite_gold": "Infinite gold",
+    "infinite_troops": "Infinite troops",
+    "compact_map": "Mini Map"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -133,21 +149,23 @@
     "info_enemy_panel": "Enemy info panel",
     "exit_confirmation": "Are you sure you want to exit the game?"
   },
+  "settings_summary": {
+    "mode": "Mode",
+    "bots": "Bots: "
+  },
   "single_modal": {
     "title": "Single Player",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
-    "disable_nations": "Disable Nations",
-    "instant_build": "Instant build",
-    "infinite_gold": "Infinite gold",
-    "infinite_troops": "Infinite troops",
-    "compact_map": "Mini Map",
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
-    "start": "Start Game"
+    "start": "Start Game",
+    "quick_start": "Quick Start",
+    "presets": "Presets",
+    "reset": "Reset"
   },
   "token_login_modal": {
     "title": "Logging in...",
@@ -219,9 +237,9 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "Duos (teams of 2)",
-    "teams_Trios": "Trios (teams of 3)",
-    "teams_Quads": "Quads (teams of 4)",
+    "teams_Duos": "Duos",
+    "teams_Trios": "Trios",
+    "teams_Quads": "Quads",
     "teams": "{num} teams"
   },
   "matchmaking_modal": {
@@ -244,14 +262,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
-    "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
-    "instant_build": "Instant build",
-    "infinite_gold": "Infinite gold",
-    "donate_gold": "Donate gold",
-    "infinite_troops": "Infinite troops",
-    "donate_troops": "Donate troops",
-    "compact_map": "Mini Map",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
