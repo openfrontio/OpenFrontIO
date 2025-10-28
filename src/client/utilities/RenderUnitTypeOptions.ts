@@ -59,8 +59,9 @@ export function renderUnitTypeOptions({
         : "border-rose-400/30 bg-rose-400/20 text-rose-100",
     ].join(" ");
 
+    const label = translateText(translationKey);
     return html`
-      <label class="${cardClasses}" title="${translateText(translationKey)}">
+      <label class="${cardClasses}" title="${label}">
         <div class="flex items-center gap-3">
           <input
             type="checkbox"
@@ -68,19 +69,17 @@ export function renderUnitTypeOptions({
             .checked=${isOn}
             @change=${(e: Event) => {
               const checked = (e.target as HTMLInputElement).checked;
-              // toggleUnit expects `checked=true` to mean "disabled".
-              // Our checkbox represents "enabled" (isOn), so invert it.
               toggleUnit(type, !checked);
             }}
-            aria-label=${translateText(translationKey)}
+            aria-label=${label}
           />
-          <span class="font-medium leading-6">
-            ${translateText(translationKey)}
-          </span>
+          <span class="font-medium leading-6"> ${label} </span>
         </div>
 
         <span class="${chipClasses}" aria-hidden="true">
-          ${isOn ? "On" : "Off"}
+          ${isOn
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
         </span>
       </label>
     `;

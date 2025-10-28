@@ -3,7 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { GameMode } from "../../../core/game/Game";
 
-@customElement("of-game-mode-controls")
+@customElement("game-mode-controls")
 export class GameModeControls extends LitElement {
   @property({ type: Number }) value: GameMode = GameMode.FFA;
 
@@ -17,7 +17,7 @@ export class GameModeControls extends LitElement {
         <label class="mb-1 ml-0.5 block text-xs text-zinc-400">
           ${translateText("host_modal.mode")}
         </label>
-        <of-game-mode-picker
+        <game-mode-picker
           .value=${this.value}
           @change=${(e: CustomEvent<{ value: GameMode }>) =>
             this.dispatchEvent(
@@ -27,7 +27,7 @@ export class GameModeControls extends LitElement {
                 composed: true,
               }),
             )}
-        ></of-game-mode-picker>
+        ></game-mode-picker>
       </div>
     `;
   }

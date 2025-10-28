@@ -21,6 +21,7 @@ import "./components/shared/MapBrowserPane";
 import "./components/shared/PresetsManager";
 import "./components/shared/SettingsSummary";
 import "./components/shared/TeamCountPicker";
+import type { RuleKey } from "./utilities/RenderRulesOptions";
 
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
@@ -158,98 +159,27 @@ export class SinglePlayerModal extends LitElement {
 
   private renderMapsPane() {
     return html`
-      <of-map-browser-pane
+      <map-browser-pane
         .selectedMap=${this.selectedMap}
         .useRandomMap=${this.useRandomMap}
         @map-select=${(e: CustomEvent<{ value: GameMapType }>) =>
           this.handleMapSelection(e.detail.value)}
         @toggle-random=${this.handleRandomMapToggle}
-      ></of-map-browser-pane>
-    `;
-  }
-
-  private renderSettingsSummary() {
-    return html`
-      <of-settings-summary
-        .selectedMap=${this.selectedMap}
-        .selectedDifficulty=${this.selectedDifficulty}
-        .gameMode=${this.gameMode}
-        .bots=${this.bots}
-        .useRandomMap=${this.useRandomMap}
-      ></of-settings-summary>
-    `;
-  }
-
-  private renderDifficultyControls() {
-    return html`
-      <of-difficulty-controls
-        .value=${this.selectedDifficulty}
-        @change=${(e: CustomEvent<{ value: Difficulty }>) => {
-          if (!e.detail) return;
-          this.handleDifficultySelection(e.detail.value);
-        }}
-      ></of-difficulty-controls>
-    `;
-  }
-
-  private renderModeControls() {
-    return html`
-      <of-game-mode-controls
-        .value=${this.gameMode}
-        @change=${(e: CustomEvent<{ value: GameMode }>) => {
-          if (!e.detail) return;
-          this.handleGameModeSelection(e.detail.value);
-        }}
-      ></of-game-mode-controls>
-    `;
-  }
-
-  private renderBotsSlider() {
-    return html`
-      <of-bots-slider
-        .value=${this.bots}
-        .max=${400}
-        .debounceMs=${0}
-        @input=${this.handleBotsEvent}
-        @change=${this.handleBotsEvent}
-      ></of-bots-slider>
+      ></map-browser-pane>
     `;
   }
 
   private renderTeamCountControls() {
     if (this.gameMode !== GameMode.Team) return null;
     return html`
-      <of-team-count-picker
+      <team-count-picker
         .mode=${this.gameMode}
         .value=${this.teamCount}
         @change=${(e: CustomEvent<{ value: TeamCountConfig }>) => {
           if (!e.detail) return;
           this.teamCount = e.detail.value;
         }}
-      ></of-team-count-picker>
-    `;
-  }
-
-  private renderAdvancedOptions() {
-    return html`
-      <of-advanced-options
-        .rules=${{
-          disableNPCs: this.disableNPCs,
-          instantBuild: this.instantBuild,
-          infiniteGold: this.infiniteGold,
-          infiniteTroops: this.infiniteTroops,
-          compactMap: this.compactMap,
-        }}
-        .disabledUnits=${this.disabledUnits}
-        @toggle-rule=${(e: CustomEvent<{ key: string; checked: boolean }>) => {
-          this[e.detail.key] = e.detail.checked;
-        }}
-        @toggle-unit=${(
-          e: CustomEvent<{ unit: UnitType; checked: boolean }>,
-        ) => {
-          this.toggleUnit(e.detail.unit, e.detail.checked);
-        }}
-      ></of-advanced-options>
+      ></team-count-picker>
     `;
   }
 
@@ -259,26 +189,68 @@ export class SinglePlayerModal extends LitElement {
         aria-label="Settings"
         class="min-h-0 flex flex-col gap-3 rounded-xl border border-white/15 bg-zinc-900/40 p-3 overflow-auto"
       >
-        ${this.renderRightTopControls()} ${this.renderSettingsSummary()}
-        ${this.renderDifficultyControls()} ${this.renderModeControls()}
-        ${this.renderTeamCountControls()} ${this.renderBotsSlider()}
-        ${this.renderAdvancedOptions()}
+        ${this.renderRightTopControls()}
+        ${html`
+          <settings-summary
+            .selectedMap=${this.selectedMap}
+            .selectedDifficulty=${this.selectedDifficulty}
+            .gameMode=${this.gameMode}
+            .bots=${this.bots}
+            .useRandomMap=${this.useRandomMap}
+          ></settings-summary>
+        `}
+        ${html`
+          <difficulty-controls
+            .value=${this.selectedDifficulty}
+            @change=${(e: CustomEvent<{ value: Difficulty }>) => {
+              if (!e.detail) return;
+              this.handleDifficultySelection(e.detail.value);
+            }}
+          ></difficulty-controls>
+        `}
+        ${html`
+          <game-mode-controls
+            .value=${this.gameMode}
+            @change=${(e: CustomEvent<{ value: GameMode }>) => {
+              if (!e.detail) return;
+              this.handleGameModeSelection(e.detail.value);
+            }}
+          ></game-mode-controls>
+        `}
+        ${this.renderTeamCountControls()}
+        ${html`
+          <bots-slider
+            .value=${this.bots}
+            .max=${400}
+            .debounceMs=${0}
+            @input=${this.handleBotsEvent}
+            @change=${this.handleBotsEvent}
+          ></bots-slider>
+        `}
+        ${html`
+          <advanced-options
+            .rules=${{
+              disableNPCs: this.disableNPCs,
+              instantBuild: this.instantBuild,
+              infiniteGold: this.infiniteGold,
+              infiniteTroops: this.infiniteTroops,
+              compactMap: this.compactMap,
+            }}
+            .disabledUnits=${this.disabledUnits}
+            @toggle-rule=${(
+              e: CustomEvent<{ key: RuleKey; checked: boolean }>,
+            ) => {
+              if (!e.detail) return;
+              this.setRuleFlag(e.detail.key, e.detail.checked);
+            }}
+            @toggle-unit=${(
+              e: CustomEvent<{ unit: UnitType; checked: boolean }>,
+            ) => {
+              this.toggleUnit(e.detail.unit, e.detail.checked);
+            }}
+          ></advanced-options>
+        `}
       </section>
-    `;
-  }
-
-  private renderFooter() {
-    return html`
-      <of-presets-manager
-        storageKey=${(this.constructor as typeof SinglePlayerModal).PRESETS_KEY}
-        .limit=${(this.constructor as typeof SinglePlayerModal).MAX_PRESETS}
-        .getSettings=${() => this.currentSettings()}
-        @apply-preset=${(
-          e: CustomEvent<{ settings: SinglePlayerPreset["settings"] }>,
-        ) => {
-          this.applySettings(e.detail.settings);
-        }}
-      ></of-presets-manager>
     `;
   }
 
@@ -310,7 +282,21 @@ export class SinglePlayerModal extends LitElement {
         <section
           class="fixed inset-4 mx-auto flex max-w-[1200px] min-h-[560px] flex-col rounded-2xl border border-white/15 bg-zinc-900/80 backdrop-blur-xl shadow-[0_14px_40px_rgba(0,0,0,0.45)] md:inset-8 text-zinc-100 antialiased"
         >
-          ${this.renderHeader()} ${this.renderBody()} ${this.renderFooter()}
+          ${this.renderHeader()} ${this.renderBody()}
+          ${html`
+            <presets-manager
+              storageKey=${(this.constructor as typeof SinglePlayerModal)
+                .PRESETS_KEY}
+              .limit=${(this.constructor as typeof SinglePlayerModal)
+                .MAX_PRESETS}
+              .getSettings=${() => this.currentSettings()}
+              @apply-preset=${(
+                e: CustomEvent<{ settings: SinglePlayerPreset["settings"] }>,
+              ) => {
+                this.applySettings(e.detail.settings);
+              }}
+            ></presets-manager>
+          `}
         </section>
       </div>
     `;
@@ -346,9 +332,12 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
-    const randIdx = Math.floor(Math.random() * maps.length);
-    return maps[randIdx] as GameMapType;
+    const numericValues = Object.values(GameMapType).filter(
+      (v) => typeof v === "number",
+    ) as number[];
+    const pool = numericValues.length > 0 ? numericValues : [GameMapType.World];
+    const randIdx = Math.floor(Math.random() * pool.length);
+    return pool[randIdx] as GameMapType;
   }
 
   private toggleUnit = (unit: UnitType, checked: boolean): void => {
@@ -369,15 +358,36 @@ export class SinglePlayerModal extends LitElement {
     }
   };
 
+  // Safely set a rule flag by key
+  private setRuleFlag(key: RuleKey, checked: boolean) {
+    switch (key) {
+      case "disableNPCs":
+        this.disableNPCs = checked;
+        break;
+      case "instantBuild":
+        this.instantBuild = checked;
+        break;
+      case "infiniteGold":
+        this.infiniteGold = checked;
+        break;
+      case "infiniteTroops":
+        this.infiniteTroops = checked;
+        break;
+      case "compactMap":
+        this.compactMap = checked;
+        break;
+    }
+  }
+
   private renderRightTopControls() {
     return html`
       <div class="sticky top-0 z-20 bg-transparent">
         <div class="flex items-center gap-2 pb-2 justify-end">
-          <of-expand-button
+          <expand-button
             .expanded=${this.rightExpanded}
             @toggle=${(e: CustomEvent<{ value: boolean }>) =>
               (this.rightExpanded = e.detail.value)}
-          ></of-expand-button>
+          ></expand-button>
         </div>
       </div>
     `;

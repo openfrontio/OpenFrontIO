@@ -3,7 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import { Difficulty } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 
-@customElement("of-difficulty-controls")
+@customElement("difficulty-controls")
 export class DifficultyControls extends LitElement {
   @property({ type: Number }) value: Difficulty = Difficulty.Medium;
 
@@ -27,7 +27,7 @@ export class DifficultyControls extends LitElement {
           ></difficulty-display>
         </div>
       </div>
-      <of-difficulty-picker
+      <difficulty-picker
         .value=${this.value}
         @change=${(e: CustomEvent<{ value: Difficulty }>) =>
           this.dispatchEvent(
@@ -37,7 +37,7 @@ export class DifficultyControls extends LitElement {
               composed: true,
             }),
           )}
-      ></of-difficulty-picker>
+      ></difficulty-picker>
     `;
   }
 }

@@ -21,7 +21,11 @@
     "none": "None",
     "search": "Search...",
     "expand_panel": "Expand",
-    "collapse_panel": "Collapse"
+    "collapse_panel": "Collapse",
+    "untitled": "Untitled",
+    "on": "On",
+    "off": "Off",
+    "name": "Name"
   },
   "game_options": {
     "advanced_options": "Advanced Options",
@@ -165,7 +169,8 @@
     "start": "Start Game",
     "quick_start": "Quick Start",
     "presets": "Presets",
-    "reset": "Reset"
+    "reset": "Reset",
+    "select_placeholder": "Select preset..."
   },
   "token_login_modal": {
     "title": "Logging in...",
@@ -220,7 +225,8 @@
     "fantasy": "Other"
   },
   "map_component": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "error": "Error"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -295,6 +301,14 @@
   "game_mode": {
     "ffa": "Free for All",
     "teams": "Teams"
+  },
+  "presets": {
+    "error_no_name": "Please enter a preset name.",
+    "error_limit_reached": "You can only save up to {limit} presets. Delete one to add another.",
+    "error_missing_settings": "Preset manager is missing getSettings()",
+    "save": "Save Preset",
+    "update": "Update Preset",
+    "delete": "Delete Preset"
   },
   "select_lang": {
     "title": "Select Language"

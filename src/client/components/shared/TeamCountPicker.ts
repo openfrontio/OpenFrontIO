@@ -4,7 +4,7 @@ import { translateText } from "../../../client/Utils";
 import { Duos, GameMode, Quads, Trios } from "../../../core/game/Game";
 import { TeamCountConfig } from "../../../core/Schemas";
 
-@customElement("of-team-count-picker")
+@customElement("team-count-picker")
 export class TeamCountPicker extends LitElement {
   @property({ type: Number }) mode: GameMode = GameMode.FFA;
   @property({ type: Number }) value: TeamCountConfig = 2;

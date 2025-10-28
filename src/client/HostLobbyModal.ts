@@ -58,7 +58,7 @@ const HOST_MAX_PRESETS = 10;
 const HOST_PRESETS_KEY = "host.presets.v1";
 
 // Allowed rule keys that can be toggled via Advanced Options
-type RuleKey =
+type HostLobbyRuleKey =
   | "disableNPCs"
   | "instantBuild"
   | "donateGold"
@@ -66,7 +66,7 @@ type RuleKey =
   | "infiniteGold"
   | "infiniteTroops"
   | "compactMap";
-const ALLOWED_RULE_KEYS: ReadonlyArray<RuleKey> = [
+const ALLOWED_RULE_KEYS: ReadonlyArray<HostLobbyRuleKey> = [
   "disableNPCs",
   "instantBuild",
   "donateGold",
@@ -154,7 +154,9 @@ export class HostLobbyModal extends LitElement {
     this.gameMode = s.gameMode;
     this.teamCount = s.teamCount;
     this.disabledUnits = [...s.disabledUnits];
-    this.putGameConfig();
+    this.putGameConfig().catch((err) =>
+      console.error("Failed to apply settings:", err),
+    );
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -166,7 +168,7 @@ export class HostLobbyModal extends LitElement {
 
   private renderMapsPane() {
     return html`
-      <of-map-browser-pane
+      <map-browser-pane
         .selectedMap=${this.selectedMap}
         .useRandomMap=${this.useRandomMap}
         @map-select=${(e: CustomEvent<{ value: GameMapType }>) => {
@@ -174,19 +176,7 @@ export class HostLobbyModal extends LitElement {
           this.handleMapSelection(e.detail.value);
         }}
         @toggle-random=${this.handleRandomMapToggle}
-      ></of-map-browser-pane>
-    `;
-  }
-
-  private renderSettingsSummary() {
-    return html`
-      <of-settings-summary
-        .selectedMap=${this.selectedMap}
-        .selectedDifficulty=${this.selectedDifficulty}
-        .gameMode=${this.gameMode}
-        .bots=${this.bots}
-        .useRandomMap=${this.useRandomMap}
-      ></of-settings-summary>
+      ></map-browser-pane>
     `;
   }
 
@@ -201,7 +191,6 @@ export class HostLobbyModal extends LitElement {
   private renderInviteBarInner() {
     const id = this.getInviteId();
 
-    // what the input displays: only the id, masked if hidden
     const displayValue = id
       ? this.lobbyIdVisible
         ? id
@@ -287,66 +276,12 @@ export class HostLobbyModal extends LitElement {
       <div class="sticky top-0 z-20 bg-transparent">
         <div class="flex items-center gap-2 pb-2">
           <div class="flex-1">${this.renderInviteBarInner()}</div>
-          <of-expand-button
+          <expand-button
             .expanded=${this.rightExpanded}
             @toggle=${(e: CustomEvent<{ value: boolean }>) =>
               (this.rightExpanded = e.detail.value)}
-          ></of-expand-button>
+          ></expand-button>
         </div>
-      </div>
-    `;
-  }
-
-  private renderDifficultyControls() {
-    return html`
-      <of-difficulty-controls
-        .value=${this.selectedDifficulty}
-        @change=${(e: CustomEvent<{ value: Difficulty }>) => {
-          if (!e.detail) return;
-          this.handleDifficultySelection(e.detail.value);
-        }}
-      ></of-difficulty-controls>
-    `;
-  }
-
-  private renderModeControls() {
-    return html`
-      <of-game-mode-controls
-        .value=${this.gameMode}
-        @change=${(e: CustomEvent<{ value: GameMode }>) => {
-          if (!e.detail) return;
-          this.handleGameModeSelection(e.detail.value);
-        }}
-      ></of-game-mode-controls>
-    `;
-  }
-
-  private renderModeToggle() {
-    const on = "bg-blue-500/25 text-blue-50 border border-blue-400/50";
-    const off =
-      "bg-white/5 text-zinc-200 hover:bg-white/10 border border-white/15";
-    const btn =
-      "h-10 px-4 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60";
-
-    return html`
-      <label class="mb-1 ml-0.5 block text-xs text-zinc-400">
-        ${translateText("host_modal.mode")}
-      </label>
-      <div class="inline-flex overflow-hidden rounded-xl">
-        <button
-          class="${btn} ${this.gameMode === GameMode.FFA ? on : off}"
-          aria-pressed=${String(this.gameMode === GameMode.FFA)}
-          @click=${() => this.handleGameModeSelection(GameMode.FFA)}
-        >
-          ${translateText("game_mode.ffa")}
-        </button>
-        <button
-          class="${btn} ${this.gameMode === GameMode.Team ? on : off}"
-          aria-pressed=${String(this.gameMode === GameMode.Team)}
-          @click=${() => this.handleGameModeSelection(GameMode.Team)}
-        >
-          ${translateText("game_mode.teams")}
-        </button>
       </div>
     `;
   }
@@ -355,70 +290,14 @@ export class HostLobbyModal extends LitElement {
     if (this.gameMode !== GameMode.Team) return null;
 
     return html`
-      <of-team-count-picker
+      <team-count-picker
         .mode=${this.gameMode}
         .value=${this.teamCount}
         @change=${(e: CustomEvent<{ value: TeamCountConfig }>) => {
           if (!e.detail) return;
           this.handleTeamCountSelection(e.detail.value);
         }}
-      ></of-team-count-picker>
-    `;
-  }
-
-  private renderBotsSlider() {
-    return html`
-      <of-bots-slider
-        .value=${this.bots}
-        .max=${400}
-        .debounceMs=${300}
-        @input=${this.handleBotsEvent}
-        @change=${this.handleBotsEvent}
-      ></of-bots-slider>
-    `;
-  }
-
-  private renderAdvancedOptions() {
-    return html`
-      <of-advanced-options
-        .rules=${{
-          disableNPCs: this.disableNPCs,
-          instantBuild: this.instantBuild,
-          donateGold: this.donateGold,
-          donateTroops: this.donateTroops,
-          infiniteGold: this.infiniteGold,
-          infiniteTroops: this.infiniteTroops,
-          compactMap: this.compactMap,
-        }}
-        .disabledUnits=${this.disabledUnits}
-        @toggle-rule=${(e: CustomEvent<{ key: string; checked: boolean }>) => {
-          const k = e.detail?.key as string;
-          const checked = !!e.detail?.checked;
-          if (!k || !ALLOWED_RULE_KEYS.includes(k as RuleKey)) return;
-          this.setRuleFlag(k as RuleKey, checked);
-          this.putGameConfig();
-        }}
-        @toggle-unit=${(
-          e: CustomEvent<{ unit: UnitType; checked: boolean }>,
-        ) => {
-          this.toggleUnit(e.detail.unit, e.detail.checked);
-        }}
-      ></of-advanced-options>
-    `;
-  }
-
-  private renderFooter() {
-    return html`
-      <of-presets-manager
-        storageKey=${HOST_PRESETS_KEY}
-        .limit=${HOST_MAX_PRESETS}
-        .getSettings=${() => this.currentSettings()}
-        @apply-preset=${(
-          e: CustomEvent<{ settings: HostLobbyPreset["settings"] }>,
-        ) => {
-          this.applySettings(e.detail.settings);
-        }}
-      ></of-presets-manager>
+      ></team-count-picker>
     `;
   }
 
@@ -428,10 +307,71 @@ export class HostLobbyModal extends LitElement {
         aria-label="Settings"
         class="min-h-0 flex flex-col gap-3 rounded-xl border border-white/15 bg-zinc-900/40 p-3 overflow-auto"
       >
-        ${this.renderRightTopControls()} ${this.renderSettingsSummary()}
-        ${this.renderDifficultyControls()} ${this.renderModeControls()}
-        ${this.renderTeamOptionsIfTeams()} ${this.renderBotsSlider()}
-        ${this.renderAdvancedOptions()}
+        ${this.renderRightTopControls()}
+        ${html`
+          <settings-summary
+            .selectedMap=${this.selectedMap}
+            .selectedDifficulty=${this.selectedDifficulty}
+            .gameMode=${this.gameMode}
+            .bots=${this.bots}
+            .useRandomMap=${this.useRandomMap}
+          ></settings-summary>
+        `}
+        ${html`
+          <difficulty-controls
+            .value=${this.selectedDifficulty}
+            @change=${(e: CustomEvent<{ value: Difficulty }>) => {
+              if (!e.detail) return;
+              this.handleDifficultySelection(e.detail.value);
+            }}
+          ></difficulty-controls>
+        `}
+        ${html`
+          <game-mode-controls
+            .value=${this.gameMode}
+            @change=${(e: CustomEvent<{ value: GameMode }>) => {
+              if (!e.detail) return;
+              this.handleGameModeSelection(e.detail.value);
+            }}
+          ></game-mode-controls>
+        `}
+        ${this.renderTeamOptionsIfTeams()}
+        ${html`
+          <bots-slider
+            .value=${this.bots}
+            .max=${400}
+            .debounceMs=${300}
+            @input=${this.handleBotsEvent}
+            @change=${this.handleBotsEvent}
+          ></bots-slider>
+        `}
+        ${html`<advanced-options
+          .rules=${{
+            disableNPCs: this.disableNPCs,
+            instantBuild: this.instantBuild,
+            donateGold: this.donateGold,
+            donateTroops: this.donateTroops,
+            infiniteGold: this.infiniteGold,
+            infiniteTroops: this.infiniteTroops,
+            compactMap: this.compactMap,
+          }}
+          .disabledUnits=${this.disabledUnits}
+          @toggle-rule=${(
+            e: CustomEvent<{ key: string; checked: boolean }>,
+          ) => {
+            const k = e.detail?.key as string;
+            const checked = !!e.detail?.checked;
+            if (!k || !ALLOWED_RULE_KEYS.includes(k as HostLobbyRuleKey))
+              return;
+            this.setRuleFlag(k as HostLobbyRuleKey, checked);
+            this.putGameConfig();
+          }}
+          @toggle-unit=${(
+            e: CustomEvent<{ unit: UnitType; checked: boolean }>,
+          ) => {
+            this.toggleUnit(e.detail.unit, e.detail.checked);
+          }}
+        ></advanced-options>`}
 
         <!-- Host-only: players + start button -->
         <section class="rounded-xl border border-white/15 bg-white/5 p-3">
@@ -538,7 +478,18 @@ export class HostLobbyModal extends LitElement {
             ${this.renderSettingsPane()}
           </main>
 
-          ${this.renderFooter()}
+          ${html`
+            <presets-manager
+              storageKey=${HOST_PRESETS_KEY}
+              .limit=${HOST_MAX_PRESETS}
+              .getSettings=${() => this.currentSettings()}
+              @apply-preset=${(
+                e: CustomEvent<{ settings: HostLobbyPreset["settings"] }>,
+              ) => {
+                this.applySettings(e.detail.settings);
+              }}
+            ></presets-manager>
+          `}
         </section>
       </div>
     `;
@@ -646,7 +597,6 @@ export class HostLobbyModal extends LitElement {
   }
 
   private toggleUnit(unit: UnitType, checked: boolean): void {
-    console.log(`Toggling unit type: ${unit} to ${checked}`);
     this.disabledUnits = checked
       ? [...this.disabledUnits, unit]
       : this.disabledUnits.filter((u) => u !== unit);
@@ -678,9 +628,6 @@ export class HostLobbyModal extends LitElement {
     }
 
     await this.putGameConfig();
-    console.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
-    );
     this.close();
     const config = await getServerConfigFromClient();
     const response = await fetch(
@@ -727,14 +674,12 @@ export class HostLobbyModal extends LitElement {
     })
       .then((response) => response.json())
       .then((data: GameInfo) => {
-        console.log(`got game info response: ${JSON.stringify(data)}`);
-
         this.clients = data.clients ?? [];
       });
   }
 
   // Safely set a rule flag by key
-  private setRuleFlag(key: RuleKey, checked: boolean) {
+  private setRuleFlag(key: HostLobbyRuleKey, checked: boolean) {
     switch (key) {
       case "disableNPCs":
         this.disableNPCs = checked;
@@ -794,8 +739,6 @@ async function createLobby(creatorClientID: string): Promise<GameInfo> {
     }
 
     const data = await response.json();
-    console.log("Success:", data);
-
     return data as GameInfo;
   } catch (error) {
     console.error("Error creating lobby:", error);

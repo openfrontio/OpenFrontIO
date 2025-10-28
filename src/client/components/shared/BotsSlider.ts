@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 
-@customElement("of-bots-slider")
+@customElement("bots-slider")
 export class BotsSlider extends LitElement {
   @property({ type: Number }) value = 0;
   @property({ type: Number }) max = 400;
@@ -16,9 +16,20 @@ export class BotsSlider extends LitElement {
     this.internal = this.value;
   }
 
+  disconnectedCallback() {
+    if (this.timer) {
+      window.clearTimeout(this.timer);
+      this.timer = null;
+    }
+    super.disconnectedCallback();
+  }
+
   willUpdate(changed: Map<string, unknown>) {
     if (changed.has("value") && this.value !== this.internal)
       this.internal = this.value;
+    if (changed.has("max") && this.internal > this.max) {
+      this.internal = this.max;
+    }
   }
 
   private onInput(e: Event) {
@@ -68,7 +79,7 @@ export class BotsSlider extends LitElement {
 
   render() {
     return html`
-      <div>
+      <div class="bots-slider">
         <label class="mb-1 ml-0.5 block text-xs text-zinc-400">
           ${translateText("single_modal.bots")}:
           <span class="font-semibold text-zinc-200">${this.internal}</span>
@@ -81,7 +92,8 @@ export class BotsSlider extends LitElement {
           .value=${String(this.internal)}
           @input=${this.onInput}
           class="w-full"
-          style=${`--val:${(this.internal / this.max) * 100}%`}
+          style=${`--val:${this.max > 0 ? (this.internal / this.max) * 100 : 0}%`}
+          aria-label=${translateText("single_modal.bots")}
           aria-valuemin="0"
           aria-valuemax=${String(this.max)}
           aria-valuenow=${String(this.internal)}
@@ -92,7 +104,7 @@ export class BotsSlider extends LitElement {
   }
   private renderSliderStyles() {
     return html`<style>
-      input[type="range"] {
+      .bots-slider input[type="range"] {
         appearance: none;
         -webkit-appearance: none;
         width: 100%;
@@ -105,7 +117,7 @@ export class BotsSlider extends LitElement {
         --track-h: 8px;
         --thumb: 16px;
       }
-      input[type="range"]::-webkit-slider-runnable-track {
+      .bots-slider input[type="range"]::-webkit-slider-runnable-track {
         height: var(--track-h);
         border-radius: 9999px;
         background: linear-gradient(
@@ -116,7 +128,7 @@ export class BotsSlider extends LitElement {
           var(--track) 100%
         );
       }
-      input[type="range"]::-webkit-slider-thumb {
+      .bots-slider input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         width: var(--thumb);
         height: var(--thumb);
@@ -125,17 +137,17 @@ export class BotsSlider extends LitElement {
         background: var(--accent);
         border: 2px solid #ffffff55;
       }
-      input[type="range"]::-moz-range-track {
+      .bots-slider input[type="range"]::-moz-range-track {
         height: var(--track-h);
         border-radius: 9999px;
         background: var(--track);
       }
-      input[type="range"]::-moz-range-progress {
+      .bots-slider input[type="range"]::-moz-range-progress {
         height: var(--track-h);
         border-radius: 9999px 0 0 9999px;
         background: var(--accent);
       }
-      input[type="range"]::-moz-range-thumb {
+      .bots-slider input[type="range"]::-moz-range-thumb {
         width: var(--thumb);
         height: var(--thumb);
         border-radius: 9999px;

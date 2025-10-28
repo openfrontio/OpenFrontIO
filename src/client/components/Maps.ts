@@ -73,7 +73,11 @@ export class MapDisplay extends LitElement {
     this.mapWebpPath = null;
 
     try {
-      const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
+      const normKey = Object.keys(GameMapType).find(
+        (k) => k.toLowerCase() === this.mapKey.toLowerCase(),
+      ) as keyof typeof GameMapType | undefined;
+      if (!normKey) throw new Error(`Unknown mapKey: ${this.mapKey}`);
+      const mapValue = GameMapType[normKey];
       const data = terrainMapFileLoader.getMapData(mapValue);
       const [webpPath, manifest] = await Promise.all([
         data.webpPath(),
@@ -112,12 +116,13 @@ export class MapDisplay extends LitElement {
             ? html`<img
                 src="${this.mapWebpPath}"
                 alt="${this.translation || this.mapName}"
+                loading="lazy"
                 class="absolute inset-0 h-full w-full rounded-xl object-cover opacity-70 z-0"
               />`
             : html`<div
                 class="flex h-full w-full items-center justify-center text-sm text-zinc-400"
               >
-                Error
+                ${translateText("map_component.error")}
               </div>`}
 
         <div
@@ -126,9 +131,13 @@ export class MapDisplay extends LitElement {
         <div class="absolute inset-x-0 bottom-0 z-10 p-3">
           <h3
             class="font-semibold text-white leading-tight text-base sm:text-lg max-w-full line-clamp-2"
-            title="${this.translation ?? this.mapName ?? "Untitled"}"
+            title="${this.translation ??
+            this.mapName ??
+            translateText("common.untitled")}"
           >
-            ${this.translation ?? this.mapName ?? "Untitled"}
+            ${this.translation ??
+            this.mapName ??
+            translateText("common.untitled")}
           </h3>
         </div>
       </div>

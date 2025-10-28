@@ -1,9 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 
 type Item = { id: string; name: string };
 
-@customElement("of-presets-bar")
+@customElement("presets-bar")
 export class PresetsBar extends LitElement {
   @property({ type: Array }) items: Item[] = [];
   @property({ type: String }) selectedId: string | null = null;
@@ -33,7 +34,7 @@ export class PresetsBar extends LitElement {
             title="Select preset"
           >
             <option class="bg-zinc-900 text-zinc-100" value="">
-              — Presets —
+              ${translateText("presets.select_placeholder")}
             </option>
             ${this.items.map(
               (p) => html`
@@ -50,7 +51,7 @@ export class PresetsBar extends LitElement {
 
           <input
             type="text"
-            placeholder="Name"
+            placeholder=${translateText("common.name")}
             class="h-9 w-36 rounded-lg border border-white/15 bg-zinc-900 px-2 text-zinc-100 placeholder:text-zinc-400 outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
             .value=${this.nameInput}
             @input=${(e: InputEvent) =>
@@ -59,32 +60,35 @@ export class PresetsBar extends LitElement {
           />
 
           <button
+            type="button"
             class="h-9 w-9 grid place-items-center rounded-lg border border-blue-400/40 bg-blue-500/15 text-blue-50 hover:bg-blue-500/25 disabled:opacity-50"
             @click=${() => this.emit("save")}
             ?disabled=${!this.nameInput.trim() ||
             this.items.length >= this.limit}
-            aria-label="Save new preset"
-            title="Save new preset"
+            aria-label=${translateText("presets.save")}
+            title=${translateText("presets.save")}
           >
             💾
           </button>
 
           <button
+            type="button"
             class="h-9 w-9 grid place-items-center rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 disabled:opacity-50"
             @click=${() => this.emit("update")}
             ?disabled=${!this.selectedId || !this.nameInput.trim()}
-            aria-label="Update selected preset"
-            title="Update selected preset"
+            aria-label=${translateText("presets.update")}
+            title=${translateText("presets.update")}
           >
             ⟳
           </button>
 
           <button
+            type="button"
             class="h-9 w-9 grid place-items-center rounded-lg border border-red-400/40 bg-red-500/15 text-red-50 hover:bg-red-500/25 disabled:opacity-50"
             @click=${() => this.emit("delete")}
             ?disabled=${!this.selectedId}
-            aria-label="Delete selected preset"
-            title="Delete selected preset"
+            aria-label=${translateText("presets.delete")}
+            title=${translateText("presets.delete")}
           >
             🗑️
           </button>

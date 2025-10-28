@@ -1,6 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { generateID } from "../../../core/Util";
+import { translateText } from "../../Utils";
 import "./PresetsBar";
 
 // Generic preset type
@@ -12,7 +13,7 @@ export type GenericPreset<T = unknown> = {
   settings: T;
 };
 
-@customElement("of-presets-manager")
+@customElement("presets-manager")
 export class PresetsManager<T = unknown> extends LitElement {
   // Storage key to isolate presets per context (host vs single player)
   @property({ type: String }) storageKey!: string;
@@ -38,7 +39,15 @@ export class PresetsManager<T = unknown> extends LitElement {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        const arr = parsed as Array<GenericPreset<T>>;
+        const arr = parsed.filter(
+          (item: any) =>
+            item &&
+            typeof item.id === "string" &&
+            typeof item.name === "string" &&
+            typeof item.createdAt === "number" &&
+            typeof item.updatedAt === "number" &&
+            item.settings !== undefined,
+        ) as Array<GenericPreset<T>>;
         this.presets = arr
           .sort((a, b) => b.updatedAt - a.updatedAt)
           .slice(0, this.limit);
@@ -83,15 +92,18 @@ export class PresetsManager<T = unknown> extends LitElement {
   private onSave = () => {
     const name = this.nameInput.trim();
     if (!name) {
-      this.error = "Please enter a preset name.";
+      this.error = translateText("presets.error_no_name");
       return;
     }
     if (this.presets.length >= this.limit) {
-      this.error = `You can only save up to ${this.limit} presets. Delete one to add another.`;
+      this.error = translateText("presets.error_limit_reached").replace(
+        "{limit}",
+        String(this.limit),
+      );
       return;
     }
     if (!this.getSettings) {
-      this.error = "Preset manager is missing getSettings()";
+      this.error = translateText("presets.error_missing_settings");
       return;
     }
 
@@ -113,7 +125,7 @@ export class PresetsManager<T = unknown> extends LitElement {
     const i = this.presets.findIndex((p) => p.id === this.selectedId);
     if (i < 0) return;
     if (!this.getSettings) {
-      this.error = "Preset manager is missing getSettings()";
+      this.error = translateText("presets.error_missing_settings");
       return;
     }
 
@@ -143,7 +155,7 @@ export class PresetsManager<T = unknown> extends LitElement {
 
   render() {
     return html`
-      <of-presets-bar
+      <presets-bar
         .items=${this.presets.map((p) => ({ id: p.id, name: p.name }))}
         .selectedId=${this.selectedId}
         .nameInput=${this.nameInput}
@@ -154,7 +166,7 @@ export class PresetsManager<T = unknown> extends LitElement {
         @save=${this.onSave}
         @update=${this.onUpdate}
         @delete=${this.onDelete}
-      ></of-presets-bar>
+      ></presets-bar>
     `;
   }
 

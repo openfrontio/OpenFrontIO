@@ -3,8 +3,8 @@ import { customElement, property } from "lit/decorators.js";
 import { GameMode } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 
-@customElement("of-game-mode-picker")
-export class OfGameModePicker extends LitElement {
+@customElement("game-mode-picker")
+export class GameModePicker extends LitElement {
   @property({ type: Number }) value: GameMode = GameMode.FFA;
 
   createRenderRoot() {
@@ -26,7 +26,11 @@ export class OfGameModePicker extends LitElement {
       <div
         class="inline-flex overflow-hidden rounded-xl border border-white/15"
       >
-        ${[GameMode.FFA, GameMode.Team].map(
+        ${(
+          Object.values(GameMode).filter(
+            (v) => typeof v === "number",
+          ) as GameMode[]
+        ).map(
           (mode) => html`
             <button
               class=${`h-10 px-4 transition-colors ${

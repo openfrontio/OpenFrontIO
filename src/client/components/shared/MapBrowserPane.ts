@@ -5,7 +5,7 @@ import { GameMapType, mapCategories } from "../../../core/game/Game";
 
 type FilterKey = "all" | keyof typeof mapCategories;
 
-@customElement("of-map-browser-pane")
+@customElement("map-browser-pane")
 export class MapBrowserPane extends LitElement {
   @property({ type: Number }) selectedMap: GameMapType = GameMapType.World;
   @property({ type: Boolean }) useRandomMap = false;
@@ -93,7 +93,7 @@ export class MapBrowserPane extends LitElement {
                     .filter === f
                     ? "border-blue-400/50 bg-blue-500/25 text-blue-50"
                     : "border-white/15 bg-white/5 text-zinc-100 hover:border-white/25"}"
-                  aria-pressed=${this.filter === f}
+                  aria-pressed=${String(this.filter === f)}
                   @click=${() => (this.filter = f)}
                 >
                   ${f === "all"

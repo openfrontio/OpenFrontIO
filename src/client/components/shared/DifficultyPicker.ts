@@ -3,8 +3,8 @@ import { customElement, property } from "lit/decorators.js";
 import { Difficulty } from "../../../core/game/Game";
 import { translateText } from "../../Utils";
 
-@customElement("of-difficulty-picker")
-export class OfDifficultyPicker extends LitElement {
+@customElement("difficulty-picker")
+export class DifficultyPicker extends LitElement {
   @property({ type: Number }) value: Difficulty = Difficulty.Medium;
 
   createRenderRoot() {

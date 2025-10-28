@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 
-@customElement("of-expand-button")
+@customElement("expand-button")
 export class ExpandButton extends LitElement {
   @property({ type: Boolean }) expanded = false;
 

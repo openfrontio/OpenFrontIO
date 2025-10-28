@@ -83,7 +83,7 @@ export function renderRulesOptions({
         </div>
 
         <span class="${chipClasses}" aria-hidden="true">
-          ${isOn ? "On" : "Off"}
+          ${isOn ? translateText("common.on") : translateText("common.off")}
         </span>
       </label>
     `;
