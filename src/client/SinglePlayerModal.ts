@@ -235,26 +235,25 @@ export class SinglePlayerModal extends LitElement {
               ${translateText("single_modal.options_title")}
             </div>
             <div class="option-cards">
-              ${html`
-                <label for="bots-count" class="option-card">
-                  <input
-                    type="range"
-                    id="bots-count"
-                    min="0"
-                    max="400"
-                    step="1"
-                    @input=${this.handleBotsChange}
-                    @change=${this.handleBotsChange}
-                    .value="${String(this.bots)}"
-                  />
-                  <div class="option-card-title">
-                    <span>${translateText("single_modal.bots")}</span>${this
-                      .bots === 0
-                      ? translateText("single_modal.bots_disabled")
-                      : this.bots}
-                  </div>
-                </label>
-              `}
+              <label for="bots-count" class="option-card">
+                <input
+                  type="range"
+                  id="bots-count"
+                  min="0"
+                  max="400"
+                  step="1"
+                  @input=${this.handleBotsChange}
+                  @change=${this.handleBotsChange}
+                  .value="${String(this.bots)}"
+                />
+                <div class="option-card-title">
+                  <span>${translateText("single_modal.bots")}</span>${this
+                    .bots === 0
+                    ? translateText("single_modal.bots_disabled")
+                    : this.bots}
+                </div>
+              </label>
+
               ${!(
                 this.gameMode === GameMode.Team &&
                 this.teamCount === HumansVsNations
@@ -558,12 +557,12 @@ export class SinglePlayerModal extends LitElement {
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
+              bots: this.bots,
               infiniteGold: this.infiniteGold,
               donateGold: true,
               donateTroops: true,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
-              bots: this.bots,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),

@@ -170,7 +170,6 @@ export async function startWorker() {
       );
       return;
     }
-
     game.start();
     res.status(200).json({ success: true });
   });

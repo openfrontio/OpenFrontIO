@@ -98,8 +98,7 @@ export class GameImpl implements Game {
     this._height = _map.height();
     this.unitGrid = new UnitGrid(this._map);
 
-    const gameMode = _config.gameConfig().gameMode;
-    if (gameMode === GameMode.Team) {
+    if (_config.gameConfig().gameMode === GameMode.Team) {
       this.populateTeams();
     }
     this.addPlayers();
@@ -148,16 +147,13 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    const gameMode = this.config().gameConfig().gameMode;
-    const playerTeams = this._config.playerTeams();
-
-    if (gameMode === GameMode.FFA) {
+    if (this.config().gameConfig().gameMode === GameMode.FFA) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
     }
 
-    if (playerTeams === HumansVsNations) {
+    if (this._config.playerTeams() === HumansVsNations) {
       this._humans.forEach((p) => this.addPlayer(p, ColoredTeams.Humans));
       this._nations.forEach((n) =>
         this.addPlayer(n.playerInfo, ColoredTeams.Nations),
@@ -463,8 +459,7 @@ export class GameImpl implements Game {
   }
 
   private maybeAssignTeam(player: PlayerInfo): Team | null {
-    const gameMode = this._config.gameConfig().gameMode;
-    if (gameMode !== GameMode.Team) {
+    if (this._config.gameConfig().gameMode !== GameMode.Team) {
       return null;
     }
     if (player.playerType === PlayerType.Bot) {
@@ -688,8 +683,7 @@ export class GameImpl implements Game {
   }
 
   teams(): Team[] {
-    const gameMode = this._config.gameConfig().gameMode;
-    if (gameMode !== GameMode.Team) {
+    if (this._config.gameConfig().gameMode !== GameMode.Team) {
       return [];
     }
     return [this.botTeam, ...this.playerTeams];

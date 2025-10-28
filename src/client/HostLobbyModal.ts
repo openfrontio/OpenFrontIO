@@ -327,7 +327,6 @@ export class HostLobbyModal extends LitElement {
               ${translateText("host_modal.options_title")}
             </div>
             <div class="option-cards">
-              ${html`
                 <label for="bots-count" class="option-card">
                   <input
                     type="range"
@@ -340,13 +339,13 @@ export class HostLobbyModal extends LitElement {
                     .value="${String(this.bots)}"
                   />
                   <div class="option-card-title">
-                    <span>${translateText("host_modal.bots")}</span>${this
-                      .bots === 0
-                      ? translateText("host_modal.bots_disabled")
-                      : this.bots}
+                    <span>${translateText("host_modal.bots")}</span>${
+                      this.bots === 0
+                        ? translateText("host_modal.bots_disabled")
+                        : this.bots
+                    }
                   </div>
                 </label>
-              `}
 
                 ${
                   !(
@@ -564,8 +563,8 @@ export class HostLobbyModal extends LitElement {
         <div class="start-game-button-container">
           <button
             @click=${this.startGame}
-            class="start-game-button"
             ?disabled=${this.clients.length < 2}
+            class="start-game-button"
           >
             ${
               this.clients.length === 1
@@ -744,6 +743,7 @@ export class HostLobbyModal extends LitElement {
             ? GameMapSize.Compact
             : GameMapSize.Normal,
           difficulty: this.selectedDifficulty,
+          bots: this.bots,
           infiniteGold: this.infiniteGold,
           donateGold: this.donateGold,
           infiniteTroops: this.infiniteTroops,
@@ -751,7 +751,6 @@ export class HostLobbyModal extends LitElement {
           instantBuild: this.instantBuild,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
-          bots: this.bots,
           playerTeams: this.teamCount,
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations

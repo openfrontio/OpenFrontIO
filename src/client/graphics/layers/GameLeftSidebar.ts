@@ -74,8 +74,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   }
 
   private get isTeamGame(): boolean {
-    const gameMode = this.game?.config().gameConfig().gameMode;
-    return gameMode === GameMode.Team;
+    return this.game?.config().gameConfig().gameMode === GameMode.Team;
   }
 
   private getTranslatedPlayerTeamLabel(): string {
