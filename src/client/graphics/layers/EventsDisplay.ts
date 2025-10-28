@@ -47,7 +47,11 @@ import {
   GoToUnitEvent,
 } from "./Leaderboard";
 
-import { getMessageTypeClasses, translateText, getSvgAspectRatio } from "../../Utils";
+import {
+  getMessageTypeClasses,
+  getSvgAspectRatio,
+  translateText,
+} from "../../Utils";
 
 interface GameEvent {
   description: string;
@@ -902,12 +906,13 @@ export class EventsDisplay extends LitElement implements Layer {
       return bPrior - aPrior;
     });
 
-
     const defaultButtonSize = 5;
 
     const renderToggleButton = (src, category) => {
-		const width = getSvgAspectRatio(src).then(aspect => {return defaultButtonSize * (aspect ?? 1)} );
-		return this.renderButton({
+      const width = getSvgAspectRatio(src).then((aspect) => {
+        return defaultButtonSize * (aspect ?? 1);
+      });
+      return this.renderButton({
         content: html`<img
           src="${src}"
           class="w-$width{width ?? defaultButtonSize} h-${defaultButtonSize}"
@@ -918,8 +923,7 @@ export class EventsDisplay extends LitElement implements Layer {
         onClick: () => this.toggleEventFilter(category),
         className: "cursor-pointer pointer-events-auto",
       });
-	}
-    
+    };
 
     return html`
       ${styles}
@@ -957,7 +961,10 @@ export class EventsDisplay extends LitElement implements Layer {
                     ${renderToggleButton(swordIcon, MessageCategory.ATTACK)}
                     ${renderToggleButton(nukeIcon, MessageCategory.NUKE)}
                     ${renderToggleButton(donateGoldIcon, MessageCategory.TRADE)}
-                    ${renderToggleButton(allianceIcon, MessageCategory.ALLIANCE)}
+                    ${renderToggleButton(
+                      allianceIcon,
+                      MessageCategory.ALLIANCE,
+                    )}
                     ${renderToggleButton(chatIcon, MessageCategory.CHAT)}
                   </div>
                   <div class="flex items-center gap-3">
