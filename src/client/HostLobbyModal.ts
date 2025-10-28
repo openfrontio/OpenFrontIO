@@ -226,6 +226,32 @@ export class HostLobbyModal extends LitElement {
             </div>
           </div>
 
+          <!-- Difficulty Selection -->
+          <div class="options-section">
+            <div class="option-title">${translateText("difficulty.difficulty")}</div>
+            <div class="option-cards">
+              ${Object.entries(Difficulty)
+                .filter(([key]) => isNaN(Number(key)))
+                .map(
+                  ([key, value]) => html`
+                    <div
+                      class="option-card ${this.selectedDifficulty === value
+                        ? "selected"
+                        : ""}"
+                      @click=${() => this.handleDifficultySelection(value)}
+                    >
+                      <difficulty-display
+                        .difficultyKey=${key}
+                      ></difficulty-display>
+                      <p class="option-card-title">
+                        ${translateText(`difficulty.${key}`)}
+                      </p>
+                    </div>
+                  `,
+                )}
+            </div>
+          </div>
+
           <!-- Game Mode Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("host_modal.mode")}</div>
@@ -539,20 +565,10 @@ export class HostLobbyModal extends LitElement {
           <button
             @click=${this.startGame}
             class="start-game-button"
-            ?disabled=${
-              this.clients.length < 2 &&
-              !(
-                this.gameMode === GameMode.Team &&
-                this.teamCount === HumansVsNations
-              )
-            }
+            ?disabled=${this.clients.length < 2}
           >
             ${
-              this.clients.length < 2 &&
-              !(
-                this.gameMode === GameMode.Team &&
-                this.teamCount === HumansVsNations
-              )
+              this.clients.length === 1
                 ? translateText("host_modal.waiting")
                 : translateText("host_modal.start")
             }

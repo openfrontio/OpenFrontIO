@@ -132,6 +132,34 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
+          <!-- Difficulty Selection -->
+          <div class="options-section">
+            <div class="option-title">
+              ${translateText("difficulty.difficulty")}
+            </div>
+            <div class="option-cards">
+              ${Object.entries(Difficulty)
+                .filter(([key]) => isNaN(Number(key)))
+                .map(
+                  ([key, value]) => html`
+                    <div
+                      class="option-card ${this.selectedDifficulty === value
+                        ? "selected"
+                        : ""}"
+                      @click=${() => this.handleDifficultySelection(value)}
+                    >
+                      <difficulty-display
+                        .difficultyKey=${key}
+                      ></difficulty-display>
+                      <p class="option-card-title">
+                        ${translateText(`difficulty.${key}`)}
+                      </p>
+                    </div>
+                  `,
+                )}
+            </div>
+          </div>
+
           <!-- Game Mode Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("host_modal.mode")}</div>
