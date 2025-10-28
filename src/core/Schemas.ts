@@ -544,6 +544,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema.nullable(), // WARNING: PII
+  clanTag: z.string().optional(),
   stats: PlayerStatsSchema,
 });
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;

@@ -320,3 +320,12 @@ export function sigmoid(
 ): number {
   return 1 / (1 + Math.exp(-decayRate * (value - midpoint)));
 }
+
+// Compute clan from name
+export function getClanTag(name: string): string | null {
+  if (!name.includes("[") || !name.includes("]")) {
+    return null;
+  }
+  const clanMatch = name.match(/\[([a-zA-Z0-9]{2,5})\]/);
+  return clanMatch ? clanMatch[1].toUpperCase() : null;
+}
