@@ -112,7 +112,7 @@ export class AttackExecution implements Execution {
       this._owner.isOnSameTeam(this.target as Player)
     ) {
       // No troop loss if defender is disconnected and on same team
-      // No initial troop removal either so no troops are lost visually either
+      // No initial troop removal either so no troops are lost visually too
       this.removeTroops = false;
     }
 
