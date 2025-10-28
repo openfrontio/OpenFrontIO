@@ -627,6 +627,8 @@ export interface Player {
   donateGold(recipient: Player, gold: Gold): boolean;
   canDeleteUnit(): boolean;
   recordDeleteUnit(): void;
+  canEmbargoAll(): boolean;
+  recordEmbargoAll(): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
@@ -749,6 +751,7 @@ export interface PlayerActions {
   canAttack: boolean;
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
+  canEmbargoAll?: boolean;
   interaction?: PlayerInteraction;
 }
 

@@ -13,6 +13,7 @@ import { ConstructionExecution } from "./ConstructionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
+import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
@@ -100,6 +101,8 @@ export class Executor {
         return new DonateGoldExecution(player, intent.recipient, intent.gold);
       case "embargo":
         return new EmbargoExecution(player, intent.targetID, intent.action);
+      case "embargo_all":
+        return new EmbargoAllExecution(player, intent.action);
       case "build_unit":
         return new ConstructionExecution(player, intent.unit, intent.tile);
       case "allianceExtension": {
