@@ -254,7 +254,10 @@ export async function getSvgAspectRatio(src: string): Promise<number | null> {
   if (cached !== undefined) return cached;
 
   try {
-    const resp = await fetch(src);
+    const controller = new AbortController(); 
+    const timeoutId = setTimeout(() => controller.abort(), 5000); 
+    const resp = await fetch(src, { signal: controller.signal }); 
+    clearTimeout(timeoutId);
     if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
     const text = await resp.text();
 
