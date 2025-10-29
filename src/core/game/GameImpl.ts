@@ -495,28 +495,6 @@ export class GameImpl implements Game {
     );
   }
 
-  neighborsWithDiag(tile: TileRef): TileRef[] {
-    const x = this.x(tile);
-    const y = this.y(tile);
-    const ns: TileRef[] = [];
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue; // Skip the center tile
-        const newX = x + dx;
-        const newY = y + dy;
-        if (
-          newX >= 0 &&
-          newX < this._width &&
-          newY >= 0 &&
-          newY < this._height
-        ) {
-          ns.push(this._map.ref(newX, newY));
-        }
-      }
-    }
-    return ns;
-  }
-
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
@@ -813,6 +791,12 @@ export class GameImpl implements Game {
   numLandTiles(): number {
     return this._map.numLandTiles();
   }
+  wrapsHorizontally(): boolean {
+    return this._map.wrapsHorizontally();
+  }
+  wrapsVertically(): boolean {
+    return this._map.wrapsVertically();
+  }
   isValidCoord(x: number, y: number): boolean {
     return this._map.isValidCoord(x, y);
   }
@@ -848,6 +832,12 @@ export class GameImpl implements Game {
   }
   neighbors(ref: TileRef): TileRef[] {
     return this._map.neighbors(ref);
+  }
+  neighborsNoWrap(ref: TileRef): TileRef[] {
+    return this._map.neighborsNoWrap(ref);
+  }
+  neighborsWithDiag(ref: TileRef): TileRef[] {
+    return this._map.neighborsWithDiag(ref);
   }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);

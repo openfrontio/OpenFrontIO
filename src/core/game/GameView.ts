@@ -725,6 +725,12 @@ export class GameView implements GameMap {
   neighbors(ref: TileRef): TileRef[] {
     return this._map.neighbors(ref);
   }
+  neighborsNoWrap(ref: TileRef): TileRef[] {
+    return this._map.neighborsNoWrap(ref);
+  }
+  neighborsWithDiag(ref: TileRef): TileRef[] {
+    return this._map.neighborsWithDiag(ref);
+  }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
   }
@@ -763,6 +769,12 @@ export class GameView implements GameMap {
   }
   numTilesWithFallout(): number {
     return this._map.numTilesWithFallout();
+  }
+  wrapsHorizontally(): boolean {
+    return this._map.wrapsHorizontally();
+  }
+  wrapsVertically(): boolean {
+    return this._map.wrapsVertically();
   }
   gameID(): GameID {
     return this._gameID;

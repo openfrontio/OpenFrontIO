@@ -9,6 +9,7 @@ export interface GraphAdapter<NodeType> {
   cost(node: NodeType): number;
   position(node: NodeType): { x: number; y: number };
   isTraversable(from: NodeType, to: NodeType): boolean;
+  wrapWidth?(): number;
 }
 
 export class SerialAStar<NodeType> implements AStar<NodeType> {
@@ -153,13 +154,30 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
   private heuristic(a: NodeType, b: NodeType): number {
     const posA = this.graph.position(a);
     const posB = this.graph.position(b);
-    return 2 * (Math.abs(posA.x - posB.x) + Math.abs(posA.y - posB.y));
+
+    let dx = Math.abs(posA.x - posB.x);
+    const wrap = this.graph.wrapWidth ? this.graph.wrapWidth() : undefined;
+    if (wrap !== undefined && wrap > 0) {
+      dx = Math.min(dx, Math.abs(wrap - dx));
+    }
+
+    const dy = Math.abs(posA.y - posB.y);
+    return 2 * (dx + dy);
   }
 
   private getDirection(from: NodeType, to: NodeType): string {
     const fromPos = this.graph.position(from);
     const toPos = this.graph.position(to);
-    const dx = toPos.x - fromPos.x;
+
+    let dx = toPos.x - fromPos.x;
+    const wrap = this.graph.wrapWidth ? this.graph.wrapWidth() : undefined;
+    if (wrap !== undefined && wrap > 0) {
+      const alt = dx > 0 ? dx - wrap : dx + wrap;
+      if (Math.abs(alt) < Math.abs(dx)) {
+        dx = alt;
+      }
+    }
+
     const dy = toPos.y - fromPos.y;
     return `${Math.sign(dx)},${Math.sign(dy)}`;
   }

@@ -27,6 +27,12 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
     return { x: this.gameMap.x(node), y: this.gameMap.y(node) };
   }
 
+  // Provide the map width so pathfinding heuristics can account for
+  // horizontal wrapping (360 maps). SerialAStar will call this if present.
+  wrapWidth(): number {
+    return this.gameMap.width();
+  }
+
   isTraversable(from: TileRef, to: TileRef): boolean {
     const toWater = this.gameMap.isWater(to);
     if (this.waterPath) {
@@ -87,16 +93,35 @@ export class MiniAStar implements AStar<TileRef> {
       this.gameMap.x(this.dst),
       this.gameMap.y(this.dst),
     );
-    const upscaled = fixExtremes(
-      upscalePath(
-        this.aStar
-          .reconstructPath()
-          .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr))),
-      ),
-      cellDst,
-      cellSrc,
-    );
-    return upscaled.map((c) => this.gameMap.ref(c.x, c.y));
+
+    const miniPath = this.aStar
+      .reconstructPath()
+      .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr)));
+
+    const unwrapHorizontally = (path: Cell[], wrapW: number): Cell[] => {
+      if (path.length === 0) return [];
+      const out: Cell[] = [];
+      let prevX = path[0].x;
+      out.push(new Cell(prevX, path[0].y));
+      for (let i = 1; i < path.length; i++) {
+        let x = path[i].x;
+        while (x - prevX > wrapW / 2) x -= wrapW;
+        while (x - prevX < -wrapW / 2) x += wrapW;
+        out.push(new Cell(x, path[i].y));
+        prevX = x;
+      }
+      return out;
+    };
+
+    const miniWidth = this.miniMap.width();
+    const unwrappedMini = unwrapHorizontally(miniPath, miniWidth);
+    const upscaled = fixExtremes(upscalePath(unwrappedMini), cellDst, cellSrc);
+
+    const gameWidth = this.gameMap.width();
+    return upscaled.map((c) => {
+      const wrappedX = ((c.x % gameWidth) + gameWidth) % gameWidth;
+      return this.gameMap.ref(wrappedX, c.y);
+    });
   }
 }
 

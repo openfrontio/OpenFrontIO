@@ -30,6 +30,8 @@ export interface GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
+  neighborsNoWrap(ref: TileRef): TileRef[];
+  neighborsWithDiag(ref: TileRef): TileRef[];
   isWater(ref: TileRef): boolean;
   isLake(ref: TileRef): boolean;
   isShore(ref: TileRef): boolean;
@@ -48,6 +50,9 @@ export interface GameMap {
   updateTile(tu: TileUpdate): TileRef;
 
   numTilesWithFallout(): number;
+
+  wrapsHorizontally(): boolean;
+  wrapsVertically(): boolean;
 }
 
 export class GameMapImpl implements GameMap {
@@ -80,6 +85,8 @@ export class GameMapImpl implements GameMap {
     height: number,
     terrainData: Uint8Array,
     private numLandTiles_: number,
+    private wrapsHorizontally_: boolean = true,
+    private wrapsVertically_: boolean = false,
   ) {
     if (terrainData.length !== width * height) {
       throw new Error(
@@ -106,6 +113,14 @@ export class GameMapImpl implements GameMap {
   }
   numTilesWithFallout(): number {
     return this._numTilesWithFallout;
+  }
+
+  wrapsHorizontally(): boolean {
+    return this.wrapsHorizontally_;
+  }
+
+  wrapsVertically(): boolean {
+    return this.wrapsVertically_;
   }
 
   ref(x: number, y: number): TileRef {
@@ -209,6 +224,19 @@ export class GameMapImpl implements GameMap {
   isOnEdgeOfMap(ref: TileRef): boolean {
     const x = this.x(ref);
     const y = this.y(ref);
+
+    if (this.wrapsHorizontally_ && this.wrapsVertically_) {
+      return false;
+    }
+
+    if (this.wrapsHorizontally_) {
+      return y === 0 || y === this.height() - 1;
+    }
+
+    if (this.wrapsVertically_) {
+      return x === 0 || x === this.width() - 1;
+    }
+
     return (
       x === 0 || x === this.width() - 1 || y === 0 || y === this.height() - 1
     );
@@ -259,31 +287,88 @@ export class GameMapImpl implements GameMap {
     return this.isOcean(ref) ? TerrainType.Ocean : TerrainType.Lake;
   }
 
-  neighbors(ref: TileRef): TileRef[] {
+  neighborsNoWrap(ref: TileRef): TileRef[] {
     const neighbors: TileRef[] = [];
     const w = this.width_;
+    const h = this.height_;
     const x = this.refToX[ref];
     const y = this.refToY[ref];
 
-    // North neighbor
-    if (ref >= w) neighbors.push(ref - w);
-    // South neighbor
-    if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
+    if (y > 0) neighbors.push(ref - w);
+    if (y < h - 1) neighbors.push(ref + w);
+    if (x > 0) neighbors.push(ref - 1);
+    if (x < w - 1) neighbors.push(ref + 1);
 
-    // West neighbor (wraps to right edge)
-    if (x !== 0) {
-      neighbors.push(ref - 1);
-    } else {
-      // At left edge, wrap to right edge
-      neighbors.push(this.yToRef[y] + w - 1);
+    return neighbors;
+  }
+
+  neighborsWithDiag(ref: TileRef): TileRef[] {
+    const w = this.width_;
+    const h = this.height_;
+    const x = this.refToX[ref];
+    const y = this.refToY[ref];
+
+    const set = new Set<number>();
+
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        let nx = x + dx;
+        let ny = y + dy;
+
+        const inX = nx >= 0 && nx < w;
+        const inY = ny >= 0 && ny < h;
+
+        if (inX && inY) {
+          set.add(this.yToRef[ny] + nx);
+          continue;
+        }
+
+        // handle horizontal wrap
+        if (this.wrapsHorizontally_) {
+          if (!inX && ny >= 0 && ny < h) {
+            nx = ((nx % w) + w) % w;
+            set.add(this.yToRef[ny] + nx);
+            continue;
+          }
+        }
+
+        // handle vertical wrap
+        if (this.wrapsVertically_) {
+          if (!inY && nx >= 0 && nx < w) {
+            ny = ((ny % h) + h) % h;
+            set.add(this.yToRef[ny] + nx);
+            continue;
+          }
+        }
+
+        // both axes wrap
+        if (this.wrapsHorizontally_ && this.wrapsVertically_) {
+          nx = ((nx % w) + w) % w;
+          ny = ((ny % h) + h) % h;
+          set.add(this.yToRef[ny] + nx);
+        }
+      }
     }
 
-    // East neighbor (wraps to left edge)
-    if (x !== w - 1) {
-      neighbors.push(ref + 1);
-    } else {
-      // At right edge, wrap to left edge
-      neighbors.push(this.yToRef[y]);
+    return Array.from(set);
+  }
+
+  neighbors(ref: TileRef): TileRef[] {
+    const neighbors: TileRef[] = this.neighborsNoWrap(ref);
+    const w = this.width_;
+    const h = this.height_;
+    const x = this.refToX[ref];
+    const y = this.refToY[ref];
+
+    if (this.wrapsVertically_) {
+      if (y === 0) neighbors.push(this.yToRef[h - 1] + x);
+      if (y === h - 1) neighbors.push(this.yToRef[0] + x);
+    }
+
+    if (this.wrapsHorizontally_) {
+      if (x === 0) neighbors.push(this.yToRef[y] + w - 1);
+      if (x === w - 1) neighbors.push(this.yToRef[y]);
     }
 
     return neighbors;
@@ -296,26 +381,32 @@ export class GameMapImpl implements GameMap {
   }
 
   manhattanDist(c1: TileRef, c2: TileRef): number {
-    // Calculate x distance with wrapping
     let dx = Math.abs(this.x(c1) - this.x(c2));
-    // Check if wrapping around the x-axis is shorter
-    dx = Math.min(dx, this.width_ - dx);
+    if (this.wrapsHorizontally_) {
+      dx = Math.min(dx, this.width_ - dx);
+    }
 
-    // Calculate y distance (no wrapping for y-axis)
-    const dy = Math.abs(this.y(c1) - this.y(c2));
+    let dy = Math.abs(this.y(c1) - this.y(c2));
+    if (this.wrapsVertically_) {
+      dy = Math.min(dy, this.height_ - dy);
+    }
 
     return dx + dy;
   }
   euclideanDistSquared(c1: TileRef, c2: TileRef): number {
-    // Calculate x distance with wrapping
     let dx = Math.abs(this.x(c1) - this.x(c2));
-    // Check if wrapping around the x-axis is shorter
-    dx = Math.min(dx, this.width_ - dx);
+    if (this.wrapsHorizontally_) {
+      dx = Math.min(dx, this.width_ - dx);
+    }
 
-    // Calculate y distance (no wrapping for y-axis)
-    const dy = this.y(c1) - this.y(c2);
+    let dySigned = this.y(c1) - this.y(c2);
+    if (this.wrapsVertically_) {
+      const ady = Math.abs(dySigned);
+      const wrapped = Math.min(ady, this.height_ - ady);
+      dySigned = dySigned < 0 ? -wrapped : wrapped;
+    }
 
-    return dx * dx + dy * dy;
+    return dx * dx + dySigned * dySigned;
   }
   bfs(
     tile: TileRef,
