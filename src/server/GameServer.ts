@@ -130,14 +130,14 @@ export class GameServer {
     }
   }
 
-  public createHostToken() {
+  public createHostToken(): string | null {
     //algorithm is not cryptographically secure
     const tokenLength = 16;
     this.hostToken = randomBytes(tokenLength).toString("hex");
     return this.getHostToken();
   }
 
-  public getHostToken() {
+  public getHostToken(): string | null {
     return this.hostToken ?? null;
   }
 
