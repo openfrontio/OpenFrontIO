@@ -12,13 +12,13 @@ import {
   PlayerInfo,
   PlayerType,
   Quads,
+  TeamGameType,
   TerrainType,
   TerraNullius,
   Tick,
   Trios,
   UnitInfo,
   UnitType,
-  TeamGameType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
@@ -317,8 +317,13 @@ export class DefaultConfig implements Config {
 
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
+  }
+
   isUnitDisabled(unitType: UnitType): boolean {
-    if (this._gameConfig.gameMode === GameMode.Team && this._gameConfig.teamGameType === TeamGameType.NukeWars) {
+    if (
+      this._gameConfig.gameMode === GameMode.Team &&
+      this._gameConfig.teamGameType === TeamGameType.NukeWars
+    ) {
       const allowedUnits = [
         UnitType.City,
         UnitType.Port,
@@ -629,7 +634,10 @@ export class DefaultConfig implements Config {
 
   numPreparationPhaseTurns(): number {
     // Preparation phase duration (Nuke Wars uses a 3 minute prep phase)
-    if (this._gameConfig.gameMode === GameMode.Team && this._gameConfig.teamGameType === TeamGameType.NukeWars) {
+    if (
+      this._gameConfig.gameMode === GameMode.Team &&
+      this._gameConfig.teamGameType === TeamGameType.NukeWars
+    ) {
       return 180 * 10; // 180 seconds * 10 ticks/sec
     }
     return 0;
