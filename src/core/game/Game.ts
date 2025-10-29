@@ -53,6 +53,7 @@ export type Team = string;
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
 export const Quads = "Quads" as const;
+export const HumansVsNations = "Humans Vs Nations" as const;
 
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
@@ -63,6 +64,8 @@ export const ColoredTeams: Record<string, Team> = {
   Orange: "Orange",
   Green: "Green",
   Bot: "Bot",
+  Humans: "Humans",
+  Nations: "Nations",
 } as const;
 
 export enum GameMapType {
