@@ -88,6 +88,13 @@ export class PresetsManager<T = unknown> extends LitElement {
       );
     } else {
       this.nameInput = "";
+      // Notify parent that selection was cleared so it can restore defaults
+      this.dispatchEvent(
+        new CustomEvent("clear-preset", {
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
   };
 

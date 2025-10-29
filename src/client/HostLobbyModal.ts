@@ -494,6 +494,7 @@ export class HostLobbyModal extends LitElement {
               ) => {
                 this.applySettings(e.detail.settings);
               }}
+              @clear-preset=${() => this.resetToDefaults()}
             ></presets-manager>
           `}
         </section>
@@ -652,6 +653,24 @@ export class HostLobbyModal extends LitElement {
       },
     );
     return response;
+  }
+
+  private resetToDefaults() {
+    this.selectedMap = GameMapType.World;
+    this.selectedDifficulty = Difficulty.Medium;
+    this.disableNPCs = false;
+    this.bots = 400;
+    this.infiniteGold = false;
+    this.donateGold = false;
+    this.infiniteTroops = false;
+    this.donateTroops = false;
+    this.instantBuild = false;
+    this.compactMap = false;
+    this.useRandomMap = false;
+    this.gameMode = GameMode.FFA;
+    this.teamCount = 2;
+    this.disabledUnits = [];
+    this.putGameConfig();
   }
 
   private getInviteUrl(): string {

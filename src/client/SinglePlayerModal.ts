@@ -295,6 +295,7 @@ export class SinglePlayerModal extends LitElement {
               ) => {
                 this.applySettings(e.detail.settings);
               }}
+              @clear-preset=${() => this.resetToDefaults()}
             ></presets-manager>
           `}
         </section>
@@ -469,5 +470,20 @@ export class SinglePlayerModal extends LitElement {
       }),
     );
     this.close();
+  }
+
+  private resetToDefaults() {
+    this.selectedMap = GameMapType.World;
+    this.selectedDifficulty = Difficulty.Medium;
+    this.disableNPCs = false;
+    this.bots = 400;
+    this.infiniteGold = false;
+    this.infiniteTroops = false;
+    this.compactMap = false;
+    this.instantBuild = false;
+    this.useRandomMap = false;
+    this.gameMode = GameMode.FFA;
+    this.teamCount = 2;
+    this.disabledUnits = [];
   }
 }
