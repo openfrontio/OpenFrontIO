@@ -241,7 +241,7 @@ export class FxLayer implements Layer {
       }
       case UnitType.AtomBomb: {
         this.createNukeTargetFxIfOwned(unit);
-        this.onNukeEvent(unit, 160);
+        this.onNukeEvent(unit, 70);
         break;
       }
       case UnitType.MIRVWarhead:
