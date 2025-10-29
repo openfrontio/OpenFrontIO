@@ -116,11 +116,11 @@ export interface Config {
   /**
    * Controls the strength of directional attack bias (additive approach).
    * This value determines the fixed point offset added/subtracted based on alignment.
-   * - Value of 1.5 creates a subtle 0-3 point swing (0 for aligned, 3 for opposite direction)
+   * - Value of 2.5 creates a subtle 0-5 point swing (0 for aligned, 5 for opposite direction)
    * - Higher values make direction more influential (e.g., 6.0 creates 0-12 swing)
    * - Lower values make direction less noticeable
    *
-   * With exponential time decay: ~16% influence at start, fading to ~1% by 6 seconds
+   * With exponential time decay: 100% influence at start, fading to ~5% by 6 seconds (20 tick constant)
    */
   attackDirectionWeight(): number;
   /**
