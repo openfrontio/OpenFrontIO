@@ -4,16 +4,16 @@ import { Fx } from "./Fx";
 export class NukeAreaFx implements Fx {
   private lifeTime = 0;
   private ended = false;
-  private endAnimationDuration = 300; // in ms
-  private startAnimationDuration = 200; // in ms
+  private readonly endAnimationDuration = 300; // in ms
+  private readonly startAnimationDuration = 200; // in ms
 
-  private dashSize: number;
+  private readonly innerDiameter: number;
+  private readonly outerDiameter: number;
+
   private offset = 0;
-  private numDash = 12;
-  private rotationSpeed = 15; // px per seconds
-  private innerDiameter: number;
-  private outerDiameter: number;
-  private baseAlpha = 0.9;
+  private readonly dashSize: number;
+  private readonly rotationSpeed = 20; // px per seconds
+  private readonly baseAlpha = 0.9;
 
   constructor(
     private x: number,
@@ -22,8 +22,8 @@ export class NukeAreaFx implements Fx {
   ) {
     this.innerDiameter = magnitude.inner;
     this.outerDiameter = magnitude.outer;
-    this.numDash = Math.max(1, Math.floor(this.outerDiameter / 3));
-    this.dashSize = (Math.PI / this.numDash) * this.outerDiameter;
+    const numDash = Math.max(1, Math.floor(this.outerDiameter / 3));
+    this.dashSize = (Math.PI / numDash) * this.outerDiameter;
   }
 
   end() {
@@ -37,11 +37,9 @@ export class NukeAreaFx implements Fx {
     if (this.ended && this.lifeTime >= this.endAnimationDuration) return false;
     let t: number;
     if (this.ended) {
-      t = 1 - this.lifeTime / this.endAnimationDuration;
-      t = Math.max(t, 0);
+      t = Math.max(0, 1 - this.lifeTime / this.endAnimationDuration);
     } else {
-      t = this.lifeTime / this.startAnimationDuration;
-      t = Math.min(t, 1);
+      t = Math.min(1, this.lifeTime / this.startAnimationDuration);
     }
     const alpha = Math.max(0, Math.min(1, this.baseAlpha * t));
 
