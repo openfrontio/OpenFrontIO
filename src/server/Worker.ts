@@ -148,8 +148,7 @@ export async function startWorker() {
 
     // Pass creatorClientID to createGame
     const game = gm.createGame(id, gc, creatorClientID);
-    const token = game.createHostToken();
-    const hostToken = { hostToken: token };
+    const hostToken = { hostToken: game.createHostToken() };
 
     log.info(
       `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
@@ -172,12 +171,11 @@ export async function startWorker() {
       );
       return;
     }
-    if (
-      !("hostToken" in req.params) ||
-      req.params.hostToken !== game.getHostToken()
-    ) {
-      log.info("cannot start private game, requestor is not host");
-      res.status(403);
+    const hostToken = req.body.hostToken ?? "";
+
+    if (hostToken !== game.getHostToken()) {
+      log.info(`cannot start private game ${game.id}, requestor is not host`);
+      res.status(403).json({ success: false };
       return;
     }
     game.start();
