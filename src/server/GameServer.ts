@@ -32,6 +32,7 @@ export enum GamePhase {
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
+  private hostToken: string | null = null;
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -126,6 +127,23 @@ export class GameServer {
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
+  }
+
+  public createHostToken() {
+    //algorithm is not cryptographically secure
+    const tokenLength = 16;
+    const chars = "ABCDEF0123456789";
+    let token = "";
+    const bytes = crypto.getRandomValues(new Uint8Array(length));
+    for (let i = 0; i < length; i++) {
+      token += chars[bytes[i] % chars.length];
+    }
+    this.hostToken = token;
+    return this.getHostToken();
+  }
+
+  public getHostToken() {
+    return this.hostToken ?? null;
   }
 
   public addClient(client: Client, lastTurn: number) {
