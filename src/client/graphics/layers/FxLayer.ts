@@ -12,8 +12,9 @@ import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
+import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
-import { SpriteFx } from "../fx/SpriteFx";
+import { FadeFx, MoveSpriteFx, SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
 import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
@@ -21,6 +22,8 @@ import { Layer } from "./Layer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
+  private lastRandomEvent: number = 0;
+  private randomEventRate: number = 8;
 
   private lastRefresh: number = 0;
   private refreshRate: number = 10;
@@ -30,7 +33,7 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
-  private nukeTargetFxByUnitId: Map<number, TargetFx> = new Map();
+  private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -41,6 +44,14 @@ export class FxLayer implements Layer {
   }
 
   tick() {
+    if (!this.game.config().userSettings()?.fxLayer()) {
+      return;
+    }
+    this.lastRandomEvent += 1;
+    if (this.lastRandomEvent > this.randomEventRate) {
+      this.lastRandomEvent = 0;
+      this.randomEvent();
+    }
     this.manageBoatTargetFx();
     this.game
       .updatesSinceLastTick()
@@ -102,7 +113,11 @@ export class FxLayer implements Layer {
         if (t !== undefined) {
           const x = this.game.x(t);
           const y = this.game.y(t);
-          const fx = new TargetFx(x, y, 0, true);
+          const fx = new NukeAreaFx(
+            x,
+            y,
+            this.game.config().nukeMagnitudes(unit.type()),
+          );
           this.allFx.push(fx);
           this.nukeTargetFxByUnitId.set(unit.id(), fx);
         }
@@ -139,6 +154,72 @@ export class FxLayer implements Layer {
     this.allFx.push(textFx);
   }
 
+  randomEvent() {
+    const randX = Math.floor(Math.random() * this.game.width());
+    const randY = Math.floor(Math.random() * this.game.height());
+    const ref = this.game.ref(randX, randY);
+    if (this.game.isOcean(ref) && !this.game.isShoreline(ref)) {
+      const animation = Math.floor(Math.random() * 4);
+      if (animation === 0) {
+        const fx = new SpriteFx(
+          this.animatedSpriteLoader,
+          randX,
+          randY,
+          FxType.Shark,
+        );
+        this.allFx.push(fx);
+      } else if (animation === 1) {
+        const fx = new SpriteFx(
+          this.animatedSpriteLoader,
+          randX,
+          randY,
+          FxType.Bubble,
+        );
+        this.allFx.push(fx);
+      } else if (animation === 2) {
+        const fx = new MoveSpriteFx(
+          new SpriteFx(
+            this.animatedSpriteLoader,
+            randX,
+            randY,
+            FxType.Tornado,
+            6000,
+          ),
+          randX - 40,
+          randY,
+          0.1,
+          0.8,
+        );
+        this.allFx.push(fx);
+      } else if (animation === 3) {
+        const fx = new FadeFx(
+          new SpriteFx(
+            this.animatedSpriteLoader,
+            randX,
+            randY,
+            FxType.Tentacle,
+          ),
+          0.1,
+          0.8,
+        );
+        this.allFx.push(fx);
+      }
+    } else {
+      const ghost = new FadeFx(
+        new SpriteFx(
+          this.animatedSpriteLoader,
+          randX,
+          randY,
+          FxType.MiniSmoke,
+          4000,
+        ),
+        0.1,
+        0.8,
+      );
+      this.allFx.push(ghost);
+    }
+  }
+
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
       case UnitType.TransportShip: {
@@ -160,7 +241,7 @@ export class FxLayer implements Layer {
       }
       case UnitType.AtomBomb: {
         this.createNukeTargetFxIfOwned(unit);
-        this.onNukeEvent(unit, 160);
+        this.onNukeEvent(unit, 70);
         break;
       }
       case UnitType.MIRVWarhead:

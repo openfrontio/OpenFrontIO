@@ -139,6 +139,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
@@ -146,6 +147,7 @@
     "compact_map": "Mini Map",
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
+    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "start": "Start Game"
   },
@@ -222,6 +224,7 @@
     "teams_Duos": "Duos (teams of 2)",
     "teams_Trios": "Trios (teams of 3)",
     "teams_Quads": "Quads (teams of 4)",
+    "teams_hvn": "Humans Vs Nations",
     "teams": "{num} teams"
   },
   "matchmaking_modal": {
@@ -244,6 +247,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
     "instant_build": "Instant build",
@@ -252,6 +256,7 @@
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
     "compact_map": "Mini Map",
+    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
