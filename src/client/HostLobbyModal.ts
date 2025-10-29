@@ -594,9 +594,9 @@ export class HostLobbyModal extends LitElement {
       .then((lobby) => {
         this.lobbyId = lobby.gameInfo.gameID;
         // join lobby
-        const cookieDurationSec = 60 * 60 * 6; // store for max 6 hours
-        const secure = location.protocol === "https:" ? "; Secure" : "";
-        document.cookie = `hostToken=${encodeURIComponent(lobby.hostToken)}; Max-Age=${cookieDurationSec}; Path=/; SameSite=Strict${secure}`;
+        const cookieDurationSec = 60 * 60 * 6; //Store cookie for max 6 hours
+        // getting error here from lobby.hostToken
+        document.cookie = `hostToken=${lobby.hostToken}; Max-Age=${cookieDurationSec}; Path=/`;
       })
       .then(() => {
         this.dispatchEvent(
@@ -801,10 +801,10 @@ export class HostLobbyModal extends LitElement {
     // Parse cookies for hostToken
     const cookies = document.cookie.split(";");
     let hostToken = "";
-    for (const cookie of cookies) {
-      const trimmed = cookie.trim();
-      if (trimmed.startsWith("hostToken=")) {
-        hostToken = decodeURIComponent(trimmed.split("=").slice(1).join("="));
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      if (cookie.trim().startsWith("hostToken=")) {
+        hostToken = cookie.split("=")[1];
         break;
       }
     }
@@ -868,7 +868,7 @@ export class HostLobbyModal extends LitElement {
 
 async function createLobby(
   creatorClientID: string,
-): Promise<{ gameInfo: GameInfo; hostToken: string | null }> {
+): Promise<{ gameInfo: GameInfo; hostToken: string }> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
@@ -892,7 +892,7 @@ async function createLobby(
     const data = await response.json();
     console.log("Success:", data);
 
-    return { gameInfo: data, hostToken: data.hostToken ?? null };
+    return { gameInfo: data, hostToken: data.hostToken ?? "" };
   } catch (error) {
     console.error("Error creating lobby:", error);
     throw error;
