@@ -6,7 +6,6 @@ import {
   Game,
   GameMapType,
   GameMode,
-  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -629,7 +628,7 @@ export class DefaultConfig implements Config {
   }
   numSpawnPhaseTurns(): number {
     // Spawn phase (choosing spawn points) defaults
-    return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
+    return 10;
   }
 
   numPreparationPhaseTurns(): number {
