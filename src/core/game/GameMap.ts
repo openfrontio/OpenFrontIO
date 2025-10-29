@@ -263,11 +263,28 @@ export class GameMapImpl implements GameMap {
     const neighbors: TileRef[] = [];
     const w = this.width_;
     const x = this.refToX[ref];
+    const y = this.refToY[ref];
 
+    // North neighbor
     if (ref >= w) neighbors.push(ref - w);
+    // South neighbor
     if (ref < (this.height_ - 1) * w) neighbors.push(ref + w);
-    if (x !== 0) neighbors.push(ref - 1);
-    if (x !== w - 1) neighbors.push(ref + 1);
+
+    // West neighbor (wraps to right edge)
+    if (x !== 0) {
+      neighbors.push(ref - 1);
+    } else {
+      // At left edge, wrap to right edge
+      neighbors.push(this.yToRef[y] + w - 1);
+    }
+
+    // East neighbor (wraps to left edge)
+    if (x !== w - 1) {
+      neighbors.push(ref + 1);
+    } else {
+      // At right edge, wrap to left edge
+      neighbors.push(this.yToRef[y]);
+    }
 
     return neighbors;
   }
@@ -279,14 +296,26 @@ export class GameMapImpl implements GameMap {
   }
 
   manhattanDist(c1: TileRef, c2: TileRef): number {
-    return (
-      Math.abs(this.x(c1) - this.x(c2)) + Math.abs(this.y(c1) - this.y(c2))
-    );
+    // Calculate x distance with wrapping
+    let dx = Math.abs(this.x(c1) - this.x(c2));
+    // Check if wrapping around the x-axis is shorter
+    dx = Math.min(dx, this.width_ - dx);
+
+    // Calculate y distance (no wrapping for y-axis)
+    const dy = Math.abs(this.y(c1) - this.y(c2));
+
+    return dx + dy;
   }
   euclideanDistSquared(c1: TileRef, c2: TileRef): number {
-    const x = this.x(c1) - this.x(c2);
-    const y = this.y(c1) - this.y(c2);
-    return x * x + y * y;
+    // Calculate x distance with wrapping
+    let dx = Math.abs(this.x(c1) - this.x(c2));
+    // Check if wrapping around the x-axis is shorter
+    dx = Math.min(dx, this.width_ - dx);
+
+    // Calculate y distance (no wrapping for y-axis)
+    const dy = this.y(c1) - this.y(c2);
+
+    return dx * dx + dy * dy;
   }
   bfs(
     tile: TileRef,
