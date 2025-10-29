@@ -51,7 +51,9 @@ export class SAMRadiusLayer implements Layer {
     // Also listen for UI toggle structure events so we can show borders when
     // the user is hovering the Atom/Hydrogen option (UnitDisplay emits
     // ToggleStructureEvent with SAMLauncher included in the list).
-    this.eventBus.on(ToggleStructureEvent, this.handleToggleStructure);
+    this.eventBus.on(ToggleStructureEvent, (e) =>
+      this.handleToggleStructure(e),
+    );
     this.redraw();
   }
 
