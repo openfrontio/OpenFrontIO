@@ -12,6 +12,7 @@ import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
+import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
@@ -30,7 +31,7 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
-  private nukeTargetFxByUnitId: Map<number, TargetFx> = new Map();
+  private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -102,7 +103,11 @@ export class FxLayer implements Layer {
         if (t !== undefined) {
           const x = this.game.x(t);
           const y = this.game.y(t);
-          const fx = new TargetFx(x, y, 0, true);
+          const fx = new NukeAreaFx(
+            x,
+            y,
+            this.game.config().nukeMagnitudes(unit.type()),
+          );
           this.allFx.push(fx);
           this.nukeTargetFxByUnitId.set(unit.id(), fx);
         }
