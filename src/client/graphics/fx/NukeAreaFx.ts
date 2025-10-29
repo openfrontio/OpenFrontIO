@@ -22,7 +22,7 @@ export class NukeAreaFx implements Fx {
   ) {
     this.innerDiameter = magnitude.inner;
     this.outerDiameter = magnitude.outer;
-    this.numDash = Math.floor(this.outerDiameter / 3);
+    this.numDash = Math.max(1, Math.floor(this.outerDiameter / 3));
     this.dashSize = (Math.PI / this.numDash) * this.outerDiameter;
   }
 
