@@ -42,10 +42,6 @@ export class SAMRadiusLayer implements Layer {
     this.canvas.height = this.game.height();
   }
 
-  cleanup() {
-    this.eventBus.off(ToggleStructureEvent, this.handleToggleStructure);
-  }
-
   init() {
     // Listen for game updates to detect SAM launcher changes
     // Also listen for UI toggle structure events so we can show borders when
