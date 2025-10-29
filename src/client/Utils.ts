@@ -254,9 +254,9 @@ export async function getSvgAspectRatio(src: string): Promise<number | null> {
   if (cached !== undefined) return cached;
 
   try {
-    const controller = new AbortController(); 
-    const timeoutId = setTimeout(() => controller.abort(), 5000); 
-    const resp = await fetch(src, { signal: controller.signal }); 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const resp = await fetch(src, { signal: controller.signal });
     clearTimeout(timeoutId);
     if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
     const text = await resp.text();
@@ -264,7 +264,10 @@ export async function getSvgAspectRatio(src: string): Promise<number | null> {
     // Try parse viewBox
     const vbMatch = text.match(/viewBox="([^"]+)"/i);
     if (vbMatch) {
-      const parts = vbMatch[1].trim().split(/[\s,]+/).map(Number);
+      const parts = vbMatch[1]
+        .trim()
+        .split(/[\s,]+/)
+        .map(Number);
       if (parts.length === 4 && parts.every((n) => !Number.isNaN(n))) {
         const [, , vbW, vbH] = parts;
         if (vbW > 0 && vbH > 0) {
