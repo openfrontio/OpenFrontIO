@@ -1,4 +1,5 @@
 import ipAnonymize from "ip-anonymize";
+import { randomBytes } from "node:crypto";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
@@ -132,13 +133,7 @@ export class GameServer {
   public createHostToken() {
     //algorithm is not cryptographically secure
     const tokenLength = 16;
-    const chars = "ABCDEF0123456789";
-    let token = "";
-    const bytes = crypto.getRandomValues(new Uint8Array(length));
-    for (let i = 0; i < length; i++) {
-      token += chars[bytes[i] % chars.length];
-    }
-    this.hostToken = token;
+    this.hostToken = randomBytes(tokenLength).toString("hex");
     return this.getHostToken();
   }
 
