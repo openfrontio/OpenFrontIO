@@ -1,8 +1,11 @@
-/* Centralized rules for Nuke Wars gamemode */
+/* Centralized rules for Nuke Wars gamemode
+   Note: preparation time is configurable via preparationTimeSeconds.
+   See src/core/gamemodes/nuke-wars/config.ts */
 import { GameMapType, GameMode, TeamGameType } from "../game/Game";
 import { UnitType } from "../units/UnitType";
 
 export const NukeWarsConstants = {
+  // Deprecated - use getPreparationTimeSeconds(cfg) instead.
   PREP_DURATION_MINUTES: 3,
   LOSS_TERRITORY_THRESHOLD_PERCENT: 5,
   SAM_INTERCEPT: new Map<UnitType, number>([
