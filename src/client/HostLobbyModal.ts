@@ -592,8 +592,11 @@ export class HostLobbyModal extends LitElement {
 
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
-        this.lobbyId = lobby.gameID;
+        this.lobbyId = lobby.gameInfo.gameID;
         // join lobby
+        const cookieDurationSec = 60 * 60 * 6; //Store cookie for max 6 hours
+        // getting error here from lobby.hostToken
+        document.cookie = `hostToken=${lobby.hostToken}; Max-Axe=${cookieDurationSec}; Path=/`;
       })
       .then(() => {
         this.dispatchEvent(
@@ -794,6 +797,19 @@ export class HostLobbyModal extends LitElement {
     );
     this.close();
     const config = await getServerConfigFromClient();
+
+    const cookies = document.cookie.split(";");
+    let hostToken = "";
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      if (cookie.trim().startsWith("hostToken=")) {
+        hostToken = cookie.split("=")[1];
+        break;
+      }
+    }
+    console.log(hostToken, cookies);
+    const j = JSON.stringify({ hostToken: hostToken });
+    console.log(j);
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
@@ -801,8 +817,10 @@ export class HostLobbyModal extends LitElement {
         headers: {
           "Content-Type": "application/json",
         },
+        body: j,
       },
     );
+    document.cookie = "hostToken=;Max-Age=-1"; //delete cookie
     return response;
   }
 
@@ -849,7 +867,9 @@ export class HostLobbyModal extends LitElement {
   }
 }
 
-async function createLobby(creatorClientID: string): Promise<GameInfo> {
+async function createLobby(
+  creatorClientID: string,
+): Promise<{ gameInfo: GameInfo; hostToken: string }> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
@@ -873,7 +893,7 @@ async function createLobby(creatorClientID: string): Promise<GameInfo> {
     const data = await response.json();
     console.log("Success:", data);
 
-    return data as GameInfo;
+    return { gameInfo: data, hostToken: data.hostToken };
   } catch (error) {
     console.error("Error creating lobby:", error);
     throw error;
