@@ -28,6 +28,7 @@ import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
+  SendEmbargoAllIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
@@ -221,6 +222,16 @@ export class PlayerPanel extends LitElement implements Layer {
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoIntentEvent(other, "stop"));
     this.hide();
+  }
+
+  private onStopTradingAllClick(e: Event) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendEmbargoAllIntentEvent("start"));
+  }
+
+  private onStartTradingAllClick(e: Event) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendEmbargoAllIntentEvent("stop"));
   }
 
   private handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
@@ -709,6 +720,37 @@ export class PlayerPanel extends LitElement implements Layer {
               })
             : ""}
         </div>
+
+        ${other === my
+          ? html`<div class="grid auto-cols-fr grid-flow-col gap-1">
+              ${actionButton({
+                onClick: (e: MouseEvent) => this.onStopTradingAllClick(e),
+                icon: stopTradingIcon,
+                iconAlt: "Stop Trading With All",
+                title: !this.actions?.canEmbargoAll
+                  ? `${translateText("player_panel.stop_trade_all")} - ${translateText("cooldown")}`
+                  : translateText("player_panel.stop_trade_all"),
+                label: !this.actions?.canEmbargoAll
+                  ? `${translateText("player_panel.stop_trade_all")} ⏳`
+                  : translateText("player_panel.stop_trade_all"),
+                type: "yellow",
+                disabled: !this.actions?.canEmbargoAll,
+              })}
+              ${actionButton({
+                onClick: (e: MouseEvent) => this.onStartTradingAllClick(e),
+                icon: startTradingIcon,
+                iconAlt: "Start Trading With All",
+                title: !this.actions?.canEmbargoAll
+                  ? `${translateText("player_panel.start_trade_all")} - ${translateText("cooldown")}`
+                  : translateText("player_panel.start_trade_all"),
+                label: !this.actions?.canEmbargoAll
+                  ? `${translateText("player_panel.start_trade_all")} ⏳`
+                  : translateText("player_panel.start_trade_all"),
+                type: "green",
+                disabled: !this.actions?.canEmbargoAll,
+              })}
+            </div>`
+          : ""}
       </div>
     `;
   }
