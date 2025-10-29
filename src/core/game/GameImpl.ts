@@ -15,6 +15,7 @@ import {
   Game,
   GameMode,
   GameUpdates,
+  HumansVsNations,
   MessageType,
   MutableAlliance,
   Nation,
@@ -105,6 +106,13 @@ export class GameImpl implements Game {
 
   private populateTeams() {
     let numPlayerTeams = this._config.playerTeams();
+
+    // HumansVsNations mode always has exactly 2 teams
+    if (numPlayerTeams === HumansVsNations) {
+      this.playerTeams = [ColoredTeams.Humans, ColoredTeams.Nations];
+      return;
+    }
+
     if (typeof numPlayerTeams !== "number") {
       const players = this._humans.length + this._nations.length;
       switch (numPlayerTeams) {
@@ -139,11 +147,21 @@ export class GameImpl implements Game {
   }
 
   private addPlayers() {
-    if (this.config().gameConfig().gameMode !== GameMode.Team) {
+    if (this.config().gameConfig().gameMode === GameMode.FFA) {
       this._humans.forEach((p) => this.addPlayer(p));
       this._nations.forEach((n) => this.addPlayer(n.playerInfo));
       return;
     }
+
+    if (this._config.playerTeams() === HumansVsNations) {
+      this._humans.forEach((p) => this.addPlayer(p, ColoredTeams.Humans));
+      this._nations.forEach((n) =>
+        this.addPlayer(n.playerInfo, ColoredTeams.Nations),
+      );
+      return;
+    }
+
+    // Team mode
     const allPlayers = [
       ...this._humans,
       ...this._nations.map((n) => n.playerInfo),

@@ -8,6 +8,7 @@ import {
   GameMode,
   GameType,
   Gold,
+  HumansVsNations,
   Player,
   PlayerInfo,
   PlayerType,
@@ -194,6 +195,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
         break;
       case Quads:
         p -= p % 4;
+        break;
+      case HumansVsNations:
+        // For HumansVsNations, return the base team player count
         break;
       default:
         p -= p % numPlayerTeams;

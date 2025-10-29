@@ -90,6 +90,8 @@ describe("ColorAllocator", () => {
     expect(allocator.assignTeamColor(ColoredTeams.Orange)).toEqual(orange);
     expect(allocator.assignTeamColor(ColoredTeams.Green)).toEqual(green);
     expect(allocator.assignTeamColor(ColoredTeams.Bot)).toEqual(botColor);
+    expect(allocator.assignTeamColor(ColoredTeams.Humans)).toEqual(blue);
+    expect(allocator.assignTeamColor(ColoredTeams.Nations)).toEqual(red);
   });
 
   test("assignTeamPlayerColor always returns the same color for the same playerID", () => {

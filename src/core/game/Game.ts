@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -52,6 +53,7 @@ export type Team = string;
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
 export const Quads = "Quads" as const;
+export const HumansVsNations = "Humans Vs Nations" as const;
 
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
@@ -62,6 +64,8 @@ export const ColoredTeams: Record<string, Team> = {
   Orange: "Orange",
   Green: "Green",
   Bot: "Bot",
+  Humans: "Humans",
+  Nations: "Nations",
 } as const;
 
 export enum GameMapType {
@@ -407,13 +411,7 @@ export class PlayerInfo {
     public readonly id: PlayerID,
     public readonly nation?: Nation | null,
   ) {
-    // Compute clan from name
-    if (!name.includes("[") || !name.includes("]")) {
-      this.clan = null;
-    } else {
-      const clanMatch = name.match(/\[([a-zA-Z0-9]{2,5})\]/);
-      this.clan = clanMatch ? clanMatch[1].toUpperCase() : null;
-    }
+    this.clan = getClanTag(name);
   }
 }
 

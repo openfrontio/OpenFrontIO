@@ -108,15 +108,15 @@ export class PastelTheme implements Theme {
       }
       case TerrainType.Plains:
         return colord({
-          r: 190,
-          g: 220 - 2 * mag,
-          b: 138,
+          r: 216,
+          g: 205 - 2 * mag,
+          b: 127,
         });
       case TerrainType.Highland:
         return colord({
-          r: 200 + 2 * mag,
-          g: 183 + 2 * mag,
-          b: 138 + 2 * mag,
+          r: 223 + 2 * mag,
+          g: 187 + 2 * mag,
+          b: 132 + 2 * mag,
         });
       case TerrainType.Mountain:
         return colord({
