@@ -47,7 +47,7 @@ export class NukeAreaFx implements Fx {
     ctx.globalAlpha = alpha;
     ctx.lineWidth = 1;
     ctx.strokeStyle = `rgba(255,0,0,${alpha})`;
-    ctx.fillStyle = `rgba(255,0,0,${alpha - 0.6})`;
+    ctx.fillStyle = `rgba(255,0,0,${Math.max(0, alpha - 0.6)})`;
 
     // Inner circle
     ctx.beginPath();
