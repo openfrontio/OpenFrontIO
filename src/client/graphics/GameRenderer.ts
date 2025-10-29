@@ -1,6 +1,7 @@
 import { EventBus } from "../../core/EventBus";
-import { GameView } from "../../core/game/GameView";
 import { GameMode, TeamGameType } from "../../core/game/Game";
+import { GameView } from "../../core/game/GameView";
+import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
