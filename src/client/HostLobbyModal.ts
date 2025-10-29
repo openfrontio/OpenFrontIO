@@ -97,7 +97,7 @@ export class HostLobbyModal extends LitElement {
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
-  @state() private lobbyIdVisible: boolean = true;
+  @state() private lobbyIdVisible: boolean = false;
 
   @state() private rightExpanded = false;
 
@@ -509,7 +509,7 @@ export class HostLobbyModal extends LitElement {
     this.lobbyCreatorClientID = generateID();
     this.lobbyIdVisible = this.userSettings.get(
       "settings.lobbyIdVisibility",
-      true,
+      false,
     );
 
     createLobby(this.lobbyCreatorClientID)
