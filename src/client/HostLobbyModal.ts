@@ -596,7 +596,7 @@ export class HostLobbyModal extends LitElement {
         // join lobby
         const cookieDurationSec = 60 * 60 * 6; //Store cookie for max 6 hours
         // getting error here from lobby.hostToken
-        document.cookie = `hostToken=${lobby.hostToken}; Max-Axe=${cookieDurationSec}; Path=/`;
+        document.cookie = `hostToken=${lobby.hostToken}; Max-Age=${cookieDurationSec}; Path=/`;
       })
       .then(() => {
         this.dispatchEvent(
@@ -818,7 +818,8 @@ export class HostLobbyModal extends LitElement {
         body: JSON.stringify({ hostToken: hostToken }),
       },
     );
-    document.cookie = "hostToken=;Max-Age=-1"; //delete cookie
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `hostToken=; Max-Age=0; Path=/; SameSite=Strict${secure}`; //delete cookie
     return response;
   }
 

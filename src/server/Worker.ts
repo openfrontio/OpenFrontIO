@@ -175,7 +175,7 @@ export async function startWorker() {
 
     if (hostToken !== game.getHostToken()) {
       log.info(`cannot start private game ${game.id}, requestor is not host`);
-      res.status(403).json({ success: false };
+      res.status(403).json({ success: false });
       return;
     }
     game.start();
