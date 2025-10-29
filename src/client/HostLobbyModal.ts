@@ -798,6 +798,7 @@ export class HostLobbyModal extends LitElement {
     this.close();
     const config = await getServerConfigFromClient();
 
+    // Parse cookies for hostToken
     const cookies = document.cookie.split(";");
     let hostToken = "";
     for (let i = 0; i < cookies.length; i++) {
@@ -807,9 +808,6 @@ export class HostLobbyModal extends LitElement {
         break;
       }
     }
-    console.log(hostToken, cookies);
-    const j = JSON.stringify({ hostToken: hostToken });
-    console.log(j);
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
@@ -817,7 +815,7 @@ export class HostLobbyModal extends LitElement {
         headers: {
           "Content-Type": "application/json",
         },
-        body: j,
+        body: JSON.stringify({ hostToken: hostToken }),
       },
     );
     document.cookie = "hostToken=;Max-Age=-1"; //delete cookie
