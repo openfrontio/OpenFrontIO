@@ -89,8 +89,9 @@ export class MapBrowserPane extends LitElement {
             ${["all", ...Object.keys(mapCategories)].map(
               (f) => html`
                 <button
-                  class="h-9 cursor-pointer rounded-full border px-3 transition-colors ${this
-                    .filter === f
+                  type="button"
+                  class="h-9 cursor-pointer rounded-full border px-3 
+                  transition-colors ${this.filter === f
                     ? "border-blue-400/50 bg-blue-500/25 text-blue-50"
                     : "border-white/15 bg-white/5 text-zinc-100 hover:border-white/25"}"
                   aria-pressed=${String(this.filter === f)}
@@ -129,14 +130,27 @@ export class MapBrowserPane extends LitElement {
         </div>
 
         <div class="grid flex-1 grid-cols-1 gap-4 overflow-auto p-3">
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            role="listbox"
+            aria-label="Maps"
+          >
             ${maps.length
               ? maps.map(({ value, key, name }) => {
                   const selected =
                     !this.useRandomMap && this.selectedMap === value;
                   return html` <div
                     @click=${() => this.selectMap(value)}
-                    class="w-full h-full cursor-pointer"
+                    @keydown=${(e: KeyboardEvent) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        this.selectMap(value);
+                      }
+                    }}
+                    tabindex="0"
+                    role="option"
+                    aria-selected=${String(selected)}
+                    class="w-full h-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 rounded-xl"
                   >
                     <map-display
                       .mapKey=${key}

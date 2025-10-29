@@ -64,7 +64,9 @@ export class AdvancedOptions extends LitElement {
         <span class="font-medium leading-6">${labelText}</span>
       </div>
       <span class="${chipBase} ${chipClasses}" aria-hidden="true"
-        >${checked ? "On" : "Off"}</span
+        >${checked
+          ? translateText("common.on")
+          : translateText("common.off")}</span
       >
     </label>`;
   }

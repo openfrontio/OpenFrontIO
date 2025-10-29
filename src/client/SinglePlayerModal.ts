@@ -341,11 +341,12 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private toggleUnit = (unit: UnitType, checked: boolean): void => {
+    // checked=true means the unit is enabled, so ensure it's NOT in disabledUnits
     this.disabledUnits = checked
-      ? this.disabledUnits.includes(unit)
+      ? this.disabledUnits.filter((u) => u !== unit)
+      : this.disabledUnits.includes(unit)
         ? this.disabledUnits
-        : [...this.disabledUnits, unit]
-      : this.disabledUnits.filter((u) => u !== unit);
+        : [...this.disabledUnits, unit];
   };
 
   private handleBotsEvent = (e: Event | CustomEvent<{ value: number }>) => {

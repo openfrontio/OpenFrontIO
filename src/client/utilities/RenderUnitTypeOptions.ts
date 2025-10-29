@@ -69,7 +69,8 @@ export function renderUnitTypeOptions({
             .checked=${isOn}
             @change=${(e: Event) => {
               const checked = (e.target as HTMLInputElement).checked;
-              toggleUnit(type, !checked);
+              // checked means the unit should be enabled (i.e., removed from disabledUnits)
+              toggleUnit(type, checked);
             }}
             aria-label=${label}
           />

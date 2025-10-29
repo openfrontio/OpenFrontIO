@@ -29,6 +29,13 @@ export class PresetsManager<T = unknown> extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // Warn early if a required prop is missing to aid integration/debugging
+    if (!this.storageKey) {
+      console.warn(
+        "PresetsManager: missing required 'storageKey' prop. Presets will not be loaded/saved.",
+      );
+      return;
+    }
     this.loadFromStorage();
   }
 

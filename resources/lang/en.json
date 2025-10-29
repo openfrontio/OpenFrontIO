@@ -25,7 +25,8 @@
     "untitled": "Untitled",
     "on": "On",
     "off": "Off",
-    "name": "Name"
+    "name": "Name",
+    "copied": "Copied"
   },
   "game_options": {
     "advanced_options": "Advanced Options",
@@ -169,8 +170,7 @@
     "start": "Start Game",
     "quick_start": "Quick Start",
     "presets": "Presets",
-    "reset": "Reset",
-    "select_placeholder": "Select preset..."
+    "reset": "Reset"
   },
   "token_login_modal": {
     "title": "Logging in...",
@@ -273,6 +273,10 @@
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
+    "generating": "Generating...",
+    "hide_id": "Hide ID",
+    "show_id": "Show ID",
+    "copy_invite": "Copy invite",
     "start": "Start Game",
     "host_badge": "Host"
   },
@@ -308,7 +312,8 @@
     "error_missing_settings": "Preset manager is missing getSettings()",
     "save": "Save Preset",
     "update": "Update Preset",
-    "delete": "Delete Preset"
+    "delete": "Delete Preset",
+    "select_placeholder": "Select preset..."
   },
   "select_lang": {
     "title": "Select Language"

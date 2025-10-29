@@ -195,7 +195,7 @@ export class HostLobbyModal extends LitElement {
       ? this.lobbyIdVisible
         ? id
         : this.mask(id)
-      : (translateText("host_modal.generating") ?? "Generating…");
+      : translateText("host_modal.generating");
 
     return html`
       <div
@@ -217,8 +217,12 @@ export class HostLobbyModal extends LitElement {
           <button
             class="absolute right-2 top-1.5 h-7 w-7 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 flex items-center justify-center"
             @click=${this.toggleInviteVisibility}
-            title=${this.lobbyIdVisible ? "Hide ID" : "Show ID"}
-            aria-label=${this.lobbyIdVisible ? "Hide ID" : "Show ID"}
+            title=${this.lobbyIdVisible
+              ? translateText("host_modal.hide_id")
+              : translateText("host_modal.show_id")}
+            aria-label=${this.lobbyIdVisible
+              ? translateText("host_modal.hide_id")
+              : translateText("host_modal.show_id")}
             aria-pressed=${String(this.lobbyIdVisible)}
             type="button"
           >
@@ -265,7 +269,9 @@ export class HostLobbyModal extends LitElement {
           ?disabled=${!id}
           type="button"
         >
-          ${this.copySuccess ? "Copied" : "Copy invite"}
+          ${this.copySuccess
+            ? translateText("common.copied")
+            : translateText("host_modal.copy_invite")}
         </button>
       </div>
     `;
@@ -597,9 +603,12 @@ export class HostLobbyModal extends LitElement {
   }
 
   private toggleUnit(unit: UnitType, checked: boolean): void {
+    // checked=true means the unit is enabled, so ensure it's NOT in disabledUnits
     this.disabledUnits = checked
-      ? [...this.disabledUnits, unit]
-      : this.disabledUnits.filter((u) => u !== unit);
+      ? this.disabledUnits.filter((u) => u !== unit)
+      : this.disabledUnits.includes(unit)
+        ? this.disabledUnits
+        : [...this.disabledUnits, unit];
 
     this.putGameConfig();
   }
@@ -616,9 +625,12 @@ export class HostLobbyModal extends LitElement {
   };
 
   private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
-    const randIdx = Math.floor(Math.random() * maps.length);
-    return maps[randIdx] as GameMapType;
+    const numericValues = Object.values(GameMapType).filter(
+      (v) => typeof v === "number",
+    ) as number[];
+    const pool = numericValues.length > 0 ? numericValues : [GameMapType.World];
+    const randIdx = Math.floor(Math.random() * pool.length);
+    return pool[randIdx] as GameMapType;
   }
 
   private async startGame() {
