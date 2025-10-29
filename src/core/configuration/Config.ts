@@ -113,12 +113,80 @@ export interface Config {
     tilesPerTickUsed: number;
   };
   attackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  /**
+   * Controls the strength of directional attack bias (additive approach).
+   * This value determines the fixed point offset added/subtracted based on alignment.
+   * - Value of 1.5 creates a subtle 0-3 point swing (0 for aligned, 3 for opposite direction)
+   * - Higher values make direction more influential (e.g., 6.0 creates 0-12 swing)
+   * - Lower values make direction less noticeable
+   *
+   * With exponential time decay: ~16% influence at start, fading to ~1% by 6 seconds
+   */
   attackDirectionWeight(): number;
+  /**
+   * Time constant (in ticks) for exponential decay of directional influence.
+   * Direction bias fades exponentially as: exp(-timeSinceStart / timeDecayConstant)
+   * - 20 ticks (2s): Fast decay - noticeable in first 3s, gone by 6s (recommended)
+   * - 15 ticks (1.5s): Faster decay - gone by 4-5s
+   * - 25 ticks (2.5s): Slower decay - gentle falloff over 6-8s
+   * - 999999: Effectively disabled - direction persists throughout attack
+   *
+   * Direction fades naturally: 100% at start → 22% at 3s → 5% at 6s
+   */
   attackTimeDecay(): number;
+  /**
+   * Weight for magnitude-based proximity bonus (distance decay).
+   * Tiles closer to the clicked point receive additional priority bonus.
+   * Uses BFS (topological) distance when available, falls back to Euclidean.
+   * - 0.0: Disabled - pure directional bias only
+   * - 0.3: Subtle - minor locality preference
+   * - 0.75: Subtle with time decay - gentle convergence that fades (recommended)
+   * - 1.0: Balanced - moderate proximity bonus
+   * - 2.0: Strong - creates noticeable convergence
+   * - 5.0+: Very strong locality preference
+   * This creates triangular convergence toward the clicked point.
+   */
   attackMagnitudeWeight(): number;
+  /**
+   * Distance decay constant for proximity bonus (in tiles for BFS, coordinate units for Euclidean).
+   * Controls how quickly the proximity bonus fades with distance from click point.
+   *
+   * For BFS distances (topological):
+   * - 30 tiles: Bonus decays to ~37% at 30 tiles, ~5% at 90 tiles (recommended)
+   * - 50 tiles: Slower decay - bonus persists longer
+   * - 20 tiles: Faster decay - only very close tiles get significant bonus
+   *
+   * Lower values = faster fade, Higher values = proximity persists longer
+   */
   attackDistanceDecayConstant(): number;
+  /**
+   * Maximum BFS radius for all directed attacks (in tiles).
+   * Limits how far the BFS can traverse from the click point.
+   * This prevents performance issues on large maps and large late-game empires.
+   *
+   * - 100 tiles: Very fast - minimal search area, sufficient for most cases
+   * - 200 tiles: Balanced - optimal performance, proximity bonus negligible beyond this (current)
+   * - 500 tiles: Large - handles extreme scenarios, may cause stuttering on large attacks
+   *
+   * Applies to all attacks (neutral and player). Beyond this radius, tiles fall back to
+   * Euclidean distance for proximity calculations. Note: proximity bonus decays to ~0.03%
+   * at 200 tiles (exp(-200/25)), making larger radii unnecessary.
+   */
   attackBFSMaxRadius(): number;
+  /**
+   * Downsample factor for BFS distance calculations in directed attacks.
+   * Only tiles at grid coordinates (multiples of this factor) are stored in the distance map.
+   * - 10: Balanced - good performance with minimal accuracy loss (recommended)
+   * - 5: Higher precision - more memory, slower BFS initialization
+   * - 15-20: Lower precision - faster BFS, less memory, may reduce proximity bonus effectiveness
+   */
   attackBFSDownsampleFactor(): number;
+  /**
+   * Enable debug logging for directed attack telemetry.
+   * When enabled, logs BFS initialization and performance metrics to console.
+   * - false: Production mode - no telemetry logs (recommended)
+   * - true: Debug mode - log BFS performance and statistics
+   */
   debugDirectedAttacks(): boolean;
   radiusPortSpawn(): number;
   // When computing likelihood of trading for any given port, the X closest port
