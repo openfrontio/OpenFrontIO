@@ -666,7 +666,7 @@
     "purchase": "Purchase",
     "blocked": {
       "login": "You must be logged in to access this skin.",
-      "purchase": "Purchase this pattern to unlock it."
+      "purchase": "Purchase this skin to unlock it."
     },
     "pattern": {
       "default": "Default",
