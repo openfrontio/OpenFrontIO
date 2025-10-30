@@ -77,7 +77,7 @@ export class TestConfig extends DefaultConfig {
     return 1;
   }
 }
-export class useRealAttackLogic extends TestConfig {
+export class UseRealAttackLogic extends TestConfig {
   // Override to use DefaultConfig's real attackLogic
   attackLogic(
     gm: Game,

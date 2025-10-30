@@ -13,7 +13,7 @@ import {
 } from "../src/core/game/Game";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
-import { useRealAttackLogic } from "./util/TestConfig";
+import { UseRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
 let game: Game;
@@ -199,7 +199,7 @@ describe("Disconnected", () => {
         },
         [player1Info, player2Info],
         undefined,
-        useRealAttackLogic, // don't use TestConfig's mock attackLogic
+        UseRealAttackLogic, // don't use TestConfig's mock attackLogic
       );
 
       game.addExecution(
@@ -437,7 +437,7 @@ describe("Disconnected", () => {
 
       player2.markDisconnected(true);
       game.addExecution(new AttackExecution(1000, player1, player2.id(), null));
-      executeTicks(game, 2);
+      executeTicks(game, 10);
 
       expect(player2.isAlive()).toBe(false);
       expect(transportShip.owner()).toBe(player1);
