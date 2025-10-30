@@ -549,8 +549,10 @@ export class HostLobbyModal extends LitElement {
                     : html`
                         <button
                           class="remove-player-btn"
-                          @click=${() => this.kickPlayer(client.clientID)}
+                          @click=${(e: Event) =>
+                            this.kickPlayer(client.clientID, e)}
                           title="Remove ${client.username}"
+                          type="button"
                         >
                           ×
                         </button>
@@ -837,9 +839,12 @@ export class HostLobbyModal extends LitElement {
       });
   }
 
-  private kickPlayer(clientID: string) {
-    // Dispatch event to be handled by WebSocket instead of HTTP
-    this.dispatchEvent(
+  private kickPlayer(clientID: string, e?: Event) {
+    // Ensure the click isn't swallowed by parent handlers
+    e?.stopPropagation();
+
+    // Dispatch directly on document to avoid any shadow DOM/slotting issues
+    document.dispatchEvent(
       new CustomEvent("kick-player", {
         detail: { target: clientID },
         bubbles: true,
