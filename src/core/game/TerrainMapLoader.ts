@@ -50,7 +50,7 @@ export async function loadTerrainMap(
     map === GameMapType.Mars ||
     map === GameMapType.GiantWorldMap ||
     map === GameMapType.Pangaea;
-  const defaultWrapVertically = false;
+  const defaultWrapVertically = map === GameMapType.Pangaea;
 
   const gameMap =
     mapSize === GameMapSize.Normal

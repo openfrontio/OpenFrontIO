@@ -8,7 +8,11 @@ import { MiniAStar } from "./MiniAStar";
 const parabolaMinHeight = 50;
 
 export class ParabolaPathFinder {
-  constructor(private mg: GameMap) {}
+  constructor(
+    private mg: GameMap,
+    private wrapHorizontally: boolean = false,
+    private wrapVertically: boolean = false,
+  ) {}
   private curve: DistanceBasedBezierCurve | undefined;
 
   computeControlPoints(
@@ -17,8 +21,51 @@ export class ParabolaPathFinder {
     increment: number = 3,
     distanceBasedHeight = true,
   ) {
+    // Compute tile center coordinates for origin and destination, but adjust
+    // destination to the equivalent wrapped coordinate that yields the
+    // shortest displacement if the map supports wrapping. This allows
+    // parabola paths (used by nukes/MIRVs) to traverse map edges smoothly.
     const p0 = { x: this.mg.x(orig), y: this.mg.y(orig) };
-    const p3 = { x: this.mg.x(dst), y: this.mg.y(dst) };
+    let p3x = this.mg.x(dst);
+    let p3y = this.mg.y(dst);
+
+    // If the map wraps horizontally/vertically, choose the closest image of dst
+    // by shifting p3 by +/- width/height when that yields a smaller delta.
+    const w = this.mg.width();
+    const h = this.mg.height();
+
+    if (this.wrapHorizontally) {
+      const rawDx = p3x - p0.x;
+      // consider wrapping left and right
+      const altDx1 = p3x - w - p0.x; // wrapped left
+      const altDx2 = p3x + w - p0.x; // wrapped right
+      // choose the dx with minimal absolute value
+      const bestDx =
+        Math.abs(rawDx) <= Math.abs(altDx1) &&
+        Math.abs(rawDx) <= Math.abs(altDx2)
+          ? rawDx
+          : Math.abs(altDx1) <= Math.abs(altDx2)
+            ? altDx1
+            : altDx2;
+      p3x = p0.x + bestDx;
+    }
+
+    if (this.wrapVertically) {
+      const rawDy = p3y - p0.y;
+      // consider wrapping up and down
+      const altDy1 = p3y - h - p0.y; // wrapped up
+      const altDy2 = p3y + h - p0.y; // wrapped down
+      const bestDy =
+        Math.abs(rawDy) <= Math.abs(altDy1) &&
+        Math.abs(rawDy) <= Math.abs(altDy2)
+          ? rawDy
+          : Math.abs(altDy1) <= Math.abs(altDy2)
+            ? altDy1
+            : altDy2;
+      p3y = p0.y + bestDy;
+    }
+
+    const p3 = { x: p3x, y: p3y };
     const dx = p3.x - p0.x;
     const dy = p3.y - p0.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
@@ -46,7 +93,25 @@ export class ParabolaPathFinder {
     if (!nextPoint) {
       return true;
     }
-    return this.mg.ref(Math.floor(nextPoint.x), Math.floor(nextPoint.y));
+
+    // Normalize / wrap coordinates so they map into the game's tile grid.
+    // When maps wrap horizontally/vertically the bezier control points may
+    // produce points outside the nominal 0..width-1 / 0..height-1 range.
+    // Use the map's wrap settings to fold them back into valid coordinates.
+    let x = Math.floor(nextPoint.x);
+    let y = Math.floor(nextPoint.y);
+
+    const w = this.mg.width();
+    const h = this.mg.height();
+
+    if (this.wrapHorizontally) {
+      x = ((x % w) + w) % w;
+    }
+    if (this.wrapVertically) {
+      y = ((y % h) + h) % h;
+    }
+
+    return this.mg.ref(x, y);
   }
 
   currentIndex(): number {
@@ -60,9 +125,74 @@ export class ParabolaPathFinder {
     if (!this.curve) {
       return [];
     }
-    return this.curve
-      .getAllPoints()
-      .map((point) => this.mg.ref(Math.floor(point.x), Math.floor(point.y)));
+
+    // Fold sampled bezier points relative to the previous sample so that when
+    // the map wraps the trajectory doesn't draw a long line across the entire
+    // world. For each sampled point choose the wrapped image closest to the
+    // previously chosen point (in the unwrapped coordinate space), then map
+    // that chosen image back into 0..width-1 / 0..height-1 when producing
+    // the TileRef instances.
+    const w = this.mg.width();
+    const h = this.mg.height();
+    const points = this.curve.getAllPoints();
+    const tiles: TileRef[] = [];
+
+    // prev holds the chosen (possibly unwrapped) coordinates for the previous
+    // sample. We keep it in the same coordinate space used to select the best
+    // wrapped image so distance comparisons are meaningful.
+    let prev: { x: number; y: number } | null = null;
+
+    for (const point of points) {
+      const baseX = Math.floor(point.x);
+      const baseY = Math.floor(point.y);
+
+      // If no wrapping is enabled, this is a simple mapping.
+      if (!this.wrapHorizontally && !this.wrapVertically) {
+        tiles.push(this.mg.ref(baseX, baseY));
+        prev = { x: baseX, y: baseY };
+        continue;
+      }
+
+      // For wrapped maps consider alternative images offset by +/- width and/or +/- height.
+      const xShifts = this.wrapHorizontally ? [0, -w, w] : [0];
+      const yShifts = this.wrapVertically ? [0, -h, h] : [0];
+
+      // If this is the first point, pick the canonical wrapped position and
+      // initialize prev to its unwrapped counterpart (baseX/baseY).
+      if (prev === null) {
+        const wrappedX = this.wrapHorizontally ? ((baseX % w) + w) % w : baseX;
+        const wrappedY = this.wrapVertically ? ((baseY % h) + h) % h : baseY;
+        tiles.push(this.mg.ref(wrappedX, wrappedY));
+        prev = { x: baseX, y: baseY };
+        continue;
+      }
+
+      // Choose the candidate image (base + shift) that is closest to prev.
+      let best = { cx: baseX, cy: baseY, dist2: Number.POSITIVE_INFINITY };
+      for (const sx of xShifts) {
+        for (const sy of yShifts) {
+          const cx = baseX + sx;
+          const cy = baseY + sy;
+          const dx = cx - prev.x;
+          const dy = cy - prev.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < best.dist2) {
+            best = { cx, cy, dist2: d2 };
+          }
+        }
+      }
+
+      // Fold the chosen image back into valid map coordinates for TileRef.
+      const finalX = this.wrapHorizontally ? ((best.cx % w) + w) % w : best.cx;
+      const finalY = this.wrapVertically ? ((best.cy % h) + h) % h : best.cy;
+
+      tiles.push(this.mg.ref(finalX, finalY));
+      // Store the unwrapped chosen coordinates so the next iteration can pick
+      // the nearest image relative to this one.
+      prev = { x: best.cx, y: best.cy };
+    }
+
+    return tiles;
   }
 }
 

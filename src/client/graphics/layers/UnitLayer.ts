@@ -397,10 +397,46 @@ export class UnitLayer implements Layer {
         x: this.game.x(trail[trail.length - 1]),
         y: this.game.y(trail[trail.length - 1]),
       };
-      const line = new BezenhamLine(prev, cur);
+
+      // When the map wraps, choose the image of the current point that is
+      // closest to the previous point so the Bezenham line doesn't draw a
+      // long straight segment across the whole world.
+      const w = this.game.width();
+      const h = this.game.height();
+      let adjCurX = cur.x;
+      let adjCurY = cur.y;
+
+      if (this.game.wrapsHorizontally()) {
+        const dx = adjCurX - prev.x;
+        if (dx > w / 2) {
+          adjCurX -= w;
+        } else if (dx < -w / 2) {
+          adjCurX += w;
+        }
+      }
+
+      if (this.game.wrapsVertically()) {
+        const dy = adjCurY - prev.y;
+        if (dy > h / 2) {
+          adjCurY -= h;
+        } else if (dy < -h / 2) {
+          adjCurY += h;
+        }
+      }
+
+      const line = new BezenhamLine(prev, { x: adjCurX, y: adjCurY });
       let point = line.increment();
       while (point !== true) {
-        trail.push(this.game.ref(point.x, point.y));
+        // Fold sampled point back into the visible map range so ref(...) is valid.
+        let px = point.x;
+        let py = point.y;
+        if (this.game.wrapsHorizontally()) {
+          px = ((px % w) + w) % w;
+        }
+        if (this.game.wrapsVertically()) {
+          py = ((py % h) + h) % h;
+        }
+        trail.push(this.game.ref(px, py));
         point = line.increment();
       }
       newTrailSize = line.size();

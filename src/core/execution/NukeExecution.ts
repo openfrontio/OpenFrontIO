@@ -37,7 +37,13 @@ export class NukeExecution implements Execution {
     if (this.speed === -1) {
       this.speed = this.mg.config().defaultNukeSpeed();
     }
-    this.pathFinder = new ParabolaPathFinder(mg);
+    // Pass the map's wrapping flags into the ParabolaPathFinder so trajectories
+    // (nukes) can account for horizontal/vertical wrapping when computing paths.
+    this.pathFinder = new ParabolaPathFinder(
+      mg,
+      mg.wrapsHorizontally(),
+      mg.wrapsVertically(),
+    );
   }
 
   public target(): Player | TerraNullius {
