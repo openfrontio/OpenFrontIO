@@ -98,29 +98,41 @@ export class MiniAStar implements AStar<TileRef> {
       .reconstructPath()
       .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr)));
 
-    const unwrapHorizontally = (path: Cell[], wrapW: number): Cell[] => {
+    const unwrap = (
+      path: Cell[],
+      wrapW: number,
+      wrapH: number,
+    ): Cell[] => {
       if (path.length === 0) return [];
       const out: Cell[] = [];
       let prevX = path[0].x;
-      out.push(new Cell(prevX, path[0].y));
+      let prevY = path[0].y;
+      out.push(new Cell(prevX, prevY));
       for (let i = 1; i < path.length; i++) {
         let x = path[i].x;
+        let y = path[i].y;
         while (x - prevX > wrapW / 2) x -= wrapW;
         while (x - prevX < -wrapW / 2) x += wrapW;
-        out.push(new Cell(x, path[i].y));
+        while (y - prevY > wrapH / 2) y -= wrapH;
+        while (y - prevY < -wrapH / 2) y += wrapH;
+        out.push(new Cell(x, y));
         prevX = x;
+        prevY = y;
       }
       return out;
     };
 
     const miniWidth = this.miniMap.width();
-    const unwrappedMini = unwrapHorizontally(miniPath, miniWidth);
+    const miniHeight = this.miniMap.height();
+    const unwrappedMini = unwrap(miniPath, miniWidth, miniHeight);
     const upscaled = fixExtremes(upscalePath(unwrappedMini), cellDst, cellSrc);
 
     const gameWidth = this.gameMap.width();
+    const gameHeight = this.gameMap.height();
     return upscaled.map((c) => {
       const wrappedX = ((c.x % gameWidth) + gameWidth) % gameWidth;
-      return this.gameMap.ref(wrappedX, c.y);
+      const wrappedY = ((c.y % gameHeight) + gameHeight) % gameHeight;
+      return this.gameMap.ref(wrappedX, wrappedY);
     });
   }
 }
