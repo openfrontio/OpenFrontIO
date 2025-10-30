@@ -19,13 +19,14 @@ GET https://api.openfront.io/public/games
 
 - `start` (required): ISO 8601 timestamp
 - `end` (required): ISO 8601 timestamp
-- `limit` (optional): Number of results (max 1000)
+- `type` (optional): Game type, must be one of `[Private, Public, Singleplayer]`
+- `limit` (optional): Number of results (max 1000, default 50)
 - `offset` (optional): Pagination offset
 
 **Example Request:**
 
 ```bash
-curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-10-26T23:59:59Z&limit=10&offset=5"
+curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-10-26T23:59:59Z&type=Singleplayer&limit=10&offset=5"
 ```
 
 **Response:**
