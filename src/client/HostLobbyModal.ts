@@ -612,6 +612,14 @@ export class HostLobbyModal extends LitElement {
             composed: true,
           }),
         );
+      })
+      .catch((err) => {
+        console.error(`Failed to create lobby: ${err}`);
+        const popup = document.createElement("div");
+        popup.className = "setting-popup"; // TODO: Change to general popup class?
+        popup.textContent = translateText("private_lobby.creation_error");
+        document.body.appendChild(popup);
+		this.close();
       });
     this.modalEl?.open();
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
