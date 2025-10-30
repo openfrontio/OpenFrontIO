@@ -33,6 +33,12 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
     return this.gameMap.width();
   }
 
+  // Provide the map height so pathfinding heuristics can account for
+  // vertical wrapping (maps that wrap top-to-bottom). SerialAStar will call this if present.
+  wrapHeight(): number {
+    return this.gameMap.height();
+  }
+
   isTraversable(from: TileRef, to: TileRef): boolean {
     const toWater = this.gameMap.isWater(to);
     if (this.waterPath) {
@@ -98,11 +104,7 @@ export class MiniAStar implements AStar<TileRef> {
       .reconstructPath()
       .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr)));
 
-    const unwrap = (
-      path: Cell[],
-      wrapW: number,
-      wrapH: number,
-    ): Cell[] => {
+    const unwrap = (path: Cell[], wrapW: number, wrapH: number): Cell[] => {
       if (path.length === 0) return [];
       const out: Cell[] = [];
       let prevX = path[0].x;

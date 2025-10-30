@@ -9,7 +9,10 @@ export interface GraphAdapter<NodeType> {
   cost(node: NodeType): number;
   position(node: NodeType): { x: number; y: number };
   isTraversable(from: NodeType, to: NodeType): boolean;
+  // Optional map width for horizontal wrapping (e.g. 360° maps)
   wrapWidth?(): number;
+  // Optional map height for vertical wrapping (added to support vertical wrap heuristics)
+  wrapHeight?(): number;
 }
 
 export class SerialAStar<NodeType> implements AStar<NodeType> {
@@ -155,13 +158,20 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     const posA = this.graph.position(a);
     const posB = this.graph.position(b);
 
+    // horizontal distance (account for optional horizontal wrapping)
     let dx = Math.abs(posA.x - posB.x);
     const wrap = this.graph.wrapWidth ? this.graph.wrapWidth() : undefined;
     if (wrap !== undefined && wrap > 0) {
       dx = Math.min(dx, Math.abs(wrap - dx));
     }
 
-    const dy = Math.abs(posA.y - posB.y);
+    // vertical distance (account for optional vertical wrapping)
+    let dy = Math.abs(posA.y - posB.y);
+    const wrapH = this.graph.wrapHeight ? this.graph.wrapHeight() : undefined;
+    if (wrapH !== undefined && wrapH > 0) {
+      dy = Math.min(dy, Math.abs(wrapH - dy));
+    }
+
     return 2 * (dx + dy);
   }
 
@@ -169,6 +179,7 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
     const fromPos = this.graph.position(from);
     const toPos = this.graph.position(to);
 
+    // horizontal delta, adjusted for optional horizontal wrap
     let dx = toPos.x - fromPos.x;
     const wrap = this.graph.wrapWidth ? this.graph.wrapWidth() : undefined;
     if (wrap !== undefined && wrap > 0) {
@@ -178,7 +189,16 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
       }
     }
 
-    const dy = toPos.y - fromPos.y;
+    // vertical delta, adjusted for optional vertical wrap
+    let dy = toPos.y - fromPos.y;
+    const wrapH = this.graph.wrapHeight ? this.graph.wrapHeight() : undefined;
+    if (wrapH !== undefined && wrapH > 0) {
+      const altY = dy > 0 ? dy - wrapH : dy + wrapH;
+      if (Math.abs(altY) < Math.abs(dy)) {
+        dy = altY;
+      }
+    }
+
     return `${Math.sign(dx)},${Math.sign(dy)}`;
   }
 
