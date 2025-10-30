@@ -592,9 +592,9 @@ export class HostLobbyModal extends LitElement {
 
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
-		if (lobby.hostToken === null) {
-			throw new Error("Server did not return hostToken for private lobby");
-		}
+        if (lobby.hostToken === null) {
+          throw new Error("Server did not return hostToken for private lobby");
+        }
         this.lobbyId = lobby.gameInfo.gameID;
         // join lobby
         const cookieDurationSec = 60 * 60 * 6; // store for max 6 hours
