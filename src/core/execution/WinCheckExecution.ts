@@ -28,6 +28,7 @@ export class WinCheckExecution implements Execution {
       return;
     }
     if (this.mg === null) throw new Error("Not initialized");
+
     if (this.mg.config().gameConfig().gameMode === GameMode.FFA) {
       this.checkWinnerFFA();
     } else {
@@ -44,11 +45,15 @@ export class WinCheckExecution implements Execution {
       return;
     }
     const max = sorted[0];
+    const timeElapsed =
+      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     if (
       (max.numTilesOwned() / numTilesWithoutFallout) * 100 >
-      this.mg.config().percentageTilesOwnedToWin()
+        this.mg.config().percentageTilesOwnedToWin() ||
+      (this.mg.config().gameConfig().maxTimerValue !== undefined &&
+        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0)
     ) {
       this.mg.setWinner(max, this.mg.stats().stats());
       console.log(`${max.name()} has won the game`);
@@ -75,10 +80,16 @@ export class WinCheckExecution implements Execution {
       return;
     }
     const max = sorted[0];
+    const timeElapsed =
+      (this.mg.ticks() - this.mg.config().numSpawnPhaseTurns()) / 10;
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
     const percentage = (max[1] / numTilesWithoutFallout) * 100;
-    if (percentage > this.mg.config().percentageTilesOwnedToWin()) {
+    if (
+      percentage > this.mg.config().percentageTilesOwnedToWin() ||
+      (this.mg.config().gameConfig().maxTimerValue !== undefined &&
+        timeElapsed - this.mg.config().gameConfig().maxTimerValue! * 60 >= 0)
+    ) {
       if (max[0] === ColoredTeams.Bot) return;
       this.mg.setWinner(max[0], this.mg.stats().stats());
       console.log(`${max[0]} has won the game`);

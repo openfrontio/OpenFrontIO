@@ -20,7 +20,7 @@ const EMOJI_ASSIST_ACCEPT = (["👍", "⛵", "🤝", "🎯"] as const).map(emoji
 const EMOJI_RELATION_TOO_LOW = (["🥱", "🤦‍♂️"] as const).map(emojiId);
 const EMOJI_TARGET_ME = (["🥺", "💀"] as const).map(emojiId);
 const EMOJI_TARGET_ALLY = (["🕊️", "👎"] as const).map(emojiId);
-export const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
+export const EMOJI_HECKLE = (["👻", "🎃"] as const).map(emojiId);
 
 export class BotBehavior {
   private enemy: Player | null = null;
@@ -306,6 +306,16 @@ export class BotBehavior {
       this.clearEnemy();
     }
     return this.enemy;
+  }
+
+  forceSendAttack(target: Player | TerraNullius) {
+    this.game.addExecution(
+      new AttackExecution(
+        this.player.troops() / 2,
+        this.player,
+        target.isPlayer() ? target.id() : this.game.terraNullius().id(),
+      ),
+    );
   }
 
   sendAttack(target: Player | TerraNullius) {

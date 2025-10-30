@@ -167,6 +167,9 @@ export class InputHandler {
       console.warn("Invalid keybinds JSON:", e);
     }
 
+    // Mac users might have different keybinds
+    const isMac = /Mac/.test(navigator.userAgent);
+
     this.keybinds = {
       toggleView: "Space",
       centerCamera: "KeyC",
@@ -180,7 +183,7 @@ export class InputHandler {
       attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
-      modifierKey: "ControlLeft",
+      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       buildCity: "Digit1",
       buildFactory: "Digit2",
@@ -195,20 +198,12 @@ export class InputHandler {
       ...saved,
     };
 
-    // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
-    if (isMac) {
-      this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
-    }
-
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
     this.canvas.addEventListener(
       "wheel",
       (e) => {
-        if (!this.onTrackpadPan(e)) {
-          this.onScroll(e);
-        }
+        this.onScroll(e);
         this.onShiftScroll(e);
         e.preventDefault();
       },
@@ -220,16 +215,6 @@ export class InputHandler {
       if (e.movementX || e.movementY) {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
-    });
-
-    this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
-      passive: false,
-    });
-    this.canvas.addEventListener("touchmove", (e) => this.onTouchMove(e), {
-      passive: false,
-    });
-    this.canvas.addEventListener("touchend", (e) => this.onTouchEnd(e), {
-      passive: false,
     });
     this.pointers.clear();
 
@@ -511,27 +496,6 @@ export class InputHandler {
     }
   }
 
-  private onTrackpadPan(event: WheelEvent): boolean {
-    if (event.shiftKey || event.ctrlKey || event.metaKey) {
-      return false;
-    }
-
-    const isTrackpadPan = event.deltaMode === 0 && event.deltaX !== 0;
-
-    if (!isTrackpadPan) {
-      return false;
-    }
-
-    const panSensitivity = 1.0;
-    const deltaX = -event.deltaX * panSensitivity;
-    const deltaY = -event.deltaY * panSensitivity;
-
-    if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
-      this.eventBus.emit(new DragEvent(deltaX, deltaY));
-    }
-    return true;
-  }
-
   private onPointerMove(event: PointerEvent) {
     if (event.button === 1) {
       event.preventDefault();
@@ -578,47 +542,6 @@ export class InputHandler {
       return;
     }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
-  }
-
-  private onTouchStart(event: TouchEvent) {
-    if (event.touches.length === 2) {
-      event.preventDefault();
-      // Solve screen jittering problem
-      const touch1 = event.touches[0];
-      const touch2 = event.touches[1];
-      this.lastPointerX = (touch1.clientX + touch2.clientX) / 2;
-      this.lastPointerY = (touch1.clientY + touch2.clientY) / 2;
-    }
-  }
-
-  private onTouchMove(event: TouchEvent) {
-    if (event.touches.length === 2) {
-      event.preventDefault();
-
-      const touch1 = event.touches[0];
-      const touch2 = event.touches[1];
-      const centerX = (touch1.clientX + touch2.clientX) / 2;
-      const centerY = (touch1.clientY + touch2.clientY) / 2;
-
-      if (this.lastPointerX !== 0 && this.lastPointerY !== 0) {
-        const deltaX = centerX - this.lastPointerX;
-        const deltaY = centerY - this.lastPointerY;
-
-        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-          this.eventBus.emit(new DragEvent(deltaX, deltaY));
-        }
-      }
-
-      this.lastPointerX = centerX;
-      this.lastPointerY = centerY;
-    }
-  }
-
-  private onTouchEnd(event: TouchEvent) {
-    if (event.touches.length < 2) {
-      this.lastPointerX = 0;
-      this.lastPointerY = 0;
-    }
   }
 
   private getPinchDistance(): number {

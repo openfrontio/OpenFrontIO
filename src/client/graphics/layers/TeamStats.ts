@@ -83,7 +83,9 @@ export class TeamStats extends LitElement implements Layer {
           }
         }
 
-        const totalScorePercent = totalScoreSort / this.game.numLandTiles();
+        const numTilesWithoutFallout =
+          this.game.numLandTiles() - this.game.numTilesWithFallout();
+        const totalScorePercent = totalScoreSort / numTilesWithoutFallout;
 
         return {
           teamName: teamStr,
@@ -219,5 +221,6 @@ export class TeamStats extends LitElement implements Layer {
 function formatPercentage(value: number): string {
   const perc = value * 100;
   if (Number.isNaN(perc)) return "0%";
+  if (perc === 100) return "100%";
   return perc.toPrecision(2) + "%";
 }

@@ -1,4 +1,4 @@
-import { Colord } from "colord";
+import { colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
@@ -96,11 +96,15 @@ export class RailroadLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     this.updateRailColors();
-    if (this.transformHandler.scale <= 2) {
-      // When zoomed out, don't show the railroads
-      // to prevent map clutter.
+    const scale = this.transformHandler.scale;
+    if (scale <= 1) {
       return;
     }
+    const rawAlpha = (scale - 1) / (2 - 1); // maps 1->0, 2->1
+    const alpha = Math.max(0, Math.min(1, rawAlpha));
+
+    context.save();
+    context.globalAlpha = alpha;
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -108,14 +112,11 @@ export class RailroadLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    context.restore();
   }
 
   private handleRailroadRendering(railUpdate: RailroadUpdate) {
     for (const railRoad of railUpdate.railTiles) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const x = this.game.x(railRoad.tile);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const y = this.game.y(railRoad.tile);
       if (railUpdate.isActive) {
         this.paintRailroad(railRoad);
       } else {
@@ -183,7 +184,7 @@ export class RailroadLayer implements Layer {
     const recipient = owner.isPlayer() ? owner : null;
     const color = recipient
       ? recipient.borderColor()
-      : new Colord({ r: 255, g: 255, b: 255, a: 1 });
+      : colord("rgba(255,255,255,1)");
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(this.context, x, y, railType);
   }

@@ -21,7 +21,7 @@ import {
   ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord } from "../core/Util";
+import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 export enum GamePhase {
@@ -108,6 +108,9 @@ export class GameServer {
     }
     if (gameConfig.donateTroops !== undefined) {
       this.gameConfig.donateTroops = gameConfig.donateTroops;
+    }
+    if (gameConfig.maxTimerValue !== undefined) {
+      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue;
     }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
@@ -686,6 +689,7 @@ export class GameServer {
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
           cosmetics: player.cosmetics,
+          clanTag: getClanTag(player.username) ?? undefined,
         } satisfies PlayerRecord;
       },
     );
@@ -826,7 +830,7 @@ export class GameServer {
 
     const ratio = `${potentialWinner.ips.size}/${activeUniqueIPs.size}`;
     this.log.info(
-      `recieved winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
+      `received winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
       {
         clientID: client.clientID,
       },

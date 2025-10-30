@@ -14,6 +14,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Quads,
   Trios,
   UnitType,
@@ -43,6 +44,7 @@ export type Intent =
   | QuickChatIntent
   | MoveWarshipIntent
   | MarkDisconnectedIntent
+  | EmbargoAllIntent
   | UpgradeStructureIntent
   | DeleteUnitIntent
   | KickPlayerIntent;
@@ -51,6 +53,7 @@ export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
 export type BoatAttackIntent = z.infer<typeof BoatAttackIntentSchema>;
+export type EmbargoAllIntent = z.infer<typeof EmbargoAllIntentSchema>;
 export type CancelBoatIntent = z.infer<typeof CancelBoatIntentSchema>;
 export type AllianceRequestIntent = z.infer<typeof AllianceRequestIntentSchema>;
 export type AllianceRequestReplyIntent = z.infer<
@@ -115,6 +118,7 @@ export type Player = z.infer<typeof PlayerSchema>;
 export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
+export type PlayerColor = z.infer<typeof PlayerColorSchema>;
 export type Flag = z.infer<typeof FlagSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 
@@ -146,6 +150,7 @@ const TeamCountConfigSchema = z.union([
   z.literal(Duos),
   z.literal(Trios),
   z.literal(Quads),
+  z.literal(HumansVsNations),
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
@@ -163,6 +168,7 @@ export const GameConfigSchema = z.object({
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
+  maxTimerValue: z.number().int().min(1).max(120).optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
 });
@@ -274,10 +280,15 @@ export const EmbargoIntentSchema = BaseIntentSchema.extend({
   action: z.union([z.literal("start"), z.literal("stop")]),
 });
 
+export const EmbargoAllIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("embargo_all"),
+  action: z.union([z.literal("start"), z.literal("stop")]),
+});
+
 export const DonateGoldIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate_gold"),
   recipient: ID,
-  gold: z.bigint().nullable(),
+  gold: z.number().nullable(),
 });
 
 export const DonateTroopIntentSchema = BaseIntentSchema.extend({
@@ -353,6 +364,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   BuildUnitIntentSchema,
   UpgradeStructureIntentSchema,
   EmbargoIntentSchema,
+  EmbargoAllIntentSchema,
   MoveWarshipIntentSchema,
   QuickChatIntentSchema,
   AllianceExtensionIntentSchema,
@@ -386,6 +398,7 @@ export const FlagSchema = z
 
 export const PlayerCosmeticRefsSchema = z.object({
   flag: FlagSchema.optional(),
+  color: z.string().optional(),
   patternName: PatternNameSchema.optional(),
   patternColorPaletteName: z.string().optional(),
 });
@@ -395,10 +408,17 @@ export const PlayerPatternSchema = z.object({
   patternData: PatternDataSchema,
   colorPalette: ColorPaletteSchema.optional(),
 });
+
+export const PlayerColorSchema = z.object({
+  color: z.string(),
+});
+
 export const PlayerCosmeticsSchema = z.object({
   flag: FlagSchema.optional(),
   pattern: PlayerPatternSchema.optional(),
+  color: PlayerColorSchema.optional(),
 });
+
 export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
@@ -527,6 +547,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema.nullable(), // WARNING: PII
+  clanTag: z.string().optional(),
   stats: PlayerStatsSchema,
 });
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;

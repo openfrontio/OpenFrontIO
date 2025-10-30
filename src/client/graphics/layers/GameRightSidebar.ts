@@ -57,10 +57,19 @@ export class GameRightSidebar extends LitElement implements Layer {
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
-    if (this.game.inSpawnPhase()) {
-      this.timer = 0;
-    } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
-      this.timer++;
+    const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
+    if (maxTimerValue !== undefined) {
+      if (this.game.inSpawnPhase()) {
+        this.timer = maxTimerValue * 60;
+      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
+        this.timer = Math.max(0, this.timer - 1);
+      }
+    } else {
+      if (this.game.inSpawnPhase()) {
+        this.timer = 0;
+      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
+        this.timer++;
+      }
     }
   }
 
@@ -140,6 +149,10 @@ export class GameRightSidebar extends LitElement implements Layer {
         <div class="flex justify-center items-center mt-2">
           <div
             class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center justify-center text-white px-1"
+            style="${this.game.config().gameConfig().maxTimerValue !==
+              undefined && this.timer < 60
+              ? "color: #ff8080;"
+              : ""}"
           >
             ${this.secondsToHms(this.timer)}
           </div>

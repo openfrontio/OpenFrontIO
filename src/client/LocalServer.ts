@@ -14,6 +14,7 @@ import {
 import {
   createPartialGameRecord,
   decompressGameRecord,
+  getClanTag,
   replacer,
 } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
@@ -188,6 +189,7 @@ export class LocalServer {
         clientID: this.lobbyConfig.clientID,
         stats: this.allPlayersStats[this.lobbyConfig.clientID],
         cosmetics: this.lobbyConfig.gameStartInfo?.players[0].cosmetics,
+        clanTag: getClanTag(this.lobbyConfig.playerName) ?? undefined,
       },
     ];
     if (this.lobbyConfig.gameStartInfo === undefined) {

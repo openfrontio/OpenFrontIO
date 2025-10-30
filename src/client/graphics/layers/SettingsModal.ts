@@ -266,9 +266,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.toggle_terrain")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.alternateView
-                    ? translateText("user_setting.terrain_enabled")
-                    : translateText("user_setting.terrain_disabled")}
+                  ${translateText("user_setting.toggle_view_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
@@ -288,9 +286,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.emojis_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.emojis()
-                    ? translateText("user_setting.emojis_visible")
-                    : translateText("user_setting.emojis_hidden")}
+                  ${translateText("user_setting.emojis_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
@@ -315,9 +311,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.dark_mode_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.darkMode()
-                    ? translateText("user_setting.dark_mode_enabled")
-                    : translateText("user_setting.light_mode_enabled")}
+                  ${translateText("user_setting.dark_mode_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
@@ -342,9 +336,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.special_effects_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.fxLayer()
-                    ? translateText("user_setting.special_effects_enabled")
-                    : translateText("user_setting.special_effects_disabled")}
+                  ${translateText("user_setting.special_effects_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
@@ -369,9 +361,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.structure_sprites_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.structureSprites()
-                    ? translateText("user_setting.structure_sprites_enabled")
-                    : translateText("user_setting.structure_sprites_disabled")}
+                  ${translateText("user_setting.structure_sprites_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
@@ -391,9 +381,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.anonymous_names_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.anonymousNames()
-                    ? translateText("user_setting.anonymous_names_enabled")
-                    : translateText("user_setting.real_names_shown")}
+                  ${translateText("user_setting.anonymous_names_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
@@ -413,9 +401,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.left_click_menu")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.leftClickOpensMenu()
-                    ? translateText("user_setting.left_click_opens_menu")
-                    : translateText("user_setting.right_click_opens_menu")}
+                  ${translateText("user_setting.left_click_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
@@ -440,11 +426,7 @@ export class SettingsModal extends LitElement implements Layer {
                   ${translateText("user_setting.performance_overlay_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${this.userSettings.performanceOverlay()
-                    ? translateText("user_setting.performance_overlay_enabled")
-                    : translateText(
-                        "user_setting.performance_overlay_disabled",
-                      )}
+                  ${translateText("user_setting.performance_overlay_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">
