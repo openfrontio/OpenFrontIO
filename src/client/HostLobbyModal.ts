@@ -8,8 +8,6 @@ import {
   GameMapType,
   GameMode,
   HumansVsNations,
-  Quads,
-  Trios,
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -88,6 +86,9 @@ export class HostLobbyModal extends LitElement {
   @state() private donateTroops: boolean = false;
   @state() private instantBuild: boolean = false;
   @state() private compactMap: boolean = false;
+  // Optional game timer settings (can be toggled by future UI)
+  @state() private maxTimer: boolean = false;
+  @state() private maxTimerValue: number = 0;
 
   @state() private lobbyId = "";
   @state() private copySuccess = false;

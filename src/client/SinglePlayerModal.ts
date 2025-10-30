@@ -8,8 +8,6 @@ import {
   GameMode,
   GameType,
   HumansVsNations,
-  Quads,
-  Trios,
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -66,6 +64,9 @@ export class SinglePlayerModal extends LitElement {
   @property({ type: Boolean }) useRandomMap = false;
   @property({ type: Number }) gameMode: GameMode = GameMode.FFA;
   @property({ type: Number }) teamCount: TeamCountConfig = 2;
+  // Optional game timer settings (not yet exposed in UI)
+  @property({ type: Boolean }) maxTimer: boolean = false;
+  @property({ type: Number }) maxTimerValue: number = 0;
 
   @state() private disabledUnits: UnitType[] = [];
   @state() private rightExpanded: boolean = false;
@@ -449,7 +450,6 @@ export class SinglePlayerModal extends LitElement {
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
-              disableNPCs: this.disableNPCs,
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
               bots: this.bots,
               infiniteGold: this.infiniteGold,

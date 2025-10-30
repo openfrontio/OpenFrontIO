@@ -114,7 +114,9 @@ export class MapDisplay extends LitElement {
           : this.mapWebpPath
             ? html`<img
                 src="${this.mapWebpPath}"
-                alt="${this.translation || this.mapName}"
+                alt="${this.translation ??
+                this.mapName ??
+                translateText("common.untitled")}"
                 loading="lazy"
                 class="absolute inset-0 h-full w-full rounded-xl object-cover opacity-70 z-0"
               />`

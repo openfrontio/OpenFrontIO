@@ -135,11 +135,7 @@ export class MapBrowserPane extends LitElement {
           role="listbox"
           aria-multiselectable="false"
         >
-          <div
-            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            role="listbox"
-            aria-label="Maps"
-          >
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             ${maps.length
               ? maps.map(({ value, key, name }) => {
                   const selected =

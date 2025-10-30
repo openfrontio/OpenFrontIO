@@ -227,7 +227,7 @@
     "pluto": "Pluto",
     "montreal": "Montreal",
     "achiran": "Achiran",
-    "browser": "Map Browser"
+    "browser": "Map Browser",
     "baikalnukewars": "Baikal (Nuke Wars)"
   },
   "map_categories": {
@@ -283,7 +283,6 @@
     "max_timer": "Game length (minutes)",
     "nations": "Nations: ",
     "disable_nations": "Disable Nations",
-    "max_timer": "Game length (minutes)",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "donate_gold": "Donate gold",

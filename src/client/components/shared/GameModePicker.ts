@@ -22,18 +22,19 @@ export class GameModePicker extends LitElement {
   }
 
   render() {
-    const keys = Object.keys(GameMode) as Array<keyof typeof GameMode>;
-    // Explicit mapping from enum key to translation id suffix
-    const labelIdByKey: Record<keyof typeof GameMode, string> = {
-      FFA: "ffa",
-      Team: "teams",
+    // Use only numeric enum values (filter out reverse string keys like "FFA")
+    const modes = Object.values(GameMode).filter(
+      (m): m is GameMode => typeof m === "number",
+    );
+    const labelIdByMode: Record<GameMode, string> = {
+      [GameMode.FFA]: "ffa",
+      [GameMode.Team]: "teams",
     };
     return html`
       <div
         class="inline-flex overflow-hidden rounded-xl border border-white/15"
       >
-        ${keys.map((key) => {
-          const mode = GameMode[key];
+        ${modes.map((mode) => {
           return html` <button
             class=${`h-10 px-4 transition-colors ${
               this.value === mode
@@ -42,7 +43,7 @@ export class GameModePicker extends LitElement {
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60`}
             @click=${() => this.pick(mode)}
           >
-            ${translateText(`game_mode.${labelIdByKey[key]}`)}
+            ${translateText(`game_mode.${labelIdByMode[mode]}`)}
           </button>`;
         })}
       </div>

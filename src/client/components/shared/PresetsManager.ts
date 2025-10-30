@@ -125,6 +125,7 @@ export class PresetsManager<T = unknown> extends LitElement {
       settings: this.getSettings(),
     };
     this.presets = [...this.presets, preset];
+    this.presets.sort((a, b) => b.updatedAt - a.updatedAt);
     this.selectedId = preset.id;
     this.persistToStorage();
   };
@@ -150,6 +151,7 @@ export class PresetsManager<T = unknown> extends LitElement {
       updated,
       ...this.presets.slice(i + 1),
     ];
+    this.presets.sort((a, b) => b.updatedAt - a.updatedAt);
     this.nameInput = updated.name;
     this.persistToStorage();
   };
