@@ -302,7 +302,7 @@ export async function getSvgAspectRatio(src: string): Promise<number | null> {
 
 export function beforeUnloadCallback(event: BeforeUnloadEvent): void {
   event.preventDefault();
-  event.returnValue = false;
+  event.returnValue = "";
 }
 
 export function setBeforeUnloadCallback(): void {
