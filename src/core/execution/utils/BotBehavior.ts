@@ -1,5 +1,6 @@
 import {
   AllianceRequest,
+  Cell,
   Difficulty,
   Game,
   Player,
@@ -282,14 +283,21 @@ export class BotBehavior {
     });
 
     if (filteredPlayers.length > 0) {
-      const playerCenter = calculateBoundingBoxCenter(this.game, myBorder);
+      // Prefer the player's precomputed largestClusterBoundingBox center if available
+      const playerCenter = this.player.largestClusterBoundingBox
+        ? this.boundingBoxCenter(this.player.largestClusterBoundingBox)
+        : calculateBoundingBoxCenter(this.game, myBorder);
 
       const sortedPlayers = filteredPlayers
         .map((filteredPlayer) => {
-          const filteredPlayerCenter = calculateBoundingBoxCenter(
-            this.game,
-            filteredPlayer.borderTiles(),
-          );
+          // Prefer filtered player's precomputed largestClusterBoundingBox center if available
+          const filteredPlayerCenter = filteredPlayer.largestClusterBoundingBox
+            ? this.boundingBoxCenter(filteredPlayer.largestClusterBoundingBox)
+            : calculateBoundingBoxCenter(
+                this.game,
+                filteredPlayer.borderTiles(),
+              );
+
           const playerCenterTile = this.game.ref(
             playerCenter.x,
             playerCenter.y,
@@ -319,6 +327,14 @@ export class BotBehavior {
         this.setNewEnemy(selectedEnemy);
       }
     }
+  }
+
+  // Compute the integer center cell of a bounding box { min: Cell, max: Cell }
+  private boundingBoxCenter(box: { min: Cell; max: Cell }): Cell {
+    return new Cell(
+      box.min.x + Math.floor((box.max.x - box.min.x) / 2),
+      box.min.y + Math.floor((box.max.y - box.min.y) / 2),
+    );
   }
 
   selectRandomEnemy(): Player | TerraNullius | null {
