@@ -22,6 +22,7 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
+import { getPreparationTimeSeconds } from "../gamemodes/nuke-wars/guards";
 import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, simpleHash, within } from "../Util";
@@ -632,12 +633,13 @@ export class DefaultConfig implements Config {
   }
 
   numPreparationPhaseTurns(): number {
-    // Preparation phase duration (Nuke Wars uses a 3 minute prep phase)
+    // Preparation phase duration for Nuke Wars is configurable via preparationTimeSeconds
     if (
       this._gameConfig.gameMode === GameMode.Team &&
       this._gameConfig.teamGameType === TeamGameType.NukeWars
     ) {
-      return 180 * 10; // 180 seconds * 10 ticks/sec
+      const seconds = getPreparationTimeSeconds(this._gameConfig);
+      return seconds * 10; // ticks are 100ms
     }
     return 0;
   }

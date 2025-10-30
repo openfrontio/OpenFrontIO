@@ -629,7 +629,9 @@ class Client {
         incrementGamesPlayed();
 
         try {
-          window.PageOS.session.newPageView();
+          if (window.PageOS && window.PageOS.session) {
+            window.PageOS.session.newPageView();
+          }
         } catch (e) {
           console.error("Error calling newPageView", e);
         }
