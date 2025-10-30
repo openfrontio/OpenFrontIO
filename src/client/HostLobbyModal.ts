@@ -7,6 +7,9 @@ import {
   GameMapSize,
   GameMapType,
   GameMode,
+  HumansVsNations,
+  Quads,
+  Trios,
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -583,7 +586,6 @@ export class HostLobbyModal extends LitElement {
             ? GameMapSize.Compact
             : GameMapSize.Normal,
           difficulty: this.selectedDifficulty,
-          disableNPCs: this.disableNPCs,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
           donateGold: this.donateGold,
@@ -593,6 +595,16 @@ export class HostLobbyModal extends LitElement {
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
+          ...(this.gameMode === GameMode.Team &&
+          this.teamCount === HumansVsNations
+            ? {
+                disableNPCs: false,
+              }
+            : {
+                disableNPCs: this.disableNPCs,
+              }),
+          maxTimerValue:
+            this.maxTimer === true ? this.maxTimerValue : undefined,
         } satisfies Partial<GameConfig>),
       },
     );

@@ -7,6 +7,9 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
+  Quads,
+  Trios,
   UnitType,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -447,6 +450,7 @@ export class SinglePlayerModal extends LitElement {
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               disableNPCs: this.disableNPCs,
+              maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
               donateGold: true,
@@ -456,6 +460,14 @@ export class SinglePlayerModal extends LitElement {
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
+              ...(this.gameMode === GameMode.Team &&
+              this.teamCount === HumansVsNations
+                ? {
+                    disableNPCs: false,
+                  }
+                : {
+                    disableNPCs: this.disableNPCs,
+                  }),
             },
           },
         } satisfies JoinLobbyEvent,

@@ -165,8 +165,15 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "nations": "Nations: ",
+    "disable_nations": "Disable Nations",
+    "instant_build": "Instant build",
+    "infinite_gold": "Infinite gold",
+    "infinite_troops": "Infinite troops",
+    "compact_map": "Mini Map",
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
+    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "start": "Start Game",
     "presets": "Presets",
@@ -221,6 +228,7 @@
     "montreal": "Montreal",
     "achiran": "Achiran",
     "browser": "Map Browser"
+    "baikalnukewars": "Baikal (Nuke Wars)"
   },
   "map_categories": {
     "continental": "Continental",
@@ -249,6 +257,7 @@
     "teams_Duos": "Duos",
     "teams_Trios": "Trios",
     "teams_Quads": "Quads",
+    "teams_hvn": "Humans Vs Nations",
     "teams": "{num} teams"
   },
   "matchmaking_modal": {
@@ -272,6 +281,16 @@
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
     "max_timer": "Game length (minutes)",
+    "nations": "Nations: ",
+    "disable_nations": "Disable Nations",
+    "max_timer": "Game length (minutes)",
+    "instant_build": "Instant build",
+    "infinite_gold": "Infinite gold",
+    "donate_gold": "Donate gold",
+    "infinite_troops": "Infinite troops",
+    "donate_troops": "Donate troops",
+    "compact_map": "Mini Map",
+    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
