@@ -13,7 +13,7 @@ import {
 } from "../src/core/game/Game";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
-import { useRealAttackLogic } from "./util/TestConfig"
+import { useRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
 let game: Game;
@@ -301,8 +301,8 @@ describe("Disconnected", () => {
       // Tick for retreat() in AttackExecution to add back startTtoops to owner troops
       const troopIncThisTick1 = game.config().troopIncreaseRate(player1);
       expectedTotalGrowth += toInt(troopIncThisTick1);
-      
-      game.executeNextTick(); 
+
+      game.executeNextTick();
 
       const expectedFinalTroops = Number(
         toInt(troopsBeforeAttack) + expectedTotalGrowth,
