@@ -5,10 +5,10 @@ import { Difficulty, GameMapType, GameMode } from "../../../core/game/Game";
 
 @customElement("settings-summary")
 export class SettingsSummary extends LitElement {
-  @property({ type: Number }) selectedMap: GameMapType = GameMapType.World;
-  @property({ type: Number }) selectedDifficulty: Difficulty =
+  @property({ type: String }) selectedMap: GameMapType = GameMapType.World;
+  @property({ type: String }) selectedDifficulty: Difficulty =
     Difficulty.Medium;
-  @property({ type: Number }) gameMode: GameMode = GameMode.FFA;
+  @property({ type: String }) gameMode: GameMode = GameMode.FFA;
   @property({ type: Number }) bots = 0;
   @property({ type: Boolean }) useRandomMap = false;
 

@@ -6,7 +6,7 @@ import { TeamCountConfig } from "../../../core/Schemas";
 
 @customElement("team-count-picker")
 export class TeamCountPicker extends LitElement {
-  @property({ type: Number }) mode: GameMode = GameMode.FFA;
+  @property({ type: String }) mode: GameMode = GameMode.FFA;
   @property({ type: Number }) value: TeamCountConfig = 2;
   @property({ type: Array }) numbers: TeamCountConfig[] = [2, 3, 4, 5, 6, 7];
   @property({ type: Array }) named: TeamCountConfig[] = [Duos, Trios, Quads];

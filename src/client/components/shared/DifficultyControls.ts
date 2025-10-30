@@ -5,7 +5,7 @@ import { translateText } from "../../Utils";
 
 @customElement("difficulty-controls")
 export class DifficultyControls extends LitElement {
-  @property({ type: Number }) value: Difficulty = Difficulty.Medium;
+  @property({ type: String }) value: Difficulty = Difficulty.Medium;
 
   private keyOf(value: Difficulty) {
     return Object.keys(Difficulty).find((k) => Difficulty[k] === value) ?? "";

@@ -42,13 +42,7 @@ export class PresetsManager<T = unknown> extends LitElement {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         const arr = parsed.filter(
-          (item: any) =>
-            item &&
-            typeof item.id === "string" &&
-            typeof item.name === "string" &&
-            typeof item.createdAt === "number" &&
-            typeof item.updatedAt === "number" &&
-            item.settings !== undefined,
+          (item: any) => item && item.settings !== undefined,
         ) as Array<GenericPreset<T>>;
         this.presets = arr
           .sort((a, b) => b.updatedAt - a.updatedAt)

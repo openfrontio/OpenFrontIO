@@ -5,7 +5,7 @@ import { translateText } from "../../Utils";
 
 @customElement("difficulty-picker")
 export class DifficultyPicker extends LitElement {
-  @property({ type: Number }) value: Difficulty = Difficulty.Medium;
+  @property({ type: String }) value: Difficulty = Difficulty.Medium;
 
   createRenderRoot() {
     return this;

@@ -7,7 +7,7 @@ type FilterKey = "all" | keyof typeof mapCategories;
 
 @customElement("map-browser-pane")
 export class MapBrowserPane extends LitElement {
-  @property({ type: Number }) selectedMap: GameMapType = GameMapType.World;
+  @property({ type: String }) selectedMap: GameMapType = GameMapType.World;
   @property({ type: Boolean }) useRandomMap = false;
 
   @state() private query = "";

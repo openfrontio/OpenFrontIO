@@ -5,7 +5,7 @@ import { translateText } from "../../Utils";
 
 @customElement("game-mode-picker")
 export class GameModePicker extends LitElement {
-  @property({ type: Number }) value: GameMode = GameMode.FFA;
+  @property({ type: String }) value: GameMode = GameMode.FFA;
 
   createRenderRoot() {
     return this;
@@ -22,10 +22,7 @@ export class GameModePicker extends LitElement {
   }
 
   render() {
-    // Use only numeric enum values (filter out reverse string keys like "FFA")
-    const modes = Object.values(GameMode).filter(
-      (m): m is GameMode => typeof m === "number",
-    );
+    const modes = Object.values(GameMode) as GameMode[];
     const labelIdByMode: Record<GameMode, string> = {
       [GameMode.FFA]: "ffa",
       [GameMode.Team]: "teams",

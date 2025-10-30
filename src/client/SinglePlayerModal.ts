@@ -52,8 +52,9 @@ const PRESETS_KEY = "sp.presets.v1";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
-  @property({ type: Number }) selectedMap: GameMapType = GameMapType.World;
-  @property({ type: Number }) selectedDifficulty: Difficulty =
+  // String enums should reflect as String
+  @property({ type: String }) selectedMap: GameMapType = GameMapType.World;
+  @property({ type: String }) selectedDifficulty: Difficulty =
     Difficulty.Medium;
   @property({ type: Boolean }) disableNPCs = false;
   @property({ type: Number }) bots = 400;
@@ -62,7 +63,7 @@ export class SinglePlayerModal extends LitElement {
   @property({ type: Boolean }) compactMap = false;
   @property({ type: Boolean }) instantBuild = false;
   @property({ type: Boolean }) useRandomMap = false;
-  @property({ type: Number }) gameMode: GameMode = GameMode.FFA;
+  @property({ type: String }) gameMode: GameMode = GameMode.FFA;
   @property({ type: Number }) teamCount: TeamCountConfig = 2;
   // Optional game timer settings (not yet exposed in UI)
   @property({ type: Boolean }) maxTimer: boolean = false;

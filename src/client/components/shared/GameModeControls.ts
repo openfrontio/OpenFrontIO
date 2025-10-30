@@ -5,7 +5,7 @@ import { GameMode } from "../../../core/game/Game";
 
 @customElement("game-mode-controls")
 export class GameModeControls extends LitElement {
-  @property({ type: Number }) value: GameMode = GameMode.FFA;
+  @property({ type: String }) value: GameMode = GameMode.FFA;
 
   createRenderRoot() {
     return this;
