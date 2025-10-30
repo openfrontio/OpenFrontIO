@@ -37,14 +37,24 @@ export class TerritoryPatternsModal extends LitElement {
 
   private affiliateCode: string | null = null;
 
-  private userMeResponse: UserMeResponse | null = null;
+  private userMeResponse: UserMeResponse | false = false;
 
   constructor() {
     super();
   }
 
-  async onUserMe(userMeResponse: UserMeResponse | null) {
-    if (userMeResponse === null) {
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener(
+      "userMeResponse",
+      (event: CustomEvent<UserMeResponse | false>) => {
+        this.onUserMe(event.detail);
+      },
+    );
+  }
+
+  async onUserMe(userMeResponse: UserMeResponse | false) {
+    if (userMeResponse === false) {
       this.userSettings.setSelectedPatternName(undefined);
       this.selectedPattern = null;
       this.selectedColor = null;
@@ -136,7 +146,11 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   private renderColorSwatchGrid(): TemplateResult {
-    const hexCodes = (this.userMeResponse?.player.flares ?? [])
+    const hexCodes = (
+      this.userMeResponse === false
+        ? []
+        : (this.userMeResponse.player.flares ?? [])
+    )
       .filter((flare) => flare.startsWith("color:"))
       .map((flare) => "#" + flare.split(":")[1]);
     return html`

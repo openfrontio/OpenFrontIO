@@ -9,6 +9,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Quads,
   Trios,
   UnitType,
@@ -40,6 +41,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
   @state() private compactMap: boolean = false;
+  @state() private maxTimer: boolean = false;
+  @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
@@ -193,7 +196,18 @@ export class SinglePlayerModal extends LitElement {
                     ${translateText("host_modal.team_count")}
                   </div>
                   <div class="option-cards">
-                    ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
+                    ${[
+                      2,
+                      3,
+                      4,
+                      5,
+                      6,
+                      7,
+                      Quads,
+                      Trios,
+                      Duos,
+                      HumansVsNations,
+                    ].map(
                       (o) => html`
                         <div
                           class="option-card ${this.teamCount === o
@@ -203,7 +217,9 @@ export class SinglePlayerModal extends LitElement {
                         >
                           <div class="option-card-title">
                             ${typeof o === "string"
-                              ? translateText(`public_lobby.teams_${o}`)
+                              ? o === HumansVsNations
+                                ? translateText("public_lobby.teams_hvn")
+                                : translateText(`public_lobby.teams_${o}`)
                               : translateText(`public_lobby.teams`, { num: o })}
                           </div>
                         </div>
@@ -238,21 +254,29 @@ export class SinglePlayerModal extends LitElement {
                 </div>
               </label>
 
-              <label
-                for="singleplayer-modal-disable-npcs"
-                class="option-card ${this.disableNPCs ? "selected" : ""}"
-              >
-                <div class="checkbox-icon"></div>
-                <input
-                  type="checkbox"
-                  id="singleplayer-modal-disable-npcs"
-                  @change=${this.handleDisableNPCsChange}
-                  .checked=${this.disableNPCs}
-                />
-                <div class="option-card-title">
-                  ${translateText("single_modal.disable_nations")}
-                </div>
-              </label>
+              ${!(
+                this.gameMode === GameMode.Team &&
+                this.teamCount === HumansVsNations
+              )
+                ? html`
+                    <label
+                      for="singleplayer-modal-disable-npcs"
+                      class="option-card ${this.disableNPCs ? "selected" : ""}"
+                    >
+                      <div class="checkbox-icon"></div>
+                      <input
+                        type="checkbox"
+                        id="singleplayer-modal-disable-npcs"
+                        @change=${this.handleDisableNPCsChange}
+                        .checked=${this.disableNPCs}
+                      />
+                      <div class="option-card-title">
+                        ${translateText("single_modal.disable_nations")}
+                      </div>
+                    </label>
+                  `
+                : ""}
+
               <label
                 for="singleplayer-modal-instant-build"
                 class="option-card ${this.instantBuild ? "selected" : ""}"
@@ -313,6 +337,39 @@ export class SinglePlayerModal extends LitElement {
                 />
                 <div class="option-card-title">
                   ${translateText("single_modal.compact_map")}
+                </div>
+              </label>
+              <label
+                for="end-timer"
+                class="option-card ${this.maxTimer ? "selected" : ""}"
+              >
+                <div class="checkbox-icon"></div>
+                <input
+                  type="checkbox"
+                  id="end-timer"
+                  @change=${(e: Event) => {
+                    const checked = (e.target as HTMLInputElement).checked;
+                    if (!checked) {
+                      this.maxTimerValue = undefined;
+                    }
+                    this.maxTimer = checked;
+                  }}
+                  .checked=${this.maxTimer}
+                />
+                ${this.maxTimer === false
+                  ? ""
+                  : html`<input
+                      type="number"
+                      id="end-timer-value"
+                      min="0"
+                      max="120"
+                      .value=${String(this.maxTimerValue ?? "")}
+                      style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                      @input=${this.handleMaxTimerValueChanges}
+                      @keydown=${this.handleMaxTimerValueKeyDown}
+                    />`}
+                <div class="option-card-title">
+                  ${translateText("single_modal.max_timer")}
                 </div>
               </label>
             </div>
@@ -393,6 +450,24 @@ export class SinglePlayerModal extends LitElement {
 
   private handleCompactMapChange(e: Event) {
     this.compactMap = Boolean((e.target as HTMLInputElement).checked);
+  }
+
+  private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleMaxTimerValueChanges(e: Event) {
+    (e.target as HTMLInputElement).value = (
+      e.target as HTMLInputElement
+    ).value.replace(/[e+-]/gi, "");
+    const value = parseInt((e.target as HTMLInputElement).value);
+
+    if (isNaN(value) || value < 0 || value > 120) {
+      return;
+    }
+    this.maxTimerValue = value;
   }
 
   private handleDisableNPCsChange(e: Event) {
@@ -481,7 +556,7 @@ export class SinglePlayerModal extends LitElement {
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
-              disableNPCs: this.disableNPCs,
+              maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
               donateGold: true,
@@ -491,6 +566,14 @@ export class SinglePlayerModal extends LitElement {
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
+              ...(this.gameMode === GameMode.Team &&
+              this.teamCount === HumansVsNations
+                ? {
+                    disableNPCs: false,
+                  }
+                : {
+                    disableNPCs: this.disableNPCs,
+                  }),
             },
           },
         } satisfies JoinLobbyEvent,
