@@ -619,7 +619,7 @@ export class HostLobbyModal extends LitElement {
         popup.className = "setting-popup"; // TODO: Change to general popup class?
         popup.textContent = translateText("private_lobby.creation_error");
         document.body.appendChild(popup);
-		this.close();
+        this.close();
       });
     this.modalEl?.open();
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
