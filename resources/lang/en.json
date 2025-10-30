@@ -216,8 +216,8 @@
     "not_found": "Lobby not found. Please check the ID and try again.",
     "error": "An error occurred. Please try again or contact support.",
     "joined_waiting": "Joined successfully! Waiting for game to start...",
-    "version_mismatch": "This game was created with a different version. Cannot join."
-	"creation_error": "Could not create lobby."
+    "version_mismatch": "This game was created with a different version. Cannot join.",
+    "creation_error": "Could not create lobby."
   },
   "public_lobby": {
     "join": "Join next Game",
