@@ -73,7 +73,7 @@ export class MapBrowserPane extends LitElement {
     const maps = this.getFilteredMaps();
     return html`
       <aside
-        aria-label="Map Browser"
+        aria-label=${translateText("map.browser")}
         class="min-h-80 flex flex-col overflow-hidden rounded-xl border border-white/15 bg-zinc-900/40"
       >
         <div class="flex flex-col gap-2 border-b border-white/10 p-3">
@@ -104,6 +104,7 @@ export class MapBrowserPane extends LitElement {
               `,
             )}
             <button
+              type="button"
               class="h-9 rounded-full border px-3 flex items-center gap-1.5 transition-all ${this
                 .useRandomMap
                 ? "border-blue-400/60 bg-gradient-to-r from-blue-500/30 to-blue-600/30 text-blue-50 font-medium shadow-[0_0_8px_rgba(59,130,246,0.35)]"
@@ -129,7 +130,11 @@ export class MapBrowserPane extends LitElement {
           </div>
         </div>
 
-        <div class="grid flex-1 grid-cols-1 gap-4 overflow-auto p-3">
+        <div
+          class="grid flex-1 grid-cols-1 gap-4 overflow-auto p-3"
+          role="listbox"
+          aria-multiselectable="false"
+        >
           <div
             class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
             role="listbox"

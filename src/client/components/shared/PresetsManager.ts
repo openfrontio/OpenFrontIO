@@ -2,16 +2,11 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { generateID } from "../../../core/Util";
 import { translateText } from "../../Utils";
+import type { Preset } from "../../types/preset";
 import "./PresetsBar";
 
-// Generic preset type
-export type GenericPreset<T = unknown> = {
-  id: string;
-  name: string;
-  createdAt: number;
-  updatedAt: number;
-  settings: T;
-};
+// Generic preset type (alias to shared Preset<T>)
+export type GenericPreset<T = unknown> = Preset<T>;
 
 @customElement("presets-manager")
 export class PresetsManager<T = unknown> extends LitElement {

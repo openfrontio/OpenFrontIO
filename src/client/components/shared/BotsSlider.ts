@@ -1,3 +1,4 @@
+import type { PropertyValues } from "lit";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../Utils";
@@ -24,7 +25,7 @@ export class BotsSlider extends LitElement {
     super.disconnectedCallback();
   }
 
-  willUpdate(changed: Map<string, unknown>) {
+  willUpdate(changed: PropertyValues<this>) {
     if (changed.has("value") && this.value !== this.internal)
       this.internal = this.value;
     if (changed.has("max") && this.internal > this.max) {

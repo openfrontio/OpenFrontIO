@@ -26,7 +26,8 @@
     "on": "On",
     "off": "Off",
     "name": "Name",
-    "copied": "Copied"
+    "copied": "Copied",
+    "no_results": "No maps found"
   },
   "game_options": {
     "advanced_options": "Advanced Options",
@@ -168,9 +169,10 @@
     "disable_nukes": "Disable Nukes",
     "enables_title": "Enable Settings",
     "start": "Start Game",
-    "quick_start": "Quick Start",
     "presets": "Presets",
-    "reset": "Reset"
+    "reset": "Reset",
+    "select_placeholder": "Select preset...",
+    "preset_name": "Preset name"
   },
   "token_login_modal": {
     "title": "Logging in...",
@@ -217,7 +219,8 @@
     "yenisei": "Yenisei",
     "pluto": "Pluto",
     "montreal": "Montreal",
-    "achiran": "Achiran"
+    "achiran": "Achiran",
+    "browser": "Map Browser"
   },
   "map_categories": {
     "continental": "Continental",

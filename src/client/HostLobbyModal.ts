@@ -30,29 +30,24 @@ import "./components/shared/SettingsSummary";
 import "./components/shared/TeamCountPicker";
 
 import { JoinLobbyEvent } from "./Main";
+import type { Preset } from "./types/preset";
 
-type HostLobbyPreset = {
-  id: string;
-  name: string;
-  createdAt: number;
-  updatedAt: number;
-  settings: {
-    selectedMap: GameMapType;
-    selectedDifficulty: Difficulty;
-    disableNPCs: boolean;
-    bots: number;
-    infiniteGold: boolean;
-    donateGold: boolean;
-    infiniteTroops: boolean;
-    donateTroops: boolean;
-    compactMap: boolean;
-    instantBuild: boolean;
-    useRandomMap: boolean;
-    gameMode: GameMode;
-    teamCount: TeamCountConfig;
-    disabledUnits: UnitType[];
-  };
-};
+type HostLobbyPreset = Preset<{
+  selectedMap: GameMapType;
+  selectedDifficulty: Difficulty;
+  disableNPCs: boolean;
+  bots: number;
+  infiniteGold: boolean;
+  donateGold: boolean;
+  infiniteTroops: boolean;
+  donateTroops: boolean;
+  compactMap: boolean;
+  instantBuild: boolean;
+  useRandomMap: boolean;
+  gameMode: GameMode;
+  teamCount: TeamCountConfig;
+  disabledUnits: UnitType[];
+}>;
 
 const HOST_MAX_PRESETS = 10;
 const HOST_PRESETS_KEY = "host.presets.v1";
@@ -311,7 +306,7 @@ export class HostLobbyModal extends LitElement {
     return html`
       <section
         aria-label="Settings"
-        class="min-h-0 flex flex-col gap-3 rounded-xl border border-white/15 bg-zinc-900/40 p-3 overflow-auto"
+        class="min-h-0 flex flex-col gap-3 rounded-xl border border-white/15 bg-zinc-900/40 p-3 md:overflow-auto overflow-visible"
       >
         ${this.renderRightTopControls()}
         ${html`
@@ -436,7 +431,8 @@ export class HostLobbyModal extends LitElement {
         aria-modal="true"
       >
         <div
-          class="pointer-events-none fixed inset-0 bg-[radial-gradient(1200px_600px_at_60%_-10%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_500px_at_15%_110%,rgba(59,130,246,0.10),transparent)]"
+          class="pointer-events-auto fixed inset-0 bg-[radial-gradient(1200px_600px_at_60%_-10%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_500px_at_15%_110%,rgba(59,130,246,0.10),transparent)]"
+          @click=${this.handleBackdropClick}
         ></div>
 
         <section
@@ -672,6 +668,14 @@ export class HostLobbyModal extends LitElement {
     this.disabledUnits = [];
     this.putGameConfig();
   }
+
+  // Close when clicking outside the modal content (backdrop)
+  private handleBackdropClick = (e: MouseEvent) => {
+    // Ensure it's the backdrop itself, not any bubbled event
+    if (e.currentTarget === e.target) {
+      this.close();
+    }
+  };
 
   private getInviteUrl(): string {
     const id = this.lobbyId?.trim();

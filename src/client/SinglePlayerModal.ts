@@ -26,6 +26,7 @@ import type { RuleKey } from "./utilities/RenderRulesOptions";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
+import type { Preset } from "./types/preset";
 import { UsernameInput } from "./UsernameInput";
 
 type PresetSettings = {
@@ -43,19 +44,13 @@ type PresetSettings = {
   disabledUnits: UnitType[];
 };
 
-type SinglePlayerPreset = {
-  id: string;
-  name: string;
-  createdAt: number;
-  updatedAt: number;
-  settings: PresetSettings;
-};
+type SinglePlayerPreset = Preset<PresetSettings>;
+
+const MAX_PRESETS = 10;
+const PRESETS_KEY = "sp.presets.v1";
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
-  private static readonly MAX_PRESETS = 10;
-  private static readonly PRESETS_KEY = "sp.presets.v1";
-
   @property({ type: Number }) selectedMap: GameMapType = GameMapType.World;
   @property({ type: Number }) selectedDifficulty: Difficulty =
     Difficulty.Medium;
@@ -139,10 +134,10 @@ export class SinglePlayerModal extends LitElement {
           <button
             id="quickStartHeader"
             class="h-11 min-w-11 rounded-xl border border-blue-400/40 bg-blue-500/15 px-3 text-blue-50 hover:bg-blue-500/20"
-            title="Quick Start (Enter)"
+            title=${translateText("single_modal.start")}
             @click=${this.startGame}
           >
-            ▶ ${translateText("single_modal.quick_start")}
+            ▶ ${translateText("single_modal.start")}
           </button>
           <button
             id="closeModal"
@@ -276,7 +271,8 @@ export class SinglePlayerModal extends LitElement {
         aria-modal="true"
       >
         <div
-          class="pointer-events-none fixed inset-0 bg-[radial-gradient(1200px_600px_at_60%_-10%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_500px_at_15%_110%,rgba(59,130,246,0.10),transparent)]"
+          class="pointer-events-auto fixed inset-0 bg-[radial-gradient(1200px_600px_at_60%_-10%,rgba(59,130,246,0.18),transparent),radial-gradient(900px_500px_at_15%_110%,rgba(59,130,246,0.10),transparent)]"
+          @click=${this.handleBackdropClick}
         ></div>
 
         <section
@@ -285,10 +281,8 @@ export class SinglePlayerModal extends LitElement {
           ${this.renderHeader()} ${this.renderBody()}
           ${html`
             <presets-manager
-              storageKey=${(this.constructor as typeof SinglePlayerModal)
-                .PRESETS_KEY}
-              .limit=${(this.constructor as typeof SinglePlayerModal)
-                .MAX_PRESETS}
+              storageKey=${PRESETS_KEY}
+              .limit=${MAX_PRESETS}
               .getSettings=${() => this.currentSettings()}
               @apply-preset=${(
                 e: CustomEvent<{ settings: SinglePlayerPreset["settings"] }>,
@@ -486,4 +480,11 @@ export class SinglePlayerModal extends LitElement {
     this.teamCount = 2;
     this.disabledUnits = [];
   }
+
+  // Close when clicking outside the modal content (backdrop)
+  private handleBackdropClick = (e: MouseEvent) => {
+    if (e.currentTarget === e.target) {
+      this.close();
+    }
+  };
 }

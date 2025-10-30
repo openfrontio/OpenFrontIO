@@ -103,8 +103,6 @@ export class MapDisplay extends LitElement {
         ${this.selected
           ? "border-blue-400/60 ring-inset ring-2 ring-blue-400/50 shadow-[0_0_0_2px_rgba(59,130,246,0.5),0_4px_8px_rgba(0,0,0,0.2)] scale-[1.02]"
           : "border-white/10 shadow-md"}"
-        role="option"
-        aria-selected=${this.selected}
       >
         ${this.isLoading
           ? html`<div

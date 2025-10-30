@@ -30,8 +30,8 @@ export class PresetsBar extends LitElement {
                 "select",
                 (e.target as HTMLSelectElement).value || null,
               )}
-            aria-label="Select preset"
-            title="Select preset"
+            aria-label=${translateText("single_modal.select_placeholder")}
+            title=${translateText("single_modal.select_placeholder")}
           >
             <option class="bg-zinc-900 text-zinc-100" value="">
               ${translateText("presets.select_placeholder")}
@@ -56,7 +56,7 @@ export class PresetsBar extends LitElement {
             .value=${this.nameInput}
             @input=${(e: InputEvent) =>
               this.emit("name-input", (e.target as HTMLInputElement).value)}
-            aria-label="Preset name"
+            aria-label=${translateText("single_modal.preset_name")}
           />
 
           <button
