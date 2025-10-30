@@ -13,6 +13,7 @@ import {
 } from "../src/core/game/Game";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
+import { useRealAttackLogic } from "./util/TestConfig"
 import { executeTicks } from "./util/utils";
 
 let game: Game;
@@ -197,6 +198,8 @@ describe("Disconnected", () => {
           playerTeams: 2, // ignore player2 "kicked" console warn
         },
         [player1Info, player2Info],
+        undefined,
+        useRealAttackLogic, // don't use TestConfig's mock attackLogic
       );
 
       game.addExecution(
@@ -275,27 +278,31 @@ describe("Disconnected", () => {
       player2.markDisconnected(true);
 
       const troopsBeforeAttack = player1.troops();
-      const attackRatioTroops = troopsBeforeAttack * 0.25;
+      const startTroops = troopsBeforeAttack * 0.25;
 
       game.addExecution(
-        new AttackExecution(attackRatioTroops, player1, player2.id(), null),
+        new AttackExecution(startTroops, player1, player2.id(), null),
       );
 
       let expectedTotalGrowth = 0n;
-      let isTickZero = true;
+      let afterTickZero = false;
 
       while (player2.isAlive()) {
-        if (!isTickZero) {
+        if (afterTickZero) {
           // No growth on tick 0, troop additions start from tick 1
           const troopIncThisTick = game.config().troopIncreaseRate(player1);
           expectedTotalGrowth += toInt(troopIncThisTick);
         }
 
         game.executeNextTick();
-        isTickZero = false;
+        afterTickZero = true;
       }
 
-      expect(player2.isAlive()).toBe(false);
+      // Tick for retreat() in AttackExecution to add back startTtoops to owner troops
+      const troopIncThisTick1 = game.config().troopIncreaseRate(player1);
+      expectedTotalGrowth += toInt(troopIncThisTick1);
+      
+      game.executeNextTick(); 
 
       const expectedFinalTroops = Number(
         toInt(troopsBeforeAttack) + expectedTotalGrowth,
