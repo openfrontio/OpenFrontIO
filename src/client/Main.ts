@@ -165,10 +165,11 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
+    window.addEventListener("pagehide", () => {
       console.log("Browser is closing");
-      if (this.gameStop === null) return;
-      this.gameStop();
+      if (this.gameStop) {
+        this.gameStop();
+      }
     });
 
     const gutterAds = document.querySelector("gutter-ads");
