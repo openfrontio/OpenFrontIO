@@ -46,7 +46,10 @@ export async function loadTerrainMap(
   // Default wrapping: horizontal is off by default, vertical is off by default.
   // Enable horizontal wrapping by default for large world-style maps (World, Mars).
   const defaultWrapHorizontally =
-    map === GameMapType.World || map === GameMapType.Mars;
+    map === GameMapType.World ||
+    map === GameMapType.Mars ||
+    map === GameMapType.GiantWorldMap ||
+    map === GameMapType.Pangaea;
   const defaultWrapVertically = false;
 
   const gameMap =
