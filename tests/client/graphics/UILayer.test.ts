@@ -2,9 +2,9 @@
  * @jest-environment jsdom
  */
 import { UILayer } from "../../../src/client/graphics/layers/UILayer";
+import { UIState } from "../../../src/client/graphics/UIState";
 import { UnitSelectionEvent } from "../../../src/client/InputHandler";
 import { UnitView } from "../../../src/core/game/GameView";
-import { UIState } from "../../../src/client/graphics/UIState";
 
 describe("UILayer", () => {
   let game: any;
