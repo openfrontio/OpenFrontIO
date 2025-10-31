@@ -370,8 +370,9 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    // Smooth anti-cheese formula: base reward scales with distance using rational function, heavily penalizing short trades while converging to original rewards at long distances
-    const baseGold = Math.floor(100_000 * (dist / (dist + 50)) + 100 * dist);
+    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under 200
+    const baseGold =
+      100_000 / (1 + Math.exp(-0.03 * (dist - 200))) + 100 * dist;
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
