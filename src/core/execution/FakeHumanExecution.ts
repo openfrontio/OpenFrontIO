@@ -186,29 +186,6 @@ export class FakeHumanExecution implements Execution {
     this.maybeAttack();
   }
 
-  /**
-   * TODO: Implement strategic betrayal logic
-   * Currently this just breaks alliances without strategic consideration.
-   * Future implementation should consider:
-   * - Relative strength (troop count, territory size) compared to target
-   * - Risk vs reward of betrayal
-   * - Potential impact on relations with other players
-   * - Timing (don't betray when already fighting other enemies)
-   * - Strategic value of target's territory
-   * - If target is distracted
-   */
-  private maybeConsiderBetrayal(target: Player): boolean {
-    if (this.player === null) throw new Error("not initialized");
-
-    const alliance = this.player.allianceWith(target);
-
-    if (!alliance) return false;
-
-    this.player.breakAlliance(alliance);
-
-    return true;
-  }
-
   private maybeAttack() {
     if (this.player === null || this.behavior === null) {
       throw new Error("not initialized");
