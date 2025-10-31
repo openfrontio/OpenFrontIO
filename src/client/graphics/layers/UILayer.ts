@@ -7,10 +7,13 @@ import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
-import { MouseMoveEvent, UnitSelectionEvent } from "../../InputHandler";
+import {
+  GhostStructureChangedEvent,
+  MouseMoveEvent,
+  UnitSelectionEvent,
+} from "../../InputHandler";
 import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
-import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 const COLOR_PROGRESSION = [
@@ -56,13 +59,12 @@ export class UILayer implements Layer {
   private trajectoryPoints: TileRef[] = [];
   private lastTrajectoryUpdate: number = 0;
   private lastTargetTile: TileRef | null = null;
-  private lastGhostStructure: UnitType | null = null;
+  private currentGhostStructure: UnitType | null = null;
 
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
-    private uiState: UIState,
   ) {
     this.theme = game.config().theme();
   }
@@ -96,6 +98,17 @@ export class UILayer implements Layer {
     this.eventBus.on(MouseMoveEvent, (e) => {
       this.mousePos.x = e.x;
       this.mousePos.y = e.y;
+    });
+    this.eventBus.on(GhostStructureChangedEvent, (e) => {
+      this.currentGhostStructure = e.ghostStructure;
+      // Clear trajectory if ghost structure changed
+      if (
+        e.ghostStructure !== UnitType.AtomBomb &&
+        e.ghostStructure !== UnitType.HydrogenBomb
+      ) {
+        this.trajectoryPoints = [];
+        this.lastTargetTile = null;
+      }
     });
     this.redraw();
   }
@@ -412,18 +425,13 @@ export class UILayer implements Layer {
    * Update trajectory preview based on current mouse position and ghost structure
    */
   private updateTrajectoryPreview() {
-    const ghostStructure = this.uiState.ghostStructure;
+    const ghostStructure = this.currentGhostStructure;
     const isNukeType =
       ghostStructure === UnitType.AtomBomb ||
       ghostStructure === UnitType.HydrogenBomb;
 
-    // Clear trajectory if not a nuke type or ghost structure changed
+    // Clear trajectory if not a nuke type
     if (!isNukeType) {
-      if (this.lastGhostStructure !== null) {
-        this.trajectoryPoints = [];
-        this.lastTargetTile = null;
-      }
-      this.lastGhostStructure = ghostStructure;
       return;
     }
 
@@ -464,15 +472,11 @@ export class UILayer implements Layer {
     const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
 
     // Only recalculate if target tile changed or ghost structure changed
-    if (
-      this.lastTargetTile === targetTile &&
-      this.lastGhostStructure === ghostStructure
-    ) {
+    if (this.lastTargetTile === targetTile) {
       return;
     }
 
     this.lastTargetTile = targetTile;
-    this.lastGhostStructure = ghostStructure;
 
     // Get buildable units to find spawn tile
     player
@@ -517,7 +521,7 @@ export class UILayer implements Layer {
    * Draw trajectory preview line on the canvas
    */
   private drawTrajectoryPreview(context: CanvasRenderingContext2D) {
-    const ghostStructure = this.uiState.ghostStructure;
+    const ghostStructure = this.currentGhostStructure;
     const isNukeType =
       ghostStructure === UnitType.AtomBomb ||
       ghostStructure === UnitType.HydrogenBomb;

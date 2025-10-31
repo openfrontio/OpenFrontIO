@@ -240,7 +240,7 @@ export function createRenderer(
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
-    new UILayer(game, eventBus, transformHandler, uiState),
+    new UILayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
