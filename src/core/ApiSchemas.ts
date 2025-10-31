@@ -51,6 +51,7 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string(),
     roles: z.string().array().optional(),
     flares: z.string().array().optional(),
+    elo: z.number().optional(),
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;

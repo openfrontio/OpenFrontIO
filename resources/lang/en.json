@@ -286,6 +286,27 @@
     "searching": "Searching for game...",
     "waiting_for_game": "Waiting for game to start..."
   },
+  "ranked_queue": {
+    "ranked": "Ranked",
+    "unranked": "Unranked",
+    "join_queue": "Join Queue",
+    "join_ranked_queue": "Join Ranked Queue",
+    "leave_queue": "Leave Queue",
+    "searching": "Searching for Match...",
+    "players_in_queue": "players in queue",
+    "estimated_wait": "Estimated wait",
+    "connecting": "Connecting...",
+    "your_elo": "Your ELO:",
+    "loading_elo": "Loading ELO...",
+    "view_leaderboard": "View Leaderboard",
+    "hide_leaderboard": "Hide Leaderboard",
+    "loading_leaderboard": "Loading leaderboard...",
+    "no_ranked_players": "No ranked players yet",
+    "elo": "ELO",
+    "games": "games",
+    "wins_short": "W",
+    "losses_short": "L"
+  },
   "username": {
     "enter_username": "Enter your username",
     "not_string": "Username must be a string.",

@@ -25,8 +25,12 @@ import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
+import { GameMode } from "../core/game/Game";
 import { MapPlaylist } from "./MapPlaylist";
+import { selectMapForRanked } from "./MapSelection";
+import { MatchmakingPoller } from "./MatchmakingPoller";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { buildRankedGameConfig } from "./RankedGameConfig";
 import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
@@ -70,6 +74,48 @@ export async function startWorker() {
     log,
   );
   privilegeRefresher.start();
+
+  // Matchmaking poller for ranked games
+  const matchmakingEnabled = process.env.MATCHMAKING_ENABLED === "true";
+
+  if (matchmakingEnabled) {
+    const matchmakingPoller = new MatchmakingPoller(
+      config,
+      log,
+      async (gameId, assignment) => {
+        // Select map based on player count
+        const selectedMap = selectMapForRanked({
+          playerCount: assignment.config.playerCount,
+          gameMode:
+            assignment.config.gameMode === "ffa" ? GameMode.FFA : GameMode.Team,
+          queueType: assignment.config.queueType,
+        });
+
+        // Build full game config
+        const gameConfig = buildRankedGameConfig(
+          selectedMap,
+          assignment.config,
+        );
+
+        // Create game
+        gm.createGame(gameId, gameConfig);
+
+        log.info("Created ranked match", {
+          gameId,
+          map: selectedMap,
+          mode: assignment.config.gameMode,
+          players: assignment.config.playerCount,
+        });
+
+        // TODO: Notify players to connect to this game
+        // Players already have gameId from Lobby websocket
+      },
+      () => gm.activeClients(), // Get CCU from GameManager
+    );
+
+    matchmakingPoller.start();
+    log.info("Matchmaking poller started");
+  }
 
   // Middleware to handle /wX path prefix
   app.use((req, res, next) => {
