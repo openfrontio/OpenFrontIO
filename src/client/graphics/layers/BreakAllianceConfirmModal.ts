@@ -52,7 +52,8 @@ export class BreakAllianceConfirmModal extends LitElement {
     title: () => translateText("break_alliance_confirm.title"),
     message: (name: string) =>
       translateText("break_alliance_confirm.message", { name }),
-    warning: () => translateText("break_alliance_confirm.warning"),
+    warning: (name: string) =>
+      translateText("break_alliance_confirm.warning", { name }),
     cancel: () => translateText("common.cancel"),
     confirm: () => translateText("break_alliance_confirm.confirm_button"),
     closeLabel: () => translateText("common.close"),
@@ -90,7 +91,7 @@ export class BreakAllianceConfirmModal extends LitElement {
           class="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 text-sm"
         >
           <div class="font-semibold mb-1">⚠️ Warning</div>
-          <div class="text-xs">${this.i18n.warning()}</div>
+          <div class="text-xs">${this.i18n.warning(targetName)}</div>
         </div>
       </div>
     `;
