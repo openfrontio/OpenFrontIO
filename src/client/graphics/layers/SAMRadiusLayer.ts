@@ -13,7 +13,7 @@ import { Layer } from "./Layer";
 export class SAMRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
-  private readonly samLaunchers: Set<number> = new Set(); // Track SAM launcher IDs
+  private readonly samLaunchers: Map<number, number> = new Map(); // Track SAM launcher IDs -> ownerSmallID
   private needsRedraw = true;
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
@@ -78,6 +78,7 @@ export class SAMRadiusLayer implements Layer {
         if (unit && unit.type() === UnitType.SAMLauncher) {
           const wasTracked = this.samLaunchers.has(update.id);
           const shouldTrack = unit.isActive();
+          const owner = unit.owner().smallID();
 
           if (wasTracked && !shouldTrack) {
             // SAM was destroyed
@@ -85,8 +86,15 @@ export class SAMRadiusLayer implements Layer {
             hasChanges = true;
           } else if (!wasTracked && shouldTrack) {
             // New SAM was built
-            this.samLaunchers.add(update.id);
+            this.samLaunchers.set(update.id, owner);
             hasChanges = true;
+          } else if (wasTracked && shouldTrack) {
+            // SAM still exists; check if owner changed
+            const prevOwner = this.samLaunchers.get(update.id);
+            if (prevOwner !== owner) {
+              this.samLaunchers.set(update.id, owner);
+              hasChanges = true;
+            }
           }
         }
       }
@@ -131,7 +139,9 @@ export class SAMRadiusLayer implements Layer {
 
     // Update our tracking set
     this.samLaunchers.clear();
-    samLaunchers.forEach((sam) => this.samLaunchers.add(sam.id()));
+    samLaunchers.forEach((sam) =>
+      this.samLaunchers.set(sam.id(), sam.owner().smallID()),
+    );
 
     // Draw union of SAM radiuses. Collect circle data then draw union outer arcs only
     const circles = samLaunchers.map((sam) => {
