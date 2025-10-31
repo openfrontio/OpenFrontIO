@@ -65,7 +65,6 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private allianceExpirySeconds: number | null = null;
   @state() private otherProfile: PlayerProfile | null = null;
   // Simple client-side hints to keep buttons disabled and show a tiny cooldown indicator
-  // even when server does not expose exact cooldown reasons for can* flags.
   @state() private cooldownHints: Record<string, number> = {};
 
   private ctModal: ChatModal;
@@ -556,7 +555,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     text-white w-[140px] min-w-[140px] flex-shrink-0"
         >
           <span class="mr-0.5">💰</span>
-          <span translate="no" class="tabular-nums w-[5ch]font-semibold">
+          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
             ${renderNumber(other.gold() || 0)}
           </span>
           <span class="text-zinc-200 whitespace-nowrap">
