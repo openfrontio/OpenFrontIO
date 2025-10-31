@@ -607,6 +607,7 @@ export interface Player {
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
+  betrayals(): number;
 
   // Targeting
   canTarget(other: Player): boolean;
