@@ -482,6 +482,11 @@ export class UILayer implements Layer {
     player
       .actions(targetTile)
       .then((actions) => {
+        // Ignore stale results if target changed
+        if (this.lastTargetTile !== targetTile) {
+          return;
+        }
+
         const buildableUnit = actions.buildableUnits.find(
           (bu) => bu.type === ghostStructure,
         );
