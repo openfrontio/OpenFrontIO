@@ -32,6 +32,7 @@ export class TransportShipExecution implements Execution {
   private boat: Unit;
 
   private pathFinder: PathFinder;
+  private pathLength: number | null = null; // Store the total A* path length when computed
 
   constructor(
     private attacker: Player,
@@ -168,6 +169,7 @@ export class TransportShipExecution implements Execution {
       this.active = false;
       return;
     }
+
     if (ticks - this.lastMove < this.ticksPerMove) {
       return;
     }
@@ -175,6 +177,12 @@ export class TransportShipExecution implements Execution {
 
     if (this.boat.retreating()) {
       this.dst = this.src!; // src is guaranteed to be set at this point
+      // Set arrival tick to null on the boat itself
+      if (this.boat.setEstimatedArrivalTick) {
+        this.boat.setEstimatedArrivalTick(null);
+      }
+      // Reset path length so we recompute for the new path
+      this.pathLength = null;
 
       if (this.boat.targetTile() !== this.dst) {
         this.boat.setTargetTile(this.dst);
@@ -182,6 +190,22 @@ export class TransportShipExecution implements Execution {
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
+
+    // Store the total path length when A* path is first completed
+    if (
+      result.type === PathFindResultType.NextTile &&
+      this.pathLength === null
+    ) {
+      // Get the current remaining path length from the pathfinder
+      const remainingPathLength = this.pathFinder.getPathLength();
+
+      if (remainingPathLength !== null && remainingPathLength > 0) {
+        // The pathfinder has already consumed 1 tile (the current one), so add it back
+        this.pathLength = remainingPathLength + 1;
+        this.updateEstimatedArrivalTick(ticks);
+      }
+    }
+
     switch (result.type) {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) === this.attacker) {
@@ -238,5 +262,18 @@ export class TransportShipExecution implements Execution {
 
   isActive(): boolean {
     return this.active;
+  }
+
+  private updateEstimatedArrivalTick(currentTick: number): void {
+    if (this.dst === null || this.pathLength === null) {
+      return;
+    }
+
+    const estimatedArrivalTick = currentTick + this.pathLength;
+
+    // Store the estimated arrival tick on the boat
+    if (this.boat.setEstimatedArrivalTick) {
+      this.boat.setEstimatedArrivalTick(estimatedArrivalTick);
+    }
   }
 }
