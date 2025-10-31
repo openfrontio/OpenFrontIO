@@ -168,9 +168,7 @@ export class SAMRadiusLayer implements Layer {
     if (circles.length === 0) return;
 
     // styles
-    const strokeStyleOuter =
-      this.game.myPlayer()?.borderColor().toRgbString() ??
-      "rgba(230, 230, 230, 0.9)";
+    const strokeStyleOuter = "rgba(0, 0, 0, 1)";
 
     // 1) Fill union simply by drawing all full circle paths and filling once
     ctx.save();
@@ -187,7 +185,7 @@ export class SAMRadiusLayer implements Layer {
     if (!this.showStroke) return;
 
     ctx.save();
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.setLineDash([12, 6]);
     ctx.strokeStyle = strokeStyleOuter;
 
