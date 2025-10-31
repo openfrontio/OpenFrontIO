@@ -263,7 +263,7 @@
   "game_starting_modal": {
     "title": "Game is Starting...",
     "credits": "Credits",
-    "code_license": "Code licensed under AGPL-3.0"
+    "code_license": "Code licensed under AGPL-3.0 (no warranty)"
   },
   "difficulty": {
     "difficulty": "Difficulty",
