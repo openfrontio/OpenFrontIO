@@ -295,7 +295,7 @@ export class UnitLayer implements Layer {
 
   private handleWarShipEvent(unit: UnitView) {
     if (unit.targetUnitId()) {
-      this.drawSprite(unit, colord({ r: 200, b: 0, g: 0 }));
+      this.drawSprite(unit, colord("rgb(200,0,0)"));
     } else {
       this.drawSprite(unit);
     }

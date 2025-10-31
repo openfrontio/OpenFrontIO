@@ -100,6 +100,7 @@ export enum GameMapType {
   Pluto = "Pluto",
   Montreal = "Montreal",
   Achiran = "Achiran",
+  BaikalNukeWars = "Baikal (Nuke Wars)",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -141,6 +142,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
     GameMapType.Achiran,
+    GameMapType.BaikalNukeWars,
   ],
 };
 
@@ -270,7 +272,9 @@ export interface UnitParamsMap {
 
   [UnitType.City]: Record<string, never>;
 
-  [UnitType.MIRV]: Record<string, never>;
+  [UnitType.MIRV]: {
+    targetTile?: number;
+  };
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;

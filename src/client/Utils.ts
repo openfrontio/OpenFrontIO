@@ -245,3 +245,56 @@ export function isInIframe(): boolean {
     return true;
   }
 }
+
+export async function getSvgAspectRatio(src: string): Promise<number | null> {
+  const self = getSvgAspectRatio as any;
+  self.svgAspectRatioCache ??= new Map();
+
+  const cached = self.svgAspectRatioCache.get(src);
+  if (cached !== undefined) return cached;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const resp = await fetch(src, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!resp.ok) throw new Error(`Fetch failed: ${resp.status}`);
+    const text = await resp.text();
+
+    // Try parse viewBox
+    const vbMatch = text.match(/viewBox="([^"]+)"/i);
+    if (vbMatch) {
+      const parts = vbMatch[1]
+        .trim()
+        .split(/[\s,]+/)
+        .map(Number);
+      if (parts.length === 4 && parts.every((n) => !Number.isNaN(n))) {
+        const [, , vbW, vbH] = parts;
+        if (vbW > 0 && vbH > 0) {
+          const ratio = vbW / vbH;
+          self.svgAspectRatioCache.set(src, ratio);
+          return ratio;
+        }
+      }
+    }
+
+    // Fallback to width/height attributes (may be with units; strip px)
+    const widthMatch = text.match(/<svg[^>]*\swidth="([^"]+)"/i);
+    const heightMatch = text.match(/<svg[^>]*\sheight="([^"]+)"/i);
+    if (widthMatch && heightMatch) {
+      const parseNum = (s: string) => Number(s.replace(/[^0-9.]/g, ""));
+      const w = parseNum(widthMatch[1]);
+      const h = parseNum(heightMatch[1]);
+      if (w > 0 && h > 0) {
+        const ratio = w / h;
+        self.svgAspectRatioCache.set(src, ratio);
+        return ratio;
+      }
+    }
+    // Not an SVG or no usable metadata
+  } catch (e) {
+    // fetch may fail due to CORS or non-SVG..
+  }
+
+  return null;
+}

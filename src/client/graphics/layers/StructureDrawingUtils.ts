@@ -256,6 +256,7 @@ export class SpriteFactory {
     const tc = owner.territoryColor();
     const bc = owner.borderColor();
 
+    // Potentially change logic here. Some TC/BC combinations do not provide good color contrast.
     const darker = bc.luminance() < tc.luminance() ? bc : tc;
     const lighter = bc.luminance() < tc.luminance() ? tc : bc;
 
