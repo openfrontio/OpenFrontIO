@@ -19,6 +19,9 @@ export class SAMRadiusLayer implements Layer {
   private hoveredShow: boolean = false;
   private ghostShow: boolean = false;
   private showStroke: boolean = false;
+  private dashOffset = 0;
+  private rotationSpeed = 14; // px per second
+  private lastTickTime = Date.now();
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
@@ -112,6 +115,17 @@ export class SAMRadiusLayer implements Layer {
     this.updateStrokeVisibility();
 
     // Redraw if transform changed or if we need to redraw
+    const now = Date.now();
+    const dt = now - this.lastTickTime;
+    this.lastTickTime = now;
+
+    if (this.showStroke) {
+      this.dashOffset += (this.rotationSpeed * dt) / 1000;
+      if (this.dashOffset > 1e6) this.dashOffset = this.dashOffset % 1000000;
+      // animate by redrawing each frame whilst visible
+      this.needsRedraw = true;
+    }
+
     if (this.transformHandler.hasChanged() || this.needsRedraw) {
       this.redraw();
       this.needsRedraw = false;
@@ -187,6 +201,7 @@ export class SAMRadiusLayer implements Layer {
     ctx.save();
     ctx.lineWidth = 2;
     ctx.setLineDash([12, 6]);
+    ctx.lineDashOffset = this.dashOffset;
     ctx.strokeStyle = strokeStyleOuter;
 
     const TWO_PI = Math.PI * 2;
