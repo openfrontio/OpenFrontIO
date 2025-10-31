@@ -230,10 +230,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  updateTickMetrics(
-    tickExecutionDuration?: number,
-    tickDelay?: number,
-  ) {
+  updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
     // Update tick execution duration stats
@@ -333,4 +330,3 @@ export class PerformanceOverlay extends LitElement implements Layer {
     `;
   }
 }
-

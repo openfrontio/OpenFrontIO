@@ -293,10 +293,13 @@ export class ClientGameRunner {
       });
       this.gameView.update(gu);
       this.renderer.tick();
-      
+
       // Update performance overlay with tick metrics via renderer
-      this.renderer.updateTickMetrics(gu.tickExecutionDuration, this.currentTickDelay);
-      
+      this.renderer.updateTickMetrics(
+        gu.tickExecutionDuration,
+        this.currentTickDelay,
+      );
+
       // Reset tick delay for next measurement
       this.currentTickDelay = undefined;
 

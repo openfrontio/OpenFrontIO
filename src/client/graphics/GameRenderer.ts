@@ -13,7 +13,6 @@ import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
-import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
@@ -23,6 +22,7 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -209,7 +209,9 @@ export function createRenderer(
     uiState,
   );
 
-  const performanceOverlay = document.querySelector("performance-overlay") as PerformanceOverlay;
+  const performanceOverlay = document.querySelector(
+    "performance-overlay",
+  ) as PerformanceOverlay;
   if (!(performanceOverlay instanceof PerformanceOverlay)) {
     console.error("performance overlay not found");
   }
@@ -392,10 +394,7 @@ export class GameRenderer {
     this.layers.forEach((l) => l.tick?.());
   }
 
-  updateTickMetrics(
-    tickExecutionDuration?: number,
-    tickDelay?: number,
-  ) {
+  updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
     this.performanceOverlay.updateTickMetrics(tickExecutionDuration, tickDelay);
   }
 
