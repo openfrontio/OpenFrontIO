@@ -5,9 +5,12 @@ import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { UnitSelectionEvent } from "../../InputHandler";
+import { TileRef } from "../../../core/game/GameMap";
+import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
+import { MouseMoveEvent, UnitSelectionEvent } from "../../InputHandler";
 import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 const COLOR_PROGRESSION = [
@@ -48,10 +51,18 @@ export class UILayer implements Layer {
   // Visual settings for selection
   private readonly SELECTION_BOX_SIZE = 6; // Size of the selection box (should be larger than the warship)
 
+  // Trajectory preview state
+  private mousePos = { x: 0, y: 0 };
+  private trajectoryPoints: TileRef[] = [];
+  private lastTrajectoryUpdate: number = 0;
+  private lastTargetTile: TileRef | null = null;
+  private lastGhostStructure: UnitType | null = null;
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
+    private uiState: UIState,
   ) {
     this.theme = game.config().theme();
   }
@@ -77,10 +88,15 @@ export class UILayer implements Layer {
         this.onUnitEvent(unitView);
       });
     this.updateProgressBars();
+    this.updateTrajectoryPreview();
   }
 
   init() {
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelection(e));
+    this.eventBus.on(MouseMoveEvent, (e) => {
+      this.mousePos.x = e.x;
+      this.mousePos.y = e.y;
+    });
     this.redraw();
   }
 
@@ -92,6 +108,7 @@ export class UILayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    this.drawTrajectoryPreview(context);
   }
 
   redraw() {
@@ -389,5 +406,158 @@ export class UILayer implements Layer {
   clearCell(x: number, y: number) {
     if (this.context === null) throw new Error("null context");
     this.context.clearRect(x, y, 1, 1);
+  }
+
+  /**
+   * Update trajectory preview based on current mouse position and ghost structure
+   */
+  private updateTrajectoryPreview() {
+    const ghostStructure = this.uiState.ghostStructure;
+    const isNukeType =
+      ghostStructure === UnitType.AtomBomb ||
+      ghostStructure === UnitType.HydrogenBomb;
+
+    // Clear trajectory if not a nuke type or ghost structure changed
+    if (!isNukeType) {
+      if (this.lastGhostStructure !== null) {
+        this.trajectoryPoints = [];
+        this.lastTargetTile = null;
+      }
+      this.lastGhostStructure = ghostStructure;
+      return;
+    }
+
+    // Throttle updates (similar to StructureIconsLayer.renderGhost)
+    const now = performance.now();
+    if (now - this.lastTrajectoryUpdate < 50) {
+      return;
+    }
+    this.lastTrajectoryUpdate = now;
+
+    const player = this.game.myPlayer();
+    if (!player) {
+      this.trajectoryPoints = [];
+      this.lastTargetTile = null;
+      return;
+    }
+
+    // Convert mouse position to world coordinates
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) {
+      this.trajectoryPoints = [];
+      return;
+    }
+
+    const localX = this.mousePos.x - rect.left;
+    const localY = this.mousePos.y - rect.top;
+    const worldCoords = this.transformHandler.screenToWorldCoordinates(
+      localX,
+      localY,
+    );
+
+    if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+      this.trajectoryPoints = [];
+      this.lastTargetTile = null;
+      return;
+    }
+
+    const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
+
+    // Only recalculate if target tile changed or ghost structure changed
+    if (
+      this.lastTargetTile === targetTile &&
+      this.lastGhostStructure === ghostStructure
+    ) {
+      return;
+    }
+
+    this.lastTargetTile = targetTile;
+    this.lastGhostStructure = ghostStructure;
+
+    // Get buildable units to find spawn tile
+    player
+      .actions(targetTile)
+      .then((actions) => {
+        const buildableUnit = actions.buildableUnits.find(
+          (bu) => bu.type === ghostStructure,
+        );
+
+        if (!buildableUnit || buildableUnit.canBuild === false) {
+          this.trajectoryPoints = [];
+          return;
+        }
+
+        const spawnTile = buildableUnit.canBuild;
+        if (!spawnTile) {
+          this.trajectoryPoints = [];
+          return;
+        }
+
+        // Calculate trajectory using ParabolaPathFinder
+        const pathFinder = new ParabolaPathFinder(this.game);
+        const speed = this.game.config().defaultNukeSpeed();
+        const distanceBasedHeight = true; // AtomBomb/HydrogenBomb use distance-based height
+
+        pathFinder.computeControlPoints(
+          spawnTile,
+          targetTile,
+          speed,
+          distanceBasedHeight,
+        );
+
+        this.trajectoryPoints = pathFinder.allTiles();
+      })
+      .catch(() => {
+        // Handle errors silently
+        this.trajectoryPoints = [];
+      });
+  }
+
+  /**
+   * Draw trajectory preview line on the canvas
+   */
+  private drawTrajectoryPreview(context: CanvasRenderingContext2D) {
+    const ghostStructure = this.uiState.ghostStructure;
+    const isNukeType =
+      ghostStructure === UnitType.AtomBomb ||
+      ghostStructure === UnitType.HydrogenBomb;
+
+    if (!isNukeType || this.trajectoryPoints.length === 0) {
+      return;
+    }
+
+    const player = this.game.myPlayer();
+    if (!player) {
+      return;
+    }
+
+    const territoryColor = player.territoryColor();
+    const lineColor = territoryColor.alpha(0.7).toRgbString();
+
+    // Calculate offset to center coordinates (same as canvas drawing)
+    const offsetX = -this.game.width() / 2;
+    const offsetY = -this.game.height() / 2;
+
+    context.save();
+    context.strokeStyle = lineColor;
+    context.lineWidth = 1.5;
+    context.setLineDash([8, 4]);
+    context.beginPath();
+
+    // Draw line connecting trajectory points
+    for (let i = 0; i < this.trajectoryPoints.length; i++) {
+      const tile = this.trajectoryPoints[i];
+      const x = this.game.x(tile) + offsetX;
+      const y = this.game.y(tile) + offsetY;
+
+      if (i === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    }
+
+    context.stroke();
+    context.restore();
   }
 }
