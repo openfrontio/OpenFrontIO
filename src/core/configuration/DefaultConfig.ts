@@ -586,7 +586,7 @@ export class DefaultConfig implements Config {
     return 15 * 10;
   }
   deleteUnitCooldown(): Tick {
-    return 5 * 10;
+    return 15 * 10;
   }
   emojiMessageDuration(): Tick {
     return 5 * 10;
