@@ -71,7 +71,17 @@ export class PlayerActionHandler {
   }
 
   handleBreakAlliance(player: PlayerView, recipient: PlayerView) {
-    this.eventBus.emit(new SendBreakAllianceIntentEvent(player, recipient));
+    const recipientName = recipient.name?.() ?? "this player";
+    const confirmed = confirm(
+      `Are you sure you want to break your alliance with ${recipientName}?\n\n` +
+        `Warning: This will mark you as a traitor for 30 seconds (50% defense debuff), ` +
+        `reduce your relationship with ${recipientName} by -200, and reduce your ` +
+        `relationship with other players by -40.`,
+    );
+
+    if (confirmed) {
+      this.eventBus.emit(new SendBreakAllianceIntentEvent(player, recipient));
+    }
   }
 
   handleTargetPlayer(targetId: string | null) {

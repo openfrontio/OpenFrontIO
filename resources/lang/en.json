@@ -643,6 +643,13 @@
     "aria_slider": "Amount slider",
     "slider_tooltip": "{{percent}}% • {{amount}}"
   },
+  "break_alliance_confirm": {
+    "title": "Break Alliance",
+    "message": "Are you sure you want to break your alliance with {name}?",
+    "warning": "Breaking an alliance will mark you as a traitor for 30 seconds (50% defense debuff), reduce your relationship with {name} by -200, and reduce your relationship with other players by -40.",
+    "confirm_button": "Break Alliance",
+    "cancel": "Cancel"
+  },
   "replay_panel": {
     "replay_speed": "Replay speed",
     "game_speed": "Game speed",

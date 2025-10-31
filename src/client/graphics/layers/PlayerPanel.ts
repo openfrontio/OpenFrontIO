@@ -44,6 +44,7 @@ import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
 import { Layer } from "./Layer";
 import "./SendResourceModal";
+import "./BreakAllianceConfirmModal";
 
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Layer {
@@ -58,6 +59,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
   @state() private sendTarget: PlayerView | null = null;
   @state() private sendMode: "troops" | "gold" | "none" = "none";
+  @state() private breakAllianceTarget: PlayerView | null = null;
   @state() public isVisible: boolean = false;
   @state() private allianceExpiryText: string | null = null;
   @state() private allianceExpirySeconds: number | null = null;
@@ -136,6 +138,7 @@ export class PlayerPanel extends LitElement implements Layer {
     this.isVisible = false;
     this.sendMode = "none";
     this.sendTarget = null;
+    this.breakAllianceTarget = null;
     this.requestUpdate();
   }
 
@@ -160,8 +163,20 @@ export class PlayerPanel extends LitElement implements Layer {
     other: PlayerView,
   ) {
     e.stopPropagation();
-    this.eventBus.emit(new SendBreakAllianceIntentEvent(myPlayer, other));
+    this.breakAllianceTarget = other;
+  }
+
+  private handleBreakAllianceConfirm(myPlayer: PlayerView) {
+    if (!this.breakAllianceTarget) return;
+    this.eventBus.emit(
+      new SendBreakAllianceIntentEvent(myPlayer, this.breakAllianceTarget),
+    );
+    this.breakAllianceTarget = null;
     this.hide();
+  }
+
+  private handleBreakAllianceCancel() {
+    this.breakAllianceTarget = null;
   }
 
   private openSendTroops(target: PlayerView) {
@@ -855,6 +870,16 @@ export class PlayerPanel extends LitElement implements Layer {
                         @confirm=${this.confirmSend}
                         @close=${this.closeSend}
                       ></send-resource-modal>
+                    `
+                  : ""}
+                ${this.breakAllianceTarget
+                  ? html`
+                      <break-alliance-confirm-modal
+                        .open=${this.breakAllianceTarget !== null}
+                        .target=${this.breakAllianceTarget}
+                        @confirm=${() => this.handleBreakAllianceConfirm(my)}
+                        @close=${this.handleBreakAllianceCancel}
+                      ></break-alliance-confirm-modal>
                     `
                   : ""}
 
