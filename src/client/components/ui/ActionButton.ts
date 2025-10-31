@@ -15,6 +15,8 @@ export interface ActionButtonProps {
   title: string;
   label: string;
   disabled?: boolean;
+  // When true, show a tiny non-intrusive cooldown indicator
+  coolingDown?: boolean;
 }
 
 const ICON_SIZE =
@@ -24,11 +26,11 @@ const TEXT_SIZE =
 
 const getButtonStyles = () => {
   const btnBase =
-    "group w-full min-w-[50px] select-none flex flex-col items-center justify-center " +
+    "group relative overflow-hidden w-full min-w-[50px] select-none flex flex-col items-center justify-center " +
     "gap-1 rounded-lg py-1.5 border border-white/10 bg-white/[0.04] shadow-sm " +
     "transition-all duration-150 " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 " +
-    "active:translate-y-[1px]";
+    "active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed";
 
   return {
     normal: `${btnBase} text-white/90 hover:bg-white/10 hover:text-white`,
@@ -49,6 +51,7 @@ export const actionButton = (props: ActionButtonProps): TemplateResult => {
     title,
     label,
     disabled = false,
+    coolingDown = false,
   } = props;
   const buttonStyles = getButtonStyles();
   const buttonClass = buttonStyles[type];
@@ -62,6 +65,12 @@ export const actionButton = (props: ActionButtonProps): TemplateResult => {
       aria-label="${title}"
       ?disabled=${disabled}
     >
+      ${coolingDown
+        ? html`<span
+            class="pointer-events-none absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-white/60 animate-pulse"
+            aria-hidden="true"
+          ></span>`
+        : ""}
       <img src=${icon} alt=${iconAlt} aria-hidden="true" class="${ICON_SIZE}" />
       <span class="${TEXT_SIZE}">${label}</span>
     </button>

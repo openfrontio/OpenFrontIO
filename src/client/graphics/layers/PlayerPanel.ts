@@ -28,6 +28,8 @@ import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
+  SendDonateGoldIntentEvent,
+  SendDonateTroopsIntentEvent,
   SendEmbargoAllIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
@@ -62,8 +64,12 @@ export class PlayerPanel extends LitElement implements Layer {
   @state() private allianceExpiryText: string | null = null;
   @state() private allianceExpirySeconds: number | null = null;
   @state() private otherProfile: PlayerProfile | null = null;
+  // Simple client-side hints to keep buttons disabled and show a tiny cooldown indicator
+  // even when server does not expose exact cooldown reasons for can* flags.
+  @state() private cooldownHints: Record<string, number> = {};
 
   private ctModal: ChatModal;
+  private cooldownListenersBound = false;
 
   createRenderRoot() {
     return this;
@@ -76,6 +82,7 @@ export class PlayerPanel extends LitElement implements Layer {
         this.hide();
       }
     });
+    this.bindGlobalCooldownListeners();
   }
 
   init() {
@@ -85,6 +92,58 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!this.ctModal) {
       console.warn("ChatModal element not found in DOM");
     }
+  }
+
+  // Ensure cooldown hints reflect actions triggered from anywhere, not just this panel
+  private bindGlobalCooldownListeners() {
+    if (this.cooldownListenersBound) return;
+    this.cooldownListenersBound = true;
+
+    // Alliance request triggered anywhere
+    this.eventBus.on(SendAllianceRequestIntentEvent, (e) => {
+      const me = this.g?.myPlayer?.();
+      if (!me) return;
+      // Only set cooldown for requests initiated by me
+      if (e.requestor.smallID() !== me.smallID()) return;
+      const id = e.recipient.smallID();
+      this.setCooldown(
+        `allianceReq:${id}`,
+        this.g.config().allianceRequestCooldown(),
+      );
+    });
+
+    // Emoji anywhere
+    this.eventBus.on(SendEmojiIntentEvent, (e) => {
+      const key =
+        e.recipient === AllPlayers
+          ? `emoji:all`
+          : `emoji:${(e.recipient as PlayerView).smallID()}`;
+      this.setCooldown(key, this.g.config().emojiMessageCooldown());
+    });
+
+    // Target mark anywhere
+    this.eventBus.on(SendTargetPlayerIntentEvent, (_e) => {
+      this.setCooldown("target", this.g.config().targetCooldown());
+    });
+
+    // Embargo all anywhere
+    this.eventBus.on(SendEmbargoAllIntentEvent, (_e) => {
+      this.setCooldown("embargoAll", this.g.config().embargoAllCooldown());
+    });
+
+    // Donations anywhere (set both keys since server shares cooldown)
+    this.eventBus.on(SendDonateGoldIntentEvent, (e) => {
+      const id = e.recipient.smallID();
+      const d = this.g.config().donateCooldown();
+      this.setCooldown(`donateGold:${id}`, d);
+      this.setCooldown(`donateTroops:${id}`, d);
+    });
+    this.eventBus.on(SendDonateTroopsIntentEvent, (e) => {
+      const id = e.recipient.smallID();
+      const d = this.g.config().donateCooldown();
+      this.setCooldown(`donateGold:${id}`, d);
+      this.setCooldown(`donateTroops:${id}`, d);
+    });
   }
 
   async tick() {
@@ -123,6 +182,8 @@ export class PlayerPanel extends LitElement implements Layer {
         this.requestUpdate();
       }
     }
+    // Cleanup expired cooldown hints
+    this.cleanupCooldowns();
   }
 
   public show(actions: PlayerActions, tile: TileRef) {
@@ -151,6 +212,7 @@ export class PlayerPanel extends LitElement implements Layer {
   ) {
     e.stopPropagation();
     this.eventBus.emit(new SendAllianceRequestIntentEvent(myPlayer, other));
+
     this.hide();
   }
 
@@ -200,7 +262,6 @@ export class PlayerPanel extends LitElement implements Layer {
   private confirmSend = (
     e: CustomEvent<{ amount: number; closePanel?: boolean }>,
   ) => {
-    this.closeSend();
     if (e.detail?.closePanel) this.hide();
   };
 
@@ -227,11 +288,13 @@ export class PlayerPanel extends LitElement implements Layer {
   private onStopTradingAllClick(e: Event) {
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoAllIntentEvent("start"));
+    this.hide();
   }
 
   private onStartTradingAllClick(e: Event) {
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoAllIntentEvent("stop"));
+    this.hide();
   }
 
   private handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
@@ -273,6 +336,33 @@ export class PlayerPanel extends LitElement implements Layer {
     e.stopPropagation();
     this.eventBus.emit(new SendTargetPlayerIntentEvent(other.id()));
     this.hide();
+  }
+
+  // Cooldown helpers
+  private setCooldown(key: string, durationTicks: number) {
+    const expiresAt = this.g.ticks() + durationTicks;
+    this.cooldownHints = { ...this.cooldownHints, [key]: expiresAt };
+  }
+
+  private remainingCooldownSeconds(key: string): number {
+    const exp = this.cooldownHints[key];
+    if (!exp) return 0;
+    const ticksLeft = exp - this.g.ticks();
+    return Math.max(0, Math.ceil(ticksLeft / 10));
+  }
+
+  private cleanupCooldowns() {
+    const now = this.g.ticks();
+    let mutated = false;
+    const next: Record<string, number> = {};
+    for (const [k, v] of Object.entries(this.cooldownHints)) {
+      if (v > now) {
+        next[k] = v;
+      } else {
+        mutated = true;
+      }
+    }
+    if (mutated) this.cooldownHints = next;
   }
 
   private identityChipProps(type: PlayerType) {
@@ -620,6 +710,46 @@ export class PlayerPanel extends LitElement implements Layer {
     const canTarget = this.actions?.interaction?.canTarget;
     const canEmbargo = this.actions?.interaction?.canEmbargo;
 
+    // Compute cooldown hints per action
+    const emojiKey =
+      other === myPlayer ? `emoji:all` : `emoji:${other.smallID()}`;
+    const donateTroopsKey = `donateTroops:${other.smallID()}`;
+    const donateGoldKey = `donateGold:${other.smallID()}`;
+    const targetKey = `target`;
+    const allianceReqKey = `allianceReq:${other.smallID()}`;
+    const embargoAllKey = `embargoAll`;
+
+    // Determine permanent disables (hide entirely) based on config
+    const troopsAlwaysDisabled =
+      other.type() === PlayerType.Human && !this.g.config().donateTroops();
+    const goldAlwaysDisabled =
+      other.type() === PlayerType.Human && !this.g.config().donateGold();
+
+    // Show rules: show when (server says can) OR (we're cooling down locally)
+    const isFriendlyContext = other === my || my.isFriendly(other);
+    const donationCooldownActive =
+      this.remainingCooldownSeconds(donateTroopsKey) > 0 ||
+      this.remainingCooldownSeconds(donateGoldKey) > 0;
+
+    const showEmoji =
+      Boolean(canSendEmoji) || this.remainingCooldownSeconds(emojiKey) > 0;
+
+    // Only show Target during cooldown if the current player is a valid target context (not friendly/self)
+    const showTarget =
+      Boolean(canTarget) ||
+      (this.remainingCooldownSeconds(targetKey) > 0 && !isFriendlyContext);
+
+    const showSendAlliance =
+      Boolean(canSendAllianceRequest) ||
+      (this.remainingCooldownSeconds(allianceReqKey) > 0 && !isFriendlyContext);
+
+    const showDonateTroops =
+      !troopsAlwaysDisabled &&
+      (Boolean(canDonateTroops) || donationCooldownActive);
+
+    const showDonateGold =
+      !goldAlwaysDisabled && (Boolean(canDonateGold) || donationCooldownActive);
+
     return html`
       <div class="flex flex-col gap-2.5">
         <div class="grid auto-cols-fr grid-flow-col gap-1">
@@ -630,7 +760,7 @@ export class PlayerPanel extends LitElement implements Layer {
             title: translateText("player_panel.chat"),
             label: translateText("player_panel.chat"),
           })}
-          ${canSendEmoji
+          ${showEmoji
             ? actionButton({
                 onClick: (e: MouseEvent) => this.handleEmojiClick(e, my, other),
                 icon: emojiIcon,
@@ -638,9 +768,12 @@ export class PlayerPanel extends LitElement implements Layer {
                 title: translateText("player_panel.emotes"),
                 label: translateText("player_panel.emotes"),
                 type: "normal",
+                disabled: !canSendEmoji,
+                coolingDown:
+                  !canSendEmoji && this.remainingCooldownSeconds(emojiKey) > 0,
               })
             : ""}
-          ${canTarget
+          ${showTarget
             ? actionButton({
                 onClick: (e: MouseEvent) => this.handleTargetClick(e, other),
                 icon: targetIcon,
@@ -648,9 +781,12 @@ export class PlayerPanel extends LitElement implements Layer {
                 title: translateText("player_panel.target"),
                 label: translateText("player_panel.target"),
                 type: "normal",
+                disabled: !canTarget,
+                coolingDown:
+                  !canTarget && this.remainingCooldownSeconds(targetKey) > 0,
               })
             : ""}
-          ${canDonateTroops
+          ${showDonateTroops
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleDonateTroopClick(e, my, other),
@@ -659,9 +795,11 @@ export class PlayerPanel extends LitElement implements Layer {
                 title: translateText("player_panel.send_troops"),
                 label: translateText("player_panel.troops"),
                 type: "normal",
+                disabled: !canDonateTroops || donationCooldownActive,
+                coolingDown: donationCooldownActive,
               })
             : ""}
-          ${canDonateGold
+          ${showDonateGold
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleDonateGoldClick(e, my, other),
@@ -670,6 +808,8 @@ export class PlayerPanel extends LitElement implements Layer {
                 title: translateText("player_panel.send_gold"),
                 label: translateText("player_panel.gold"),
                 type: "normal",
+                disabled: !canDonateGold || donationCooldownActive,
+                coolingDown: donationCooldownActive,
               })
             : ""}
         </div>
@@ -708,7 +848,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "red",
               })
             : ""}
-          ${canSendAllianceRequest
+          ${showSendAlliance
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleAllianceClick(e, my, other),
@@ -717,6 +857,10 @@ export class PlayerPanel extends LitElement implements Layer {
                 title: translateText("player_panel.send_alliance"),
                 label: translateText("player_panel.send_alliance"),
                 type: "indigo",
+                disabled: !canSendAllianceRequest,
+                coolingDown:
+                  !canSendAllianceRequest &&
+                  this.remainingCooldownSeconds(allianceReqKey) > 0,
               })
             : ""}
         </div>
@@ -727,27 +871,25 @@ export class PlayerPanel extends LitElement implements Layer {
                 onClick: (e: MouseEvent) => this.onStopTradingAllClick(e),
                 icon: stopTradingIcon,
                 iconAlt: "Stop Trading With All",
-                title: !this.actions?.canEmbargoAll
-                  ? `${translateText("player_panel.stop_trade_all")} - ${translateText("cooldown")}`
-                  : translateText("player_panel.stop_trade_all"),
-                label: !this.actions?.canEmbargoAll
-                  ? `${translateText("player_panel.stop_trade_all")} ⏳`
-                  : translateText("player_panel.stop_trade_all"),
+                title: translateText("player_panel.stop_trade_all"),
+                label: translateText("player_panel.stop_trade_all"),
                 type: "yellow",
                 disabled: !this.actions?.canEmbargoAll,
+                coolingDown:
+                  !this.actions?.canEmbargoAll &&
+                  this.remainingCooldownSeconds(embargoAllKey) > 0,
               })}
               ${actionButton({
                 onClick: (e: MouseEvent) => this.onStartTradingAllClick(e),
                 icon: startTradingIcon,
                 iconAlt: "Start Trading With All",
-                title: !this.actions?.canEmbargoAll
-                  ? `${translateText("player_panel.start_trade_all")} - ${translateText("cooldown")}`
-                  : translateText("player_panel.start_trade_all"),
-                label: !this.actions?.canEmbargoAll
-                  ? `${translateText("player_panel.start_trade_all")} ⏳`
-                  : translateText("player_panel.start_trade_all"),
+                title: translateText("player_panel.start_trade_all"),
+                label: translateText("player_panel.start_trade_all"),
                 type: "green",
                 disabled: !this.actions?.canEmbargoAll,
+                coolingDown:
+                  !this.actions?.canEmbargoAll &&
+                  this.remainingCooldownSeconds(embargoAllKey) > 0,
               })}
             </div>`
           : ""}
