@@ -1,22 +1,86 @@
 import {
+  DataSet,
   RegExpMatcher,
   collapseDuplicatesTransformer,
   englishDataset,
-  englishRecommendedTransformers,
+  pattern,
   resolveConfusablesTransformer,
   resolveLeetSpeakTransformer,
   skipNonAlphabeticTransformer,
+  toAsciiLowerCaseTransformer,
 } from "obscenity";
 import { translateText } from "../../client/Utils";
 import { simpleHash } from "../Util";
+import { getRandomUsername } from "../utilities/UsernameGenerator";
+
+const customDataset = new DataSet()
+  .addAll(englishDataset)
+  /* similarity to racial slur */
+  .addPhrase((phrase) =>
+    phrase
+      .setMetadata({ originalWord: "nigg" })
+      /* Not used by any english words */
+      .addPattern(pattern`niqq`),
+  )
+  /* historic significance / edgy */
+  .addPhrase((phrase) =>
+    phrase
+      .setMetadata({ originalWord: "hitler" })
+      .addPattern(pattern`hitl?r`)
+      .addPattern(pattern`hiti?r`)
+      .addPattern(pattern`hltl?r`),
+  )
+  .addPhrase((phrase) =>
+    phrase.setMetadata({ originalWord: "nazi" }).addPattern(pattern`|nazi`),
+  )
+  /* aggressive / edgy */
+  .addPhrase((phrase) =>
+    phrase.setMetadata({ originalWord: "hang" }).addPattern(pattern`|hang|`),
+  )
+  .addPhrase((phrase) =>
+    phrase
+      .setMetadata({ originalWord: "kill" })
+      .addPattern(pattern`|kill`)
+      /* not used by any english words */
+      .addPattern(pattern`ikill`),
+  )
+  .addPhrase((phrase) =>
+    phrase
+      .setMetadata({ originalWord: "murder" })
+      /* only used by a few english words */
+      .addPattern(pattern`murd`)
+      .addPattern(pattern`mard`),
+  )
+  .addPhrase((phrase) =>
+    phrase
+      .setMetadata({ originalWord: "shoot" })
+      .addPattern(pattern`|shoot`)
+      .addPattern(pattern`|shot`)
+      /* only used by a few english words */
+      .addPattern(pattern`ishoot`)
+      .addPattern(pattern`ishot`),
+  );
 
 const matcher = new RegExpMatcher({
-  ...englishDataset.build(),
-  ...englishRecommendedTransformers,
-  ...resolveConfusablesTransformer(),
-  ...skipNonAlphabeticTransformer(),
-  ...collapseDuplicatesTransformer(),
-  ...resolveLeetSpeakTransformer(),
+  ...customDataset.build(),
+
+  blacklistMatcherTransformers: [
+    resolveConfusablesTransformer(),
+    resolveLeetSpeakTransformer(),
+    skipNonAlphabeticTransformer(),
+    toAsciiLowerCaseTransformer(),
+    collapseDuplicatesTransformer({
+      customThresholds: new Map([
+        ["b", 2],
+        ["e", 2],
+        ["o", 2],
+        ["l", 2],
+        ["s", 2],
+        ["g", 2],
+        ["q", 2],
+      ]),
+    }),
+  ],
 });
 
 export const MIN_USERNAME_LENGTH = 3;
@@ -24,19 +88,9 @@ export const MAX_USERNAME_LENGTH = 27;
 
 const validPattern = /^[a-zA-Z0-9_[\] 🐈🍀üÜ]+$/u;
 
-const shadowNames = [
-  "NicePeopleOnly",
-  "BeKindPlz",
-  "LearningManners",
-  "StayClassy",
-  "BeNicer",
-  "NeedHugs",
-  "MakeFriends",
-];
-
 export function fixProfaneUsername(username: string): string {
   if (isProfaneUsername(username)) {
-    return shadowNames[simpleHash(username) % shadowNames.length];
+    return getRandomUsername(simpleHash(username));
   }
   return username;
 }
