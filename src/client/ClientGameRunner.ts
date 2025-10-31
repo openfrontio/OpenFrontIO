@@ -33,6 +33,7 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
@@ -294,10 +295,9 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.renderer.tick();
 
-      // Update performance overlay with tick metrics via renderer
-      this.renderer.updateTickMetrics(
-        gu.tickExecutionDuration,
-        this.currentTickDelay,
+      // Emit tick metrics event for performance overlay
+      this.eventBus.emit(
+        new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
       );
 
       // Reset tick delay for next measurement

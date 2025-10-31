@@ -2,7 +2,10 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { TogglePerformanceOverlayEvent } from "../../InputHandler";
+import {
+  TickMetricsEvent,
+  TogglePerformanceOverlayEvent,
+} from "../../InputHandler";
 import { Layer } from "./Layer";
 
 @customElement("performance-overlay")
@@ -121,6 +124,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
   init() {
     this.eventBus.on(TogglePerformanceOverlayEvent, () => {
       this.userSettings.togglePerformanceOverlay();
+    });
+    this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
+      this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
     });
   }
 

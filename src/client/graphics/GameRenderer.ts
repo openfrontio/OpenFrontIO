@@ -394,10 +394,6 @@ export class GameRenderer {
     this.layers.forEach((l) => l.tick?.());
   }
 
-  updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
-    this.performanceOverlay.updateTickMetrics(tickExecutionDuration, tickDelay);
-  }
-
   resize(width: number, height: number): void {
     this.canvas.width = Math.ceil(width / window.devicePixelRatio);
     this.canvas.height = Math.ceil(height / window.devicePixelRatio);
