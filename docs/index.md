@@ -4,9 +4,9 @@
 
 This documentation serves as a place to learn about the internal workings of [this project](https://github.com/openfrontio/openfrontio), namely:
 
-* [Using the API (API Reference)](API.md)
-* [Contributing](contribute.md)
-* [Orienting yourself in the project (Developer Reference)](develop.md)
+- [Using the API (API Reference)](API.md)
+- [Contributing](contribute.md)
+- [Orienting yourself in the project (Developer Reference)](develop.md)
 
 For a quick guide on how to get the repository up and running with some of your first changes, visit the [Starting Guide](getting_started.md)!
 

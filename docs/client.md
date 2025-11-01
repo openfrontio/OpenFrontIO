@@ -82,8 +82,8 @@ The default replay speed multiplier
 
 #### interface UnitTypeRenderContext
 
-* `disabledUnits: UnitType[]` - array of disabled units
-* `toggleUnit: (unit: UnitType, checked: boolean) => void` - function to toggle a unit's visibility 
+- `disabledUnits: UnitType[]` - array of disabled units
+- `toggleUnit: (unit: UnitType, checked: boolean) => void` - function to toggle a unit's visibility
 
 #### const unitOptions
 
@@ -94,5 +94,3 @@ array of object containing unit types and their translation keys
 Takes a `UnitTypeRenderContext` interface as a parameter, returns `TemplateResult[]`
 
 Returns an array of `TemplateResult`s (html strings) with each one holding the html for a unit type and a checkbox.
-
-

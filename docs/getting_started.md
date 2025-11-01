@@ -2,11 +2,11 @@
 
 ## Prerequisites
 
-* git
-* npm (v10.9.2 or higher)
-* A modern browser with developer tools
-* github account
-* discord account
+- git
+- npm (v10.9.2 or higher)
+- A modern browser with developer tools
+- github account
+- discord account
 
 Before you start, make sure you have all of these tools installed and ready to be used
 
@@ -52,6 +52,7 @@ Install dependencies
 ```bash
 npm i
 ```
+
 Before making a change, make sure your local repo is up to date on the upstream and update your origin.
 
 ```bash
@@ -79,9 +80,11 @@ To test your change in-game, you can run any of the following
 ```bash
 npm run dev
 ```
+
 ```bash
 npm run start:client
 ```
+
 ```bash
 npm run start:server-dev
 ```
@@ -142,5 +145,5 @@ Hopefully, afterwards, your change will be accepted, merged into main, and then 
 
 ## Next steps
 
-* To learn more about our contribution guidelines, check out [the contribution page](contribute.md)
-* To learn more about the structure of the codebase, go to [the developemenet reference](develop.md)
+- To learn more about our contribution guidelines, check out [the contribution page](contribute.md)
+- To learn more about the structure of the codebase, go to [the developemenet reference](develop.md)
