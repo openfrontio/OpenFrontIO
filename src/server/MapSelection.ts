@@ -1,38 +1,7 @@
+import { numPlayersConfig } from "../core/configuration/DefaultConfig";
 import { GameMapType, GameMode } from "../core/game/Game";
-// import { TeamCountConfig } from "../core/Schemas";
 
-const MAP_CAPACITIES: Record<GameMapType, [number, number, number]> = {
-  [GameMapType.Africa]: [100, 70, 50],
-  [GameMapType.Asia]: [50, 40, 30],
-  [GameMapType.Australia]: [70, 40, 30],
-  [GameMapType.Baikal]: [100, 70, 50],
-  [GameMapType.BetweenTwoSeas]: [70, 50, 40],
-  [GameMapType.BlackSea]: [50, 30, 30],
-  [GameMapType.Britannia]: [50, 30, 20],
-  [GameMapType.DeglaciatedAntarctica]: [50, 40, 30],
-  [GameMapType.EastAsia]: [50, 30, 20],
-  [GameMapType.Europe]: [100, 70, 50],
-  [GameMapType.EuropeClassic]: [50, 30, 30],
-  [GameMapType.FalklandIslands]: [50, 30, 20],
-  [GameMapType.FaroeIslands]: [20, 15, 10],
-  [GameMapType.GatewayToTheAtlantic]: [100, 70, 50],
-  [GameMapType.GiantWorldMap]: [100, 70, 50],
-  [GameMapType.Halkidiki]: [100, 50, 40],
-  [GameMapType.Iceland]: [50, 40, 30],
-  [GameMapType.Italia]: [50, 30, 20],
-  [GameMapType.Japan]: [20, 15, 10],
-  [GameMapType.Mars]: [70, 40, 30],
-  [GameMapType.Mena]: [70, 50, 40],
-  [GameMapType.Montreal]: [60, 40, 30],
-  [GameMapType.NorthAmerica]: [70, 40, 30],
-  [GameMapType.Oceania]: [10, 10, 10],
-  [GameMapType.Pangaea]: [20, 15, 10],
-  [GameMapType.Pluto]: [100, 70, 50],
-  [GameMapType.SouthAmerica]: [70, 50, 40],
-  [GameMapType.StraitOfGibraltar]: [100, 70, 50],
-  [GameMapType.World]: [50, 30, 20],
-  [GameMapType.Yenisei]: [150, 100, 70],
-};
+const MAP_CAPACITIES = numPlayersConfig;
 
 export interface MapSelectionCriteria {
   playerCount: number;
@@ -68,8 +37,11 @@ export function selectMapForRanked(
   // Find intersection
   const viableMaps = suitableMaps.filter((map) => rankedMaps.includes(map));
 
+  // Use ranked maps if available, otherwise fall back to all suitable maps
+  const candidates = viableMaps.length > 0 ? viableMaps : suitableMaps;
+
   // Pick best fit (prefer maps closest to player count)
-  return pickBestFit(viableMaps, playerCount);
+  return pickBestFit(candidates, playerCount);
 }
 
 /**
@@ -95,8 +67,9 @@ function getSuitableMaps(playerCount: number): GameMapType[] {
  * Selects map where player count is closest to the middle of its capacity range
  */
 function pickBestFit(maps: GameMapType[], playerCount: number): GameMapType {
+  // This should never happen now due to fallback in selectMapForRanked,
+  // but keep a safe fallback just in case
   if (maps.length === 0) {
-    // Fallback to World if no perfect match
     return GameMapType.World;
   }
 
