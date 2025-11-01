@@ -132,12 +132,7 @@ export class WinModal extends LitElement implements Layer {
     for (const pattern of Object.values(patterns?.patterns ?? {})) {
       for (const colorPalette of pattern.colorPalettes ?? []) {
         if (
-          patternRelationship(
-            pattern,
-            colorPalette,
-            me !== false ? me : null,
-            null,
-          ) === "purchasable"
+          patternRelationship(pattern, colorPalette, me, null) === "purchasable"
         ) {
           const palette = patterns?.colorPalettes?.[colorPalette.name];
           if (palette) {
