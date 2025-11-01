@@ -254,30 +254,34 @@ export class TransformHandler {
 
   private clampOffsets() {
     const canvasRect = this.boundingRect();
-    const canvasW = canvasRect.width;
-    const canvasH = canvasRect.height;
-    const gameW = this.game.width();
+    const canvasWidth = canvasRect.width;
+    const canvasHeight = canvasRect.height;
+    const gameWidth = this.game.width();
     const gameH = this.game.height();
-    const s = this.scale;
+    const scale = this.scale;
 
-    // Compute allowed offset range so that screenBoundingRect stays within [0, game] in game coords
-    const minOffsetX = -gameW / 2 + gameW / (2 * s);
-    const maxOffsetX = gameW / 2 - (canvasW - gameW / 2) / s;
-    const minOffsetY = -gameH / 2 + gameH / (2 * s);
-    const maxOffsetY = gameH / 2 - (canvasH - gameH / 2) / s;
+    // Allow panning so that up to half of the viewport can be outside the map on each side.
+    // This lets a map corner be placed at the screen center, but no further.
+    // Derivation (X axis):
+    //   gameLeftX = -gameWidth/(2*scale) + offsetX + gameWidth/2 >= -vw/2
+    //   gameRightX = (canvasWidth - gameWidth/2)/scale + offsetX + gameWidth/2 <= gameWidth + vw/2
+    // Solving gives:
+    //   minOffsetX = -gameWidth/2 + (gameWidth - canvasWidth) / (2*scale)
+    //   maxOffsetX =  gameWidth/2 + (gameWidth - canvasWidth) / (2*scale)
+    const minOffsetX = -gameWidth / 2 + (gameWidth - canvasWidth) / (2 * scale);
+    const maxOffsetX = gameWidth / 2 + (gameWidth - canvasWidth) / (2 * scale);
 
-    // If viewport (in world units) is larger than map, center by averaging bounds
-    if (minOffsetX > maxOffsetX) {
-      this.offsetX = (minOffsetX + maxOffsetX) / 2;
-    } else if (this.offsetX < minOffsetX) {
+    const minOffsetY = -gameH / 2 + (gameH - canvasHeight) / (2 * scale);
+    const maxOffsetY = gameH / 2 + (gameH - canvasHeight) / (2 * scale);
+
+    // Clamp offsets within computed bounds on each axis
+    if (this.offsetX < minOffsetX) {
       this.offsetX = minOffsetX;
     } else if (this.offsetX > maxOffsetX) {
       this.offsetX = maxOffsetX;
     }
 
-    if (minOffsetY > maxOffsetY) {
-      this.offsetY = (minOffsetY + maxOffsetY) / 2;
-    } else if (this.offsetY < minOffsetY) {
+    if (this.offsetY < minOffsetY) {
       this.offsetY = minOffsetY;
     } else if (this.offsetY > maxOffsetY) {
       this.offsetY = maxOffsetY;
