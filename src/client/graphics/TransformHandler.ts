@@ -248,13 +248,47 @@ export class TransformHandler {
     // Adjust the offset
     this.offsetX = zoomPointX - (canvasX - this.game.width() / 2) / this.scale;
     this.offsetY = zoomPointY - (canvasY - this.game.height() / 2) / this.scale;
+    this.clampOffsets();
     this.changed = true;
+  }
+
+  private clampOffsets() {
+    const canvasRect = this.boundingRect();
+    const canvasW = canvasRect.width;
+    const canvasH = canvasRect.height;
+    const gameW = this.game.width();
+    const gameH = this.game.height();
+    const s = this.scale;
+
+    // Compute allowed offset range so that screenBoundingRect stays within [0, game] in game coords
+    const minOffsetX = -gameW / 2 + gameW / (2 * s);
+    const maxOffsetX = gameW / 2 - (canvasW - gameW / 2) / s;
+    const minOffsetY = -gameH / 2 + gameH / (2 * s);
+    const maxOffsetY = gameH / 2 - (canvasH - gameH / 2) / s;
+
+    // If viewport (in world units) is larger than map, center by averaging bounds
+    if (minOffsetX > maxOffsetX) {
+      this.offsetX = (minOffsetX + maxOffsetX) / 2;
+    } else if (this.offsetX < minOffsetX) {
+      this.offsetX = minOffsetX;
+    } else if (this.offsetX > maxOffsetX) {
+      this.offsetX = maxOffsetX;
+    }
+
+    if (minOffsetY > maxOffsetY) {
+      this.offsetY = (minOffsetY + maxOffsetY) / 2;
+    } else if (this.offsetY < minOffsetY) {
+      this.offsetY = minOffsetY;
+    } else if (this.offsetY > maxOffsetY) {
+      this.offsetY = maxOffsetY;
+    }
   }
 
   onMove(event: DragEvent) {
     this.clearTarget();
     this.offsetX -= event.deltaX / this.scale;
     this.offsetY -= event.deltaY / this.scale;
+    this.clampOffsets();
     this.changed = true;
   }
 
