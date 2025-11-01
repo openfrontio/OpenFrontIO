@@ -2,11 +2,14 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { TogglePerformanceOverlayEvent } from "../../InputHandler";
+import {
+  TickMetricsEvent,
+  TogglePerformanceOverlayEvent,
+} from "../../InputHandler";
 import { Layer } from "./Layer";
 
-@customElement("fps-display")
-export class FPSDisplay extends LitElement implements Layer {
+@customElement("performance-overlay")
+export class PerformanceOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public eventBus!: EventBus;
 
@@ -21,6 +24,18 @@ export class FPSDisplay extends LitElement implements Layer {
 
   @state()
   private frameTime: number = 0;
+
+  @state()
+  private tickExecutionAvg: number = 0;
+
+  @state()
+  private tickExecutionMax: number = 0;
+
+  @state()
+  private tickDelayAvg: number = 0;
+
+  @state()
+  private tickDelayMax: number = 0;
 
   @state()
   private isVisible: boolean = false;
@@ -38,9 +53,11 @@ export class FPSDisplay extends LitElement implements Layer {
   private lastSecondTime: number = 0;
   private framesThisSecond: number = 0;
   private dragStart: { x: number; y: number } = { x: 0, y: 0 };
+  private tickExecutionTimes: number[] = [];
+  private tickDelayTimes: number[] = [];
 
   static styles = css`
-    .fps-display {
+    .performance-overlay {
       position: fixed;
       top: 20px;
       left: 50%;
@@ -57,25 +74,25 @@ export class FPSDisplay extends LitElement implements Layer {
       transition: none;
     }
 
-    .fps-display.dragging {
+    .performance-overlay.dragging {
       cursor: grabbing;
       transition: none;
       opacity: 0.5;
     }
 
-    .fps-line {
+    .performance-line {
       margin: 2px 0;
     }
 
-    .fps-good {
+    .performance-good {
       color: #4ade80; /* green-400 */
     }
 
-    .fps-warning {
+    .performance-warning {
       color: #fbbf24; /* amber-400 */
     }
 
-    .fps-bad {
+    .performance-bad {
       color: #f87171; /* red-400 */
     }
 
@@ -107,6 +124,9 @@ export class FPSDisplay extends LitElement implements Layer {
   init() {
     this.eventBus.on(TogglePerformanceOverlayEvent, () => {
       this.userSettings.togglePerformanceOverlay();
+    });
+    this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
+      this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
     });
   }
 
@@ -159,7 +179,7 @@ export class FPSDisplay extends LitElement implements Layer {
     document.removeEventListener("mouseup", this.handleMouseUp);
   };
 
-  updateFPS(frameDuration: number) {
+  updateFrameMetrics(frameDuration: number) {
     this.isVisible = this.userSettings.performanceOverlay();
 
     if (!this.isVisible) return;
@@ -216,14 +236,54 @@ export class FPSDisplay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
+    if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
+
+    // Update tick execution duration stats
+    if (tickExecutionDuration !== undefined) {
+      this.tickExecutionTimes.push(tickExecutionDuration);
+      if (this.tickExecutionTimes.length > 60) {
+        this.tickExecutionTimes.shift();
+      }
+
+      if (this.tickExecutionTimes.length > 0) {
+        const avg =
+          this.tickExecutionTimes.reduce((a, b) => a + b, 0) /
+          this.tickExecutionTimes.length;
+        this.tickExecutionAvg = Math.round(avg * 100) / 100;
+        this.tickExecutionMax = Math.round(
+          Math.max(...this.tickExecutionTimes),
+        );
+      }
+    }
+
+    // Update tick delay stats
+    if (tickDelay !== undefined) {
+      this.tickDelayTimes.push(tickDelay);
+      if (this.tickDelayTimes.length > 60) {
+        this.tickDelayTimes.shift();
+      }
+
+      if (this.tickDelayTimes.length > 0) {
+        const avg =
+          this.tickDelayTimes.reduce((a, b) => a + b, 0) /
+          this.tickDelayTimes.length;
+        this.tickDelayAvg = Math.round(avg * 100) / 100;
+        this.tickDelayMax = Math.round(Math.max(...this.tickDelayTimes));
+      }
+    }
+
+    this.requestUpdate();
+  }
+
   shouldTransform(): boolean {
     return false;
   }
 
-  private getFPSColor(fps: number): string {
-    if (fps >= 55) return "fps-good";
-    if (fps >= 30) return "fps-warning";
-    return "fps-bad";
+  private getPerformanceColor(fps: number): string {
+    if (fps >= 55) return "performance-good";
+    if (fps >= 30) return "performance-warning";
+    return "performance-bad";
   }
 
   render() {
@@ -239,28 +299,38 @@ export class FPSDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="fps-display ${this.isDragging ? "dragging" : ""}"
+        class="performance-overlay ${this.isDragging ? "dragging" : ""}"
         style="${style}"
         @mousedown="${this.handleMouseDown}"
       >
         <button class="close-button" @click="${this.handleClose}">×</button>
-        <div class="fps-line">
+        <div class="performance-line">
           FPS:
-          <span class="${this.getFPSColor(this.currentFPS)}"
+          <span class="${this.getPerformanceColor(this.currentFPS)}"
             >${this.currentFPS}</span
           >
         </div>
-        <div class="fps-line">
+        <div class="performance-line">
           Avg (60s):
-          <span class="${this.getFPSColor(this.averageFPS)}"
+          <span class="${this.getPerformanceColor(this.averageFPS)}"
             >${this.averageFPS}</span
           >
         </div>
-        <div class="fps-line">
+        <div class="performance-line">
           Frame:
-          <span class="${this.getFPSColor(1000 / this.frameTime)}"
+          <span class="${this.getPerformanceColor(1000 / this.frameTime)}"
             >${this.frameTime}ms</span
           >
+        </div>
+        <div class="performance-line">
+          Tick Exec:
+          <span>${this.tickExecutionAvg.toFixed(2)}ms</span>
+          (max: <span>${this.tickExecutionMax}ms</span>)
+        </div>
+        <div class="performance-line">
+          Tick Delay:
+          <span>${this.tickDelayAvg.toFixed(2)}ms</span>
+          (max: <span>${this.tickDelayMax}ms</span>)
         </div>
       </div>
     `;

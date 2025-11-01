@@ -115,6 +115,13 @@ export class AutoUpgradeEvent implements GameEvent {
   ) {}
 }
 
+export class TickMetricsEvent implements GameEvent {
+  constructor(
+    public readonly tickExecutionDuration?: number,
+    public readonly tickDelay?: number,
+  ) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;

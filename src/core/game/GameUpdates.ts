@@ -19,6 +19,7 @@ export interface GameUpdateViewData {
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
   playerNameViewData: Record<string, NameViewData>;
+  tickExecutionDuration?: number;
 }
 
 export interface ErrorUpdate {
