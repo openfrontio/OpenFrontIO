@@ -407,6 +407,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         this.game.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
+    // Calculate trade ship gold if applicable
+    let tradeShipGold: bigint | null = null;
+    if (unit.type() === UnitType.TradeShip) {
+      tradeShipGold = this.calculateTradeShipGold(unit);
+    }
+
     return html`
       <div class="p-2">
         <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
@@ -422,9 +428,72 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 </div>
               `
             : ""}
+          ${unit.type() === UnitType.TradeShip && tradeShipGold !== null
+            ? html`
+                <div class="flex gap-2 text-sm opacity-80 mt-1" translate="no">
+                  <img
+                    src=${goldCoinIcon}
+                    alt=${translateText("player_info_overlay.gold")}
+                    width="15"
+                    height="15"
+                    style="vertical-align: middle;"
+                  />
+                  <span class="text-yellow-400 font-bold">
+                    ${renderNumber(tradeShipGold)}
+                  </span>
+                  <span class="text-xs opacity-60 ml-auto">(estimate)</span>
+                </div>
+              `
+            : ""}
+          ${unit.type() === UnitType.TransportShip && unit.troops() > 0
+            ? html`
+                <div class="flex gap-2 text-sm opacity-80 mt-1" translate="no">
+                  ${translateText("player_info_overlay.troops")}:
+                  <span class="ml-auto mr-0 font-bold">
+                    ${renderTroops(unit.troops())}
+                  </span>
+                </div>
+              `
+            : ""}
         </div>
       </div>
     `;
+  }
+
+  private calculateTradeShipGold(unit: UnitView): bigint | null {
+    const targetUnitId = unit.targetUnitId();
+    if (!targetUnitId) {
+      return null;
+    }
+
+    const dstPort = this.game.unit(targetUnitId);
+    if (!dstPort || dstPort.type() !== UnitType.Port) {
+      return null;
+    }
+
+    // Find source port - closest port owned by the ship's owner
+    const owner = unit.owner();
+    const ports = owner.units(UnitType.Port);
+    if (ports.length === 0) {
+      return null;
+    }
+
+    // Find closest port to destination (likely the source)
+    let srcPort = ports[0];
+    let minDist = this.game.manhattanDist(srcPort.tile(), dstPort.tile());
+    for (const port of ports) {
+      const dist = this.game.manhattanDist(port.tile(), dstPort.tile());
+      if (dist < minDist) {
+        minDist = dist;
+        srcPort = port;
+      }
+    }
+
+    // Use manhattan distance as estimate (pathfinding is too expensive)
+    const distance = this.game.manhattanDist(srcPort.tile(), dstPort.tile());
+    const numPorts = owner.totalUnitLevels(UnitType.Port);
+
+    return this.game.config().tradeShipGold(distance, numPorts);
   }
 
   render() {
