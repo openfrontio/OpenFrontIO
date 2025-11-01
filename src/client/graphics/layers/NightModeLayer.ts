@@ -7,7 +7,7 @@ export class NightModeLayer implements Layer {
   private darkenColor: [number, number, number] = [0, 0, 0];
   private darkenAlpha: number = 0.8; // separated from darkenColor for more readable code
 
-  //private flashlightRadius: number = 125; // in-game tiles
+  private flashlightRadius: number = 50; // in-game tiles
 
   private userSettingsInstance = new UserSettings();
 
@@ -32,42 +32,51 @@ export class NightModeLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D): void {
-    if (!this.userSettingsInstance.nightMode()) {
-      return;
-    } // end function early
-    //context = html canvas
+    if (!this.userSettingsInstance.nightMode()) return;
 
-    context.fillStyle = `rgba(${this.darkenColor[0]}, ${this.darkenColor[1]}, ${this.darkenColor[2]}, ${this.darkenAlpha})`;
-    context.fillRect(
-      0,
-      0,
-      this.transformHandler.width(),
-      this.transformHandler.boundingRect().height,
-    );
-
+    const width = this.transformHandler.width();
+    const height = this.transformHandler.boundingRect().height;
     const cellSize = this.transformHandler.scale;
 
-    for (
-      let y = 0;
-      y < this.transformHandler.boundingRect().height;
-      y += cellSize
-    ) {
-      for (let x = 0; x < this.transformHandler.width(); x += cellSize) {
+    // Fill the entire screen with dark
+    context.fillStyle = `rgba(${this.darkenColor[0]}, ${this.darkenColor[1]}, ${this.darkenColor[2]}, ${this.darkenAlpha})`;
+    context.fillRect(0, 0, width, height);
+
+    const startX =
+      Math.floor(
+        Math.max(this.mouseX - this.flashlightRadius * cellSize, 0) / cellSize,
+      ) * cellSize;
+    const endX =
+      Math.ceil(
+        Math.min(this.mouseX + this.flashlightRadius * cellSize, width) /
+          cellSize,
+      ) * cellSize;
+
+    const startY =
+      Math.floor(
+        Math.max(this.mouseY - this.flashlightRadius * cellSize, 0) / cellSize,
+      ) * cellSize;
+    const endY =
+      Math.ceil(
+        Math.min(this.mouseY + this.flashlightRadius * cellSize, height) /
+          cellSize,
+      ) * cellSize;
+
+    for (let y = startY; y < endY; y += cellSize) {
+      for (let x = startX; x < endX; x += cellSize) {
+        // distance from mouse in tile units
         const dist = Math.hypot(
-          Math.abs(this.mouseX - x) / cellSize,
-          Math.abs(this.mouseY - y) / cellSize,
+          (this.mouseX - (x + cellSize / 2)) / cellSize,
+          (this.mouseY - (y + cellSize / 2)) / cellSize,
         );
 
-        const final = context.getImageData(x, y, cellSize, cellSize).data;
+        // Determine brightness factor (adjust 3 for flashlight size)
+        const brightness = Math.max(0, 1 - dist / this.flashlightRadius);
 
-        const originalPixel = [
-          final[0] + (final[0] / (1 - this.darkenAlpha) - final[0]) * dist,
-          final[1] + (final[1] / (1 - this.darkenAlpha) - final[1]) * dist,
-          final[2] + (final[2] / (1 - this.darkenAlpha) - final[2]) * dist,
-        ];
-
-        context.fillStyle = `rgba(${originalPixel[0]}, ${originalPixel[1]}, ${originalPixel[2]}, 1)`;
-        context.fillRect(x, y, cellSize, cellSize);
+        if (brightness > 0) {
+          context.fillStyle = `rgba(200,200,130,${(this.darkenAlpha / 2) * brightness})`;
+          context.fillRect(x, y, cellSize, cellSize);
+        }
       }
     }
   }
