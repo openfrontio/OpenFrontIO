@@ -1,6 +1,5 @@
 import {
   AllianceRequest,
-  Cell,
   Difficulty,
   Game,
   Player,
@@ -10,7 +9,11 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
-import { calculateBoundingBoxCenter, flattenedEmojiTable } from "../../Util";
+import {
+  boundingBoxCenter,
+  calculateBoundingBoxCenter,
+  flattenedEmojiTable,
+} from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
@@ -269,6 +272,13 @@ export class BotBehavior {
     return this.enemySanityCheck();
   }
 
+  getPlayerCenter(player: Player) {
+    if (player.largestClusterBoundingBox) {
+      return boundingBoxCenter(player.largestClusterBoundingBox);
+    }
+    return calculateBoundingBoxCenter(this.game, player.borderTiles());
+  }
+
   selectNearestIslandEnemy() {
     const myBorder = this.player.borderTiles();
     if (myBorder.size === 0) return;
@@ -283,20 +293,11 @@ export class BotBehavior {
     });
 
     if (filteredPlayers.length > 0) {
-      // Prefer the player's precomputed largestClusterBoundingBox center if available
-      const playerCenter = this.player.largestClusterBoundingBox
-        ? this.boundingBoxCenter(this.player.largestClusterBoundingBox)
-        : calculateBoundingBoxCenter(this.game, myBorder);
+      const playerCenter = this.getPlayerCenter(this.player);
 
       const sortedPlayers = filteredPlayers
         .map((filteredPlayer) => {
-          // Prefer filtered player's precomputed largestClusterBoundingBox center if available
-          const filteredPlayerCenter = filteredPlayer.largestClusterBoundingBox
-            ? this.boundingBoxCenter(filteredPlayer.largestClusterBoundingBox)
-            : calculateBoundingBoxCenter(
-                this.game,
-                filteredPlayer.borderTiles(),
-              );
+          const filteredPlayerCenter = this.getPlayerCenter(filteredPlayer);
 
           const playerCenterTile = this.game.ref(
             playerCenter.x,
@@ -327,14 +328,6 @@ export class BotBehavior {
         this.setNewEnemy(selectedEnemy);
       }
     }
-  }
-
-  // Compute the integer center cell of a bounding box { min: Cell, max: Cell }
-  private boundingBoxCenter(box: { min: Cell; max: Cell }): Cell {
-    return new Cell(
-      box.min.x + Math.floor((box.max.x - box.min.x) / 2),
-      box.min.y + Math.floor((box.max.y - box.min.y) / 2),
-    );
   }
 
   selectRandomEnemy(): Player | TerraNullius | null {
