@@ -59,6 +59,8 @@ export class Executor {
           player,
           intent.targetID,
           null,
+          true,
+          intent.dst,
         );
       }
       case "cancel_attack":

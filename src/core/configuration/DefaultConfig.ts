@@ -796,6 +796,34 @@ export class DefaultConfig implements Config {
     }
   }
 
+  attackDirectionWeight(): number {
+    return 2.5;
+  }
+
+  attackTimeDecay(): number {
+    return 20.0;
+  }
+
+  attackMagnitudeWeight(): number {
+    return 0.75;
+  }
+
+  attackDistanceDecayConstant(): number {
+    return 25.0;
+  }
+
+  attackBFSMaxRadius(): number {
+    return 200.0;
+  }
+
+  attackBFSDownsampleFactor(): number {
+    return 10;
+  }
+
+  debugDirectedAttacks(): boolean {
+    return false;
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
