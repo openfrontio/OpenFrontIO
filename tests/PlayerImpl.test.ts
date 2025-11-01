@@ -1,3 +1,4 @@
+import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import {
   Game,
   Player,
@@ -22,6 +23,11 @@ describe("PlayerImpl", () => {
         new PlayerInfo("player", PlayerType.Human, null, "player_id"),
         new PlayerInfo("other", PlayerType.Human, null, "other_id"),
       ],
+    );
+
+    game.addExecution(
+      new SpawnExecution(game.player("player_id").info(), game.ref(0, 0)),
+      new SpawnExecution(game.player("other_id").info(), game.ref(20, 20)),
     );
 
     while (game.inSpawnPhase()) {
