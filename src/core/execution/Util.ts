@@ -1,3 +1,4 @@
+import { Game, Player } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
 
 export function getSpawnTiles(gm: GameMap, tile: TileRef): TileRef[] {
@@ -70,4 +71,62 @@ export function closestTwoTiles(
   }
 
   return result;
+}
+
+/**
+ * Calculates the center of a player's territory using geometric approach.
+ * Uses the bounding box center and verifies ownership, falling back to nearest border tile if necessary.
+ *
+ * @param game - The game instance
+ * @param target - The player whose territory center to calculate
+ * @returns The tile reference for the territory center, or null if no valid center found
+ */
+export function calculateTerritoryCenter(
+  game: Game,
+  target: Player,
+): TileRef | null {
+  const borderTiles = target.borderTiles();
+  if (borderTiles.size === 0) return null;
+
+  // Calculate bounding box center in a single pass through border tiles
+  let minX = Infinity,
+    maxX = -Infinity;
+  let minY = Infinity,
+    maxY = -Infinity;
+
+  for (const tile of borderTiles) {
+    const x = game.x(tile);
+    const y = game.y(tile);
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+
+  const centerX = Math.floor((minX + maxX) / 2);
+  const centerY = Math.floor((minY + maxY) / 2);
+
+  const centerTile = game.ref(centerX, centerY);
+
+  // Verify ownership of the center tile
+  if (game.owner(centerTile) === target) {
+    return centerTile;
+  }
+
+  // Fall back to nearest border tile if center is not owned
+  let closestTile: TileRef | null = null;
+  let closestDistanceSquared = Infinity;
+
+  for (const tile of borderTiles) {
+    const dx = game.x(tile) - centerX;
+    const dy = game.y(tile) - centerY;
+    const distSquared = dx * dx + dy * dy;
+
+    if (distSquared < closestDistanceSquared) {
+      closestDistanceSquared = distSquared;
+      closestTile = tile;
+    }
+  }
+
+  return closestTile;
 }
