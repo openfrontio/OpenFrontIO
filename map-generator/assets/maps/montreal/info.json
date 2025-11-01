@@ -29,49 +29,49 @@
       "coordinates": [1400, 1000],
       "flag": "quebec",
       "name": "Saint-Lambert",
-      "strength": 2
+      "strength": 1
     },
     {
       "coordinates": [500, 130],
       "flag": "quebec",
       "name": "Blainville",
-      "strength": 2
+      "strength": 1
     },
     {
       "coordinates": [350, 650],
       "flag": "quebec",
       "name": "Saint-Eustache",
-      "strength": 2
+      "strength": 1
     },
     {
       "coordinates": [200, 1350],
       "flag": "quebec",
       "name": "Perrot Island",
-      "strength": 2
+      "strength": 1
     },
     {
       "coordinates": [25, 950],
       "flag": "quebec",
       "name": "Kanesatake Lands",
-      "strength": 3
+      "strength": 1
     },
     {
       "coordinates": [50, 450],
       "flag": "quebec",
       "name": "Mirabel",
-      "strength": 2
+      "strength": 1
     },
     {
       "coordinates": [650, 1450],
       "flag": "quebec",
       "name": "Chateauguay",
-      "strength": 2
+      "strength": 1
     },
     {
       "coordinates": [1330, 300],
       "flag": "quebec",
       "name": "Pointe-aux-Trembles",
-      "strength": 2
+      "strength": 1
     }
   ]
 }
