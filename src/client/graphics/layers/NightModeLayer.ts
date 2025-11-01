@@ -14,8 +14,9 @@ export class NightModeLayer implements Layer {
   private mouseX: number = 0;
   private mouseY: number = 0;
   private handleMouseMove(event: MouseEvent) {
-    this.mouseX = event.clientX;
-    this.mouseY = event.clientY;
+    const rect = this.transformHandler.boundingRect();
+    this.mouseX = event.clientX - rect.left;
+    this.mouseY = event.clientY - rect.top;
   }
 
   init(): void {}
