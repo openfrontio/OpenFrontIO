@@ -60,6 +60,7 @@ export class UILayer implements Layer {
   private lastTrajectoryUpdate: number = 0;
   private lastTargetTile: TileRef | null = null;
   private currentGhostStructure: UnitType | null = null;
+  private cachedSpawnTile: TileRef | null = null; // Cache spawn tile to avoid expensive player.actions() calls
 
   constructor(
     private game: GameView,
@@ -108,6 +109,7 @@ export class UILayer implements Layer {
       ) {
         this.trajectoryPoints = [];
         this.lastTargetTile = null;
+        this.cachedSpawnTile = null;
       }
     });
     this.redraw();
@@ -121,6 +123,8 @@ export class UILayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    // Update trajectory path each frame for smooth responsiveness
+    this.updateTrajectoryPath();
     this.drawTrajectoryPreview(context);
   }
 
@@ -422,7 +426,8 @@ export class UILayer implements Layer {
   }
 
   /**
-   * Update trajectory preview based on current mouse position and ghost structure
+   * Update trajectory preview - called from tick() to cache spawn tile via expensive player.actions() call
+   * This only runs when target tile changes, minimizing worker thread communication
    */
   private updateTrajectoryPreview() {
     const ghostStructure = this.currentGhostStructure;
@@ -432,6 +437,7 @@ export class UILayer implements Layer {
 
     // Clear trajectory if not a nuke type
     if (!isNukeType) {
+      this.cachedSpawnTile = null;
       return;
     }
 
@@ -446,6 +452,93 @@ export class UILayer implements Layer {
     if (!player) {
       this.trajectoryPoints = [];
       this.lastTargetTile = null;
+      this.cachedSpawnTile = null;
+      return;
+    }
+
+    // Convert mouse position to world coordinates
+    const rect = this.transformHandler.boundingRect();
+    if (!rect) {
+      this.trajectoryPoints = [];
+      this.cachedSpawnTile = null;
+      return;
+    }
+
+    const localX = this.mousePos.x - rect.left;
+    const localY = this.mousePos.y - rect.top;
+    const worldCoords = this.transformHandler.screenToWorldCoordinates(
+      localX,
+      localY,
+    );
+
+    if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+      this.trajectoryPoints = [];
+      this.lastTargetTile = null;
+      this.cachedSpawnTile = null;
+      return;
+    }
+
+    const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
+
+    // Only recalculate if target tile changed
+    if (this.lastTargetTile === targetTile) {
+      return;
+    }
+
+    this.lastTargetTile = targetTile;
+
+    // Get buildable units to find spawn tile (expensive call - only on tick when tile changes)
+    player
+      .actions(targetTile)
+      .then((actions) => {
+        // Ignore stale results if target changed
+        if (this.lastTargetTile !== targetTile) {
+          return;
+        }
+
+        const buildableUnit = actions.buildableUnits.find(
+          (bu) => bu.type === ghostStructure,
+        );
+
+        if (!buildableUnit || buildableUnit.canBuild === false) {
+          this.cachedSpawnTile = null;
+          return;
+        }
+
+        const spawnTile = buildableUnit.canBuild;
+        if (!spawnTile) {
+          this.cachedSpawnTile = null;
+          return;
+        }
+
+        // Cache the spawn tile for use in updateTrajectoryPath()
+        this.cachedSpawnTile = spawnTile;
+      })
+      .catch(() => {
+        // Handle errors silently
+        this.cachedSpawnTile = null;
+      });
+  }
+
+  /**
+   * Update trajectory path - called from renderLayer() each frame for smooth visual feedback
+   * Uses cached spawn tile to avoid expensive player.actions() calls
+   */
+  private updateTrajectoryPath() {
+    const ghostStructure = this.currentGhostStructure;
+    const isNukeType =
+      ghostStructure === UnitType.AtomBomb ||
+      ghostStructure === UnitType.HydrogenBomb;
+
+    // Clear trajectory if not a nuke type or no cached spawn tile
+    if (!isNukeType || !this.cachedSpawnTile) {
+      this.trajectoryPoints = [];
+      return;
+    }
+
+    const player = this.game.myPlayer();
+    if (!player) {
+      this.trajectoryPoints = [];
       return;
     }
 
@@ -465,61 +558,24 @@ export class UILayer implements Layer {
 
     if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
       this.trajectoryPoints = [];
-      this.lastTargetTile = null;
       return;
     }
 
     const targetTile = this.game.ref(worldCoords.x, worldCoords.y);
 
-    // Only recalculate if target tile changed or ghost structure changed
-    if (this.lastTargetTile === targetTile) {
-      return;
-    }
+    // Calculate trajectory using ParabolaPathFinder with cached spawn tile
+    const pathFinder = new ParabolaPathFinder(this.game);
+    const speed = this.game.config().defaultNukeSpeed();
+    const distanceBasedHeight = true; // AtomBomb/HydrogenBomb use distance-based height
 
-    this.lastTargetTile = targetTile;
+    pathFinder.computeControlPoints(
+      this.cachedSpawnTile,
+      targetTile,
+      speed,
+      distanceBasedHeight,
+    );
 
-    // Get buildable units to find spawn tile
-    player
-      .actions(targetTile)
-      .then((actions) => {
-        // Ignore stale results if target changed
-        if (this.lastTargetTile !== targetTile) {
-          return;
-        }
-
-        const buildableUnit = actions.buildableUnits.find(
-          (bu) => bu.type === ghostStructure,
-        );
-
-        if (!buildableUnit || buildableUnit.canBuild === false) {
-          this.trajectoryPoints = [];
-          return;
-        }
-
-        const spawnTile = buildableUnit.canBuild;
-        if (!spawnTile) {
-          this.trajectoryPoints = [];
-          return;
-        }
-
-        // Calculate trajectory using ParabolaPathFinder
-        const pathFinder = new ParabolaPathFinder(this.game);
-        const speed = this.game.config().defaultNukeSpeed();
-        const distanceBasedHeight = true; // AtomBomb/HydrogenBomb use distance-based height
-
-        pathFinder.computeControlPoints(
-          spawnTile,
-          targetTile,
-          speed,
-          distanceBasedHeight,
-        );
-
-        this.trajectoryPoints = pathFinder.allTiles();
-      })
-      .catch(() => {
-        // Handle errors silently
-        this.trajectoryPoints = [];
-      });
+    this.trajectoryPoints = pathFinder.allTiles();
   }
 
   /**
