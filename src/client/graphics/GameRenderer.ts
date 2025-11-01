@@ -23,6 +23,7 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { NightModeLayer } from "./layers/NightModeLayer";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -239,6 +240,7 @@ export function createRenderer(
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
+    new NightModeLayer(game, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),

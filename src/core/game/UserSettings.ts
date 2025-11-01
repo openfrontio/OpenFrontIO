@@ -65,6 +65,10 @@ export class UserSettings {
     return this.get("settings.darkMode", false);
   }
 
+  nightMode() {
+    return this.get("settings.nightMode", false);
+  }
+
   leftClickOpensMenu() {
     return this.get("settings.leftClickOpensMenu", false);
   }
@@ -125,6 +129,15 @@ export class UserSettings {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
+    }
+  }
+
+  toggleNightMode() {
+    this.set("settings.nightMode", !this.nightMode());
+    if (this.nightMode()) {
+      document.documentElement.classList.add("night");
+    } else {
+      document.documentElement.classList.remove("night");
     }
   }
 
