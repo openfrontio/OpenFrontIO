@@ -7,6 +7,7 @@
   },
   "common": {
     "close": "Close",
+    "all": "All",
     "available": "Available",
     "preset_max": "Max",
     "summary_send": "Send",
@@ -17,7 +18,28 @@
     "cap_tooltip": "Recipient’s remaining capacity",
     "target_dead": "Target eliminated",
     "target_dead_note": "You can't send resources to an eliminated player.",
-    "none": "None"
+    "none": "None",
+    "search": "Search...",
+    "expand_panel": "Expand",
+    "collapse_panel": "Collapse",
+    "untitled": "Untitled",
+    "on": "On",
+    "off": "Off",
+    "name": "Name",
+    "copied": "Copied",
+    "no_results": "No maps found"
+  },
+  "game_options": {
+    "advanced_options": "Advanced Options",
+    "rules": "Rules",
+    "units_and_buildings": "Units & Buildings",
+    "donate_gold": "Donate gold",
+    "donate_troops": "Donate troops",
+    "disable_nations": "Disable Nations",
+    "instant_build": "Instant build",
+    "infinite_gold": "Infinite gold",
+    "infinite_troops": "Infinite troops",
+    "compact_map": "Mini Map"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -133,6 +155,10 @@
     "info_enemy_panel": "Enemy info panel",
     "exit_confirmation": "Are you sure you want to exit the game?"
   },
+  "settings_summary": {
+    "mode": "Mode",
+    "bots": "Bots: "
+  },
   "single_modal": {
     "title": "Single Player",
     "allow_alliances": "Allow alliances",
@@ -149,7 +175,11 @@
     "disable_nukes": "Disable Nukes",
     "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
-    "start": "Start Game"
+    "start": "Start Game",
+    "presets": "Presets",
+    "reset": "Reset",
+    "select_placeholder": "Select preset...",
+    "preset_name": "Preset name"
   },
   "token_login_modal": {
     "title": "Logging in...",
@@ -197,6 +227,7 @@
     "pluto": "Pluto",
     "montreal": "Montreal",
     "achiran": "Achiran",
+    "browser": "Map Browser",
     "baikalnukewars": "Baikal (Nuke Wars)"
   },
   "map_categories": {
@@ -205,7 +236,8 @@
     "fantasy": "Other"
   },
   "map_component": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "error": "Error"
   },
   "private_lobby": {
     "title": "Join Private Lobby",
@@ -222,9 +254,9 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "Duos (teams of 2)",
-    "teams_Trios": "Trios (teams of 3)",
-    "teams_Quads": "Quads (teams of 4)",
+    "teams_Duos": "Duos",
+    "teams_Trios": "Trios",
+    "teams_Quads": "Quads",
     "teams_hvn": "Humans Vs Nations",
     "teams": "{num} teams"
   },
@@ -248,9 +280,9 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "max_timer": "Game length (minutes)",
     "nations": "Nations: ",
     "disable_nations": "Disable Nations",
-    "max_timer": "Game length (minutes)",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "donate_gold": "Donate gold",
@@ -262,6 +294,10 @@
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
+    "generating": "Generating...",
+    "hide_id": "Hide ID",
+    "show_id": "Show ID",
+    "copy_invite": "Copy invite",
     "start": "Start Game",
     "host_badge": "Host"
   },
@@ -290,6 +326,15 @@
   "game_mode": {
     "ffa": "Free for All",
     "teams": "Teams"
+  },
+  "presets": {
+    "error_no_name": "Please enter a preset name.",
+    "error_limit_reached": "You can only save up to {limit} presets. Delete one to add another.",
+    "error_missing_settings": "Preset manager is missing getSettings()",
+    "save": "Save Preset",
+    "update": "Update Preset",
+    "delete": "Delete Preset",
+    "select_placeholder": "Select preset..."
   },
   "select_lang": {
     "title": "Select Language"
