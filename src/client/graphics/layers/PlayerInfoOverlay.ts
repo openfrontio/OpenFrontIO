@@ -441,7 +441,9 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   <span class="text-yellow-400 font-bold">
                     ${renderNumber(tradeShipGold)}
                   </span>
-                  <span class="text-xs opacity-60 ml-auto">(estimate)</span>
+                  <span class="text-xs opacity-60 ml-auto"
+                    >${translateText("player_info_overlay.estimate")}</span
+                  >
                 </div>
               `
             : ""}

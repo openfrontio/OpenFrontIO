@@ -548,7 +548,8 @@
     "warships": "Warships",
     "health": "Health",
     "attitude": "Attitude",
-    "levels": "Levels"
+    "levels": "Levels",
+    "estimate": "(estimate)"
   },
   "events_display": {
     "retreating": "retreating",
