@@ -32,13 +32,13 @@ Stops the current music track.
 
 ##### setBackgroundMusicVolume()
 
-Takes a `volume: number` parameter.
+Takes `volume: number`.
 
 Sets the music volume to `volume`
 
 ##### loadSoundEffect()
 
-Takes `name: SoundEffect` `src: string`
+Takes `name: SoundEffect`, `src: string`.
 
 Loads or changes the src of a Howl sound effect.
 
@@ -52,13 +52,13 @@ Plays `name`.
 
 Takes `volume: number`
 
-Sets SFX folume to volume
+Sets SFX volume to `volume`.
 
 ##### stopSoundEffect()
 
 Takes `name: SoundEffect`
 
-Stops name.
+Stops `name`.
 
 ##### unloadSoundEffect()
 
@@ -87,7 +87,7 @@ The default replay speed multiplier
 
 #### const unitOptions
 
-array of object containing unit types and their translation keys
+Array of objects containing unit types and their translation keys.
 
 #### function renderUnitTypeOptions()
 

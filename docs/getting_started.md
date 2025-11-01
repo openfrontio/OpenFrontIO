@@ -25,7 +25,7 @@ If you would like to make a change, especially a larger one (like a new feature,
 
 The first step to becoming active in the community as a contributor is to request to join the development discord over at [https://discord.gg/K9zernJB5z]. It usually takes up to a few days to get accepted.
 
-In the meantime while waiting, you can open an issue on the issues page. Make sure to fill it out throughly. You can then ask to be assigned in the comments of the issue.
+In the meantime while waiting, you can open an issue on the issues page. Make sure to fill it out thoroughly. You can then ask to be assigned in the comments of the issue.
 
 Once you know what kind of changes you would like to make, you can move on to the next section.
 
@@ -146,4 +146,4 @@ Hopefully, afterwards, your change will be accepted, merged into main, and then 
 ## Next steps
 
 - To learn more about our contribution guidelines, check out [the contribution page](contribute.md)
-- To learn more about the structure of the codebase, go to [the developemenet reference](develop.md)
+- To learn more about the structure of the codebase, go to [the development reference](develop.md)
