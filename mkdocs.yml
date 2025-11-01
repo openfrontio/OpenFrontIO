@@ -1,0 +1,12 @@
+site_name: OpenFront docs
+nav:
+- Home: index.md
+- API reference: API.md
+- Getting Started: getting_started.md
+- Contributing: contribute.md
+- Development reference: develop.md
+- Client reference: client.md
+- Server reference: server.md
+- Core reference: core.md
+
+theme: readthedocs
