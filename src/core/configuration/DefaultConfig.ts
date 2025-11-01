@@ -913,6 +913,23 @@ export class DefaultConfig implements Config {
     return 70;
   }
 
+  samRange(level: number | "MAX"): number {
+    // i.e. when a SAM has level >= 5, it outranges hydros
+    const maxRangeLevel = 5;
+    const numericLevel = level === "MAX" ? maxRangeLevel : Math.max(1, level);
+
+    const safetyMargin = 10;
+
+    const baseRange = this.defaultSamRange();
+    const hydroRange = this.nukeMagnitudes(UnitType.HydrogenBomb).outer;
+
+    const step = Math.ceil(
+      (hydroRange + safetyMargin - baseRange) / Math.max(1, maxRangeLevel - 1),
+    );
+
+    return baseRange + step * (Math.min(numericLevel, maxRangeLevel) - 1);
+  }
+
   defaultSamMissileSpeed(): number {
     return 12;
   }

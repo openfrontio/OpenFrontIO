@@ -163,7 +163,7 @@ export class SAMRadiusLayer implements Layer {
       return {
         x: this.game.x(tile),
         y: this.game.y(tile),
-        r: this.game.config().defaultSamRange(),
+        r: this.game.config().samRange(sam.level()),
         owner: sam.owner().smallID(),
       };
     });
