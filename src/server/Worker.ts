@@ -148,11 +148,12 @@ export async function startWorker() {
 
     // Pass creatorClientID to createGame
     const game = gm.createGame(id, gc, creatorClientID);
+    const hostToken = { hostToken: game.createHostToken() };
 
     log.info(
       `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
     );
-    res.json(game.gameInfo());
+    res.json({ ...game.gameInfo(), ...hostToken });
   });
 
   // Add other endpoints from your original server
@@ -168,6 +169,13 @@ export async function startWorker() {
       log.info(
         `cannot start public game ${game.id}, game is public, ip: ${ipAnonymize(clientIP)}`,
       );
+      return;
+    }
+    const hostToken = req.body.hostToken ?? "";
+
+    if (hostToken !== game.getHostToken()) {
+      log.info(`cannot start private game ${game.id}, requestor is not host`);
+      res.status(403).json({ success: false });
       return;
     }
     game.start();

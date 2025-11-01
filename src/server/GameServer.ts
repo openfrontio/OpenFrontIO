@@ -1,4 +1,5 @@
 import ipAnonymize from "ip-anonymize";
+import { randomBytes } from "node:crypto";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
@@ -32,6 +33,7 @@ export enum GamePhase {
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
+  private hostToken: string | null = null;
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -126,6 +128,17 @@ export class GameServer {
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
+  }
+
+  public createHostToken(): string | null {
+    //algorithm is not cryptographically secure
+    const tokenLength = 16;
+    this.hostToken = randomBytes(tokenLength).toString("hex");
+    return this.getHostToken();
+  }
+
+  public getHostToken(): string | null {
+    return this.hostToken ?? null;
   }
 
   public addClient(client: Client, lastTurn: number) {
