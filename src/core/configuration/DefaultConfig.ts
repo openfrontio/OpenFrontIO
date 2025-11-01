@@ -46,7 +46,9 @@ const JwksSchema = z.object({
     .min(1),
 });
 
-const numPlayersConfig = {
+// Map capacity configuration: [large, medium, small] player counts
+// Used by both lobby creation and ranked matchmaking
+export const numPlayersConfig = {
   [GameMapType.Africa]: [100, 70, 50],
   [GameMapType.Asia]: [50, 40, 30],
   [GameMapType.Australia]: [70, 40, 30],

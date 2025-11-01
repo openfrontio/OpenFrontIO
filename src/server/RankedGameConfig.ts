@@ -11,7 +11,7 @@ export interface RankedMatchConfig {
   queueType: "ranked" | "unranked";
   gameMode: "ffa" | "team";
   playerCount: number;
-  teamConfig?: unknown;
+  teamConfig?: TeamCountConfig;
 }
 
 /**
@@ -51,7 +51,7 @@ export function buildRankedGameConfig(
     disabledUnits: [],
 
     // Team configuration
-    playerTeams: matchConfig.teamConfig as TeamCountConfig | undefined,
+    playerTeams: matchConfig.teamConfig,
   };
 }
 

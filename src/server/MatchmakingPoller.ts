@@ -1,5 +1,6 @@
 import { Logger } from "winston";
 import { ServerConfig } from "../core/configuration/Config";
+import { TeamCountConfig } from "../core/Schemas";
 import { generateID, simpleHash } from "../core/Util";
 
 export interface MatchAssignment {
@@ -8,7 +9,7 @@ export interface MatchAssignment {
     queueType: "ranked" | "unranked";
     gameMode: "ffa" | "team";
     playerCount: number;
-    teamConfig?: unknown; // TODO: define team config
+    teamConfig?: TeamCountConfig;
   };
 }
 
@@ -79,7 +80,7 @@ export class MatchmakingPoller {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-API-Key": process.env.GAME_SERVER_API_KEY ?? "",
+              "X-API-Key": process.env.API_KEY ?? "",
             },
             body: JSON.stringify({
               id: workerId,

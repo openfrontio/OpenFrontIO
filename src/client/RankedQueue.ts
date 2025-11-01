@@ -279,15 +279,29 @@ export class RankedQueue extends LitElement {
     // Connect WebSocket if not connected
     await this.connectWebSocket();
 
-    // Send join queue message
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(
-        JSON.stringify({
-          type: "join_queue",
-          queueType: this.queueType,
-          gameMode: this.gameMode,
-        }),
-      );
+    // Function to send join queue message
+    const sendJoinMessage = () => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(
+          JSON.stringify({
+            type: "join_queue",
+            queueType: this.queueType,
+            gameMode: this.gameMode,
+          }),
+        );
+      }
+    };
+
+    // Send join queue message immediately if connected, or wait for connection
+    if (this.ws) {
+      if (this.ws.readyState === WebSocket.OPEN) {
+        sendJoinMessage();
+      } else if (this.ws.readyState === WebSocket.CONNECTING) {
+        // Wait for connection to open before sending join message
+        this.ws.addEventListener("open", () => sendJoinMessage(), {
+          once: true,
+        });
+      }
     }
   }
 
