@@ -6,6 +6,9 @@ export interface Stats {
   getPlayerStats(player: Player): PlayerStats | null;
   stats(): AllPlayersStats;
 
+  // Update max tiles tracking for a player (called when tile ownership changes)
+  updateMaxTiles(player: Player): void;
+
   // Player attacks target
   attack(
     player: Player,
