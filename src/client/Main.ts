@@ -106,6 +106,11 @@ class Client {
 
   private gutterAds: GutterAds;
 
+  // Night Mode properties
+  private nightModeEnabled: boolean = false;
+  private nightModeOverlay: HTMLDivElement | null = null;
+  private nightModeCursor: HTMLDivElement | null = null;
+
   constructor() {}
 
   initialize(): void {
@@ -346,6 +351,9 @@ class Client {
       document.documentElement.classList.remove("dark");
     }
 
+    // Initialize Night Mode
+    this.initializeNightMode();
+
     // Attempt to join lobby
     this.handleHash();
 
@@ -382,6 +390,169 @@ class Client {
       });
 
     this.initializeFuseTag();
+  }
+
+  // Night Mode Implementation
+  private initializeNightMode(): void {
+    // Inject Night Mode styles
+    const styleId = "night-mode-styles";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+        #night-mode-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          pointer-events: none;
+          z-index: 9999;
+          background: radial-gradient(
+            circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+            transparent 0%,
+            transparent 80px,
+            rgba(0, 0, 0, 0.92) 150px
+          );
+          display: none;
+        }
+
+        body.night-mode-active #night-mode-overlay {
+          display: block;
+        }
+
+        body.night-mode-active {
+          cursor: none;
+        }
+
+        #night-mode-cursor {
+          position: fixed;
+          width: 8px;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.6);
+          border: 2px solid white;
+          border-radius: 50%;
+          pointer-events: none;
+          z-index: 10000;
+          transform: translate(-50%, -50%);
+          box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+          display: none;
+        }
+
+        body.night-mode-active #night-mode-cursor {
+          display: block;
+        }
+
+        .night-mode-toggle-btn {
+          background: rgba(0, 0, 0, 0.2);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          padding: 8px 12px;
+          cursor: pointer;
+          font-size: 20px;
+          transition: all 0.3s;
+          margin-left: 10px;
+        }
+
+        .night-mode-toggle-btn:hover {
+          background: rgba(0, 0, 0, 0.4);
+          transform: scale(1.1);
+        }
+
+        .night-mode-toggle-btn.active {
+          background: rgba(255, 215, 0, 0.3);
+          border-color: gold;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Create Night Mode toggle button
+    const nightModeButton = document.createElement("button");
+    nightModeButton.className = "night-mode-toggle-btn";
+    nightModeButton.innerHTML = "🌙";
+    nightModeButton.title = "Toggle Night Mode / Flashlight Mode";
+    nightModeButton.addEventListener("click", () => this.toggleNightMode());
+
+    // Add button next to settings button or dark mode button
+    const settingsButton = document.getElementById("settings-button");
+    if (settingsButton && settingsButton.parentElement) {
+      settingsButton.parentElement.insertBefore(
+        nightModeButton,
+        settingsButton.nextSibling
+      );
+    }
+
+    // Create overlay
+    this.nightModeOverlay = document.createElement("div");
+    this.nightModeOverlay.id = "night-mode-overlay";
+    document.body.appendChild(this.nightModeOverlay);
+
+    // Create custom cursor
+    this.nightModeCursor = document.createElement("div");
+    this.nightModeCursor.id = "night-mode-cursor";
+    document.body.appendChild(this.nightModeCursor);
+
+    // Add mouse tracking
+    document.addEventListener("mousemove", this.handleNightModeMouseMove.bind(this));
+
+    // Load saved preference
+    const saved = localStorage.getItem("nightMode");
+    if (saved === "true") {
+      this.enableNightMode();
+      nightModeButton.classList.add("active");
+      nightModeButton.innerHTML = "☀️";
+    }
+  }
+
+  private toggleNightMode(): void {
+    if (this.nightModeEnabled) {
+      this.disableNightMode();
+    } else {
+      this.enableNightMode();
+    }
+
+    // Update button
+    const button = document.querySelector(".night-mode-toggle-btn");
+    if (button) {
+      if (this.nightModeEnabled) {
+        button.classList.add("active");
+        button.innerHTML = "☀️";
+      } else {
+        button.classList.remove("active");
+        button.innerHTML = "🌙";
+      }
+    }
+  }
+
+  private enableNightMode(): void {
+    this.nightModeEnabled = true;
+    document.body.classList.add("night-mode-active");
+    localStorage.setItem("nightMode", "true");
+    console.log("Night Mode enabled");
+  }
+
+  private disableNightMode(): void {
+    this.nightModeEnabled = false;
+    document.body.classList.remove("night-mode-active");
+    localStorage.setItem("nightMode", "false");
+    console.log("Night Mode disabled");
+  }
+
+  private handleNightModeMouseMove(e: MouseEvent): void {
+    if (!this.nightModeEnabled) return;
+
+    if (this.nightModeOverlay) {
+      const x = (e.clientX / window.innerWidth) * 100;
+      const y = (e.clientY / window.innerHeight) * 100;
+      this.nightModeOverlay.style.setProperty("--mouse-x", `${x}%`);
+      this.nightModeOverlay.style.setProperty("--mouse-y", `${y}%`);
+    }
+
+    if (this.nightModeCursor) {
+      this.nightModeCursor.style.left = `${e.clientX}px`;
+      this.nightModeCursor.style.top = `${e.clientY}px`;
+    }
   }
 
   private handleHash() {
