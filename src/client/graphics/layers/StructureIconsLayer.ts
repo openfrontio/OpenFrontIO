@@ -16,6 +16,7 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
+  GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
   ToggleStructureEvent as ToggleStructuresEvent,
@@ -393,6 +394,7 @@ export class StructureIconsLayer implements Layer {
   private removeGhostStructure() {
     this.clearGhostStructure();
     this.uiState.ghostStructure = null;
+    this.eventBus.emit(new GhostStructureChangedEvent(null));
   }
 
   private toggleStructures(toggleStructureType: UnitType[] | null): void {

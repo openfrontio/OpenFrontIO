@@ -79,6 +79,10 @@ export class ToggleStructureEvent implements GameEvent {
   constructor(public readonly structureTypes: UnitType[] | null) {}
 }
 
+export class GhostStructureChangedEvent implements GameEvent {
+  constructor(public readonly ghostStructure: UnitType | null) {}
+}
+
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -284,7 +288,7 @@ export class InputHandler {
       if (e.code === "Escape") {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
-        this.uiState.ghostStructure = null;
+        this.setGhostStructure(null);
       }
 
       if (
@@ -352,52 +356,52 @@ export class InputHandler {
 
       if (e.code === this.keybinds.buildCity) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.City;
+        this.setGhostStructure(UnitType.City);
       }
 
       if (e.code === this.keybinds.buildFactory) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.Factory;
+        this.setGhostStructure(UnitType.Factory);
       }
 
       if (e.code === this.keybinds.buildPort) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.Port;
+        this.setGhostStructure(UnitType.Port);
       }
 
       if (e.code === this.keybinds.buildDefensePost) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.DefensePost;
+        this.setGhostStructure(UnitType.DefensePost);
       }
 
       if (e.code === this.keybinds.buildMissileSilo) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.MissileSilo;
+        this.setGhostStructure(UnitType.MissileSilo);
       }
 
       if (e.code === this.keybinds.buildSamLauncher) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.SAMLauncher;
+        this.setGhostStructure(UnitType.SAMLauncher);
       }
 
       if (e.code === this.keybinds.buildAtomBomb) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.AtomBomb;
+        this.setGhostStructure(UnitType.AtomBomb);
       }
 
       if (e.code === this.keybinds.buildHydrogenBomb) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.HydrogenBomb;
+        this.setGhostStructure(UnitType.HydrogenBomb);
       }
 
       if (e.code === this.keybinds.buildWarship) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.Warship;
+        this.setGhostStructure(UnitType.Warship);
       }
 
       if (e.code === this.keybinds.buildMIRV) {
         e.preventDefault();
-        this.uiState.ghostStructure = UnitType.MIRV;
+        this.setGhostStructure(UnitType.MIRV);
       }
 
       // Shift-D to toggle performance overlay
@@ -538,10 +542,15 @@ export class InputHandler {
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
     if (this.uiState.ghostStructure !== null) {
-      this.uiState.ghostStructure = null;
+      this.setGhostStructure(null);
       return;
     }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
+  }
+
+  private setGhostStructure(ghostStructure: UnitType | null) {
+    this.uiState.ghostStructure = ghostStructure;
+    this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
   }
 
   private getPinchDistance(): number {
