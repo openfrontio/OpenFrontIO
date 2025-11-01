@@ -339,10 +339,10 @@ export class SettingsModal extends LitElement implements Layer {
               />
               <div class="flex-1">
                 <div class="font-medium">
-                  ${translateText("user_setting.dark_mode_label")}
+                  ${translateText("user_setting.night_mode_label")}
                 </div>
                 <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.dark_mode_desc")}
+                  ${translateText("user_setting.night_mode_desc")}
                 </div>
               </div>
               <div class="text-sm text-slate-400">

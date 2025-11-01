@@ -107,6 +107,30 @@ export class UserSettingModal extends LitElement {
     console.log("🌙 Dark Mode:", enabled ? "ON" : "OFF");
   }
 
+  toggleNightMode(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+
+    if (typeof enabled !== "boolean") {
+      console.warn("Unexpected toggle event payload", e);
+      return;
+    }
+    this.userSettings.set("settings.nightMode", enabled);
+
+    if (enabled) {
+      document.documentElement.classList.add("night");
+    } else {
+      document.documentElement.classList.remove("night");
+    }
+
+    this.dispatchEvent(
+      new CustomEvent("night-mode-changed", {
+        detail: { darkMode: enabled },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   private toggleEmojis(e: CustomEvent<{ checked: boolean }>) {
     const enabled = e.detail?.checked;
     if (typeof enabled !== "boolean") return;
@@ -281,6 +305,16 @@ export class UserSettingModal extends LitElement {
         .checked=${this.userSettings.darkMode()}
         @change=${(e: CustomEvent<{ checked: boolean }>) =>
           this.toggleDarkMode(e)}
+      ></setting-toggle>
+
+      <!-- 🌙 Night Mode -->
+      <setting-toggle
+        label="${translateText("user_setting.night_mode_label")}"
+        description="${translateText("user_setting.night_mode_desc")}"
+        id="night-mode-toggle"
+        .checked=${this.userSettings.nightMode()}
+        @change=${(e: CustomEvent<{ checked: boolean }>) =>
+          this.toggleNightMode(e)}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
