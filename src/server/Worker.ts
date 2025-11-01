@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
-import { GameType } from "../core/game/Game";
+import { GameMode, GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
@@ -25,7 +25,6 @@ import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
 import { GameEnv } from "../core/configuration/Config";
-import { GameMode } from "../core/game/Game";
 import { MapPlaylist } from "./MapPlaylist";
 import { selectMapForRanked } from "./MapSelection";
 import { MatchmakingPoller } from "./MatchmakingPoller";
