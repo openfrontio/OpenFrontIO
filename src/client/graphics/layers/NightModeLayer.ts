@@ -47,35 +47,26 @@ export class NightModeLayer implements Layer {
 
     const cellSize = this.transformHandler.scale;
 
-    const maxDist = Math.sqrt(
-      Math.max(this.mouseX, this.transformHandler.width() - this.mouseX) ** 2 +
-        Math.max(
-          this.mouseY,
-          this.transformHandler.boundingRect().height - this.mouseY,
-        ) **
-          2,
-    );
-
     for (
       let y = 0;
       y < this.transformHandler.boundingRect().height;
       y += cellSize
     ) {
       for (let x = 0; x < this.transformHandler.width(); x += cellSize) {
-        const dx = x + cellSize / 2 - this.mouseX;
-        const dy = y + cellSize / 2 - this.mouseY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dist = Math.hypot(
+          Math.abs(this.mouseX - x) / cellSize,
+          Math.abs(this.mouseY - y) / cellSize,
+        );
 
-        const blend =
-          1 - this.darkenAlpha + (1 - dist / maxDist) * this.darkenAlpha;
+        const final = context.getImageData(x, y, cellSize, cellSize).data;
 
-        const color = [
-          Math.round(this.darkenColor[0] + blend * (255 - this.darkenColor[0])),
-          Math.round(this.darkenColor[1] + blend * (255 - this.darkenColor[1])),
-          Math.round(this.darkenColor[2] + blend * (255 - this.darkenColor[2])),
+        const originalPixel = [
+          final[0] + (final[0] / (1 - this.darkenAlpha) - final[0]) * dist,
+          final[1] + (final[1] / (1 - this.darkenAlpha) - final[1]) * dist,
+          final[2] + (final[2] / (1 - this.darkenAlpha) - final[2]) * dist,
         ];
 
-        context.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 1)`;
+        context.fillStyle = `rgba(${originalPixel[0]}, ${originalPixel[1]}, ${originalPixel[2]}, 1)`;
         context.fillRect(x, y, cellSize, cellSize);
       }
     }
