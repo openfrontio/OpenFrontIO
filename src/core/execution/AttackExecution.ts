@@ -252,7 +252,7 @@ export class AttackExecution implements Execution {
       this.attack.removeBorderTile(tileToConquer);
 
       let onBorder = false;
-      for (const n of this.mg.neighbors(tileToConquer)) {
+      for (const n of this.mg.neighborsNoWrap(tileToConquer)) {
         if (this.mg.owner(n) === this._owner) {
           onBorder = true;
           break;
@@ -298,7 +298,7 @@ export class AttackExecution implements Execution {
 
     const tickNow = this.mg.ticks(); // cache tick
 
-    for (const neighbor of this.mg.neighbors(tile)) {
+    for (const neighbor of this.mg.neighborsNoWrap(tile)) {
       if (
         this.mg.isWater(neighbor) ||
         this.mg.owner(neighbor) !== this.target
@@ -307,7 +307,7 @@ export class AttackExecution implements Execution {
       }
       this.attack.addBorderTile(neighbor);
       let numOwnedByMe = 0;
-      for (const n of this.mg.neighbors(neighbor)) {
+      for (const n of this.mg.neighborsNoWrap(neighbor)) {
         if (this.mg.owner(n) === this._owner) {
           numOwnedByMe++;
         }
@@ -342,12 +342,12 @@ export class AttackExecution implements Execution {
     for (let i = 0; i < 10; i++) {
       for (const tile of this.target.tiles()) {
         const borders = this.mg
-          .neighbors(tile)
+          .neighborsNoWrap(tile)
           .some((t) => this.mg.owner(t) === this._owner);
         if (borders) {
           this._owner.conquer(tile);
         } else {
-          for (const neighbor of this.mg.neighbors(tile)) {
+          for (const neighbor of this.mg.neighborsNoWrap(tile)) {
             const no = this.mg.owner(neighbor);
             if (no.isPlayer() && no !== this.target) {
               this.mg.player(no.id()).conquer(tile);

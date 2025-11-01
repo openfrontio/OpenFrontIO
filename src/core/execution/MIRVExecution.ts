@@ -41,7 +41,13 @@ export class MirvExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.random = new PseudoRandom(mg.ticks() + simpleHash(this.player.id()));
     this.mg = mg;
-    this.pathFinder = new ParabolaPathFinder(mg);
+    // Pass the map wrapping flags into the ParabolaPathFinder so MIRV paths
+    // account for maps that wrap horizontally and/or vertically.
+    this.pathFinder = new ParabolaPathFinder(
+      mg,
+      mg.wrapsHorizontally(),
+      mg.wrapsVertically(),
+    );
     this.targetPlayer = this.mg.owner(this.dst);
     this.speed = this.mg.config().defaultNukeSpeed();
 
@@ -71,11 +77,57 @@ export class MirvExecution implements Execution {
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
         targetTile: this.dst,
       });
-      const x = Math.floor(
-        (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
-      );
-      const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
-      this.separateDst = this.mg.ref(x, y);
+      // Compute a midpoint (separateDst) between spawn and dst, but choose the
+      // wrapped image of dst that yields the shortest displacement from spawn.
+      const spawnX = this.mg.x(spawn);
+      const spawnY = this.mg.y(spawn);
+      let dstX = this.mg.x(this.dst);
+      let dstY = this.mg.y(this.dst);
+      const w = this.mg.width();
+      const h = this.mg.height();
+
+      if (this.mg.wrapsHorizontally()) {
+        const rawDx = dstX - spawnX;
+        const altDx1 = dstX - w - spawnX; // wrapped left
+        const altDx2 = dstX + w - spawnX; // wrapped right
+        const bestDx =
+          Math.abs(rawDx) <= Math.abs(altDx1) &&
+          Math.abs(rawDx) <= Math.abs(altDx2)
+            ? rawDx
+            : Math.abs(altDx1) <= Math.abs(altDx2)
+              ? altDx1
+              : altDx2;
+        dstX = spawnX + bestDx;
+      }
+
+      if (this.mg.wrapsVertically()) {
+        const rawDy = dstY - spawnY;
+        const altDy1 = dstY - h - spawnY; // wrapped up
+        const altDy2 = dstY + h - spawnY; // wrapped down
+        const bestDy =
+          Math.abs(rawDy) <= Math.abs(altDy1) &&
+          Math.abs(rawDy) <= Math.abs(altDy2)
+            ? rawDy
+            : Math.abs(altDy1) <= Math.abs(altDy2)
+              ? altDy1
+              : altDy2;
+        dstY = spawnY + bestDy;
+      }
+
+      const midX = Math.floor((spawnX + dstX) / 2);
+      const midY = Math.max(0, Math.floor(dstY) - 500) + 50;
+
+      // Fold midpoint back into map coordinates if necessary
+      let finalX = midX;
+      let finalY = midY;
+      if (this.mg.wrapsHorizontally()) {
+        finalX = ((finalX % w) + w) % w;
+      }
+      if (this.mg.wrapsVertically()) {
+        finalY = ((finalY % h) + h) % h;
+      }
+
+      this.separateDst = this.mg.ref(finalX, finalY);
       this.pathFinder.computeControlPoints(spawn, this.separateDst);
 
       this.mg.displayIncomingUnit(

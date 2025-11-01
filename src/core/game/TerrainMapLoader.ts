@@ -14,6 +14,8 @@ export interface MapMetadata {
   width: number;
   height: number;
   num_land_tiles: number;
+  wrapHorizontally?: boolean;
+  wrapVertically?: boolean;
 }
 
 export interface MapManifest {
@@ -41,18 +43,47 @@ export async function loadTerrainMap(
   const mapFiles = terrainMapFileLoader.getMapData(map);
   const manifest = await mapFiles.manifest();
 
+  // Default wrapping: horizontal is off by default, vertical is off by default.
+  // Enable horizontal wrapping by default for large world-style maps (World, Mars).
+  const defaultWrapHorizontally =
+    map === GameMapType.World ||
+    map === GameMapType.Mars ||
+    map === GameMapType.GiantWorldMap ||
+    map === GameMapType.Pangaea;
+  const defaultWrapVertically = map === GameMapType.Pangaea;
+
   const gameMap =
     mapSize === GameMapSize.Normal
-      ? await genTerrainFromBin(manifest.map, await mapFiles.mapBin())
-      : await genTerrainFromBin(manifest.map4x, await mapFiles.map4xBin());
+      ? await genTerrainFromBin(
+          manifest.map,
+          await mapFiles.mapBin(),
+          manifest.map.wrapHorizontally ?? defaultWrapHorizontally,
+          manifest.map.wrapVertically ?? defaultWrapVertically,
+        )
+      : await genTerrainFromBin(
+          manifest.map4x,
+          await mapFiles.map4xBin(),
+          manifest.map4x.wrapHorizontally ?? defaultWrapHorizontally,
+          manifest.map4x.wrapVertically ?? defaultWrapVertically,
+        );
 
   const miniMap =
     mapSize === GameMapSize.Normal
       ? await genTerrainFromBin(
+          // For normal mapSize we show the 4x mini preview
           mapSize === GameMapSize.Normal ? manifest.map4x : manifest.map16x,
           await mapFiles.map4xBin(),
+          (mapSize === GameMapSize.Normal ? manifest.map4x : manifest.map16x)
+            .wrapHorizontally ?? defaultWrapHorizontally,
+          (mapSize === GameMapSize.Normal ? manifest.map4x : manifest.map16x)
+            .wrapVertically ?? defaultWrapVertically,
         )
-      : await genTerrainFromBin(manifest.map16x, await mapFiles.map16xBin());
+      : await genTerrainFromBin(
+          manifest.map16x,
+          await mapFiles.map16xBin(),
+          manifest.map16x.wrapHorizontally ?? defaultWrapHorizontally,
+          manifest.map16x.wrapVertically ?? defaultWrapVertically,
+        );
 
   if (mapSize === GameMapSize.Compact) {
     manifest.nations.forEach((nation) => {
@@ -75,6 +106,8 @@ export async function loadTerrainMap(
 export async function genTerrainFromBin(
   mapData: MapMetadata,
   data: Uint8Array,
+  wrapHorizontally: boolean = false,
+  wrapVertically: boolean = false,
 ): Promise<GameMap> {
   if (data.length !== mapData.width * mapData.height) {
     throw new Error(
@@ -87,5 +120,7 @@ export async function genTerrainFromBin(
     mapData.height,
     data,
     mapData.num_land_tiles,
+    wrapHorizontally,
+    wrapVertically,
   );
 }

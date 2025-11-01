@@ -9,6 +9,10 @@ export interface GraphAdapter<NodeType> {
   cost(node: NodeType): number;
   position(node: NodeType): { x: number; y: number };
   isTraversable(from: NodeType, to: NodeType): boolean;
+  // Optional map width for horizontal wrapping (e.g. 360° maps)
+  wrapWidth?(): number;
+  // Optional map height for vertical wrapping (added to support vertical wrap heuristics)
+  wrapHeight?(): number;
 }
 
 export class SerialAStar<NodeType> implements AStar<NodeType> {
@@ -153,14 +157,48 @@ export class SerialAStar<NodeType> implements AStar<NodeType> {
   private heuristic(a: NodeType, b: NodeType): number {
     const posA = this.graph.position(a);
     const posB = this.graph.position(b);
-    return 2 * (Math.abs(posA.x - posB.x) + Math.abs(posA.y - posB.y));
+
+    // horizontal distance (account for optional horizontal wrapping)
+    let dx = Math.abs(posA.x - posB.x);
+    const wrap = this.graph.wrapWidth ? this.graph.wrapWidth() : undefined;
+    if (wrap !== undefined && wrap > 0) {
+      dx = Math.min(dx, Math.abs(wrap - dx));
+    }
+
+    // vertical distance (account for optional vertical wrapping)
+    let dy = Math.abs(posA.y - posB.y);
+    const wrapH = this.graph.wrapHeight ? this.graph.wrapHeight() : undefined;
+    if (wrapH !== undefined && wrapH > 0) {
+      dy = Math.min(dy, Math.abs(wrapH - dy));
+    }
+
+    return 2 * (dx + dy);
   }
 
   private getDirection(from: NodeType, to: NodeType): string {
     const fromPos = this.graph.position(from);
     const toPos = this.graph.position(to);
-    const dx = toPos.x - fromPos.x;
-    const dy = toPos.y - fromPos.y;
+
+    // horizontal delta, adjusted for optional horizontal wrap
+    let dx = toPos.x - fromPos.x;
+    const wrap = this.graph.wrapWidth ? this.graph.wrapWidth() : undefined;
+    if (wrap !== undefined && wrap > 0) {
+      const alt = dx > 0 ? dx - wrap : dx + wrap;
+      if (Math.abs(alt) < Math.abs(dx)) {
+        dx = alt;
+      }
+    }
+
+    // vertical delta, adjusted for optional vertical wrap
+    let dy = toPos.y - fromPos.y;
+    const wrapH = this.graph.wrapHeight ? this.graph.wrapHeight() : undefined;
+    if (wrapH !== undefined && wrapH > 0) {
+      const altY = dy > 0 ? dy - wrapH : dy + wrapH;
+      if (Math.abs(altY) < Math.abs(dy)) {
+        dy = altY;
+      }
+    }
+
     return `${Math.sign(dx)},${Math.sign(dy)}`;
   }
 

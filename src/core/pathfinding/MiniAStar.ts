@@ -27,6 +27,18 @@ export class GameMapAdapter implements GraphAdapter<TileRef> {
     return { x: this.gameMap.x(node), y: this.gameMap.y(node) };
   }
 
+  // Provide the map width so pathfinding heuristics can account for
+  // horizontal wrapping (360 maps). SerialAStar will call this if present.
+  wrapWidth(): number {
+    return this.gameMap.width();
+  }
+
+  // Provide the map height so pathfinding heuristics can account for
+  // vertical wrapping (maps that wrap top-to-bottom). SerialAStar will call this if present.
+  wrapHeight(): number {
+    return this.gameMap.height();
+  }
+
   isTraversable(from: TileRef, to: TileRef): boolean {
     const toWater = this.gameMap.isWater(to);
     if (this.waterPath) {
@@ -87,16 +99,43 @@ export class MiniAStar implements AStar<TileRef> {
       this.gameMap.x(this.dst),
       this.gameMap.y(this.dst),
     );
-    const upscaled = fixExtremes(
-      upscalePath(
-        this.aStar
-          .reconstructPath()
-          .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr))),
-      ),
-      cellDst,
-      cellSrc,
-    );
-    return upscaled.map((c) => this.gameMap.ref(c.x, c.y));
+
+    const miniPath = this.aStar
+      .reconstructPath()
+      .map((tr) => new Cell(this.miniMap.x(tr), this.miniMap.y(tr)));
+
+    const unwrap = (path: Cell[], wrapW: number, wrapH: number): Cell[] => {
+      if (path.length === 0) return [];
+      const out: Cell[] = [];
+      let prevX = path[0].x;
+      let prevY = path[0].y;
+      out.push(new Cell(prevX, prevY));
+      for (let i = 1; i < path.length; i++) {
+        let x = path[i].x;
+        let y = path[i].y;
+        while (x - prevX > wrapW / 2) x -= wrapW;
+        while (x - prevX < -wrapW / 2) x += wrapW;
+        while (y - prevY > wrapH / 2) y -= wrapH;
+        while (y - prevY < -wrapH / 2) y += wrapH;
+        out.push(new Cell(x, y));
+        prevX = x;
+        prevY = y;
+      }
+      return out;
+    };
+
+    const miniWidth = this.miniMap.width();
+    const miniHeight = this.miniMap.height();
+    const unwrappedMini = unwrap(miniPath, miniWidth, miniHeight);
+    const upscaled = fixExtremes(upscalePath(unwrappedMini), cellDst, cellSrc);
+
+    const gameWidth = this.gameMap.width();
+    const gameHeight = this.gameMap.height();
+    return upscaled.map((c) => {
+      const wrappedX = ((c.x % gameWidth) + gameWidth) % gameWidth;
+      const wrappedY = ((c.y % gameHeight) + gameHeight) % gameHeight;
+      return this.gameMap.ref(wrappedX, wrappedY);
+    });
   }
 }
 
