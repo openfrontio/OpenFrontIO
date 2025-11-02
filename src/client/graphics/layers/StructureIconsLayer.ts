@@ -404,16 +404,13 @@ export class StructureIconsLayer implements Layer {
     if (buildableUnit.type !== UnitType.SAMLauncher) {
       return undefined;
     }
-
     if (buildableUnit.canUpgrade !== false) {
       const existing = this.game.unit(buildableUnit.canUpgrade);
       if (existing) {
         return existing.level() + 1;
+      } else {
+        console.error("Failed to find existing SAMLauncher for upgrade");
       }
-      if (this.potentialUpgrade) {
-        return this.potentialUpgrade.unit.level() + 1;
-      }
-      return 2;
     }
 
     return 1;

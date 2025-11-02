@@ -82,7 +82,7 @@ class SAMTargetingSystem {
 
   public getSingleTarget(ticks: number): Target | null {
     // Look beyond the SAM range so it can preshot nukes
-    const detectionRange = this.mg.config().samRange("MAX") * 2;
+    const detectionRange = this.mg.config().samRange(10) * 2;
     const nukes = this.mg.nearbyUnits(
       this.sam.tile(),
       detectionRange,
