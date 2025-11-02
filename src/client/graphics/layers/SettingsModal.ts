@@ -6,6 +6,7 @@ import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
+import nightModeIcon from "../../../../resources/images/NightModeIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
@@ -332,7 +333,7 @@ export class SettingsModal extends LitElement implements Layer {
               @click="${this.onToggleNightModeButtonClick}"
             >
               <img
-                src=${darkModeIcon}
+                src=${nightModeIcon}
                 alt="nightModeIcon"
                 width="20"
                 height="20"
