@@ -22,14 +22,20 @@ describe("UserSettings - Night Mode", () => {
       writable: true,
     });
 
-    // Mock document.documentElement.classList
+    // Mock document (for node environment compatibility)
     const classListMock = {
       add: jest.fn(),
       remove: jest.fn(),
     };
-    Object.defineProperty(document.documentElement, "classList", {
-      value: classListMock,
+    const documentMock = {
+      documentElement: {
+        classList: classListMock,
+      },
+    };
+    Object.defineProperty(global, "document", {
+      value: documentMock,
       writable: true,
+      configurable: true,
     });
 
     userSettings = new UserSettings();

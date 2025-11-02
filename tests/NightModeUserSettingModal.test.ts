@@ -1,3 +1,29 @@
+// Mock lit module before importing UserSettingModal
+jest.mock("lit", () => ({
+  LitElement: class {
+    connectedCallback() {}
+    disconnectedCallback() {}
+    dispatchEvent(event: any) {
+      return true;
+    }
+    createRenderRoot() {
+      return this;
+    }
+  },
+  html: (strings: TemplateStringsArray, ...values: any[]) =>
+    String.raw(strings, ...values),
+}));
+
+jest.mock("lit/decorators.js", () => ({
+  customElement: (name: string) => (constructor: any) => constructor,
+  query: (selector: string) => (target: any, propertyKey: string) => {},
+  state: () => (target: any, propertyKey: string, descriptor: any) =>
+    descriptor,
+  property:
+    (options?: any) => (target: any, propertyKey: string, descriptor: any) =>
+      descriptor ?? {},
+}));
+
 import { UserSettingModal } from "../src/client/UserSettingModal";
 
 describe("UserSettingModal - Night Mode", () => {
@@ -22,14 +48,20 @@ describe("UserSettingModal - Night Mode", () => {
       writable: true,
     });
 
-    // Mock classList
+    // Mock document (for node environment compatibility)
     const classListMock = {
       add: jest.fn(),
       remove: jest.fn(),
     };
-    Object.defineProperty(document.documentElement, "classList", {
-      value: classListMock,
+    const documentMock = {
+      documentElement: {
+        classList: classListMock,
+      },
+    };
+    Object.defineProperty(global, "document", {
+      value: documentMock,
       writable: true,
+      configurable: true,
     });
 
     modal = new UserSettingModal();

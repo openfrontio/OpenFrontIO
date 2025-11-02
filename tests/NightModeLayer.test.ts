@@ -6,6 +6,19 @@ describe("NightModeLayer", () => {
   let mockTransformHandler: jest.Mocked<TransformHandler>;
   let mockContext: jest.Mocked<CanvasRenderingContext2D>;
 
+  // Mock MouseEvent for node environment
+  class MockMouseEvent {
+    type: string;
+    clientX: number;
+    clientY: number;
+    constructor(type: string, init?: { clientX?: number; clientY?: number }) {
+      this.type = type;
+      this.clientX = init?.clientX ?? 0;
+      this.clientY = init?.clientY ?? 0;
+    }
+  }
+  global.MouseEvent = MockMouseEvent as any;
+
   beforeEach(() => {
     // Mock localStorage
     const localStorageMock = (() => {
@@ -30,13 +43,18 @@ describe("NightModeLayer", () => {
       add: jest.fn(),
       remove: jest.fn(),
     };
-    Object.defineProperty(document.documentElement, "classList", {
-      value: classListMock,
+    const documentMock = {
+      documentElement: {
+        classList: classListMock,
+      },
+      addEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    };
+    Object.defineProperty(global, "document", {
+      value: documentMock,
       writable: true,
+      configurable: true,
     });
-
-    // Mock addEventListener
-    document.addEventListener = jest.fn();
 
     // Mock TransformHandler
     mockTransformHandler = {
@@ -100,11 +118,28 @@ describe("NightModeLayer", () => {
     localStorage.setItem("settings.nightMode", "true");
     layer = new NightModeLayer(mockTransformHandler);
 
+    // Track fillStyle assignments
+    const fillStyleValues: string[] = [];
+    let currentFillStyle = "";
+    Object.defineProperty(mockContext, "fillStyle", {
+      set: (value: string) => {
+        fillStyleValues.push(value);
+        currentFillStyle = value;
+      },
+      get: () => currentFillStyle,
+      configurable: true,
+    });
+
+    // Reset mock to track calls
+    mockContext.fillRect.mockClear();
+
     layer.renderLayer(mockContext);
 
-    // Should fill entire screen with dark overlay
+    // Should fill entire screen with dark overlay as the first call
     expect(mockContext.fillRect).toHaveBeenCalledWith(0, 0, 1920, 1080);
-    expect(mockContext.fillStyle).toContain("rgba(0, 0, 0, 0.8)");
+
+    // Verify the dark overlay fillStyle was set first
+    expect(fillStyleValues[0]).toBe("rgba(0, 0, 0, 0.8)");
   });
 
   test("renders flashlight effect around mouse position", () => {
