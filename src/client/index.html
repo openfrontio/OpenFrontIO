@@ -97,6 +97,13 @@
       src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
     ></script>
 
+    <script>
+      window.googletag = window.googletag || { cmd: [] };
+      googletag.cmd.push(function () {
+        googletag.pubads().set("page_url", "http://openfront.io ");
+      });
+    </script>
+
     <!-- Analytics -->
     <script
       async
@@ -221,6 +228,9 @@
         <div>
           <public-lobby class="block"></public-lobby>
         </div>
+        <div>
+          <matchmaking-button class="w-[20%] md:w-[15%]"></matchmaking-button>
+        </div>
         <div class="container__row container__row--equal">
           <o-button
             id="host-lobby-button"
@@ -312,7 +322,7 @@
     <!-- Footer section -->
     <footer class="l-footer">
       <div class="l-footer__content">
-        <div class="l-footer__col">
+        <div class="l-footer__col t-text-white">
           <a
             href="https://youtu.be/jvHEvbko3uw?si=znspkP84P76B1w5I"
             data-i18n="main.how_to_play"
@@ -331,13 +341,20 @@
           </a>
           <a
             target="_blank"
+            href="https://www.reddit.com/r/Openfront/"
+            class="t-link"
+          >
+            <span data-i18n="main.reddit"> Reddit </span>
+          </a>
+          <a
+            target="_blank"
             href="https://discord.gg/jRpxXvG42t"
             class="t-link"
           >
             <span data-i18n="main.join_discord"> Join the Discord! </span>
           </a>
         </div>
-        <div class="l-footer__col t-text-white">
+        <div class="l-footer__col t-text-white space-x-4">
           <a
             href="https://github.com/openfrontio/OpenFrontIO"
             class="t-link inline-flex items-center space-x-2"
@@ -349,7 +366,7 @@
               alt="GitHub"
               width="20"
               height="20"
-              class="ml-2 mr-4"
+              class="ml-2"
             />
           </a>
           <a
@@ -388,6 +405,7 @@
     </div>
     <settings-modal></settings-modal>
     <player-panel></player-panel>
+    <spawn-timer></spawn-timer>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
     <alert-frame></alert-frame>
@@ -396,7 +414,6 @@
     <multi-tab-modal></multi-tab-modal>
     <news-modal></news-modal>
     <game-left-sidebar></game-left-sidebar>
-    <spawn-ad></spawn-ad>
     <flag-input-modal></flag-input-modal>
     <fps-display></fps-display>
     <div
