@@ -313,7 +313,7 @@ export class DefaultConfig implements Config {
       );
     }
     const baseValue = 5;
-    const maxIncrease = 2.5;
+    const maxIncrease = 1.5;
     const k = 2;
     return baseValue + maxIncrease * ((level - 1) / (level - 1 + k));
   }
