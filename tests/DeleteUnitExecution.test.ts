@@ -53,6 +53,8 @@ describe("DeleteUnitExecution Security Tests", () => {
       game.executeNextTick();
     }
 
+    executeTicks(game, game.config().deleteUnitCooldown() + 1);
+
     player = game.player(player1Info.id);
     enemyPlayer = game.player(player2Info.id);
 
