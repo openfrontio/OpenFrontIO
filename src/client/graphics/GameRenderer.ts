@@ -323,7 +323,7 @@ export class GameRenderer {
       this.redraw();
       rafId = requestAnimationFrame(() => this.renderGame());
     });
-    nightModeLayer.setGame(game);
+    NightModeLayer.setGame(this.game);
   }
 
   resizeCanvas() {
