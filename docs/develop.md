@@ -31,4 +31,8 @@ This project started as a fork of WarFront (not to be confused with FrontWars), 
     - `./utilities` - Generic client helper functions
   - `./server` - [Backend game server](server.md)
 
+## Technologies used
+
+- [Lit](https://lit.dev/) for creating usable html objects (usually `TemplateResult`) from strings.
+
 ![](./res/sample.png)
