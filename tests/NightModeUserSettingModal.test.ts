@@ -15,7 +15,7 @@ jest.mock("lit", () => ({
 }));
 
 jest.mock("lit/decorators.js", () => ({
-  customElement: (name: string) => (constructor: any) => constructor,
+  customElement: (name: string) => (ctor: any) => ctor,
   query: (selector: string) => (target: any, propertyKey: string) => {},
   state: () => (target: any, propertyKey: string, descriptor: any) =>
     descriptor,
