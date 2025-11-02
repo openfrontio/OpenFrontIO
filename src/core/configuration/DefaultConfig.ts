@@ -378,9 +378,10 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under 200
-    const baseGold =
-      100_000 / (1 + Math.exp(-0.03 * (dist - 200))) + 100 * dist;
+    // Rational function: gradually rewards distance while still incentivizing longer trades
+    // At dist=50: ~38k (36% penalty), dist=100: ~60k (45% penalty), dist=200: ~87k (28% penalty)
+    // Much less harsh than previous sigmoid which gave only ~6k at dist=50
+    const baseGold = Math.floor(100_000 * (dist / (dist + 100)) + 100 * dist);
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
