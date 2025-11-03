@@ -66,7 +66,7 @@ export class PlayerSpawner {
       const spawnLand = this.randomSpawnLand();
 
       if (spawnLand === null) {
-        // TODO: this should nornally not happen,
+        // TODO: this should normally not happen,
         // but if it does maybe need to add some splash screen or add additional logic
         console.warn(`cannot spawn ${player.id}`);
         continue;
