@@ -117,9 +117,8 @@ export class Leaderboard extends LitElement implements Layer {
         troops: renderNumber(troops),
         isMyPlayer: player === myPlayer,
         isOnSameTeam:
-          player === myPlayer || myPlayer !== null
-            ? player.isOnSameTeam(myPlayer)
-            : false,
+          myPlayer !== null &&
+          (player === myPlayer || player.isOnSameTeam(myPlayer)),
         player: player,
       };
     });
