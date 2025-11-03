@@ -148,6 +148,7 @@
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
     "automatic_difficulty": "Automatic Difficulty",
+    "empty_map": "Empty Map",
     "enables_title": "Enable Settings",
     "start": "Start Game"
   },

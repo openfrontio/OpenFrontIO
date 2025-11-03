@@ -44,6 +44,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
+  @state() private emptyMap: boolean = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
@@ -340,6 +341,21 @@ export class SinglePlayerModal extends LitElement {
                 </div>
               </label>
               <label
+                for="singleplayer-modal-empty-map"
+                class="option-card ${this.emptyMap ? "selected" : ""}"
+              >
+                <div class="checkbox-icon"></div>
+                <input
+                  type="checkbox"
+                  id="singleplayer-modal-empty-map"
+                  @change=${this.handleEmptyMapChange}
+                  .checked=${this.emptyMap}
+                />
+                <div class="option-card-title">
+                  ${translateText("single_modal.empty_map")}
+                </div>
+              </label>
+              <label
                 for="end-timer"
                 class="option-card ${this.maxTimer ? "selected" : ""}"
               >
@@ -452,6 +468,10 @@ export class SinglePlayerModal extends LitElement {
     this.compactMap = Boolean((e.target as HTMLInputElement).checked);
   }
 
+  private handleEmptyMapChange(e: Event) {
+    this.emptyMap = Boolean((e.target as HTMLInputElement).checked);
+  }
+
   private handleMaxTimerValueKeyDown(e: KeyboardEvent) {
     if (["-", "+", "e"].includes(e.key)) {
       e.preventDefault();
@@ -557,7 +577,7 @@ export class SinglePlayerModal extends LitElement {
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
-              bots: this.bots,
+              bots: this.emptyMap ? 0 : this.bots,
               infiniteGold: this.infiniteGold,
               donateGold: true,
               donateTroops: true,
@@ -572,7 +592,7 @@ export class SinglePlayerModal extends LitElement {
                     disableNPCs: false,
                   }
                 : {
-                    disableNPCs: this.disableNPCs,
+                    disableNPCs: this.emptyMap ? true : this.disableNPCs,
                   }),
             },
           },
