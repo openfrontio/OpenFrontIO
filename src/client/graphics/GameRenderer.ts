@@ -13,7 +13,6 @@ import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
-import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
@@ -23,6 +22,7 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -202,12 +202,14 @@ export function createRenderer(
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
 
-  const fpsDisplay = document.querySelector("fps-display") as FPSDisplay;
-  if (!(fpsDisplay instanceof FPSDisplay)) {
-    console.error("fps display not found");
+  const performanceOverlay = document.querySelector(
+    "performance-overlay",
+  ) as PerformanceOverlay;
+  if (!(performanceOverlay instanceof PerformanceOverlay)) {
+    console.error("performance overlay not found");
   }
-  fpsDisplay.eventBus = eventBus;
-  fpsDisplay.userSettings = userSettings;
+  performanceOverlay.eventBus = eventBus;
+  performanceOverlay.userSettings = userSettings;
 
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
@@ -263,7 +265,7 @@ export function createRenderer(
     multiTabModal,
     new AdTimer(game),
     alertFrame,
-    fpsDisplay,
+    performanceOverlay,
   ];
 
   return new GameRenderer(
@@ -273,7 +275,7 @@ export function createRenderer(
     transformHandler,
     uiState,
     layers,
-    fpsDisplay,
+    performanceOverlay,
   );
 }
 
@@ -287,7 +289,7 @@ export class GameRenderer {
     public transformHandler: TransformHandler,
     public uiState: UIState,
     private layers: Layer[],
-    private fpsDisplay: FPSDisplay,
+    private performanceOverlay: PerformanceOverlay,
   ) {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
@@ -371,7 +373,7 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    this.fpsDisplay.updateFPS(duration);
+    this.performanceOverlay.updateFrameMetrics(duration);
 
     if (duration > 50) {
       console.warn(
