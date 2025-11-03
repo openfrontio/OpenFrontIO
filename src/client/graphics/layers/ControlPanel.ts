@@ -9,6 +9,8 @@ import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
@@ -85,6 +87,7 @@ export class ControlPanel extends LitElement implements Layer {
       this.updateTroopIncrease();
     }
 
+    this._troops = player.troops();
     this._maxTroops = this.game.config().maxTroops(player);
     this._gold = player.gold();
     this._troops = player.troops();
@@ -161,15 +164,33 @@ export class ControlPanel extends LitElement implements Layer {
       </style>
       <div
         class="${this._isVisible
-          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-gray-800/70 p-2 pr-3 sm:p-4 shadow-lg sm:rounded-lg backdrop-blur"
+          ? "w-full sm:max-w-[320px] text-sm sm:text-base bg-blue-950/70 p-2 pr-3 shadow-lg sm:rounded-tr-2xl backdrop-blur"
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div class="block bg-black/30 text-white mb-4 p-2 rounded">
-          <div class="flex justify-between mb-1">
-            <span class="font-bold"
-              >${translateText("control_panel.troops")}:</span
-            >
+        <div class="block text-white mb-2 font-bold">
+          <div class="flex gap-2 items-center mb-1">
+            <span class="inline-block">
+              <img
+                src=${goldCoinIcon}
+                alt="gold"
+                width="16"
+                height="16"
+                style="vertical-align: middle;"
+              />
+            </span>
+            <span translate="no">${renderNumber(this._gold)}</span>
+          </div>
+          <div class="flex gap-2 items-center">
+            <span class="inline-block">
+              <img
+                src=${troopIcon}
+                alt="gold"
+                width="16"
+                height="16"
+                style="vertical-align: middle;"
+              />
+            </span>
             <span translate="no"
               >${renderTroops(this._troops)} / ${renderTroops(this._maxTroops)}
               <span
@@ -181,21 +202,16 @@ export class ControlPanel extends LitElement implements Layer {
               ></span
             >
           </div>
-          <div class="flex justify-between">
-            <span class="font-bold"
-              >${translateText("control_panel.gold")}:</span
-            >
-            <span translate="no">${renderNumber(this._gold)}</span>
-          </div>
         </div>
 
-        <div class="relative mb-0 sm:mb-4">
-          <label class="block text-white mb-1" translate="no"
-            >${translateText("control_panel.attack_ratio")}:
-            ${(this.attackRatio * 100).toFixed(0)}%
+        <div class="relative mb-0">
+          <label class="flex justify-between text-white leading-4" translate="no">
+            <span>${translateText("control_panel.attack_ratio")}</span>
+            <span>${(this.attackRatio * 100).toFixed(0)}%
             (${renderTroops(
               (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-            )})</label
+            )})</span>
+          </label
           >
           <div class="relative h-8">
             <!-- Background track -->

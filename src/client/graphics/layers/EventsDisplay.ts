@@ -7,6 +7,8 @@ import chatIcon from "../../../../resources/images/ChatIconWhite.svg";
 import donateGoldIcon from "../../../../resources/images/DonateGoldIconWhite.svg";
 import nukeIcon from "../../../../resources/images/NukeIconWhite.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
+import chevronDownIcon from "../../../../resources/images/ChrevonDown.svg";
+import chevronUpIcon from "../../../../resources/images/ChrevonUp.svg";
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
@@ -920,34 +922,12 @@ export class EventsDisplay extends LitElement implements Layer {
 
     return html`
       ${styles}
-      <!-- Events Toggle (when hidden) -->
-      ${this._hidden
-        ? html`
-            <div class="relative w-fit lg:bottom-2.5 lg:right-2.5 z-50">
-              ${this.renderButton({
-                content: html`
-                  Events
-                  <span
-                    class="${this.newEvents
-                      ? ""
-                      : "hidden"} inline-block px-2 bg-red-500 rounded-xl text-sm"
-                    >${this.newEvents}</span
-                  >
-                `,
-                onClick: this.toggleHidden,
-                className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
-              })}
-            </div>
-          `
-        : html`
-            <!-- Main Events Display -->
-            <div
-              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
+        <div
+          class="relative w-full z-50 sm:w-72 backdrop-blur"
             >
               <!-- Button Bar -->
               <div
-                class="w-full p-2 lg:p-3 rounded-t-none md:rounded-t-md bg-gray-800/70"
+                class="w-full p-2 lg:p-3 rounded-tl-none md:rounded-tl-2xl bg-blue-950/70"
               >
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
@@ -980,7 +960,11 @@ export class EventsDisplay extends LitElement implements Layer {
                         >`
                       : ""}
                     ${this.renderButton({
-                      content: translateText("leaderboard.hide"),
+                      content:
+                        html`<img
+                        src="${this._hidden ? chevronUpIcon : chevronDownIcon}"
+                        class="w-5 h-5"
+                      />`,
                       onClick: this.toggleHidden,
                       className:
                         "text-white cursor-pointer pointer-events-auto",
@@ -991,7 +975,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="rounded-b-none md:rounded-b-md bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
+                class="${this._hidden ? "hidden" : ""} rounded-b-none md:rounded-b-md bg-blue-950/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
               >
                 <div>
                   <table
@@ -1003,7 +987,7 @@ export class EventsDisplay extends LitElement implements Layer {
                         (event, index) => html`
                           <tr>
                             <td
-                              class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
+                              class="lg:px-2 lg:py-1 p-1 pl-2 text-left ${getMessageTypeClasses(
                                 event.type,
                               )}"
                             >
@@ -1073,8 +1057,8 @@ export class EventsDisplay extends LitElement implements Layer {
                       <!--- Incoming attacks row -->
                       ${this.incomingAttacks.length > 0
                         ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                            <tr class="lg:px-2 lg:py-1 p-1 pl-2">
+                              <td class="lg:px-2 lg:py-1 p-1 pl-2 text-left">
                                 ${this.renderIncomingAttacks()}
                               </td>
                             </tr>
@@ -1084,8 +1068,8 @@ export class EventsDisplay extends LitElement implements Layer {
                       <!--- Outgoing attacks row -->
                       ${this.outgoingAttacks.length > 0
                         ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                            <tr class="lg:px-2 lg:py-1 p-1 pl-2">
+                              <td class="lg:px-2 lg:py-1 p-1 pl-2 text-left">
                                 ${this.renderOutgoingAttacks()}
                               </td>
                             </tr>
@@ -1095,8 +1079,8 @@ export class EventsDisplay extends LitElement implements Layer {
                       <!--- Outgoing land attacks row -->
                       ${this.outgoingLandAttacks.length > 0
                         ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                            <tr class="lg:px-2 lg:py-1 p-1 pl-2">
+                              <td class="lg:px-2 lg:py-1 p-1 pl-2 text-left">
                                 ${this.renderOutgoingLandAttacks()}
                               </td>
                             </tr>
@@ -1106,8 +1090,8 @@ export class EventsDisplay extends LitElement implements Layer {
                       <!--- Boats row -->
                       ${this.outgoingBoats.length > 0
                         ? html`
-                            <tr class="lg:px-2 lg:py-1 p-1">
-                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                            <tr class="lg:px-2 lg:py-1 p-1 pl-2">
+                              <td class="lg:px-2 lg:py-1 p-1 pl-2 text-left">
                                 ${this.renderBoats()}
                               </td>
                             </tr>
@@ -1123,7 +1107,7 @@ export class EventsDisplay extends LitElement implements Layer {
                         ? html`
                             <tr>
                               <td
-                                class="lg:px-2 lg:py-1 p-1 min-w-72 text-left"
+                                class="lg:px-2 lg:py-1 p-1 pl-2 min-w-72 text-left"
                               >
                                 &nbsp;
                               </td>
@@ -1135,7 +1119,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 </div>
               </div>
             </div>
-          `}
+        
     `;
   }
 

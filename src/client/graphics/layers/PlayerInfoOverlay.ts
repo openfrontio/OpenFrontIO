@@ -5,6 +5,8 @@ import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
+import chevronDownIcon from "../../../../resources/images/ChrevonDown.svg";
+import chevronUpIcon from "../../../../resources/images/ChrevonUp.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
@@ -252,7 +254,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         .find((alliance) => alliance.other === player.id());
       if (alliance !== undefined) {
         relationHtml = html` <span
-          class="flex gap-2 ml-auto mr-0 text-sm font-bold"
+          class="flex gap-2 ml-auto mr-0 text-sm font-bold text-green-500"
         >
           <img
             src=${allianceIcon}
@@ -281,7 +283,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return html`
       <div class="p-2">
         <button
-          class="items-center text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
+          class="items-center justify-between w-full flex text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
           @click=${() => {
@@ -289,24 +291,29 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
             this.requestUpdate?.();
           }}
         >
-          ${player.cosmetics.flag
-            ? player.cosmetics.flag!.startsWith("!")
-              ? html`<div
-                  class="h-8 mr-1 aspect-[3/4] player-flag"
-                  ${ref((el) => {
-                    if (el instanceof HTMLElement) {
-                      requestAnimationFrame(() => {
-                        renderPlayerFlag(player.cosmetics.flag!, el);
-                      });
-                    }
-                  })}
-                ></div>`
-              : html`<img
-                  class="h-8 mr-1 aspect-[3/4]"
-                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
-                />`
-            : html``}
-          ${player.name()}
+          <div class="flex items-center">
+            ${player.cosmetics.flag
+              ? player.cosmetics.flag!.startsWith("!")
+                ? html`<div
+                    class="h-8 mr-1 aspect-[3/4] player-flag"
+                    ${ref((el) => {
+                      if (el instanceof HTMLElement) {
+                        requestAnimationFrame(() => {
+                          renderPlayerFlag(player.cosmetics.flag!, el);
+                        });
+                      }
+                    })}
+                  ></div>`
+                : html`<img
+                    class="h-8 mr-1 aspect-[3/4]"
+                    src=${"/flags/" + player.cosmetics.flag! + ".svg"}
+                  />`
+              : html``}
+            ${player.name()}
+          </div>
+          <img
+            src="${this.showDetails ? chevronUpIcon : chevronDownIcon}"
+          class="w-4 h-4">
         </button>
 
         <!-- Collapsible section -->
@@ -442,7 +449,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-blue-950/70 backdrop-blur-sm shadow-xs rounded-xl shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
           ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}

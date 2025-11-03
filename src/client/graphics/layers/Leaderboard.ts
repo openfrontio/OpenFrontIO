@@ -6,6 +6,8 @@ import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
+import chevronDownIcon from "../../../../resources/images/ChrevonDown.svg";
+import chevronUpIcon from "../../../../resources/images/ChrevonUp.svg";
 
 interface Entry {
   name: string;
@@ -180,10 +182,10 @@ export class Leaderboard extends LitElement implements Layer {
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
-          style="grid-template-columns: 30px 100px 70px 55px 75px;"
+          class="grid w-full text-xs md:text-xs lg:text-sm"
+          style="grid-template-columns: 30px 100px 70px 70px 75px;"
         >
-          <div class="contents font-bold bg-gray-700/50">
+          <div class="contents font-bold">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
               #
             </div>
@@ -191,36 +193,36 @@ export class Leaderboard extends LitElement implements Layer {
               ${translateText("leaderboard.player")}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              class="flex items-center justify-center gap-1.5 py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("tiles")}
             >
               ${translateText("leaderboard.owned")}
               ${this._sortKey === "tiles"
-                ? this._sortOrder === "asc"
-                  ? "⬆️"
-                  : "⬇️"
+                ? html`<img
+                    src="${this._sortOrder === "asc" ? chevronUpIcon : chevronDownIcon}"
+                  class="w-3 h-3">`
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              class="flex items-center justify-center gap-1.5 py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("gold")}
             >
               ${translateText("leaderboard.gold")}
               ${this._sortKey === "gold"
-                ? this._sortOrder === "asc"
-                  ? "⬆️"
-                  : "⬇️"
+                ? html`<img
+                    src="${this._sortOrder === "asc" ? chevronUpIcon : chevronDownIcon}"
+                  class="w-3 h-3">`
                 : ""}
             </div>
             <div
-              class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
+              class="flex items-center justify-center gap-1.5 py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
               @click=${() => this.setSort("troops")}
             >
               ${translateText("leaderboard.troops")}
               ${this._sortKey === "troops"
-                ? this._sortOrder === "asc"
-                  ? "⬆️"
-                  : "⬇️"
+                ? html`<img
+                    src="${this._sortOrder === "asc" ? chevronUpIcon : chevronDownIcon}"
+                  class="w-3 h-3">`
                 : ""}
             </div>
           </div>
@@ -259,13 +261,15 @@ export class Leaderboard extends LitElement implements Layer {
       </div>
 
       <button
-        class="mt-1 px-1.5 py-0.5 md:px-2 md:py-0.5 text-xs md:text-xs lg:text-sm border border-white/20 hover:bg-white/10 text-white mx-auto block"
+        class="mt-1 px-1.5 py-0.5 md:px-2 md:py-0.5 w-full text-xs md:text-xs lg:text-sm hover:bg-white/10 text-white mx-auto block"
         @click=${() => {
           this.showTopFive = !this.showTopFive;
           this.updateLeaderboard();
         }}
       >
-        ${this.showTopFive ? "+" : "-"}
+        <img
+          src="${this.showTopFive ? chevronDownIcon : chevronUpIcon}"
+        class="w-5 h-5 m-auto">
       </button>
     `;
   }

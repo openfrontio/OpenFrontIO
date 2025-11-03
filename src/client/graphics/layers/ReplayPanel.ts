@@ -66,7 +66,7 @@ export class ReplayPanel extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex-shrink-0 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md"
+        class="flex-shrink-0 bg-opacity-60 bg-blue-950/70 p-1 lg:p-2 rounded-es-sm lg:rounded-xl backdrop-blur-md"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">

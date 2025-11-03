@@ -127,10 +127,10 @@ export class UnitDisplay extends LitElement implements Layer {
 
     return html`
       <div
-        class="hidden 2xl:flex lg:flex fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[1100] 2xl:flex-row xl:flex-col lg:flex-col 2xl:gap-5 xl:gap-2 lg:gap-2 justify-center items-center"
+        class="hidden 2xl:flex lg:flex fixed bottom-1 left-1/2 transform -translate-x-1/2 z-[1100] 2xl:flex-row xl:flex-col lg:flex-col 2xl:gap-5 xl:gap-2 lg:gap-2 justify-center items-center"
       >
-        <div class="bg-gray-800/70 backdrop-blur-sm rounded-lg p-0.5">
-          <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1 w-fit">
+        <div class="bg-blue-950/70 backdrop-blur-sm rounded-xl p-2">
+          <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1.5 w-fit">
             ${this.renderUnitItem(
               cityIcon,
               this._cities,
@@ -175,8 +175,8 @@ export class UnitDisplay extends LitElement implements Layer {
             )}
           </div>
         </div>
-        <div class="bg-gray-800/70 backdrop-blur-sm rounded-lg p-0.5 w-fit">
-          <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1">
+        <div class="bg-blue-950/70 backdrop-blur-sm rounded-xl p-2 w-fit">
+          <div class="grid grid-rows-1 auto-cols-max grid-flow-col gap-1.5">
             ${this.renderUnitItem(
               warshipIcon,
               this._warships,
@@ -239,7 +239,7 @@ export class UnitDisplay extends LitElement implements Layer {
         ${hovered
           ? html`
               <div
-                class="absolute -top-[250%] left-1/2 -translate-x-1/2 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-sm rounded p-1 z-20 shadow-lg pointer-events-none"
+                class="absolute -top-[350%] left-1/2 -translate-x-1/2 text-gray-200 text-center w-max text-xs bg-blue-950/90 backdrop-blur-sm rounded p-1 z-20 shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
                   ${translateText(
@@ -261,8 +261,8 @@ export class UnitDisplay extends LitElement implements Layer {
         <div
           class="${this.canBuild(unitType)
             ? ""
-            : "opacity-40"} border border-slate-500 rounded pr-2 pb-1 flex items-center gap-2 cursor-pointer 
-             ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
+            : "opacity-40"} border border-slate-500 rounded-lg pr-1.5 pl-1.5 flex items-center gap-2 cursor-pointer 
+             ${selected ? "hover:bg-blue-400/10" : "hover:bg-blue-900"}
              rounded text-white ${selected ? "bg-slate-400/20" : ""}"
           @click=${() => {
             if (selected) {
@@ -293,14 +293,14 @@ export class UnitDisplay extends LitElement implements Layer {
           @mouseleave=${() =>
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
-          ${html`<div class="ml-1 text-xs relative -top-1.5 text-gray-400">
+          ${html`<div class="text-xs relative text-gray-400">
             ${hotkey.toUpperCase()}
           </div>`}
-          <div class="flex items-center gap-1 pt-1">
+          <div class="flex font-medium text-sm items-center gap-1 h-[1.5rem]">
             <img
               src=${icon}
               alt=${structureKey}
-              style="vertical-align: middle; width: 24px; height: 24px;"
+              style="vertical-align: middle; width: 16px; height: 16px;"
             />
             ${number !== null ? renderNumber(number) : null}
           </div>
