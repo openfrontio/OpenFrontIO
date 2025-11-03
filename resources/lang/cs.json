@@ -105,7 +105,6 @@
   },
   "single_modal": {
     "title": "Jeden hráč",
-    "random_spawn": "Náhodné rozmístění",
     "allow_alliances": "Povolit aliance",
     "options_title": "Možnosti",
     "bots": "Boti: ",
@@ -150,10 +149,6 @@
     "regional": "Regionální",
     "fantasy": "Ostatní"
   },
-  "heads_up_message": {
-    "choose_spawn": "Vyberte místo počátku",
-    "spawn_selected_automatically": "Místo spawnování je vybráno automaticky. Připravte se na bitvu"
-  },
   "private_lobby": {
     "title": "Připojit se do soukromé lobby",
     "enter_id": "Zadat ID Lobby",
@@ -192,8 +187,7 @@
     "player": "Hráč",
     "players": "Hráči",
     "waiting": "Čeká se na hráče...",
-    "start": "Začít hru",
-    "random_spawn": "Náhodné rozmístění"
+    "start": "Začít hru"
   },
   "game_starting_modal": {
     "title": "Hra začíná...",
