@@ -1,9 +1,9 @@
-import { Game, PlayerType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { PseudoRandom } from "../PseudoRandom";
-import { GameID } from "../Schemas";
-import { simpleHash } from "../Util";
-import { SpawnExecution } from "./SpawnExecution";
+import { Game, PlayerType } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
+import { PseudoRandom } from "../../PseudoRandom";
+import { GameID } from "../../Schemas";
+import { simpleHash } from "../../Util";
+import { SpawnExecution } from "../SpawnExecution";
 
 export class PlayerSpawner {
   private random: PseudoRandom;
