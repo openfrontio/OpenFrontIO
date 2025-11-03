@@ -466,16 +466,16 @@ Handles camera transformations including zooming, panning, centering, and smooth
 
 **Properties:**
 
-| Name               | Type                     | Description                                                   |
-| ------------------ | ------------------------ | ------------------------------------------------------------- |
-| `scale`            | `number`                 | Current zoom level. Defaults to 1.8.                          |
-| `_boundingRect`    | `DOMRect`                | Current canvas bounding rectangle.                            |
-| `offsetX`          | `number`                 | Horizontal camera offset.                                     |
-| `offsetY`          | `number`                 | Vertical camera offset.                                       |
-| `lastGoToCallTime` | `number \| null`         | Timestamp of the last camera goTo call.                       |
-| `target`           | `Cell \| null`           | Current target cell for camera movement.                      |
-| `intervalID`       | `NodeJS.Timeout \| null` | Interval ID for smooth camera movement.                       |
-| `changed`          | `boolean`                | Tracks if the camera transform has changed since last update. |
+| Name               | Type            | Description                                                   |
+| ------------------ | --------------- | ------------------------------------------------------------- | ---------------------------------------- |
+| `scale`            | `number`        | Current zoom level. Defaults to 1.8.                          |
+| `_boundingRect`    | `DOMRect`       | Current canvas bounding rectangle.                            |
+| `offsetX`          | `number`        | Horizontal camera offset.                                     |
+| `offsetY`          | `number`        | Vertical camera offset.                                       |
+| `lastGoToCallTime` | `number         | null`                                                         | Timestamp of the last camera goTo call.  |
+| `target`           | `Cell           | null`                                                         | Current target cell for camera movement. |
+| `intervalID`       | `NodeJS.Timeout | null`                                                         | Interval ID for smooth camera movement.  |
+| `changed`          | `boolean`       | Tracks if the camera transform has changed since last update. |
 
 ##### public constructor `constructor()`
 
@@ -850,14 +850,14 @@ Implements: [interface `Fx`](#interface-fx)
 
 **Properties:**
 
-| Name             | Type                     | Description                                                        |
-| ---------------- | ------------------------ | ------------------------------------------------------------------ |
-| `animatedSprite` | `AnimatedSprite \| null` | The underlying animated sprite.                                    |
-| `elapsedTime`    | `number`                 | Time elapsed since animation started.                              |
-| `duration`       | `number`                 | Duration of animation in milliseconds.                             |
-| `waitToTheEnd`   | `boolean`                | Whether to wait for sprite lifetime instead of specified duration. |
-| `x`              | `number`                 | X-coordinate of sprite position.                                   |
-| `y`              | `number`                 | Y-coordinate of sprite position.                                   |
+| Name             | Type            | Description                                                        |
+| ---------------- | --------------- | ------------------------------------------------------------------ | ------------------------------- |
+| `animatedSprite` | `AnimatedSprite | null`                                                              | The underlying animated sprite. |
+| `elapsedTime`    | `number`        | Time elapsed since animation started.                              |
+| `duration`       | `number`        | Duration of animation in milliseconds.                             |
+| `waitToTheEnd`   | `boolean`       | Whether to wait for sprite lifetime instead of specified duration. |
+| `x`              | `number`        | X-coordinate of sprite position.                                   |
+| `y`              | `number`        | Y-coordinate of sprite position.                                   |
 
 ##### public constructor `constructor()`
 
@@ -2116,16 +2116,16 @@ Manages the left sidebar in the game UI, displaying player team labels, leaderbo
 
 **Properties:**
 
-| Name                       | Type             | Description                                                      |
-| -------------------------- | ---------------- | ---------------------------------------------------------------- |
-| `isLeaderboardShow`        | `boolean`        | Indicates whether the leaderboard is visible.                    |
-| `isTeamLeaderboardShow`    | `boolean`        | Indicates whether the team leaderboard is visible.               |
-| `isVisible`                | `boolean`        | Indicates whether the sidebar is visible.                        |
-| `isPlayerTeamLabelVisible` | `boolean`        | Indicates whether the player's team label is visible.            |
-| `playerTeam`               | `string \| null` | Stores the player's team identifier.                             |
-| `playerColor`              | `Colord`         | Color associated with the player's team.                         |
-| `game`                     | `GameView`       | Game view instance for accessing player and game state.          |
-| `_shownOnInit`             | `boolean`        | Tracks whether the sidebar was initially shown on large screens. |
+| Name                       | Type       | Description                                                      |
+| -------------------------- | ---------- | ---------------------------------------------------------------- | ------------------------------------ |
+| `isLeaderboardShow`        | `boolean`  | Indicates whether the leaderboard is visible.                    |
+| `isTeamLeaderboardShow`    | `boolean`  | Indicates whether the team leaderboard is visible.               |
+| `isVisible`                | `boolean`  | Indicates whether the sidebar is visible.                        |
+| `isPlayerTeamLabelVisible` | `boolean`  | Indicates whether the player's team label is visible.            |
+| `playerTeam`               | `string    | null`                                                            | Stores the player's team identifier. |
+| `playerColor`              | `Colord`   | Color associated with the player's team.                         |
+| `game`                     | `GameView` | Game view instance for accessing player and game state.          |
+| `_shownOnInit`             | `boolean`  | Tracks whether the sidebar was initially shown on large screens. |
 
 #### public function `createRenderRoot()`
 
@@ -2826,7 +2826,7 @@ Initializes event listeners for mouse movements, context menus, and closing radi
 
 Hides the overlay and clears the currently displayed player and unit.
 
-##### public function `maybeShow(x: number, y: number)`
+##### public function `maybeShow()`
 
 | Parameter | Type     | Description                                |
 | --------- | -------- | ------------------------------------------ |
@@ -2839,7 +2839,7 @@ Displays player or unit info if the coordinates correspond to a valid tile or ne
 
 Requests a UI update every tick.
 
-##### public function `renderLayer(context: CanvasRenderingContext2D)`
+##### public function `renderLayer()`
 
 | Parameter | Type                       | Description                              |
 | --------- | -------------------------- | ---------------------------------------- |
@@ -2851,7 +2851,7 @@ Implements the [Layer](#class-layer) interface. Empty placeholder for compatibil
 
 Returns `boolean`. Always returns `false`.
 
-##### public function `setVisible(visible: boolean)`
+##### public function `setVisible()`
 
 | Parameter | Type      | Description                                |
 | --------- | --------- | ------------------------------------------ |
@@ -2859,7 +2859,7 @@ Returns `boolean`. Always returns `false`.
 
 Updates `_isInfoVisible` and requests a UI update.
 
-##### private function `getRelationClass(relation: Relation)`
+##### private function `getRelationClass()`
 
 | Parameter  | Type       | Description                      |
 | ---------- | ---------- | -------------------------------- |
@@ -2867,7 +2867,7 @@ Updates `_isInfoVisible` and requests a UI update.
 
 Returns a Tailwind CSS class string for coloring relation indicators.
 
-##### private function `getRelationName(relation: Relation)`
+##### private function `getRelationName()`
 
 | Parameter  | Type       | Description                      |
 | ---------- | ---------- | -------------------------------- |
@@ -2875,7 +2875,7 @@ Returns a Tailwind CSS class string for coloring relation indicators.
 
 Returns a translated text string describing the relation.
 
-##### private function `displayUnitCount(player: PlayerView, type: UnitType, icon: string, description: string)`
+##### private function `displayUnitCount()`
 
 | Parameter     | Type         | Description                               |
 | ------------- | ------------ | ----------------------------------------- |
@@ -2886,7 +2886,7 @@ Returns a translated text string describing the relation.
 
 Returns a `TemplateResult` displaying the unit count, or an empty string if the unit type is disabled.
 
-##### private function `allianceExpirationText(alliance: AllianceView)`
+##### private function `allianceExpirationText()`
 
 | Parameter  | Type           | Description                           |
 | ---------- | -------------- | ------------------------------------- |
@@ -2894,7 +2894,7 @@ Returns a `TemplateResult` displaying the unit count, or an empty string if the 
 
 Returns a formatted string representing the remaining alliance duration.
 
-##### private function `renderPlayerInfo(player: PlayerView)`
+##### private function `renderPlayerInfo()`
 
 | Parameter | Type         | Description                |
 | --------- | ------------ | -------------------------- |
@@ -2902,7 +2902,7 @@ Returns a formatted string representing the remaining alliance duration.
 
 Returns a `TemplateResult` rendering the player's info, including flag, name, troops, gold, units, and alliance relations.
 
-##### private function `renderUnitInfo(unit: UnitView)`
+##### private function `renderUnitInfo()`
 
 | Parameter | Type       | Description              |
 | --------- | ---------- | ------------------------ |
@@ -2918,261 +2918,426 @@ Overrides the default LitElement render root to return `this`, disabling shadow 
 
 #### class `PlayerPanel`
 
-Manages the display and interaction of a player panel, including resources, alliances, actions, and player-specific information.
-
+Defines the player interaction panel component for the game UI.  
+Displays player details, alliance information, resources, and actionable buttons (chat, trade, alliance, emoji).  
 Implements [interface `Layer`](#interface-layer).
 
 **Properties:**
 
-| Name                    | Type                           | Description                                                                  |
-| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------- |
-| `g`                     | `GameView`                     | The game view instance used to query player and tile data.                   |
-| `eventBus`              | `EventBus`                     | Event bus instance for emitting and subscribing to events.                   |
-| `emojiTable`            | `EmojiTable`                   | Component for displaying emoji selection.                                    |
-| `uiState`               | `UIState`                      | UI state manager for modal and panel interactions.                           |
-| `actions`               | `PlayerActions \| null`        | Cached actions for the currently displayed player and tile.                  |
-| `tile`                  | `TileRef \| null`              | Tile reference for the current panel.                                        |
-| `_profileForPlayerId`   | `number \| null`               | Stores the player ID of the currently loaded profile.                        |
-| `sendTarget`            | `PlayerView \| null`           | Player targeted for sending troops or gold. Optional, managed via state.     |
-| `sendMode`              | `'troops' \| 'gold' \| 'none'` | Current send mode. Optional, managed via state.                              |
-| `isVisible`             | `boolean`                      | Visibility state of the panel. Optional, managed via state.                  |
-| `allianceExpiryText`    | `string \| null`               | Text representation of remaining alliance time. Optional, managed via state. |
-| `allianceExpirySeconds` | `number \| null`               | Remaining alliance time in seconds. Optional, managed via state.             |
-| `otherProfile`          | `PlayerProfile \| null`        | Profile information for the displayed player. Optional, managed via state.   |
-| `ctModal`               | `ChatModal`                    | Chat modal component used to open chat windows.                              |
+| Name                    | Type                           | Description                                                             |
+| ----------------------- | ------------------------------ | ----------------------------------------------------------------------- |
+| `g`                     | `GameView`                     | Reference to the active [class `GameView`](#class-gameview).            |
+| `eventBus`              | `EventBus`                     | Event bus used for communication between UI elements and game logic.    |
+| `emojiTable`            | `EmojiTable`                   | Reference to the global emoji selector.                                 |
+| `uiState`               | `UIState`                      | The current [class `UIState`](#class-uistate) for UI rendering context. |
+| `actions`               | `PlayerActions | null`        | Holds the current player action permissions and statuses.               |
+| `tile`                  | `TileRef       | null`        | The tile currently being examined.                                      |
+| `_profileForPlayerId`   | `number        | null`        | Caches the last loaded player profile ID for optimization.              |
+| `sendTarget`            | `PlayerView    | null`        | Target player for sending resources (stateful).                         |
+| `sendMode`              | `"troops" | "gold" | "none"` | Current send mode type (stateful).                                      |
+| `isVisible`             | `boolean`                      | Visibility state of the panel.                                          |
+| `allianceExpiryText`    | `string        | null`        | Human-readable alliance expiry text.                                    |
+| `allianceExpirySeconds` | `number        | null`        | Remaining seconds before alliance expires.                              |
+| `otherProfile`          | `PlayerProfile | null`        | Loaded profile of the other player.                                     |
+| `ctModal`               | `ChatModal`                    | Cached chat modal reference.                                            |
 
-##### public function `createRenderRoot()`
+---
+
+##### protected function `createRenderRoot()`
 
 Returns `this`.
 
-Overrides LitElement method to use the component itself as the render root.
+Overrides LitElement’s shadow DOM root creation to render directly into the main DOM tree.
 
-##### public function `initEventBus(eventBus: EventBus)`
+---
 
-| Parameter  | Type       | Description                                                  |
-| ---------- | ---------- | ------------------------------------------------------------ |
-| `eventBus` | `EventBus` | The event bus to initialize and listen for `CloseViewEvent`. |
+##### public function `initEventBus()`
 
-Returns `void`.
+| Parameter  | Type       | Description                                     |
+| ---------- | ---------- | ----------------------------------------------- |
+| `eventBus` | `EventBus` | The central event bus instance to subscribe to. |
 
-Sets up a listener to hide the panel when a `CloseViewEvent` is emitted.
+Returns `void`.  
+Registers handlers for view close events and hides the panel when appropriate.
+
+---
 
 ##### public function `init()`
 
-Returns `void`.
+Returns `void`.  
+Initializes event listeners and binds the `ChatModal` component. Logs a warning if the modal is not found.
 
-Initializes the event bus for `MouseUpEvent` and queries the DOM for the `ChatModal` element.
+---
 
-##### public function `tick()`
+##### public async function `tick()`
 
-Returns `Promise<void>`.
+Returns `Promise<void>`.  
+Refreshes the displayed player data and interaction state when the panel is visible.  
+Fetches profiles, updates alliance timers, and requests UI updates.  
+Returns early if no visible tile is active.
 
-Updates the panel periodically, refreshing the target player's profile, actions, and alliance expiry.
+---
 
-##### public function `show(actions: PlayerActions, tile: TileRef)`
+##### public function `show()`
 
-| Parameter | Type            | Description                              |
-| --------- | --------------- | ---------------------------------------- |
-| `actions` | `PlayerActions` | Actions available to the current player. |
-| `tile`    | `TileRef`       | Tile reference for the panel display.    |
+| Parameter | Type            | Description                                             |
+| --------- | --------------- | ------------------------------------------------------- |
+| `actions` | `PlayerActions` | Current player interaction permissions.                 |
+| `tile`    | `TileRef`       | Tile reference used to determine ownership and context. |
 
-Returns `void`.
+Returns `void`.  
+Displays the panel for the given tile and initializes action context.
 
-Sets panel state to visible and updates the display.
+---
 
 ##### public function `hide()`
 
-Returns `void`.
+Returns `void`.  
+Hides the panel and resets transient state such as send mode and target.
 
-Hides the panel and resets send mode and target.
+---
 
-##### private function `handleClose(e: Event)`
+##### private function `handleClose()`
 
-| Parameter | Type    | Description                          |
-| --------- | ------- | ------------------------------------ |
-| `e`       | `Event` | Event triggered by the close button. |
+| Parameter | Type    | Description                         |
+| --------- | ------- | ----------------------------------- |
+| `e`       | `Event` | DOM event triggering panel closure. |
 
-Returns `void`.
-
+Returns `void`.  
 Stops propagation and hides the panel.
 
-##### private function `handleAllianceClick(e: Event, myPlayer: PlayerView, other: PlayerView)`
+---
 
-| Parameter  | Type         | Description     |
-| ---------- | ------------ | --------------- |
-| `e`        | `Event`      | Click event.    |
-| `myPlayer` | `PlayerView` | Current player. |
-| `other`    | `PlayerView` | Target player.  |
+##### private function `handleAllianceClick()`
 
-Returns `void`.
+| Parameter  | Type         | Description               |
+| ---------- | ------------ | ------------------------- |
+| `e`        | `Event`      | The originating UI event. |
+| `myPlayer` | `PlayerView` | The local player.         |
+| `other`    | `PlayerView` | The target player.        |
 
-Emits a [class `SendAllianceRequestIntentEvent`](#class-sendalliancerequestintentevent) and hides the panel.
+Returns `void`.  
+Sends a [class `SendAllianceRequestIntentEvent`](#class-sendalliancerequestintentevent) via the [class `EventBus`](#class-eventbus).  
+Hides the panel afterward.
 
-##### private function `handleBreakAllianceClick(e: Event, myPlayer: PlayerView, other: PlayerView)`
+---
 
-| Parameter  | Type         | Description     |
-| ---------- | ------------ | --------------- |
-| `e`        | `Event`      | Click event.    |
-| `myPlayer` | `PlayerView` | Current player. |
-| `other`    | `PlayerView` | Target player.  |
+##### private function `handleBreakAllianceClick()`
 
-Returns `void`.
+| Parameter  | Type         | Description        |
+| ---------- | ------------ | ------------------ |
+| `e`        | `Event`      | The UI event.      |
+| `myPlayer` | `PlayerView` | The local player.  |
+| `other`    | `PlayerView` | The target player. |
 
-Emits a [class `SendBreakAllianceIntentEvent`](#class-sendbreakallianceintentevent) and hides the panel.
+Returns `void`.  
+Emits a [class `SendBreakAllianceIntentEvent`](#class-sendbreakallianceintentevent) to request breaking the alliance.  
+Hides the panel afterward.
 
-##### private function `openSendTroops(target: PlayerView)`
+---
 
-| Parameter | Type         | Description               |
-| --------- | ------------ | ------------------------- |
-| `target`  | `PlayerView` | Player to send troops to. |
+##### private function `openSendTroops()`
 
-Returns `void`.
+| Parameter | Type         | Description                   |
+| --------- | ------------ | ----------------------------- |
+| `target`  | `PlayerView` | The player to send troops to. |
 
-Sets send target and mode to `troops`.
+Returns `void`.  
+Sets internal state to enable troop send mode.
 
-##### private function `openSendGold(target: PlayerView)`
+---
 
-| Parameter | Type         | Description             |
-| --------- | ------------ | ----------------------- |
-| `target`  | `PlayerView` | Player to send gold to. |
+##### private function `openSendGold()`
 
-Returns `void`.
+| Parameter | Type         | Description                 |
+| --------- | ------------ | --------------------------- |
+| `target`  | `PlayerView` | The player to send gold to. |
 
-Sets send target and mode to `gold`.
+Returns `void`.  
+Sets internal state to enable gold send mode.
 
-##### private function `handleDonateTroopClick(e: Event, myPlayer: PlayerView, other: PlayerView)`
+---
 
-| Parameter  | Type         | Description     |
-| ---------- | ------------ | --------------- |
-| `e`        | `Event`      | Click event.    |
-| `myPlayer` | `PlayerView` | Current player. |
-| `other`    | `PlayerView` | Target player.  |
+##### private function `handleDonateTroopClick()`
 
-Returns `void`.
+| Parameter  | Type         | Description        |
+| ---------- | ------------ | ------------------ |
+| `e`        | `Event`      | Click event.       |
+| `myPlayer` | `PlayerView` | The local player.  |
+| `other`    | `PlayerView` | The target player. |
 
-Opens the send troops modal.
+Returns `void`.  
+Opens the send troop panel for the specified player.
 
-##### private function `handleDonateGoldClick(e: Event, myPlayer: PlayerView, other: PlayerView)`
+---
 
-| Parameter  | Type         | Description     |
-| ---------- | ------------ | --------------- |
-| `e`        | `Event`      | Click event.    |
-| `myPlayer` | `PlayerView` | Current player. |
-| `other`    | `PlayerView` | Target player.  |
+##### private function `handleDonateGoldClick()`
 
-Returns `void`.
+| Parameter  | Type         | Description        |
+| ---------- | ------------ | ------------------ |
+| `e`        | `Event`      | Click event.       |
+| `myPlayer` | `PlayerView` | The local player.  |
+| `other`    | `PlayerView` | The target player. |
 
-Opens the send gold modal.
+Returns `void`.  
+Opens the send gold panel for the specified player.
+
+---
 
 ##### private function `closeSend()`
 
-Returns `void`.
+Returns `void`.  
+Resets sending state to default (“none”).
 
-Resets the send target and send mode to `none`.
+---
 
-##### private function `confirmSend(e: CustomEvent<{ amount: number; closePanel?: boolean }>)`
+##### private function `confirmSend()`
 
-| Parameter | Type                                                    | Description                                                   |
-| --------- | ------------------------------------------------------- | ------------------------------------------------------------- |
-| `e`       | `CustomEvent<{ amount: number; closePanel?: boolean }>` | Event containing amount to send and optional closePanel flag. |
+| Parameter | Type                                                    | Description                                        |
+| --------- | ------------------------------------------------------- | -------------------------------------------------- |
+| `e`       | `CustomEvent<{ amount: number; closePanel?: boolean }>` | The confirmation event with amount and close flag. |
 
-Returns `void`.
+Returns `void`.  
+Confirms resource send, resets send mode, and optionally hides the panel.
 
-Confirms sending resources, closes send modal, optionally hides panel.
+---
 
-##### private function `handleEmbargoClick(e: Event, myPlayer: PlayerView, other: PlayerView)`
+##### private function `handleEmbargoClick()`
 
-Emits [class `SendEmbargoIntentEvent`](#class-sendembargointentevent) to start embargo and hides the panel.
+| Parameter  | Type         | Description       |
+| ---------- | ------------ | ----------------- |
+| `e`        | `Event`      | Click event.      |
+| `myPlayer` | `PlayerView` | The local player. |
+| `other`    | `PlayerView` | Target player.    |
 
-##### private function `handleStopEmbargoClick(e: Event, myPlayer: PlayerView, other: PlayerView)`
+Returns `void`.  
+Emits a [class `SendEmbargoIntentEvent`](#class-sendembargointentevent) with `"start"` action and hides the panel.
 
-Emits [class `SendEmbargoIntentEvent`](#class-sendembargointentevent) to stop embargo and hides the panel.
+---
 
-##### private function `onStopTradingAllClick(e: Event)`
+##### private function `handleStopEmbargoClick()`
 
-Emits [class `SendEmbargoAllIntentEvent`](#class-sendembargoallintentevent) to start embargo with all players.
+| Parameter  | Type         | Description       |
+| ---------- | ------------ | ----------------- |
+| `e`        | `Event`      | Click event.      |
+| `myPlayer` | `PlayerView` | The local player. |
+| `other`    | `PlayerView` | Target player.    |
 
-##### private function `onStartTradingAllClick(e: Event)`
+Returns `void`.  
+Emits a [class `SendEmbargoIntentEvent`](#class-sendembargointentevent) with `"stop"` action and hides the panel.
 
-Emits [class `SendEmbargoAllIntentEvent`](#class-sendembargoallintentevent) to stop embargo with all players.
+---
 
-##### private function `handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView)`
+##### private function `onStopTradingAllClick()`
 
-Displays emoji table, emits [class `SendEmojiIntentEvent`](#class-sendemojiintentevent) for selected emoji, hides panel.
+| Parameter | Type    | Description  |
+| --------- | ------- | ------------ |
+| `e`       | `Event` | Click event. |
 
-##### private function `handleChat(e: Event, sender: PlayerView, other: PlayerView)`
+Returns `void`.  
+Emits a [class `SendEmbargoAllIntentEvent`](#class-sendembargoallintentevent) to stop all trading.
 
-Opens [class `ChatModal`](#class-chatmodal) for conversation between players.
+---
 
-##### private function `handleTargetClick(e: Event, other: PlayerView)`
+##### private function `onStartTradingAllClic()k`
 
-Emits [class `SendTargetPlayerIntentEvent`](#class-sendtargetplayerintentevent) and hides panel.
+| Parameter | Type    | Description  |
+| --------- | ------- | ------------ |
+| `e`       | `Event` | Click event. |
 
-##### private function `identityChipProps(type: PlayerType)`
+Returns `void`.  
+Emits a [class `SendEmbargoAllIntentEvent`](#class-sendembargoallintentevent) to resume all trading.
 
-| Parameter | Type         | Description                             |
-| --------- | ------------ | --------------------------------------- |
-| `type`    | `PlayerType` | Type of player (Human, Bot, FakeHuman). |
+---
 
-Returns `Object` with label, aria, classes, and icon for identity chip.
+##### private function `handleEmojiClick()`
 
-##### private function `getRelationClass(relation: Relation)`
+| Parameter  | Type         | Description        |
+| ---------- | ------------ | ------------------ |
+| `e`        | `Event`      | Click event.       |
+| `myPlayer` | `PlayerView` | The local player.  |
+| `other`    | `PlayerView` | The target player. |
 
-| Parameter  | Type       | Description                           |
-| ---------- | ---------- | ------------------------------------- |
-| `relation` | `Relation` | Relation type to determine CSS class. |
+Returns `void`.  
+Displays the [class `EmojiTable`](#class-emojitable) for emoji selection and emits a [class `SendEmojiIntentEvent`](#class-sendemojiintentevent) when an emoji is chosen.  
+Hides both the emoji table and the panel after completion.
 
-Returns `string` CSS class for relation pill.
+---
 
-##### private function `getRelationName(relation: Relation)`
+##### private function `handleChat()`
 
-Returns `string` localized relation name.
+| Parameter | Type         | Description           |
+| --------- | ------------ | --------------------- |
+| `e`       | `Event`      | Click event.          |
+| `sender`  | `PlayerView` | The message sender.   |
+| `other`   | `PlayerView` | The recipient player. |
 
-##### private function `getExpiryColorClass(seconds: number \| null)`
+Returns `void`.  
+Opens the chat modal between the two players. Logs a warning if the chat modal is missing.
 
-Returns `string` CSS color class based on remaining seconds for alliance expiry.
+---
 
-##### private function `getTraitorRemainingSeconds(player: PlayerView)`
+##### private function `handleTargetClick()`
 
-Returns `number \| null`. Remaining traitor time in seconds. Returns `null` if player is not traitor or no remaining ticks.
+| Parameter | Type         | Description    |
+| --------- | ------------ | -------------- |
+| `e`       | `Event`      | Click event.   |
+| `other`   | `PlayerView` | Target player. |
 
-##### private function `renderTraitorBadge(other: PlayerView)`
+Returns `void`.  
+Emits a [class `SendTargetPlayerIntentEvent`](#class-sendtargetplayerintentevent) and hides the panel.
 
-Returns `TemplateResult`. HTML template for displaying traitor badge with remaining time.
+---
 
-##### private function `renderRelationPillIfNation(other: PlayerView, my: PlayerView)`
+##### private function `identityChipProps()`
 
-Returns `TemplateResult`. HTML template showing relation pill if player is a nation.
+| Parameter | Type         | Description         |
+| --------- | ------------ | ------------------- |
+| `type`    | `PlayerType` | Type of the player. |
 
-##### private function `renderIdentityRow(other: PlayerView, my: PlayerView)`
+Returns `{ labelKey: string; aria: string; classes: string; icon: string }`.  
+Provides styling and metadata for identity chips depending on player type.
 
-Returns `TemplateResult`. HTML template for player's flag, name, type chip, traitor badge, and relation pill.
+---
 
-##### private function `renderResources(other: PlayerView)`
+##### private function `getRelationClass()`
 
-Returns `TemplateResult`. HTML template displaying player's gold and troops.
+| Parameter  | Type       | Description                         |
+| ---------- | ---------- | ----------------------------------- |
+| `relation` | `Relation` | The relation state between players. |
 
-##### private function `renderStats(other: PlayerView, my: PlayerView)`
+Returns `string`.  
+Computes the CSS class string for visual relation representation.
 
-Returns `TemplateResult`. HTML template showing betrayals and trading status.
+---
 
-##### private function `renderAlliances(other: PlayerView)`
+##### private function `getRelationName()`
 
-Returns `TemplateResult`. HTML template listing all allies of the player.
+| Parameter  | Type       | Description              |
+| ---------- | ---------- | ------------------------ |
+| `relation` | `Relation` | The relation enum value. |
+
+Returns `string`.  
+Translates the relation into localized text.
+
+---
+
+##### private function `getExpiryColorClass()`
+
+| Parameter | Type    | Description |
+| --------- | ------- | ----------- | ---------------------------- |
+| `seconds` | `number | null`       | Remaining seconds or `null`. |
+
+Returns `string`.  
+Determines color class based on remaining time thresholds.
+
+---
+
+##### private function `getTraitorRemainingSeconds()`
+
+| Parameter | Type         | Description                       |
+| --------- | ------------ | --------------------------------- |
+| `player`  | `PlayerView` | Player to check for traitor time. |
+
+Returns `number | null`.  
+Calculates the remaining seconds for traitor status or returns `null` if not applicable.
+
+---
+
+##### private function `renderTraitorBadge()`
+
+| Parameter | Type         | Description                |
+| --------- | ------------ | -------------------------- |
+| `other`   | `PlayerView` | The player being rendered. |
+
+Returns `TemplateResult`.  
+Renders the traitor badge UI with remaining time if applicable.
+
+---
+
+##### private function `renderRelationPillIfNation()`
+
+| Parameter | Type         | Description        |
+| --------- | ------------ | ------------------ |
+| `other`   | `PlayerView` | The target player. |
+| `my`      | `PlayerView` | The local player.  |
+
+Returns `TemplateResult`.  
+Renders relation pill only for nation-type players when conditions are met.
+
+---
+
+##### private function `renderIdentityRow()`
+
+| Parameter | Type         | Description           |
+| --------- | ------------ | --------------------- |
+| `other`   | `PlayerView` | The displayed player. |
+| `my`      | `PlayerView` | The local player.     |
+
+Returns `TemplateResult`.  
+Renders the player identity row including flag, name, player type, and relation details.
+
+---
+
+##### private function `renderResources()`
+
+| Parameter | Type         | Description    |
+| --------- | ------------ | -------------- |
+| `other`   | `PlayerView` | Target player. |
+
+Returns `TemplateResult`.  
+Displays current gold and troop resources for the given player.
+
+---
+
+##### private function `renderStats()`
+
+| Parameter | Type         | Description    |
+| --------- | ------------ | -------------- |
+| `other`   | `PlayerView` | Target player. |
+| `my`      | `PlayerView` | Local player.  |
+
+Returns `TemplateResult`.  
+Displays betrayal count and trading status between players.
+
+---
+
+##### private function `renderAlliances()`
+
+| Parameter | Type         | Description                         |
+| --------- | ------------ | ----------------------------------- |
+| `other`   | `PlayerView` | The player whose alliances to list. |
+
+Returns `TemplateResult`.  
+Displays a scrollable list of the player’s allies.
+
+---
 
 ##### private function `renderAllianceExpiry()`
 
-Returns `TemplateResult`. HTML template showing remaining alliance time with color-coded urgency.
+Returns `TemplateResult`.  
+Shows remaining alliance time with dynamic color styling.  
+Returns an empty template if expiry data is missing.
 
-##### private function `renderActions(my: PlayerView, other: PlayerView)`
+---
 
-Returns `TemplateResult`. HTML template rendering all possible actions based on current state and permissions.
+##### private function `renderActions()`
+
+| Parameter | Type         | Description    |
+| --------- | ------------ | -------------- |
+| `my`      | `PlayerView` | Local player.  |
+| `other`   | `PlayerView` | Target player. |
+
+Returns `TemplateResult`.  
+Renders all available player action buttons depending on permissions and relation state.
+
+---
 
 ##### public function `render()`
 
-Returns `TemplateResult`.
-
-Renders the complete player panel including identity, resources, stats, alliances, alliance expiry, and action buttons. Hides panel if `isVisible` is false or tile has no player owner.
+Returns `TemplateResult`.  
+Renders the entire `PlayerPanel` UI including identity, stats, resources, and action buttons.  
+If visibility or ownership conditions fail, returns an empty template and logs a warning when appropriate.
 
 ### ./layers/RadialMenu.ts
 
@@ -3381,21 +3546,21 @@ Represents a single element in a radial or sub-menu.
 
 **Properties:**
 
-| Name            | Type                                                  | Description                                                                                                |
-| --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `id`            | `string`                                              | Unique identifier of the menu element.                                                                     |
-| `name`          | `string`                                              | Display name or internal key.                                                                              |
-| `displayed?`    | `boolean \| ((params: MenuElementParams) => boolean)` | Optional. Determines whether the element is displayed. Can be a boolean or a function returning a boolean. |
-| `color?`        | `string`                                              | Optional. Color of the element.                                                                            |
-| `icon?`         | `string`                                              | Optional. Icon image path.                                                                                 |
-| `text?`         | `string`                                              | Optional. Text to display on the element.                                                                  |
-| `fontSize?`     | `string`                                              | Optional. Font size for `text`.                                                                            |
-| `tooltipItems?` | `TooltipItem[]`                                       | Optional. Tooltip items for the element.                                                                   |
-| `tooltipKeys?`  | `TooltipKey[]`                                        | Optional. Tooltip keys for localization.                                                                   |
-| `cooldown?`     | `(params: MenuElementParams) => number`               | Optional. Returns cooldown value for the element.                                                          |
-| `disabled`      | `(params: MenuElementParams) => boolean`              | Determines if the element is disabled.                                                                     |
-| `action?`       | `(params: MenuElementParams) => void`                 | Optional. Action executed when the element is activated.                                                   |
-| `subMenu?`      | `(params: MenuElementParams) => MenuElement[]`        | Optional. Returns submenu elements if the element has children.                                            |
+| Name            | Type                                           | Description                                                     |
+| --------------- | ---------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `id`            | `string`                                       | Unique identifier of the menu element.                          |
+| `name`          | `string`                                       | Display name or internal key.                                   |
+| `displayed?`    | `boolean                                       | ((params: MenuElementParams) => boolean)`                       | Optional. Determines whether the element is displayed. Can be a boolean or a function returning a boolean. |
+| `color?`        | `string`                                       | Optional. Color of the element.                                 |
+| `icon?`         | `string`                                       | Optional. Icon image path.                                      |
+| `text?`         | `string`                                       | Optional. Text to display on the element.                       |
+| `fontSize?`     | `string`                                       | Optional. Font size for `text`.                                 |
+| `tooltipItems?` | `TooltipItem[]`                                | Optional. Tooltip items for the element.                        |
+| `tooltipKeys?`  | `TooltipKey[]`                                 | Optional. Tooltip keys for localization.                        |
+| `cooldown?`     | `(params: MenuElementParams) => number`        | Optional. Returns cooldown value for the element.               |
+| `disabled`      | `(params: MenuElementParams) => boolean`       | Determines if the element is disabled.                          |
+| `action?`       | `(params: MenuElementParams) => void`          | Optional. Action executed when the element is activated.        |
+| `subMenu?`      | `(params: MenuElementParams) => MenuElement[]` | Optional. Returns submenu elements if the element has children. |
 
 ---
 
@@ -3405,11 +3570,11 @@ Represents a key used to generate tooltips.
 
 **Properties:**
 
-| Name        | Type                               | Description                                             |
-| ----------- | ---------------------------------- | ------------------------------------------------------- |
-| `key`       | `string`                           | Localization key for tooltip.                           |
-| `className` | `string`                           | CSS class for styling the tooltip.                      |
-| `params?`   | `Record<string, string \| number>` | Optional. Parameters for localized string substitution. |
+| Name        | Type                   | Description                        |
+| ----------- | ---------------------- | ---------------------------------- | ------------------------------------------------------- |
+| `key`       | `string`               | Localization key for tooltip.      |
+| `className` | `string`               | CSS class for styling the tooltip. |
+| `params?`   | `Record<string, string | number>`                           | Optional. Parameters for localized string substitution. |
 
 ---
 
@@ -4538,7 +4703,7 @@ Manages rendering, updating, and interaction for structure icons, levels, and do
 | `levelsStage`      | `PIXI.Container`                                    | Stage containing level sprites.                          |                                                         |                                                                   |
 | `dotsStage`        | `PIXI.Container`                                    | Stage containing dot sprites.                            |                                                         |                                                                   |
 | `rootStage`        | `PIXI.Container`                                    | Root container holding all stages.                       |                                                         |                                                                   |
-| `playerActions`    | `PlayerActions                                      | null`                                                    | Actions available to the current player.                |                                                                   |
+| `playerActions`    | `PlayerActions  | null`                                                    | Actions available to the current player.                |                                                                   |
 | `theme`            | `Theme`                                             | Current game theme.                                      |                                                         |                                                                   |
 | `renderer`         | `PIXI.Renderer`                                     | Renderer for drawing the PIXI canvas.                    |                                                         |                                                                   |
 | `renders`          | `StructureRenderInfo[]`                             | Active rendered structures.                              |                                                         |                                                                   |
