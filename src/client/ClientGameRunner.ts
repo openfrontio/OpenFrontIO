@@ -47,6 +47,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -314,6 +315,19 @@ export class ClientGameRunner {
       if (message.type === "start") {
         this.hasJoined = true;
         console.log("starting game!");
+
+        if (this.gameView.isRandomSpawn()) {
+          setTimeout(() => {
+            const myPlayer = this.gameView.myPlayer();
+
+            if (!myPlayer) {
+              return;
+            }
+
+            this.eventBus.emit(new GoToPlayerEvent(myPlayer));
+          }, 1000);
+        }
+
         for (const turn of message.turns) {
           if (turn.turnNumber < this.turnsSeen) {
             continue;
