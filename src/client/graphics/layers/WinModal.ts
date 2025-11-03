@@ -5,6 +5,7 @@ import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
+import "../../components/GameRecapViewer";
 import "../../components/PatternButton";
 import {
   fetchCosmetics,
@@ -13,6 +14,7 @@ import {
 } from "../../Cosmetics";
 import { getUserMe } from "../../jwt";
 import { SendWinnerEvent } from "../../Transport";
+import { GameRecapCapture } from "../recapCapture/GameRecapCapture";
 import { Layer } from "./Layer";
 
 @customElement("win-modal")
@@ -34,9 +36,14 @@ export class WinModal extends LitElement implements Layer {
   @state()
   private patternContent: TemplateResult | null = null;
 
+  @state()
+  private exportingRecap = false;
+
   private _title: string;
 
   private rand = Math.random();
+
+  private recapCapture: GameRecapCapture | null = null;
 
   // Override to prevent shadow DOM creation
   createRenderRoot() {
@@ -45,6 +52,18 @@ export class WinModal extends LitElement implements Layer {
 
   constructor() {
     super();
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+  }
+
+  attachRecapCapture(recapCapture: GameRecapCapture) {
+    if (this.recapCapture === recapCapture) {
+      return;
+    }
+    this.recapCapture = recapCapture;
+    this.requestUpdate();
   }
 
   render() {
@@ -57,7 +76,7 @@ export class WinModal extends LitElement implements Layer {
         <h2 class="m-0 mb-4 text-[26px] text-center text-white">
           ${this._title || ""}
         </h2>
-        ${this.innerHtml()}
+        ${this.innerHtml()} ${this.renderRecapSection()}
         <div
           class="${this.showButtons
             ? "flex justify-between gap-2.5"
@@ -104,6 +123,67 @@ export class WinModal extends LitElement implements Layer {
       return this.steamWishlist();
     }
     return this.renderPatternButton();
+  }
+
+  private renderRecapSection(): TemplateResult | null {
+    if (!this.recapCapture) {
+      return null;
+    }
+    const frameStore = this.recapCapture.getFrameStore();
+    return html`
+      <div class="mt-4">
+        <game-recap-viewer
+          class="block w-full"
+          .frameStore=${frameStore}
+          @recap-request-export=${this.onExportRecapWebM}
+        ></game-recap-viewer>
+      </div>
+    `;
+  }
+
+  private get canExportRecap(): boolean {
+    return (
+      typeof MediaRecorder !== "undefined" &&
+      typeof HTMLCanvasElement !== "undefined" &&
+      "captureStream" in HTMLCanvasElement.prototype
+    );
+  }
+
+  private async onExportRecapWebM() {
+    if (!this.recapCapture || this.exportingRecap) {
+      return;
+    }
+    if (!this.canExportRecap) {
+      console.warn(
+        "Recap export requested but MediaRecorder support is unavailable",
+      );
+      return;
+    }
+    this.exportingRecap = true;
+    console.info("[RecapCapture] Manual export requested");
+    try {
+      const { blob, filename } = await this.recapCapture.exportAsWebM();
+      if (typeof document === "undefined") {
+        console.warn("Recap export is unavailable in this environment");
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      console.info("[RecapCapture] Manual export completed", {
+        sizeBytes: blob.size,
+        filename,
+      });
+    } catch (error) {
+      console.error("Failed to export recap capture", error);
+    } finally {
+      this.exportingRecap = false;
+    }
   }
 
   renderPatternButton() {
@@ -191,6 +271,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   async show() {
+    this.recapCapture?.stopCapturing();
     await this.loadPatternContent();
     this.isVisible = true;
     this.requestUpdate();
