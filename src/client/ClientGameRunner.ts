@@ -324,6 +324,20 @@ export class ClientGameRunner {
               return;
             }
 
+            if (!myPlayer.hasSpawned()) {
+              showErrorModal(
+                "spawn_failed",
+                translateText("error_modal.spawn_failed.description"),
+                this.lobby.gameID,
+                this.lobby.clientID,
+                true,
+                false,
+                translateText("error_modal.spawn_failed.title"),
+              );
+
+              return;
+            }
+
             this.eventBus.emit(new GoToPlayerEvent(myPlayer));
           }, 1000);
         }
