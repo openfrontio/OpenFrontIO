@@ -375,7 +375,7 @@ export class HostLobbyModal extends LitElement {
                     : ""
                 }
 
-                                <label
+                <label
                   for="instant-build"
                   class="option-card ${this.instantBuild ? "selected" : ""}"
                 >
