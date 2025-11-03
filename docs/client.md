@@ -4,6 +4,250 @@ Table of contents:
 
 [TOC]
 
+## Components
+
+### Difficulties.ts
+
+#### class `DifficultyDisplay`
+
+Displays a visual indicator of difficulty using skull icons with different states and sizes.
+
+**Properties:**
+
+| Name            | Type     | Description                                                                   |
+| --------------- | -------- | ----------------------------------------------------------------------------- |
+| `difficultyKey` | `string` | Current difficulty key determining which icons are active (defaults to `""`). |
+
+##### private function `getDifficultyIcon(difficultyKey: string)`
+
+ Returns the corresponding difficulty icon markup as an HTML template.
+
+| Parameter                                                             | Type     | Description                              |
+| --------------------------------------------------------------------- | -------- | ---------------------------------------- |
+| `difficultyKey`                                                       | `string` | Key representing the current difficulty. |
+
+Returns `import("lit").TemplateResult`.
+
+##### public function `render()`
+
+No parameters.
+Renders the difficulty indicator container with the appropriate difficulty icon.
+Returns `import("lit").TemplateResult`.
+
+### Maps.ts
+
+#### const `MapDescription`
+
+**Properties:**
+
+| Name             | Type                                       | Description                                            |
+| ---------------- | ------------------------------------------ | ------------------------------------------------------ |
+| `MapDescription` | `Record<keyof typeof GameMapType, string>` | Map of `GameMapType` keys to human-readable map names. |
+
+#### class `MapDisplay`
+
+Displays a selectable map option with loading state and rendered preview.
+
+**Properties:**
+
+| Name          | Type      | Description                                                   |                                             |
+| ------------- | --------- | ------------------------------------------------------------- | ------------------------------------------- |
+| `mapKey`      | `string`  | Key of the map to display (defaults to `""`).                 |                                             |
+| `selected`    | `boolean` | Whether the map is selected (defaults to `false`).            |                                             |
+| `translation` | `string`  | Optional translated map name.                                 |                                             |
+| `mapWebpPath` | `string   \| null`                                                         | Path to the WebP map image (private state). |
+| `mapName`     | `string   \| null`                                                         | Loaded map name (private state).            |
+| `isLoading`   | `boolean` | Loading state of the map (private state, defaults to `true`). |                                             |
+
+##### private function `loadMapData()`
+
+No parameters.
+Loads map data and updates `mapWebpPath` and `mapName` states.
+Returns `Promise<void>`.
+
+##### public function `render()`
+
+No parameters.
+Renders the map card with loading, error, or preview image and map name.
+Returns `import("lit").TemplateResult`.
+
+### ModalOverlay.ts
+
+#### class `ModalOverlay`
+
+Renders a full-screen overlay that can be shown or hidden and closes on click.
+
+**Properties:**
+
+| Name      | Type      | Description                                                                   |
+| --------- | --------- | ----------------------------------------------------------------------------- |
+| `visible` | `boolean` | Whether the overlay is visible (defaults to `false`, reflected to attribute). |
+
+##### public function `render()`
+
+No parameters.
+Renders the overlay div and sets visibility based on `visible`.
+Returns `import("lit").TemplateResult`.
+
+### NewsButton.ts
+
+#### class `NewsButton`
+
+Displays a news button that activates when a new version is detected and opens the news modal.
+
+**Properties:**
+
+| Name       | Type      | Description                                                        |
+| ---------- | --------- | ------------------------------------------------------------------ |
+| `hidden`   | `boolean` | Whether the news button is hidden (defaults to `false`).           |
+| `isActive` | `boolean` | Whether the button is active due to a new version (private state). |
+
+##### private function `checkForNewVersion()`
+
+No parameters.
+Checks localStorage for the last seen version and updates `isActive` if a new version is detected.
+Returns `void`.
+
+##### private function `handleClick()`
+
+No parameters.
+Marks the current version as seen, deactivates the button, and opens the `NewsModal`.
+Returns `void`.
+
+##### public function `render()`
+
+No parameters.
+Renders the news button with icon and conditional active or hidden classes.
+Returns `import("lit").TemplateResult`.
+
+##### public function `createRenderRoot()`
+
+No parameters.
+Overrides LitElement's shadow root to render in light DOM.
+Returns `this`.
+
+### PatternButton.ts
+
+#### const `BUTTON_WIDTH`
+
+No parameters.
+Specifies the default width for pattern buttons.
+Returns `number`.
+
+#### class `PatternButton`
+
+Renders a pattern selection button with optional purchase handling and preview.
+
+**Properties:**
+
+| Name               | Type                                           | Description                                                   |                                                 |
+| ------------------ | ---------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------- |
+| `pattern`          | `Pattern                                       \| null`                                                         | Pattern object to display (defaults to `null`). |
+| `colorPalette`     | `ColorPalette                                  \| null`                                                         | Associated color palette (defaults to `null`).  |
+| `requiresPurchase` | `boolean`                                      | Whether purchase is required to select (defaults to `false`). |                                                 |
+| `onSelect`         | `(pattern: PlayerPattern                       \| null) => void`                                                | Callback when the pattern is selected.          |
+| `onPurchase`       | `(pattern: Pattern, colorPalette: ColorPalette \| null) => void`                                                | Callback when the purchase button is clicked.   |
+
+##### private function `translateCosmetic()`
+
+Translates cosmetic name or formats it if translation not available
+
+| Parameter                                                            | Type     | Description                    |
+| -------------------------------------------------------------------- | -------- | ------------------------------ |
+| `prefix`                                                             | `string` | Translation key prefix.        |
+| `patternName`                                                        | `string` | Pattern or color palette name. |
+
+Returns `string`.
+
+##### private function `handleClick()`
+
+No parameters.
+Triggers `onSelect` callback with current pattern or `null`.
+Returns `void`.
+
+##### private function `handlePurchase()`
+
+| Parameter                                                                 | Type    | Description                      |
+| ------------------------------------------------------------------------- | ------- | -------------------------------- |
+| `e`                                                                       | `Event` | Click event to stop propagation. |
+
+Triggers `onPurchase` callback for the current pattern and color palette. 
+
+Returns `void`.
+
+##### public function `render()`
+
+No parameters.
+
+Renders the pattern button, optional color palette, preview image, and purchase button if required.
+
+Returns `import("lit").TemplateResult`.
+
+##### public function `createRenderRoot()`
+
+No parameters.
+Overrides shadow root to render in light DOM.
+Returns `this`.
+
+#### function `renderPatternPreview()`
+
+Renders pattern preview image or blank placeholder.
+
+| Parameter                                           | Type           | Description            |                    |
+| --------------------------------------------------- | -------------- | ---------------------- | ------------------ |
+| `pattern`                                           | `PlayerPattern | null`                  | Pattern to render. |
+| `width`                                             | `number`       | Width of the preview.  |                    |
+| `height`                                            | `number`       | Height of the preview. |                    |
+
+Returns `import("lit").TemplateResult`.
+
+### ActionButton.ts
+
+#### function `actionButton()`
+
+Renders a styled HTML button with icon, label, and click behavior using Lit.
+
+**Properties:**
+
+| Name       | Type                      | Description                                           |
+| ---------- | ------------------------- | ----------------------------------------------------- |
+| `onClick`  | `(e: MouseEvent) => void` | Callback executed when the button is clicked.         |
+| `type`     | `ButtonVariant`           | Button color variant (defaults to `normal`).          |
+| `icon`     | `string`                  | URL or path to the button icon.                       |
+| `iconAlt`  | `string`                  | Alternative text for the button icon.                 |
+| `title`    | `string`                  | Tooltip and ARIA label for the button.                |
+| `label`    | `string`                  | Text label displayed below the icon.                  |
+| `disabled` | `boolean`                 | Whether the button is disabled (defaults to `false`). |
+
+Returns a Lit `TemplateResult` rendering the button with appropriate styles, icon, and label.
+Returns `TemplateResult`.
+
+### Divider.ts
+
+#### class `Divider`
+
+Renders a horizontal divider with configurable spacing and color.
+
+**Properties:**
+
+| Name      | Type             | Description                                                 |
+| --------- | ---------------- | ----------------------------------------------------------- |
+| `spacing` | `DividerSpacing` | Vertical spacing of the divider (defaults to `md`).         |
+| `color`   | `string`         | CSS class for divider color (defaults to `bg-zinc-700/80`). |
+
+##### public function `createRenderRoot()`
+
+No parameters.
+Overrides LitElement's shadow root creation to render in light DOM.
+Returns `this`.
+
+##### public function `render()`
+
+No parameters.
+Renders the divider element with spacing and color classes.
+Returns `TemplateResult`.
+
+
 ## Graphics
 
 ### AnimatedSprite.ts
@@ -2116,16 +2360,16 @@ Manages the left sidebar in the game UI, displaying player team labels, leaderbo
 
 **Properties:**
 
-| Name                       | Type       | Description                                                      |
-| -------------------------- | ---------- | ---------------------------------------------------------------- | ------------------------------------ |
-| `isLeaderboardShow`        | `boolean`  | Indicates whether the leaderboard is visible.                    |
-| `isTeamLeaderboardShow`    | `boolean`  | Indicates whether the team leaderboard is visible.               |
-| `isVisible`                | `boolean`  | Indicates whether the sidebar is visible.                        |
-| `isPlayerTeamLabelVisible` | `boolean`  | Indicates whether the player's team label is visible.            |
-| `playerTeam`               | `string    | null`                                                            | Stores the player's team identifier. |
-| `playerColor`              | `Colord`   | Color associated with the player's team.                         |
-| `game`                     | `GameView` | Game view instance for accessing player and game state.          |
-| `_shownOnInit`             | `boolean`  | Tracks whether the sidebar was initially shown on large screens. |
+| Name                       | Type                | Description                                                      |
+| -------------------------- | ------------------- | ---------------------------------------------------------------- |
+| `isLeaderboardShow`        | `boolean`           | Indicates whether the leaderboard is visible.                    |
+| `isTeamLeaderboardShow`    | `boolean`           | Indicates whether the team leaderboard is visible.               |
+| `isVisible`                | `boolean`           | Indicates whether the sidebar is visible.                        |
+| `isPlayerTeamLabelVisible` | `boolean`           | Indicates whether the player's team label is visible.            |
+| `playerTeam`               | `string    \| null` | Stores the player's team identifier.                             |
+| `playerColor`              | `Colord`            | Color associated with the player's team.                         |
+| `game`                     | `GameView`          | Game view instance for accessing player and game state.          |
+| `_shownOnInit`             | `boolean`           | Tracks whether the sidebar was initially shown on large screens. |
 
 #### public function `createRenderRoot()`
 
@@ -2924,22 +3168,22 @@ Implements [interface `Layer`](#interface-layer).
 
 **Properties:**
 
-| Name                    | Type                           | Description                                                             |
-| ----------------------- | ------------------------------ | ----------------------------------------------------------------------- |
-| `g`                     | `GameView`                     | Reference to the active [class `GameView`](#class-gameview).            |
-| `eventBus`              | `EventBus`                     | Event bus used for communication between UI elements and game logic.    |
-| `emojiTable`            | `EmojiTable`                   | Reference to the global emoji selector.                                 |
-| `uiState`               | `UIState`                      | The current [class `UIState`](#class-uistate) for UI rendering context. |
-| `actions`               | `PlayerActions | null`        | Holds the current player action permissions and statuses.               |
-| `tile`                  | `TileRef       | null`        | The tile currently being examined.                                      |
-| `_profileForPlayerId`   | `number        | null`        | Caches the last loaded player profile ID for optimization.              |
-| `sendTarget`            | `PlayerView    | null`        | Target player for sending resources (stateful).                         |
-| `sendMode`              | `"troops" | "gold" | "none"` | Current send mode type (stateful).                                      |
-| `isVisible`             | `boolean`                      | Visibility state of the panel.                                          |
-| `allianceExpiryText`    | `string        | null`        | Human-readable alliance expiry text.                                    |
-| `allianceExpirySeconds` | `number        | null`        | Remaining seconds before alliance expires.                              |
-| `otherProfile`          | `PlayerProfile | null`        | Loaded profile of the other player.                                     |
-| `ctModal`               | `ChatModal`                    | Cached chat modal reference.                                            |
+| Name                    | Type                                                                                                    | Description                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `g`                     | `GameView`                                                                                              | Reference to the active [class `GameView`](#class-gameview).            |
+| `eventBus`              | `EventBus`                                                                                              | Event bus used for communication between UI elements and game logic.    |
+| `emojiTable`            | `EmojiTable`                                                                                            | Reference to the global emoji selector.                                 |
+| `uiState`               | `UIState`                                                                                               | The current [class `UIState`](#class-uistate) for UI rendering context. |
+| `actions`               | `PlayerActions \  \| null`                                                                              | Holds the current player action permissions and statuses.               |
+| `tile`                  | `TileRef \        \| null`                                                                              | The tile currently being examined.                                      |
+| `_profileForPlayerId`   | `number \         \| null`                                                                              | Caches the last loaded player profile ID for optimization.              |
+| `sendTarget`            | `PlayerView       \| null`                                                                              | Target player for sending resources (stateful).                         |
+| `sendMode`              | `"troops"         \| "gold"                                                                  \| "none"` | Current send mode type (stateful).                                      |
+| `isVisible`             | `boolean`                                                                                               | Visibility state of the panel.                                          |
+| `allianceExpiryText`    | `string           \| null`                                                                              | Human-readable alliance expiry text.                                    |
+| `allianceExpirySeconds` | `number           \| null`                                                                              | Remaining seconds before alliance expires.                              |
+| `otherProfile`          | `PlayerProfile    \| null`                                                                              | Loaded profile of the other player.                                     |
+| `ctModal`               | `ChatModal`                                                                                             | Cached chat modal reference.                                            |
 
 ---
 
@@ -3224,9 +3468,9 @@ Translates the relation into localized text.
 
 ##### private function `getExpiryColorClass()`
 
-| Parameter | Type    | Description |
-| --------- | ------- | ----------- | ---------------------------- |
-| `seconds` | `number | null`       | Remaining seconds or `null`. |
+| Parameter | Type             | Description                  |
+| --------- | ---------------- | ---------------------------- |
+| `seconds` | `number \| null` | Remaining seconds or `null`. |
 
 Returns `string`.  
 Determines color class based on remaining time thresholds.
@@ -3387,33 +3631,33 @@ Manages interactive radial menus with multiple nested levels, central button act
 
 **Properties:**
 
-| Name                       | Type                                                                   | Description                                            |                                                     |
-| -------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
-| `menuElement`              | `d3.Selection<HTMLDivElement, unknown, null, undefined>`               | The container `div` holding the menu SVG.              |                                                     |
-| `tooltipElement`           | `HTMLDivElement                                                        | null`                                                  | The DOM element used for displaying tooltips.       |
-| `isVisible`                | `boolean`                                                              | Indicates whether the menu is currently displayed.     |                                                     |
-| `currentLevel`             | `number`                                                               | Current menu level (0 = main menu).                    |                                                     |
-| `menuStack`                | `MenuElement[][]`                                                      | Stack of previous menu levels for navigation.          |                                                     |
-| `currentMenuItems`         | `MenuElement[]`                                                        | Currently active menu items.                           |                                                     |
-| `config`                   | `Required<RadialMenuConfig>`                                           | Effective configuration object with defaults applied.  |                                                     |
-| `backIconSize`             | `number`                                                               | Computed size of the back button icon.                 |                                                     |
-| `centerButtonState`        | `"default"                                                             | "back"`                                                | Current state of the center button.                 |
-| `isTransitioning`          | `boolean`                                                              | True when a menu animation is in progress.             |                                                     |
-| `lastHideTime`             | `number`                                                               | Timestamp of last menu hide event.                     |                                                     |
-| `reopenCooldownMs`         | `number`                                                               | Minimum interval before reopening the menu.            |                                                     |
-| `anchorX`                  | `number`                                                               | X-coordinate for menu center positioning.              |                                                     |
-| `anchorY`                  | `number`                                                               | Y-coordinate for menu center positioning.              |                                                     |
-| `menuGroups`               | `Map<number, d3.Selection<SVGGElement, unknown, null, undefined>>`     | Group elements for each menu level.                    |                                                     |
-| `menuPaths`                | `Map<string, d3.Selection<SVGPathElement, unknown, null, undefined>>`  | Mapping of menu item IDs to their SVG paths.           |                                                     |
-| `menuIcons`                | `Map<string, d3.Selection<SVGImageElement, unknown, null, undefined>>` | Mapping of menu item IDs to their icons/text elements. |                                                     |
-| `selectedItemId`           | `string                                                                | null`                                                  | ID of the currently selected menu item.             |
-| `submenuHoverTimeout`      | `number                                                                | null`                                                  | Timeout ID for submenu hover delay.                 |
-| `backButtonHoverTimeout`   | `number                                                                | null`                                                  | Timeout ID for back button hover delay.             |
-| `navigationInProgress`     | `boolean`                                                              | True if a submenu navigation animation is active.      |                                                     |
-| `originalCenterButtonIcon` | `string`                                                               | Stored reference to the original center button icon.   |                                                     |
-| `params`                   | `MenuElementParams                                                     | null`                                                  | Current runtime parameters applied to menu actions. |
+| Name                       | Type                                                                              | Description                                            |     |
+| -------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------ | --- |
+| `menuElement`              | `d3.Selection<HTMLDivElement, unknown, null, undefined>`                          | The container `div` holding the menu SVG.              |     |
+| `tooltipElement`           | `HTMLDivElement                                                        \| null`   | The DOM element used for displaying tooltips.          |
+| `isVisible`                | `boolean`                                                                         | Indicates whether the menu is currently displayed.     |     |
+| `currentLevel`             | `number`                                                                          | Current menu level (0 = main menu).                    |     |
+| `menuStack`                | `MenuElement[][]`                                                                 | Stack of previous menu levels for navigation.          |     |
+| `currentMenuItems`         | `MenuElement[]`                                                                   | Currently active menu items.                           |     |
+| `config`                   | `Required<RadialMenuConfig>`                                                      | Effective configuration object with defaults applied.  |     |
+| `backIconSize`             | `number`                                                                          | Computed size of the back button icon.                 |     |
+| `centerButtonState`        | `"default"                                                             \| "back"` | Current state of the center button.                    |
+| `isTransitioning`          | `boolean`                                                                         | True when a menu animation is in progress.             |     |
+| `lastHideTime`             | `number`                                                                          | Timestamp of last menu hide event.                     |     |
+| `reopenCooldownMs`         | `number`                                                                          | Minimum interval before reopening the menu.            |     |
+| `anchorX`                  | `number`                                                                          | X-coordinate for menu center positioning.              |     |
+| `anchorY`                  | `number`                                                                          | Y-coordinate for menu center positioning.              |     |
+| `menuGroups`               | `Map<number, d3.Selection<SVGGElement, unknown, null, undefined>>`                | Group elements for each menu level.                    |     |
+| `menuPaths`                | `Map<string, d3.Selection<SVGPathElement, unknown, null, undefined>>`             | Mapping of menu item IDs to their SVG paths.           |     |
+| `menuIcons`                | `Map<string, d3.Selection<SVGImageElement, unknown, null, undefined>>`            | Mapping of menu item IDs to their icons/text elements. |     |
+| `selectedItemId`           | `string                                                                \| null`   | ID of the currently selected menu item.                |
+| `submenuHoverTimeout`      | `number                                                                \| null`   | Timeout ID for submenu hover delay.                    |
+| `backButtonHoverTimeout`   | `number                                                                \| null`   | Timeout ID for back button hover delay.                |
+| `navigationInProgress`     | `boolean`                                                                         | True if a submenu navigation animation is active.      |     |
+| `originalCenterButtonIcon` | `string`                                                                          | Stored reference to the original center button icon.   |     |
+| `params`                   | `MenuElementParams                                                     \| null`   | Current runtime parameters applied to menu actions.    |
 
-##### constructor `RadialMenu(eventBus: EventBus, rootMenu: MenuElement, centerButtonElement: CenterButtonElement, config?: RadialMenuConfig)`
+##### constructor `RadialMenu()`
 
 | Parameter             | Type                  | Description                              |
 | --------------------- | --------------------- | ---------------------------------------- |
@@ -3430,7 +3674,7 @@ Returns `void`.
 
 Initializes the menu by creating DOM elements and subscribing to close events.
 
-##### public function `showRadialMenu(x: number, y: number)`
+##### public function `showRadialMenu()`
 
 | Parameter | Type     | Description                  |
 | --------- | -------- | ---------------------------- |
@@ -3453,7 +3697,7 @@ Returns `void`.
 
 Disables all current menu items and resets the center button state.
 
-##### public function `updateCenterButtonState(state: CenterButtonState)`
+##### public function `updateCenterButtonState()`
 
 | Parameter | Type                | Description                                        |
 | --------- | ------------------- | -------------------------------------------------- |
@@ -3475,7 +3719,7 @@ Returns `number`.
 
 Returns the current active menu level.
 
-##### public function `setParams(params: MenuElementParams)`
+##### public function `setParams()`
 
 | Parameter | Type                | Description                                       |
 | --------- | ------------------- | ------------------------------------------------- |
@@ -3497,7 +3741,7 @@ Returns `void`.
 
 Refreshes all menu items, updating disabled states, icons, and cooldowns based on current parameters.
 
-##### public function `renderLayer(context: CanvasRenderingContext2D)`
+##### public function `renderLayer()`
 
 | Parameter | Type                       | Description                          |
 | --------- | -------------------------- | ------------------------------------ |
@@ -3523,20 +3767,20 @@ Parameters passed to [MenuElement](#interface-menuelement) handlers and submenus
 
 **Properties:**
 
-| Name                  | Type                  | Description                                         |                              |
-| --------------------- | --------------------- | --------------------------------------------------- | ---------------------------- |
-| `myPlayer`            | `PlayerView`          | The current player.                                 |                              |
-| `selected`            | `PlayerView           | null`                                               | The selected player, if any. |
-| `tile`                | `TileRef`             | The tile reference associated with the menu action. |                              |
-| `playerActions`       | `PlayerActions`       | Current player actions.                             |                              |
-| `game`                | `GameView`            | Current game state.                                 |                              |
-| `buildMenu`           | `BuildMenu`           | Build menu instance.                                |                              |
-| `emojiTable`          | `EmojiTable`          | Emoji table instance.                               |                              |
-| `playerActionHandler` | `PlayerActionHandler` | Handles player actions.                             |                              |
-| `playerPanel`         | `PlayerPanel`         | Player panel UI handler.                            |                              |
-| `chatIntegration`     | `ChatIntegration`     | Handles chat menu generation.                       |                              |
-| `eventBus`            | `EventBus`            | Event bus for emitting and listening to events.     |                              |
-| `closeMenu`           | `() => void`          | Callback to close the menu.                         |                              |
+| Name                  | Type                           | Description                                         |     |
+| --------------------- | ------------------------------ | --------------------------------------------------- | --- |
+| `myPlayer`            | `PlayerView`                   | The current player.                                 |     |
+| `selected`            | `PlayerView           \| null` | The selected player, if any.                        |
+| `tile`                | `TileRef`                      | The tile reference associated with the menu action. |     |
+| `playerActions`       | `PlayerActions`                | Current player actions.                             |     |
+| `game`                | `GameView`                     | Current game state.                                 |     |
+| `buildMenu`           | `BuildMenu`                    | Build menu instance.                                |     |
+| `emojiTable`          | `EmojiTable`                   | Emoji table instance.                               |     |
+| `playerActionHandler` | `PlayerActionHandler`          | Handles player actions.                             |     |
+| `playerPanel`         | `PlayerPanel`                  | Player panel UI handler.                            |     |
+| `chatIntegration`     | `ChatIntegration`              | Handles chat menu generation.                       |     |
+| `eventBus`            | `EventBus`                     | Event bus for emitting and listening to events.     |     |
+| `closeMenu`           | `() => void`                   | Callback to close the menu.                         |     |
 
 ---
 
@@ -3633,7 +3877,7 @@ Predefined radial menu slots.
 
 ---
 
-#### public function `getAllEnabledUnits(myPlayer: boolean, config: Config)`
+#### public function `getAllEnabledUnits()`
 
 Returns `Set<UnitType>`.
 
@@ -3646,7 +3890,7 @@ Returns all enabled units depending on whether it is for the current player or o
 
 ---
 
-#### public function `createMenuElements(params: MenuElementParams, filterType: "attack" | "build", elementIdPrefix: string)`
+#### public function `createMenuElements()`
 
 Returns `MenuElement[]`.
 
@@ -4040,20 +4284,20 @@ Modal for sending resources (troops or gold) to another player.
 
 **Properties:**
 
-| Name              | Type                    | Description                                               |                                                              |
-| ----------------- | ----------------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
-| `eventBus`        | `EventBus               | null`                                                     | Event bus for emitting send intent events.                   |
-| `open`            | `boolean`               | Whether the modal is open. Defaults to `false`.           |                                                              |
-| `mode`            | `'troops'               | 'gold'`                                                   | Type of resource to send. Defaults to `'troops'`.            |
-| `total`           | `number                 | bigint`                                                   | Total amount of resource available to send.                  |
-| `uiState`         | `UIState                | null`                                                     | Optional UI state to seed initial percent selection.         |
-| `format`          | `(n: number) => string` | Function to format numbers. Defaults to `renderTroops()`. |                                                              |
-| `myPlayer`        | `PlayerView             | null`                                                     | The sending player.                                          |
-| `target`          | `PlayerView             | null`                                                     | The receiving player.                                        |
-| `gameView`        | `GameView               | null`                                                     | Reference to the current game view.                          |
-| `heading`         | `string                 | null`                                                     | Optional heading text for the modal.                         |
-| `sendAmount`      | `number`                | Internal state representing the amount to send.           |                                                              |
-| `selectedPercent` | `number                 | null`                                                     | Internal state of currently selected percentage for sending. |
+| Name              | Type                    | Description                                                  |     |
+| ----------------- | ----------------------- | ------------------------------------------------------------ | --- |
+| `eventBus`        | `EventBus  \| null`     | Event bus for emitting send intent events.                   |
+| `open`            | `boolean`               | Whether the modal is open. Defaults to `false`.              |     |
+| `mode`            | `'troops' \| 'gold'`    | Type of resource to send. Defaults to `'troops'`.            |
+| `total`           | `number \| bigint`      | Total amount of resource available to send.                  |
+| `uiState`         | `UIState \| null`       | Optional UI state to seed initial percent selection.         |
+| `format`          | `(n: number) => string` | Function to format numbers. Defaults to `renderTroops()`.    |     |
+| `myPlayer`        | `PlayerView \| null`    | The sending player.                                          |
+| `target`          | `PlayerView \| null`    | The receiving player.                                        |
+| `gameView`        | `GameView \| null`      | Reference to the current game view.                          |
+| `heading`         | `string \| null`        | Optional heading text for the modal.                         |
+| `sendAmount`      | `number`                | Internal state representing the amount to send.              |     |
+| `selectedPercent` | `number \| null`        | Internal state of currently selected percentage for sending. |
 
 **Constants:**
 
@@ -4694,26 +4938,26 @@ Manages rendering, updating, and interaction for structure icons, levels, and do
 
 **Properties:**
 
-| Name               | Type                                                | Description                                              |                                                         |                                                                   |
-| ------------------ | --------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------- |
-| `ghostUnit`        | `{ container: PIXI.Container; range: PIXI.Container | null; buildableUnit: BuildableUnit; }                    | null`                                                   | Currently active ghost structure being placed, or `null` if none. |
-| `pixicanvas`       | `HTMLCanvasElement`                                 | Canvas used for rendering PIXI stages.                   |                                                         |                                                                   |
-| `iconsStage`       | `PIXI.Container`                                    | Stage containing icon sprites.                           |                                                         |                                                                   |
-| `ghostStage`       | `PIXI.Container`                                    | Stage containing ghost sprites.                          |                                                         |                                                                   |
-| `levelsStage`      | `PIXI.Container`                                    | Stage containing level sprites.                          |                                                         |                                                                   |
-| `dotsStage`        | `PIXI.Container`                                    | Stage containing dot sprites.                            |                                                         |                                                                   |
-| `rootStage`        | `PIXI.Container`                                    | Root container holding all stages.                       |                                                         |                                                                   |
-| `playerActions`    | `PlayerActions  | null`                                                    | Actions available to the current player.                |                                                                   |
-| `theme`            | `Theme`                                             | Current game theme.                                      |                                                         |                                                                   |
-| `renderer`         | `PIXI.Renderer`                                     | Renderer for drawing the PIXI canvas.                    |                                                         |                                                                   |
-| `renders`          | `StructureRenderInfo[]`                             | Active rendered structures.                              |                                                         |                                                                   |
-| `seenUnits`        | `Set<UnitView>`                                     | Units that have been seen and rendered.                  |                                                         |                                                                   |
-| `mousePos`         | `{ x: number; y: number }`                          | Current mouse position in pixels.                        |                                                         |                                                                   |
-| `renderSprites`    | `boolean`                                           | Flag indicating if structure sprites should be rendered. |                                                         |                                                                   |
-| `factory`          | `SpriteFactory`                                     | Factory for creating PIXI sprites.                       |                                                         |                                                                   |
-| `structures`       | `Map<UnitType, { visible: boolean }>`               | Visibility settings per unit type.                       |                                                         |                                                                   |
-| `lastGhostQueryAt` | `number`                                            | Timestamp of last ghost update.                          |                                                         |                                                                   |
-| `potentialUpgrade` | `StructureRenderInfo                                | undefined`                                               | Stores the render info of a potential upgradeable unit. |                                                                   |
+| Name               | Type                                                                                                                     | Description                                                       |     |     |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | --- | --- |
+| `ghostUnit`        | `{ container: PIXI.Container; range: PIXI.Container \| null; buildableUnit: BuildableUnit; }                    \| null` | Currently active ghost structure being placed, or `null` if none. |
+| `pixicanvas`       | `HTMLCanvasElement`                                                                                                      | Canvas used for rendering PIXI stages.                            |     |     |
+| `iconsStage`       | `PIXI.Container`                                                                                                         | Stage containing icon sprites.                                    |     |     |
+| `ghostStage`       | `PIXI.Container`                                                                                                         | Stage containing ghost sprites.                                   |     |     |
+| `levelsStage`      | `PIXI.Container`                                                                                                         | Stage containing level sprites.                                   |     |     |
+| `dotsStage`        | `PIXI.Container`                                                                                                         | Stage containing dot sprites.                                     |     |     |
+| `rootStage`        | `PIXI.Container`                                                                                                         | Root container holding all stages.                                |     |     |
+| `playerActions`    | `PlayerActions                                      \| null`                                                             | Actions available to the current player.                          |     |
+| `theme`            | `Theme`                                                                                                                  | Current game theme.                                               |     |     |
+| `renderer`         | `PIXI.Renderer`                                                                                                          | Renderer for drawing the PIXI canvas.                             |     |     |
+| `renders`          | `StructureRenderInfo[]`                                                                                                  | Active rendered structures.                                       |     |     |
+| `seenUnits`        | `Set<UnitView>`                                                                                                          | Units that have been seen and rendered.                           |     |     |
+| `mousePos`         | `{ x: number; y: number }`                                                                                               | Current mouse position in pixels.                                 |     |     |
+| `renderSprites`    | `boolean`                                                                                                                | Flag indicating if structure sprites should be rendered.          |     |     |
+| `factory`          | `SpriteFactory`                                                                                                          | Factory for creating PIXI sprites.                                |     |     |
+| `structures`       | `Map<UnitType, { visible: boolean }>`                                                                                    | Visibility settings per unit type.                                |     |     |
+| `lastGhostQueryAt` | `number`                                                                                                                 | Timestamp of last ghost update.                                   |     |     |
+| `potentialUpgrade` | `StructureRenderInfo                                \| undefined`                                                        | Stores the render info of a potential upgradeable unit.           |     |
 
 ##### public constructor `StructureIconsLayer()`
 
@@ -4800,9 +5044,9 @@ Updates the position of the ghost structure based on mouse movement.
 
 ##### private function `createGhostStructure()`
 
-| Parameter | Type      | Description |                                                |
-| --------- | --------- | ----------- | ---------------------------------------------- |
-| `type`    | `UnitType | null`       | Type of unit to create a ghost for, or `null`. |
+| Parameter | Type               | Description                                    |     |
+| --------- | ------------------ | ---------------------------------------------- | --- |
+| `type`    | `UnitType \| null` | Type of unit to create a ghost for, or `null`. |
 
 Returns `void`.
 
@@ -4822,9 +5066,9 @@ Calls `clearGhostStructure()` and resets the `uiState.ghostStructure` to `null`.
 
 ##### private function `toggleStructures()`
 
-| Parameter             | Type        | Description |                                                                |
-| --------------------- | ----------- | ----------- | -------------------------------------------------------------- |
-| `toggleStructureType` | `UnitType[] | null`       | Array of structure types to show; `null` shows all structures. |
+| Parameter             | Type                 | Description                                                    |     |
+| --------------------- | -------------------- | -------------------------------------------------------------- | --- |
+| `toggleStructureType` | `UnitType[] \| null` | Array of structure types to show; `null` shows all structures. |
 
 Returns `void`.
 
@@ -5280,31 +5524,31 @@ Implements the `Layer` interface to manage territory visualization and highlight
 
 **Properties:**
 
-| Name                             | Type                                                   | Description                                           |                                                          |
-| -------------------------------- | ------------------------------------------------------ | ----------------------------------------------------- | -------------------------------------------------------- |
-| `userSettings`                   | `UserSettings`                                         | User settings influencing rendering behavior.         |                                                          |
-| `canvas`                         | `HTMLCanvasElement`                                    | Main canvas for territory rendering.                  |                                                          |
-| `context`                        | `CanvasRenderingContext2D`                             | 2D rendering context for the main canvas.             |                                                          |
-| `imageData`                      | `ImageData`                                            | Pixel data for territory layer.                       |                                                          |
-| `alternativeImageData`           | `ImageData`                                            | Pixel data for alternative view mode.                 |                                                          |
-| `borderAnimTime`                 | `number`                                               | Timer for breathing border animation.                 |                                                          |
-| `cachedTerritoryPatternsEnabled` | `boolean                                               | undefined`                                            | Flag indicating if territory pattern caching is enabled. |
-| `tileToRenderQueue`              | `PriorityQueue<{ tile: TileRef; lastUpdate: number }>` | Queue of tiles pending render updates.                |                                                          |
-| `random`                         | `PseudoRandom`                                         | Random number generator instance for rendering order. |                                                          |
-| `theme`                          | `Theme`                                                | Current theme applied to territory colors.            |                                                          |
-| `highlightCanvas`                | `HTMLCanvasElement`                                    | Canvas for spawn and focus highlights.                |                                                          |
-| `highlightContext`               | `CanvasRenderingContext2D`                             | 2D rendering context for highlights.                  |                                                          |
-| `highlightedTerritory`           | `PlayerView                                            | null`                                                 | Currently highlighted territory, if any.                 |
-| `alternativeView`                | `boolean`                                              | Indicates if alternative view mode is active.         |                                                          |
-| `lastDragTime`                   | `number`                                               | Timestamp of last drag event.                         |                                                          |
-| `nodrawDragDuration`             | `number`                                               | Duration to skip rendering during drag (ms).          |                                                          |
-| `lastMousePosition`              | `{ x: number; y: number }                              | null`                                                 | Last mouse position for territory highlighting.          |
-| `refreshRate`                    | `number`                                               | Minimum refresh interval (ms) for rendering.          |                                                          |
-| `lastRefresh`                    | `number`                                               | Timestamp of last render.                             |                                                          |
-| `lastFocusedPlayer`              | `PlayerView                                            | null`                                                 | Last player that had focus.                              |
-| `game`                           | `GameView`                                             | Reference to the game view instance.                  |                                                          |
-| `eventBus`                       | `EventBus`                                             | Event bus for input and updates.                      |                                                          |
-| `transformHandler`               | `TransformHandler`                                     | Handles layer transformations and scaling.            |                                                          |
+| Name                             | Type                                                                 | Description                                              |     |
+| -------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------- | --- |
+| `userSettings`                   | `UserSettings`                                                       | User settings influencing rendering behavior.            |     |
+| `canvas`                         | `HTMLCanvasElement`                                                  | Main canvas for territory rendering.                     |     |
+| `context`                        | `CanvasRenderingContext2D`                                           | 2D rendering context for the main canvas.                |     |
+| `imageData`                      | `ImageData`                                                          | Pixel data for territory layer.                          |     |
+| `alternativeImageData`           | `ImageData`                                                          | Pixel data for alternative view mode.                    |     |
+| `borderAnimTime`                 | `number`                                                             | Timer for breathing border animation.                    |     |
+| `cachedTerritoryPatternsEnabled` | `boolean                                               \| undefined` | Flag indicating if territory pattern caching is enabled. |
+| `tileToRenderQueue`              | `PriorityQueue<{ tile: TileRef; lastUpdate: number }>`               | Queue of tiles pending render updates.                   |     |
+| `random`                         | `PseudoRandom`                                                       | Random number generator instance for rendering order.    |     |
+| `theme`                          | `Theme`                                                              | Current theme applied to territory colors.               |     |
+| `highlightCanvas`                | `HTMLCanvasElement`                                                  | Canvas for spawn and focus highlights.                   |     |
+| `highlightContext`               | `CanvasRenderingContext2D`                                           | 2D rendering context for highlights.                     |     |
+| `highlightedTerritory`           | `PlayerView                                            \| null`      | Currently highlighted territory, if any.                 |
+| `alternativeView`                | `boolean`                                                            | Indicates if alternative view mode is active.            |     |
+| `lastDragTime`                   | `number`                                                             | Timestamp of last drag event.                            |     |
+| `nodrawDragDuration`             | `number`                                                             | Duration to skip rendering during drag (ms).             |     |
+| `lastMousePosition`              | `{ x: number; y: number }                              \| null`      | Last mouse position for territory highlighting.          |
+| `refreshRate`                    | `number`                                                             | Minimum refresh interval (ms) for rendering.             |     |
+| `lastRefresh`                    | `number`                                                             | Timestamp of last render.                                |     |
+| `lastFocusedPlayer`              | `PlayerView                                            \| null`      | Last player that had focus.                              |
+| `game`                           | `GameView`                                                           | Reference to the game view instance.                     |     |
+| `eventBus`                       | `EventBus`                                                           | Event bus for input and updates.                         |     |
+| `transformHandler`               | `TransformHandler`                                                   | Handles layer transformations and scaling.               |     |
 
 ##### public constructor `constructor(game: GameView, eventBus: EventBus, transformHandler: TransformHandler, userSettings: UserSettings)`
 
@@ -5548,21 +5792,21 @@ Layer responsible for drawing UI elements that overlay the game, including selec
 
 **Properties:**
 
-| Name                     | Type                                                        | Description                                           |                                                      |
-| ------------------------ | ----------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
-| `canvas`                 | `HTMLCanvasElement`                                         | The internal canvas used to draw UI elements.         |                                                      |
-| `context`                | `CanvasRenderingContext2D                                   | null`                                                 | Canvas rendering context for drawing operations.     |
-| `theme`                  | `Theme                                                      | null`                                                 | Current theme used for UI colorization.              |
-| `userSettings`           | `UserSettings`                                              | Stores user preferences for UI display.               |                                                      |
-| `selectionAnimTime`      | `number`                                                    | Tracks animation time for selection box pulsation.    |                                                      |
-| `allProgressBars`        | `Map<number, { unit: UnitView; progressBar: ProgressBar }>` | Tracks progress bars for units currently in progress. |                                                      |
-| `allHealthBars`          | `Map<number, ProgressBar>`                                  | Tracks health bars for active units.                  |                                                      |
-| `selectedUnit`           | `UnitView                                                   | null`                                                 | Currently selected unit.                             |
-| `lastSelectionBoxCenter` | `{ x: number; y: number; size: number }                     | null`                                                 | Stores previous selection box position for clearing. |
-| `SELECTION_BOX_SIZE`     | `number`                                                    | Size of selection boxes (constant).                   |                                                      |
-| `game`                   | `GameView`                                                  | Reference to the main game view.                      |                                                      |
-| `eventBus`               | `EventBus`                                                  | Event bus for subscribing to game events.             |                                                      |
-| `transformHandler`       | `TransformHandler`                                          | Handles coordinate transformations for drawing.       |                                                      |
+| Name                     | Type                                                                 | Description                                           |     |
+| ------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------- | --- |
+| `canvas`                 | `HTMLCanvasElement`                                                  | The internal canvas used to draw UI elements.         |     |
+| `context`                | `CanvasRenderingContext2D                                   \| null` | Canvas rendering context for drawing operations.      |
+| `theme`                  | `Theme                                                      \| null` | Current theme used for UI colorization.               |
+| `userSettings`           | `UserSettings`                                                       | Stores user preferences for UI display.               |     |
+| `selectionAnimTime`      | `number`                                                             | Tracks animation time for selection box pulsation.    |     |
+| `allProgressBars`        | `Map<number, { unit: UnitView; progressBar: ProgressBar }>`          | Tracks progress bars for units currently in progress. |     |
+| `allHealthBars`          | `Map<number, ProgressBar>`                                           | Tracks health bars for active units.                  |     |
+| `selectedUnit`           | `UnitView                                                   \| null` | Currently selected unit.                              |
+| `lastSelectionBoxCenter` | `{ x: number; y: number; size: number }                     \| null` | Stores previous selection box position for clearing.  |
+| `SELECTION_BOX_SIZE`     | `number`                                                             | Size of selection boxes (constant).                   |     |
+| `game`                   | `GameView`                                                           | Reference to the main game view.                      |     |
+| `eventBus`               | `EventBus`                                                           | Event bus for subscribing to game events.             |     |
+| `transformHandler`       | `TransformHandler`                                                   | Handles coordinate transformations for drawing.       |     |
 
 ##### public function `shouldTransform()`
 
@@ -5776,22 +6020,22 @@ Displays unit counts and build options in the UI. Provides interactive unit sele
 
 **Properties:**
 
-| Name            | Type                                             | Description                                           |                                                  |
-| --------------- | ------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------ |
-| `game`          | `GameView`                                       | Reference to the current game view.                   |                                                  |
-| `eventBus`      | `EventBus`                                       | Event bus for subscribing and emitting events.        |                                                  |
-| `uiState`       | `UIState`                                        | Tracks current UI state, including ghost structures.  |                                                  |
-| `playerActions` | `PlayerActions                                   | null`                                                 | Tracks available buildable units for the player. |
-| `keybinds`      | `Record<string, { value: string; key: string }>` | Stores keybinds loaded from local storage.            |                                                  |
-| `_cities`       | `number`                                         | Count of City units.                                  |                                                  |
-| `_warships`     | `number`                                         | Count of Warship units.                               |                                                  |
-| `_factories`    | `number`                                         | Count of Factory units.                               |                                                  |
-| `_missileSilo`  | `number`                                         | Count of Missile Silo units.                          |                                                  |
-| `_port`         | `number`                                         | Count of Port units.                                  |                                                  |
-| `_defensePost`  | `number`                                         | Count of Defense Post units.                          |                                                  |
-| `_samLauncher`  | `number`                                         | Count of SAM Launcher units.                          |                                                  |
-| `allDisabled`   | `boolean`                                        | Indicates if all units are disabled in configuration. |                                                  |
-| `_hoveredUnit`  | `UnitType                                        | null`                                                 | Currently hovered unit type for tooltip display. |
+| Name            | Type                                                      | Description                                           |     |
+| --------------- | --------------------------------------------------------- | ----------------------------------------------------- | --- |
+| `game`          | `GameView`                                                | Reference to the current game view.                   |     |
+| `eventBus`      | `EventBus`                                                | Event bus for subscribing and emitting events.        |     |
+| `uiState`       | `UIState`                                                 | Tracks current UI state, including ghost structures.  |     |
+| `playerActions` | `PlayerActions                                   \| null` | Tracks available buildable units for the player.      |
+| `keybinds`      | `Record<string, { value: string; key: string }>`          | Stores keybinds loaded from local storage.            |     |
+| `_cities`       | `number`                                                  | Count of City units.                                  |     |
+| `_warships`     | `number`                                                  | Count of Warship units.                               |     |
+| `_factories`    | `number`                                                  | Count of Factory units.                               |     |
+| `_missileSilo`  | `number`                                                  | Count of Missile Silo units.                          |     |
+| `_port`         | `number`                                                  | Count of Port units.                                  |     |
+| `_defensePost`  | `number`                                                  | Count of Defense Post units.                          |     |
+| `_samLauncher`  | `number`                                                  | Count of SAM Launcher units.                          |     |
+| `allDisabled`   | `boolean`                                                 | Indicates if all units are disabled in configuration. |     |
+| `_hoveredUnit`  | `UnitType                                        \| null` | Currently hovered unit type for tooltip display.      |
 
 ##### public function `createRenderRoot()`
 
@@ -5849,13 +6093,13 @@ Renders the unit display UI:
 
 ##### private function `renderUnitItem()`
 
-| Parameter      | Type       | Description                                |                                           |
-| -------------- | ---------- | ------------------------------------------ | ----------------------------------------- |
-| `icon`         | `string`   | URL or import of the unit icon image.      |                                           |
-| `number`       | `number    | null`                                      | Count of units, `null` if not applicable. |
-| `unitType`     | `UnitType` | Unit type being rendered.                  |                                           |
-| `structureKey` | `string`   | Key used for translations and identifiers. |                                           |
-| `hotkey`       | `string`   | Assigned hotkey for building this unit.    |                                           |
+| Parameter      | Type                | Description                                |     |
+| -------------- | ------------------- | ------------------------------------------ | --- |
+| `icon`         | `string`            | URL or import of the unit icon image.      |     |
+| `number`       | `number    \| null` | Count of units, `null` if not applicable.  |
+| `unitType`     | `UnitType`          | Unit type being rendered.                  |     |
+| `structureKey` | `string`            | Key used for translations and identifiers. |     |
+| `hotkey`       | `string`            | Assigned hotkey for building this unit.    |     |
 
 Returns `TemplateResult`.
 
@@ -5877,19 +6121,19 @@ Manages rendering of all units and their movement trails. Handles unit selection
 
 **Properties:**
 
-| Name                       | Type                       | Description                                                |                          |
-| -------------------------- | -------------------------- | ---------------------------------------------------------- | ------------------------ |
-| `canvas`                   | `HTMLCanvasElement`        | Main canvas for unit sprites.                              |                          |
-| `context`                  | `CanvasRenderingContext2D` | 2D rendering context of `canvas`.                          |                          |
-| `transportShipTrailCanvas` | `HTMLCanvasElement`        | Canvas for rendering transport ship trails.                |                          |
-| `unitTrailContext`         | `CanvasRenderingContext2D` | 2D context for unit trails.                                |                          |
-| `unitToTrail`              | `Map<UnitView, TileRef[]>` | Tracks the tile trail for each moving unit.                |                          |
-| `theme`                    | `Theme`                    | Current theme for color configuration.                     |                          |
-| `alternateView`            | `boolean`                  | Indicates if alternate coloring view is active.            |                          |
-| `oldShellTile`             | `Map<UnitView, TileRef>`   | Tracks previous positions for shell units.                 |                          |
-| `transformHandler`         | `TransformHandler`         | Converts between screen and world coordinates.             |                          |
-| `selectedUnit`             | `UnitView                  | null`                                                      | Currently selected unit. |
-| `WARSHIP_SELECTION_RADIUS` | `number`                   | Radius for selecting warships near a click, in game cells. |                          |
+| Name                       | Type                                | Description                                                |     |
+| -------------------------- | ----------------------------------- | ---------------------------------------------------------- | --- |
+| `canvas`                   | `HTMLCanvasElement`                 | Main canvas for unit sprites.                              |     |
+| `context`                  | `CanvasRenderingContext2D`          | 2D rendering context of `canvas`.                          |     |
+| `transportShipTrailCanvas` | `HTMLCanvasElement`                 | Canvas for rendering transport ship trails.                |     |
+| `unitTrailContext`         | `CanvasRenderingContext2D`          | 2D context for unit trails.                                |     |
+| `unitToTrail`              | `Map<UnitView, TileRef[]>`          | Tracks the tile trail for each moving unit.                |     |
+| `theme`                    | `Theme`                             | Current theme for color configuration.                     |     |
+| `alternateView`            | `boolean`                           | Indicates if alternate coloring view is active.            |     |
+| `oldShellTile`             | `Map<UnitView, TileRef>`            | Tracks previous positions for shell units.                 |     |
+| `transformHandler`         | `TransformHandler`                  | Converts between screen and world coordinates.             |     |
+| `selectedUnit`             | `UnitView                  \| null` | Currently selected unit.                                   |
+| `WARSHIP_SELECTION_RADIUS` | `number`                            | Radius for selecting warships near a click, in game cells. |     |
 
 ##### public function `shouldTransform()`
 
@@ -6181,17 +6425,17 @@ Implements: [interface `Layer`](#interface-layer)
 
 **Properties:**
 
-| Name                 | Type            | Description                                                                            |                                                                                             |
-| -------------------- | --------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `game`               | `GameView`      | The current game view instance.                                                        |                                                                                             |
-| `eventBus`           | `EventBus`      | Event bus used to emit game events.                                                    |                                                                                             |
-| `hasShownDeathModal` | `boolean`       | Tracks whether the death modal has already been displayed.                             |                                                                                             |
-| `isVisible`          | `boolean`       | Indicates if the modal is currently visible. Managed as a reactive `@state()`.         |                                                                                             |
-| `showButtons`        | `boolean`       | Determines whether the action buttons are displayed. Managed as a reactive `@state()`. |                                                                                             |
-| `isWin`              | `boolean`       | Indicates if the current outcome is a win. Managed as a private reactive `@state()`.   |                                                                                             |
-| `patternContent`     | `TemplateResult | null`                                                                                  | Stores dynamically loaded pattern button content. Managed as a private reactive `@state()`. |
-| `_title`             | `string`        | Stores the modal title for display.                                                    |                                                                                             |
-| `rand`               | `number`        | Random number used to determine modal content fallback.                                |                                                                                             |
+| Name                 | Type                     | Description                                                                                 |
+| -------------------- | ------------------------ | ------------------------------------------------------------------------------------------- |
+| `game`               | `GameView`               | The current game view instance.                                                             |
+| `eventBus`           | `EventBus`               | Event bus used to emit game events.                                                         |
+| `hasShownDeathModal` | `boolean`                | Tracks whether the death modal has already been displayed.                                  |
+| `isVisible`          | `boolean`                | Indicates if the modal is currently visible. Managed as a reactive `@state()`.              |
+| `showButtons`        | `boolean`                | Determines whether the action buttons are displayed. Managed as a reactive `@state()`.      |
+| `isWin`              | `boolean`                | Indicates if the current outcome is a win. Managed as a private reactive `@state()`.        |
+| `patternContent`     | `TemplateResult \| null` | Stores dynamically loaded pattern button content. Managed as a private reactive `@state()`. |
+| `_title`             | `string`                 | Stores the modal title for display.                                                         |
+| `rand`               | `number`                 | Random number used to determine modal content fallback.                                     |
 
 ##### public constructor `constructor()`
 
@@ -6283,77 +6527,122 @@ Indicates whether the layer requires canvas transformation. Always returns `fals
 
 ### SoundManager.ts
 
-#### enum `SoundEffect`
-
-Enum of sound effects and their respective names.
-
 #### class `SoundManager`
 
-Manages playing, stopping, loading, unloading, and changing volume of music and SFX.
+Manages background music and sound effects using Howler.js. Handles track sequencing, volume, and playback.
 
 **Properties:**
 
-| Name           | Type                        | Description                        |
-| -------------- | --------------------------- | ---------------------------------- |
-| `music`        | `Howl`                      | Current background music instance. |
-| `soundEffects` | `Record<SoundEffect, Howl>` | Map of sound effects.              |
+| Name                    | Type                     | Description                                          |
+| ----------------------- | ------------------------ | ---------------------------------------------------- |
+| `backgroundMusic`       | `Howl[]`                 | Array of background music tracks.                    |
+| `currentTrack`          | `number`                 | Index of the currently playing background track.     |
+| `soundEffects`          | `Map<SoundEffect, Howl>` | Loaded sound effects mapped by `SoundEffect`.        |
+| `soundEffectsVolume`    | `number`                 | Volume level for sound effects (defaults to `1`).    |
+| `backgroundMusicVolume` | `number`                 | Volume level for background music (defaults to `0`). |
+
+##### public constructor `constructor()`
+
+No parameters.
+
+Initializes background music tracks and loads default sound effects.
+
+Throws an error if Howl fails to initialize.
 
 ##### public function `playBackgroundMusic()`
+
+No parameters.
+
+Plays the current background music track if not already playing.
 
 Returns `void`.
 
 ##### public function `stopBackgroundMusic()`
 
+No parameters.
+
+Stops the currently playing background music track.
+
 Returns `void`.
 
 ##### public function `setBackgroundMusicVolume()`
 
-| Parameter | Type     | Description             |
-| --------- | -------- | ----------------------- |
-| `volume`  | `number` | Volume between 0 and 1. |
+| Parameter | Type     | Description                       |
+| --------- | -------- | --------------------------------- |
+| `volume`  | `number` | Volume level between `0` and `1`. |
+
+Sets the volume of all background music tracks.
+
+Returns `void`.
+
+##### private function `playNext()`
+
+No parameters.
+
+Advances to the next background track and plays it.
 
 Returns `void`.
 
 ##### public function `loadSoundEffect()`
 
-| Parameter | Type          | Description                     |
-| --------- | ------------- | ------------------------------- |
-| `name`    | `SoundEffect` | Sound effect identifier.        |
-| `src`     | `string`      | Source file path for the sound. |
+| Parameter | Type          | Description                            |
+| --------- | ------------- | -------------------------------------- |
+| `name`    | `SoundEffect` | Name of the sound effect.              |
+| `src`     | `string`      | Source file path for the sound effect. |
+
+Loads a sound effect if not already loaded.
 
 Returns `void`.
 
 ##### public function `playSoundEffect()`
 
-| Parameter | Type          | Description           |
-| --------- | ------------- | --------------------- |
-| `name`    | `SoundEffect` | Sound effect to play. |
+| Parameter | Type          | Description                       |
+| --------- | ------------- | --------------------------------- |
+| `name`    | `SoundEffect` | Name of the sound effect to play. |
+
+Plays a loaded sound effect.
 
 Returns `void`.
 
 ##### public function `setSoundEffectsVolume()`
 
-| Parameter | Type     | Description             |
-| --------- | -------- | ----------------------- |
-| `volume`  | `number` | Volume between 0 and 1. |
+| Parameter | Type     | Description                       |
+| --------- | -------- | --------------------------------- |
+| `volume`  | `number` | Volume level between `0` and `1`. |
+
+Sets the volume for all loaded sound effects.
 
 Returns `void`.
 
 ##### public function `stopSoundEffect()`
 
-| Parameter | Type          | Description           |
-| --------- | ------------- | --------------------- |
-| `name`    | `SoundEffect` | Sound effect to stop. |
+| Parameter | Type          | Description                       |
+| --------- | ------------- | --------------------------------- |
+| `name`    | `SoundEffect` | Name of the sound effect to stop. |
+
+Stops a playing sound effect.
 
 Returns `void`.
 
 ##### public function `unloadSoundEffect()`
 
-| Parameter | Type          | Description             |
-| --------- | ------------- | ----------------------- |
-| `name`    | `SoundEffect` | Sound effect to unload. |
+| Parameter | Type          | Description                         |
+| --------- | ------------- | ----------------------------------- |
+| `name`    | `SoundEffect` | Name of the sound effect to unload. |
+
+Unloads a sound effect and removes it from the internal map.
 
 Returns `void`.
+
+#### enum `SoundEffect`
+
+Defines available sound effect identifiers.
+
+**Properties:**
+
+| Name      | Type     | Description                                 |
+| --------- | -------- | ------------------------------------------- |
+| `KaChing` | `string` | Identifier for the "ka-ching" sound effect. |
 
 ## Utilities
 
