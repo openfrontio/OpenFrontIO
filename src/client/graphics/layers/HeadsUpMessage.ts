@@ -41,7 +41,7 @@ export class HeadsUpMessage extends LitElement implements Layer {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         ${this.game.isRandomSpawn()
-          ? translateText("heads_up_message.spawn_selected_automatically")
+          ? translateText("heads_up_message.random_spawn")
           : translateText("heads_up_message.choose_spawn")}
       </div>
     `;

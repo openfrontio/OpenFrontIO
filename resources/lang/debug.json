@@ -169,6 +169,6 @@
   },
   "heads_up_message": {
     "choose_spawn": "heads_up_message.choose_spawn",
-    "spawn_selected_automatically": "heads_up_message.spawn_selected_automatically"
+    "random_spawn": "heads_up_message.random_spawn"
   }
 }
