@@ -134,7 +134,6 @@
     "compact_map": "ミニマップ",
     "disable_nukes": "核兵器使用禁止",
     "enables_title": "機能の有効化",
-    "random_spawn": "ランダム出現",
     "start": "ゲーム開始"
   },
   "token_login_modal": {
@@ -235,7 +234,6 @@
     "player": "プレイヤー",
     "players": "プレイヤー",
     "waiting": "他のプレイヤーの参加を待っています...",
-    "random_spawn": "ランダム出現",
     "start": "ゲーム開始",
     "host_badge": "ホスト"
   },
@@ -590,8 +588,7 @@
     "desync_notice": "他のプレイヤと同期ズレが発生しています。他のプレイヤーとは違う画面になっている可能性があります。"
   },
   "heads_up_message": {
-    "choose_spawn": "スタート地点を選んで下さい",
-    "spawn_selected_automatically": "スポーンが自動的に選択されます。戦闘の準備をしてください"
+    "choose_spawn": "スタート地点を選んで下さい"
   },
   "territory_patterns": {
     "title": "領土スキンを選択",

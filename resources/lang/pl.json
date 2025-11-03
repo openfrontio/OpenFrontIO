@@ -135,7 +135,6 @@
     "donate_troops": "Wyślij jednostki",
     "disable_nukes": "Wyłącz broń nuklearną",
     "enables_title": "Włącz ustawienia",
-    "random_spawn": "Losowe pojawienie",
     "start": "Rozpocznij Grę"
   },
   "token_login_modal": {
@@ -232,7 +231,6 @@
     "player": "Gracz",
     "players": "Gracze",
     "waiting": "Oczekiwanie na graczy...",
-    "random_spawn": "Losowe pojawienie",
     "start": "Rozpocznij grę",
     "host_badge": "Host"
   },
@@ -584,8 +582,7 @@
     "desync_notice": "Jesteś desynchronizowany względem innych graczy. To, co widzisz, może się różnić od tego, co widzą inni."
   },
   "heads_up_message": {
-    "choose_spawn": "Wybierz lokalizację początkową",
-    "spawn_selected_automatically": "Miejsce pojawienia się jest wybierane automatycznie. Przygotuj się do bitwy"
+    "choose_spawn": "Wybierz lokalizację początkową"
   },
   "territory_patterns": {
     "title": "Wybierz wzór terytorium",

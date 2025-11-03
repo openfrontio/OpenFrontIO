@@ -132,7 +132,6 @@
     "infinite_troops": "Obegränsade trupper",
     "disable_nukes": "Inaktivera Kärnvapen",
     "enables_title": "Aktivera Inställningar",
-    "random_spawn": "Slumpmässig spawn",
     "start": "Starta spelet"
   },
   "map": {
@@ -214,8 +213,7 @@
     "player": "Spelare",
     "players": "Spelare",
     "waiting": "Väntar på spelare...",
-    "start": "Starta spelet",
-    "random_spawn": "Slumpmässig spawn"
+    "start": "Starta spelet"
   },
   "team_colors": {
     "red": "Röd",
@@ -535,8 +533,7 @@
     "desync_notice": "Du har blivit avsynkroniserad från de andra spelarna. Det du ser kan komma att skilja från andra spelare."
   },
   "heads_up_message": {
-    "choose_spawn": "Välj en plats att börja på",
-    "spawn_selected_automatically": "Spawn väljs automatiskt. Förbered dig för strid."
+    "choose_spawn": "Välj en plats att börja på"
   },
   "territory_patterns": {
     "title": "Välj Mönster för Territorium",

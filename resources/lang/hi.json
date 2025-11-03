@@ -98,7 +98,6 @@
     "infinite_gold": "असीमित सोना",
     "infinite_troops": "असीमित सैनिक",
     "disable_nukes": "परमाणु अस्त्र निष्क्रिय करें",
-    "random_spawn": "यादृच्छिक स्पॉन",
     "start": "गेम शुरू करें"
   },
   "map": {
@@ -160,7 +159,6 @@
     "player": "खिलाड़ी",
     "players": "खिलाड़ी",
     "waiting": "खिलाड़ियों की प्रतीक्षा कर रहे हैं...",
-    "random_spawn": "यादृच्छिक स्पॉन",
     "start": "गेम शुरू करें"
   },
   "game_starting_modal": {
@@ -225,9 +223,5 @@
     "continental": "महाद्वीपीय",
     "regional": "रीजनल",
     "fantasy": "अन्य"
-  },
-  "heads_up_message": {
-    "choose_spawn": "प्रारंभिक स्थान चुनें",
-    "spawn_selected_automatically": "स्पॉन स्वचालित रूप से चुना गया है। युद्ध के लिए तैयार हो जाइए"
   }
 }

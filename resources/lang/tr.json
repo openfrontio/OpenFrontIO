@@ -135,7 +135,6 @@
     "donate_troops": "Asker bağışla",
     "disable_nukes": "Nükleerleri Devre Dışı Bırak",
     "enables_title": "Ayarları Etkinleştir",
-    "random_spawn": "Rastgele spawn",
     "start": "Oyunu Başlat"
   },
   "token_login_modal": {
@@ -233,8 +232,7 @@
     "players": "Oyuncular",
     "waiting": "Oyuncular bekleniyor...",
     "start": "Oyunu Başlat",
-    "host_badge": "Host",
-    "random_spawn": "Rastgele spawn"
+    "host_badge": "Host"
   },
   "team_colors": {
     "red": "Kırmızı",
@@ -584,8 +582,7 @@
     "desync_notice": "Diğer oyuncularla senkronizasyonunuz bozuldu. Gördükleriniz diğer oyunculardan farklı olabilir."
   },
   "heads_up_message": {
-    "choose_spawn": "Başlangıç konumu seçin",
-    "spawn_selected_automatically": "Spawn otomatik olarak seçildi. Savaşa hazırlanın."
+    "choose_spawn": "Başlangıç konumu seçin"
   },
   "territory_patterns": {
     "title": "Bölge Deseni Seç",

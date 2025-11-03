@@ -134,7 +134,6 @@
     "compact_map": "小地图",
     "disable_nukes": "禁用核弹",
     "enables_title": "启用设置",
-    "random_spawn": "随机出生",
     "start": "开始游戏"
   },
   "token_login_modal": {
@@ -236,8 +235,7 @@
     "players": "玩家",
     "waiting": "正在等待玩家...",
     "start": "开始游戏",
-    "host_badge": "主机",
-    "random_spawn": "随机出生"
+    "host_badge": "主机"
   },
   "team_colors": {
     "red": "红色",
@@ -590,8 +588,7 @@
     "desync_notice": "你与其他玩家失去同步。你看到的可能与其他玩家不同。"
   },
   "heads_up_message": {
-    "choose_spawn": "选择出生点",
-    "spawn_selected_automatically": "出生点将自动选择。准备战斗"
+    "choose_spawn": "选择出生点"
   },
   "territory_patterns": {
     "title": "选择领土皮肤",
