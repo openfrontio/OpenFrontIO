@@ -91,6 +91,7 @@
     "infinite_gold": "Ouro infinito",
     "infinite_troops": "Tropas infinitas",
     "disable_nukes": "Desativar Bombas",
+    "random_spawn": "Spawn aleatório",
     "start": "Iniciar Jogo"
   },
   "map": {
@@ -150,6 +151,7 @@
     "players": "Jogadores",
     "waiting": "Aguardando jogadores...",
     "start": "Iniciar o Jogo",
+    "random_spawn": "Spawn aleatório",
     "mode": "Modo"
   },
   "difficulty": {
@@ -175,5 +177,9 @@
   },
   "select_lang": {
     "title": "Selecionar idioma"
+  },
+  "heads_up_message": {
+    "choose_spawn": "Escolha o ponto de spawn",
+    "spawn_selected_automatically": "O ponto de aparecimento é selecionado automaticamente. Prepare-se para a batalha"
   }
 }

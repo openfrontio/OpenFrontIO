@@ -98,6 +98,7 @@
     "infinite_gold": "Beskrajno zlato",
     "infinite_troops": "Beskrajna vojska",
     "disable_nukes": "Onemogući nuklearna oružja",
+    "random_spawn": "Nasumično pojavljivanje",
     "start": "Započni partiju"
   },
   "map": {
@@ -160,6 +161,7 @@
     "player": "Igrač",
     "players": "Igrači",
     "waiting": "Čekamo igrače...",
+    "random_spawn": "Nasumično pojavljivanje",
     "start": "Započni partiju"
   },
   "game_starting_modal": {
@@ -179,6 +181,10 @@
   },
   "select_lang": {
     "title": "Odaberi jezik"
+  },
+  "heads_up_message": {
+    "choose_spawn": "Izaberi početno mjesto",
+    "spawn_selected_automatically": "Mesto pojavljivanja je odabrano automatski. Pripremite se za bitku"
   },
   "user_setting": {
     "title": "Podješavanja",

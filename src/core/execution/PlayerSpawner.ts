@@ -1,0 +1,74 @@
+import { Game, PlayerType } from "../game/Game";
+import { TileRef } from "../game/GameMap";
+import { PseudoRandom } from "../PseudoRandom";
+import { GameID } from "../Schemas";
+import { simpleHash } from "../Util";
+import { SpawnExecution } from "./SpawnExecution";
+
+export class PlayerSpawner {
+  private random: PseudoRandom;
+  private players: SpawnExecution[] = [];
+
+  constructor(
+    private gm: Game,
+    gameID: GameID,
+  ) {
+    this.random = new PseudoRandom(simpleHash(gameID));
+  }
+
+  private randTile(): TileRef {
+    const x = this.random.nextInt(0, this.gm.width());
+    const y = this.random.nextInt(0, this.gm.height());
+
+    return this.gm.ref(x, y);
+  }
+
+  randomSpawnLand(): TileRef | null {
+    let tries = 0;
+
+    while (tries < 100) {
+      tries++;
+
+      const tile = this.randTile();
+
+      if (
+        !this.gm.isLand(tile) ||
+        this.gm.hasOwner(tile) ||
+        this.gm.isBorder(tile)
+      ) {
+        continue;
+      }
+
+      for (const spawn of this.players) {
+        if (this.gm.manhattanDist(spawn.tile, tile) < 50) {
+          continue;
+        }
+      }
+
+      return tile;
+    }
+
+    return null;
+  }
+
+  spawnPlayers(): SpawnExecution[] {
+    for (const player of this.gm.allPlayers()) {
+      if (player.type() !== PlayerType.Human) {
+        continue;
+      }
+
+      const spawnLand = this.randomSpawnLand();
+
+      if (spawnLand === null) {
+        // TODO: this should nornally not happen,
+        // but if it does maybe need to add some splash screen or add additional logic
+        console.warn(`cannot spawn ${player.id}`);
+        continue;
+      }
+
+      this.players.push(new SpawnExecution(player.info(), spawnLand));
+    }
+
+    return this.players;
+  }
+}

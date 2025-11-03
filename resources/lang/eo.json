@@ -128,6 +128,7 @@
     "bots": "Robotoj: ",
     "bots_disabled": "Malŝaltita",
     "disable_nations": "Malŝalti naciojn",
+    "random_spawn": "Hazarda spawno",
     "instant_build": "Tujkonstruaĵo",
     "infinite_gold": "Senfina oro",
     "infinite_troops": "Senfinaj trupoj",
@@ -234,6 +235,7 @@
     "player": "Ludanto",
     "players": "Ludantoj",
     "waiting": "Atendante ludantojn...",
+    "random_spawn": "Hazarda spawno",
     "start": "Komenci la ludon",
     "host_badge": "Gastiganto"
   },
@@ -588,7 +590,8 @@
     "desync_notice": "Vi estas malsinkronigita de aliaj ludantoj. Kion vi vidas eble diferencas de aliaj ludantoj."
   },
   "heads_up_message": {
-    "choose_spawn": "Elektu komencan lokon"
+    "choose_spawn": "Elektu komencan lokon",
+    "spawn_selected_automatically": "Aparigloko estas elektata aŭtomate. Preparu vin por la batalo"
   },
   "territory_patterns": {
     "title": "Elekti Teritoria Ŝablono",

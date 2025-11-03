@@ -20,6 +20,7 @@ import { FakeHumanExecution } from "./FakeHumanExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
+import { PlayerSpawner } from "./PlayerSpawner";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -129,6 +130,10 @@ export class Executor {
 
   spawnBots(numBots: number): Execution[] {
     return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
+  }
+
+  spawnPlayers(): Execution[] {
+    return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
   fakeHumanExecutions(): Execution[] {

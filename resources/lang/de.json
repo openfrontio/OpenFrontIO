@@ -116,6 +116,7 @@
   },
   "single_modal": {
     "title": "Einzelspieler",
+    "random_spawn": "Zufälliger Spawn",
     "allow_alliances": "Bündnisse erlauben",
     "options_title": "Optionen",
     "bots": "Bots: ",
@@ -207,6 +208,7 @@
     "player": "Spieler",
     "players": "Spieler",
     "waiting": "Warte auf Spieler...",
+    "random_spawn": "Zufälliger Spawn",
     "start": "Spiel starten"
   },
   "team_colors": {
@@ -495,7 +497,8 @@
     "desync_notice": "Du wurdest von anderen Spielern desynchronisiert. Was du siehst, könnte sich von anderen Spielern unterscheiden."
   },
   "heads_up_message": {
-    "choose_spawn": "Wähle eine Startposition"
+    "choose_spawn": "Wähle eine Startposition",
+    "spawn_selected_automatically": "Der Spawn wird automatisch ausgewählt. Bereite dich auf den Kampf vor"
   },
   "territory_patterns": {
     "title": "Gebietsmuster auswählen",

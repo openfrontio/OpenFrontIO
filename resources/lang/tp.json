@@ -102,6 +102,7 @@
     "infinite_troops": "o jo e kulupu utala ale",
     "disable_nukes": "o pini e ilo pi pakala wawa",
     "enables_title": "o ken e lipu ken",
+    "random_spawn": "ma nasa",
     "start": "o open"
   },
   "map": {
@@ -173,6 +174,7 @@
     "player": "jan musi",
     "players": "jan musi",
     "waiting": "tomo li awen tawa jan musi...",
+    "random_spawn": "ma nasa",
     "start": "o open"
   },
   "game_starting_modal": {
@@ -318,5 +320,9 @@
       "saving_for_mirv": "[P1] li awen tawa ilo pi pakala wawa mute.",
       "mirv_ready": "[P1] li jo e mani tawa ilo pi pakala wawa mute a!"
     }
+  },
+  "heads_up_message": {
+    "choose_spawn": "o wile e ma sina",
+    "spawn_selected_automatically": "ilo li wile e ma sina. o awen tawa utala"
   }
 }

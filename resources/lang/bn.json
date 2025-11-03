@@ -89,6 +89,7 @@
   },
   "single_modal": {
     "title": "কম্পিউটার মোড",
+    "random_spawn": "এলোমেলো স্পন",
     "allow_alliances": "মিত্রতা অনুমতি দিন",
     "options_title": "বিকল্পসমূহ",
     "bots": "বট: ",
@@ -159,6 +160,7 @@
     "player": "খেলোয়াড়",
     "players": "খেলোয়াড়",
     "waiting": "খেলোয়াড়দের জন্য অপেক্ষা করছে...",
+    "random_spawn": "এলোমেলো স্পন",
     "start": "গেম শুরু করুন"
   },
   "game_starting_modal": {
@@ -223,5 +225,9 @@
     "continental": "মহাদেশীয়",
     "regional": "আঞ্চলিক",
     "fantasy": "অন্য"
+  },
+  "heads_up_message": {
+    "choose_spawn": "নির্ধারিত শুরু অবস্থান নির্বাচন করুন",
+    "spawn_selected_automatically": "স্পন স্বয়ংক্রিয়ভাবে নির্বাচন করা হয়েছে। যুদ্ধের জন্য প্রস্তুত হন"
   }
 }

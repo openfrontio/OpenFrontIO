@@ -135,6 +135,7 @@
     "donate_troops": "Lahjoita joukkoja",
     "disable_nukes": "Poista ydinohjukset käytöstä",
     "enables_title": "Säädä asetuksia",
+    "random_spawn": "Satunnainen aloituspaikka",
     "start": "Aloita peli"
   },
   "token_login_modal": {
@@ -231,6 +232,7 @@
     "player": "Pelaaja",
     "players": "pelaajaa",
     "waiting": "Odotetaan pelaajia...",
+    "random_spawn": "Satunnainen aloituspaikka",
     "start": "Aloita peli",
     "host_badge": "Isäntä"
   },
@@ -582,7 +584,8 @@
     "desync_notice": "Olet muiden pelaajien kanssa eri tahdissa. Mitä näet saattaa poiketa muiden pelaajien näkymästä."
   },
   "heads_up_message": {
-    "choose_spawn": "Valitse aloituspaikka"
+    "choose_spawn": "Valitse aloituspaikka",
+    "spawn_selected_automatically": "Spawn valitaan automaattisesti. Valmistaudu taisteluun"
   },
   "territory_patterns": {
     "title": "Valitse aluekuvio",

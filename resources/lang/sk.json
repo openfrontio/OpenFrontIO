@@ -133,6 +133,7 @@
     "infinite_troops": "Nekonečné vojská",
     "disable_nukes": "Zakázať jadrové bomby",
     "enables_title": "Povoliť nastavenia",
+    "random_spawn": "Náhodné spawnovanie",
     "start": "Spustiť hru"
   },
   "map": {
@@ -217,6 +218,7 @@
     "player": "Hráč",
     "players": "Hráči",
     "waiting": "Čakanie na hráčov…",
+    "random_spawn": "Náhodné spawnovanie",
     "start": "Spustiť hru",
     "host_badge": "Domáci"
   },
@@ -544,7 +546,8 @@
     "desync_notice": "Tvoja hra je desynchronizovaná od ostatných hráčov. To, čo vidíš, sa môže líšiť od nich."
   },
   "heads_up_message": {
-    "choose_spawn": "Vyber začiatočnú polohu"
+    "choose_spawn": "Vyber začiatočnú polohu",
+    "spawn_selected_automatically": "Miesto spawnovania sa vyberie automaticky. Priprav sa na bitku"
   },
   "territory_patterns": {
     "title": "Vybrať územný vzorec",

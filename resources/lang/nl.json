@@ -132,6 +132,7 @@
     "infinite_troops": "Oneindige troepen",
     "disable_nukes": "Kernwapens uitschakelen",
     "enables_title": "Onderdelen inschakelen",
+    "random_spawn": "Willekeurige spawn",
     "start": "Start Spel"
   },
   "map": {
@@ -213,6 +214,7 @@
     "player": "Speler",
     "players": "Spelers",
     "waiting": "Wachten op spelers...",
+    "random_spawn": "Willekeurige spawn",
     "start": "Start Spel"
   },
   "team_colors": {
@@ -533,7 +535,8 @@
     "desync_notice": "Je bent niet meer gesynchroniseerd met andere spelers. Wat je ziet kan verschillen van andere spelers."
   },
   "heads_up_message": {
-    "choose_spawn": "Kies een startlocatie"
+    "choose_spawn": "Kies een startlocatie",
+    "spawn_selected_automatically": "Spawn wordt automatisch geselecteerd. Maak je klaar voor de strijd"
   },
   "territory_patterns": {
     "title": "Selecteer gebiedspatroon",

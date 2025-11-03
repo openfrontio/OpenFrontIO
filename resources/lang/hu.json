@@ -134,6 +134,7 @@
     "compact_map": "Mini térkép",
     "disable_nukes": "Nukleáris fegyverek letiltása",
     "enables_title": "Beállítások engedélyezése",
+    "random_spawn": "Véletlenszerű megjelenés",
     "start": "Játék indítása"
   },
   "token_login_modal": {
@@ -234,6 +235,7 @@
     "player": "Játékos",
     "players": "Játékosok",
     "waiting": "Várakozás a játékosokra...",
+    "random_spawn": "Véletlenszerű megjelenés",
     "start": "Játék indítása",
     "host_badge": "Host"
   },
@@ -588,7 +590,8 @@
     "desync_notice": "Szinkronizációs hiba. Amit látsz, eltérhet attól, amit mások látnak."
   },
   "heads_up_message": {
-    "choose_spawn": "Válassz kiindulási helyet"
+    "choose_spawn": "Válassz kiindulási helyet",
+    "spawn_selected_automatically": "A megjelenési hely automatikusan kerül kiválasztásra. Készülj a csatára"
   },
   "territory_patterns": {
     "title": "Válassz területi mintát",

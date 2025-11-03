@@ -92,6 +92,7 @@
   },
   "single_modal": {
     "title": "لاعب فردي",
+    "random_spawn": "ظهور عشوائي",
     "allow_alliances": "السماح بالتحالفات",
     "options_title": "خيارات",
     "bots": "البوتات:",
@@ -135,6 +136,10 @@
     "regional": "إقليمي",
     "fantasy": "خيالي"
   },
+  "heads_up_message": {
+    "choose_spawn": "اختر موقع البداية",
+    "spawn_selected_automatically": "نقطة الظهور تُختار تلقائيًا. استعد للمعركة"
+  },
   "private_lobby": {
     "title": "الانضمام إلى لوبي خاص",
     "enter_id": "أدخل رقم اللوبي",
@@ -173,6 +178,7 @@
     "player": "لاعب",
     "players": "لاعبين",
     "waiting": "بانتظار اللاعبين...",
+    "random_spawn": "ظهور عشوائي",
     "start": "بدء اللعبة"
   },
   "game_starting_modal": {

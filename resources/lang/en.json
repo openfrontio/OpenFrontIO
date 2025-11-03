@@ -135,6 +135,7 @@
   },
   "single_modal": {
     "title": "Single Player",
+    "random_spawn": "Random spawn",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
     "bots": "Bots: ",
@@ -262,6 +263,7 @@
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
+    "random_spawn": "Random spawn",
     "start": "Start Game",
     "host_badge": "Host"
   },
@@ -658,7 +660,8 @@
     "desync_notice": "You are desynced from other players. What you see might differ from other players."
   },
   "heads_up_message": {
-    "choose_spawn": "Choose a starting location"
+    "choose_spawn": "Choose a starting location",
+    "spawn_selected_automatically": "Spawn is selected automatically. Prepare for the battle"
   },
   "territory_patterns": {
     "title": "Skins",

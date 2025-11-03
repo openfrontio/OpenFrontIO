@@ -115,6 +115,7 @@
     "infinite_troops": "Truppe infinite",
     "disable_nukes": "Disabilita Bombe Nucleari",
     "enables_title": "Abilita impostazioni",
+    "random_spawn": "Comparsa casuale",
     "start": "Inizia partita"
   },
   "map": {
@@ -187,6 +188,7 @@
     "player": "Giocatore",
     "players": "Giocatori",
     "waiting": "In attesa dei giocatori...",
+    "random_spawn": "Comparsa casuale",
     "start": "Avvia Partita"
   },
   "game_starting_modal": {
@@ -383,6 +385,10 @@
     "warships": "Nave da guerra",
     "health": "Salute",
     "attitude": "Relazione"
+  },
+  "heads_up_message": {
+    "choose_spawn": "Scegli il punto di spawn",
+    "spawn_selected_automatically": "Il punto di spawn è selezionato automaticamente. Preparati alla battaglia"
   },
   "relation": {
     "hostile": "Ostile",

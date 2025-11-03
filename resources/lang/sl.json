@@ -134,6 +134,7 @@
     "compact_map": "Mini mapa",
     "disable_nukes": "Deaktiviraj bombe",
     "enables_title": "Aktiviraj nastavitve",
+    "random_spawn": "Naključno pojavljanje",
     "start": "Začni igro"
   },
   "token_login_modal": {
@@ -234,6 +235,7 @@
     "player": "Igralec",
     "players": "Igralci",
     "waiting": "Čakanje na igralce...",
+    "random_spawn": "Naključno pojavljanje",
     "start": "Začni igro",
     "host_badge": "Gostitelj"
   },
@@ -588,7 +590,8 @@
     "desync_notice": "Niste sinhronizirani z drugimi igralci. Kar vidite, se lahko razlikuje od drugih igralcev."
   },
   "heads_up_message": {
-    "choose_spawn": "Izberite začetno lokacijo"
+    "choose_spawn": "Izberite začetno lokacijo",
+    "spawn_selected_automatically": "Spawn je izbran samodejno. Pripravite se na bitko"
   },
   "territory_patterns": {
     "title": "Izberi poslikavo območja",

@@ -123,6 +123,7 @@
   },
   "single_modal": {
     "title": "Enkeltspiller",
+    "random_spawn": "Tilfældig spawn",
     "allow_alliances": "Tillad alliancer",
     "options_title": "Indstillinger",
     "bots": "Bots: ",
@@ -217,6 +218,7 @@
     "player": "Spiller",
     "players": "Spillere",
     "waiting": "Venter på spillerne...",
+    "random_spawn": "Tilfældig spawn",
     "start": "Start spil",
     "host_badge": "Vært"
   },
@@ -544,7 +546,8 @@
     "desync_notice": "Du er ikke synkroniseret med de andre spillere. Det, du ser, kan derfor være forskelligt fra, hvad de andre spillere ser."
   },
   "heads_up_message": {
-    "choose_spawn": "Vælg en startplacering"
+    "choose_spawn": "Vælg en startplacering",
+    "spawn_selected_automatically": "Spawn vælges automatisk. Gør dig klar til kampen"
   },
   "territory_patterns": {
     "title": "Vælg Territoriummønster",

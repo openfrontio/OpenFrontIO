@@ -126,6 +126,7 @@
     "infinite_troops": "חיילים אינסופיים",
     "disable_nukes": "בטל אטום",
     "enables_title": "אפשר הגדרות",
+    "random_spawn": "הופעה אקראית",
     "start": "התחל משחק"
   },
   "map": {
@@ -207,6 +208,7 @@
     "player": "שחקן",
     "players": "שחקנים",
     "waiting": "מחכה לשחקנים...",
+    "random_spawn": "הופעה אקראית",
     "start": "התחל משחק"
   },
   "team_colors": {
@@ -495,7 +497,8 @@
     "desync_notice": "אתה לא מסונכרן עם שאר השחקנים. מה שאתה רואה עלול להיות שונה משאר השחקנים."
   },
   "heads_up_message": {
-    "choose_spawn": "בחר מיקום התחלתי"
+    "choose_spawn": "בחר מיקום התחלתי",
+    "spawn_selected_automatically": "נקודת ההופעה נבחרת אוטומטית. התכוננו לקרב."
   },
   "territory_patterns": {
     "title": "בחר דפוס שטח",

@@ -133,6 +133,7 @@
     "infinite_troops": "Tropas infinitas",
     "disable_nukes": "Desabilitar Bombas Nucleares",
     "enables_title": "Ativar Configurações",
+    "random_spawn": "Spawn aleatório",
     "start": "Iniciar Jogo"
   },
   "map": {
@@ -217,6 +218,7 @@
     "player": "Jogador",
     "players": "Jogadores",
     "waiting": "Aguardando jogadores...",
+    "random_spawn": "Spawn aleatório",
     "start": "Iniciar jogo",
     "host_badge": "Servidor"
   },
@@ -544,7 +546,8 @@
     "desync_notice": "Está dessincronizado de outros jogadores. O que vê pode ser diferente dos outros jogadores."
   },
   "heads_up_message": {
-    "choose_spawn": "Escolha um local de início"
+    "choose_spawn": "Escolha um local de início",
+    "spawn_selected_automatically": "O ponto de aparecimento é selecionado automaticamente. Prepare-se para a batalha"
   },
   "territory_patterns": {
     "title": "Selecione padrão do território",

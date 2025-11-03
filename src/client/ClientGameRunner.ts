@@ -401,7 +401,8 @@ export class ClientGameRunner {
     if (
       this.gameView.isLand(tile) &&
       !this.gameView.hasOwner(tile) &&
-      this.gameView.inSpawnPhase()
+      this.gameView.inSpawnPhase() &&
+      !this.gameView.isRandomSpawn()
     ) {
       this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;

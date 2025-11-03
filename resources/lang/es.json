@@ -115,6 +115,7 @@
     "infinite_troops": "Tropas infinitas",
     "disable_nukes": "Deshabilitar bombas",
     "enables_title": "Activar configuración",
+    "random_spawn": "Aparición aleatoria",
     "start": "Iniciar Partida"
   },
   "map": {
@@ -187,6 +188,7 @@
     "player": "Jugador",
     "players": "Jugadores",
     "waiting": "Esperando jugadores...",
+    "random_spawn": "Aparición aleatoria",
     "start": "Iniciar Partida"
   },
   "game_starting_modal": {
@@ -409,5 +411,9 @@
     "stop_trade": "Parar de comerciar",
     "yes": "Sí",
     "no": "No"
+  },
+  "heads_up_message": {
+    "choose_spawn": "Elige la ubicación inicial",
+    "spawn_selected_automatically": "El punto de aparición se selecciona automáticamente. Prepárate para la batalla"
   }
 }

@@ -134,6 +134,7 @@
     "compact_map": "Mini-carte",
     "disable_nukes": "Désactiver les armes nucléaires",
     "enables_title": "Activer les paramètres",
+    "random_spawn": "Apparition aléatoire",
     "start": "Commencer la partie"
   },
   "token_login_modal": {
@@ -234,6 +235,7 @@
     "player": "Joueur",
     "players": "Joueurs",
     "waiting": "En attente de joueurs...",
+    "random_spawn": "Apparition aléatoire",
     "start": "Commencer la partie",
     "host_badge": "Hôte"
   },
@@ -588,7 +590,8 @@
     "desync_notice": "Vous êtes désynchronisé des autres joueurs. Ce que vous voyez peut être différent des autres joueurs."
   },
   "heads_up_message": {
-    "choose_spawn": "Choisissez un emplacement de départ"
+    "choose_spawn": "Choisissez un emplacement de départ",
+    "spawn_selected_automatically": "Le point d'apparition est sélectionné automatiquement. Préparez-vous pour la bataille"
   },
   "territory_patterns": {
     "title": "Sélectionner un motif de territoire",
