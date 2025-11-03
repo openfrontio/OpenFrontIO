@@ -3,6 +3,7 @@ import {
   AllUnitParams,
   MessageType,
   Player,
+  PlayerType,
   Tick,
   TrainType,
   TrajectoryTile,
@@ -252,6 +253,21 @@ export class UnitImpl implements Unit {
     if (!this.isActive()) {
       throw new Error(`cannot delete ${this} not active`);
     }
+
+    // If a FakeHuman transport ship is destroyed, notify its controller to send a retaliation warship
+    if (
+      destroyer !== undefined &&
+      this._type === UnitType.TransportShip &&
+      this.owner().type() === PlayerType.FakeHuman
+    ) {
+      for (const exec of this.mg.executions()) {
+        const fh = exec as any;
+        if (typeof fh?.onTransportShipDestroyed === "function") {
+          fh.onTransportShipDestroyed(this.tile(), this.owner());
+        }
+      }
+    }
+
     this._owner._units = this._owner._units.filter((b) => b !== this);
     this._active = false;
     this.mg.addUpdate(this.toUpdate());

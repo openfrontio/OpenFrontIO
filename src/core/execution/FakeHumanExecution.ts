@@ -1,5 +1,6 @@
 import {
   Cell,
+  Difficulty,
   Execution,
   Game,
   Gold,
@@ -907,5 +908,25 @@ export class FakeHumanExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return true;
+  }
+
+  // Called when a transport ship is destroyed
+  // Sends a retaliation warship to the destroyed ship's tile
+  public onTransportShipDestroyed(tile: TileRef, owner: Player): void {
+    if (this.player === null) throw new Error("not initialized");
+    if (owner !== this.player) return;
+
+    const { difficulty } = this.mg.config().gameConfig();
+    if (
+      difficulty === Difficulty.Easy ||
+      difficulty === Difficulty.Medium ||
+      (difficulty === Difficulty.Hard && this.random.chance(50))
+    ) {
+      return;
+    }
+
+    this.mg.addExecution(
+      new ConstructionExecution(this.player, UnitType.Warship, tile),
+    );
   }
 }
