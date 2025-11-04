@@ -41,9 +41,7 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     game.executeNextTick();
     game.executeNextTick();
     game.executeNextTick();
-    expect(player.units(UnitType.HydrogenBomb).length).toBeGreaterThan(
-      0,
-    );
+    expect(player.units(UnitType.HydrogenBomb).length).toBeGreaterThan(0);
 
     // Now build another silo with construction time and ensure it won't be used
     // Use non-instant config by simulating an under-construction flag on a new silo

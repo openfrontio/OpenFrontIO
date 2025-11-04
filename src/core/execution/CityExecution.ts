@@ -7,10 +7,17 @@ export class CityExecution implements Execution {
   private city: Unit | null = null;
   private active: boolean = true;
 
+  constructor(playerOrUnit: Unit);
+  constructor(playerOrUnit: Player, tile: TileRef);
+
   constructor(
     private playerOrUnit: Player | Unit,
     private tile?: TileRef,
-  ) {}
+  ) {
+    if (!isUnit(playerOrUnit) && tile === undefined) {
+      throw new Error("tile is required when playerOrUnit is a Player");
+    }
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -22,20 +29,13 @@ export class CityExecution implements Execution {
         this.city = this.playerOrUnit;
         this.createStation();
       } else {
-        const spawnTile = this.playerOrUnit.canBuild(
-          UnitType.City, 
-          this.tile!,
-        );
+        const spawnTile = this.playerOrUnit.canBuild(UnitType.City, this.tile!);
         if (spawnTile === false) {
           console.warn("cannot build city");
           this.active = false;
           return;
         }
-        this.city = this.playerOrUnit.buildUnit(
-          UnitType.City, 
-          spawnTile,
-          {},
-          );
+        this.city = this.playerOrUnit.buildUnit(UnitType.City, spawnTile, {});
         this.createStation();
       }
     }

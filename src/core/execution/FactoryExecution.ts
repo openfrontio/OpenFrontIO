@@ -6,10 +6,18 @@ export class FactoryExecution implements Execution {
   private factory: Unit | null = null;
   private active: boolean = true;
   private game: Game;
+
+  constructor(playerOrUnit: Unit);
+  constructor(playerOrUnit: Player, tile: TileRef);
+
   constructor(
     private playerOrUnit: Player | Unit,
     private tile?: TileRef,
-  ) {}
+  ) {
+    if (!isUnit(playerOrUnit) && tile === undefined) {
+      throw new Error("tile is required when playerOrUnit is a Player");
+    }
+  }
 
   init(mg: Game, ticks: number): void {
     this.game = mg;
