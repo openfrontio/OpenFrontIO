@@ -44,6 +44,7 @@ export class TradeShipExecution implements Execution {
       }
       this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, spawn, {
         targetUnit: this._dstPort,
+        sourcePortId: this.srcPort.id(),
         lastSetSafeFromPirates: ticks,
       });
       this.mg.stats().boatSendTrade(this.origOwner, this._dstPort.owner());

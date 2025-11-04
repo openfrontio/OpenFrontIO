@@ -127,6 +127,9 @@ export class UnitView {
   targetUnitId(): number | undefined {
     return this.data.targetUnitId;
   }
+  sourcePortId(): number | undefined {
+    return this.data.sourcePortId;
+  }
   targetTile(): TileRef | undefined {
     return this.data.targetTile;
   }
