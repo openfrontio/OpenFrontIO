@@ -500,20 +500,25 @@
       "factory": "Creates railroads and spawns trains"
     },
     "not_enough_money": "Not enough money"
-  },
+{
   "win_modal": {
-    "support_openfront": "Support OpenFront!",
-    "territory_pattern": "Purchase a territory skin to go ad-free!",
-    "died": "You died",
-    "your_team": "Your team won!",
-    "other_team": "{team} team has won!",
-    "you_won": "You Won!",
-    "other_won": "{player} has won!",
-    "exit": "Exit Game",
-    "keep": "Keep Playing",
+    "exit": "Exit to Lobby",
+    "keep": "Keep Watching",
     "spectate": "Spectate",
-    "wishlist": "Wishlist on Steam!"
-  },
+    "died": "You Died!",
+    "you_won": "You Won!",
+    "your_team": "Your Team Won!",
+    "wishlist": "Wishlist on Steam!",
+    "support_openfront": "Support OpenFront",
+    "territory_pattern": "Purchase a territory pattern",
+    "ofm_winter": "OpenFront Masters Winter Tournament!",
+    "ofm_winter_description": "Join the competitive tournament and compete against the best players",
+    "join_tournament": "Join Tournament",
+    "join_discord": "Join Our Discord Community!",
+    "discord_description": "Connect with other players, get updates, and share strategies",
+    "join_server": "Join Server"
+  }
+}
   "leaderboard": {
     "title": "Leaderboard",
     "hide": "Hide",
