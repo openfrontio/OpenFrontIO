@@ -205,7 +205,7 @@ ofmDisplay(): TemplateResult {
       </h3>
       <div class="mb-3">
         <img 
-          src="/resources/ofm-winters-logo.png" 
+          src="/resources/images/Ofm-Winters-Logo.png" 
           alt="OpenFront Masters Winter"
           class="mx-auto max-w-full h-auto max-h-[200px] rounded"
         />
