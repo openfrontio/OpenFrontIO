@@ -1,13 +1,14 @@
-import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { PauseGameEvent } from "../../Transport";
 import { GameType } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
-import { Layer } from "./Layer";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
+import { PauseGameEvent } from "../../Transport";
+import { translateText } from "../../Utils";
+import { Layer } from "./Layer";
 
 const button = ({
   classes = "",
@@ -29,6 +30,16 @@ const button = ({
     ${children}
   </button>
 `;
+
+const secondsToHms = (d: number): string => {
+  const h = Math.floor(d / 3600);
+  const m = Math.floor((d % 3600) / 60);
+  const s = Math.floor((d % 3600) % 60);
+  let time = d === 0 ? "-" : `${s}s`;
+  if (m > 0) time = `${m}m` + time;
+  if (h > 0) time = `${h}h` + time;
+  return time;
+};
 
 @customElement("options-menu")
 export class OptionsMenu extends LitElement implements Layer {
@@ -64,7 +75,9 @@ export class OptionsMenu extends LitElement implements Layer {
   private onExitButtonClick() {
     const isAlive = this.game.myPlayer()?.isAlive();
     if (isAlive) {
-      const isConfirmed = confirm("Are you sure you want to exit the game?");
+      const isConfirmed = confirm(
+        translateText("help_modal.exit_confirmation"),
+      );
       if (!isConfirmed) return;
     }
     // redirect to the home page
@@ -90,31 +103,57 @@ export class OptionsMenu extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private onToggleAlertFrameButtonClick() {
+    this.userSettings.toggleAlertFrame();
+    this.requestUpdate();
+  }
+
+  private onToggleSpecialEffectsButtonClick() {
+    this.userSettings.toggleFxLayer();
+    this.requestUpdate();
+  }
+
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.requestUpdate();
     this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
+  private onToggleRandomNameModeButtonClick() {
+    this.userSettings.toggleRandomName();
+  }
+
+  private onToggleFocusLockedButtonClick() {
+    this.userSettings.toggleFocusLocked();
+    this.requestUpdate();
+  }
+
   private onToggleLeftClickOpensMenu() {
     this.userSettings.toggleLeftClickOpenMenu();
+  }
+
+  private onToggleTerritoryPatterns() {
+    this.userSettings.toggleTerritoryPatterns();
+    this.requestUpdate();
   }
 
   init() {
     console.log("init called from OptionsMenu");
     this.showPauseButton =
-      this.game.config().gameConfig().gameType == GameType.Singleplayer;
+      this.game.config().gameConfig().gameType === GameType.Singleplayer ||
+      this.game.config().isReplay();
     this.isVisible = true;
     this.requestUpdate();
   }
 
   tick() {
-    this.hasWinner =
-      this.hasWinner ||
-      this.game.updatesSinceLastTick()[GameUpdateType.Win].length > 0;
+    const updates = this.game.updatesSinceLastTick();
+    if (updates) {
+      this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
+    }
     if (this.game.inSpawnPhase()) {
       this.timer = 0;
-    } else if (!this.hasWinner && this.game.ticks() % 10 == 0) {
+    } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
       this.timer++;
     }
     this.isVisible = true;
@@ -141,11 +180,11 @@ export class OptionsMenu extends LitElement implements Layer {
               children: this.isPaused ? "▶️" : "⏸",
             })}
             <div
-              class="w-14 h-8 lg:w-20 lg:h-10 flex items-center justify-center
+              class="w-[55px] h-8 lg:w-24 lg:h-10 flex items-center justify-center
                               bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                               rounded text-sm lg:text-xl"
             >
-              ${this.timer}
+              ${secondsToHms(this.timer)}
             </div>
             ${button({
               onClick: this.onExitButtonClick,
@@ -161,7 +200,7 @@ export class OptionsMenu extends LitElement implements Layer {
         </div>
 
         <div
-          class="options-menu flex flex-wrap justify-around gap-y-3 mt-2 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md ${!this
+          class="options-menu flex flex-col justify-around gap-y-3 mt-2 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md ${!this
             .showSettings
             ? "hidden"
             : ""}"
@@ -177,9 +216,31 @@ export class OptionsMenu extends LitElement implements Layer {
             children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
           })}
           ${button({
+            onClick: this.onToggleAlertFrameButtonClick,
+            title: "Toggle Alert frame",
+            children: "🚨: " + (this.userSettings.alertFrame() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleSpecialEffectsButtonClick,
+            title: "Toggle Special effects",
+            children: "💥: " + (this.userSettings.fxLayer() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleTerritoryPatterns,
+            title: "Territory Patterns",
+            children:
+              "🏳️: " + (this.userSettings.territoryPatterns() ? "On" : "Off"),
+          })}
+          ${button({
             onClick: this.onToggleDarkModeButtonClick,
             title: "Dark Mode",
             children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
+          })}
+          ${button({
+            onClick: this.onToggleRandomNameModeButtonClick,
+            title: "Random name mode",
+            children:
+              "🥷: " + (this.userSettings.anonymousNames() ? "On" : "Off"),
           })}
           ${button({
             onClick: this.onToggleLeftClickOpensMenu,
@@ -190,6 +251,15 @@ export class OptionsMenu extends LitElement implements Layer {
                 ? "Opens menu"
                 : "Attack"),
           })}
+          <!-- ${button({
+            onClick: this.onToggleFocusLockedButtonClick,
+            title: "Lock Focus",
+            children:
+              "🗺: " +
+              (this.userSettings.focusLocked()
+                ? "Focus locked"
+                : "Hover focus"),
+          })} -->
         </div>
       </div>
     `;

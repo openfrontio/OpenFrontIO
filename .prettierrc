@@ -1,1 +1,17 @@
-{}
+{
+  "overrides": [
+    {
+      "files": ".husky/**",
+      "options": {
+        "plugins": []
+      }
+    },
+    {
+      "files": "Dockerfile",
+      "options": {
+        "plugins": []
+      }
+    }
+  ],
+  "plugins": ["prettier-plugin-organize-imports", "prettier-plugin-sh"]
+}

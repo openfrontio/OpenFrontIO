@@ -1,0 +1,24 @@
+.l-footer {
+  background: var(--boxBackgroundColor);
+  backdrop-filter: blur(var(--blur-md));
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+
+  @media (min-width: 800px) {
+    padding: 12px 24px;
+  }
+}
+
+.l-footer__content {
+  max-width: 860px;
+  flex-wrap: wrap;
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.l-footer__col {
+  display: flex;
+  gap: 20px;
+}

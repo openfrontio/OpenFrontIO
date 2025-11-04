@@ -1,12 +1,24 @@
 import { Colord } from "colord";
+import { EventBus } from "../../../core/EventBus";
 import { Theme } from "../../../core/configuration/Config";
 import { UnitType } from "../../../core/game/Game";
-import { Layer } from "./Layer";
-import { EventBus } from "../../../core/EventBus";
-import { ClientID } from "../../../core/Schemas";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { UnitSelectionEvent } from "../../InputHandler";
+import { ProgressBar } from "../ProgressBar";
 import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
+
+const COLOR_PROGRESSION = [
+  "rgb(232, 25, 25)",
+  "rgb(240, 122, 25)",
+  "rgb(202, 231, 15)",
+  "rgb(44, 239, 18)",
+];
+const HEALTHBAR_WIDTH = 11; // Width of the health bar
+const LOADINGBAR_WIDTH = 14; // Width of the loading bar
+const PROGRESSBAR_HEIGHT = 3; // Height of a bar
 
 /**
  * Layer responsible for drawing UI elements that overlay the game
@@ -14,11 +26,15 @@ import { TransformHandler } from "../TransformHandler";
  */
 export class UILayer implements Layer {
   private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
-
-  private theme: Theme = null;
+  private context: CanvasRenderingContext2D | null;
+  private theme: Theme | null = null;
+  private userSettings: UserSettings = new UserSettings();
   private selectionAnimTime = 0;
-
+  private allProgressBars: Map<
+    number,
+    { unit: UnitView; progressBar: ProgressBar }
+  > = new Map();
+  private allHealthBars: Map<number, ProgressBar> = new Map();
   // Keep track of currently selected unit
   private selectedUnit: UnitView | null = null;
 
@@ -35,7 +51,6 @@ export class UILayer implements Layer {
   constructor(
     private game: GameView,
     private eventBus: EventBus,
-    private clientID: ClientID,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
@@ -53,6 +68,15 @@ export class UILayer implements Layer {
     if (this.selectedUnit && this.selectedUnit.type() === UnitType.Warship) {
       this.drawSelectionBox(this.selectedUnit);
     }
+
+    this.game
+      .updatesSinceLastTick()
+      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.forEach((unitView) => {
+        if (unitView === undefined) return;
+        this.onUnitEvent(unitView);
+      });
+    this.updateProgressBars();
   }
 
   init() {
@@ -76,6 +100,53 @@ export class UILayer implements Layer {
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
+  }
+
+  onUnitEvent(unit: UnitView) {
+    switch (unit.type()) {
+      case UnitType.Construction: {
+        const constructionType = unit.constructionType();
+        if (constructionType === undefined) {
+          // Skip units without construction type
+          return;
+        }
+        this.createLoadingBar(unit);
+        break;
+      }
+      case UnitType.Warship: {
+        this.drawHealthBar(unit);
+        break;
+      }
+      case UnitType.MissileSilo:
+        this.createLoadingBar(unit);
+        break;
+      case UnitType.SAMLauncher:
+        this.createLoadingBar(unit);
+        break;
+      default:
+        return;
+    }
+  }
+
+  private clearIcon(icon: HTMLImageElement, startX: number, startY: number) {
+    if (this.context !== null) {
+      this.context.clearRect(startX, startY, icon.width, icon.height);
+    }
+  }
+
+  private drawIcon(
+    icon: HTMLImageElement,
+    unit: UnitView,
+    startX: number,
+    startY: number,
+  ) {
+    if (this.context === null || this.theme === null) {
+      return;
+    }
+    const color = this.theme.borderColor(unit.owner());
+    this.context.fillStyle = color.toRgbString();
+    this.context.fillRect(startX, startY, icon.width, icon.height);
+    this.context.drawImage(icon, startX, startY);
   }
 
   /**
@@ -136,7 +207,8 @@ export class UILayer implements Layer {
       baseOpacity + Math.sin(this.selectionAnimTime * 0.1) * pulseAmount;
 
     // Get the unit's owner color for the box
-    const ownerColor = this.theme.territoryColor(unit.owner().info());
+    if (this.theme === null) throw new Error("missing theme");
+    const ownerColor = this.theme.territoryColor(unit.owner());
 
     // Create a brighter version of the owner color for the selection
     const selectionColor = ownerColor.lighten(0.2);
@@ -188,20 +260,111 @@ export class UILayer implements Layer {
   }
 
   /**
-   * Draw health bar for a unit (placeholder for future implementation)
+   * Draw health bar for a unit
    */
   public drawHealthBar(unit: UnitView) {
-    // This is a placeholder for future health bar implementation
-    // It would draw a health bar above units that have health
+    const maxHealth = this.game.unitInfo(unit.type()).maxHealth;
+    if (maxHealth === undefined || this.context === null) {
+      return;
+    }
+    if (
+      this.allHealthBars.has(unit.id()) &&
+      (unit.health() >= maxHealth || unit.health() <= 0 || !unit.isActive())
+    ) {
+      // full hp/dead warships dont need a hp bar
+      this.allHealthBars.get(unit.id())?.clear();
+      this.allHealthBars.delete(unit.id());
+    } else if (
+      unit.isActive() &&
+      unit.health() < maxHealth &&
+      unit.health() > 0
+    ) {
+      this.allHealthBars.get(unit.id())?.clear();
+      const healthBar = new ProgressBar(
+        COLOR_PROGRESSION,
+        this.context,
+        this.game.x(unit.tile()) - 4,
+        this.game.y(unit.tile()) - 6,
+        HEALTHBAR_WIDTH,
+        PROGRESSBAR_HEIGHT,
+        unit.health() / maxHealth,
+      );
+      // keep track of units that have health bars for clearing purposes
+      this.allHealthBars.set(unit.id(), healthBar);
+    }
+  }
+
+  private updateProgressBars() {
+    this.allProgressBars.forEach((progressBarInfo, unitId) => {
+      const progress = this.getProgress(progressBarInfo.unit);
+      if (progress >= 1) {
+        this.allProgressBars.get(unitId)?.progressBar.clear();
+        this.allProgressBars.delete(unitId);
+        return;
+      } else {
+        progressBarInfo.progressBar.setProgress(progress);
+      }
+    });
+  }
+
+  private getProgress(unit: UnitView): number {
+    if (!unit.isActive()) {
+      return 1;
+    }
+    switch (unit.type()) {
+      case UnitType.Construction:
+        const constructionType = unit.constructionType();
+        if (constructionType === undefined) {
+          return 1;
+        }
+        const constDuration =
+          this.game.unitInfo(constructionType).constructionDuration;
+        if (constDuration === undefined) {
+          throw new Error("unit does not have constructionTime");
+        }
+        return (
+          (this.game.ticks() - unit.createdAt()) /
+          (constDuration === 0 ? 1 : constDuration)
+        );
+
+      case UnitType.MissileSilo:
+      case UnitType.SAMLauncher:
+        return unit.missileReadinesss();
+      default:
+        return 1;
+    }
+  }
+
+  public createLoadingBar(unit: UnitView) {
+    if (!this.context) {
+      return;
+    }
+    if (!this.allProgressBars.has(unit.id())) {
+      const progressBar = new ProgressBar(
+        COLOR_PROGRESSION,
+        this.context,
+        this.game.x(unit.tile()) - 6,
+        this.game.y(unit.tile()) + 6,
+        LOADINGBAR_WIDTH,
+        PROGRESSBAR_HEIGHT,
+        0,
+      );
+      this.allProgressBars.set(unit.id(), {
+        unit,
+        progressBar,
+      });
+    }
   }
 
   paintCell(x: number, y: number, color: Colord, alpha: number) {
+    if (this.context === null) throw new Error("null context");
     this.clearCell(x, y);
     this.context.fillStyle = color.alpha(alpha / 255).toRgbString();
     this.context.fillRect(x, y, 1, 1);
   }
 
   clearCell(x: number, y: number) {
+    if (this.context === null) throw new Error("null context");
     this.context.clearRect(x, y, 1, 1);
   }
 }

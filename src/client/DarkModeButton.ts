@@ -1,5 +1,5 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { LitElement, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { UserSettings } from "../core/game/UserSettings";
 
 @customElement("dark-mode-button")

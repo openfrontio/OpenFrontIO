@@ -1,4 +1,3 @@
-import { consolex } from "../Consolex";
 import { Execution, Game, Player, PlayerID } from "../game/Game";
 
 export class EmbargoExecution implements Execution {
@@ -11,11 +10,6 @@ export class EmbargoExecution implements Execution {
   ) {}
 
   init(mg: Game, _: number): void {
-    if (!mg.hasPlayer(this.player.id())) {
-      console.warn(`EmbargoExecution: sender ${this.player.id()} not found`);
-      this.active = false;
-      return;
-    }
     if (!mg.hasPlayer(this.targetID)) {
       console.warn(`EmbargoExecution recipient ${this.targetID} not found`);
       this.active = false;
@@ -24,14 +18,10 @@ export class EmbargoExecution implements Execution {
   }
 
   tick(_: number): void {
-    if (this.action == "start") this.player.addEmbargo(this.targetID);
+    if (this.action === "start") this.player.addEmbargo(this.targetID, false);
     else this.player.stopEmbargo(this.targetID);
 
     this.active = false;
-  }
-
-  owner(): Player {
-    return null;
   }
 
   isActive(): boolean {

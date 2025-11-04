@@ -1,17 +1,25 @@
-import { consolex } from "../Consolex";
-import { Cell, GameMapType, TerrainType } from "./Game";
+import { GameMapType } from "./Game";
 import { GameMap, GameMapImpl } from "./GameMap";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
-const loadedMaps = new Map<
-  GameMapType,
-  { nationMap: NationMap; gameMap: GameMap; miniGameMap: GameMap }
->();
+export type TerrainMapData = {
+  manifest: MapManifest;
+  gameMap: GameMap;
+  miniGameMap: GameMap;
+};
 
-export interface NationMap {
-  name: string;
+const loadedMaps = new Map<GameMapType, TerrainMapData>();
+
+export interface MapMetadata {
   width: number;
   height: number;
+  num_land_tiles: number;
+}
+
+export interface MapManifest {
+  name: string;
+  map: MapMetadata;
+  mini_map: MapMetadata;
   nations: Nation[];
 }
 
@@ -24,16 +32,22 @@ export interface Nation {
 
 export async function loadTerrainMap(
   map: GameMapType,
-): Promise<{ nationMap: NationMap; gameMap: GameMap; miniGameMap: GameMap }> {
-  if (loadedMaps.has(map)) {
-    return loadedMaps.get(map);
-  }
-  const mapFiles = await terrainMapFileLoader.getMapData(map);
+): Promise<TerrainMapData> {
+  const cached = loadedMaps.get(map);
+  if (cached !== undefined) return cached;
+  const mapFiles = terrainMapFileLoader.getMapData(map);
 
-  const gameMap = await loadTerrainFromFile(mapFiles.mapBin);
-  const miniGameMap = await loadTerrainFromFile(mapFiles.miniMapBin);
+  const manifest = await mapFiles.manifest();
+  const gameMap = await genTerrainFromBin(
+    manifest.map,
+    await mapFiles.mapBin(),
+  );
+  const miniGameMap = await genTerrainFromBin(
+    manifest.mini_map,
+    await mapFiles.miniMapBin(),
+  );
   const result = {
-    nationMap: mapFiles.nationMap,
+    manifest: await mapFiles.manifest(),
     gameMap: gameMap,
     miniGameMap: miniGameMap,
   };
@@ -41,38 +55,29 @@ export async function loadTerrainMap(
   return result;
 }
 
-export async function loadTerrainFromFile(fileData: string): Promise<GameMap> {
-  const width = (fileData.charCodeAt(1) << 8) | fileData.charCodeAt(0);
-  const height = (fileData.charCodeAt(3) << 8) | fileData.charCodeAt(2);
-
-  if (fileData.length != width * height + 4) {
+export async function genTerrainFromBin(
+  mapData: MapMetadata,
+  data: string,
+): Promise<GameMap> {
+  if (data.length !== mapData.width * mapData.height) {
     throw new Error(
-      `Invalid data: buffer size ${fileData.length} incorrect for ${width}x${height} terrain plus 4 bytes for dimensions.`,
+      `Invalid data: buffer size ${data.length} incorrect for ${mapData.width}x${mapData.height} terrain plus 4 bytes for dimensions.`,
     );
   }
 
   // Store raw data in Uint8Array
-  const rawData = new Uint8Array(width * height);
-  let numLand = 0;
+  const rawData = new Uint8Array(mapData.width * mapData.height);
 
   // Copy data starting after the header
-  for (let i = 0; i < width * height; i++) {
-    const packedByte = fileData.charCodeAt(i + 4);
+  for (let i = 0; i < mapData.width * mapData.height; i++) {
+    const packedByte = data.charCodeAt(i);
     rawData[i] = packedByte;
-    if (packedByte & 0b10000000) numLand++;
   }
 
-  return new GameMapImpl(width, height, rawData, numLand);
-}
-
-function logBinaryAsAscii(data: string, length: number = 8) {
-  consolex.log("Binary data (1 = set bit, 0 = unset bit):");
-  for (let i = 0; i < Math.min(length, data.length); i++) {
-    const byte = data.charCodeAt(i);
-    let byteString = "";
-    for (let j = 7; j >= 0; j--) {
-      byteString += byte & (1 << j) ? "1" : "0";
-    }
-    consolex.log(`Byte ${i}: ${byteString}`);
-  }
+  return new GameMapImpl(
+    mapData.width,
+    mapData.height,
+    rawData,
+    mapData.num_land_tiles,
+  );
 }

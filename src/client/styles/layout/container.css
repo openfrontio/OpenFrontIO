@@ -1,0 +1,19 @@
+.container {
+  display: flex;
+  padding: 1rem;
+  max-width: 540px !important;
+  flex-direction: column;
+  gap: 1rem;
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.container__row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.container__row--equal > * {
+  flex: 1 1 100%;
+}

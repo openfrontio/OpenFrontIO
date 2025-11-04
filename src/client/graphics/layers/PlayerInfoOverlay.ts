@@ -1,23 +1,23 @@
-import { LitElement, html } from "lit";
+import { LitElement, TemplateResult, html } from "lit";
+import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
-import { Layer } from "./Layer";
+import { translateText } from "../../../client/Utils";
+import { renderPlayerFlag } from "../../../core/CustomFlag";
+import { EventBus } from "../../../core/EventBus";
 import {
-  Game,
-  GameType,
-  Player,
   PlayerProfile,
   PlayerType,
   Relation,
   Unit,
   UnitType,
 } from "../../../core/game/Game";
-import { ClientID } from "../../../core/Schemas";
-import { EventBus } from "../../../core/EventBus";
-import { TransformHandler } from "../TransformHandler";
-import { MouseMoveEvent } from "../../InputHandler";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TileRef } from "../../../core/game/GameMap";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
+import { CloseRadialMenuEvent } from "./RadialMenu";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -43,9 +43,6 @@ function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
 export class PlayerInfoOverlay extends LitElement implements Layer {
   @property({ type: Object })
   public game!: GameView;
-
-  @property({ type: String })
-  public clientID!: ClientID;
 
   @property({ type: Object })
   public eventBus!: EventBus;
@@ -73,6 +70,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
       this.onMouseEvent(e),
     );
+    this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
+      this.maybeShow(e.x, e.y),
+    );
+    this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
     this._isActive = true;
   }
 
@@ -139,13 +140,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
-  private myPlayer(): PlayerView | null {
-    if (!this.game) {
-      return null;
-    }
-    return this.game.playerByClientID(this.clientID);
-  }
-
   private getRelationClass(relation: Relation): string {
     switch (relation) {
       case Relation.Hostile:
@@ -161,52 +155,148 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
   }
 
-  private renderPlayerInfo(player: PlayerView) {
-    const myPlayer = this.myPlayer();
-    const isAlly = myPlayer?.isAlliedWith(player);
-    let relationHtml = null;
+  private getRelationName(relation: Relation): string {
+    switch (relation) {
+      case Relation.Hostile:
+        return translateText("relation.hostile");
+      case Relation.Distrustful:
+        return translateText("relation.distrustful");
+      case Relation.Neutral:
+        return translateText("relation.neutral");
+      case Relation.Friendly:
+        return translateText("relation.friendly");
+      default:
+        return translateText("relation.default");
+    }
+  }
 
-    if (player.type() == PlayerType.FakeHuman && myPlayer != null) {
+  private displayUnitCount(
+    player: PlayerView,
+    type: UnitType,
+    description: string,
+  ) {
+    return !this.game.config().isUnitDisabled(type)
+      ? html`<div class="text-sm opacity-80" translate="no">
+          ${translateText(description)}: ${player.totalUnitLevels(type)}
+        </div>`
+      : "";
+  }
+
+  private renderPlayerInfo(player: PlayerView) {
+    const myPlayer = this.game.myPlayer();
+    const isFriendly = myPlayer?.isFriendly(player);
+    let relationHtml: TemplateResult | null = null;
+    const attackingTroops = player
+      .outgoingAttacks()
+      .map((a) => a.troops)
+      .reduce((a, b) => a + b, 0);
+
+    if (player.type() === PlayerType.FakeHuman && myPlayer !== null) {
       const relation =
         this.playerProfile?.relations[myPlayer.smallID()] ?? Relation.Neutral;
       const relationClass = this.getRelationClass(relation);
-      const relationName = Relation[relation];
+      const relationName = this.getRelationName(relation);
 
       relationHtml = html`
         <div class="text-sm opacity-80">
-          Attitude: <span class="${relationClass}">${relationName}</span>
+          ${translateText("player_info_overlay.attitude")}:
+          <span class="${relationClass}">${relationName}</span>
         </div>
       `;
     }
     let playerType = "";
     switch (player.type()) {
       case PlayerType.Bot:
-        playerType = "Bot";
+        playerType = translateText("player_info_overlay.bot");
         break;
       case PlayerType.FakeHuman:
-        playerType = "Nation";
+        playerType = translateText("player_info_overlay.nation");
         break;
       case PlayerType.Human:
-        playerType = "Player";
+        playerType = translateText("player_info_overlay.player");
         break;
     }
 
     return html`
       <div class="p-2">
         <div
-          class="text-bold text-sm lg:text-lg font-bold mb-1 ${isAlly
+          class="text-bold text-sm lg:text-lg font-bold mb-1 inline-flex break-all ${isFriendly
             ? "text-green-500"
             : "text-white"}"
         >
+          ${player.cosmetics.flag
+            ? player.cosmetics.flag!.startsWith("!")
+              ? html`<div
+                  class="h-8 mr-1 aspect-[3/4] player-flag"
+                  ${ref((el) => {
+                    if (el instanceof HTMLElement) {
+                      requestAnimationFrame(() => {
+                        renderPlayerFlag(player.cosmetics.flag!, el);
+                      });
+                    }
+                  })}
+                ></div>`
+              : html`<img
+                  class="h-8 mr-1 aspect-[3/4]"
+                  src=${"/flags/" + player.cosmetics.flag! + ".svg"}
+                />`
+            : html``}
           ${player.name()}
         </div>
-        <div class="text-sm opacity-80">Type: ${playerType}</div>
-        <div class="text-sm opacity-80" translate="no">
-          Troops: ${renderTroops(player.troops())}
+        ${player.team() !== null
+          ? html`<div class="text-sm opacity-80">
+              ${translateText("player_info_overlay.team")}: ${player.team()}
+            </div>`
+          : ""}
+        <div class="text-sm opacity-80">
+          ${translateText("player_info_overlay.type")}: ${playerType}
         </div>
+        ${player.troops() >= 1
+          ? html`<div class="text-sm opacity-80" translate="no">
+              ${translateText("player_info_overlay.d_troops")}:
+              ${renderTroops(player.troops())}
+            </div>`
+          : ""}
+        ${attackingTroops >= 1
+          ? html`<div class="text-sm opacity-80" translate="no">
+              ${translateText("player_info_overlay.a_troops")}:
+              ${renderTroops(attackingTroops)}
+            </div>`
+          : ""}
         <div class="text-sm opacity-80" translate="no">
-          Gold: ${renderNumber(player.gold())}
+          ${translateText("player_info_overlay.gold")}:
+          ${renderNumber(player.gold())}
         </div>
+        ${this.displayUnitCount(
+          player,
+          UnitType.Port,
+          "player_info_overlay.ports",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.City,
+          "player_info_overlay.cities",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.Factory,
+          "player_info_overlay.factories",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.MissileSilo,
+          "player_info_overlay.missile_launchers",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.SAMLauncher,
+          "player_info_overlay.sams",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.Warship,
+          "player_info_overlay.warships",
+        )}
         ${relationHtml}
       </div>
     `;
@@ -214,8 +304,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
-      (unit.owner() == this.myPlayer() ||
-        this.myPlayer()?.isAlliedWith(unit.owner())) ??
+      (unit.owner() === this.game.myPlayer() ||
+        this.game.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
     return html`
@@ -227,7 +317,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           <div class="text-sm opacity-80">${unit.type()}</div>
           ${unit.hasHealth()
             ? html`
-                <div class="text-sm opacity-80">Health: ${unit.health()}</div>
+                <div class="text-sm opacity-80">
+                  ${translateText("player_info_overlay.health")}:
+                  ${unit.health()}
+                </div>
               `
             : ""}
         </div>
@@ -246,14 +339,14 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex w-full  z-50 flex flex-col"
+        class="block lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
-          class="bg-opacity-70 bg-gray-900 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
+          class="bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg shadow-lg transition-all duration-300  text-white text-lg md:text-base ${containerClasses}"
         >
-          ${this.player != null ? this.renderPlayerInfo(this.player) : ""}
-          ${this.unit != null ? this.renderUnitInfo(this.unit) : ""}
+          ${this.player !== null ? this.renderPlayerInfo(this.player) : ""}
+          ${this.unit !== null ? this.renderUnitInfo(this.unit) : ""}
         </div>
       </div>
     `;

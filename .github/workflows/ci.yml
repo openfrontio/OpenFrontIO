@@ -1,22 +1,70 @@
-name: CI
-on: [push, pull_request]
+name: 🧪 CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
 jobs:
   build:
+    name: 🏗️ Build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: false
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup node
+        uses: actions/setup-node@v4
         with:
-          bun-version: 1.2.4
-      - name: install packages
-        run: bun install
-      - name: Build
-        run: bun run build-prod
+          node-version: 20
+      - run: npm ci
+      - run: npm run build-prod
       - uses: actions/upload-artifact@v4
         with:
           path: out/index.html
           retention-days: 1
+  test:
+    name: 🔬 Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm test
+
+  eslint:
+    name: 🔍 ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npx eslint --format gha
+
+  prettier:
+    name: 🎨 Prettier
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prettier --check .

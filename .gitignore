@@ -2,8 +2,10 @@ build/
 node_modules/
 out/
 static/
+coverage/
 TODO.txt
 resources/images/.DS_Store
 resources/.DS_Store
-.env
+.env*
 .DS_Store
+.clinic/

@@ -1,28 +1,24 @@
+import { Colord } from "colord";
+import { JWK } from "jose";
 import {
   Difficulty,
   Game,
-  GameType,
+  GameMapType,
+  GameMode,
   Gold,
   Player,
-  PlayerID,
   PlayerInfo,
+  Team,
   TerraNullius,
   Tick,
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { Colord, colord } from "colord";
-import { preprodConfig } from "./PreprodConfig";
-import { prodConfig } from "./ProdConfig";
-import { consolex } from "../Consolex";
-import { GameConfig, GameID } from "../Schemas";
-import { DefaultConfig } from "./DefaultConfig";
-import { DevConfig, DevServerConfig } from "./DevConfig";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 import { UserSettings } from "../game/UserSettings";
-
-let cachedSC: ServerConfig = null;
+import { GameConfig, GameID, TeamCountConfig } from "../Schemas";
+import { NukeType } from "../StatsSchemas";
 
 export enum GameEnv {
   Dev,
@@ -30,68 +26,14 @@ export enum GameEnv {
   Prod,
 }
 
-export async function getConfig(
-  gameConfig: GameConfig,
-  userSettings: UserSettings | null = null,
-): Promise<Config> {
-  const sc = await getServerConfigFromClient();
-  switch (sc.env()) {
-    case GameEnv.Dev:
-      return new DevConfig(sc, gameConfig, userSettings);
-    case GameEnv.Preprod:
-    case GameEnv.Prod:
-      consolex.log("using prod config");
-      return new DefaultConfig(sc, gameConfig, userSettings);
-    default:
-      throw Error(`unsupported server configuration: ${process.env.GAME_ENV}`);
-  }
-}
-
-export async function getServerConfigFromClient(): Promise<ServerConfig> {
-  if (cachedSC) {
-    return cachedSC;
-  }
-  const response = await fetch("/api/env");
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to fetch server config: ${response.status} ${response.statusText}`,
-    );
-  }
-  const config = await response.json();
-  // Log the retrieved configuration
-  console.log("Server config loaded:", config);
-
-  cachedSC = getServerConfig(config.game_env);
-  return cachedSC;
-}
-
-export function getServerConfigFromServer(): ServerConfig {
-  const gameEnv = process.env.GAME_ENV;
-  return getServerConfig(gameEnv);
-}
-
-function getServerConfig(gameEnv: string) {
-  switch (gameEnv) {
-    case "dev":
-      consolex.log("using dev server config");
-      return new DevServerConfig();
-    case "staging":
-      consolex.log("using preprod server config");
-      return preprodConfig;
-    case "prod":
-      consolex.log("using prod server config");
-      return prodConfig;
-    default:
-      throw Error(`unsupported server configuration: ${gameEnv}`);
-  }
-}
-
 export interface ServerConfig {
   turnIntervalMs(): number;
-  gameCreationRate(highTraffic: boolean): number;
-  lobbyLifetime(highTraffic): number;
-  discordRedirectURI(): string;
+  gameCreationRate(): number;
+  lobbyMaxPlayers(
+    map: GameMapType,
+    mode: GameMode,
+    numPlayerTeams: TeamCountConfig | undefined,
+  ): number;
   numWorkers(): number;
   workerIndex(gameID: GameID): number;
   workerPath(gameID: GameID): string;
@@ -102,9 +44,34 @@ export interface ServerConfig {
   adminHeader(): string;
   // Only available on the server
   gitCommit(): string;
+  r2Bucket(): string;
+  r2Endpoint(): string;
+  r2AccessKey(): string;
+  r2SecretKey(): string;
+  otelEndpoint(): string;
+  otelAuthHeader(): string;
+  otelEnabled(): boolean;
+  jwtAudience(): string;
+  jwtIssuer(): string;
+  jwkPublicKey(): Promise<JWK>;
+  domain(): string;
+  subdomain(): string;
+  cloudflareAccountId(): string;
+  cloudflareApiToken(): string;
+  cloudflareConfigPath(): string;
+  cloudflareCredsPath(): string;
+  stripePublishableKey(): string;
+  allowedFlares(): string[] | undefined;
+}
+
+export interface NukeMagnitude {
+  inner: number;
+  outer: number;
 }
 
 export interface Config {
+  samHittingChance(): number;
+  samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
   serverConfig(): ServerConfig;
   gameConfig(): GameConfig;
@@ -112,16 +79,18 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
+  isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
   infiniteTroops(): boolean;
   instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
+  playerTeams(): TeamCountConfig;
 
   startManpower(playerInfo: PlayerInfo): number;
   populationIncreaseRate(player: Player | PlayerView): number;
-  goldAdditionRate(player: Player | PlayerView): number;
+  goldAdditionRate(player: Player | PlayerView): Gold;
   troopAdjustmentRate(player: Player): number;
   attackTilesPerTick(
     attckTroops: number,
@@ -141,12 +110,18 @@ export interface Config {
     tilesPerTickUsed: number;
   };
   attackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  radiusPortSpawn(): number;
+  // When computing likelihood of trading for any given port, the X closest port
+  // are twice more likely to be selected. X is determined below.
+  proximityBonusPortsNb(totalPorts: number): number;
   maxPopulation(player: Player | PlayerView): number;
   cityPopulationIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
+  shellLifetime(): number;
   boatMaxNumber(): number;
   allianceDuration(): Tick;
   allianceRequestCooldown(): Tick;
+  temporaryEmbargoDuration(): Tick;
   targetDuration(): Tick;
   targetCooldown(): Tick;
   emojiMessageCooldown(): Tick;
@@ -154,25 +129,59 @@ export interface Config {
   donateCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
-  tradeShipGold(dist: number): Gold;
-  tradeShipSpawnRate(): number;
+  tradeShipGold(dist: number, numPorts: number): Gold;
+  tradeShipSpawnRate(numberOfPorts: number): number;
+  trainGold(): Gold;
+  trainSpawnRate(numberOfStations: number): number;
+  trainStationMinRange(): number;
+  trainStationMaxRange(): number;
+  railroadMaxSize(): number;
+  safeFromPiratesCooldownMax(): number;
   defensePostRange(): number;
+  SAMCooldown(): number;
+  SiloCooldown(): number;
   defensePostDefenseBonus(): number;
-  falloutDefenseModifier(): number;
+  defensePostSpeedBonus(): number;
+  falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
+  warshipPatrolRange(): number;
+  warshipShellAttackRate(): number;
+  warshipTargettingRange(): number;
+  defensePostShellAttackRate(): number;
+  defensePostTargettingRange(): number;
   // 0-1
   traitorDefenseDebuff(): number;
+  traitorDuration(): number;
+  nukeMagnitudes(unitType: UnitType): NukeMagnitude;
+  // Number of tiles destroyed to break an alliance
+  nukeAllianceBreakThreshold(): number;
+  defaultNukeSpeed(): number;
+  defaultNukeTargetableRange(): number;
+  defaultSamRange(): number;
+  nukeDeathFactor(
+    nukeType: NukeType,
+    humans: number,
+    tilesOwned: number,
+    maxPop: number,
+  ): number;
+  structureMinDist(): number;
+  isReplay(): boolean;
+  allianceExtensionPromptOffset(): number;
 }
 
 export interface Theme {
-  territoryColor(playerInfo: PlayerInfo): Colord;
-  borderColor(playerInfo: PlayerInfo): Colord;
-  defendedBorderColor(playerInfo: PlayerInfo): Colord;
+  teamColor(team: Team): Colord;
+  territoryColor(playerInfo: PlayerView): Colord;
+  specialBuildingColor(playerInfo: PlayerView): Colord;
+  railroadColor(playerInfo: PlayerView): Colord;
+  borderColor(playerInfo: PlayerView): Colord;
+  defendedBorderColors(playerInfo: PlayerView): { light: Colord; dark: Colord };
+  focusedBorderColor(): Colord;
   terrainColor(gm: GameMap, tile: TileRef): Colord;
   backgroundColor(): Colord;
   falloutColor(): Colord;
   font(): string;
-  textColor(playerInfo: PlayerInfo): string;
+  textColor(playerInfo: PlayerView): string;
   // unit color for alternate view
   selfColor(): Colord;
   allyColor(): Colord;

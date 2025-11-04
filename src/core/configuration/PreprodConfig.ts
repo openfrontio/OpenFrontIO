@@ -1,14 +1,19 @@
 import { GameEnv } from "./Config";
-import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
+import { DefaultServerConfig } from "./DefaultConfig";
 
 export const preprodConfig = new (class extends DefaultServerConfig {
   env(): GameEnv {
     return GameEnv.Preprod;
   }
-  discordRedirectURI(): string {
-    return "https://openfront.dev/auth/callback";
-  }
   numWorkers(): number {
-    return 3;
+    return 2;
+  }
+  jwtAudience(): string {
+    return "openfront.dev";
+  }
+  allowedFlares(): string[] | undefined {
+    return [
+      // "access:openfront.dev"
+    ];
   }
 })();

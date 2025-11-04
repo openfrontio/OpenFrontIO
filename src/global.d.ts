@@ -7,6 +7,11 @@ declare module "*.jpg" {
   export default value;
 }
 
+declare module "*.webp" {
+  const value: string;
+  export default value;
+}
+
 declare module "*.jpeg" {
   const value: string;
   export default value;
@@ -19,6 +24,10 @@ declare module "*.bin" {
   const value: string;
   export default value;
 }
+declare module "*.md" {
+  const value: string;
+  export default value;
+}
 declare module "*.txt" {
   const value: string;
   export default value;
@@ -27,7 +36,7 @@ declare module "*.html" {
   const content: string;
   export default content;
 }
-declare module "*.json" {
-  const value: any;
+declare module "*.xml" {
+  const value: string;
   export default value;
 }

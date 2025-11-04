@@ -1,11 +1,13 @@
 import {
+  Cell,
   PlayerActions,
+  PlayerBorderTiles,
   PlayerID,
-  PlayerInfo,
   PlayerProfile,
 } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
-import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
+import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
 import { WorkerMessage } from "./WorkerMessages";
 
@@ -18,8 +20,7 @@ export class WorkerClient {
   ) => void;
 
   constructor(
-    private gameID: GameID,
-    private gameConfig: GameConfig,
+    private gameStartInfo: GameStartInfo,
     private clientID: ClientID,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
@@ -67,8 +68,7 @@ export class WorkerClient {
       this.worker.postMessage({
         type: "init",
         id: messageId,
-        gameID: this.gameID,
-        gameConfig: this.gameConfig,
+        gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
       });
 
@@ -132,6 +132,32 @@ export class WorkerClient {
     });
   }
 
+  playerBorderTiles(playerID: PlayerID): Promise<PlayerBorderTiles> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "player_border_tiles_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "player_border_tiles",
+        id: messageId,
+        playerID: playerID,
+      });
+    });
+  }
+
   playerInteraction(
     playerID: PlayerID,
     x: number,
@@ -160,6 +186,71 @@ export class WorkerClient {
         playerID: playerID,
         x: x,
         y: y,
+      });
+    });
+  }
+
+  attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Promise<Cell | null> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "attack_average_position_result" &&
+          message.x !== undefined &&
+          message.y !== undefined
+        ) {
+          if (message.x === null || message.y === null) {
+            resolve(null);
+          } else {
+            resolve(new Cell(message.x, message.y));
+          }
+        }
+      });
+
+      this.worker.postMessage({
+        type: "attack_average_position",
+        id: messageId,
+        playerID: playerID,
+        attackID: attackID,
+      });
+    });
+  }
+
+  transportShipSpawn(
+    playerID: PlayerID,
+    targetTile: TileRef,
+  ): Promise<TileRef | false> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "transport_ship_spawn_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker.postMessage({
+        type: "transport_ship_spawn",
+        id: messageId,
+        playerID: playerID,
+        targetTile: targetTile,
       });
     });
   }

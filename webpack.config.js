@@ -1,13 +1,18 @@
+import { execSync } from "child_process";
+import CopyPlugin from "copy-webpack-plugin";
+import ESLintPlugin from "eslint-webpack-plugin";
+import HtmlWebpackPlugin from "html-webpack-plugin";
 import path from "path";
 import { fileURLToPath } from "url";
-import HtmlWebpackPlugin from "html-webpack-plugin";
 import webpack from "webpack";
-import CopyPlugin from "copy-webpack-plugin";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default (env, argv) => {
+const gitCommit =
+  process.env.GIT_COMMIT ?? execSync("git rev-parse HEAD").toString().trim();
+
+export default async (env, argv) => {
   const isProduction = argv.mode === "production";
 
   return {
@@ -16,7 +21,7 @@ export default (env, argv) => {
       publicPath: "/",
       filename: "js/[name].[contenthash].js", // Added content hash
       path: path.resolve(__dirname, "static"),
-      clean: true,
+      clean: isProduction,
     },
     module: {
       rules: [
@@ -29,6 +34,10 @@ export default (env, argv) => {
         },
         {
           test: /\.txt$/,
+          type: "asset/source",
+        },
+        {
+          test: /\.md$/,
           type: "asset/resource", // Changed from raw-loader
           generator: {
             filename: "text/[name].[contenthash][ext]", // Added content hash
@@ -60,7 +69,7 @@ export default (env, argv) => {
           ],
         },
         {
-          test: /\.(png|jpe?g|gif)$/i,
+          test: /\.(webp|png|jpe?g|gif)$/i,
           type: "asset/resource",
           generator: {
             filename: "images/[name].[contenthash][ext]", // Added content hash
@@ -78,7 +87,7 @@ export default (env, argv) => {
           },
         },
         {
-          test: /\.(woff|woff2|eot|ttf|otf)$/,
+          test: /\.(woff|woff2|eot|ttf|otf|xml)$/,
           type: "asset/resource", // Changed from file-loader
           generator: {
             filename: "fonts/[name].[contenthash][ext]", // Added content hash and fixed path
@@ -115,26 +124,24 @@ export default (env, argv) => {
         "process.env.WEBSOCKET_URL": JSON.stringify(
           isProduction ? "" : "localhost:3000",
         ),
-      }),
-      new webpack.DefinePlugin({
         "process.env.GAME_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
+        "process.env.GIT_COMMIT": JSON.stringify(gitCommit),
+        "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
+          process.env.STRIPE_PUBLISHABLE_KEY,
+        ),
       }),
       new CopyPlugin({
         patterns: [
           {
-            from: "resources",
-            to: ".", // Copy to the output directory (static)
-            // Add content hashing to copied files
-            transform: function (content, path) {
-              return content; // Return unmodified content
-            },
-            // Don't hash HTML files from resources
+            from: path.resolve(__dirname, "resources"),
+            to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,
           },
         ],
-        options: {
-          concurrency: 100,
-        },
+        options: { concurrency: 100 },
+      }),
+      new ESLintPlugin({
+        context: __dirname,
       }),
     ],
     optimization: {
@@ -231,6 +238,7 @@ export default (env, argv) => {
                 "/api/archive_singleplayer_game",
                 "/api/auth/callback",
                 "/api/auth/discord",
+                "/api/kick_player",
               ],
               target: "http://localhost:3000",
               secure: false,

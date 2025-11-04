@@ -1,19 +1,22 @@
-import { v4 as uuidv4 } from "uuid";
-import twemoji from "twemoji";
 import DOMPurify from "dompurify";
-import { Cell, Game, Player, Unit } from "./game/Game";
+import { customAlphabet } from "nanoid";
+import twemoji from "twemoji";
+import { Cell, Unit } from "./game/Game";
+import { GameMap, TileRef } from "./game/GameMap";
 import {
-  AllPlayersStats,
-  ClientID,
   GameConfig,
   GameID,
   GameRecord,
   PlayerRecord,
-  PlayerStats,
   Turn,
+  Winner,
 } from "./Schemas";
-import { customAlphabet, nanoid } from "nanoid";
-import { andFN, GameMap, manhattanDistFN, TileRef } from "./game/GameMap";
+
+import { ServerConfig } from "./configuration/Config";
+import {
+  BOT_NAME_PREFIXES,
+  BOT_NAME_SUFFIXES,
+} from "./execution/utils/BotNames";
 
 export function manhattanDistWrapped(
   c1: Cell,
@@ -57,80 +60,6 @@ export function distSortUnit(
       gm.manhattanDist(b.tile(), targetRef)
     );
   };
-}
-
-// TODO: refactor to new file
-export function sourceDstOceanShore(
-  gm: Game,
-  src: Player,
-  tile: TileRef,
-): [TileRef | null, TileRef | null] {
-  const dst = gm.owner(tile);
-  const srcTile = closestShoreFromPlayer(gm, src, tile);
-  let dstTile: TileRef | null = null;
-  if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
-  } else {
-    dstTile = closestShoreTN(gm, tile, 50);
-  }
-  return [srcTile, dstTile];
-}
-
-export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
-  const dst = gm.playerBySmallID(gm.ownerID(tile));
-  let dstTile: TileRef | null = null;
-  if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
-  } else {
-    dstTile = closestShoreTN(gm, tile, 50);
-  }
-  return dstTile;
-}
-
-export function closestShoreFromPlayer(
-  gm: GameMap,
-  player: Player,
-  target: TileRef,
-): TileRef | null {
-  const shoreTiles = Array.from(player.borderTiles()).filter((t) =>
-    gm.isShore(t),
-  );
-  if (shoreTiles.length == 0) {
-    return null;
-  }
-
-  return shoreTiles.reduce((closest, current) => {
-    const closestDistance = manhattanDistWrapped(
-      gm.cell(target),
-      gm.cell(closest),
-      gm.width(),
-    );
-    const currentDistance = manhattanDistWrapped(
-      gm.cell(target),
-      gm.cell(current),
-      gm.width(),
-    );
-    return currentDistance < closestDistance ? current : closest;
-  });
-}
-
-function closestShoreTN(
-  gm: GameMap,
-  tile: TileRef,
-  searchDist: number,
-): TileRef {
-  const tn = Array.from(
-    gm.bfs(
-      tile,
-      andFN((_, t) => !gm.hasOwner(t), manhattanDistFN(tile, searchDist)),
-    ),
-  )
-    .filter((t) => gm.isShore(t))
-    .sort((a, b) => gm.manhattanDist(tile, a) - gm.manhattanDist(tile, b));
-  if (tn.length == 0) {
-    return null;
-  }
-  return tn[0];
 }
 
 export function simpleHash(str: string): number {
@@ -190,7 +119,7 @@ export function getMode(list: Set<number>): number {
   // Count occurrences
   const counts = new Map<number, number>();
   for (const item of list) {
-    counts.set(item, (counts.get(item) || 0) + 1);
+    counts.set(item, (counts.get(item) ?? 0) + 1);
   }
 
   // Find the item with the highest count
@@ -210,7 +139,7 @@ export function getMode(list: Set<number>): number {
 export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
-    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}\[\]_]/gu, "");
+    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
 }
 
 export function processName(name: string): string {
@@ -256,64 +185,65 @@ export function onlyImages(html: string) {
 }
 
 export function createGameRecord(
-  id: GameID,
-  gameConfig: GameConfig,
+  gameID: GameID,
+  config: GameConfig,
   // username does not need to be set.
   players: PlayerRecord[],
-  turns: Turn[],
+  allTurns: Turn[],
   start: number,
   end: number,
-  winner: ClientID | null,
-  allPlayersStats: AllPlayersStats,
+  winner: Winner,
+  serverConfig: ServerConfig,
 ): GameRecord {
-  const record: GameRecord = {
-    id: id,
-    gameConfig: gameConfig,
-    startTimestampMS: start,
-    endTimestampMS: end,
-    date: new Date().toISOString().split("T")[0],
-    turns: [],
-    allPlayersStats,
-    version: "v0.0.1",
-  };
-
-  for (const turn of turns) {
-    if (turn.intents.length != 0 || turn.hash != undefined) {
-      record.turns.push(turn);
-      for (const intent of turn.intents) {
-        if (intent.type == "spawn") {
-          for (const playerRecord of players) {
-            if (playerRecord.clientID == intent.clientID) {
-              playerRecord.username = intent.name;
-            }
-          }
-        }
-      }
-    }
-  }
-  record.players = players;
-  record.durationSeconds = Math.floor(
-    (record.endTimestampMS - record.startTimestampMS) / 1000,
+  const duration = Math.floor((end - start) / 1000);
+  const version = "v0.0.2";
+  const gitCommit = serverConfig.gitCommit();
+  const subdomain = serverConfig.subdomain();
+  const domain = serverConfig.domain();
+  const num_turns = allTurns.length;
+  const turns = allTurns.filter(
+    (t) => t.intents.length !== 0 || t.hash !== undefined,
   );
-  record.num_turns = turns.length;
-  record.winner = winner;
+  const record: GameRecord = {
+    info: {
+      gameID,
+      config,
+      players,
+      start,
+      end,
+      duration,
+      num_turns,
+      winner,
+    },
+    version,
+    gitCommit,
+    subdomain,
+    domain,
+    turns,
+  };
   return record;
 }
 
 export function decompressGameRecord(gameRecord: GameRecord) {
-  const turns = [];
+  const turns: Turn[] = [];
   let lastTurnNum = -1;
   for (const turn of gameRecord.turns) {
     while (lastTurnNum < turn.turnNumber - 1) {
       lastTurnNum++;
       turns.push({
-        gameID: gameRecord.id,
         turnNumber: lastTurnNum,
         intents: [],
       });
     }
     turns.push(turn);
     lastTurnNum = turn.turnNumber;
+  }
+  const turnLength = turns.length;
+  for (let i = turnLength; i < gameRecord.info.num_turns; i++) {
+    turns.push({
+      turnNumber: i,
+      intents: [],
+    });
   }
   gameRecord.turns = turns;
   return gameRecord;
@@ -351,4 +281,43 @@ export function minInt(a: bigint, b: bigint): bigint {
 export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
   const atLeastMin = maxInt(num, min);
   return minInt(atLeastMin, max);
+}
+
+export function createRandomName(
+  name: string,
+  playerType: string,
+): string | null {
+  let randomName: string | null = null;
+  if (playerType === "HUMAN") {
+    const hash = simpleHash(name);
+    const prefixIndex = hash % BOT_NAME_PREFIXES.length;
+    const suffixIndex =
+      Math.floor(hash / BOT_NAME_PREFIXES.length) % BOT_NAME_SUFFIXES.length;
+
+    randomName = `👤 ${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+  }
+  return randomName;
+}
+
+export const emojiTable: string[][] = [
+  ["😀", "😊", "🥰", "😇", "😎"],
+  ["😞", "🥺", "😭", "😱", "😡"],
+  ["😈", "🤡", "🖕", "🥱", "🤦‍♂️"],
+  ["👋", "👏", "🤌", "💪", "🫡"],
+  ["👍", "👎", "❓", "🐔", "🐀"],
+  ["🤝", "🆘", "🕊️", "🏳️", "⏳"],
+  ["🔥", "💥", "💀", "☢️", "⚠️"],
+  ["↖️", "⬆️", "↗️", "👑", "🥇"],
+  ["⬅️", "🎯", "➡️", "🥈", "🥉"],
+  ["↙️", "⬇️", "↘️", "❤️", "💔"],
+  ["💰", "⚓", "⛵", "🏡", "🛡️"],
+];
+// 2d to 1d array
+export const flattenedEmojiTable: string[] = emojiTable.flat();
+
+/**
+ * JSON.stringify replacer function that converts bigint values to strings.
+ */
+export function replacer(_key: string, value: any): any {
+  return typeof value === "bigint" ? value.toString() : value;
 }

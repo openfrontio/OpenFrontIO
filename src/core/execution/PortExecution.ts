@@ -1,64 +1,43 @@
-import {
-  AllPlayers,
-  Cell,
-  Execution,
-  Game,
-  Player,
-  Unit,
-  PlayerID,
-  TerrainType,
-  UnitType,
-} from "../game/Game";
-import { PathFinder } from "../pathfinding/PathFinding";
+import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
-import { consolex } from "../Consolex";
-import { manhattanDistFN, TileRef } from "../game/GameMap";
+import { TrainStationExecution } from "./TrainStationExecution";
 
 export class PortExecution implements Execution {
   private active = true;
   private mg: Game;
-  private port: Unit;
+  private port: Unit | null = null;
   private random: PseudoRandom;
+  private checkOffset: number;
 
   constructor(
-    private _owner: PlayerID,
+    private player: Player,
     private tile: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!mg.hasPlayer(this._owner)) {
-      console.warn(`PortExecution: player ${this._owner} not found`);
-      this.active = false;
-      return;
-    }
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
+    this.checkOffset = mg.ticks() % 10;
   }
 
   tick(ticks: number): void {
-    if (this.port == null) {
-      // TODO: use canBuild
+    if (this.mg === null || this.random === null || this.checkOffset === null) {
+      throw new Error("Not initialized");
+    }
+    if (this.port === null) {
       const tile = this.tile;
-      const player = this.mg.player(this._owner);
-      if (!player.canBuild(UnitType.Port, tile)) {
-        consolex.warn(`player ${player} cannot build port at ${this.tile}`);
-        this.active = false;
-        return;
-      }
-      const spawns = Array.from(this.mg.bfs(tile, manhattanDistFN(tile, 20)))
-        .filter((t) => this.mg.isOceanShore(t) && this.mg.owner(t) == player)
-        .sort(
-          (a, b) =>
-            this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
+      const spawn = this.player.canBuild(UnitType.Port, tile);
+      if (spawn === false) {
+        console.warn(
+          `player ${this.player.id()} cannot build port at ${this.tile}`,
         );
-
-      if (spawns.length == 0) {
-        consolex.warn(`cannot find spawn for port`);
         this.active = false;
         return;
       }
-      this.port = player.buildUnit(UnitType.Port, 0, spawns[0]);
+      this.port = this.player.buildUnit(UnitType.Port, spawn, {});
+      this.createStation();
     }
 
     if (!this.port.isActive()) {
@@ -66,27 +45,27 @@ export class PortExecution implements Execution {
       return;
     }
 
-    if (!this.random.chance(this.mg.config().tradeShipSpawnRate())) {
+    if (this.player.id() !== this.port.owner().id()) {
+      this.player = this.port.owner();
+    }
+
+    // Only check every 10 ticks for performance.
+    if ((this.mg.ticks() + this.checkOffset) % 10 !== 0) {
       return;
     }
 
-    const ports = this.mg
-      .players()
-      .filter((p) => p != this.port.owner() && p.canTrade(this.port.owner()))
-      .flatMap((p) => p.units(UnitType.Port));
-    if (ports.length == 0) {
+    if (!this.shouldSpawnTradeShip()) {
+      return;
+    }
+
+    const ports = this.player.tradingPorts(this.port);
+
+    if (ports.length === 0) {
       return;
     }
 
     const port = this.random.randElement(ports);
-    const pf = PathFinder.Mini(this.mg, 2500, false);
-    this.mg.addExecution(
-      new TradeShipExecution(this.player().id(), this.port, port, pf),
-    );
-  }
-
-  owner(): Player {
-    return null;
+    this.mg.addExecution(new TradeShipExecution(this.player, this.port, port));
   }
 
   isActive(): boolean {
@@ -97,7 +76,28 @@ export class PortExecution implements Execution {
     return false;
   }
 
-  player(): Player {
-    return this.port.owner();
+  shouldSpawnTradeShip(): boolean {
+    const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
+    const spawnRate = this.mg.config().tradeShipSpawnRate(numTradeShips);
+    for (let i = 0; i < this.port!.level(); i++) {
+      if (this.random.chance(spawnRate)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  createStation(): void {
+    if (this.port !== null) {
+      const nearbyFactory = this.mg.hasUnitNearby(
+        this.port.tile()!,
+        this.mg.config().trainStationMaxRange(),
+        UnitType.Factory,
+        this.player.id(),
+      );
+      if (nearbyFactory) {
+        this.mg.addExecution(new TrainStationExecution(this.port));
+      }
+    }
   }
 }

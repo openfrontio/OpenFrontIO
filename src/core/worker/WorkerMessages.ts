@@ -1,6 +1,12 @@
+import {
+  PlayerActions,
+  PlayerBorderTiles,
+  PlayerID,
+  PlayerProfile,
+} from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { GameUpdateViewData } from "../game/GameUpdates";
-import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
-import { PlayerActions, PlayerID, PlayerProfile } from "../game/Game";
+import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
   | "heartbeat"
@@ -11,7 +17,13 @@ export type WorkerMessageType =
   | "player_actions"
   | "player_actions_result"
   | "player_profile"
-  | "player_profile_result";
+  | "player_profile_result"
+  | "player_border_tiles"
+  | "player_border_tiles_result"
+  | "attack_average_position"
+  | "attack_average_position_result"
+  | "transport_ship_spawn"
+  | "transport_ship_spawn_result";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -26,8 +38,7 @@ export interface HeartbeatMessage extends BaseWorkerMessage {
 // Messages from main thread to worker
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
-  gameID: GameID;
-  gameConfig: GameConfig;
+  gameStartInfo: GameStartInfo;
   clientID: ClientID;
 }
 
@@ -68,17 +79,56 @@ export interface PlayerProfileResultMessage extends BaseWorkerMessage {
   result: PlayerProfile;
 }
 
+export interface PlayerBorderTilesMessage extends BaseWorkerMessage {
+  type: "player_border_tiles";
+  playerID: PlayerID;
+}
+
+export interface PlayerBorderTilesResultMessage extends BaseWorkerMessage {
+  type: "player_border_tiles_result";
+  result: PlayerBorderTiles;
+}
+
+export interface AttackAveragePositionMessage extends BaseWorkerMessage {
+  type: "attack_average_position";
+  playerID: number;
+  attackID: string;
+}
+
+export interface AttackAveragePositionResultMessage extends BaseWorkerMessage {
+  type: "attack_average_position_result";
+  x: number | null;
+  y: number | null;
+}
+
+export interface TransportShipSpawnMessage extends BaseWorkerMessage {
+  type: "transport_ship_spawn";
+  playerID: PlayerID;
+  targetTile: TileRef;
+}
+
+export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
+  type: "transport_ship_spawn_result";
+  result: TileRef | false;
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | HeartbeatMessage
   | InitMessage
   | TurnMessage
   | PlayerActionsMessage
-  | PlayerProfileMessage;
+  | PlayerProfileMessage
+  | PlayerBorderTilesMessage
+  | AttackAveragePositionMessage
+  | TransportShipSpawnMessage;
 
 // Message send from worker
 export type WorkerMessage =
   | InitializedMessage
   | GameUpdateMessage
   | PlayerActionsResultMessage
-  | PlayerProfileResultMessage;
+  | PlayerProfileResultMessage
+  | PlayerBorderTilesResultMessage
+  | AttackAveragePositionResultMessage
+  | TransportShipSpawnResultMessage;

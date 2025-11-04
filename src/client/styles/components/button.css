@@ -1,0 +1,57 @@
+.c-button {
+  background: var(--primaryColor);
+  color: #fff;
+  cursor: pointer;
+  outline: none;
+  display: inline-block;
+  font-size: 16px;
+  border: 1px solid transparent;
+  text-align: center;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  transition: var(--transition);
+
+  @media (min-width: 1024px) {
+    font-size: 18px;
+  }
+}
+
+.c-button:hover,
+.c-button:active,
+.c-button:focus {
+  background: var(--primaryColorHover);
+  transition: var(--transition);
+}
+
+.c-button:disabled {
+  background: var(--primaryColorDisabled);
+  opacity: 0.7;
+  cursor: not-allowed;
+  transition: var(--transition);
+}
+
+.c-button--secondary {
+  background: var(--secondaryColor);
+  color: var(--fontColor);
+}
+
+.c-button--secondary:hover,
+.c-button--secondary:active,
+.c-button--secondary:focus {
+  background: var(--secondaryColorHover);
+}
+
+.c-button--block {
+  display: block;
+  width: 100%;
+}
+
+.c-button--blockDesktop {
+  display: block;
+  width: 100%;
+
+  @media (min-width: 1024px) {
+    width: auto;
+    margin: 0 auto;
+  }
+}

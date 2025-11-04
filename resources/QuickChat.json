@@ -1,0 +1,182 @@
+{
+  "help": [
+    {
+      "key": "troops",
+      "requiresPlayer": false
+    },
+    {
+      "key": "gold",
+      "requiresPlayer": false
+    },
+    {
+      "key": "no_attack",
+      "requiresPlayer": false
+    },
+    {
+      "key": "sorry_attack",
+      "requiresPlayer": false
+    },
+    {
+      "key": "alliance",
+      "requiresPlayer": false
+    },
+    {
+      "key": "help_defend",
+      "requiresPlayer": true
+    },
+    {
+      "key": "team_up",
+      "requiresPlayer": true
+    }
+  ],
+  "attack": [
+    {
+      "key": "attack",
+      "requiresPlayer": true
+    },
+    {
+      "key": "mirv",
+      "requiresPlayer": true
+    },
+    {
+      "key": "focus",
+      "requiresPlayer": true
+    },
+    {
+      "key": "finish",
+      "requiresPlayer": true
+    }
+  ],
+  "defend": [
+    {
+      "key": "defend",
+      "requiresPlayer": true
+    },
+    {
+      "key": "dont_attack",
+      "requiresPlayer": true
+    },
+    {
+      "key": "ally",
+      "requiresPlayer": true
+    }
+  ],
+  "greet": [
+    {
+      "key": "hello",
+      "requiresPlayer": false
+    },
+    {
+      "key": "good_luck",
+      "requiresPlayer": false
+    },
+    {
+      "key": "have_fun",
+      "requiresPlayer": false
+    },
+    {
+      "key": "gg",
+      "requiresPlayer": false
+    },
+    {
+      "key": "nice_to_meet",
+      "requiresPlayer": false
+    },
+    {
+      "key": "well_played",
+      "requiresPlayer": false
+    },
+    {
+      "key": "hi_again",
+      "requiresPlayer": false
+    },
+    {
+      "key": "bye",
+      "requiresPlayer": false
+    },
+    {
+      "key": "thanks",
+      "requiresPlayer": false
+    },
+    {
+      "key": "oops",
+      "requiresPlayer": false
+    },
+    {
+      "key": "trust_me",
+      "requiresPlayer": false
+    },
+    {
+      "key": "trust_broken",
+      "requiresPlayer": false
+    }
+  ],
+  "misc": [
+    {
+      "key": "go",
+      "requiresPlayer": false
+    },
+    {
+      "key": "strategy",
+      "requiresPlayer": false
+    },
+    {
+      "key": "fun",
+      "requiresPlayer": false
+    },
+    {
+      "key": "pr",
+      "requiresPlayer": false
+    }
+  ],
+  "warnings": [
+    {
+      "key": "strong",
+      "requiresPlayer": true
+    },
+    {
+      "key": "weak",
+      "requiresPlayer": true
+    },
+    {
+      "key": "mirv_soon",
+      "requiresPlayer": true
+    },
+    {
+      "key": "number1_warning",
+      "requiresPlayer": false
+    },
+    {
+      "key": "stalemate",
+      "requiresPlayer": false
+    },
+    {
+      "key": "has_allies",
+      "requiresPlayer": true
+    },
+    {
+      "key": "no_allies",
+      "requiresPlayer": true
+    },
+    {
+      "key": "betrayed",
+      "requiresPlayer": true
+    },
+    {
+      "key": "getting_big",
+      "requiresPlayer": true
+    },
+    {
+      "key": "danger_base",
+      "requiresPlayer": true
+    },
+    {
+      "key": "saving_for_mirv",
+      "requiresPlayer": true
+    },
+    {
+      "key": "mirv_ready",
+      "requiresPlayer": true
+    }
+  ]
+}

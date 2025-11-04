@@ -1,55 +1,54 @@
-# Build stage - will use your native architecture
-FROM --platform=$BUILDPLATFORM oven/bun:1 AS builder
+# Use an official Node runtime as the base image
+FROM node:24-slim AS base
+
+# Create dependency layer
+FROM base AS dependencies
+RUN apt-get update && apt-get install -y \
+    nginx \
+    supervisor \
+    git \
+    curl \
+    jq \
+    wget \
+    apache2-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb > cloudflared.deb \
+    && dpkg -i cloudflared.deb \
+    && rm cloudflared.deb
+
+# Final image
+FROM base
+
+# Copy installed packages from dependencies stage
+COPY --from=dependencies / /
 
 ARG GIT_COMMIT=unknown
-ENV GIT_COMMIT=$GIT_COMMIT
-
-# Set the working directory for the build
-WORKDIR /build
-
-# Copy package files
-COPY package.json bun.lock ./
-
-# Install dependencies while bypassing Husky hooks
-ENV HUSKY=0 
-ENV NPM_CONFIG_IGNORE_SCRIPTS=1
-RUN mkdir -p .git && bun install --include=dev
-
-# Copy the rest of the application code
-COPY . .
-
-# Build the client-side application with verbose output
-RUN echo "Starting build process..." && bun run build-prod && echo "Build completed successfully!"
-
-# Check output directory
-RUN ls -la static || echo "Static directory not found"
-
-# Production stage
-FROM oven/bun:1
-
-# Add environment variable
-ARG GAME_ENV=prod
-ENV GAME_ENV=$GAME_ENV
-ENV NODE_ENV=production
-ARG GIT_COMMIT=unknown
-ENV GIT_COMMIT=$GIT_COMMIT
-
-# Install Nginx, Supervisor and Git (for Husky)
-RUN apt-get update && apt-get install -y nginx supervisor && \
-    rm -rf /var/lib/apt/lists/*
+ENV GIT_COMMIT="$GIT_COMMIT"
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy output files from builder (using the correct 'static' directory)
-COPY --from=builder /build/static ./static
-COPY --from=builder /build/node_modules ./node_modules
-COPY --from=builder /build/package.json ./package.json
-COPY --from=builder /build/bun.lock ./bun.lock
+# Copy package.json and package-lock.json
+COPY package*.json ./
 
-# Copy server files
-COPY --from=builder /build/src ./src
+# Install dependencies while bypassing Husky hooks
+ENV HUSKY=0
+ENV NPM_CONFIG_IGNORE_SCRIPTS=1
+RUN mkdir -p .git && npm ci
 
+# Copy the rest of the application code
+COPY . .
+
+# Build the client-side application
+RUN npm run build-prod
+
+# So we can see which commit was used to build the container
+# https://openfront.io/commit.txt
+RUN echo "$GIT_COMMIT" > static/commit.txt
+
+# Update worker_connections in the existing nginx.conf
+RUN sed -i 's/worker_connections [0-9]*/worker_connections 8192/' /etc/nginx/nginx.conf
 
 # Copy Nginx configuration and ensure it's used instead of the default
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -59,8 +58,17 @@ RUN rm -f /etc/nginx/sites-enabled/default
 RUN mkdir -p /var/log/supervisor
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Expose only the Nginx port
-EXPOSE 80 443
+# Copy and make executable the startup script
+COPY startup.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/startup.sh
 
-# Start Supervisor to manage both Node.js and Nginx
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+RUN mkdir -p /etc/cloudflared && \
+    chown -R node:node /etc/cloudflared && \
+    chmod -R 755 /etc/cloudflared
+
+# Set Cloudflared config directory to a volume mount location
+ENV CF_CONFIG_PATH=/etc/cloudflared/config.yml
+ENV CF_CREDS_PATH=/etc/cloudflared/creds.json
+
+# Use the startup script as the entrypoint
+ENTRYPOINT ["/usr/local/bin/startup.sh"]

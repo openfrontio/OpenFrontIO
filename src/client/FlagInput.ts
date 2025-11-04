@@ -1,7 +1,6 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
-import { ModalOverlay } from "./components/ModalOverlay";
 const flagKey: string = "flag";
 
 @customElement("flag-input")
@@ -27,7 +26,7 @@ export class FlagInput extends LitElement {
   }
 
   private setFlag(flag: string) {
-    if (flag == "xx") {
+    if (flag === "xx") {
       flag = "";
     }
     this.flag = flag;

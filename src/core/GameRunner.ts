@@ -1,48 +1,78 @@
-import { utcDay } from "d3";
 import { placeName } from "../client/graphics/NameBoxCalculator";
-import { getConfig } from "./configuration/Config";
-import { EventBus } from "./EventBus";
+import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
-  BuildableUnit,
   Cell,
   Game,
   GameUpdates,
-  MessageType,
+  NameViewData,
+  Nation,
   Player,
   PlayerActions,
+  PlayerBorderTiles,
   PlayerID,
+  PlayerInfo,
   PlayerProfile,
   PlayerType,
-  UnitType,
 } from "./game/Game";
-import { DisplayMessageUpdate, ErrorUpdate } from "./game/GameUpdates";
-import { NameViewData } from "./game/Game";
-import { GameUpdateType } from "./game/GameUpdates";
 import { createGame } from "./game/GameImpl";
+import { TileRef } from "./game/GameMap";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+} from "./game/GameUpdates";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
-import { ClientID, GameConfig, Turn } from "./Schemas";
-import { GameUpdateViewData } from "./game/GameUpdates";
+import { PseudoRandom } from "./PseudoRandom";
+import { ClientID, GameStartInfo, Turn } from "./Schemas";
+import { sanitize, simpleHash } from "./Util";
+import { fixProfaneUsername } from "./validations/username";
 
 export async function createGameRunner(
-  gameID: string,
-  gameConfig: GameConfig,
+  gameStart: GameStartInfo,
   clientID: ClientID,
   callBack: (gu: GameUpdateViewData) => void,
 ): Promise<GameRunner> {
-  const config = await getConfig(gameConfig, null);
-  const gameMap = await loadGameMap(gameConfig.gameMap);
-  const game = createGame(
+  const config = await getConfig(gameStart.config, null);
+  const gameMap = await loadGameMap(gameStart.config.gameMap);
+  const random = new PseudoRandom(simpleHash(gameStart.gameID));
+
+  const humans = gameStart.players.map(
+    (p) =>
+      new PlayerInfo(
+        p.clientID === clientID
+          ? sanitize(p.username)
+          : fixProfaneUsername(sanitize(p.username)),
+        PlayerType.Human,
+        p.clientID,
+        random.nextID(),
+      ),
+  );
+
+  const nations = gameStart.config.disableNPCs
+    ? []
+    : gameMap.manifest.nations.map(
+        (n) =>
+          new Nation(
+            new Cell(n.coordinates[0], n.coordinates[1]),
+            n.strength,
+            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+          ),
+      );
+
+  const game: Game = createGame(
+    humans,
+    nations,
     gameMap.gameMap,
     gameMap.miniGameMap,
-    gameMap.nationMap,
     config,
   );
+
   const gr = new GameRunner(
-    game as Game,
-    new Executor(game, gameID, clientID),
+    game,
+    new Executor(game, gameStart.gameID, clientID),
     callBack,
   );
   gr.init();
@@ -103,23 +133,25 @@ export class GameRunner {
           errMsg: error.message,
           stack: error.stack,
         } as ErrorUpdate);
-        return;
+      } else {
+        console.error("Game tick error:", error);
       }
+      return;
     }
 
-    if (this.game.inSpawnPhase() && this.game.ticks() % 2 == 0) {
+    if (this.game.inSpawnPhase() && this.game.ticks() % 2 === 0) {
       this.game
         .players()
         .filter(
           (p) =>
-            p.type() == PlayerType.Human || p.type() == PlayerType.FakeHuman,
+            p.type() === PlayerType.Human || p.type() === PlayerType.FakeHuman,
         )
         .forEach(
           (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
         );
     }
 
-    if (this.game.ticks() < 3 || this.game.ticks() % 30 == 0) {
+    if (this.game.ticks() < 3 || this.game.ticks() % 30 === 0) {
       this.game.players().forEach((p) => {
         this.playerViewData[p.id()] = placeName(this.game, p);
       });
@@ -146,15 +178,8 @@ export class GameRunner {
     const player = this.game.player(playerID);
     const tile = this.game.ref(x, y);
     const actions = {
-      canBoat: player.canBoat(tile),
       canAttack: player.canAttack(tile),
-      buildableUnits: Object.values(UnitType).map((u) => {
-        return {
-          type: u,
-          canBuild: player.canBuild(u, tile) != false,
-          cost: this.game.config().unitInfo(u).cost(player),
-        } as BuildableUnit;
-      }),
+      buildableUnits: player.buildableUnits(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
     } as PlayerActions;
 
@@ -169,15 +194,60 @@ export class GameRunner {
         canDonate: player.canDonate(other),
         canEmbargo: !player.hasEmbargoAgainst(other),
       };
+      const alliance = player.allianceWith(other as Player);
+      if (alliance) {
+        actions.interaction.allianceExpiresAt = alliance.expiresAt();
+      }
     }
 
     return actions;
   }
+
   public playerProfile(playerID: number): PlayerProfile {
     const player = this.game.playerBySmallID(playerID);
     if (!player.isPlayer()) {
       throw new Error(`player with id ${playerID} not found`);
     }
     return player.playerProfile();
+  }
+  public playerBorderTiles(playerID: PlayerID): PlayerBorderTiles {
+    const player = this.game.player(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+    return {
+      borderTiles: player.borderTiles(),
+    } as PlayerBorderTiles;
+  }
+
+  public attackAveragePosition(
+    playerID: number,
+    attackID: string,
+  ): Cell | null {
+    const player = this.game.playerBySmallID(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+
+    const condition = (a) => a.id() === attackID;
+    const attack =
+      player.outgoingAttacks().find(condition) ??
+      player.incomingAttacks().find(condition);
+    if (attack === undefined) {
+      return null;
+    }
+
+    return attack.averagePosition();
+  }
+
+  public bestTransportShipSpawn(
+    playerID: PlayerID,
+    targetTile: TileRef,
+  ): TileRef | false {
+    const player = this.game.player(playerID);
+    if (!player.isPlayer()) {
+      throw new Error(`player with id ${playerID} not found`);
+    }
+    return player.bestTransportShipSpawn(targetTile);
   }
 }

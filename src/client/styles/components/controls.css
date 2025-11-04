@@ -1,0 +1,91 @@
+.scroll-combo-horizontal {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: sans-serif;
+  color: white;
+}
+
+.key {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 6px;
+  background-color: #000;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 2px 0 #444;
+}
+
+.plus {
+  font-size: 16px;
+  color: #ccc;
+}
+
+.mouse-shell {
+  width: 28px;
+  height: 45px;
+  border: 2px solid #ccc;
+  border-radius: 50px;
+  position: relative;
+  background: transparent;
+}
+
+.mouse-left-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 50%;
+  background-color: #ff4d4d;
+  border-top-left-radius: 50px;
+}
+
+.mouse-right-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 50%;
+  background-color: #ff4d4d;
+  border-top-right-radius: 50px;
+}
+
+.mouse-wheel {
+  width: 4px;
+  height: 8px;
+  background-color: #ccc;
+  border-radius: 2px;
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#highlighted-wheel {
+  background-color: #ff4d4d;
+}
+
+.mouse-with-arrows {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mouse-arrows-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.setting-input.keybind:hover .key,
+.setting-input.keybind:focus .key {
+  background-color: #333;
+  box-shadow: 0 2px 0 #222;
+}
+
+.setting-input.keybind.listening .key {
+  background-color: #1d4ed8; /* blue-700 */
+  box-shadow: 0 2px 0 #0f172a; /* darker blue */
+}

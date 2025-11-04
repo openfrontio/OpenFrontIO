@@ -1,11 +1,14 @@
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { GameUpdateViewData } from "../game/GameUpdates";
 import {
-  MainThreadMessage,
-  WorkerMessage,
+  AttackAveragePositionResultMessage,
   InitializedMessage,
+  MainThreadMessage,
   PlayerActionsResultMessage,
+  PlayerBorderTilesResultMessage,
   PlayerProfileResultMessage,
+  TransportShipSpawnResultMessage,
+  WorkerMessage,
 } from "./WorkerMessages";
 
 const ctx: Worker = self as any;
@@ -27,13 +30,12 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
   switch (message.type) {
     case "heartbeat":
-      (await gameRunner).executeNextTick();
+      (await gameRunner)?.executeNextTick();
       break;
     case "init":
       try {
         gameRunner = createGameRunner(
-          message.gameID,
-          message.gameConfig,
+          message.gameStartInfo,
           message.clientID,
           gameUpdate,
         ).then((gr) => {
@@ -99,6 +101,65 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       } catch (error) {
         console.error("Failed to check borders:", error);
         throw error;
+      }
+      break;
+    case "player_border_tiles":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const borderTiles = (await gameRunner).playerBorderTiles(
+          message.playerID,
+        );
+        sendMessage({
+          type: "player_border_tiles_result",
+          id: message.id,
+          result: borderTiles,
+        } as PlayerBorderTilesResultMessage);
+      } catch (error) {
+        console.error("Failed to get border tiles:", error);
+        throw error;
+      }
+      break;
+    case "attack_average_position":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const averagePosition = (await gameRunner).attackAveragePosition(
+          message.playerID,
+          message.attackID,
+        );
+        sendMessage({
+          type: "attack_average_position_result",
+          id: message.id,
+          x: averagePosition ? averagePosition.x : null,
+          y: averagePosition ? averagePosition.y : null,
+        } as AttackAveragePositionResultMessage);
+      } catch (error) {
+        console.error("Failed to get attack average position:", error);
+        throw error;
+      }
+      break;
+    case "transport_ship_spawn":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        const spawnTile = (await gameRunner).bestTransportShipSpawn(
+          message.playerID,
+          message.targetTile,
+        );
+        sendMessage({
+          type: "transport_ship_spawn_result",
+          id: message.id,
+          result: spawnTile,
+        } as TransportShipSpawnResultMessage);
+      } catch (error) {
+        console.error("Failed to spawn transport ship:", error);
       }
       break;
     default:
