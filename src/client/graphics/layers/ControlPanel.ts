@@ -109,6 +109,7 @@ export class ControlPanel extends LitElement implements Layer {
       console.warn("Failed to calculate capacity breakdown:", e);
       this._territoryCapacity = 0;
       this._cityCapacity = 0;
+      this._maxTroops = 0;
     }
 
     this.requestUpdate();
