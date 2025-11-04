@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
+import { Gold, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
@@ -22,6 +22,12 @@ export class ControlPanel extends LitElement implements Layer {
 
   @state()
   private _maxTroops: number;
+
+  @state()
+  private _territoryMax: number = 0;
+
+  @state()
+  private _cityMax: number = 0;
 
   @state()
   private troopRate: number;
@@ -89,6 +95,20 @@ export class ControlPanel extends LitElement implements Layer {
     this._gold = player.gold();
     this._troops = player.troops();
     this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
+    // Compute breakdown of max troops into territory and city contributions
+    try {
+      const tiles = player.numTilesOwned();
+      const territory = 2 * (Math.pow(tiles, 0.6) * 1000 + 50000);
+      const cityLevels = player.totalUnitLevels(UnitType.City);
+      const cityContribution =
+        cityLevels * this.game.config().cityTroopIncrease();
+      this._territoryMax = Math.round(territory);
+      this._cityMax = Math.round(cityContribution);
+    } catch (e) {
+      // Fallback: clear breakdown if anything unexpected
+      this._territoryMax = 0;
+      this._cityMax = 0;
+    }
     this.requestUpdate();
   }
 
@@ -180,6 +200,35 @@ export class ControlPanel extends LitElement implements Layer {
                 >(+${renderTroops(this.troopRate)})</span
               ></span
             >
+          </div>
+          <!-- Max troops breakdown bar -->
+          <div class="h-1 bg-black/50 rounded-full overflow-hidden mt-2 mb-3">
+            <div
+              class="flex h-full"
+              style="width: ${this._maxTroops > 0
+                ? (this._troops / this._maxTroops) * 100
+                : 0}%"
+            >
+              <div
+                style="background-color: ${this.game
+                  ?.myPlayer()
+                  ?.territoryColor()
+                  .toRgbString() ?? "rgb(147, 51, 234)"}; width: ${this
+                  ._maxTroops > 0
+                  ? (this._territoryMax / this._maxTroops) * 100
+                  : 50}%"
+              ></div>
+              <div
+                style="background-color: ${this.game
+                  ?.myPlayer()
+                  ?.territoryColor()
+                  .darken(0.2)
+                  .toRgbString() ?? "rgb(59, 130, 246)"}; width: ${this
+                  ._maxTroops > 0
+                  ? (this._cityMax / this._maxTroops) * 100
+                  : 50}%"
+              ></div>
+            </div>
           </div>
           <div class="flex justify-between">
             <span class="font-bold"
