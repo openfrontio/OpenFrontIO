@@ -24,10 +24,10 @@ export class ControlPanel extends LitElement implements Layer {
   private _maxTroops: number;
 
   @state()
-  private _territoryMax: number = 0;
+  private _territoryCapacity: number = 0;
 
   @state()
-  private _cityMax: number = 0;
+  private _cityCapacity: number = 0;
 
   @state()
   private troopRate: number;
@@ -102,12 +102,12 @@ export class ControlPanel extends LitElement implements Layer {
       const cityLevels = player.totalUnitLevels(UnitType.City);
       const cityContribution =
         cityLevels * this.game.config().cityTroopIncrease();
-      this._territoryMax = Math.round(territory);
-      this._cityMax = Math.round(cityContribution);
+      this._territoryCapacity = Math.round(territory);
+      this._cityCapacity = Math.round(cityContribution);
     } catch (e) {
       // Fallback: clear breakdown if anything unexpected
-      this._territoryMax = 0;
-      this._cityMax = 0;
+      this._territoryCapacity = 0;
+      this._cityCapacity = 0;
     }
     this.requestUpdate();
   }
@@ -215,9 +215,9 @@ export class ControlPanel extends LitElement implements Layer {
                   ?.myPlayer()
                   ?.territoryColor()
                   .toRgbString() ?? "rgb(147, 51, 234)"}; flex-grow: ${this
-                  ._territoryMax}"
+                  ._territoryCapacity}"
               ></div>
-              ${this._cityMax > 0
+              ${this._cityCapacity > 0
                 ? html`<div
                     class="h-full"
                     style="background-color: ${this.game
@@ -225,7 +225,7 @@ export class ControlPanel extends LitElement implements Layer {
                       ?.territoryColor()
                       .darken(0.2)
                       .toRgbString() ?? "rgb(59, 130, 246)"}; flex-grow: ${this
-                      ._cityMax}"
+                      ._cityCapacity}"
                   ></div>`
                 : ""}
             </div>
