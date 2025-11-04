@@ -41,7 +41,7 @@ export class PlayerSpawner {
 
       let tooCloseToOtherPlayer = false;
       for (const spawn of this.players) {
-        if (this.gm.manhattanDist(spawn.tile, tile) < 50) {
+        if (this.gm.manhattanDist(spawn.tile, tile) < 30) {
           tooCloseToOtherPlayer = true;
           break;
         }
