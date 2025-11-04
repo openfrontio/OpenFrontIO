@@ -70,7 +70,9 @@ export class PortExecution implements Execution {
     }
 
     const port = this.random.randElement(ports);
-    this.mg.addExecution(new TradeShipExecution(this.port.owner(), this.port, port));
+    this.mg.addExecution(
+      new TradeShipExecution(this.port.owner(), this.port, port),
+    );
   }
 
   isActive(): boolean {
@@ -84,7 +86,9 @@ export class PortExecution implements Execution {
   shouldSpawnTradeShip(): boolean {
     const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
     const numPlayerPorts = this.port!.owner().unitCount(UnitType.Port);
-    const numPlayerTradeShips = this.port!.owner().unitCount(UnitType.TradeShip);
+    const numPlayerTradeShips = this.port!.owner().unitCount(
+      UnitType.TradeShip,
+    );
     const spawnRate = this.mg
       .config()
       .tradeShipSpawnRate(numTradeShips, numPlayerPorts, numPlayerTradeShips);

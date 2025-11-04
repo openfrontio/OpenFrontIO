@@ -12,7 +12,10 @@ export class DefensePostExecution implements Execution {
 
   private alreadySentShell = new Set<Unit>();
 
-  constructor(private playerOrUnit: Player | Unit, private tile?: TileRef) {}
+  constructor(
+    private playerOrUnit: Player | Unit,
+    private tile?: TileRef,
+  ) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;

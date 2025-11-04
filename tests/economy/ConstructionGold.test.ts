@@ -1,6 +1,12 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
-import { Game, Player, PlayerInfo, PlayerType, UnitType } from "../../src/core/game/Game";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
+import {
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../../src/core/game/Game";
 import { setup } from "../util/Setup";
 
 describe("Construction economy", () => {
@@ -13,7 +19,12 @@ describe("Construction economy", () => {
       instantBuild: false,
       infiniteTroops: true,
     });
-    const info = new PlayerInfo("builder", PlayerType.Human, null, "builder_id");
+    const info = new PlayerInfo(
+      "builder",
+      PlayerType.Human,
+      null,
+      "builder_id",
+    );
     game.addPlayer(info);
     const spawn = game.ref(0, 10);
     game.addExecution(new SpawnExecution(info, spawn));
@@ -38,8 +49,8 @@ describe("Construction economy", () => {
     const afterBuild = player.gold();
     const ticksAfterBuild = BigInt(game.ticks() - startTick);
     const passivePerTick = 100n; // DefaultConfig goldAdditionRate for humans
-    expect(afterBuild).toBeLessThan(cost); // cost was deducted
-    expect(afterBuild).toBeLessThanOrEqual(ticksAfterBuild * passivePerTick); // only passive income allowed
+    expect(afterBuild < cost).toBe(true); // cost was deducted
+    expect(afterBuild <= ticksAfterBuild * passivePerTick).toBe(true); // only passive income allowed
 
     // Advance through construction duration
     const duration = game.unitInfo(UnitType.City).constructionDuration ?? 0;
@@ -48,13 +59,13 @@ describe("Construction economy", () => {
     const finalGold = player.gold();
     const ticksElapsed = BigInt(game.ticks() - startTick);
     // Ensure no refund equal to cost snuck back in; only passive income accumulated
-    expect(finalGold).toBeLessThan(cost);
-    expect(finalGold).toBeLessThanOrEqual(ticksElapsed * passivePerTick);
+    expect(finalGold < cost).toBe(true);
+    expect(finalGold <= ticksElapsed * passivePerTick).toBe(true);
 
     // Structure exists and is active
     expect(player.units(UnitType.City)).toHaveLength(1);
-    expect(((player.units(UnitType.City)[0] as any).isUnderConstruction?.() ?? false)).toBe(false);
+    expect(
+      (player.units(UnitType.City)[0] as any).isUnderConstruction?.() ?? false,
+    ).toBe(false);
   });
 });
-
-

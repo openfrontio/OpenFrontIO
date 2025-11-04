@@ -9,7 +9,7 @@ export class CityExecution implements Execution {
 
   constructor(
     private playerOrUnit: Player | Unit,
-    private tile?: TileRef
+    private tile?: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {

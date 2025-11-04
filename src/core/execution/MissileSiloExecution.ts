@@ -8,7 +8,7 @@ export class MissileSiloExecution implements Execution {
 
   constructor(
     private playerOrUnit: Player | Unit,
-    private tile?: TileRef
+    private tile?: TileRef,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -31,7 +31,11 @@ export class MissileSiloExecution implements Execution {
           this.active = false;
           return;
         }
-        this.silo = this.playerOrUnit.buildUnit(UnitType.MissileSilo, spawn, {});
+        this.silo = this.playerOrUnit.buildUnit(
+          UnitType.MissileSilo,
+          spawn,
+          {},
+        );
 
         if (this.playerOrUnit !== this.silo.owner()) {
           this.playerOrUnit = this.silo.owner();

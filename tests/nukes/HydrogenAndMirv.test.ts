@@ -1,6 +1,12 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType, UnitType } from "../../src/core/game/Game";
+import {
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../../src/core/game/Game";
 import { setup } from "../util/Setup";
 
 describe("Hydrogen Bomb and MIRV flows", () => {
@@ -18,17 +24,21 @@ describe("Hydrogen Bomb and MIRV flows", () => {
 
   test("Hydrogen bomb launches when silo exists and cannot use silo under construction", () => {
     // Build a silo instantly and launch Hydrogen Bomb
-    game.addExecution(new ConstructionExecution(player, UnitType.MissileSilo, game.ref(1, 1)));
+    game.addExecution(
+      new ConstructionExecution(player, UnitType.MissileSilo, game.ref(1, 1)),
+    );
     game.executeNextTick();
     game.executeNextTick();
     expect(player.units(UnitType.MissileSilo)).toHaveLength(1);
 
     // Launch Hydrogen Bomb
     const target = game.ref(7, 7);
-    game.addExecution(new ConstructionExecution(player, UnitType.HydrogenBomb, target));
+    game.addExecution(
+      new ConstructionExecution(player, UnitType.HydrogenBomb, target),
+    );
     game.executeNextTick();
     game.executeNextTick();
-    expect(player.units(UnitType.HydrogenBomb).length >= 0).toBe(true);
+    expect(player.units(UnitType.HydrogenBomb).length).toBeGreaterThanOrEqual(0);
 
     // Now build another silo with construction time and ensure it won't be used
     // Use non-instant config by simulating an under-construction flag on a new silo
@@ -37,7 +47,9 @@ describe("Hydrogen Bomb and MIRV flows", () => {
 
   test("MIRV launches when silo exists and targets player-owned tiles", () => {
     // Build a silo instantly
-    game.addExecution(new ConstructionExecution(player, UnitType.MissileSilo, game.ref(1, 1)));
+    game.addExecution(
+      new ConstructionExecution(player, UnitType.MissileSilo, game.ref(1, 1)),
+    );
     game.executeNextTick();
     game.executeNextTick();
     expect(player.units(UnitType.MissileSilo)).toHaveLength(1);
@@ -55,5 +67,3 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     expect(mirvs > 0 || warheads > 0).toBe(true);
   });
 });
-
-

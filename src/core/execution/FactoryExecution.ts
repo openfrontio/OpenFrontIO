@@ -6,7 +6,10 @@ export class FactoryExecution implements Execution {
   private factory: Unit | null = null;
   private active: boolean = true;
   private game: Game;
-  constructor(private playerOrUnit: Player | Unit, private tile?: TileRef) {}
+  constructor(
+    private playerOrUnit: Player | Unit,
+    private tile?: TileRef,
+  ) {}
 
   init(mg: Game, ticks: number): void {
     this.game = mg;
@@ -18,13 +21,20 @@ export class FactoryExecution implements Execution {
         this.factory = this.playerOrUnit;
         this.createStation();
       } else {
-        const spawnTile = this.playerOrUnit.canBuild(UnitType.Factory, this.tile!);
+        const spawnTile = this.playerOrUnit.canBuild(
+          UnitType.Factory,
+          this.tile!,
+        );
         if (spawnTile === false) {
           console.warn("cannot build factory");
           this.active = false;
           return;
         }
-        this.factory = this.playerOrUnit.buildUnit(UnitType.Factory, spawnTile, {});
+        this.factory = this.playerOrUnit.buildUnit(
+          UnitType.Factory,
+          spawnTile,
+          {},
+        );
         this.createStation();
       }
     }
