@@ -5,19 +5,12 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 export class NightModeLayer implements Layer {
-  setGame(game: GameView) {
-    this.game = game;
-  }
-
   private darkenColor: [number, number, number] = [0, 0, 0];
   private darkenAlpha: number = 0.8;
   private flashlightRadius: number = 50;
   private userSettingsInstance = new UserSettings();
   private mouseX: number = 0;
   private mouseY: number = 0;
-
-  // Add game reference
-  private game: GameView | null = null;
 
   private handleMouseMove(event: MouseEvent) {
     const rect = this.transformHandler.boundingRect();
@@ -30,15 +23,9 @@ export class NightModeLayer implements Layer {
   redraw(): void {}
 
   constructor(
+    private game: GameView | null,
     private transformHandler: TransformHandler,
-    game?: GameView, // Add game parameter
   ) {
-    this.game = game ?? null;
-    if (this.userSettingsInstance.nightMode()) {
-      document.documentElement.classList.add("night");
-    } else {
-      document.documentElement.classList.remove("night");
-    }
     document.addEventListener("mousemove", (e) => this.handleMouseMove(e));
   }
 
@@ -174,6 +161,49 @@ export class NightModeLayer implements Layer {
           context.fillStyle = `rgba(200,200,130,${(this.darkenAlpha / 2) * brightness})`;
           context.fillRect(x, y, cellSize, cellSize);
         }
+      }
+    }
+  }
+  private renderStructureLights(
+    context: CanvasRenderingContext2D,
+    cellSize: number,
+  ): void {
+    // SAM Launchers
+    const sams = this.game!.units(UnitType.SAMLauncher);
+    for (const sam of sams) {
+      const tileRef = sam.tile();
+      const x = this.game!.x(tileRef) * cellSize;
+      const y = this.game!.y(tileRef) * cellSize;
+
+      // Red warning lights
+      context.fillStyle = "rgba(255, 50, 50, 0.6)";
+      context.fillRect(x, y, cellSize, cellSize);
+    }
+
+    // Nukes in flight (if above certain height)
+    const nukes = this.game!.units(
+      UnitType.AtomBomb,
+      UnitType.HydrogenBomb,
+      UnitType.MIRV,
+    );
+
+    for (const nuke of nukes) {
+      const trajectoryIndex = nuke.trajectoryIndex();
+      const trajectory = nuke.trajectory();
+
+      if (trajectoryIndex < trajectory.length) {
+        const currentTile = trajectory[trajectoryIndex].tile;
+        const x = this.game!.x(currentTile) * cellSize;
+        const y = this.game!.y(currentTile) * cellSize;
+
+        // Bright white glow for nukes
+        context.fillStyle = "rgba(255, 255, 255, 0.9)";
+        context.fillRect(
+          x - cellSize,
+          y - cellSize,
+          cellSize * 3,
+          cellSize * 3,
+        );
       }
     }
   }

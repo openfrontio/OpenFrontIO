@@ -151,7 +151,7 @@ describe("NightModeLayer", () => {
       clientX: 960,
       clientY: 540,
     });
-    document.dispatchEvent(mouseEvent);
+    mouseMoveHandler?.(mouseEvent);
 
     layer.renderLayer(mockContext);
 
