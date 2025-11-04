@@ -104,10 +104,12 @@ innerHtml() {
     return this.steamWishlist();
   }
   
-  // 33% chance for each option
-  if (this.rand < 0.33) {
+  // 25% chance for each option to make papa evan happy 
+  if (this.rand < 0.25) {
+    return this.steamWishlist();
+  } else if (this.rand < 0.5) {
     return this.ofmDisplay();
-  } else if (this.rand < 0.66) {
+  } else if (this.rand < 0.75) {
     return this.discordDisplay();
   }
   return this.renderPatternButton();
