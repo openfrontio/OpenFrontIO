@@ -76,6 +76,7 @@ describe("NukeExecution", () => {
   });
 
   test("nuke should only be targetable near src and dst", async () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
     const nukeExec = new NukeExecution(
       UnitType.AtomBomb,
       player,
