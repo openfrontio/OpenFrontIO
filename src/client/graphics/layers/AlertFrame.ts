@@ -11,6 +11,8 @@ import { Layer } from "./Layer";
 // Parameters for the alert animation
 const ALERT_SPEED = 1.6;
 const ALERT_COUNT = 2;
+const RETALIATION_WINDOW_TICKS = 15 * 10; // 15 seconds
+const ALERT_COOLDOWN_TICKS = 15 * 10; // 15 seconds
 
 @customElement("alert-frame")
 export class AlertFrame extends LitElement implements Layer {
@@ -22,6 +24,9 @@ export class AlertFrame extends LitElement implements Layer {
 
   private animationTimeout: number | null = null;
   private seenAttackIds: Set<string> = new Set();
+  private lastAlertTick: number = -1;
+  // Map of player ID -> tick when we last attacked them
+  private outgoingAttackTicks: Map<number, number> = new Map();
 
   static styles = css`
     .alert-border {
@@ -82,8 +87,13 @@ export class AlertFrame extends LitElement implements Layer {
     // Clear tracked attacks if player dies or doesn't exist
     if (!myPlayer || !myPlayer.isAlive()) {
       this.seenAttackIds.clear();
+      this.outgoingAttackTicks.clear();
+      this.lastAlertTick = -1;
       return;
     }
+
+    // Track outgoing attacks to detect retaliation
+    this.trackOutgoingAttacks();
 
     // Check for BrokeAllianceUpdate events
     this.game
@@ -116,7 +126,33 @@ export class AlertFrame extends LitElement implements Layer {
   private activateAlert() {
     if (this.userSettings.alertFrame()) {
       this.isActive = true;
+      this.lastAlertTick = this.game.ticks();
       this.requestUpdate();
+    }
+  }
+
+  private trackOutgoingAttacks() {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || !myPlayer.isAlive()) {
+      return;
+    }
+
+    const currentTick = this.game.ticks();
+    const outgoingAttacks = myPlayer.outgoingAttacks();
+
+    // Track when we attack other players (not terra nullius)
+    for (const attack of outgoingAttacks) {
+      // Only track attacks on players (targetID !== 0 means it's a player, not unclaimed land)
+      if (attack.targetID !== 0 && !attack.retreating) {
+        this.outgoingAttackTicks.set(attack.targetID, currentTick);
+      }
+    }
+
+    // Clean up old entries (older than retaliation window)
+    for (const [playerID, tick] of this.outgoingAttackTicks.entries()) {
+      if (currentTick - tick > RETALIATION_WINDOW_TICKS) {
+        this.outgoingAttackTicks.delete(playerID);
+      }
     }
   }
 
@@ -127,13 +163,33 @@ export class AlertFrame extends LitElement implements Layer {
     }
 
     const incomingAttacks = myPlayer.incomingAttacks();
+    const currentTick = this.game.ticks();
+
+    // Check if we're in cooldown (within 10 seconds of last alert)
+    const inCooldown =
+      this.lastAlertTick !== -1 &&
+      currentTick - this.lastAlertTick < ALERT_COOLDOWN_TICKS;
 
     // Find new attacks that we haven't seen yet
     for (const attack of incomingAttacks) {
       // Only alert for non-retreating attacks
       if (!attack.retreating && !this.seenAttackIds.has(attack.id)) {
-        this.seenAttackIds.add(attack.id);
-        this.activateAlert();
+        // Check if this is a retaliation (we attacked them recently)
+        const ourAttackTick = this.outgoingAttackTicks.get(attack.attackerID);
+        const isRetaliation =
+          ourAttackTick !== undefined &&
+          currentTick - ourAttackTick < RETALIATION_WINDOW_TICKS;
+
+        // Don't alert if:
+        // 1. We're in cooldown from a recent alert
+        // 2. This is a retaliation (we attacked them within 10 seconds)
+        if (!inCooldown && !isRetaliation) {
+          this.seenAttackIds.add(attack.id);
+          this.activateAlert();
+        } else {
+          // Still mark as seen so we don't alert later
+          this.seenAttackIds.add(attack.id);
+        }
       }
     }
 
