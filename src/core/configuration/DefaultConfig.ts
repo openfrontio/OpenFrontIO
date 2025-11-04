@@ -779,7 +779,7 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipShortRangeDebuff(): number {
-    return 200;
+    return 300;
   }
 
   proximityBonusPortsNb(totalPorts: number) {
