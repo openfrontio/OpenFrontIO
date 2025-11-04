@@ -171,8 +171,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   turnIntervalMs(): number {
     return 100;
   }
+
   gameCreationRate(): number {
-    return 60 * 1000;
+    return 30 * 1000;
   }
 
   lobbyMaxPlayers(
