@@ -370,9 +370,10 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under 200
+    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
+    const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
-      100_000 / (1 + Math.exp(-0.03 * (dist - 200))) + 100 * dist;
+      100_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 100 * dist;
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
@@ -774,6 +775,10 @@ export class DefaultConfig implements Config {
 
   radiusPortSpawn() {
     return 20;
+  }
+
+  tradeShipShortRangeDebuff(): number {
+    return 200;
   }
 
   proximityBonusPortsNb(totalPorts: number) {
