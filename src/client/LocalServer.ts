@@ -84,6 +84,7 @@ export class LocalServer {
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
+      lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
     } satisfies ServerStartGameMessage);
   }
 
@@ -219,13 +220,17 @@ export class LocalServer {
 
     compress(jsonString)
       .then((compressedData) => {
+        // Create a blob from the ArrayBuffer
+        const blob = new Blob([compressedData.buffer as ArrayBuffer], {
+          type: "application/json",
+        });
         return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Content-Encoding": "gzip",
           },
-          body: compressedData,
+          body: blob,
           keepalive: true, // Ensures request completes even if page unloads
         });
       })

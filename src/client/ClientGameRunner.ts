@@ -242,6 +242,7 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       update.winner,
+      this.lobby.gameStartInfo.lobbyCreatedAt,
     );
     endGame(record);
   }
