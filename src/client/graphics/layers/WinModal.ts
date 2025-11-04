@@ -1,5 +1,6 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import ofmWintersLogo from "../../../../resources/images/OfmWintersLogo.png";
 import { isInIframe, translateText } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
@@ -110,8 +111,9 @@ export class WinModal extends LitElement implements Layer {
       return this.ofmDisplay();
     } else if (this.rand < 0.75) {
       return this.discordDisplay();
+    } else {
+      return this.renderPatternButton();
     }
-    return this.renderPatternButton();
   }
 
   renderPatternButton() {
@@ -206,7 +208,7 @@ export class WinModal extends LitElement implements Layer {
         </h3>
         <div class="mb-3">
           <img
-            src="/resources/images/Ofm-Winters-Logo.png"
+            src=${ofmWintersLogo}
             alt="OpenFront Masters Winter"
             class="mx-auto max-w-full h-auto max-h-[200px] rounded"
           />

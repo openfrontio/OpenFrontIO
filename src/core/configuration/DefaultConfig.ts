@@ -618,7 +618,7 @@ export class DefaultConfig implements Config {
     if (this._gameConfig.gameMode === GameMode.Team) {
       return 95;
     }
-    return 80;
+    return 0.1;
   }
   boatMaxNumber(): number {
     return 3;
