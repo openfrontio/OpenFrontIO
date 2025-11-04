@@ -576,10 +576,10 @@ export class DefaultConfig implements Config {
     return 10 * 10;
   }
   deletionMarkDuration(): Tick {
-    return 15 * 10;
+    return 30 * 10;
   }
   deleteUnitCooldown(): Tick {
-    return 5 * 10;
+    return 30 * 10;
   }
   emojiMessageDuration(): Tick {
     return 5 * 10;
