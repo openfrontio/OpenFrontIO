@@ -253,7 +253,7 @@ export interface UnitParamsMap {
 
   [UnitType.TradeShip]: {
     targetUnit: Unit;
-    sourcePortId: number;
+    sourceUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
 
@@ -495,7 +495,7 @@ export interface Unit {
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
-  sourcePortId(): number | undefined; // Only for trade ships
+  sourceUnit(): Unit | undefined; // Only for trade ships
 
   // Construction
   constructionType(): UnitType | null;

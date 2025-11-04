@@ -25,7 +25,7 @@ export class UnitImpl implements Unit {
   private _targetedBySAM = false;
   private _reachedTarget = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
-  private _sourcePortId: number | undefined; // Only for trade ships
+  private _sourceUnit: Unit | undefined; // Only for trade ships
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
@@ -60,8 +60,8 @@ export class UnitImpl implements Unit {
       "lastSetSafeFromPirates" in params
         ? (params.lastSetSafeFromPirates ?? 0)
         : 0;
-    this._sourcePortId =
-      "sourcePortId" in params ? (params.sourcePortId ?? undefined) : undefined;
+    this._sourceUnit =
+      "sourceUnit" in params ? (params.sourceUnit ?? undefined) : undefined;
     this._patrolTile =
       "patrolTile" in params ? (params.patrolTile ?? undefined) : undefined;
     this._targetUnit =
@@ -136,7 +136,7 @@ export class UnitImpl implements Unit {
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
       targetUnitId: this._targetUnit?.id() ?? undefined,
-      sourcePortId: this._sourcePortId ?? undefined,
+      sourceUnitId: this._sourceUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
@@ -407,8 +407,8 @@ export class UnitImpl implements Unit {
     );
   }
 
-  sourcePortId(): number | undefined {
-    return this._sourcePortId;
+  sourceUnit(): Unit | undefined {
+    return this._sourceUnit;
   }
 
   level(): number {

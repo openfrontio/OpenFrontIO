@@ -473,26 +473,43 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       return null;
     }
 
-    // Find source port - closest port owned by the ship's owner
-    const owner = unit.owner();
-    const ports = owner.units(UnitType.Port);
-    if (ports.length === 0) {
-      return null;
+    // Use stored source port, fallback to heuristic if not available or destroyed
+    let srcPort: UnitView | null = null;
+    const sourceUnitId = unit.sourceUnitId();
+    if (sourceUnitId) {
+      const sourceUnit = this.game.unit(sourceUnitId);
+      if (
+        sourceUnit &&
+        sourceUnit.type() === UnitType.Port &&
+        sourceUnit.isActive()
+      ) {
+        srcPort = sourceUnit;
+      }
     }
 
-    // Find closest port to destination (likely the source)
-    let srcPort = ports[0];
-    let minDist = this.game.manhattanDist(srcPort.tile(), dstPort.tile());
-    for (const port of ports) {
-      const dist = this.game.manhattanDist(port.tile(), dstPort.tile());
-      if (dist < minDist) {
-        minDist = dist;
-        srcPort = port;
+    // Fallback: find closest port owned by the ship's owner
+    if (!srcPort) {
+      const owner = unit.owner();
+      const ports = owner.units(UnitType.Port);
+      if (ports.length === 0) {
+        return null;
+      }
+
+      // Find closest port to destination (likely the source)
+      srcPort = ports[0];
+      let minDist = this.game.manhattanDist(srcPort.tile(), dstPort.tile());
+      for (const port of ports) {
+        const dist = this.game.manhattanDist(port.tile(), dstPort.tile());
+        if (dist < minDist) {
+          minDist = dist;
+          srcPort = port;
+        }
       }
     }
 
     // Use manhattan distance as estimate (pathfinding is too expensive)
     const distance = this.game.manhattanDist(srcPort.tile(), dstPort.tile());
+    const owner = unit.owner();
     const numPorts = owner.totalUnitLevels(UnitType.Port);
 
     return this.game.config().tradeShipGold(distance, numPorts);
