@@ -69,9 +69,9 @@ describe("Hydrogen Bomb and MIRV flows", () => {
 
     // Capture gold before starting silo construction
     const goldBeforeSilo = playerWithConstruction.gold();
-    const siloCost = gameWithConstruction.unitInfo(UnitType.MissileSilo).cost(
-      playerWithConstruction,
-    );
+    const siloCost = gameWithConstruction
+      .unitInfo(UnitType.MissileSilo)
+      .cost(playerWithConstruction);
     playerWithConstruction.addGold(siloCost);
 
     // Start construction of silo
@@ -142,9 +142,9 @@ describe("Hydrogen Bomb and MIRV flows", () => {
 
     // Now launch should succeed - ensure we have gold and target is conquered
     playerWithConstruction.conquer(targetTile);
-    const hydrogenBombCost = gameWithConstruction.unitInfo(UnitType.HydrogenBomb).cost(
-      playerWithConstruction,
-    );
+    const hydrogenBombCost = gameWithConstruction
+      .unitInfo(UnitType.HydrogenBomb)
+      .cost(playerWithConstruction);
     playerWithConstruction.addGold(hydrogenBombCost);
 
     const canBuildAfterCompletion = playerWithConstruction.canBuild(
@@ -165,8 +165,9 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     gameWithConstruction.executeNextTick();
 
     // Verify launch succeeded
-    const hydrogenBombCountAfterSuccess =
-      playerWithConstruction.units(UnitType.HydrogenBomb).length;
+    const hydrogenBombCountAfterSuccess = playerWithConstruction.units(
+      UnitType.HydrogenBomb,
+    ).length;
     expect(hydrogenBombCountAfterSuccess).toBeGreaterThan(
       hydrogenBombCountBefore,
     );
