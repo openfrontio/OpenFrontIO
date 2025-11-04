@@ -594,7 +594,7 @@ export interface Player {
   decayRelations(): void;
   isOnSameTeam(other: Player): boolean;
   // Either allied or on same team.
-  isFriendly(other: Player): boolean;
+  isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
   team(): Team | null;
   clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
@@ -607,6 +607,7 @@ export interface Player {
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
+  betrayals(): number;
 
   // Targeting
   canTarget(other: Player): boolean;

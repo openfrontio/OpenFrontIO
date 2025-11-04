@@ -278,7 +278,7 @@
   "game_starting_modal": {
     "title": "Game is Starting...",
     "credits": "Credits",
-    "code_license": "Code licensed under AGPL-3.0"
+    "code_license": "Code licensed under AGPL-3.0 (no warranty)"
   },
   "difficulty": {
     "difficulty": "Difficulty",
@@ -669,39 +669,7 @@
       "purchase": "Purchase this skin to unlock it."
     },
     "pattern": {
-      "default": "Default",
-      "custom": "Custom",
-      "stripes_v": "Vertical",
-      "stripes_h": "Horizontal",
-      "horizontal_stripes": "Horizontal (Alt)",
-      "vertical_bars": "Vertical (Alt)",
-      "checkerboard": "Checkerboard",
-      "choco": "Choco",
-      "diagonal": "Diagonal",
-      "cross": "Cross",
-      "mini_cross": "Mini Cross",
-      "sword": "Sword",
-      "sparse_dots": "Sparse Dots",
-      "evan": "Evan",
-      "diagonal_stripe": "Diagonal Stripe",
-      "mountain_ridge": "Mountain Ridge",
-      "scattered_dots": "Scattered Dots",
-      "circuit_board": "Circuit Board",
-      "shells": "Shells",
-      "-w-": ".w.",
-      "white_rabbit": "White Rabbit",
-      "goat": "Goat",
-      "cats": "Cats",
-      "cursor": "Cursor",
-      "hand": "Hand",
-      "radiation": "Radiation",
-      "openfront_qr": "OpenFront.io QR code",
-      "openfront": "OpenFront",
-      "t_rex": "T-Rex",
-      "embelem": "Emblem",
-      "contributor": "Contributor",
-      "grogu_head": "Grogu Head",
-      "grogu": "Grogu"
+      "default": "Default"
     }
   },
   "flag_input": {
