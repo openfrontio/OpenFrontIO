@@ -1,5 +1,4 @@
 import ipAnonymize from "ip-anonymize";
-import { randomBytes } from "node:crypto";
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { z } from "zod";
@@ -132,10 +131,10 @@ export class GameServer {
 
   public setHostPersistentID(id: string): string | null {
     if (this.getHostPersistentID()) {
-		return null;
-	}
-	this._hostPersistentID = id;
-	return this.getHostPersistentID();
+      return null;
+    }
+    this._hostPersistentID = id;
+    return this.getHostPersistentID();
   }
 
   public getHostPersistentID(): string | null {

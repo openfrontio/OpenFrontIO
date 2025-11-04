@@ -23,11 +23,10 @@ import {
   TeamCountConfig,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { getPersistentID } from "./Main"
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import "./components/Maps";
-import { JoinLobbyEvent } from "./Main";
+import { JoinLobbyEvent, getPersistentID } from "./Main";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("host-lobby-modal")
@@ -594,7 +593,9 @@ export class HostLobbyModal extends LitElement {
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         if (lobby.hostPersistentID === null) {
-          throw new Error("Server did not return hostPersistentID for private lobby");
+          throw new Error(
+            "Server did not return hostPersistentID for private lobby",
+          );
         }
         this.lobbyId = lobby.gameInfo.gameID;
         // join lobby
@@ -877,7 +878,7 @@ async function createLobby(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ hostPersistentID: getPersistentID() }),
-	  }
+      },
     );
 
     if (!response.ok) {

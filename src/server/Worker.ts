@@ -120,7 +120,7 @@ export async function startWorker() {
     }
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-	// TODO: this destroys hostPersistentID requests, but also I cannot put hostPersistentID in configschema
+    // TODO: this destroys hostPersistentID requests, but also I cannot put hostPersistentID in configschema
     const result = CreateGameInputSchema.safeParse(req.body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
@@ -149,18 +149,21 @@ export async function startWorker() {
 
     // Pass creatorClientID to createGame
     const game = gm.createGame(id, gc, creatorClientID);
-	
-	log.info(
+
+    log.info(
       `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
     );
-	
-    const hostPersistentID = { hostPersistentID: game.setHostPersistentID(req.body.hostPersistentID) };
 
-	if (!hostPersistentID) {
-		log.warn(`Worker ${workerId}: IP ${ipAnonymize(clientIP)} id ${id} did not receive hostPersistentID, game may be started by anyone`)
-	}
+    const hostPersistentID = {
+      hostPersistentID: game.setHostPersistentID(req.body.hostPersistentID),
+    };
 
-    
+    if (!hostPersistentID) {
+      log.warn(
+        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} id ${id} did not receive hostPersistentID, game may be started by anyone`,
+      );
+    }
+
     res.json({ ...game.gameInfo(), ...hostPersistentID });
   });
 
@@ -181,9 +184,9 @@ export async function startWorker() {
     }
 
     const hostPersistentID = req.body.hostPersistentID ?? "";
-	const gameHostPersistentID = game.getHostPersistentID();
-	
-	// If gameHostPersistentID is null, no auth is done
+    const gameHostPersistentID = game.getHostPersistentID();
+
+    // If gameHostPersistentID is null, no auth is done
     if (gameHostPersistentID && hostPersistentID !== gameHostPersistentID) {
       log.info(`cannot start private game ${game.id}, requestor is not host`);
       res.status(403).json({ success: false });
