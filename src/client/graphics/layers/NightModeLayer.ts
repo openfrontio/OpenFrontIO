@@ -1,4 +1,4 @@
-import { UnitType } from "../../../core/game/Game";
+import { Cell, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { TransformHandler } from "../TransformHandler";
@@ -11,6 +11,9 @@ export class NightModeLayer implements Layer {
   private userSettingsInstance = new UserSettings();
   private mouseX: number = 0;
   private mouseY: number = 0;
+  private maxCityLightLevel: number = 15;
+
+  private mouseMoveHandler = (e: MouseEvent) => this.handleMouseMove(e);
 
   private handleMouseMove(event: MouseEvent) {
     const rect = this.transformHandler.boundingRect();
@@ -26,7 +29,7 @@ export class NightModeLayer implements Layer {
     private game: GameView | null,
     private transformHandler: TransformHandler,
   ) {
-    document.addEventListener("mousemove", (e) => this.handleMouseMove(e));
+    document.addEventListener("mousemove", this.mouseMoveHandler);
   }
 
   // New method to set game reference after construction
@@ -55,6 +58,58 @@ export class NightModeLayer implements Layer {
    * Renders illumination for all cities on the map.
    * Creates a glow effect similar to satellite images of Earth at night.
    */
+
+  private glowBitmaps: Map<number, ImageBitmap> = new Map();
+  //lazy generator & cache for little lag
+  private async getGlowBitmap(
+    level: number,
+    cellSize: number,
+  ): Promise<ImageBitmap> {
+    const cappedLevel = this.maxCityLightLevel;
+
+    // Check cache first
+    const cached = this.glowBitmaps.get(cappedLevel);
+    if (cached) return cached;
+
+    // Not in cache → generate, store, and return
+    const bitmap = await this.createGlowBitmap(cappedLevel, cellSize);
+    this.glowBitmaps.set(cappedLevel, bitmap);
+
+    return bitmap;
+  }
+
+  private async createGlowBitmap(
+    level: number,
+    cellSize: number,
+  ): Promise<ImageBitmap> {
+    const lightRadius = (10 + level * 2) * cellSize;
+    const size = lightRadius * 2;
+
+    // Use OffscreenCanvas for faster bitmap creation
+    const offscreen = new OffscreenCanvas(size, size);
+    const ctx = offscreen.getContext("2d")!;
+
+    // Glow gradient (you can customize color stops here)
+    const gradient = ctx.createRadialGradient(
+      lightRadius,
+      lightRadius,
+      0,
+      lightRadius,
+      lightRadius,
+      lightRadius,
+    );
+    gradient.addColorStop(0, "rgba(255, 230, 120, 0.8)");
+    gradient.addColorStop(0.4, "rgba(255, 180, 80, 0.4)");
+    gradient.addColorStop(1, "rgba(255, 140, 40, 0)");
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(lightRadius, lightRadius, lightRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    return await createImageBitmap(offscreen);
+  }
+
   private renderCityLights(
     context: CanvasRenderingContext2D,
     cellSize: number,
@@ -69,8 +124,11 @@ export class NightModeLayer implements Layer {
       const cityY = this.game!.y(tileRef);
 
       // Convert tile coordinates to screen coordinates
-      const screenX = cityX * cellSize;
-      const screenY = cityY * cellSize;
+      const screenPos = this.transformHandler.worldToScreenCoordinates(
+        new Cell(cityX, cityY),
+      );
+      const screenX = screenPos.x;
+      const screenY = screenPos.y;
 
       // Get city level for scaling the light effect
       const cityLevel = city.level();
@@ -84,38 +142,20 @@ export class NightModeLayer implements Layer {
    * Renders a glow effect for a single city.
    * Customize this method to achieve your desired lighting pattern.
    */
-  private renderCityGlow(
+  private async renderCityGlow(
     context: CanvasRenderingContext2D,
     x: number,
     y: number,
     cellSize: number,
     level: number,
-  ): void {
-    // Example 1: Simple bright square (like a satellite image)
-    const lightRadius = 5 + level * 2; // Larger cities have bigger glow
+  ): Promise<void> {
+    const glow = await this.getGlowBitmap(level, cellSize);
 
-    for (let dy = -lightRadius; dy <= lightRadius; dy++) {
-      for (let dx = -lightRadius; dx <= lightRadius; dx++) {
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance <= lightRadius) {
-          // Brightness decreases with distance
-          const brightness = 1 - distance / lightRadius;
-          const alpha = this.darkenAlpha * 0.8 * brightness;
+    // Compute radius for positioning (still capped)
+    const cappedLevel = this.maxCityLightLevel;
+    const radius = (10 + cappedLevel * 2) * cellSize;
 
-          context.fillStyle = `rgba(255, 220, 150, ${alpha})`;
-          context.fillRect(
-            x + dx * cellSize,
-            y + dy * cellSize,
-            cellSize,
-            cellSize,
-          );
-        }
-      }
-    }
-
-    // Example 2: Add a brighter core
-    context.fillStyle = `rgba(255, 255, 200, ${this.darkenAlpha * 0.9})`;
-    context.fillRect(x, y, cellSize, cellSize);
+    context.drawImage(glow, x - radius, y - radius);
   }
 
   /**
@@ -164,47 +204,7 @@ export class NightModeLayer implements Layer {
       }
     }
   }
-  private renderStructureLights(
-    context: CanvasRenderingContext2D,
-    cellSize: number,
-  ): void {
-    // SAM Launchers
-    const sams = this.game!.units(UnitType.SAMLauncher);
-    for (const sam of sams) {
-      const tileRef = sam.tile();
-      const x = this.game!.x(tileRef) * cellSize;
-      const y = this.game!.y(tileRef) * cellSize;
-
-      // Red warning lights
-      context.fillStyle = "rgba(255, 50, 50, 0.6)";
-      context.fillRect(x, y, cellSize, cellSize);
-    }
-
-    // Nukes in flight (if above certain height)
-    const nukes = this.game!.units(
-      UnitType.AtomBomb,
-      UnitType.HydrogenBomb,
-      UnitType.MIRV,
-    );
-
-    for (const nuke of nukes) {
-      const trajectoryIndex = nuke.trajectoryIndex();
-      const trajectory = nuke.trajectory();
-
-      if (trajectoryIndex < trajectory.length) {
-        const currentTile = trajectory[trajectoryIndex].tile;
-        const x = this.game!.x(currentTile) * cellSize;
-        const y = this.game!.y(currentTile) * cellSize;
-
-        // Bright white glow for nukes
-        context.fillStyle = "rgba(255, 255, 255, 0.9)";
-        context.fillRect(
-          x - cellSize,
-          y - cellSize,
-          cellSize * 3,
-          cellSize * 3,
-        );
-      }
-    }
+  destroy?(): void {
+    document.removeEventListener("mousemove", this.mouseMoveHandler);
   }
 }

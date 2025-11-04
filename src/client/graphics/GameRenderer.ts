@@ -284,13 +284,11 @@ export function createRenderer(
     uiState,
     layers,
     fpsDisplay,
-    nightModeLayer,
   );
 }
 
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
-  private nightModeLayer: NightModeLayer;
 
   constructor(
     private game: GameView,
@@ -300,9 +298,7 @@ export class GameRenderer {
     public uiState: UIState,
     private layers: Layer[],
     private fpsDisplay: FPSDisplay,
-    nightModeLayer: NightModeLayer,
   ) {
-    this.nightModeLayer = nightModeLayer;
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
@@ -327,7 +323,6 @@ export class GameRenderer {
       this.redraw();
       rafId = requestAnimationFrame(() => this.renderGame());
     });
-    this.nightModeLayer.setGame(this.game);
   }
 
   resizeCanvas() {
