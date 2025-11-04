@@ -597,9 +597,7 @@
   "control_panel": {
     "gold": "Gold",
     "troops": "Troops",
-    "attack_ratio": "Attack Ratio",
-    "from_territory": "territory",
-    "from_cities": "cities"
+    "attack_ratio": "Attack Ratio"
   },
   "player_panel": {
     "gold": "Gold",

@@ -210,24 +210,24 @@ export class ControlPanel extends LitElement implements Layer {
                 : 0}%"
             >
               <div
+                class="h-full"
                 style="background-color: ${this.game
                   ?.myPlayer()
                   ?.territoryColor()
-                  .toRgbString() ?? "rgb(147, 51, 234)"}; width: ${this
-                  ._maxTroops > 0
-                  ? (this._territoryMax / this._maxTroops) * 100
-                  : 50}%"
+                  .toRgbString() ?? "rgb(147, 51, 234)"}; flex-grow: ${this
+                  ._territoryMax}"
               ></div>
-              <div
-                style="background-color: ${this.game
-                  ?.myPlayer()
-                  ?.territoryColor()
-                  .darken(0.2)
-                  .toRgbString() ?? "rgb(59, 130, 246)"}; width: ${this
-                  ._maxTroops > 0
-                  ? (this._cityMax / this._maxTroops) * 100
-                  : 50}%"
-              ></div>
+              ${this._cityMax > 0
+                ? html`<div
+                    class="h-full"
+                    style="background-color: ${this.game
+                      ?.myPlayer()
+                      ?.territoryColor()
+                      .darken(0.2)
+                      .toRgbString() ?? "rgb(59, 130, 246)"}; flex-grow: ${this
+                      ._cityMax}"
+                  ></div>`
+                : ""}
             </div>
           </div>
           <div class="flex justify-between">
