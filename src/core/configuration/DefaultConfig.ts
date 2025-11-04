@@ -815,16 +815,24 @@ export class DefaultConfig implements Config {
     return this.infiniteTroops() ? 1_000_000 : 25_000;
   }
 
+  baseTerritoryCapacity(player: Player | PlayerView): number {
+    return 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000);
+  }
+
+  baseCityCapacity(player: Player | PlayerView): number {
+    return (
+      player
+        .units(UnitType.City)
+        .map((city) => city.level())
+        .reduce((a, b) => a + b, 0) * this.cityTroopIncrease()
+    );
+  }
+
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
-        : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-          player
-            .units(UnitType.City)
-            .map((city) => city.level())
-            .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+        : this.baseTerritoryCapacity(player) + this.baseCityCapacity(player);
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;

@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Gold, UnitType } from "../../../core/game/Game";
+import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
@@ -91,24 +91,17 @@ export class ControlPanel extends LitElement implements Layer {
       this.updateTroopIncrease();
     }
 
-    this._maxTroops = this.game.config().maxTroops(player);
     this._gold = player.gold();
     this._troops = player.troops();
     this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
+
     // Compute breakdown of max troops into territory and city contributions
-    try {
-      const tiles = player.numTilesOwned();
-      const territory = 2 * (Math.pow(tiles, 0.6) * 1000 + 50000);
-      const cityLevels = player.totalUnitLevels(UnitType.City);
-      const cityContribution =
-        cityLevels * this.game.config().cityTroopIncrease();
-      this._territoryCapacity = Math.round(territory);
-      this._cityCapacity = Math.round(cityContribution);
-    } catch (e) {
-      // Fallback: clear breakdown if anything unexpected
-      this._territoryCapacity = 0;
-      this._cityCapacity = 0;
-    }
+    // Uses config methods to ensure consistency with maxTroops calculation
+    const config = this.game.config();
+    this._territoryCapacity = Math.round(config.baseTerritoryCapacity(player));
+    this._cityCapacity = Math.round(config.baseCityCapacity(player));
+    this._maxTroops = config.maxTroops(player);
+
     this.requestUpdate();
   }
 
