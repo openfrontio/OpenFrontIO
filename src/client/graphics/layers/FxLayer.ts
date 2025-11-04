@@ -13,7 +13,7 @@ import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
-import { FadeFx, MoveSpriteFx, SpriteFx } from "../fx/SpriteFx";
+import { SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
 import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
@@ -21,8 +21,6 @@ import { Layer } from "./Layer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D;
-  private lastRandomEvent: number = 0;
-  private randomEventRate: number = 8;
 
   private lastRefresh: number = 0;
   private refreshRate: number = 10;
@@ -42,14 +40,6 @@ export class FxLayer implements Layer {
   }
 
   tick() {
-    if (!this.game.config().userSettings()?.fxLayer()) {
-      return;
-    }
-    this.lastRandomEvent += 1;
-    if (this.lastRandomEvent > this.randomEventRate) {
-      this.lastRandomEvent = 0;
-      this.randomEvent();
-    }
     this.manageBoatTargetFx();
     this.game
       .updatesSinceLastTick()
@@ -124,72 +114,6 @@ export class FxLayer implements Layer {
   addTextFx(text: string, x: number, y: number) {
     const textFx = new TextFx(text, x, y, 1000, 20);
     this.allFx.push(textFx);
-  }
-
-  randomEvent() {
-    const randX = Math.floor(Math.random() * this.game.width());
-    const randY = Math.floor(Math.random() * this.game.height());
-    const ref = this.game.ref(randX, randY);
-    if (this.game.isOcean(ref) && !this.game.isShoreline(ref)) {
-      const animation = Math.floor(Math.random() * 4);
-      if (animation === 0) {
-        const fx = new SpriteFx(
-          this.animatedSpriteLoader,
-          randX,
-          randY,
-          FxType.Shark,
-        );
-        this.allFx.push(fx);
-      } else if (animation === 1) {
-        const fx = new SpriteFx(
-          this.animatedSpriteLoader,
-          randX,
-          randY,
-          FxType.Bubble,
-        );
-        this.allFx.push(fx);
-      } else if (animation === 2) {
-        const fx = new MoveSpriteFx(
-          new SpriteFx(
-            this.animatedSpriteLoader,
-            randX,
-            randY,
-            FxType.Tornado,
-            6000,
-          ),
-          randX - 40,
-          randY,
-          0.1,
-          0.8,
-        );
-        this.allFx.push(fx);
-      } else if (animation === 3) {
-        const fx = new FadeFx(
-          new SpriteFx(
-            this.animatedSpriteLoader,
-            randX,
-            randY,
-            FxType.Tentacle,
-          ),
-          0.1,
-          0.8,
-        );
-        this.allFx.push(fx);
-      }
-    } else {
-      const ghost = new FadeFx(
-        new SpriteFx(
-          this.animatedSpriteLoader,
-          randX,
-          randY,
-          FxType.MiniSmoke,
-          4000,
-        ),
-        0.1,
-        0.8,
-      );
-      this.allFx.push(ghost);
-    }
   }
 
   onUnitEvent(unit: UnitView) {
