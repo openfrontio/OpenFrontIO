@@ -17,18 +17,25 @@ export class CityExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.city === null) {
+    if (!this.city) {
       if (isUnit(this.playerOrUnit)) {
         this.city = this.playerOrUnit;
         this.createStation();
       } else {
-        const spawnTile = this.playerOrUnit.canBuild(UnitType.City, this.tile!);
+        const spawnTile = this.playerOrUnit.canBuild(
+          UnitType.City, 
+          this.tile!,
+        );
         if (spawnTile === false) {
           console.warn("cannot build city");
           this.active = false;
           return;
         }
-        this.city = this.playerOrUnit.buildUnit(UnitType.City, spawnTile, {});
+        this.city = this.playerOrUnit.buildUnit(
+          UnitType.City, 
+          spawnTile,
+          {},
+          );
         this.createStation();
       }
     }

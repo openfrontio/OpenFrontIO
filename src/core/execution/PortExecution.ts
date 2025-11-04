@@ -11,10 +11,15 @@ export class PortExecution implements Execution {
   private random: PseudoRandom;
   private checkOffset: number;
 
+  constructor(playerOrUnit: Unit);
   constructor(
     private playerOrUnit: Player | Unit,
     private tile?: TileRef,
-  ) {}
+  ) {
+      if (!isUnit(playerOrUnit) && tile === undefined) {
+        throw new Error("tile is required when playerOrUnit is a Player");
+      }
+    }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;

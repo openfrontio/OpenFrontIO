@@ -60,7 +60,11 @@ export class ConstructionExecution implements Execution {
         this.active = false;
         return;
       }
-      this.structure = this.player.buildUnit(this.constructionType, spawnTile, {});
+      this.structure = this.player.buildUnit(
+        this.constructionType,
+        spawnTile,
+        {},
+      );
       const duration = info.constructionDuration ?? 0;
       if (duration > 0) {
         this.structure.setUnderConstruction(true);
@@ -121,7 +125,9 @@ export class ConstructionExecution implements Execution {
         this.mg.addExecution(new DefensePostExecution(this.structure!));
         break;
       case UnitType.SAMLauncher:
-        this.mg.addExecution(new SAMLauncherExecution(player, null, this.structure!));
+        this.mg.addExecution(
+          new SAMLauncherExecution(player, null, this.structure!),
+        );
         break;
       case UnitType.City:
         this.mg.addExecution(new CityExecution(this.structure!));

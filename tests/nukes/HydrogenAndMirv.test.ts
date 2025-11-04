@@ -20,6 +20,8 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     game.addExecution(new SpawnExecution(info, game.ref(1, 1)));
     while (game.inSpawnPhase()) game.executeNextTick();
     player = game.player(info.id);
+
+    player.conquer(game.ref(1, 1));
   });
 
   test("Hydrogen bomb launches when silo exists and cannot use silo under construction", () => {
@@ -38,7 +40,10 @@ describe("Hydrogen Bomb and MIRV flows", () => {
     );
     game.executeNextTick();
     game.executeNextTick();
-    expect(player.units(UnitType.HydrogenBomb).length).toBeGreaterThanOrEqual(0);
+    game.executeNextTick();
+    expect(player.units(UnitType.HydrogenBomb).length).toBeGreaterThan(
+      0,
+    );
 
     // Now build another silo with construction time and ensure it won't be used
     // Use non-instant config by simulating an under-construction flag on a new silo
