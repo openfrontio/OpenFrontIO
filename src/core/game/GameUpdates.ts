@@ -127,7 +127,7 @@ export interface UnitUpdate {
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
-  constructionType?: UnitType;
+  underConstruction?: boolean;
   missileTimerQueue: number[];
   level: number;
   hasTrainStation: boolean;

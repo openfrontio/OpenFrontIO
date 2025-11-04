@@ -216,6 +216,10 @@ export class SAMLauncherExecution implements Execution {
     }
     this.targetingSystem ??= new SAMTargetingSystem(this.mg, this.sam);
 
+    if (this.sam.isUnderConstruction()) {
+      return;
+    }
+
     if (this.sam.isInCooldown()) {
       const frontTime = this.sam.missileTimerQueue()[0];
       if (frontTime === undefined) {

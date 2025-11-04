@@ -228,8 +228,8 @@ export class PlayerImpl implements Player {
     const built = this.numUnitsConstructed[type] ?? 0;
     let constructing = 0;
     for (const unit of this._units) {
-      if (unit.type() !== UnitType.Construction) continue;
-      if (unit.constructionType() !== type) continue;
+      if (unit.type() !== type) continue;
+      if (!unit.isUnderConstruction()) continue;
       constructing++;
     }
     const total = constructing + built;
@@ -255,9 +255,9 @@ export class PlayerImpl implements Player {
         total += unit.level();
         continue;
       }
-      if (unit.type() !== UnitType.Construction) continue;
-      if (unit.constructionType() !== type) continue;
-      total++;
+      if (unit.type() === type && unit.isUnderConstruction()) {
+        total++;
+      }
     }
     return total;
   }
@@ -984,7 +984,6 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
-      case UnitType.Construction:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
@@ -998,10 +997,10 @@ export class PlayerImpl implements Player {
         return false;
       }
     }
-    // only get missilesilos that are not on cooldown
+    // only get missilesilos that are not on cooldown and not under construction
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
-        return !silo.isInCooldown();
+        return !silo.isInCooldown() && !silo.isUnderConstruction();
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length === 0) {

@@ -1,4 +1,4 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType, isUnit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { TrainStationExecution } from "./TrainStationExecution";
 
@@ -8,8 +8,8 @@ export class CityExecution implements Execution {
   private active: boolean = true;
 
   constructor(
-    private player: Player,
-    private tile: TileRef,
+    private playerOrUnit: Player | Unit,
+    private tile?: TileRef
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -18,22 +18,29 @@ export class CityExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.city === null) {
-      const spawnTile = this.player.canBuild(UnitType.City, this.tile);
-      if (spawnTile === false) {
-        console.warn("cannot build city");
-        this.active = false;
-        return;
+      if (isUnit(this.playerOrUnit)) {
+        this.city = this.playerOrUnit;
+        this.createStation();
+      } else {
+        const spawnTile = this.playerOrUnit.canBuild(UnitType.City, this.tile!);
+        if (spawnTile === false) {
+          console.warn("cannot build city");
+          this.active = false;
+          return;
+        }
+        this.city = this.playerOrUnit.buildUnit(UnitType.City, spawnTile, {});
+        this.createStation();
       }
-      this.city = this.player.buildUnit(UnitType.City, spawnTile, {});
-      this.createStation();
     }
     if (!this.city.isActive()) {
       this.active = false;
       return;
     }
 
-    if (this.player !== this.city.owner()) {
-      this.player = this.city.owner();
+    if (!isUnit(this.playerOrUnit)) {
+      if (this.playerOrUnit !== this.city.owner()) {
+        this.playerOrUnit = this.city.owner();
+      }
     }
   }
 
