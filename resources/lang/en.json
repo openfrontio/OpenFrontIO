@@ -501,7 +501,7 @@
     },
     "not_enough_money": "Not enough money"
   },
-"win_modal": {
+  "win_modal": {
     "support_openfront": "Support OpenFront!",
     "territory_pattern": "Purchase a territory skin to go ad-free!",
     "died": "You died",
