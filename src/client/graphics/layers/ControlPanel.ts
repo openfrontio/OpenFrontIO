@@ -1,5 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
@@ -9,8 +11,6 @@ import { AttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
-import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import troopIcon from "../../../../resources/images/TroopIconWhite.svg";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Layer {
@@ -90,7 +90,6 @@ export class ControlPanel extends LitElement implements Layer {
     this._troops = player.troops();
     this._maxTroops = this.game.config().maxTroops(player);
     this._gold = player.gold();
-    this._troops = player.troops();
     this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
     this.requestUpdate();
   }
@@ -185,7 +184,7 @@ export class ControlPanel extends LitElement implements Layer {
             <span class="inline-block">
               <img
                 src=${troopIcon}
-                alt="gold"
+                alt="troops"
                 width="16"
                 height="16"
                 style="vertical-align: middle;"
@@ -205,14 +204,18 @@ export class ControlPanel extends LitElement implements Layer {
         </div>
 
         <div class="relative mb-0">
-          <label class="flex justify-between text-white leading-4" translate="no">
-            <span>${translateText("control_panel.attack_ratio")}</span>
-            <span>${(this.attackRatio * 100).toFixed(0)}%
-            (${renderTroops(
-              (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-            )})</span>
-          </label
+          <label
+            class="flex justify-between text-white leading-4"
+            translate="no"
           >
+            <span>${translateText("control_panel.attack_ratio")}</span>
+            <span
+              >${(this.attackRatio * 100).toFixed(0)}%
+              (${renderTroops(
+                (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+              )})</span
+            >
+          </label>
           <div class="relative h-8">
             <!-- Background track -->
             <div
