@@ -6,6 +6,7 @@ import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import exitIcon from "../../../../resources/images/ExitIconWhite.svg";
 import explosionIcon from "../../../../resources/images/ExplosionIconWhite.svg";
 import mouseIcon from "../../../../resources/images/MouseIconWhite.svg";
+import nightModeIcon from "../../../../resources/images/NightModeIconWhite.svg";
 import ninjaIcon from "../../../../resources/images/NinjaIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import treeIcon from "../../../../resources/images/TreeIconWhite.svg";
@@ -132,6 +133,12 @@ export class SettingsModal extends LitElement implements Layer {
 
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
+    this.eventBus.emit(new RefreshGraphicsEvent());
+    this.requestUpdate();
+  }
+
+  private onToggleNightModeButtonClick() {
+    this.userSettings.toggleNightMode();
     this.eventBus.emit(new RefreshGraphicsEvent());
     this.requestUpdate();
   }
@@ -316,6 +323,31 @@ export class SettingsModal extends LitElement implements Layer {
               </div>
               <div class="text-sm text-slate-400">
                 ${this.userSettings.darkMode()
+                  ? translateText("user_setting.on")
+                  : translateText("user_setting.off")}
+              </div>
+            </button>
+
+            <button
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+              @click="${this.onToggleNightModeButtonClick}"
+            >
+              <img
+                src=${nightModeIcon}
+                alt="nightModeIcon"
+                width="20"
+                height="20"
+              />
+              <div class="flex-1">
+                <div class="font-medium">
+                  ${translateText("user_setting.night_mode_label")}
+                </div>
+                <div class="text-sm text-slate-400">
+                  ${translateText("user_setting.night_mode_desc")}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">
+                ${this.userSettings.nightMode()
                   ? translateText("user_setting.on")
                   : translateText("user_setting.off")}
               </div>
