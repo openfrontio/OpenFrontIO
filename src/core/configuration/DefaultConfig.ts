@@ -827,12 +827,7 @@ export class DefaultConfig implements Config {
   }
 
   baseCityCapacity(player: Player | PlayerView): number {
-    return (
-      player
-        .units(UnitType.City)
-        .map((city) => city.level())
-        .reduce((a, b) => a + b, 0) * this.cityTroopIncrease()
-    );
+    return player.totalUnitLevels(UnitType.City) * this.cityTroopIncrease();
   }
 
   maxTroops(player: Player | PlayerView): number {

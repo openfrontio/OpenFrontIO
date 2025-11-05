@@ -568,6 +568,7 @@ export interface Player {
   unitCount(type: UnitType): number;
   unitsConstructed(type: UnitType): number;
   unitsOwned(type: UnitType): number;
+  totalUnitLevels(type: UnitType): number;
   buildableUnits(tile: TileRef | null): BuildableUnit[];
   canBuild(type: UnitType, targetTile: TileRef): TileRef | false;
   buildUnit<T extends UnitType>(
