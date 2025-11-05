@@ -428,7 +428,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 </div>
               `
             : ""}
-          ${unit.type() === UnitType.TradeShip && tradeShipGold !== null
+          ${tradeShipGold !== null
             ? html`
                 <div class="flex gap-2 text-sm opacity-80 mt-1" translate="no">
                   <img
