@@ -120,7 +120,6 @@ export async function startWorker() {
     }
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
-    // TODO: this destroys hostPersistentID requests, but also I cannot put hostPersistentID in configschema
     const result = CreateGameInputSchema.safeParse(req.body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
@@ -158,13 +157,13 @@ export async function startWorker() {
       hostPersistentID: game.setHostPersistentID(req.body.hostPersistentID),
     };
 
-    if (!hostPersistentID) {
+    if (gc?.gameType === GameType.Private && !req.body.hostPersistentID) {
       log.warn(
-        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} id ${id} did not receive hostPersistentID, game may be started by anyone`,
+        `Worker ${workerId}: IP ${ipAnonymize(clientIP)} Private game with id ${id} did not receive hostPersistentID, game may be started by anyone`,
       );
     }
 
-    res.json({ ...game.gameInfo(), ...hostPersistentID });
+    res.json(game.gameInfo());
   });
 
   // Add other endpoints from your original server

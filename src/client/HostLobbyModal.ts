@@ -592,11 +592,6 @@ export class HostLobbyModal extends LitElement {
 
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
-        if (lobby.hostPersistentID === null) {
-          throw new Error(
-            "Server did not return hostPersistentID for private lobby",
-          );
-        }
         this.lobbyId = lobby.gameInfo.gameID;
         // join lobby
       })
@@ -866,7 +861,7 @@ export class HostLobbyModal extends LitElement {
 
 async function createLobby(
   creatorClientID: string,
-): Promise<{ gameInfo: GameInfo; hostPersistentID: string | null }> {
+): Promise<{ gameInfo: GameInfo }> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
@@ -890,7 +885,7 @@ async function createLobby(
     const data = await response.json();
     console.log("Success:", data);
 
-    return { gameInfo: data, hostPersistentID: data.hostPersistentID ?? null };
+    return { gameInfo: data };
   } catch (error) {
     console.error("Error creating lobby:", error);
     throw error;

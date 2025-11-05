@@ -3,7 +3,7 @@ import { GameConfigSchema } from "./Schemas";
 
 export const CreateGameInputSchema = GameConfigSchema.or(
   z
-    .object({})
+    .object({ hostPersistentID: z.string().uuid().optional() })
     .strict()
     .transform((val) => undefined),
 );
