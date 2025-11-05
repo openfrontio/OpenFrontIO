@@ -144,7 +144,17 @@ export class AlertFrame extends LitElement implements Layer {
     for (const attack of outgoingAttacks) {
       // Only track attacks on players (targetID !== 0 means it's a player, not unclaimed land)
       if (attack.targetID !== 0 && !attack.retreating) {
-        this.outgoingAttackTicks.set(attack.targetID, currentTick);
+        const existingTick = this.outgoingAttackTicks.get(attack.targetID);
+
+        // Only update timestamp if:
+        // 1. This is a new attack (not in map yet), OR
+        // 2. The existing entry has expired (older than retaliation window)
+        if (
+          existingTick === undefined ||
+          currentTick - existingTick >= RETALIATION_WINDOW_TICKS
+        ) {
+          this.outgoingAttackTicks.set(attack.targetID, currentTick);
+        }
       }
     }
 
