@@ -101,19 +101,16 @@ export class ControlPanel extends LitElement implements Layer {
     // Calculate troops on mission directly from player data
     const outgoingAttacks = player.outgoingAttacks();
 
-    const attackTroops = outgoingAttacks
-      .filter((a) => a.targetID !== 0)
-      .reduce((sum, attack) => sum + attack.troops, 0);
-
-    const landAttackTroops = outgoingAttacks
-      .filter((a) => a.targetID === 0)
-      .reduce((sum, attack) => sum + attack.troops, 0);
+    const attackTroops = outgoingAttacks.reduce(
+      (sum, attack) => sum + attack.troops,
+      0,
+    );
 
     const boatTroops = player
       .units(UnitType.TransportShip)
       .reduce((sum, boat) => sum + boat.troops(), 0);
 
-    this._troopsOnMission = attackTroops + landAttackTroops + boatTroops;
+    this._troopsOnMission = attackTroops + boatTroops;
 
     // Compute breakdown of max troops into territory and city contributions
     // Uses config methods to ensure consistency with maxTroops calculation
@@ -123,7 +120,7 @@ export class ControlPanel extends LitElement implements Layer {
         config.baseTerritoryCapacity(player),
       );
       this._cityCapacity = Math.round(config.baseCityCapacity(player));
-      this._maxTroops = config.maxTroops(player);
+      this._maxTroops = Math.round(config.maxTroops(player));
     } catch (e) {
       // Fallback: clear breakdown if anything unexpected
       console.warn("Failed to calculate capacity breakdown:", e);
@@ -162,6 +159,10 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   render() {
+    const playerColor =
+      this.game?.myPlayer()?.territoryColor()?.toRgbString() ??
+      "rgb(147, 51, 234)";
+
     return html`
       <style>
         input[type="range"] {
@@ -248,20 +249,14 @@ export class ControlPanel extends LitElement implements Layer {
               <div class="flex" style="flex-grow: ${this._troops}">
                 <div
                   class="h-full opacity-60"
-                  style="background-color: ${this.game
-                    ?.myPlayer()
-                    ?.territoryColor()
-                    .toRgbString() ?? "rgb(147, 51, 234)"}; flex-grow: ${this
+                  style="background-color: ${playerColor}; flex-grow: ${this
                     ._territoryCapacity}"
                 ></div>
                 ${this._cityCapacity > 0
                   ? html`<div
                       class="h-full opacity-80"
-                      style="background-color: ${this.game
-                        ?.myPlayer()
-                        ?.territoryColor()
-                        .toRgbString() ??
-                      "rgb(59, 130, 246)"}; flex-grow: ${this._cityCapacity}"
+                      style="background-color: ${playerColor}; flex-grow: ${this
+                        ._cityCapacity}"
                     ></div>`
                   : ""}
               </div>
