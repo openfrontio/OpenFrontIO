@@ -653,6 +653,30 @@ export class EventsDisplay extends LitElement implements Layer {
     this.eventBus.emit(new GoToUnitEvent(unit));
   }
 
+  /**
+   * Calculate total troops currently engaged in attacks and naval transport.
+   * Used by ControlPanel to display troops on mission indicator.
+   * @returns Total number of troops on mission
+   */
+  public getTroopsOnMission(): number {
+    const attackTroops = this.outgoingAttacks.reduce(
+      (sum, attack) => sum + attack.troops,
+      0,
+    );
+
+    const landAttackTroops = this.outgoingLandAttacks.reduce(
+      (sum, attack) => sum + attack.troops,
+      0,
+    );
+
+    const boatTroops = this.outgoingBoats.reduce(
+      (sum, boat) => sum + boat.troops(),
+      0,
+    );
+
+    return attackTroops + landAttackTroops + boatTroops;
+  }
+
   onEmojiMessageEvent(update: EmojiUpdate) {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;

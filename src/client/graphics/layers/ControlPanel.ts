@@ -41,6 +41,9 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private _gold: Gold;
 
+  @state()
+  private _troopsOnMission: number = 0;
+
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
@@ -94,6 +97,14 @@ export class ControlPanel extends LitElement implements Layer {
     this._gold = player.gold();
     this._troops = player.troops();
     this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
+
+    // Get troops on mission from EventsDisplay
+    const eventsDisplay = document.querySelector("events-display");
+    if (eventsDisplay && "getTroopsOnMission" in eventsDisplay) {
+      this._troopsOnMission = (eventsDisplay as any).getTroopsOnMission() ?? 0;
+    } else {
+      this._troopsOnMission = 0;
+    }
 
     // Compute breakdown of max troops into territory and city contributions
     // Uses config methods to ensure consistency with maxTroops calculation
@@ -207,38 +218,52 @@ export class ControlPanel extends LitElement implements Layer {
           <!-- Max troops breakdown bar -->
           <div
             role="progressbar"
-            aria-valuenow="${this._troops}"
+            aria-valuenow="${this._troops + this._troopsOnMission}"
             aria-valuemin="0"
             aria-valuemax="${this._maxTroops}"
-            aria-label="Troop capacity: ${this._troops} / ${this._maxTroops}"
+            aria-label="Troop capacity: ${this._troops} available, ${this
+              ._troopsOnMission} on mission, ${this._maxTroops} maximum"
             class="h-1 bg-black/50 rounded-full overflow-hidden mt-2 mb-3"
-            title="Territory: ${renderNumber(
+            title="Available - Territory: ${renderNumber(
               this._territoryCapacity,
-            )} | Cities: ${renderNumber(this._cityCapacity)}"
+            )} | Cities: ${renderNumber(this._cityCapacity)}${this
+              ._troopsOnMission > 0
+              ? ` | On Mission: ${renderNumber(this._troopsOnMission)}`
+              : ""}"
           >
             <div
               class="flex h-full"
               style="width: ${this._maxTroops > 0
-                ? (this._troops / this._maxTroops) * 100
+                ? ((this._troops + this._troopsOnMission) / this._maxTroops) *
+                  100
                 : 0}%"
             >
-              <div
-                class="h-full"
-                style="background-color: ${this.game
-                  ?.myPlayer()
-                  ?.territoryColor()
-                  .toRgbString() ?? "rgb(147, 51, 234)"}; flex-grow: ${this
-                  ._territoryCapacity}"
-              ></div>
-              ${this._cityCapacity > 0
+              <!-- Available troops (territory + cities) -->
+              <div class="flex" style="flex-grow: ${this._troops}">
+                <div
+                  class="h-full opacity-60"
+                  style="background-color: ${this.game
+                    ?.myPlayer()
+                    ?.territoryColor()
+                    .toRgbString() ?? "rgb(147, 51, 234)"}; flex-grow: ${this
+                    ._territoryCapacity}"
+                ></div>
+                ${this._cityCapacity > 0
+                  ? html`<div
+                      class="h-full opacity-80"
+                      style="background-color: ${this.game
+                        ?.myPlayer()
+                        ?.territoryColor()
+                        .toRgbString() ??
+                      "rgb(59, 130, 246)"}; flex-grow: ${this._cityCapacity}"
+                    ></div>`
+                  : ""}
+              </div>
+              <!-- Troops on mission (red with pattern for distinction) -->
+              ${this._troopsOnMission > 0
                 ? html`<div
-                    class="h-full"
-                    style="background-color: ${this.game
-                      ?.myPlayer()
-                      ?.territoryColor()
-                      .darken(0.2)
-                      .toRgbString() ?? "rgb(59, 130, 246)"}; flex-grow: ${this
-                      ._cityCapacity}"
+                    class="h-full bg-red-600 opacity-50"
+                    style="flex-grow: ${this._troopsOnMission}"
                   ></div>`
                 : ""}
             </div>
