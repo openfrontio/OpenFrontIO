@@ -224,12 +224,6 @@ export class ControlPanel extends LitElement implements Layer {
             aria-label="Troop capacity: ${this._troops} available, ${this
               ._troopsOnMission} on mission, ${this._maxTroops} maximum"
             class="h-1 bg-black/50 rounded-full overflow-hidden mt-2 mb-3"
-            title="Available - Territory: ${renderNumber(
-              this._territoryCapacity,
-            )} | Cities: ${renderNumber(this._cityCapacity)}${this
-              ._troopsOnMission > 0
-              ? ` | On Mission: ${renderNumber(this._troopsOnMission)}`
-              : ""}"
           >
             <div
               class="flex h-full"
