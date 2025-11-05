@@ -171,6 +171,9 @@ export class AlertFrame extends LitElement implements Layer {
       currentTick - this.lastAlertTick < ALERT_COOLDOWN_TICKS;
 
     // Find new attacks that we haven't seen yet
+    const playerTroops = myPlayer.troops();
+    const minAttackTroopsThreshold = playerTroops / 5; // 1/5 of current troops
+
     for (const attack of incomingAttacks) {
       // Only alert for non-retreating attacks
       if (!attack.retreating && !this.seenAttackIds.has(attack.id)) {
@@ -180,10 +183,14 @@ export class AlertFrame extends LitElement implements Layer {
           ourAttackTick !== undefined &&
           currentTick - ourAttackTick < RETALIATION_WINDOW_TICKS;
 
+        // Check if attack is too small (less than 1/5 of our troops)
+        const isSmallAttack = attack.troops < minAttackTroopsThreshold;
+
         // Don't alert if:
         // 1. We're in cooldown from a recent alert
-        // 2. This is a retaliation (we attacked them within 10 seconds)
-        if (!inCooldown && !isRetaliation) {
+        // 2. This is a retaliation (we attacked them within 15 seconds)
+        // 3. The attack is too small (less than 1/5 of our troops)
+        if (!inCooldown && !isRetaliation && !isSmallAttack) {
           this.seenAttackIds.add(attack.id);
           this.activateAlert();
         } else {
