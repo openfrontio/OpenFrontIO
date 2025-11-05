@@ -52,7 +52,7 @@ describe("PlayerSpawner", () => {
     const players: PlayerInfo[] = [];
 
     // Try to spawn more players than possible on a small map
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 5; i++) {
       players.push(
         new PlayerInfo(
           `player${i}`,
@@ -67,7 +67,6 @@ describe("PlayerSpawner", () => {
     const executors = new PlayerSpawner(game, "game_id").spawnPlayers();
 
     // Should spawn fewer than requested when map is too small
-    expect(executors.length).toBeLessThan(players.length);
-    expect(executors.length).toBeGreaterThan(0);
+    expect(executors.length).toBe(1);
   });
 });

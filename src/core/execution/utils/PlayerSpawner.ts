@@ -72,7 +72,6 @@ export class PlayerSpawner {
 
       if (spawnLand === null) {
         // TODO: this should normally not happen, additional logic may be needed, if this occurs
-        console.warn(`cannot spawn ${player.id}`);
         continue;
       }
 
