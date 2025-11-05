@@ -175,6 +175,8 @@ export class PathFinder {
       case PathFindResultType.Completed:
         this.computeFinished = true;
         this.path = this.aStar.reconstructPath();
+
+        // exclude first tile
         this.path_idx = 1;
 
         return this.nextTile(curr, dst);

@@ -2,7 +2,6 @@ import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
-import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
@@ -38,17 +37,17 @@ import {
   generateCryptoRandomUUID,
   incrementGamesPlayed,
   isInIframe,
-  translateText,
 } from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn } from "./jwt";
+import { getUserMe, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 declare global {
   interface Window {
+    enableAds: boolean;
     PageOS: {
       session: {
         newPageView: () => void;
@@ -59,6 +58,7 @@ declare global {
       destroyZone: (id: string) => void;
       pageInit: (options?: any) => void;
       que: Array<() => void>;
+      destroySticky: () => void;
     };
     ramp: {
       que: Array<() => void>;
@@ -278,98 +278,12 @@ class Client {
         }),
       );
 
-      const config = await getServerConfigFromClient();
-      if (!hasAllowedFlare(userMeResponse, config)) {
-        if (userMeResponse === false) {
-          // Login is required
-          document.body.innerHTML = `
-            <div style="
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              height: 100vh;
-              margin: 0;
-              font-family: sans-serif;
-              background-size: cover;
-              background-position: center;
-            ">
-              <div style="
-                background-color: rgba(0, 0, 0, 0.7);
-                color: white;
-                padding: 2em;
-                margin: 5em;
-                border-radius: 12px;
-                text-align: center;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-              ">
-                <p style="margin-bottom: 1em;">${translateText("auth.login_required")}</p>
-                <p style="margin-bottom: 1.5em;">${translateText("auth.redirecting")}</p>
-                <div style="width: 100%; height: 8px; background-color: #444; border-radius: 4px; overflow: hidden;">
-                  <div style="
-                    height: 100%;
-                    width: 0%;
-                    background-color: #4caf50;
-                    animation: fillBar 5s linear forwards;
-                  "></div>
-                </div>
-              </div>
-            </div>
-            <div class="bg-image"></div>
-            <style>
-              @keyframes fillBar {
-                from { width: 0%; }
-                to { width: 100%; }
-              }
-            </style>
-          `;
-          setTimeout(discordLogin, 5000);
-        } else {
-          // Unauthorized
-          document.body.innerHTML = `
-            <div style="
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              height: 100vh;
-              margin: 0;
-              font-family: sans-serif;
-              background-size: cover;
-              background-position: center;
-            ">
-              <div style="
-                background-color: rgba(0, 0, 0, 0.7);
-                color: white;
-                padding: 2em;
-                margin: 5em;
-                border-radius: 12px;
-                text-align: center;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-              ">
-                <p style="margin-bottom: 1em;">${translateText("auth.not_authorized")}</p>
-                <p>${translateText("auth.contact_admin")}</p>
-              </div>
-            </div>
-            <div class="bg-image"></div>
-          `;
-        }
-        return;
-      } else if (userMeResponse === false) {
-        // Not logged in
-        this.patternsModal.onUserMe(null);
-      } else {
+      if (userMeResponse !== false) {
         // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
-        this.patternsModal.onUserMe(userMeResponse);
-        const flares = (userMeResponse.player.flares ?? []).filter((flare) =>
-          flare.startsWith("pattern:"),
-        );
-        if (flares.length > 0) {
-          console.log("Hiding gutter ads because you have patterns");
-          this.gutterAds.hide();
-        }
       }
     };
 
@@ -642,12 +556,6 @@ class Client {
         this.publicLobby.stop();
         incrementGamesPlayed();
 
-        try {
-          window.PageOS.session.newPageView();
-        } catch (e) {
-          console.error("Error calling newPageView", e);
-        }
-
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
@@ -689,7 +597,6 @@ class Client {
           window.fusetag.pageInit({
             blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
           });
-          this.gutterAds.show();
         });
         return true;
       } else {
@@ -748,16 +655,4 @@ function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
-}
-
-function hasAllowedFlare(
-  userMeResponse: UserMeResponse | false,
-  config: ServerConfig,
-) {
-  const allowed = config.allowedFlares();
-  if (allowed === undefined) return true;
-  if (userMeResponse === false) return false;
-  const flares = userMeResponse.player.flares;
-  if (flares === undefined) return false;
-  return allowed.length === 0 || allowed.some((f) => flares.includes(f));
 }

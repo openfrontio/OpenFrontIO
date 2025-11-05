@@ -131,10 +131,12 @@ export interface Config {
   emojiMessageCooldown(): Tick;
   emojiMessageDuration(): Tick;
   donateCooldown(): Tick;
+  embargoAllCooldown(): Tick;
   deletionMarkDuration(): Tick;
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
+  tradeShipShortRangeDebuff(): number;
   tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(
     numTradeShips: number,
@@ -200,4 +202,7 @@ export interface Theme {
   neutralColor(): Colord;
   enemyColor(): Colord;
   spawnHighlightColor(): Colord;
+  spawnHighlightSelfColor(): Colord;
+  spawnHighlightTeamColor(): Colord;
+  spawnHighlightEnemyColor(): Colord;
 }

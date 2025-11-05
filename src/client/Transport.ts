@@ -132,6 +132,10 @@ export class SendEmbargoIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendEmbargoAllIntentEvent implements GameEvent {
+  constructor(public readonly action: "start" | "stop") {}
+}
+
 export class SendDeleteUnitIntentEvent implements GameEvent {
   constructor(public readonly unitId: number) {}
 }
@@ -225,6 +229,9 @@ export class Transport {
     this.eventBus.on(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
     this.eventBus.on(SendEmbargoIntentEvent, (e) =>
       this.onSendEmbargoIntent(e),
+    );
+    this.eventBus.on(SendEmbargoAllIntentEvent, (e) =>
+      this.onSendEmbargoAllIntent(e),
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
@@ -528,6 +535,14 @@ export class Transport {
     });
   }
 
+  private onSendEmbargoAllIntent(event: SendEmbargoAllIntentEvent) {
+    this.sendIntent({
+      type: "embargo_all",
+      clientID: this.lobbyConfig.clientID,
+      action: event.action,
+    });
+  }
+
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
     this.sendIntent({
       type: "build_unit",
@@ -575,7 +590,7 @@ export class Transport {
     } else {
       console.log(
         "WebSocket is not open. Current state:",
-        this.socket!.readyState,
+        this.socket?.readyState,
       );
       console.log("attempting reconnect");
     }

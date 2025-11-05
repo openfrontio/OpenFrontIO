@@ -115,6 +115,13 @@ export class AutoUpgradeEvent implements GameEvent {
   ) {}
 }
 
+export class TickMetricsEvent implements GameEvent {
+  constructor(
+    public readonly tickExecutionDuration?: number,
+    public readonly tickDelay?: number,
+  ) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -167,6 +174,9 @@ export class InputHandler {
       console.warn("Invalid keybinds JSON:", e);
     }
 
+    // Mac users might have different keybinds
+    const isMac = /Mac/.test(navigator.userAgent);
+
     this.keybinds = {
       toggleView: "Space",
       centerCamera: "KeyC",
@@ -180,7 +190,7 @@ export class InputHandler {
       attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
-      modifierKey: "ControlLeft",
+      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       buildCity: "Digit1",
       buildFactory: "Digit2",
@@ -194,12 +204,6 @@ export class InputHandler {
       buildMIRV: "Digit0",
       ...saved,
     };
-
-    // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
-    if (isMac) {
-      this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
-    }
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
