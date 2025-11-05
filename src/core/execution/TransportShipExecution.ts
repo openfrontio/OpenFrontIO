@@ -220,28 +220,18 @@ export class TransportShipExecution implements Execution {
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
     switch (result.type) {
       case PathFindResultType.Completed:
-        if (this.mg.owner(this.dst) === this.attacker) {
-          this.attacker.addTroops(this.boat.troops());
-          this.boat.delete(false);
-          this.active = false;
-
-          // Record stats
-          this.mg
-            .stats()
-            .boatArriveTroops(this.attacker, this.target, this.boat.troops());
-          return;
-        }
-        this.attacker.conquer(this.dst);
-        if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
-          this.attacker.addTroops(this.boat.troops());
-        } else {
+        this.attacker.addTroops(this.boat.troops());
+        if (
+          this.mg.owner(this.dst) !== this.attacker &&
+          (!this.target.isPlayer() || !this.attacker.isFriendly(this.target))
+        ) {
+          this.attacker.conquer(this.dst);
           this.mg.addExecution(
             new AttackExecution(
               this.boat.troops(),
               this.attacker,
               this.targetID,
               this.dst,
-              false,
             ),
           );
         }
