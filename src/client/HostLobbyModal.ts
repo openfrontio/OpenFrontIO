@@ -859,9 +859,7 @@ export class HostLobbyModal extends LitElement {
   }
 }
 
-async function createLobby(
-  creatorClientID: string,
-): Promise<GameInfo> {
+async function createLobby(creatorClientID: string): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
