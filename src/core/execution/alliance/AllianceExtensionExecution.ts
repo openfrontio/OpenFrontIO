@@ -38,7 +38,7 @@ export class AllianceExtensionExecution implements Execution {
 
     // Check if this is a new request (before adding it)
     const wasOnlyOneAgreed = alliance.onlyOneAgreedToExtend();
-    
+
     // Mark this player's intent to extend
     alliance.addExtensionRequest(this.from);
 
