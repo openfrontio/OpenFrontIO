@@ -8,6 +8,8 @@ import { SpawnExecution } from "../SpawnExecution";
 export class PlayerSpawner {
   private random: PseudoRandom;
   private players: SpawnExecution[] = [];
+  private static readonly MAX_SPAWN_TRIES = 100;
+  private static readonly MIN_SPAWN_DISTANCE = 30;
 
   constructor(
     private gm: Game,
@@ -23,10 +25,10 @@ export class PlayerSpawner {
     return this.gm.ref(x, y);
   }
 
-  randomSpawnLand(): TileRef | null {
+  private randomSpawnLand(): TileRef | null {
     let tries = 0;
 
-    while (tries < 100) {
+    while (tries < PlayerSpawner.MAX_SPAWN_TRIES) {
       tries++;
 
       const tile = this.randTile();
@@ -41,7 +43,10 @@ export class PlayerSpawner {
 
       let tooCloseToOtherPlayer = false;
       for (const spawn of this.players) {
-        if (this.gm.manhattanDist(spawn.tile, tile) < 30) {
+        if (
+          this.gm.manhattanDist(spawn.tile, tile) <
+          PlayerSpawner.MIN_SPAWN_DISTANCE
+        ) {
           tooCloseToOtherPlayer = true;
           break;
         }
