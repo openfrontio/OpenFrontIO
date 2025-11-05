@@ -262,6 +262,12 @@ export class PlayerImpl implements Player {
     return total;
   }
 
+  totalUnitLevels(type: UnitType): number {
+    return this.units(type)
+      .map((unit) => unit.level())
+      .reduce((a, b) => a + b, 0);
+  }
+
   sharesBorderWith(other: Player | TerraNullius): boolean {
     for (const border of this._borderTiles) {
       for (const neighbor of this.mg.map().neighbors(border)) {
