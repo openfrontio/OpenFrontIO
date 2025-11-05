@@ -9,7 +9,11 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
-import { flattenedEmojiTable } from "../../Util";
+import {
+  boundingBoxCenter,
+  calculateBoundingBoxCenter,
+  flattenedEmojiTable,
+} from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
@@ -20,7 +24,7 @@ const EMOJI_ASSIST_ACCEPT = (["👍", "⛵", "🤝", "🎯"] as const).map(emoji
 const EMOJI_RELATION_TOO_LOW = (["🥱", "🤦‍♂️"] as const).map(emojiId);
 const EMOJI_TARGET_ME = (["🥺", "💀"] as const).map(emojiId);
 const EMOJI_TARGET_ALLY = (["🕊️", "👎"] as const).map(emojiId);
-export const EMOJI_HECKLE = (["👻", "🎃"] as const).map(emojiId);
+export const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
 
 export class BotBehavior {
   private enemy: Player | null = null;
@@ -198,7 +202,7 @@ export class BotBehavior {
     }
   }
 
-  selectEnemy(enemies: Player[]): Player | null {
+  selectEnemy(borderingEnemies: Player[]): Player | null {
     if (this.enemy === null) {
       // Save up troops until we reach the reserve ratio
       if (!this.hasReserveRatioTroops()) return null;
@@ -249,18 +253,81 @@ export class BotBehavior {
       }
 
       // Select the weakest player
-      if (this.enemy === null && enemies.length > 0) {
-        this.setNewEnemy(enemies[0]);
+      if (this.enemy === null && borderingEnemies.length > 0) {
+        this.setNewEnemy(borderingEnemies[0]);
       }
 
       // Select a random player
-      if (this.enemy === null && enemies.length > 0) {
-        this.setNewEnemy(this.random.randElement(enemies));
+      if (this.enemy === null && borderingEnemies.length > 0) {
+        this.setNewEnemy(this.random.randElement(borderingEnemies));
+      }
+
+      // If we don't have bordering enemies, we are on an island. Attack someone on an island next to us
+      if (this.enemy === null && borderingEnemies.length === 0) {
+        this.selectNearestIslandEnemy();
       }
     }
 
     // Sanity check, don't attack our allies or teammates
     return this.enemySanityCheck();
+  }
+
+  getPlayerCenter(player: Player) {
+    if (player.largestClusterBoundingBox) {
+      return boundingBoxCenter(player.largestClusterBoundingBox);
+    }
+    return calculateBoundingBoxCenter(this.game, player.borderTiles());
+  }
+
+  selectNearestIslandEnemy() {
+    const myBorder = this.player.borderTiles();
+    if (myBorder.size === 0) return;
+
+    const filteredPlayers = this.game.players().filter((p) => {
+      if (p === this.player) return false;
+      if (!p.isAlive()) return false;
+      if (p.borderTiles().size === 0) return false;
+      if (this.player.isFriendly(p)) return false;
+      // Don't spam boats into players more than 2x our troops
+      return p.troops() <= this.player.troops() * 2;
+    });
+
+    if (filteredPlayers.length > 0) {
+      const playerCenter = this.getPlayerCenter(this.player);
+
+      const sortedPlayers = filteredPlayers
+        .map((filteredPlayer) => {
+          const filteredPlayerCenter = this.getPlayerCenter(filteredPlayer);
+
+          const playerCenterTile = this.game.ref(
+            playerCenter.x,
+            playerCenter.y,
+          );
+          const filteredPlayerCenterTile = this.game.ref(
+            filteredPlayerCenter.x,
+            filteredPlayerCenter.y,
+          );
+
+          const distance = this.game.manhattanDist(
+            playerCenterTile,
+            filteredPlayerCenterTile,
+          );
+          return { player: filteredPlayer, distance };
+        })
+        .sort((a, b) => a.distance - b.distance); // Sort by distance (ascending)
+
+      // Select the nearest or second-nearest enemy (So our boat doesn't always run into the same warship, if there is one)
+      let selectedEnemy: Player | null;
+      if (sortedPlayers.length > 1 && this.random.chance(2)) {
+        selectedEnemy = sortedPlayers[1].player;
+      } else {
+        selectedEnemy = sortedPlayers[0].player;
+      }
+
+      if (selectedEnemy !== null) {
+        this.setNewEnemy(selectedEnemy);
+      }
+    }
   }
 
   selectRandomEnemy(): Player | TerraNullius | null {
