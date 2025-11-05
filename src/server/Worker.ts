@@ -153,10 +153,6 @@ export async function startWorker() {
       `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
     );
 
-    const hostPersistentID = {
-      hostPersistentID: game.setHostPersistentID(req.body.hostPersistentID),
-    };
-
     if (gc?.gameType === GameType.Private && !req.body.hostPersistentID) {
       log.warn(
         `Worker ${workerId}: IP ${ipAnonymize(clientIP)} Private game with id ${id} did not receive hostPersistentID, game may be started by anyone`,
