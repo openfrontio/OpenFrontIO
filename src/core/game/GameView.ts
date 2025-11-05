@@ -644,9 +644,6 @@ export class GameView implements GameMap {
   inSpawnPhase(): boolean {
     return this.ticks() <= this._config.numSpawnPhaseTurns();
   }
-  isRandomSpawn(): boolean {
-    return this._config.randomSpawn();
-  }
   config(): Config {
     return this._config;
   }

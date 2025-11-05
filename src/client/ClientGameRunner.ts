@@ -327,7 +327,7 @@ export class ClientGameRunner {
         this.hasJoined = true;
         console.log("starting game!");
 
-        if (this.gameView.isRandomSpawn()) {
+        if (this.gameView.config().isRandomSpawn()) {
           setTimeout(() => {
             const myPlayer = this.gameView.myPlayer();
 
@@ -449,7 +449,7 @@ export class ClientGameRunner {
       this.gameView.isLand(tile) &&
       !this.gameView.hasOwner(tile) &&
       this.gameView.inSpawnPhase() &&
-      !this.gameView.isRandomSpawn()
+      !this.gameView.config().isRandomSpawn()
     ) {
       this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;

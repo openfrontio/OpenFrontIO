@@ -88,7 +88,7 @@ export interface Config {
   infiniteTroops(): boolean;
   donateTroops(): boolean;
   instantBuild(): boolean;
-  randomSpawn(): boolean;
+  isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
