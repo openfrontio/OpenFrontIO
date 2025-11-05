@@ -12,6 +12,7 @@ import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
+import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
@@ -30,6 +31,7 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
+  private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -87,6 +89,32 @@ export class FxLayer implements Layer {
     }
   }
 
+  // Register a persistent nuke target marker for the current player or teammates
+  private createNukeTargetFxIfOwned(unit: UnitView) {
+    const my = this.game.myPlayer();
+    if (!my) return;
+    // Show nuke marker owned by the player or by players on the same team
+    if (
+      (unit.owner() === my || my.isOnSameTeam(unit.owner())) &&
+      unit.isActive()
+    ) {
+      if (!this.nukeTargetFxByUnitId.has(unit.id())) {
+        const t = unit.targetTile();
+        if (t !== undefined) {
+          const x = this.game.x(t);
+          const y = this.game.y(t);
+          const fx = new NukeAreaFx(
+            x,
+            y,
+            this.game.config().nukeMagnitudes(unit.type()),
+          );
+          this.allFx.push(fx);
+          this.nukeTargetFxByUnitId.set(unit.id(), fx);
+        }
+      }
+    }
+  }
+
   onBonusEvent(bonus: BonusEventUpdate) {
     if (this.game.player(bonus.player) !== this.game.myPlayer()) {
       // Only display text fx for the current player
@@ -135,13 +163,19 @@ export class FxLayer implements Layer {
         }
         break;
       }
-      case UnitType.AtomBomb:
+      case UnitType.AtomBomb: {
+        this.createNukeTargetFxIfOwned(unit);
+        this.onNukeEvent(unit, 70);
+        break;
+      }
       case UnitType.MIRVWarhead:
         this.onNukeEvent(unit, 70);
         break;
-      case UnitType.HydrogenBomb:
+      case UnitType.HydrogenBomb: {
+        this.createNukeTargetFxIfOwned(unit);
         this.onNukeEvent(unit, 160);
         break;
+      }
       case UnitType.Warship:
         this.onWarshipEvent(unit);
         break;
@@ -270,6 +304,11 @@ export class FxLayer implements Layer {
 
   onNukeEvent(unit: UnitView, radius: number) {
     if (!unit.isActive()) {
+      const fx = this.nukeTargetFxByUnitId.get(unit.id());
+      if (fx) {
+        fx.end();
+        this.nukeTargetFxByUnitId.delete(unit.id());
+      }
       if (!unit.reachedTarget()) {
         this.handleSAMInterception(unit);
       } else {

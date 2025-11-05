@@ -14,6 +14,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Quads,
   Trios,
   UnitType,
@@ -149,6 +150,7 @@ const TeamCountConfigSchema = z.union([
   z.literal(Duos),
   z.literal(Trios),
   z.literal(Quads),
+  z.literal(HumansVsNations),
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
@@ -545,6 +547,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema.nullable(), // WARNING: PII
+  clanTag: z.string().optional(),
   stats: PlayerStatsSchema,
 });
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
