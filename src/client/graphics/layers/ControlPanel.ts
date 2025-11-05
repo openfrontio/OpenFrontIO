@@ -44,6 +44,9 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private _troopsOnMission: number = 0;
 
+  @state()
+  private _playerColor: string = ""; // Will be set in tick() from theme.neutralColor()
+
   private _troopRateIsIncreasing: boolean = true;
 
   private _lastTroopIncreaseRate: number;
@@ -129,6 +132,11 @@ export class ControlPanel extends LitElement implements Layer {
       this._maxTroops = 0;
     }
 
+    // Cache player color to avoid redundant calls in render()
+    this._playerColor =
+      player.territoryColor()?.toRgbString() ??
+      this.game.config().theme().neutralColor().toRgbString();
+
     this.requestUpdate();
   }
 
@@ -159,9 +167,7 @@ export class ControlPanel extends LitElement implements Layer {
   }
 
   render() {
-    const playerColor =
-      this.game?.myPlayer()?.territoryColor()?.toRgbString() ??
-      "rgb(147, 51, 234)";
+    const playerColor = this._playerColor;
 
     return html`
       <style>
@@ -233,6 +239,7 @@ export class ControlPanel extends LitElement implements Layer {
             aria-valuemax="${this._maxTroops}"
             aria-label="Troop capacity: ${this._troops} available, ${this
               ._troopsOnMission} on mission, ${this._maxTroops} maximum"
+            aria-describedby="troop-capacity-description"
             class="h-1 bg-black/50 rounded-full overflow-hidden mt-2 mb-3"
           >
             <div
@@ -269,6 +276,11 @@ export class ControlPanel extends LitElement implements Layer {
                 : ""}
             </div>
           </div>
+          <span id="troop-capacity-description" class="sr-only">
+            Colored bar segments represent territory capacity (lighter shade)
+            and city capacity (darker shade). Red segment shows troops currently
+            on mission.
+          </span>
           <div class="flex justify-between">
             <span class="font-bold"
               >${translateText("control_panel.gold")}:</span
