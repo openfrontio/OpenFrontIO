@@ -328,14 +328,14 @@ export class ClientGameRunner {
         console.log("starting game!");
 
         if (this.gameView.config().isRandomSpawn()) {
-          setTimeout(() => {
+          const goToPlayer = () => {
             const myPlayer = this.gameView.myPlayer();
 
-            if (!myPlayer) {
-              return;
-            }
-
-            if (!myPlayer.hasSpawned()) {
+            if (!myPlayer || !myPlayer.hasSpawned()) {
+              if (this.gameView.inSpawnPhase()) {
+                setTimeout(goToPlayer, 1000);
+                return;
+              }
               showErrorModal(
                 "spawn_failed",
                 translateText("error_modal.spawn_failed.description"),
@@ -345,12 +345,14 @@ export class ClientGameRunner {
                 false,
                 translateText("error_modal.spawn_failed.title"),
               );
-
               return;
             }
 
             this.eventBus.emit(new GoToPlayerEvent(myPlayer));
-          }, 1000);
+          };
+
+          // Start immediately; allow slower machines up to end of spawn phase to finish spawn.
+          goToPlayer();
         }
 
         for (const turn of message.turns) {
