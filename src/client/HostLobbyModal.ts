@@ -592,7 +592,7 @@ export class HostLobbyModal extends LitElement {
 
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
-        this.lobbyId = lobby.gameInfo.gameID;
+        this.lobbyId = lobby.gameID;
         // join lobby
       })
       .then(() => {
@@ -861,7 +861,7 @@ export class HostLobbyModal extends LitElement {
 
 async function createLobby(
   creatorClientID: string,
-): Promise<{ gameInfo: GameInfo }> {
+): Promise<GameInfo> {
   const config = await getServerConfigFromClient();
   try {
     const id = generateID();
@@ -885,7 +885,7 @@ async function createLobby(
     const data = await response.json();
     console.log("Success:", data);
 
-    return { gameInfo: data };
+    return data as GameInfo;
   } catch (error) {
     console.error("Error creating lobby:", error);
     throw error;
