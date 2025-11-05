@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { UserMeResponse } from "../core/ApiSchemas";
 import { isInIframe } from "./Utils";
 
 const LEFT_FUSE = "gutter-ad-container-left";
@@ -15,6 +16,31 @@ export class GutterAds extends LitElement {
   // Override createRenderRoot to disable shadow DOM
   createRenderRoot() {
     return this;
+  }
+
+  private readonly boundUserMeHandler = (event: Event) =>
+    this.onUserMe((event as CustomEvent<UserMeResponse | false>).detail);
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener(
+      "userMeResponse",
+      this.boundUserMeHandler as EventListener,
+    );
+  }
+
+  private onUserMe(userMeResponse: UserMeResponse | false): void {
+    const flares =
+      userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+    const hasFlare = flares.some((flare) => flare.startsWith("pattern:"));
+    if (hasFlare) {
+      console.log("No ads because you have patterns");
+      window.enableAds = false;
+    } else {
+      console.log("No flares, showing ads");
+      this.show();
+      window.enableAds = true;
+    }
   }
 
   private isScreenLargeEnough(): boolean {
@@ -52,6 +78,10 @@ export class GutterAds extends LitElement {
     this.isVisible = false;
     console.log("hiding GutterAds");
     this.destroyAds();
+    document.removeEventListener(
+      "userMeResponse",
+      this.boundUserMeHandler as EventListener,
+    );
     this.requestUpdate();
   }
 
@@ -95,7 +125,7 @@ export class GutterAds extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    this.destroyAds();
+    this.hide();
   }
 
   render() {

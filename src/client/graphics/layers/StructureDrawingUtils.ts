@@ -256,6 +256,7 @@ export class SpriteFactory {
     const tc = owner.territoryColor();
     const bc = owner.borderColor();
 
+    // Potentially change logic here. Some TC/BC combinations do not provide good color contrast.
     const darker = bc.luminance() < tc.luminance() ? bc : tc;
     const lighter = bc.luminance() < tc.luminance() ? tc : bc;
 
@@ -427,6 +428,7 @@ export class SpriteFactory {
     type: UnitType,
     stage: PIXI.Container,
     pos: { x: number; y: number },
+    level?: number,
   ): PIXI.Container | null {
     if (stage === undefined) throw new Error("Not initialized");
     const parentContainer = new PIXI.Container();
@@ -434,7 +436,7 @@ export class SpriteFactory {
     let radius = 0;
     switch (type) {
       case UnitType.SAMLauncher:
-        radius = this.game.config().defaultSamRange();
+        radius = this.game.config().samRange(level ?? 1);
         break;
       case UnitType.Factory:
         radius = this.game.config().trainStationMaxRange();
@@ -453,7 +455,8 @@ export class SpriteFactory {
     }
     circle
       .circle(0, 0, radius)
-      .stroke({ width: 1, color: 0xffffff, alpha: 0.2 });
+      .fill({ color: 0xffffff, alpha: 0.2 })
+      .stroke({ width: 1, color: 0xffffff, alpha: 0.5 });
     parentContainer.addChild(circle);
     parentContainer.position.set(pos.x, pos.y);
     parentContainer.scale.set(this.transformHandler.scale);
