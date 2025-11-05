@@ -8,7 +8,7 @@ import { SpawnExecution } from "../SpawnExecution";
 export class PlayerSpawner {
   private random: PseudoRandom;
   private players: SpawnExecution[] = [];
-  private static readonly MAX_SPAWN_TRIES = 100;
+  private static readonly MAX_SPAWN_TRIES = 10_000;
   private static readonly MIN_SPAWN_DISTANCE = 30;
 
   constructor(
