@@ -2,7 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
-import { Gold } from "../../../core/game/Game";
+import { Gold, UnitType } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
 import { AttackRatioEvent } from "../../InputHandler";
@@ -98,13 +98,22 @@ export class ControlPanel extends LitElement implements Layer {
     this._troops = player.troops();
     this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
 
-    // Get troops on mission from EventsDisplay
-    const eventsDisplay = document.querySelector("events-display");
-    if (eventsDisplay && "getTroopsOnMission" in eventsDisplay) {
-      this._troopsOnMission = (eventsDisplay as any).getTroopsOnMission() ?? 0;
-    } else {
-      this._troopsOnMission = 0;
-    }
+    // Calculate troops on mission directly from player data
+    const outgoingAttacks = player.outgoingAttacks();
+
+    const attackTroops = outgoingAttacks
+      .filter((a) => a.targetID !== 0)
+      .reduce((sum, attack) => sum + attack.troops, 0);
+
+    const landAttackTroops = outgoingAttacks
+      .filter((a) => a.targetID === 0)
+      .reduce((sum, attack) => sum + attack.troops, 0);
+
+    const boatTroops = player
+      .units(UnitType.TransportShip)
+      .reduce((sum, boat) => sum + boat.troops(), 0);
+
+    this._troopsOnMission = attackTroops + landAttackTroops + boatTroops;
 
     // Compute breakdown of max troops into territory and city contributions
     // Uses config methods to ensure consistency with maxTroops calculation
@@ -228,8 +237,11 @@ export class ControlPanel extends LitElement implements Layer {
             <div
               class="flex h-full"
               style="width: ${this._maxTroops > 0
-                ? ((this._troops + this._troopsOnMission) / this._maxTroops) *
-                  100
+                ? Math.min(
+                    ((this._troops + this._troopsOnMission) / this._maxTroops) *
+                      100,
+                    100,
+                  )
                 : 0}%"
             >
               <!-- Available troops (territory + cities) -->
