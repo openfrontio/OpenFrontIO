@@ -138,6 +138,7 @@ export interface Config {
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
+  tradeShipShortRangeDebuff(): number;
   tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(
     numTradeShips: number,
