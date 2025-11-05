@@ -157,6 +157,8 @@ export async function startWorker() {
       log.warn(
         `Worker ${workerId}: IP ${ipAnonymize(clientIP)} Private game with id ${id} did not receive hostPersistentID, game may be started by anyone`,
       );
+    } else if (gc?.gameType === GameType.Private) {
+      game.setHostPersistentID(req.body.hostPersistentID);
     }
 
     res.json(game.gameInfo());

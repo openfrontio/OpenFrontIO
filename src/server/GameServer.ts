@@ -129,12 +129,11 @@ export class GameServer {
     }
   }
 
-  public setHostPersistentID(id: string): string | null {
+  public setHostPersistentID(id: string): void {
     if (this.getHostPersistentID()) {
       throw new Error("hostPersistentID is already set");
     }
     this._hostPersistentID = id;
-    return this.getHostPersistentID();
   }
 
   public getHostPersistentID(): string | null {
