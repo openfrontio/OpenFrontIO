@@ -346,6 +346,12 @@ class Client {
       document.documentElement.classList.remove("dark");
     }
 
+    if (this.userSettings.nightMode()) {
+      document.documentElement.classList.add("night");
+    } else {
+      document.documentElement.classList.remove("night");
+    }
+
     // Attempt to join lobby
     this.handleHash();
 
