@@ -68,12 +68,17 @@ describe("TradeShipExecution", () => {
       isActive: jest.fn(() => true),
     } as any;
 
+    let distanceTraveledValue = 0;
     tradeShip = {
       isActive: jest.fn(() => true),
       owner: jest.fn(() => origOwner),
       move: jest.fn(),
       setTargetUnit: jest.fn(),
       setSafeFromPirates: jest.fn(),
+      setDistanceTraveled: jest.fn((value: number) => {
+        distanceTraveledValue = value;
+      }),
+      distanceTraveled: jest.fn(() => distanceTraveledValue),
       delete: jest.fn(),
       tile: jest.fn(() => 2001),
     } as any;
