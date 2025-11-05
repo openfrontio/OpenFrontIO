@@ -203,6 +203,8 @@ export class ClientGameRunner {
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private goToPlayerTimeout: NodeJS.Timeout | null = null;
+
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
 
@@ -331,11 +333,16 @@ export class ClientGameRunner {
           const goToPlayer = () => {
             const myPlayer = this.gameView.myPlayer();
 
-            if (!myPlayer || !myPlayer.hasSpawned()) {
-              if (this.gameView.inSpawnPhase()) {
-                setTimeout(goToPlayer, 1000);
-                return;
-              }
+            if (this.gameView.inSpawnPhase() && !myPlayer?.hasSpawned()) {
+              this.goToPlayerTimeout = setTimeout(goToPlayer, 1000);
+              return;
+            }
+
+            if (!myPlayer) {
+              return;
+            }
+
+            if (!this.gameView.inSpawnPhase() && !myPlayer.hasSpawned()) {
               showErrorModal(
                 "spawn_failed",
                 translateText("error_modal.spawn_failed.description"),
@@ -351,7 +358,6 @@ export class ClientGameRunner {
             this.eventBus.emit(new GoToPlayerEvent(myPlayer));
           };
 
-          // Start immediately; allow slower machines up to end of spawn phase to finish spawn.
           goToPlayer();
         }
 
@@ -430,6 +436,10 @@ export class ClientGameRunner {
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
+      this.connectionCheckInterval = null;
+    }
+    if (this.goToPlayerTimeout) {
+      clearTimeout(this.goToPlayerTimeout);
       this.connectionCheckInterval = null;
     }
   }
