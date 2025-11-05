@@ -18,7 +18,6 @@ export class TradeShipExecution implements Execution {
   private tradeShip: Unit | undefined;
   private wasCaptured = false;
   private pathFinder: PathFinder;
-  private tilesTraveled = 0;
 
   constructor(
     private origOwner: Player,
@@ -116,7 +115,9 @@ export class TradeShipExecution implements Execution {
           this.tradeShip.setSafeFromPirates();
         }
         this.tradeShip.move(result.node);
-        this.tilesTraveled++;
+        this.tradeShip.setDistanceTraveled(
+          this.tradeShip.distanceTraveled() + 1,
+        );
         break;
       case PathFindResultType.Completed:
         this.complete();
@@ -137,7 +138,7 @@ export class TradeShipExecution implements Execution {
     const gold = this.mg
       .config()
       .tradeShipGold(
-        this.tilesTraveled,
+        this.tradeShip!.distanceTraveled(),
         this.tradeShip!.owner().unitCount(UnitType.Port),
       );
 

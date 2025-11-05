@@ -441,9 +441,6 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   <span class="text-yellow-400 font-bold">
                     ${renderNumber(tradeShipGold)}
                   </span>
-                  <span class="text-xs opacity-60 ml-auto"
-                    >${translateText("player_info_overlay.estimate")}</span
-                  >
                 </div>
               `
             : ""}
@@ -463,56 +460,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   }
 
   private calculateTradeShipGold(unit: UnitView): bigint | null {
-    const targetUnitId = unit.targetUnitId();
-    if (!targetUnitId) {
+    const distanceTraveled = unit.distanceTraveled();
+    if (distanceTraveled === undefined) {
       return null;
     }
 
-    const dstPort = this.game.unit(targetUnitId);
-    if (!dstPort || dstPort.type() !== UnitType.Port) {
-      return null;
-    }
-
-    // Use stored source port, fallback to heuristic if not available or destroyed
-    let srcPort: UnitView | null = null;
-    const sourceUnitId = unit.sourceUnitId();
-    if (sourceUnitId) {
-      const sourceUnit = this.game.unit(sourceUnitId);
-      if (
-        sourceUnit &&
-        sourceUnit.type() === UnitType.Port &&
-        sourceUnit.isActive()
-      ) {
-        srcPort = sourceUnit;
-      }
-    }
-
-    // Fallback: find closest port owned by the ship's owner
-    if (!srcPort) {
-      const owner = unit.owner();
-      const ports = owner.units(UnitType.Port);
-      if (ports.length === 0) {
-        return null;
-      }
-
-      // Find closest port to destination (likely the source)
-      srcPort = ports[0];
-      let minDist = this.game.manhattanDist(srcPort.tile(), dstPort.tile());
-      for (const port of ports) {
-        const dist = this.game.manhattanDist(port.tile(), dstPort.tile());
-        if (dist < minDist) {
-          minDist = dist;
-          srcPort = port;
-        }
-      }
-    }
-
-    // Use manhattan distance as estimate (pathfinding is too expensive)
-    const distance = this.game.manhattanDist(srcPort.tile(), dstPort.tile());
     const owner = unit.owner();
     const numPorts = owner.totalUnitLevels(UnitType.Port);
 
-    return this.game.config().tradeShipGold(distance, numPorts);
+    return this.game.config().tradeShipGold(distanceTraveled, numPorts);
   }
 
   render() {

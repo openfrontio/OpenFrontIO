@@ -126,6 +126,7 @@ export interface UnitUpdate {
   markedForDeletion: number | false;
   targetUnitId?: number; // Only for trade ships
   sourceUnitId?: number; // Only for trade ships
+  distanceTraveled?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
   constructionType?: UnitType;

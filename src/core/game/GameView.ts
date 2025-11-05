@@ -130,6 +130,9 @@ export class UnitView {
   sourceUnitId(): number | undefined {
     return this.data.sourceUnitId;
   }
+  distanceTraveled(): number | undefined {
+    return this.data.distanceTraveled;
+  }
   targetTile(): TileRef | undefined {
     return this.data.targetTile;
   }
