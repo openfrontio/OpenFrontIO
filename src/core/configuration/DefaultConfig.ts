@@ -337,7 +337,7 @@ export class DefaultConfig implements Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
-  randomSpawn(): boolean {
+  isRandomSpawn(): boolean {
     return this._gameConfig.randomSpawn;
   }
   infiniteGold(): boolean {
