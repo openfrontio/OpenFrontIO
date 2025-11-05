@@ -440,7 +440,7 @@ export class ClientGameRunner {
     }
     if (this.goToPlayerTimeout) {
       clearTimeout(this.goToPlayerTimeout);
-      this.connectionCheckInterval = null;
+      this.goToPlayerTimeout = null;
     }
   }
 
