@@ -98,17 +98,8 @@ export class FxLayer implements Layer {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) continue;
 
-      // Calculate alert intensity if this is an inbound bomb
-      const targetTile = unit.targetTile();
-      if (!targetTile) continue;
-
-      const my = this.game.myPlayer();
-      if (!my) continue;
-
-      const targetOwner = this.game.owner(targetTile);
-      const isInbound = targetOwner.isPlayer() && targetOwner.id() === my.id();
-
-      if (isInbound) {
+      // Only update alert intensity for inbound bombs (we already know this from creation)
+      if (fx.isInboundBomb()) {
         const trajectoryIndex = unit.trajectoryIndex();
         const trajectoryLength = unit.trajectoryLength();
         if (

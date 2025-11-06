@@ -38,6 +38,10 @@ export class NukeAreaFx implements Fx {
     this.alertIntensity = Math.max(0, Math.min(1, intensity));
   }
 
+  isInboundBomb(): boolean {
+    return this.isInbound;
+  }
+
   end() {
     this.ended = true;
     this.lifeTime = 0; // reset for fade-out timing
