@@ -69,6 +69,9 @@ describe("DeleteUnitExecution Security Tests", () => {
     if (!tileOwner.isPlayer() || tileOwner.id() !== player.id()) {
       throw new Error("Unit is not on player's territory");
     }
+
+    game.config().deleteUnitCooldown = () => 10;
+    game.config().deletionMarkDuration = () => 10;
   });
 
   describe("Security Validations", () => {
