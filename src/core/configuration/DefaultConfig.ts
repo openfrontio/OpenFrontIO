@@ -822,14 +822,33 @@ export class DefaultConfig implements Config {
     return this.infiniteTroops() ? 1_000_000 : 25_000;
   }
 
+  /**
+   * Compute maximum troop capacity contributed by territory (tiles owned).
+   * The formula scales with the number of tiles owned and includes a base offset.
+   * @param player Player or PlayerView used to read tiles owned.
+   * @returns Territory-derived troop capacity.
+   */
   maxTroopsTerritory(player: Player | PlayerView): number {
     return 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000);
   }
 
+  /**
+   * Compute maximum troop capacity contributed by cities.
+   * Capacity is proportional to the total city unit levels owned by the player.
+   * @param player Player or PlayerView used to read city unit levels.
+   * @returns City-derived troop capacity.
+   */
   maxTroopsCity(player: Player | PlayerView): number {
     return player.totalUnitLevels(UnitType.City) * this.cityTroopIncrease();
   }
 
+  /**
+   * Estimate how many of the player's current troops are attributable to
+   * territory-derived capacity. This is a proportional estimate based on the
+   * ratio of territory capacity to total capacity, multiplied by current troops.
+   * Note: this is only an estimate and not precise tracking of troop sources.
+   * @param player Player or PlayerView used to compute the estimate.
+   */
   estimatedTroopsTerritory(player: Player | PlayerView): number {
     const maxTroops = this.maxTroops(player);
     if (maxTroops === 0) return 0;
@@ -841,6 +860,13 @@ export class DefaultConfig implements Config {
     return Math.round((maxTroopsTerritory / maxTroops) * currentTroops);
   }
 
+  /**
+   * Estimate how many of the player's current troops are attributable to
+   * city-derived capacity. This is a proportional estimate based on the
+   * ratio of city capacity to total capacity, multiplied by current troops.
+   * Note: this is only an estimate and not precise tracking of troop sources.
+   * @param player Player or PlayerView used to compute the estimate.
+   */
   estimatedTroopsCity(player: Player | PlayerView): number {
     const maxTroops = this.maxTroops(player);
     if (maxTroops === 0) return 0;
@@ -852,6 +878,13 @@ export class DefaultConfig implements Config {
     return Math.round((maxTroopsCity / maxTroops) * currentTroops);
   }
 
+  /**
+   * Compute the player's effective maximum troop capacity. This sums territory
+   * and city capacities, applies special handling for infiniteTroops and
+   * adjusts for player type (bot/human) and game difficulty.
+   * @param player Player or PlayerView used to compute capacity.
+   * @returns Effective maximum troop capacity for the player.
+   */
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
       player.type() === PlayerType.Human && this.infiniteTroops()

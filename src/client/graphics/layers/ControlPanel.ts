@@ -23,17 +23,31 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private _maxTroops: number;
 
+  /**
+   * Rounded total maximum troop capacity available to the player.
+   */
   @state()
   private _maxTroopsTerritory: number = 0;
 
+  /**
+   * Rounded maximum troop capacity coming from cities.
+   */
   @state()
   private _maxTroopsCity: number = 0;
 
+  /**
+   * Estimated current troops that belong to territory-derived capacity.
+   * This value is computed from the config.estimatedTroopsTerritory helper.
+   */
   @state()
-  private _troopsTerritory: number = 0;
+  private _troopsTerritoryEstimate: number = 0;
 
+  /**
+   * Estimated current troops that belong to city-derived capacity.
+   * This value is computed from the config.estimatedTroopsCity helper.
+   */
   @state()
-  private _troopsCity: number = 0;
+  private _troopsCityEstimate: number = 0;
 
   @state()
   private troopRate: number;
@@ -127,15 +141,15 @@ export class ControlPanel extends LitElement implements Layer {
       this._maxTroops = Math.round(config.maxTroops(player));
 
       // Get estimated breakdown of current troops
-      this._troopsTerritory = config.estimatedTroopsTerritory(player);
-      this._troopsCity = config.estimatedTroopsCity(player);
+      this._troopsTerritoryEstimate = config.estimatedTroopsTerritory(player);
+      this._troopsCityEstimate = config.estimatedTroopsCity(player);
     } catch (e) {
       console.warn("Failed to calculate capacity breakdown:", e);
       this._maxTroopsTerritory = 0;
       this._maxTroopsCity = 0;
       this._maxTroops = 0;
-      this._troopsTerritory = 0;
-      this._troopsCity = 0;
+      this._troopsTerritoryEstimate = 0;
+      this._troopsCityEstimate = 0;
     }
 
     this._playerColor =
@@ -262,13 +276,13 @@ export class ControlPanel extends LitElement implements Layer {
                 <div
                   class="h-full opacity-60"
                   style="background-color: ${playerColor}; flex-grow: ${this
-                    ._troopsTerritory}"
+                    ._troopsTerritoryEstimate}"
                 ></div>
-                ${this._troopsCity > 0
+                ${this._troopsCityEstimate > 0
                   ? html`<div
                       class="h-full opacity-80"
                       style="background-color: ${playerColor}; flex-grow: ${this
-                        ._troopsCity}"
+                        ._troopsCityEstimate}"
                     ></div>`
                   : ""}
               </div>

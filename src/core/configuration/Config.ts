@@ -117,13 +117,42 @@ export interface Config {
   // When computing likelihood of trading for any given port, the X closest port
   // are twice more likely to be selected. X is determined below.
   proximityBonusPortsNb(totalPorts: number): number;
+  /**
+   * Returns the total maximum troop capacity for the given player.
+   * This is the sum of all capacity sources (territory + cities) and may be
+   * adjusted by player type (bot/human) or game difficulty.
+   * @param player The player or player view to compute capacity for.
+   * @returns Maximum troop capacity as a number.
+   */
   maxTroops(player: Player | PlayerView): number;
+
+  /**
+   * Maximum troop capacity derived from territory ownership (tiles).
+   * This represents how many troops the player's territories can hold.
+   * @param player The player or player view to compute territory capacity for.
+   */
   maxTroopsTerritory(player: Player | PlayerView): number;
+
+  /**
+   * Maximum troop capacity derived from cities (unit levels of UnitType.City).
+   * @param player The player or player view to compute city capacity for.
+   */
   maxTroopsCity(player: Player | PlayerView): number;
 
-  // Helper methods to proportionally attribute current troops to their capacity sources
-  // Note: These are estimates based on capacity ratio, not actual tracking
+  /**
+   * Helper method to estimate how many of the player's current troops are
+   * attributable to territory-derived capacity. These are proportional
+   * estimates (based on capacity ratios) and do not represent exact tracking.
+   * @param player The player or player view to compute an estimate for.
+   */
   estimatedTroopsTerritory(player: Player | PlayerView): number;
+
+  /**
+   * Helper method to estimate how many of the player's current troops are
+   * attributable to city-derived capacity. These are proportional estimates
+   * (based on capacity ratios) and do not represent exact tracking.
+   * @param player The player or player view to compute an estimate for.
+   */
   estimatedTroopsCity(player: Player | PlayerView): number;
 
   cityTroopIncrease(): number;
