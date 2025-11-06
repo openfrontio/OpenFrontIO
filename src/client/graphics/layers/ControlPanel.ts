@@ -24,10 +24,16 @@ export class ControlPanel extends LitElement implements Layer {
   private _maxTroops: number;
 
   @state()
-  private _territoryCapacity: number = 0;
+  private _maxTroopsTerritory: number = 0;
 
   @state()
-  private _cityCapacity: number = 0;
+  private _maxTroopsCity: number = 0;
+
+  @state()
+  private _troopsTerritory: number = 0;
+
+  @state()
+  private _troopsCity: number = 0;
 
   @state()
   private troopRate: number;
@@ -116,16 +122,20 @@ export class ControlPanel extends LitElement implements Layer {
 
     try {
       const config = this.game.config();
-      this._territoryCapacity = Math.round(
-        config.baseTerritoryCapacity(player),
-      );
-      this._cityCapacity = Math.round(config.baseCityCapacity(player));
+      this._maxTroopsTerritory = Math.round(config.maxTroopsTerritory(player));
+      this._maxTroopsCity = Math.round(config.maxTroopsCity(player));
       this._maxTroops = Math.round(config.maxTroops(player));
+
+      // Get estimated breakdown of current troops
+      this._troopsTerritory = config.estimatedTroopsTerritory(player);
+      this._troopsCity = config.estimatedTroopsCity(player);
     } catch (e) {
       console.warn("Failed to calculate capacity breakdown:", e);
-      this._territoryCapacity = 0;
-      this._cityCapacity = 0;
+      this._maxTroopsTerritory = 0;
+      this._maxTroopsCity = 0;
       this._maxTroops = 0;
+      this._troopsTerritory = 0;
+      this._troopsCity = 0;
     }
 
     this._playerColor =
@@ -252,13 +262,13 @@ export class ControlPanel extends LitElement implements Layer {
                 <div
                   class="h-full opacity-60"
                   style="background-color: ${playerColor}; flex-grow: ${this
-                    ._territoryCapacity}"
+                    ._troopsTerritory}"
                 ></div>
-                ${this._cityCapacity > 0
+                ${this._troopsCity > 0
                   ? html`<div
                       class="h-full opacity-80"
                       style="background-color: ${playerColor}; flex-grow: ${this
-                        ._cityCapacity}"
+                        ._troopsCity}"
                     ></div>`
                   : ""}
               </div>

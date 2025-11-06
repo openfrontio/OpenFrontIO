@@ -822,19 +822,41 @@ export class DefaultConfig implements Config {
     return this.infiniteTroops() ? 1_000_000 : 25_000;
   }
 
-  baseTerritoryCapacity(player: Player | PlayerView): number {
+  maxTroopsTerritory(player: Player | PlayerView): number {
     return 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000);
   }
 
-  baseCityCapacity(player: Player | PlayerView): number {
+  maxTroopsCity(player: Player | PlayerView): number {
     return player.totalUnitLevels(UnitType.City) * this.cityTroopIncrease();
+  }
+
+  estimatedTroopsTerritory(player: Player | PlayerView): number {
+    const maxTroops = this.maxTroops(player);
+    if (maxTroops === 0) return 0;
+
+    const maxTroopsTerritory = this.maxTroopsTerritory(player);
+    const currentTroops = player.troops();
+
+    // Proportionally attribute current troops based on territory's share of max capacity
+    return Math.round((maxTroopsTerritory / maxTroops) * currentTroops);
+  }
+
+  estimatedTroopsCity(player: Player | PlayerView): number {
+    const maxTroops = this.maxTroops(player);
+    if (maxTroops === 0) return 0;
+
+    const maxTroopsCity = this.maxTroopsCity(player);
+    const currentTroops = player.troops();
+
+    // Proportionally attribute current troops based on cities' share of max capacity
+    return Math.round((maxTroopsCity / maxTroops) * currentTroops);
   }
 
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
       player.type() === PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
-        : this.baseTerritoryCapacity(player) + this.baseCityCapacity(player);
+        : this.maxTroopsTerritory(player) + this.maxTroopsCity(player);
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;

@@ -118,8 +118,14 @@ export interface Config {
   // are twice more likely to be selected. X is determined below.
   proximityBonusPortsNb(totalPorts: number): number;
   maxTroops(player: Player | PlayerView): number;
-  baseTerritoryCapacity(player: Player | PlayerView): number;
-  baseCityCapacity(player: Player | PlayerView): number;
+  maxTroopsTerritory(player: Player | PlayerView): number;
+  maxTroopsCity(player: Player | PlayerView): number;
+
+  // Helper methods to proportionally attribute current troops to their capacity sources
+  // Note: These are estimates based on capacity ratio, not actual tracking
+  estimatedTroopsTerritory(player: Player | PlayerView): number;
+  estimatedTroopsCity(player: Player | PlayerView): number;
+
   cityTroopIncrease(): number;
   boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number;
   shellLifetime(): number;
