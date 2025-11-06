@@ -38,6 +38,10 @@ export class NukeAreaFx implements Fx {
     this.alertIntensity = Math.max(0, Math.min(1, intensity));
   }
 
+  setInbound(isInbound: boolean) {
+    this.isInbound = isInbound;
+  }
+
   isInboundBomb(): boolean {
     return this.isInbound;
   }

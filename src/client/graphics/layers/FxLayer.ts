@@ -91,15 +91,31 @@ export class FxLayer implements Layer {
   }
 
   private updateNukeTargetFxRemainingTime() {
-    // Update alert intensity for inbound bombs to make flashing faster as impact approaches
+    // Update alert intensity for inbound bombs and check if inbound status changed
+    // (e.g., if player recaptures territory while bomb is in flight)
     for (const [unitId, fx] of Array.from(
       this.nukeTargetFxByUnitId.entries(),
     )) {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) continue;
 
-      // Only update alert intensity for inbound bombs (we already know this from creation)
-      if (fx.isInboundBomb()) {
+      const targetTile = unit.targetTile();
+      if (!targetTile) continue;
+
+      const my = this.game.myPlayer();
+      if (!my) continue;
+
+      // Recompute isInbound based on current target tile ownership
+      const targetOwner = this.game.owner(targetTile);
+      const isInbound = targetOwner.isPlayer() && targetOwner.id() === my.id();
+
+      // Update inbound flag if it changed
+      if (fx.isInboundBomb() !== isInbound) {
+        fx.setInbound(isInbound);
+      }
+
+      // Update alert intensity for inbound bombs
+      if (isInbound) {
         const trajectoryIndex = unit.trajectoryIndex();
         const trajectoryLength = unit.trajectoryLength();
         if (
