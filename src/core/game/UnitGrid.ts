@@ -137,6 +137,7 @@ export class UnitGrid {
     searchRange: number,
     types: readonly UnitType[] | UnitType,
     predicate?: UnitPredicate,
+    includeUnderConstruction: boolean = false,
   ): Array<{ unit: Unit | UnitView; distSquared: number }> {
     const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
@@ -152,6 +153,10 @@ export class UnitGrid {
           if (unitSet === undefined) continue;
           for (const unit of unitSet) {
             if (!unit.isActive()) continue;
+            // Exclude units under construction by default (e.g., defense posts being built)
+            // But include them for spacing checks
+            if (!includeUnderConstruction && unit.isUnderConstruction())
+              continue;
             const distSquared = this.squaredDistanceFromTile(unit, tile);
             if (distSquared > rangeSquared) continue;
             const value = { unit, distSquared };
@@ -169,8 +174,14 @@ export class UnitGrid {
     tile: TileRef,
     rangeSquared: number,
     playerId?: PlayerID,
+    includeUnderConstruction: boolean = false,
   ): boolean {
     if (!unit.isActive()) {
+      return false;
+    }
+    // Exclude units under construction by default (e.g., defense posts being built)
+    // But include them for spacing checks
+    if (!includeUnderConstruction && unit.isUnderConstruction()) {
       return false;
     }
     if (playerId !== undefined && unit.owner().id() !== playerId) {
@@ -186,6 +197,7 @@ export class UnitGrid {
     searchRange: number,
     type: UnitType,
     playerId?: PlayerID,
+    includeUnderConstruction: boolean = false,
   ): boolean {
     const { startGridX, endGridX, startGridY, endGridY } = this.getCellsInRange(
       tile,
@@ -197,7 +209,15 @@ export class UnitGrid {
         const unitSet = this.grid[cy][cx].get(type);
         if (unitSet === undefined) continue;
         for (const unit of unitSet) {
-          if (this.unitIsInRange(unit, tile, rangeSquared, playerId)) {
+          if (
+            this.unitIsInRange(
+              unit,
+              tile,
+              rangeSquared,
+              playerId,
+              includeUnderConstruction,
+            )
+          ) {
             return true;
           }
         }
