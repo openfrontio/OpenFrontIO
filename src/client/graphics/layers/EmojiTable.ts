@@ -58,7 +58,10 @@ export class EmojiTable extends LitElement {
   private onEmojiClicked: (emoji: string) => void = () => {};
 
   private handleBackdropClick = (e: MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    const panelContent = this.querySelector(
+      'div[class*="bg-zinc-900"]',
+    ) as HTMLElement;
+    if (panelContent && !panelContent.contains(e.target as Node)) {
       this.hideTable();
     }
   };
@@ -74,7 +77,12 @@ export class EmojiTable extends LitElement {
         @click=${this.handleBackdropClick}
       >
         <div
-          class="bg-zinc-900/95 max-w-[95vw] p-[10px] flex flex-col items-center rounded-[10px] z-[9999] justify-center relative shadow-2xl shadow-black/50 ring-1 ring-white/5"
+          class="bg-zinc-900/95 p-[6px] flex items-center justify-center rounded-[10px] z-[9999] relative shadow-2xl shadow-black/50 ring-1 ring-white/5"
+          style="
+            width: min(410px, calc(100vw - 60px), calc((100vh - 40px) * 215 / 449));
+            aspect-ratio: 215 / 449;
+            container-type: size;
+          "
           @contextmenu=${(e: MouseEvent) => e.preventDefault()}
           @wheel=${(e: WheelEvent) => e.stopPropagation()}
           @click=${(e: MouseEvent) => e.stopPropagation()}
@@ -87,17 +95,19 @@ export class EmojiTable extends LitElement {
           >
             ✕
           </button>
-          <div class="flex flex-col">
+          <div
+            class="flex flex-col"
+            style="transform: scale(calc(100cqw / 215px)); transform-origin: center;"
+          >
             ${emojiTable.map(
               (row) => html`
-                <div class="w-full justify-center flex">
+                <div class="flex justify-center">
                   ${row.map(
                     (emoji) => html`
                       <button
                         class="flex transition-transform duration-300 ease justify-center items-center cursor-pointer
                                 border border-solid border-zinc-600 rounded-[8px] bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600
-                                md:m-[4px] md:text-[40px] md:w-[60px] md:h-[60px] hover:scale-[1.1] active:scale-[0.95]
-                                sm:w-[45px] sm:h-[45px] sm:text-[30px] sm:m-[3px] text-[25px] w-[35px] h-[35px] m-[2px]"
+                                m-[2px] text-[25px] w-[35px] h-[35px] hover:scale-[1.1] active:scale-[0.95]"
                         @click=${() => this.onEmojiClicked(emoji)}
                       >
                         ${emoji}
