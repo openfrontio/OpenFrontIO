@@ -54,6 +54,10 @@ export class TestConfig extends DefaultConfig {
     return 20;
   }
 
+  samRange(level: number): number {
+    return 20;
+  }
+
   spawnImmunityDuration(): Tick {
     return 0;
   }
@@ -79,5 +83,28 @@ export class TestConfig extends DefaultConfig {
     numAdjacentTilesWithEnemy: number,
   ): number {
     return 1;
+  }
+}
+export class UseRealAttackLogic extends TestConfig {
+  // Override to use DefaultConfig's real attackLogic
+  attackLogic(
+    gm: Game,
+    attackTroops: number,
+    attacker: Player,
+    defender: Player | TerraNullius,
+    tileToConquer: TileRef,
+  ): {
+    attackerTroopLoss: number;
+    defenderTroopLoss: number;
+    tilesPerTickUsed: number;
+  } {
+    return DefaultConfig.prototype.attackLogic.call(
+      this,
+      gm,
+      attackTroops,
+      attacker,
+      defender,
+      tileToConquer,
+    );
   }
 }

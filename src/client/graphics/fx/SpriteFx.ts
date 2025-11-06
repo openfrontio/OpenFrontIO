@@ -20,35 +20,6 @@ function fadeInOut(
   }
 }
 /**
- * Move a sprite around
- */
-export class MoveSpriteFx implements Fx {
-  private originX: number;
-  private originY: number;
-  constructor(
-    private fxToMove: SpriteFx,
-    private toX: number,
-    private toY: number,
-    private fadeIn: number = 0.1,
-    private fadeOut: number = 0.9,
-  ) {
-    this.originX = fxToMove.x;
-    this.originY = fxToMove.y;
-  }
-
-  renderTick(duration: number, ctx: CanvasRenderingContext2D): boolean {
-    const t = this.fxToMove.getElapsedTime() / this.fxToMove.getDuration();
-    this.fxToMove.x = Math.floor(this.originX * (1 - t) + this.toX * t);
-    this.fxToMove.y = Math.floor(this.originY * (1 - t) + this.toY * t);
-    ctx.save();
-    ctx.globalAlpha = fadeInOut(t, this.fadeIn, this.fadeOut);
-    const result = this.fxToMove.renderTick(duration, ctx);
-    ctx.restore();
-    return result;
-  }
-}
-
-/**
  * Fade in/out another FX
  */
 export class FadeFx implements Fx {
@@ -78,8 +49,8 @@ export class SpriteFx implements Fx {
   protected waitToTheEnd = false;
   constructor(
     animatedSpriteLoader: AnimatedSpriteLoader,
-    public x: number,
-    public y: number,
+    protected x: number,
+    protected y: number,
     fxType: FxType,
     duration?: number,
     owner?: PlayerView,

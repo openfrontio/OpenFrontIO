@@ -148,9 +148,13 @@ export function calculateBoundingBoxCenter(
   borderTiles: ReadonlySet<TileRef>,
 ): Cell {
   const { min, max } = calculateBoundingBox(gm, borderTiles);
+  return boundingBoxCenter({ min, max });
+}
+
+export function boundingBoxCenter(box: { min: Cell; max: Cell }): Cell {
   return new Cell(
-    min.x + Math.floor((max.x - min.x) / 2),
-    min.y + Math.floor((max.y - min.y) / 2),
+    box.min.x + Math.floor((box.max.x - box.min.x) / 2),
+    box.min.y + Math.floor((box.max.y - box.min.y) / 2),
   );
 }
 
@@ -289,17 +293,17 @@ export function createRandomName(
 }
 
 export const emojiTable = [
-  ["😀", "😊", "😇", "😎", "😈"],
+  ["😀", "😊", "🥰", "😇", "😎"],
   ["😞", "🥺", "😭", "😱", "😡"],
-  ["⏳", "🥱", "🤦‍♂️", "🖕", "🤡"],
-  ["👋", "👏", "👻", "💪", "🎃"],
+  ["😈", "🤡", "🖕", "🥱", "🤦‍♂️"],
+  ["👋", "👏", "🤌", "💪", "🫡"],
   ["👍", "👎", "❓", "🐔", "🐀"],
-  ["🆘", "🤝", "🕊️", "🏳️", "🛡️"],
+  ["🤝", "🆘", "🕊️", "🏳️", "⏳"],
   ["🔥", "💥", "💀", "☢️", "⚠️"],
   ["↖️", "⬆️", "↗️", "👑", "🥇"],
   ["⬅️", "🎯", "➡️", "🥈", "🥉"],
   ["↙️", "⬇️", "↘️", "❤️", "💔"],
-  ["💰", "🏭", "🚂", "⚓", "⛵"],
+  ["💰", "⚓", "⛵", "🏡", "🛡️"],
 ] as const;
 // 2d to 1d array
 export const flattenedEmojiTable = emojiTable.flat();
