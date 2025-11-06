@@ -95,6 +95,7 @@ export class MapPlaylist {
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
+      randomSpawn: false,
       disableNPCs: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
