@@ -1,5 +1,5 @@
 import { UnitType } from "../../../core/game/Game";
-import { GameView, UnitView } from "../../../core/game/GameView";
+import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -74,10 +74,7 @@ export class BombTimerLayer implements Layer {
 
       const trajectoryIndex = bomb.trajectoryIndex();
       const trajectoryLength = bomb.trajectoryLength();
-      if (
-        trajectoryIndex === undefined ||
-        trajectoryLength === undefined
-      ) {
+      if (trajectoryIndex === undefined || trajectoryLength === undefined) {
         continue;
       }
 
@@ -101,8 +98,12 @@ export class BombTimerLayer implements Layer {
       const worldY = this.game.y(targetTile);
 
       // Draw timer text
-      const incomingText = isInbound ? translateText("bomb_timer.incoming") : "";
-      const impactText = translateText("bomb_timer.til_impact", { seconds: remainingSeconds });
+      const incomingText = isInbound
+        ? translateText("bomb_timer.incoming")
+        : "";
+      const impactText = translateText("bomb_timer.til_impact", {
+        seconds: remainingSeconds,
+      });
       const text = incomingText ? `${incomingText} ${impactText}` : impactText;
 
       // Set text style
@@ -142,4 +143,3 @@ export class BombTimerLayer implements Layer {
     }
   }
 }
-

@@ -62,11 +62,13 @@ export class NukeAreaFx implements Fx {
       const maxFlashPeriod = 500; // ms at intensity 0
       const minFlashPeriod = 200; // ms at intensity 1
       const flashPeriod =
-        maxFlashPeriod - (maxFlashPeriod - minFlashPeriod) * this.alertIntensity;
+        maxFlashPeriod -
+        (maxFlashPeriod - minFlashPeriod) * this.alertIntensity;
       const flashPhase = (this.lifeTime % flashPeriod) / flashPeriod;
       // Flash between 0.5 (50%) and 1.0 (100%) alpha in sinusoidal pattern
       // Flash between 0.6 (60%) and 1.0 (100%) alpha in sinusoidal pattern
-      const flashAlpha = 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(flashPhase * Math.PI * 2));
+      const flashAlpha =
+        0.6 + 0.4 * (0.5 + 0.5 * Math.sin(flashPhase * Math.PI * 2));
       alpha = flashAlpha;
     }
 

@@ -92,7 +92,9 @@ export class FxLayer implements Layer {
 
   private updateNukeTargetFxRemainingTime() {
     // Update alert intensity for inbound bombs to make flashing faster as impact approaches
-    for (const [unitId, fx] of Array.from(this.nukeTargetFxByUnitId.entries())) {
+    for (const [unitId, fx] of Array.from(
+      this.nukeTargetFxByUnitId.entries(),
+    )) {
       const unit = this.game.unit(unitId);
       if (!unit || !unit.isActive()) continue;
 
@@ -104,8 +106,7 @@ export class FxLayer implements Layer {
       if (!my) continue;
 
       const targetOwner = this.game.owner(targetTile);
-      const isInbound =
-        targetOwner.isPlayer() && targetOwner.id() === my.id();
+      const isInbound = targetOwner.isPlayer() && targetOwner.id() === my.id();
 
       if (isInbound) {
         const trajectoryIndex = unit.trajectoryIndex();
@@ -135,8 +136,7 @@ export class FxLayer implements Layer {
     if (!unit.isActive()) return;
 
     // Check if bomb is outbound (owned by player or teammate)
-    const isOutbound =
-      unit.owner() === my || my.isOnSameTeam(unit.owner());
+    const isOutbound = unit.owner() === my || my.isOnSameTeam(unit.owner());
 
     // Check if bomb is inbound (targeting player's territory)
     const targetTile = unit.targetTile();
@@ -147,7 +147,10 @@ export class FxLayer implements Layer {
     }
 
     // Show nuke marker for outbound or inbound bombs
-    if ((isOutbound || isInbound) && !this.nukeTargetFxByUnitId.has(unit.id())) {
+    if (
+      (isOutbound || isInbound) &&
+      !this.nukeTargetFxByUnitId.has(unit.id())
+    ) {
       if (targetTile !== undefined) {
         const x = this.game.x(targetTile);
         const y = this.game.y(targetTile);
