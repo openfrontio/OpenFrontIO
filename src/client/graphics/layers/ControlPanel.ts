@@ -45,7 +45,7 @@ export class ControlPanel extends LitElement implements Layer {
   private _troopsOnMission: number = 0;
 
   @state()
-  private _playerColor: string = ""; // Will be set in tick() from theme.neutralColor()
+  private _playerColor: string = "";
 
   private _troopRateIsIncreasing: boolean = true;
 
@@ -101,7 +101,6 @@ export class ControlPanel extends LitElement implements Layer {
     this._troops = player.troops();
     this.troopRate = this.game.config().troopIncreaseRate(player) * 10;
 
-    // Calculate troops on mission directly from player data
     const outgoingAttacks = player.outgoingAttacks();
 
     const attackTroops = outgoingAttacks.reduce(
@@ -115,8 +114,6 @@ export class ControlPanel extends LitElement implements Layer {
 
     this._troopsOnMission = attackTroops + boatTroops;
 
-    // Compute breakdown of max troops into territory and city contributions
-    // Uses config methods to ensure consistency with maxTroops calculation
     try {
       const config = this.game.config();
       this._territoryCapacity = Math.round(
@@ -125,14 +122,12 @@ export class ControlPanel extends LitElement implements Layer {
       this._cityCapacity = Math.round(config.baseCityCapacity(player));
       this._maxTroops = Math.round(config.maxTroops(player));
     } catch (e) {
-      // Fallback: clear breakdown if anything unexpected
       console.warn("Failed to calculate capacity breakdown:", e);
       this._territoryCapacity = 0;
       this._cityCapacity = 0;
       this._maxTroops = 0;
     }
 
-    // Cache player color to avoid redundant calls in render()
     this._playerColor =
       player.territoryColor()?.toRgbString() ??
       this.game.config().theme().neutralColor().toRgbString();
@@ -267,7 +262,7 @@ export class ControlPanel extends LitElement implements Layer {
                     ></div>`
                   : ""}
               </div>
-              <!-- Troops on mission (red with pattern for distinction) -->
+              <!-- Troops on mission -->
               ${this._troopsOnMission > 0
                 ? html`<div
                     class="h-full bg-red-600 opacity-50"
