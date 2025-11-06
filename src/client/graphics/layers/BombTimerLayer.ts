@@ -82,11 +82,14 @@ export class BombTimerLayer implements Layer {
       const remainingTicks = trajectoryLength - trajectoryIndex;
       const remainingSeconds = Math.max(0, Math.ceil(remainingTicks / 10));
 
-      // Determine if bomb is outbound (launched by my player) or inbound (targeting my player)
-      const isOutbound = bomb.owner().id() === myPlayer.id();
+      // Determine if bomb is outbound (launched by my player or teammate) or inbound (targeting my player or teammate)
+      const isOutbound =
+        bomb.owner() === myPlayer || myPlayer.isOnSameTeam(bomb.owner());
       const targetOwner = this.game.owner(targetTile);
       const isInbound =
-        targetOwner.isPlayer() && targetOwner.id() === myPlayer.id();
+        targetOwner.isPlayer() &&
+        (targetOwner.id() === myPlayer.id() ||
+          myPlayer.isOnSameTeam(targetOwner));
 
       // Only show timer for bombs that are either outbound or inbound
       if (!isOutbound && !isInbound) {
