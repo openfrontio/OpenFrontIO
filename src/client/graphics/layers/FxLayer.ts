@@ -53,6 +53,7 @@ export class FxLayer implements Layer {
       this.randomEvent();
     }
     this.manageBoatTargetFx();
+    this.updateNukeTargetFxRemainingTime();
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -99,28 +100,96 @@ export class FxLayer implements Layer {
     }
   }
 
+  private updateNukeTargetFxRemainingTime() {
+    // Update alert intensity for inbound bombs to make flashing faster as impact approaches
+    for (const [unitId, fx] of Array.from(this.nukeTargetFxByUnitId.entries())) {
+      const unit = this.game.unit(unitId);
+      if (!unit || !unit.isActive()) continue;
+
+      // Calculate alert intensity if this is an inbound bomb
+      const targetTile = unit.targetTile();
+      if (!targetTile) continue;
+
+      const my = this.game.myPlayer();
+      if (!my) continue;
+
+      const targetOwner = this.game.owner(targetTile);
+      const isInbound =
+        targetOwner.isPlayer() && targetOwner.id() === my.id();
+
+      if (isInbound) {
+        const trajectoryIndex = unit.trajectoryIndex();
+        const trajectoryLength = unit.trajectoryLength();
+        if (
+          trajectoryIndex !== undefined &&
+          trajectoryLength !== undefined &&
+          trajectoryLength > 0
+        ) {
+          // Calculate alert intensity: 0 = start of trajectory, 1 = end of trajectory
+          // Scale based on progress through trajectory
+          const alertIntensity = Math.max(
+            0,
+            Math.min(1, trajectoryIndex / trajectoryLength),
+          );
+          fx.updateAlertIntensity(alertIntensity);
+        }
+      }
+    }
+  }
+
   // Register a persistent nuke target marker for the current player or teammates
+  // Also shows marker for inbound bombs targeting the player
   private createNukeTargetFxIfOwned(unit: UnitView) {
     const my = this.game.myPlayer();
     if (!my) return;
-    // Show nuke marker owned by the player or by players on the same team
-    if (
-      (unit.owner() === my || my.isOnSameTeam(unit.owner())) &&
-      unit.isActive()
-    ) {
-      if (!this.nukeTargetFxByUnitId.has(unit.id())) {
-        const t = unit.targetTile();
-        if (t !== undefined) {
-          const x = this.game.x(t);
-          const y = this.game.y(t);
-          const fx = new NukeAreaFx(
-            x,
-            y,
-            this.game.config().nukeMagnitudes(unit.type()),
-          );
-          this.allFx.push(fx);
-          this.nukeTargetFxByUnitId.set(unit.id(), fx);
+    if (!unit.isActive()) return;
+
+    // Check if bomb is outbound (owned by player or teammate)
+    const isOutbound =
+      unit.owner() === my || my.isOnSameTeam(unit.owner());
+
+    // Check if bomb is inbound (targeting player's territory)
+    const targetTile = unit.targetTile();
+    let isInbound = false;
+    if (targetTile !== undefined) {
+      const targetOwner = this.game.owner(targetTile);
+      isInbound = targetOwner.isPlayer() && targetOwner.id() === my.id();
+    }
+
+    // Show nuke marker for outbound or inbound bombs
+    if ((isOutbound || isInbound) && !this.nukeTargetFxByUnitId.has(unit.id())) {
+      if (targetTile !== undefined) {
+        const x = this.game.x(targetTile);
+        const y = this.game.y(targetTile);
+
+        // Calculate alert intensity for inbound bombs
+        let alertIntensity = 0;
+        if (isInbound) {
+          const trajectoryIndex = unit.trajectoryIndex();
+          const trajectoryLength = unit.trajectoryLength();
+          if (
+            trajectoryIndex !== undefined &&
+            trajectoryLength !== undefined &&
+            trajectoryLength > 0
+          ) {
+            // Calculate alert intensity: 0 = start of trajectory, 1 = end of trajectory
+            // Scale based on progress through trajectory
+            alertIntensity = Math.max(
+              0,
+              Math.min(1, trajectoryIndex / trajectoryLength),
+            );
+          }
         }
+
+        const fx = new NukeAreaFx(
+          x,
+          y,
+          this.game.config().nukeMagnitudes(unit.type()),
+          isInbound,
+          alertIntensity,
+        );
+        this.allFx.push(fx);
+        this.nukeTargetFxByUnitId.set(unit.id(), fx);
       }
     }
   }

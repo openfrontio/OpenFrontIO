@@ -15,15 +15,27 @@ export class NukeAreaFx implements Fx {
   private readonly rotationSpeed = 20; // px per seconds
   private readonly baseAlpha = 0.9;
 
+  // Alert mode for inbound bombs - flashing increases as impact approaches
+  private alertIntensity: number = 0; // 0 = no alert, 1 = maximum alert (fastest flash)
+  private isInbound: boolean = false;
+
   constructor(
     private x: number,
     private y: number,
     magnitude: NukeMagnitude,
+    isInbound: boolean = false,
+    alertIntensity: number = 0,
   ) {
     this.innerDiameter = magnitude.inner;
     this.outerDiameter = magnitude.outer;
     const numDash = Math.max(1, Math.floor(this.outerDiameter / 3));
     this.dashSize = (Math.PI / numDash) * this.outerDiameter;
+    this.isInbound = isInbound;
+    this.alertIntensity = alertIntensity;
+  }
+
+  updateAlertIntensity(intensity: number) {
+    this.alertIntensity = Math.max(0, Math.min(1, intensity));
   }
 
   end() {
@@ -41,7 +53,22 @@ export class NukeAreaFx implements Fx {
     } else {
       t = Math.min(1, this.lifeTime / this.startAnimationDuration);
     }
-    const alpha = Math.max(0, Math.min(1, this.baseAlpha * t));
+    let alpha = Math.max(0, Math.min(1, this.baseAlpha * t));
+
+    // Add flashing effect for alerting inbound bombs
+    // Flash speed increases as alertIntensity increases (0 = slow, 1 = fast)
+    if (this.isInbound && this.alertIntensity > 0 && !this.ended) {
+      // Flash faster as intensity increases: 0.5s per flash at intensity 0, 0.2s per flash at intensity 1
+      const maxFlashPeriod = 500; // ms at intensity 0
+      const minFlashPeriod = 200; // ms at intensity 1
+      const flashPeriod =
+        maxFlashPeriod - (maxFlashPeriod - minFlashPeriod) * this.alertIntensity;
+      const flashPhase = (this.lifeTime % flashPeriod) / flashPeriod;
+      // Flash between 0.5 (50%) and 1.0 (100%) alpha in sinusoidal pattern
+      // Flash between 0.6 (60%) and 1.0 (100%) alpha in sinusoidal pattern
+      const flashAlpha = 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(flashPhase * Math.PI * 2));
+      alpha = flashAlpha;
+    }
 
     ctx.save();
     ctx.globalAlpha = alpha;

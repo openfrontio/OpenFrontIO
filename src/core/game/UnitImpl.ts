@@ -139,6 +139,8 @@ export class UnitImpl implements Unit {
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
+      trajectoryIndex: this._trajectoryIndex,
+      trajectoryLength: this._trajectory.length,
     };
   }
 

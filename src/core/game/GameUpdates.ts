@@ -133,6 +133,8 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
+  trajectoryIndex?: number; // Only for nukes
+  trajectoryLength?: number; // Only for nukes
 }
 
 export interface AttackUpdate {
