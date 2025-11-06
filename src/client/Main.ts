@@ -165,7 +165,17 @@ class Client {
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
 
-    window.addEventListener("beforeunload", () => {
+    window.addEventListener("beforeunload", (event) => {
+      const isDev = process.env.NODE_ENV === "development";
+
+      if (this.gameStop !== null && !isDev) {
+        event.preventDefault();
+        event.returnValue = "";
+        return event.returnValue;
+      }
+    });
+
+    window.addEventListener("pagehide", () => {
       console.log("Browser is closing");
       if (this.gameStop !== null) {
         this.gameStop();
