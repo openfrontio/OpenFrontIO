@@ -120,8 +120,8 @@ export class UnitLayer implements Layer {
       if (!this.game.isValidCoord(cell.x, cell.y)) return;
 
       clickRef = this.game.ref(cell.x, cell.y);
-      if (!this.game.isOcean(clickRef)) return;
     }
+    if (!this.game.isOcean(clickRef)) return;
 
     if (this.selectedUnit) {
       this.eventBus.emit(
