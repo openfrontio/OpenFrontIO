@@ -251,10 +251,12 @@ export class PlayerImpl implements Player {
   unitsOwned(type: UnitType): number {
     let total = 0;
     for (const unit of this._units) {
-      if (unit.isUnderConstruction()) {
-        total++;
-      } else {
-        total += unit.level();
+      if (unit.type() === type) {
+        if (unit.isUnderConstruction()) {
+          total++;
+        } else {
+          total += unit.level();
+        }
       }
     }
     return total;
