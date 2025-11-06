@@ -422,17 +422,6 @@ export class UnitImpl implements Unit {
       this._missileTimerQueue.push(this.mg.ticks());
     }
     this.mg.addUpdate(this.toUpdate());
-
-    // Record stats
-    switch (this._type) {
-      case UnitType.Warship:
-      case UnitType.Port:
-      case UnitType.MissileSilo:
-      case UnitType.DefensePost:
-      case UnitType.SAMLauncher:
-      case UnitType.City:
-        this.mg.stats().unitUpgrade(this._owner, this._type);
-    }
   }
 
   decreaseLevel(destroyer?: Player): void {
