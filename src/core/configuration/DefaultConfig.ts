@@ -850,14 +850,18 @@ export class DefaultConfig implements Config {
    * @param player Player or PlayerView used to compute the estimate.
    */
   estimatedTroopsTerritory(player: Player | PlayerView): number {
-    const maxTroops = this.maxTroops(player);
-    if (maxTroops === 0) return 0;
-
     const maxTroopsTerritory = this.maxTroopsTerritory(player);
+    const maxTroopsCity = this.maxTroopsCity(player);
+
+    const baseCapacity = maxTroopsTerritory + maxTroopsCity;
+    if (baseCapacity === 0) return 0;
+
     const currentTroops = player.troops();
 
-    // Proportionally attribute current troops based on territory's share of max capacity
-    return Math.round((maxTroopsTerritory / maxTroops) * currentTroops);
+    // Proportionally attribute current troops based on territory's share of the
+    // unscaled base capacity (territory + city). This keeps the numerator and
+    // denominator consistent for all player types.
+    return Math.round((maxTroopsTerritory / baseCapacity) * currentTroops);
   }
 
   /**
@@ -868,14 +872,18 @@ export class DefaultConfig implements Config {
    * @param player Player or PlayerView used to compute the estimate.
    */
   estimatedTroopsCity(player: Player | PlayerView): number {
-    const maxTroops = this.maxTroops(player);
-    if (maxTroops === 0) return 0;
-
+    const maxTroopsTerritory = this.maxTroopsTerritory(player);
     const maxTroopsCity = this.maxTroopsCity(player);
+
+    const baseCapacity = maxTroopsTerritory + maxTroopsCity;
+    if (baseCapacity === 0) return 0;
+
     const currentTroops = player.troops();
 
-    // Proportionally attribute current troops based on cities' share of max capacity
-    return Math.round((maxTroopsCity / maxTroops) * currentTroops);
+    // Proportionally attribute current troops based on cities' share of the
+    // unscaled base capacity (territory + city). This keeps the numerator and
+    // denominator consistent for all player types.
+    return Math.round((maxTroopsCity / baseCapacity) * currentTroops);
   }
 
   /**
