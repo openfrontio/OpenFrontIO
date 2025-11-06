@@ -36,7 +36,6 @@ export class PortExecution implements Execution {
     if (this.port === null) {
       if (isUnit(this.playerOrUnit)) {
         this.port = this.playerOrUnit;
-        this.createStation();
       } else {
         const tile = this.tile!;
         const spawn = this.playerOrUnit.canBuild(UnitType.Port, tile);
@@ -48,7 +47,6 @@ export class PortExecution implements Execution {
           return;
         }
         this.port = this.playerOrUnit.buildUnit(UnitType.Port, spawn, {});
-        this.createStation();
       }
     }
 
@@ -59,6 +57,10 @@ export class PortExecution implements Execution {
 
     if (this.port.isUnderConstruction()) {
       return;
+    }
+
+    if (!this.port.hasTrainStation()) {
+      this.createStation();
     }
 
     // Only check every 10 ticks for performance.
