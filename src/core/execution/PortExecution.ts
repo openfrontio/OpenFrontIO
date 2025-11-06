@@ -119,4 +119,40 @@ export class PortExecution implements Execution {
       }
     }
   }
+
+  // It's a probability list, so if an element appears twice it's because it's
+  // twice more likely to be picked later.
+  tradingPorts(): Unit[] {
+    const ports = this.mg
+      .players()
+      .filter((p) => p !== this.port!.owner() && p.canTrade(this.port!.owner()))
+      .flatMap((p) => p.units(UnitType.Port))
+      .sort((p1, p2) => {
+        return (
+          this.mg.manhattanDist(this.port!.tile(), p1.tile()) -
+          this.mg.manhattanDist(this.port!.tile(), p2.tile())
+        );
+      });
+
+    const weightedPorts: Unit[] = [];
+
+    for (const [i, otherPort] of ports.entries()) {
+      const expanded = new Array(otherPort.level()).fill(otherPort);
+      weightedPorts.push(...expanded);
+      const tooClose =
+        this.mg.manhattanDist(this.port!.tile(), otherPort.tile()) <
+        this.mg.config().tradeShipShortRangeDebuff();
+      const closeBonus =
+        i < this.mg.config().proximityBonusPortsNb(ports.length);
+      if (!tooClose && closeBonus) {
+        // If the port is close, but not too close, add it again
+        // to increase the chances of trading with it.
+        weightedPorts.push(...expanded);
+      }
+      if (!tooClose && this.port!.owner().isFriendly(otherPort.owner())) {
+        weightedPorts.push(...expanded);
+      }
+    }
+    return weightedPorts;
+  }
 }

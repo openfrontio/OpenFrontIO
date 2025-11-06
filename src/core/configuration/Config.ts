@@ -136,6 +136,7 @@ export interface Config {
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
+  tradeShipShortRangeDebuff(): number;
   tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(
     numTradeShips: number,
@@ -170,6 +171,8 @@ export interface Config {
   defaultNukeTargetableRange(): number;
   defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
+  samRange(level: number): number;
+  maxSamRange(): number;
   nukeDeathFactor(
     nukeType: NukeType,
     humans: number,

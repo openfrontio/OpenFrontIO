@@ -421,6 +421,7 @@ export class SpriteFactory {
     type: UnitType,
     stage: PIXI.Container,
     pos: { x: number; y: number },
+    level?: number,
   ): PIXI.Container | null {
     if (stage === undefined) throw new Error("Not initialized");
     const parentContainer = new PIXI.Container();
@@ -428,7 +429,7 @@ export class SpriteFactory {
     let radius = 0;
     switch (type) {
       case UnitType.SAMLauncher:
-        radius = this.game.config().defaultSamRange();
+        radius = this.game.config().samRange(level ?? 1);
         break;
       case UnitType.Factory:
         radius = this.game.config().trainStationMaxRange();
