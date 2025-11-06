@@ -90,6 +90,21 @@ export class FxLayer implements Layer {
     }
   }
 
+  private calculateAlertIntensity(unit: UnitView): number | undefined {
+    const trajectoryIndex = unit.trajectoryIndex();
+    const trajectoryLength = unit.trajectoryLength();
+    if (
+      trajectoryIndex !== undefined &&
+      trajectoryLength !== undefined &&
+      trajectoryLength > 0
+    ) {
+      // Calculate alert intensity: 0 = start of trajectory, 1 = end of trajectory
+      // Scale based on progress through trajectory
+      return Math.max(0, Math.min(1, trajectoryIndex / trajectoryLength));
+    }
+    return undefined;
+  }
+
   private updateNukeTargetFxRemainingTime() {
     // Update alert intensity for inbound bombs and check if inbound status changed
     // (e.g., if player recaptures territory while bomb is in flight)
@@ -116,19 +131,8 @@ export class FxLayer implements Layer {
 
       // Update alert intensity for inbound bombs
       if (isInbound) {
-        const trajectoryIndex = unit.trajectoryIndex();
-        const trajectoryLength = unit.trajectoryLength();
-        if (
-          trajectoryIndex !== undefined &&
-          trajectoryLength !== undefined &&
-          trajectoryLength > 0
-        ) {
-          // Calculate alert intensity: 0 = start of trajectory, 1 = end of trajectory
-          // Scale based on progress through trajectory
-          const alertIntensity = Math.max(
-            0,
-            Math.min(1, trajectoryIndex / trajectoryLength),
-          );
+        const alertIntensity = this.calculateAlertIntensity(unit);
+        if (alertIntensity !== undefined) {
           fx.updateAlertIntensity(alertIntensity);
         }
       }
@@ -163,23 +167,9 @@ export class FxLayer implements Layer {
         const y = this.game.y(targetTile);
 
         // Calculate alert intensity for inbound bombs
-        let alertIntensity = 0;
-        if (isInbound) {
-          const trajectoryIndex = unit.trajectoryIndex();
-          const trajectoryLength = unit.trajectoryLength();
-          if (
-            trajectoryIndex !== undefined &&
-            trajectoryLength !== undefined &&
-            trajectoryLength > 0
-          ) {
-            // Calculate alert intensity: 0 = start of trajectory, 1 = end of trajectory
-            // Scale based on progress through trajectory
-            alertIntensity = Math.max(
-              0,
-              Math.min(1, trajectoryIndex / trajectoryLength),
-            );
-          }
-        }
+        const alertIntensity = isInbound
+          ? (this.calculateAlertIntensity(unit) ?? 0)
+          : 0;
 
         const fx = new NukeAreaFx(
           x,
