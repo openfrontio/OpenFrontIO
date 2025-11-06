@@ -181,10 +181,10 @@ export class AttackExecution implements Execution {
         this._owner.id(),
       );
     }
-    if (this.removeTroops === false && this.sourceTile !== null) {
+    if (this.removeTroops === false && this.sourceTile === null) {
       // startTroops are always added to attack troops at init but not always removed from owner troops
       // subtract startTroops from attack troops so we don't give back startTroops to owner that were never removed
-      // exception: boat attacks (sourceTile !== null) have troops removed at boat departure, before attackexecution, troops still need to be added back
+      // boat attacks (sourceTile !== null) are the exception: troops were removed at departure and must be returned after attack still
       this.attack.setTroops(this.attack.troops() - (this.startTroops ?? 0));
     }
 
