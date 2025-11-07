@@ -150,6 +150,10 @@ export class TradeShipExecution implements Execution {
         this.tradeShip!.owner().id(),
         gold,
       );
+      // Record stats
+      this.mg
+        .stats()
+        .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, gold);
     } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
@@ -165,6 +169,10 @@ export class TradeShipExecution implements Execution {
         this.srcPort.owner().id(),
         gold,
       );
+      // Record stats
+      this.mg
+        .stats()
+        .boatArriveTrade(this.srcPort.owner(), this._dstPort.owner(), gold);
     }
     return;
   }

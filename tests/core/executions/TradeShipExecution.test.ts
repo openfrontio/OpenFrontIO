@@ -29,6 +29,7 @@ describe("TradeShipExecution", () => {
       units: jest.fn(() => [dstPort]),
       unitCount: jest.fn(() => 1),
       id: jest.fn(() => 1),
+      clientID: jest.fn(() => 1),
       canTrade: jest.fn(() => true),
     } as any;
 
@@ -38,6 +39,7 @@ describe("TradeShipExecution", () => {
       displayName: jest.fn(() => "Destination"),
       units: jest.fn(() => [dstPort]),
       unitCount: jest.fn(() => 1),
+      clientID: jest.fn(() => 2),
       canTrade: jest.fn(() => true),
     } as any;
 
