@@ -338,6 +338,9 @@ export class DefaultConfig implements Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
+  isRandomSpawn(): boolean {
+    return this._gameConfig.randomSpawn;
+  }
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }
@@ -918,6 +921,15 @@ export class DefaultConfig implements Config {
 
   defaultSamRange(): number {
     return 70;
+  }
+
+  samRange(level: number): number {
+    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
+    return this.maxSamRange() - 480 / (level + 5);
+  }
+
+  maxSamRange(): number {
+    return 150;
   }
 
   defaultSamMissileSpeed(): number {

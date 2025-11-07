@@ -88,6 +88,7 @@ export interface Config {
   infiniteTroops(): boolean;
   donateTroops(): boolean;
   instantBuild(): boolean;
+  isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
@@ -171,6 +172,8 @@ export interface Config {
   defaultNukeTargetableRange(): number;
   defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
+  samRange(level: number): number;
+  maxSamRange(): number;
   nukeDeathFactor(
     nukeType: NukeType,
     humans: number,
