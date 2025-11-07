@@ -916,7 +916,7 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
-  // Send out a warship if our troop transport ship got captured
+  // Send out a warship if our troop transport ship got destroyed by an enemy
   private trackTransportShipsAndRetaliate(): void {
     if (this.player === null) return;
 
