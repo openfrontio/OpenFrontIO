@@ -610,7 +610,7 @@ export class HostLobbyModal extends LitElement {
       .catch((err) => {
         console.error(`Failed to create lobby: ${err}`);
         const popup = document.createElement("div");
-        popup.className = "setting-popup"; // TODO: Change to general popup class?
+        popup.className = "setting-popup";
         popup.textContent = translateText("private_lobby.creation_error");
         document.body.appendChild(popup);
         this.close();
@@ -746,31 +746,34 @@ export class HostLobbyModal extends LitElement {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          gameMap: this.selectedMap,
-          gameMapSize: this.compactMap
-            ? GameMapSize.Compact
-            : GameMapSize.Normal,
-          difficulty: this.selectedDifficulty,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          donateGold: this.donateGold,
-          infiniteTroops: this.infiniteTroops,
-          donateTroops: this.donateTroops,
-          instantBuild: this.instantBuild,
-          gameMode: this.gameMode,
-          disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
-          ...(this.gameMode === GameMode.Team &&
-          this.teamCount === HumansVsNations
-            ? {
-                disableNPCs: false,
-              }
-            : {
-                disableNPCs: this.disableNPCs,
-              }),
-          maxTimerValue:
-            this.maxTimer === true ? this.maxTimerValue : undefined,
-        } satisfies Partial<GameConfig>),
+          hostPersistentID: getPersistentID(),
+          ...({
+            gameMap: this.selectedMap,
+            gameMapSize: this.compactMap
+              ? GameMapSize.Compact
+              : GameMapSize.Normal,
+            difficulty: this.selectedDifficulty,
+            bots: this.bots,
+            infiniteGold: this.infiniteGold,
+            donateGold: this.donateGold,
+            infiniteTroops: this.infiniteTroops,
+            donateTroops: this.donateTroops,
+            instantBuild: this.instantBuild,
+            gameMode: this.gameMode,
+            disabledUnits: this.disabledUnits,
+            playerTeams: this.teamCount,
+            ...(this.gameMode === GameMode.Team &&
+            this.teamCount === HumansVsNations
+              ? {
+                  disableNPCs: false,
+                }
+              : {
+                  disableNPCs: this.disableNPCs,
+                }),
+            maxTimerValue:
+              this.maxTimer === true ? this.maxTimerValue : undefined,
+          } satisfies Partial<GameConfig>),
+        }),
       },
     );
     return response;

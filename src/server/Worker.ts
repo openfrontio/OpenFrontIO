@@ -17,7 +17,12 @@ import {
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
-import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
+import {
+  CreateGameInputSchema,
+  GameConfig,
+  GameInputSchema,
+  StartGameSchema,
+} from "../core/WorkerSchemas";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
@@ -126,7 +131,10 @@ export async function startWorker() {
       return res.status(400).json({ error });
     }
 
-    const gc = result.data;
+    const gc = result.data as GameConfig;
+    const hostPersistentID =
+      "hostPersistentID" in result.data ? result.data.hostPersistentID : "";
+
     if (
       gc?.gameType === GameType.Public &&
       req.headers[config.adminHeader()] !== config.adminToken()
@@ -153,12 +161,12 @@ export async function startWorker() {
       `Worker ${workerId}: IP ${ipAnonymize(clientIP)} creating ${game.isPublic() ? "Public" : "Private"}${gc?.gameMode ? ` ${gc.gameMode}` : ""} game with id ${id}${creatorClientID ? `, creator: ${creatorClientID}` : ""}`,
     );
 
-    if (gc?.gameType === GameType.Private && !req.body.hostPersistentID) {
+    if (gc?.gameType !== GameType.Public && !hostPersistentID) {
       log.warn(
         `Worker ${workerId}: IP ${ipAnonymize(clientIP)} Private game with id ${id} did not receive hostPersistentID, game may be started by anyone`,
       );
-    } else if (gc?.gameType === GameType.Private) {
-      game.setHostPersistentID(req.body.hostPersistentID);
+    } else if (gc?.gameType !== GameType.Public) {
+      game.setHostPersistentID(hostPersistentID ?? "");
     }
 
     res.json(game.gameInfo());
@@ -180,14 +188,20 @@ export async function startWorker() {
       return;
     }
 
-    const hostPersistentID = req.body.hostPersistentID ?? "";
+    const result = StartGameSchema.safeParse(req.body);
+    if (!result.success) {
+      const error = z.prettifyError(result.error);
+      return res.status(400).json({ error });
+    }
+    const hostPersistentID = result.data.hostPersistentID;
     const gameHostPersistentID = game.getHostPersistentID();
 
-    // If gameHostPersistentID is null, no auth is done
+    // If gameHostPersistentID is falsy, no auth is done
     if (gameHostPersistentID && hostPersistentID !== gameHostPersistentID) {
-      log.info(`cannot start private game ${game.id}, requestor is not host`);
-      res.status(403).json({ success: false });
-      return;
+      log.warn(`cannot start private game ${game.id}, requestor is not host`);
+      return res
+        .status(403)
+        .json({ error: "Cannot start private game if client is not the host" });
     }
     game.start();
     res.status(200).json({ success: true });
@@ -199,7 +213,7 @@ export async function startWorker() {
       const error = z.prettifyError(result.error);
       return res.status(400).json({ error });
     }
-    const config = result.data;
+    const config = result.data as GameConfig;
     // TODO: only update public game if from local host
     const lobbyID = req.params.id;
     if (config.gameType === GameType.Public) {
@@ -217,6 +231,16 @@ export async function startWorker() {
         `cannot update public game ${game.id}, ip: ${ipAnonymize(clientIP)}`,
       );
       return res.status(400).json({ error: "Cannot update public game" });
+    }
+
+    const hostPersistentID = result.data.hostPersistentID ?? "";
+    const gameHostPersistentID = game.getHostPersistentID();
+
+    if (gameHostPersistentID && hostPersistentID !== gameHostPersistentID) {
+      log.warn(`cannot update private game ${game.id}, requestor is not host`);
+      return res
+        .status(403)
+        .json({ error: "Cannot update private game if client is not host" });
     }
     if (game.hasStarted()) {
       log.warn(`cannot update game ${game.id} after it has started`);
