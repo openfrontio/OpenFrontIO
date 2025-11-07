@@ -24,26 +24,26 @@ export class ControlPanel extends LitElement implements Layer {
   private _maxTroops: number;
 
   /**
-   * Rounded total maximum troop capacity available to the player.
+   * Maximum troops available to the player from territory tiles.
    */
   @state()
   private _maxTroopsTerritory: number = 0;
 
   /**
-   * Rounded maximum troop capacity coming from cities.
+   * Maximum troops available to the player from City units.
    */
   @state()
   private _maxTroopsCity: number = 0;
 
   /**
-   * Estimated current troops that belong to territory-derived capacity.
+   * Proportional allocation of troops that belong to territory-derived maximum troops.
    * This value is computed from the config.estimatedTroopsTerritory helper.
    */
   @state()
   private _troopsTerritoryEstimate: number = 0;
 
   /**
-   * Estimated current troops that belong to city-derived capacity.
+   * Proportional allocation of troops available to the player that belong to city-derived maximum troops.
    * This value is computed from the config.estimatedTroopsCity helper.
    */
   @state()
