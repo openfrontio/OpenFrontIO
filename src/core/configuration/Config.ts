@@ -131,12 +131,14 @@ export interface Config {
    * Maximum troop capacity derived from territory ownership (tiles).
    * This represents how many troops the player's territories can hold.
    * @param player The player or player view to compute territory capacity for.
+   * @returns The maximum number of troops capacity derived from the player's territories.
    */
   maxTroopsTerritory(player: Player | PlayerView): number;
 
   /**
    * Maximum troop capacity derived from cities (unit levels of UnitType.City).
    * @param player The player or player view to compute city capacity for.
+   * @returns The maximum number of troops capacity derived from the player's cities.
    */
   maxTroopsCity(player: Player | PlayerView): number;
 
@@ -145,6 +147,7 @@ export interface Config {
    * attributable to territory-derived capacity. These are proportional
    * estimates (based on capacity ratios) and do not represent exact tracking.
    * @param player The player or player view to compute an estimate for.
+   * @returns Estimated number of the player's troops attributable to territory capacity as a number.
    */
   estimatedTroopsTerritory(player: Player | PlayerView): number;
 
@@ -153,6 +156,7 @@ export interface Config {
    * attributable to city-derived capacity. These are proportional estimates
    * (based on capacity ratios) and do not represent exact tracking.
    * @param player The player or player view to compute an estimate for.
+   * @returns Estimated number of player's troops attributable to city capacity as a number.
    */
   estimatedTroopsCity(player: Player | PlayerView): number;
 

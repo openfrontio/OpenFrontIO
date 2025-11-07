@@ -846,25 +846,37 @@ export class DefaultConfig implements Config {
   }
 
   /**
+   * Private helper to estimate troop source breakdowns for a player.
+   * Returns both territory and city estimates as an object.
+   * @param player Player or PlayerView used to compute the estimate.
+   */
+  private estimateTroopSources(player: Player | PlayerView): {
+    territory: number;
+    city: number;
+  } {
+    const maxTroopsTerritory = this.maxTroopsTerritory(player);
+    const maxTroopsCity = this.maxTroopsCity(player);
+    const baseCapacity = maxTroopsTerritory + maxTroopsCity;
+    if (baseCapacity === 0) return { territory: 0, city: 0 };
+    const currentTroops = player.troops();
+    return {
+      territory: Math.round(
+        (maxTroopsTerritory / baseCapacity) * currentTroops,
+      ),
+      city: Math.round((maxTroopsCity / baseCapacity) * currentTroops),
+    };
+  }
+
+  /**
    * Estimate how many of the player's current troops are attributable to
    * territory-derived capacity. This is a proportional estimate based on the
    * ratio of territory capacity to total capacity, multiplied by current troops.
    * Note: this is only an estimate and not precise tracking of troop sources.
    * @param player Player or PlayerView used to compute the estimate.
+   * @returns Estimated number of the player's troops attributable to territory-derived capacity (proportional, not exact).
    */
   estimatedTroopsTerritory(player: Player | PlayerView): number {
-    const maxTroopsTerritory = this.maxTroopsTerritory(player);
-    const maxTroopsCity = this.maxTroopsCity(player);
-
-    const baseCapacity = maxTroopsTerritory + maxTroopsCity;
-    if (baseCapacity === 0) return 0;
-
-    const currentTroops = player.troops();
-
-    // Proportionally attribute current troops based on territory's share of the
-    // unscaled base capacity (territory + city). This keeps the numerator and
-    // denominator consistent for all player types.
-    return Math.round((maxTroopsTerritory / baseCapacity) * currentTroops);
+    return this.estimateTroopSources(player).territory;
   }
 
   /**
@@ -873,20 +885,10 @@ export class DefaultConfig implements Config {
    * ratio of city capacity to total capacity, multiplied by current troops.
    * Note: this is only an estimate and not precise tracking of troop sources.
    * @param player Player or PlayerView used to compute the estimate.
+   * @returns Estimated number of troops attributable to city capacity as a number.
    */
   estimatedTroopsCity(player: Player | PlayerView): number {
-    const maxTroopsTerritory = this.maxTroopsTerritory(player);
-    const maxTroopsCity = this.maxTroopsCity(player);
-
-    const baseCapacity = maxTroopsTerritory + maxTroopsCity;
-    if (baseCapacity === 0) return 0;
-
-    const currentTroops = player.troops();
-
-    // Proportionally attribute current troops based on cities' share of the
-    // unscaled base capacity (territory + city). This keeps the numerator and
-    // denominator consistent for all player types.
-    return Math.round((maxTroopsCity / baseCapacity) * currentTroops);
+    return this.estimateTroopSources(player).city;
   }
 
   /**
