@@ -3,7 +3,6 @@ import {
   AllUnitParams,
   MessageType,
   Player,
-  PlayerType,
   Tick,
   TrainType,
   TrajectoryTile,
@@ -25,6 +24,7 @@ export class UnitImpl implements Unit {
   private _retreating: boolean = false;
   private _targetedBySAM = false;
   private _reachedTarget = false;
+  private _wasDestroyedByEnemy: boolean = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
@@ -254,19 +254,8 @@ export class UnitImpl implements Unit {
       throw new Error(`cannot delete ${this} not active`);
     }
 
-    // If a FakeHuman transport ship is destroyed, notify its controller to send a retaliation warship
-    if (
-      destroyer !== undefined &&
-      this._type === UnitType.TransportShip &&
-      this.owner().type() === PlayerType.FakeHuman
-    ) {
-      for (const exec of this.mg.executions()) {
-        const fh = exec as any;
-        if (typeof fh?.onTransportShipDestroyed === "function") {
-          fh.onTransportShipDestroyed(this.tile(), this.owner());
-        }
-      }
-    }
+    // Record whether this unit was destroyed by an enemy (vs. arrived / retreated)
+    this._wasDestroyedByEnemy = destroyer !== undefined;
 
     this._owner._units = this._owner._units.filter((b) => b !== this);
     this._active = false;
@@ -305,6 +294,10 @@ export class UnitImpl implements Unit {
 
   isActive(): boolean {
     return this._active;
+  }
+
+  wasDestroyedByEnemy(): boolean {
+    return this._wasDestroyedByEnemy;
   }
 
   retreating(): boolean {

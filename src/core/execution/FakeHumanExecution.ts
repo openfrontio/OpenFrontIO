@@ -47,6 +47,14 @@ export class FakeHumanExecution implements Execution {
   private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
+  // Track our transport ships
+  private lastTickTransportShips: Map<
+    number,
+    { unit: Unit; lastTile: TileRef }
+  > = new Map();
+  // Track our trade ships
+  private lastTickTradeShips: Map<number, PlayerID> = new Map();
+
   /** MIRV Strategy Constants */
 
   /** Ticks until MIRV can be attempted again */
@@ -134,6 +142,12 @@ export class FakeHumanExecution implements Execution {
   }
 
   tick(ticks: number) {
+    // Ship tracking
+    if (this.player !== null && this.player.isAlive()) {
+      this.trackTransportShipsAndRetaliate();
+      this.trackTradeShipsAndRetaliate();
+    }
+
     if (ticks % this.attackRate !== this.attackTick) {
       return;
     }
@@ -902,31 +916,88 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
+  // Send out a warship if our troop transport ship gets captured
+  private trackTransportShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    const transports = this.player.units(UnitType.TransportShip);
+    const currentTransportIds = new Set<number>();
+    for (const u of transports) {
+      currentTransportIds.add(u.id());
+      this.lastTickTransportShips.set(u.id(), { unit: u, lastTile: u.tile() });
+    }
+    // Detect destroyed/missing transports from last tick
+    for (const [id, info] of Array.from(
+      this.lastTickTransportShips.entries(),
+    )) {
+      if (!currentTransportIds.has(id)) {
+        // Distinguish between arrival/retreat and enemy destruction
+        const wasDestroyedByEnemy = info.unit.wasDestroyedByEnemy?.() ?? false;
+        if (wasDestroyedByEnemy) {
+          this.maybeRetaliateWithWarship(info.lastTile);
+        }
+        this.lastTickTransportShips.delete(id);
+      }
+    }
+  }
+
+  // Send out a warship if our trade ship gets captured
+  private trackTradeShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    const allTradeShips = this.mg.units(UnitType.TradeShip);
+    const presentTradeIds = new Set<number>();
+    for (const ship of allTradeShips) {
+      const sid = ship.id();
+      presentTradeIds.add(sid);
+      const currentOwner = ship.owner().id();
+      const lastOwner = this.lastTickTradeShips.get(sid);
+      if (
+        lastOwner !== undefined &&
+        lastOwner === this.player.id() &&
+        currentOwner !== this.player.id()
+      ) {
+        // Ship was ours and is now owned by someone else -> captured
+        this.maybeRetaliateWithWarship(ship.tile());
+      }
+      // Track current owner for next tick if relevant
+      if (lastOwner !== currentOwner) {
+        this.lastTickTradeShips.set(sid, currentOwner);
+      }
+    }
+    // Cleanup entries for ships that no longer exist
+    for (const sid of Array.from(this.lastTickTradeShips.keys())) {
+      if (!presentTradeIds.has(sid)) {
+        this.lastTickTradeShips.delete(sid);
+      }
+    }
+  }
+
+  private maybeRetaliateWithWarship(tile: TileRef): void {
+    if (this.player === null) return;
+
+    const { difficulty } = this.mg.config().gameConfig();
+    // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
+    if (
+      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
+      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
+      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
+    ) {
+      const canBuild = this.player.canBuild(UnitType.Warship, tile);
+      if (canBuild === false) {
+        return;
+      }
+      this.mg.addExecution(
+        new ConstructionExecution(this.player, UnitType.Warship, tile),
+      );
+    }
+  }
+
   isActive(): boolean {
     return this.active;
   }
 
   activeDuringSpawnPhase(): boolean {
     return true;
-  }
-
-  // Called when a transport ship is destroyed
-  // Sends a retaliation warship to the destroyed ship's tile
-  public onTransportShipDestroyed(tile: TileRef, owner: Player): void {
-    if (this.player === null) throw new Error("not initialized");
-    if (owner !== this.player) return;
-
-    const { difficulty } = this.mg.config().gameConfig();
-    if (
-      difficulty === Difficulty.Easy ||
-      difficulty === Difficulty.Medium ||
-      (difficulty === Difficulty.Hard && this.random.chance(50))
-    ) {
-      return;
-    }
-
-    this.mg.addExecution(
-      new ConstructionExecution(this.player, UnitType.Warship, tile),
-    );
   }
 }
