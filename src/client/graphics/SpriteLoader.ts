@@ -1,6 +1,6 @@
 import { Colord } from "colord";
-import miniPumpkin from "../../../resources/sprites/halloween/miniPumpkin.png";
-import pumpkin from "../../../resources/sprites/halloween/pumpkin.png";
+import atomBombSprite from "../../../resources/sprites/atombomb.png";
+import hydrogenBombSprite from "../../../resources/sprites/hydrogenbomb.png";
 import mirvSprite from "../../../resources/sprites/mirv2.png";
 import samMissileSprite from "../../../resources/sprites/samMissile.png";
 import tradeShipSprite from "../../../resources/sprites/tradeship.png";
@@ -26,8 +26,8 @@ const SPRITE_CONFIG: Partial<Record<UnitType | TrainTypeSprite, string>> = {
   [UnitType.TransportShip]: transportShipSprite,
   [UnitType.Warship]: warshipSprite,
   [UnitType.SAMMissile]: samMissileSprite,
-  [UnitType.AtomBomb]: miniPumpkin,
-  [UnitType.HydrogenBomb]: pumpkin,
+  [UnitType.AtomBomb]: atomBombSprite,
+  [UnitType.HydrogenBomb]: hydrogenBombSprite,
   [UnitType.TradeShip]: tradeShipSprite,
   [UnitType.MIRV]: mirvSprite,
   [TrainTypeSprite.Engine]: trainEngineSprite,
