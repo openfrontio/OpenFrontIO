@@ -932,7 +932,7 @@ export class FakeHumanExecution implements Execution {
     )) {
       if (!currentTransportIds.has(id)) {
         // Distinguish between arrival/retreat and enemy destruction
-        const wasDestroyedByEnemy = info.unit.wasDestroyedByEnemy?.() ?? false;
+        const wasDestroyedByEnemy = info.unit.wasDestroyedByEnemy();
         if (wasDestroyedByEnemy) {
           this.maybeRetaliateWithWarship(info.lastTile);
         }
