@@ -916,7 +916,7 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
-  // Send out a warship if our troop transport ship gets captured
+  // Send out a warship if our troop transport ship got captured
   private trackTransportShipsAndRetaliate(): void {
     if (this.player === null) return;
 
@@ -941,7 +941,7 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
-  // Send out a warship if our trade ship gets captured
+  // Send out a warship if our trade ship got captured
   private trackTradeShipsAndRetaliate(): void {
     if (this.player === null) return;
 
