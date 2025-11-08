@@ -11,6 +11,7 @@ import {
   HumansVsNations,
   Player,
   PlayerInfo,
+  PlayerRel,
   PlayerType,
   Quads,
   TerrainType,
@@ -359,7 +360,7 @@ export class DefaultConfig implements Config {
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
     return (numPlayerFactories + 10) * 16;
   }
-  trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
+  trainGold(rel: PlayerRel): Gold {
     switch (rel) {
       case "ally":
         return 50_000n;

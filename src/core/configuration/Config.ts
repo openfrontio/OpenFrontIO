@@ -8,6 +8,7 @@ import {
   Gold,
   Player,
   PlayerInfo,
+  PlayerRel,
   Team,
   TerraNullius,
   Tick,
@@ -144,7 +145,7 @@ export interface Config {
     numPlayerPorts: number,
     numPlayerTradeShips: number,
   ): number;
-  trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
+  trainGold(rel: PlayerRel): Gold;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;

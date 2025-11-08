@@ -521,6 +521,8 @@ export interface Embargo {
   isTemporary: boolean;
   target: Player;
 }
+// TODO: rename after discussion
+export type PlayerRel = "self" | "team" | "ally" | "other";
 
 export interface Player {
   // Basic Info
@@ -589,6 +591,8 @@ export interface Player {
   neighbors(): (Player | TerraNullius)[];
   sharesBorderWith(other: Player | TerraNullius): boolean;
   relation(other: Player): Relation;
+  // TODO: Need to decide with naming
+  rel(other: Player): PlayerRel;
   allRelationsSorted(): { player: Player; relation: Relation }[];
   updateRelation(other: Player, delta: number): void;
   decayRelations(): void;

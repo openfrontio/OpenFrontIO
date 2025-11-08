@@ -261,4 +261,78 @@ export class RailNetworkImpl implements RailNetwork {
       merged.merge(cluster);
     }
   }
+
+  private getDestinationWeight(
+    sourceStation: TrainStation,
+    destinationStation: TrainStation,
+  ): number {
+    if (sourceStation === destinationStation) {
+      return -1;
+    }
+
+    if (
+      ![UnitType.City, UnitType.Port].includes(destinationStation.unit.type())
+    ) {
+      return -1;
+    }
+
+    if (!destinationStation.tradeAvailable(sourceStation.unit.owner())) {
+      return -1;
+    }
+
+    let weight = 0;
+
+    const pathStations = this.pathService.findStationsPath(
+      sourceStation,
+      destinationStation,
+    );
+
+    for (const pathStation of pathStations) {
+      if (![UnitType.City, UnitType.Port].includes(pathStation.unit.type())) {
+        // TODO: Consider adding a gold multiplier for factories along the route.
+        //       Visually, the train could display accumulated cargo.
+        //       This needs a discussion.
+        continue;
+      }
+
+      weight += 1;
+
+      switch (sourceStation.unit.owner().rel(pathStation.unit.owner())) {
+        case "ally":
+          weight += 50;
+          break;
+        case "team":
+        case "other":
+          weight += 25;
+          break;
+        case "self":
+          weight += 10;
+          break;
+      }
+    }
+
+    return weight;
+  }
+
+  getMostProfitDestination(from: TrainStation): TrainStation | null {
+    let bestDestinationWeight = 0;
+    let bestDestination: TrainStation | null = null;
+
+    const cluster = from.getCluster();
+
+    if (!cluster) {
+      return null;
+    }
+
+    for (const station of cluster.stations) {
+      const stationWeight = this.getDestinationWeight(from, station);
+
+      if (stationWeight > bestDestinationWeight) {
+        bestDestination = station;
+        bestDestinationWeight = stationWeight;
+      }
+    }
+
+    return bestDestination;
+  }
 }

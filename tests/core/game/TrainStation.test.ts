@@ -28,6 +28,7 @@ describe("TrainStation", () => {
       id: 1,
       canTrade: jest.fn().mockReturnValue(true),
       isFriendly: jest.fn().mockReturnValue(false),
+      rel: jest.fn().mockReturnValue(true),
     } as any;
 
     unit = {

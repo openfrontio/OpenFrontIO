@@ -25,7 +25,7 @@ class CityStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+    const goldBonus = mg.config().trainGold(trainOwner.rel(stationOwner));
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
       stationOwner.addGold(goldBonus, station.tile());
@@ -43,7 +43,7 @@ class PortStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+    const goldBonus = mg.config().trainGold(trainOwner.rel(stationOwner));
 
     trainOwner.addGold(goldBonus, station.tile());
     // Share revenue with the station owner if it's not the current player
@@ -210,20 +210,6 @@ export class Cluster {
     }
   }
 
-  availableForTrade(player: Player): Set<TrainStation> {
-    const tradingStations = new Set<TrainStation>();
-    for (const station of this.stations) {
-      if (
-        (station.unit.type() === UnitType.City ||
-          station.unit.type() === UnitType.Port) &&
-        station.tradeAvailable(player)
-      ) {
-        tradingStations.add(station);
-      }
-    }
-    return tradingStations;
-  }
-
   size() {
     return this.stations.size;
   }
@@ -231,20 +217,4 @@ export class Cluster {
   clear() {
     this.stations.clear();
   }
-}
-
-function rel(
-  player: Player,
-  other: Player,
-): "self" | "team" | "ally" | "other" {
-  if (player === other) {
-    return "self";
-  }
-  if (player.isOnSameTeam(other)) {
-    return "team";
-  }
-  if (player.isAlliedWith(other)) {
-    return "ally";
-  }
-  return "other";
 }

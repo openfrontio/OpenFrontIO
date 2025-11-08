@@ -28,6 +28,7 @@ import {
   PlayerID,
   PlayerInfo,
   PlayerProfile,
+  PlayerRel,
   PlayerType,
   Relation,
   Team,
@@ -1221,5 +1222,18 @@ export class PlayerImpl implements Player {
 
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
     return bestShoreDeploymentSource(this.mg, this, targetTile);
+  }
+
+  rel(other: Player): PlayerRel {
+    if (this === other) {
+      return "self";
+    }
+    if (this.isOnSameTeam(other)) {
+      return "team";
+    }
+    if (this.isAlliedWith(other)) {
+      return "ally";
+    }
+    return "other";
   }
 }

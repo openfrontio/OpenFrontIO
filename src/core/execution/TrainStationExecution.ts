@@ -69,30 +69,26 @@ export class TrainStationExecution implements Execution {
     if (cluster === null) {
       return;
     }
-    const availableForTrade = cluster.availableForTrade(this.unit.owner());
-    if (availableForTrade.size === 0) {
-      return;
-    }
     if (!this.shouldSpawnTrain()) {
       return;
     }
 
-    // Pick a destination randomly.
-    // Could be improved to pick a lucrative trip
-    const destination: TrainStation =
-      this.random.randFromSet(availableForTrade);
-    if (destination !== station) {
-      this.mg.addExecution(
-        new TrainExecution(
-          this.mg.railNetwork(),
-          this.unit.owner(),
-          station,
-          destination,
-          this.numCars,
-        ),
-      );
-      this.lastSpawnTick = currentTick;
+    const destination = this.mg.railNetwork().getMostProfitDestination(station);
+
+    if (!destination) {
+      return;
     }
+
+    this.mg.addExecution(
+      new TrainExecution(
+        this.mg.railNetwork(),
+        this.unit.owner(),
+        station,
+        destination,
+        this.numCars,
+      ),
+    );
+    this.lastSpawnTick = currentTick;
   }
 
   activeDuringSpawnPhase(): boolean {
