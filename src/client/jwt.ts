@@ -225,6 +225,7 @@ export async function postRefresh(): Promise<boolean> {
     // Refresh the JWT
     const response = await fetch(getApiBase() + "/refresh", {
       method: "POST",
+      credentials: "include",
       headers: {
         authorization: `Bearer ${token}`,
       },
@@ -242,6 +243,9 @@ export async function postRefresh(): Promise<boolean> {
       return false;
     }
     localStorage.setItem("token", result.data.token);
+    // Clear the cached logged in state
+    // so that the next call to isLoggedIn() will refresh the token
+    __isLoggedIn = undefined;
     return true;
   } catch (e) {
     __isLoggedIn = false;

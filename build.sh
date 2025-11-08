@@ -64,6 +64,12 @@ fi
 
 DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
 
+# If ADDITIONAL_VERSION_TAG is provided ADDITIONAL_DOCKER_IMAGE will be set
+# example usage: adding latest tag
+if [ -n "$ADDITIONAL_VERSION_TAG" ]; then
+    ADDITIONAL_DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${ADDITIONAL_VERSION_TAG}"
+fi
+
 # Build and upload Docker image to Docker Hub
 echo "Environment: ${DEPLOY_ENV}"
 echo "Using version tag: $VERSION_TAG"
@@ -86,6 +92,7 @@ docker buildx build \
     --build-arg GIT_COMMIT=$GIT_COMMIT \
     --metadata-file $METADATA_FILE \
     -t $DOCKER_IMAGE \
+    ${ADDITIONAL_DOCKER_IMAGE:+-t "$ADDITIONAL_DOCKER_IMAGE"} \
     --push \
     .
 
