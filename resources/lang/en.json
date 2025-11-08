@@ -578,6 +578,7 @@
     "accept_alliance": "Accept",
     "reject_alliance": "Reject",
     "alliance_renewed": "Your alliance with {name} has been renewed",
+    "wants_to_renew_alliance": "{name} wants to renew your alliance",
     "ignore": "Ignore",
     "unit_voluntarily_deleted": "Unit voluntarily deleted"
   },
