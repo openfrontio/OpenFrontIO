@@ -1,7 +1,7 @@
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 
-const AD_SHOW_TICKS = 60 * 10; // 1 minute
+const AD_SHOW_TICKS = 2 * 60 * 10; // 2 minutes
 
 export class AdTimer implements Layer {
   private isHidden: boolean = false;
