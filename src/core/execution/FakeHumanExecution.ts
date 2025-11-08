@@ -140,7 +140,11 @@ export class FakeHumanExecution implements Execution {
 
   tick(ticks: number) {
     // Ship tracking
-    if (this.player !== null && this.player.isAlive()) {
+    if (
+      this.player !== null &&
+      this.player.isAlive() &&
+      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
+    ) {
       this.trackTransportShipsAndRetaliate();
       this.trackTradeShipsAndRetaliate();
     }
