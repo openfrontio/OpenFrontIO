@@ -789,8 +789,8 @@ export class PlayerImpl implements Player {
     return this._team === other.team();
   }
 
-  isFriendly(other: Player, treatAFKFriendly: boolean = false): boolean {
-    if (other.isDisconnected() && !treatAFKFriendly) {
+  isFriendly(other: Player): boolean {
+    if (other.isDisconnected()) {
       return false;
     }
     return this.isOnSameTeam(other) || this.isAlliedWith(other);
