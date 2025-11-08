@@ -91,6 +91,9 @@ npm run start:server-dev
 
 Sometimes it's useful to connect to production servers when replaying a game, testing user profiles, purchases, or login flow.
 
+> To replay production games, make sure you're on the same commit as the game, check the `gitCommit` property via https://api.openfront.io/game/[gameId].
+> Not finished games can't be replayed on localhost.
+
 To connect to staging api servers:
 
 ```bash
