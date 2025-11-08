@@ -260,7 +260,8 @@
   },
   "game_mode": {
     "ffa": "バトルロワイヤル",
-    "teams": "チーム"
+    "teams": "チーム",
+    "fog_of_war": "戦争の霧"
   },
   "select_lang": {
     "title": "言語を選択"

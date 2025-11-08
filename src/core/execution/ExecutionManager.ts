@@ -1,4 +1,4 @@
-import { Execution, Game } from "../game/Game";
+import { Execution, Game, GameMode, PlayerInfo } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -16,6 +16,7 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
+import { FFARSpawner } from "./FFARSpawner";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
@@ -47,6 +48,12 @@ export class Executor {
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);
+      return new NoOpExecution();
+    }
+
+    // Interaction blocking during spawn phase in Fog of War mode
+    if (this.mg.config().gameConfig().gameMode === GameMode.FogOfWar && this.mg.inSpawnPhase()) {
+      // Convert all intents to NoOpExecution during spawn phase in FOW mode
       return new NoOpExecution();
     }
 
@@ -134,5 +141,11 @@ export class Executor {
       execs.push(new FakeHumanExecution(this.gameID, nation));
     }
     return execs;
+  }
+
+  spawnFFARPlayers(humans: PlayerInfo[], numBots: number): SpawnExecution[] {
+    // Automatic spawn in Fog of War mode
+    const nations = this.mg.nations().map(nation => nation.playerInfo);
+    return new FFARSpawner(this.mg, this.gameID).spawnFFARPlayers(humans, numBots, nations);
   }
 }

@@ -14,6 +14,7 @@ import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { FogOfWarLayer } from "./layers/FogOfWarLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
 import { GutterAdModal } from "./layers/GutterAdModal";
@@ -87,6 +88,7 @@ export function createRenderer(
     console.error("GameLeftSidebar element not found in the DOM");
   }
   gameLeftSidebar.game = game;
+  gameLeftSidebar.eventBus = eventBus;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!teamStats || !(teamStats instanceof TeamStats)) {
@@ -230,6 +232,9 @@ export function createRenderer(
   }
   alertFrame.game = game;
 
+  const fogOfWarLayer = new FogOfWarLayer(game, transformHandler);
+  const nameLayer = new NameLayer(game, transformHandler, eventBus, fogOfWarLayer);
+  
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -242,26 +247,45 @@ export function createRenderer(
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
-    new NameLayer(game, transformHandler, eventBus),
+    nameLayer,
     eventsDisplay,
     chatDisplay,
     buildMenu,
-    new MainRadialMenu(
-      eventBus,
-      game,
-      transformHandler,
-      emojiTable as EmojiTable,
-      buildMenu,
-      uiState,
-      playerPanel,
-    ),
+    // Pass the NameLayer reference to the MainRadialMenu
+    (() => {
+      const mainRadialMenu = new MainRadialMenu(
+        eventBus,
+        game,
+        transformHandler,
+        emojiTable as EmojiTable,
+        buildMenu,
+        uiState,
+        playerPanel,
+      );
+      mainRadialMenu.setFogOfWarLayer(fogOfWarLayer);
+      mainRadialMenu.setNameLayer(nameLayer);
+      return mainRadialMenu;
+    })(),
     new SpawnTimer(game, transformHandler),
-    leaderboard,
+    // Pass the FogOfWarLayer reference to the Leaderboard
+    (() => {
+      leaderboard.fogOfWarLayer = fogOfWarLayer;
+      return leaderboard;
+    })(),
     gameLeftSidebar,
     unitDisplay,
-    gameRightSidebar,
+    // Pass the FogOfWarLayer reference to GameRightSidebar
+    (() => {
+      gameRightSidebar.fogOfWarLayer = fogOfWarLayer;
+      return gameRightSidebar;
+    })(),
     controlPanel,
-    playerInfo,
+    // Pass the FogOfWarLayer and NameLayer references to PlayerInfoOverlay
+    (() => {
+      playerInfo.setFogOfWarLayer(fogOfWarLayer);
+      playerInfo.setNameLayer(nameLayer);
+      return playerInfo;
+    })(),
     winModal,
     replayPanel,
     settingsModal,
@@ -273,6 +297,8 @@ export function createRenderer(
     gutterAdModal,
     alertFrame,
     fpsDisplay,
+    // Fog of War layer moved to the end to render on top of all other elements
+    fogOfWarLayer,
   ];
 
   return new GameRenderer(
@@ -302,6 +328,9 @@ export class GameRenderer {
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
   }
+  
+  // Add property for FogOfWarLayer
+  public fogOfWarLayer: any = null;
 
   initialize() {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());

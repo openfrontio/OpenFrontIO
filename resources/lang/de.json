@@ -232,7 +232,8 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Teams"
+    "teams": "Teams",
+    "fog_of_war": "Kriegsnebel"
   },
   "select_lang": {
     "title": "Sprache auswählen"

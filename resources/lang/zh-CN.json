@@ -257,7 +257,8 @@
   },
   "game_mode": {
     "ffa": "混战",
-    "teams": "团队"
+    "teams": "团队",
+    "fog_of_war": "战争迷雾"
   },
   "select_lang": {
     "title": "选择语言"

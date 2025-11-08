@@ -1,7 +1,7 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
+import { PlayerActions, GameMode } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
@@ -22,6 +22,14 @@ import {
 
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { ContextMenuEvent } from "../../InputHandler";
+import { FogOfWarLayer } from "./FogOfWarLayer";
+import { NameLayer } from "./NameLayer";
+
+// Extended interface to include fogOfWarLayer and nameLayer
+interface ExtendedMenuElementParams extends MenuElementParams {
+  fogOfWarLayer: FogOfWarLayer | null;
+  nameLayer: NameLayer | null;
+}
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
@@ -31,6 +39,8 @@ export class MainRadialMenu extends LitElement implements Layer {
   private chatIntegration: ChatIntegration;
 
   private clickedTile: TileRef | null = null;
+  private fogOfWarLayer: FogOfWarLayer | null = null;
+  private nameLayer: NameLayer | null = null;
 
   constructor(
     private eventBus: EventBus,
@@ -71,6 +81,16 @@ export class MainRadialMenu extends LitElement implements Layer {
     this.chatIntegration = new ChatIntegration(this.game, this.eventBus);
   }
 
+  // Method to set the reference to FogOfWarLayer
+  public setFogOfWarLayer(fogLayer: FogOfWarLayer) {
+    this.fogOfWarLayer = fogLayer;
+  }
+
+  // Method to set the reference to NameLayer
+  public setNameLayer(nameLayer: NameLayer) {
+    this.nameLayer = nameLayer;
+  }
+
   init() {
     this.radialMenu.init();
     this.eventBus.on(ContextMenuEvent, (event) => {
@@ -84,6 +104,27 @@ export class MainRadialMenu extends LitElement implements Layer {
       if (this.game.myPlayer() === null) {
         return;
       }
+      
+      // Check if we are in Fog of War mode or other supported modes (FFA, Team)
+      const gameMode = this.game.config().gameConfig().gameMode;
+      if (gameMode === GameMode.FogOfWar && this.fogOfWarLayer) {
+        // In Fog of War mode, continue with existing logic
+        const tileRef = this.game.ref(worldCoords.x, worldCoords.y);
+        const x = this.game.x(tileRef);
+        const y = this.game.y(tileRef);
+        const idx = y * this.game.width() + x;
+        const fogValue = this.fogOfWarLayer.getFogValueAt(idx);
+        
+        // Show radial menu in all areas, but with different logic for fog = 1
+        // This check was removed because the radial menu should be displayed in all areas
+      } else if (gameMode === GameMode.FFA || gameMode === GameMode.Team) {
+        // In FFA and Team modes, allow radial menu
+        // No fog check in these modes
+      } else {
+        // In other modes, don't show radial menu
+        return;
+      }
+
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
       this.game
         .myPlayer()!
@@ -116,7 +157,8 @@ export class MainRadialMenu extends LitElement implements Layer {
       this.chatIntegration.setupChatModal(myPlayer, recipient);
     }
 
-    const params: MenuElementParams = {
+    // Extend parameters with fogOfWarLayer and nameLayer
+    const params: ExtendedMenuElementParams = {
       myPlayer,
       selected: recipient,
       tile,
@@ -129,7 +171,9 @@ export class MainRadialMenu extends LitElement implements Layer {
       chatIntegration: this.chatIntegration,
       closeMenu: () => this.closeMenu(),
       eventBus: this.eventBus,
-    };
+      fogOfWarLayer: this.fogOfWarLayer,
+      nameLayer: this.nameLayer,
+    } as ExtendedMenuElementParams;
 
     this.radialMenu.setParams(params);
     if (screenX !== null && screenY !== null) {

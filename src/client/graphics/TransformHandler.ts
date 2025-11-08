@@ -7,6 +7,7 @@ import {
   GoToPositionEvent,
   GoToUnitEvent,
 } from "./layers/Leaderboard";
+import { FogOfWarLayer } from "./layers/FogOfWarLayer";
 
 export const GOTO_INTERVAL_MS = 16;
 export const CAMERA_MAX_SPEED = 15;
@@ -22,6 +23,9 @@ export class TransformHandler {
   private target: Cell | null;
   private intervalID: NodeJS.Timeout | null = null;
   private changed = false;
+  
+  // Adding reference to FogOfWarLayer
+  public fogOfWarLayer: FogOfWarLayer | null = null;
 
   constructor(
     private game: GameView,

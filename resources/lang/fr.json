@@ -260,7 +260,8 @@
   },
   "game_mode": {
     "ffa": "Chacun pour soi",
-    "teams": "Équipes"
+    "teams": "Équipes",
+    "fog_of_war": "Brouillard de guerre"
   },
   "select_lang": {
     "title": "Sélectionner une langue"

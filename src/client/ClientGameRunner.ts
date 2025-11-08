@@ -12,7 +12,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameMode, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -270,6 +270,15 @@ export class ClientGameRunner {
 
     this.renderer.initialize();
     this.input.initialize();
+    
+    // Pass the game reference to the InputHandler
+    this.input.setGame(this.gameView);
+    
+    // Pass the FogOfWarLayer reference to the InputHandler (if available)
+    if (this.renderer && this.renderer.fogOfWarLayer) {
+      this.input.setFogOfWarLayer(this.renderer.fogOfWarLayer);
+    }
+    
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
       if (this.lobby.gameStartInfo === undefined) {
         throw new Error("missing gameStartInfo");
@@ -386,9 +395,10 @@ export class ClientGameRunner {
   }
 
   private inputEvent(event: MouseUpEvent) {
-    if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
+    if (!this.isActive) {
       return;
     }
+
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
       event.x,
       event.y,
@@ -398,6 +408,24 @@ export class ClientGameRunner {
     }
     console.log(`clicked cell ${cell}`);
     const tile = this.gameView.ref(cell.x, cell.y);
+    
+    // Check if we are in Fog of War mode and if the position is completely fogged (fog = 1)
+    // Allow attacks even in areas with fog = 1
+    let isFoggedArea = false;
+    if (this.renderer && this.renderer.fogOfWarLayer && 
+        this.gameView.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      const tileX = this.gameView.x(tile);
+      const tileY = this.gameView.y(tile);
+      const idx = tileY * this.gameView.width() + tileX;
+      const fogValue = this.renderer.fogOfWarLayer.getFogValueAt(idx);
+      
+      // If fog is completely fogged (value 1), mark as fogged area
+      if (fogValue >= 1.0) {
+        isFoggedArea = true;
+      }
+    }
+    
+    // Allow spawn in all modes, not just Fog of War mode
     if (
       this.gameView.isLand(tile) &&
       !this.gameView.hasOwner(tile) &&
@@ -423,7 +451,7 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (this.canAutoBoat(actions, tile)) {
+      } else if (this.canBoatAttack(actions, tile)) {
         this.sendBoatAttackIntent(tile);
       }
 
@@ -519,7 +547,7 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      if (this.canBoatAttack(actions) !== false) {
+      if (!actions.canAttack && this.canBoatAttack(actions, tile)) {
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -567,7 +595,7 @@ export class ClientGameRunner {
     return this.gameView.ref(cell.x, cell.y);
   }
 
-  private canBoatAttack(actions: PlayerActions): false | TileRef {
+  private canBoatAttack(actions: PlayerActions, tile: TileRef): boolean {
     const bu = actions.buildableUnits.find(
       (bu) => bu.type === UnitType.TransportShip,
     );
@@ -575,7 +603,11 @@ export class ClientGameRunner {
       console.warn(`no transport ship buildable units`);
       return false;
     }
-    return bu.canBuild;
+    return (
+      bu.canBuild !== false &&
+      this.shouldBoat(tile, bu.canBuild) &&
+      this.gameView.isLand(tile)
+    );
   }
 
   private sendBoatAttackIntent(tile: TileRef) {
@@ -594,20 +626,16 @@ export class ClientGameRunner {
     });
   }
 
-  private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {
-    if (!this.gameView.isLand(tile)) return false;
-
-    const canBuild = this.canBoatAttack(actions);
-    if (canBuild === false) return false;
-
+  private shouldBoat(tile: TileRef, src: TileRef) {
     // TODO: Global enable flag
     // TODO: Global limit autoboat to nearby shore flag
     // if (!enableAutoBoat) return false;
     // if (!limitAutoBoatNear) return true;
-    const distanceSquared = this.gameView.euclideanDistSquared(tile, canBuild);
+    const distanceSquared = this.gameView.euclideanDistSquared(tile, src);
     const limit = 100;
     const limitSquared = limit * limit;
-    return distanceSquared < limitSquared;
+    if (distanceSquared > limitSquared) return false;
+    return true;
   }
 
   private onMouseMove(event: MouseMoveEvent) {

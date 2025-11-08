@@ -15,6 +15,7 @@ import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
+  GameMode,
   Gold,
   PlayerActions,
   UnitType,
@@ -129,6 +130,9 @@ export class BuildMenu extends LitElement implements Layer {
   public playerActions: PlayerActions | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
+  
+  // Add reference to fogOfWarLayer
+  public fogOfWarLayer: any = null;
 
   init() {
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
@@ -151,6 +155,20 @@ export class BuildMenu extends LitElement implements Layer {
         return;
       }
       const tile = this.game.ref(clickedCell.x, clickedCell.y);
+      
+      // Check if we are in Fog of War mode and if the position is completely fogged (fog = 1)
+      if (this.game.config().gameConfig().gameMode === GameMode.FogOfWar && this.fogOfWarLayer) {
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const idx = y * this.game.width() + x;
+        const fogValue = this.fogOfWarLayer.getFogValueAt(idx);
+        
+        // If fog is completely fogged (value 1), don't show the menu
+        if (fogValue >= 1.0) {
+          return;
+        }
+      }
+      
       this.showMenu(tile);
     });
     this.eventBus.on(CloseViewEvent, () => this.hideMenu());

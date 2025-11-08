@@ -1,5 +1,5 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import { AllPlayers, GameMode, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -10,6 +10,7 @@ import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
+import { NameLayer } from "./NameLayer";
 
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import boatIcon from "../../../../resources/images/BoatIconWhite.svg";
@@ -24,6 +25,11 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
+
+// Extended interface to include nameLayer
+interface ExtendedMenuElementParams extends MenuElementParams {
+  nameLayer: NameLayer | null;
+}
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -306,13 +312,35 @@ export const infoMenuElement: MenuElement = {
   id: Slot.Info,
   name: "info",
   disabled: (params: MenuElementParams) =>
-    !params.selected || params.game.inSpawnPhase(),
+    !params.selected || params.game.inSpawnPhase() || !isPlayerNameVisible(params as ExtendedMenuElementParams),
   icon: infoIcon,
   color: COLORS.info,
   action: (params: MenuElementParams) => {
     params.playerPanel.show(params.playerActions, params.tile);
   },
 };
+
+// Function to check if the player's NameLayer is visible
+function isPlayerNameVisible(params: ExtendedMenuElementParams): boolean {
+  // If we're not in Fog of War mode, the name is always visible
+  if (params.game.config().gameConfig().gameMode !== GameMode.FogOfWar) {
+    // In FFA and Team modes, check if the selected player exists and is alive
+    return params.selected !== null && params.selected.isAlive();
+  }
+
+  // If we don't have access to the selected player, assume it's not visible
+  if (!params.selected) {
+    return false;
+  }
+
+  // If we don't have access to nameLayer, assume it's not visible
+  if (!params.nameLayer) {
+    return false;
+  }
+
+  // Check if the player's name is visible through NameLayer
+  return params.nameLayer.isPlayerNameVisible(params.selected);
+}
 
 function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
   const Units: Set<UnitType> = new Set<UnitType>();
@@ -567,6 +595,28 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
+    // Check the fog value to determine which menus are available
+    let fogValue = 0;
+    let isFogLevel1 = false; // fog = 1
+    
+    // Check if we have access to fogOfWarLayer through extended parameters
+    if ((params as any).fogOfWarLayer && (params as any).game) {
+      const game = (params as any).game;
+      const fogOfWarLayer = (params as any).fogOfWarLayer;
+      
+      if (game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+        const tileX = game.x(params.tile);
+        const tileY = game.y(params.tile);
+        const idx = tileY * game.width() + tileX;
+        fogValue = fogOfWarLayer.getFogValueAt(idx);
+        
+        // Check if it's exactly fog = 1
+        if (fogValue >= 1.0) {
+          isFogLevel1 = true;
+        }
+      }
+    }
+    
     let ally = allyRequestElement;
     if (params.selected?.isAlliedWith(params.myPlayer)) {
       ally = allyBreakElement;
@@ -577,17 +627,24 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
-    const menuItems: (MenuElement | null)[] = [
-      infoMenuElement,
-      boatMenuElement,
-      ally,
-    ];
+    const menuItems: (MenuElement | null)[] = [];
 
-    if (isOwnTerritory) {
-      menuItems.push(buildMenuElement);
-      menuItems.push(deleteUnitElement);
-    } else {
+    // Specific logic based on fog value:
+    if (isFogLevel1) {
+      // Fog = 1: Only Attack Menu available
       menuItems.push(attackMenuElement);
+    } else {
+      // All other fog values: All default menus available
+      menuItems.push(infoMenuElement);
+      menuItems.push(boatMenuElement);
+      menuItems.push(ally);
+      
+      if (isOwnTerritory) {
+        menuItems.push(buildMenuElement);
+        menuItems.push(deleteUnitElement);
+      } else {
+        menuItems.push(attackMenuElement);
+      }
     }
 
     return menuItems.filter((item): item is MenuElement => item !== null);

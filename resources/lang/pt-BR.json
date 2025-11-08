@@ -171,7 +171,8 @@
   },
   "game_mode": {
     "ffa": "Free for All",
-    "teams": "Equipes"
+    "teams": "Equipes",
+    "fog_of_war": "Nevoeiro de Guerra"
   },
   "select_lang": {
     "title": "Selecionar idioma"

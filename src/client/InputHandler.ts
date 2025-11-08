@@ -1,5 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { UnitType } from "../core/game/Game";
+import { GameMode, UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
@@ -138,12 +138,26 @@ export class InputHandler {
   private readonly ZOOM_SPEED = 10;
 
   private readonly userSettings: UserSettings = new UserSettings();
+  
+  // Add reference to game and fogOfWarLayer to check the mode
+  private game: any = null;
+  private fogOfWarLayer: any = null;
 
   constructor(
     public uiState: UIState,
     private canvas: HTMLCanvasElement,
     private eventBus: EventBus,
   ) {}
+
+  // Method to set the reference to the game
+  public setGame(game: any) {
+    this.game = game;
+  }
+  
+  // Method to set the reference to the FogOfWarLayer
+  public setFogOfWarLayer(fogOfWarLayer: any) {
+    this.fogOfWarLayer = fogOfWarLayer;
+  }
 
   initialize() {
     let saved: Record<string, string> = {};
@@ -206,7 +220,9 @@ export class InputHandler {
     this.canvas.addEventListener(
       "wheel",
       (e) => {
-        this.onScroll(e);
+        if (!this.onTrackpadPan(e)) {
+          this.onScroll(e);
+        }
         this.onShiftScroll(e);
         e.preventDefault();
       },
@@ -218,6 +234,16 @@ export class InputHandler {
       if (e.movementX || e.movementY) {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
+    });
+
+    this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
+      passive: false,
+    });
+    this.canvas.addEventListener("touchmove", (e) => this.onTouchMove(e), {
+      passive: false,
+    });
+    this.canvas.addEventListener("touchend", (e) => this.onTouchEnd(e), {
+      passive: false,
     });
     this.pointers.clear();
 
@@ -442,7 +468,7 @@ export class InputHandler {
     }
   }
 
-  onPointerUp(event: PointerEvent) {
+  private onPointerUp(event: PointerEvent) {
     if (event.button === 1) {
       event.preventDefault();
       return;
@@ -454,7 +480,38 @@ export class InputHandler {
     this.pointerDown = false;
     this.pointers.clear();
 
+    // Check if we are in Fog of War mode before showing the build menu
     if (this.isModifierKeyPressed(event)) {
+      // If in Fog of War mode, check the fog value at the clicked position
+      if (this.game && this.game.config && this.fogOfWarLayer) {
+        // Check if the game mode is Fog of War (correct comparison)
+        const gameMode = this.game.config().gameConfig().gameMode;
+        if (gameMode === GameMode.FogOfWar) {
+          // Convert screen coordinates to world coordinates
+          const rect = this.canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          
+          // Convert to world coordinates
+          if (this.game.renderer && this.game.renderer.transformHandler) {
+            const worldCoords = this.game.renderer.transformHandler.screenToWorldCoordinates(x, y);
+            
+            // Check if coordinates are valid
+            if (this.game.isValidCoord && this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+              const tileRef = this.game.ref(worldCoords.x, worldCoords.y);
+              const tileX = this.game.x(tileRef);
+              const tileY = this.game.y(tileRef);
+              const idx = tileY * this.game.width() + tileX;
+              const fogValue = this.fogOfWarLayer.getFogValueAt(idx);
+              
+              // If fog is completely fogged (value 1), don't show the menu
+              if (fogValue >= 1.0) {
+                return;
+              }
+            }
+          }
+        }
+      }
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
@@ -497,6 +554,27 @@ export class InputHandler {
       const ratio = scrollValue > 0 ? -10 : 10;
       this.eventBus.emit(new AttackRatioEvent(ratio));
     }
+  }
+
+  private onTrackpadPan(event: WheelEvent): boolean {
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      return false;
+    }
+
+    const isTrackpadPan = event.deltaMode === 0 && event.deltaX !== 0;
+
+    if (!isTrackpadPan) {
+      return false;
+    }
+
+    const panSensitivity = 1.0;
+    const deltaX = -event.deltaX * panSensitivity;
+    const deltaY = -event.deltaY * panSensitivity;
+
+    if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
+      this.eventBus.emit(new DragEvent(deltaX, deltaY));
+    }
+    return true;
   }
 
   private onPointerMove(event: PointerEvent) {
@@ -545,6 +623,47 @@ export class InputHandler {
       return;
     }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
+  }
+
+  private onTouchStart(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      // Solve screen jittering problem
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      this.lastPointerX = (touch1.clientX + touch2.clientX) / 2;
+      this.lastPointerY = (touch1.clientY + touch2.clientY) / 2;
+    }
+  }
+
+  private onTouchMove(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const centerX = (touch1.clientX + touch2.clientX) / 2;
+      const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+      if (this.lastPointerX !== 0 && this.lastPointerY !== 0) {
+        const deltaX = centerX - this.lastPointerX;
+        const deltaY = centerY - this.lastPointerY;
+
+        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+          this.eventBus.emit(new DragEvent(deltaX, deltaY));
+        }
+      }
+
+      this.lastPointerX = centerX;
+      this.lastPointerY = centerY;
+    }
+  }
+
+  private onTouchEnd(event: TouchEvent) {
+    if (event.touches.length < 2) {
+      this.lastPointerX = 0;
+      this.lastPointerY = 0;
+    }
   }
 
   private getPinchDistance(): number {
