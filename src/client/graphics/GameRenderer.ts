@@ -5,7 +5,6 @@ import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
-import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -13,23 +12,24 @@ import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
 import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
+import { FPSDisplay } from "./layers/FPSDisplay";
 import { FxLayer } from "./layers/FxLayer";
+import { FogOfWarLayer } from "./layers/FogOfWarLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
 import { GameRightSidebar } from "./layers/GameRightSidebar";
+import { GutterAdModal } from "./layers/GutterAdModal";
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
-import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
-import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
-import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
+import { SpawnAd } from "./layers/SpawnAd";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
 import { StructureLayer } from "./layers/StructureLayer";
@@ -88,6 +88,7 @@ export function createRenderer(
     console.error("GameLeftSidebar element not found in the DOM");
   }
   gameLeftSidebar.game = game;
+  gameLeftSidebar.eventBus = eventBus;
 
   const teamStats = document.querySelector("team-stats") as TeamStats;
   if (!teamStats || !(teamStats instanceof TeamStats)) {
@@ -203,21 +204,27 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
-  const samRadiusLayer = new SAMRadiusLayer(
-    game,
-    eventBus,
-    transformHandler,
-    uiState,
-  );
 
-  const performanceOverlay = document.querySelector(
-    "performance-overlay",
-  ) as PerformanceOverlay;
-  if (!(performanceOverlay instanceof PerformanceOverlay)) {
-    console.error("performance overlay not found");
+  const fpsDisplay = document.querySelector("fps-display") as FPSDisplay;
+  if (!(fpsDisplay instanceof FPSDisplay)) {
+    console.error("fps display not found");
   }
-  performanceOverlay.eventBus = eventBus;
-  performanceOverlay.userSettings = userSettings;
+  fpsDisplay.eventBus = eventBus;
+  fpsDisplay.userSettings = userSettings;
+
+  const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
+  if (!(spawnAd instanceof SpawnAd)) {
+    console.error("spawn ad not found");
+  }
+  spawnAd.g = game;
+
+  const gutterAdModal = document.querySelector(
+    "gutter-ad-modal",
+  ) as GutterAdModal;
+  if (!(gutterAdModal instanceof GutterAdModal)) {
+    console.error("gutter ad modal not found");
+  }
+  gutterAdModal.eventBus = eventBus;
 
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
@@ -225,13 +232,9 @@ export function createRenderer(
   }
   alertFrame.game = game;
 
-  const spawnTimer = document.querySelector("spawn-timer") as SpawnTimer;
-  if (!(spawnTimer instanceof SpawnTimer)) {
-    console.error("spawn timer not found");
-  }
-  spawnTimer.game = game;
-  spawnTimer.transformHandler = transformHandler;
-
+  const fogOfWarLayer = new FogOfWarLayer(game, transformHandler);
+  const nameLayer = new NameLayer(game, transformHandler, eventBus, fogOfWarLayer);
+  
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -240,32 +243,49 @@ export function createRenderer(
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game, transformHandler),
     structureLayer,
-    samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
-    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
-    new NameLayer(game, transformHandler, eventBus),
+    nameLayer,
     eventsDisplay,
     chatDisplay,
     buildMenu,
-    new MainRadialMenu(
-      eventBus,
-      game,
-      transformHandler,
-      emojiTable as EmojiTable,
-      buildMenu,
-      uiState,
-      playerPanel,
-    ),
-    spawnTimer,
-    leaderboard,
+    // Pass the NameLayer reference to the MainRadialMenu
+    (() => {
+      const mainRadialMenu = new MainRadialMenu(
+        eventBus,
+        game,
+        transformHandler,
+        emojiTable as EmojiTable,
+        buildMenu,
+        uiState,
+        playerPanel,
+      );
+      mainRadialMenu.setFogOfWarLayer(fogOfWarLayer);
+      mainRadialMenu.setNameLayer(nameLayer);
+      return mainRadialMenu;
+    })(),
+    new SpawnTimer(game, transformHandler),
+    // Pass the FogOfWarLayer reference to the Leaderboard
+    (() => {
+      leaderboard.fogOfWarLayer = fogOfWarLayer;
+      return leaderboard;
+    })(),
     gameLeftSidebar,
     unitDisplay,
-    gameRightSidebar,
+    // Pass the FogOfWarLayer reference to GameRightSidebar
+    (() => {
+      gameRightSidebar.fogOfWarLayer = fogOfWarLayer;
+      return gameRightSidebar;
+    })(),
     controlPanel,
-    playerInfo,
+    // Pass the FogOfWarLayer and NameLayer references to PlayerInfoOverlay
+    (() => {
+      playerInfo.setFogOfWarLayer(fogOfWarLayer);
+      playerInfo.setNameLayer(nameLayer);
+      return playerInfo;
+    })(),
     winModal,
     replayPanel,
     settingsModal,
@@ -273,9 +293,12 @@ export function createRenderer(
     playerPanel,
     headsUpMessage,
     multiTabModal,
-    new AdTimer(game),
+    spawnAd,
+    gutterAdModal,
     alertFrame,
-    performanceOverlay,
+    fpsDisplay,
+    // Fog of War layer moved to the end to render on top of all other elements
+    fogOfWarLayer,
   ];
 
   return new GameRenderer(
@@ -285,7 +308,7 @@ export function createRenderer(
     transformHandler,
     uiState,
     layers,
-    performanceOverlay,
+    fpsDisplay,
   );
 }
 
@@ -299,12 +322,15 @@ export class GameRenderer {
     public transformHandler: TransformHandler,
     public uiState: UIState,
     private layers: Layer[],
-    private performanceOverlay: PerformanceOverlay,
+    private fpsDisplay: FPSDisplay,
   ) {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
   }
+  
+  // Add property for FogOfWarLayer
+  public fogOfWarLayer: any = null;
 
   initialize() {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
@@ -383,7 +409,7 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    this.performanceOverlay.updateFrameMetrics(duration);
+    this.fpsDisplay.updateFPS(duration);
 
     if (duration > 50) {
       console.warn(

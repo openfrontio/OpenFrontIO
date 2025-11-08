@@ -14,7 +14,7 @@ import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
+import { AllPlayers, Cell, GameMode, nukeTypes } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
@@ -60,12 +60,15 @@ export class NameLayer implements Layer {
   private theme: Theme = this.game.config().theme();
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
+  private fogOfWarLayer: any = null; // Reference to FogOfWarLayer
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
     private eventBus: EventBus,
+    fogOfWarLayer: any = null, // Optional reference to FogOfWarLayer
   ) {
+    this.fogOfWarLayer = fogOfWarLayer;
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
     this.disconnectedIconImage = new Image();
@@ -132,6 +135,22 @@ export class NameLayer implements Layer {
   private updateElementVisibility(render: RenderInfo) {
     if (!render.player.nameLocation() || !render.player.isAlive()) {
       return;
+    }
+
+    // Check if we are in Fog of War mode and if the player is in a visible area
+    if (this.game.config().gameConfig().gameMode === GameMode.FogOfWar && this.fogOfWarLayer) {
+      // Get the player's position
+      const nameLocation = render.player.nameLocation();
+      if (nameLocation) {
+        const tileRef = this.game.ref(nameLocation.x, nameLocation.y);
+        const fogValue = this.fogOfWarLayer.getFogValueAt(tileRef);
+        
+        // If fog is between 0.8 and 1.0 (completely fogged), don't show the name
+        if (fogValue > 0.8) {
+          render.element.style.display = "none";
+          return;
+        }
+      }
     }
 
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
@@ -633,5 +652,45 @@ export class NameLayer implements Layer {
       icon.style.transform = "translateY(-50%)";
     }
     return icon;
+  }
+
+  // Method to check if a specific player's name is visible
+  public isPlayerNameVisible(player: PlayerView): boolean {
+    // If we're not in Fog of War mode, the name is always visible
+    if (this.game.config().gameConfig().gameMode !== GameMode.FogOfWar) {
+      return true;
+    }
+
+    // If we don't have access to the fog layer, assume it's not visible
+    if (!this.fogOfWarLayer) {
+      return false;
+    }
+
+    // Check if the player is alive
+    if (!player.isAlive()) {
+      return false;
+    }
+
+    // Get the player's name location
+    const nameLocation = player.nameLocation();
+    if (!nameLocation) {
+      return false;
+    }
+
+    // Check if coordinates are valid
+    if (nameLocation.x < 0 || nameLocation.y < 0 || 
+        nameLocation.x >= this.game.width() || nameLocation.y >= this.game.height()) {
+      return false;
+    }
+
+    // Convert x,y coordinates to index
+    const idx = nameLocation.y * this.game.width() + nameLocation.x;
+    
+    // Get the fog value at the player's name position
+    const fogValue = this.fogOfWarLayer.getFogValueAt(idx);
+    
+    // If fog is between 0.8 and 1.0 (completely fogged), don't show the name
+    // If fog is less than 0.8, the name is visible
+    return fogValue < 0.8;
   }
 }

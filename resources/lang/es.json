@@ -202,7 +202,8 @@
   },
   "game_mode": {
     "ffa": "Todos contra todos",
-    "teams": "Equipos"
+    "teams": "Equipos",
+    "fog_of_war": "Niebla de guerra"
   },
   "select_lang": {
     "title": "Selecciona idioma"

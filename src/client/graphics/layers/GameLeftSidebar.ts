@@ -7,6 +7,7 @@ import teamRegularIcon from "../../../../resources/images/TeamIconRegularWhite.s
 import teamSolidIcon from "../../../../resources/images/TeamIconSolidWhite.svg";
 import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
+import { EventBus } from "../../../core/EventBus";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -22,6 +23,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
 
   private playerColor: Colord = new Colord("#FFFFFF");
   public game: GameView;
+  public eventBus: EventBus; // Adicionando a propriedade eventBus
   private _shownOnInit = false;
 
   createRenderRoot() {
@@ -66,11 +68,34 @@ export class GameLeftSidebar extends LitElement implements Layer {
   }
 
   private toggleLeaderboard(): void {
+    // In Fog of War mode, check if the player is eliminated before allowing to switch to global mode
+    if (this.game?.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      const myPlayer = this.game.myPlayer();
+      const isPlayerEliminated = myPlayer !== null && !myPlayer.isAlive();
+      
+      // If the player is alive, only allow local mode
+      if (myPlayer && myPlayer.isAlive()) {
+        // Ensure the leaderboard is in local mode
+        const leaderboard = this.querySelector('leader-board') as any;
+        if (leaderboard && leaderboard._leaderboardMode !== "local") {
+          leaderboard._leaderboardMode = "local";
+        }
+      }
+    }
+    
     this.isLeaderboardShow = !this.isLeaderboardShow;
+    // Emitting event when the leaderboard is toggled
+    if (this.eventBus) {
+      this.eventBus.emit({ type: "leaderboardToggled", show: this.isLeaderboardShow });
+    }
   }
 
   private toggleTeamLeaderboard(): void {
     this.isTeamLeaderboardShow = !this.isTeamLeaderboardShow;
+    // Emitting event when the team leaderboard is toggled
+    if (this.eventBus) {
+      this.eventBus.emit({ type: "teamLeaderboardToggled", show: this.isTeamLeaderboardShow });
+    }
   }
 
   private get isTeamGame(): boolean {

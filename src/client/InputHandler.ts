@@ -1,5 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { UnitType } from "../core/game/Game";
+import { GameMode, UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
 import { UIState } from "./graphics/UIState";
@@ -13,12 +13,6 @@ export class MouseUpEvent implements GameEvent {
 }
 
 export class MouseOverEvent implements GameEvent {
-  constructor(
-    public readonly x: number,
-    public readonly y: number,
-  ) {}
-}
-export class TouchEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
@@ -85,10 +79,6 @@ export class ToggleStructureEvent implements GameEvent {
   constructor(public readonly structureTypes: UnitType[] | null) {}
 }
 
-export class GhostStructureChangedEvent implements GameEvent {
-  constructor(public readonly ghostStructure: UnitType | null) {}
-}
-
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -125,13 +115,6 @@ export class AutoUpgradeEvent implements GameEvent {
   ) {}
 }
 
-export class TickMetricsEvent implements GameEvent {
-  constructor(
-    public readonly tickExecutionDuration?: number,
-    public readonly tickDelay?: number,
-  ) {}
-}
-
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -155,12 +138,26 @@ export class InputHandler {
   private readonly ZOOM_SPEED = 10;
 
   private readonly userSettings: UserSettings = new UserSettings();
+  
+  // Add reference to game and fogOfWarLayer to check the mode
+  private game: any = null;
+  private fogOfWarLayer: any = null;
 
   constructor(
     public uiState: UIState,
     private canvas: HTMLCanvasElement,
     private eventBus: EventBus,
   ) {}
+
+  // Method to set the reference to the game
+  public setGame(game: any) {
+    this.game = game;
+  }
+  
+  // Method to set the reference to the FogOfWarLayer
+  public setFogOfWarLayer(fogOfWarLayer: any) {
+    this.fogOfWarLayer = fogOfWarLayer;
+  }
 
   initialize() {
     let saved: Record<string, string> = {};
@@ -184,9 +181,6 @@ export class InputHandler {
       console.warn("Invalid keybinds JSON:", e);
     }
 
-    // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
-
     this.keybinds = {
       toggleView: "Space",
       centerCamera: "KeyC",
@@ -200,7 +194,7 @@ export class InputHandler {
       attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
-      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
+      modifierKey: "ControlLeft",
       altKey: "AltLeft",
       buildCity: "Digit1",
       buildFactory: "Digit2",
@@ -215,12 +209,20 @@ export class InputHandler {
       ...saved,
     };
 
+    // Mac users might have different keybinds
+    const isMac = /Mac/.test(navigator.userAgent);
+    if (isMac) {
+      this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
+    }
+
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
     this.canvas.addEventListener(
       "wheel",
       (e) => {
-        this.onScroll(e);
+        if (!this.onTrackpadPan(e)) {
+          this.onScroll(e);
+        }
         this.onShiftScroll(e);
         e.preventDefault();
       },
@@ -232,6 +234,16 @@ export class InputHandler {
       if (e.movementX || e.movementY) {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
+    });
+
+    this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
+      passive: false,
+    });
+    this.canvas.addEventListener("touchmove", (e) => this.onTouchMove(e), {
+      passive: false,
+    });
+    this.canvas.addEventListener("touchend", (e) => this.onTouchEnd(e), {
+      passive: false,
     });
     this.pointers.clear();
 
@@ -301,7 +313,7 @@ export class InputHandler {
       if (e.code === "Escape") {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
-        this.setGhostStructure(null);
+        this.uiState.ghostStructure = null;
       }
 
       if (
@@ -369,52 +381,52 @@ export class InputHandler {
 
       if (e.code === this.keybinds.buildCity) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.City);
+        this.uiState.ghostStructure = UnitType.City;
       }
 
       if (e.code === this.keybinds.buildFactory) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.Factory);
+        this.uiState.ghostStructure = UnitType.Factory;
       }
 
       if (e.code === this.keybinds.buildPort) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.Port);
+        this.uiState.ghostStructure = UnitType.Port;
       }
 
       if (e.code === this.keybinds.buildDefensePost) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.DefensePost);
+        this.uiState.ghostStructure = UnitType.DefensePost;
       }
 
       if (e.code === this.keybinds.buildMissileSilo) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.MissileSilo);
+        this.uiState.ghostStructure = UnitType.MissileSilo;
       }
 
       if (e.code === this.keybinds.buildSamLauncher) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.SAMLauncher);
+        this.uiState.ghostStructure = UnitType.SAMLauncher;
       }
 
       if (e.code === this.keybinds.buildAtomBomb) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.AtomBomb);
+        this.uiState.ghostStructure = UnitType.AtomBomb;
       }
 
       if (e.code === this.keybinds.buildHydrogenBomb) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.HydrogenBomb);
+        this.uiState.ghostStructure = UnitType.HydrogenBomb;
       }
 
       if (e.code === this.keybinds.buildWarship) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.Warship);
+        this.uiState.ghostStructure = UnitType.Warship;
       }
 
       if (e.code === this.keybinds.buildMIRV) {
         e.preventDefault();
-        this.setGhostStructure(UnitType.MIRV);
+        this.uiState.ghostStructure = UnitType.MIRV;
       }
 
       // Shift-D to toggle performance overlay
@@ -456,7 +468,7 @@ export class InputHandler {
     }
   }
 
-  onPointerUp(event: PointerEvent) {
+  private onPointerUp(event: PointerEvent) {
     if (event.button === 1) {
       event.preventDefault();
       return;
@@ -468,7 +480,38 @@ export class InputHandler {
     this.pointerDown = false;
     this.pointers.clear();
 
+    // Check if we are in Fog of War mode before showing the build menu
     if (this.isModifierKeyPressed(event)) {
+      // If in Fog of War mode, check the fog value at the clicked position
+      if (this.game && this.game.config && this.fogOfWarLayer) {
+        // Check if the game mode is Fog of War (correct comparison)
+        const gameMode = this.game.config().gameConfig().gameMode;
+        if (gameMode === GameMode.FogOfWar) {
+          // Convert screen coordinates to world coordinates
+          const rect = this.canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          
+          // Convert to world coordinates
+          if (this.game.renderer && this.game.renderer.transformHandler) {
+            const worldCoords = this.game.renderer.transformHandler.screenToWorldCoordinates(x, y);
+            
+            // Check if coordinates are valid
+            if (this.game.isValidCoord && this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
+              const tileRef = this.game.ref(worldCoords.x, worldCoords.y);
+              const tileX = this.game.x(tileRef);
+              const tileY = this.game.y(tileRef);
+              const idx = tileY * this.game.width() + tileX;
+              const fogValue = this.fogOfWarLayer.getFogValueAt(idx);
+              
+              // If fog is completely fogged (value 1), don't show the menu
+              if (fogValue >= 1.0) {
+                return;
+              }
+            }
+          }
+        }
+      }
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
       return;
     }
@@ -482,7 +525,7 @@ export class InputHandler {
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
       if (event.pointerType === "touch") {
-        this.eventBus.emit(new TouchEvent(event.x, event.y));
+        this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
         event.preventDefault();
         return;
       }
@@ -511,6 +554,27 @@ export class InputHandler {
       const ratio = scrollValue > 0 ? -10 : 10;
       this.eventBus.emit(new AttackRatioEvent(ratio));
     }
+  }
+
+  private onTrackpadPan(event: WheelEvent): boolean {
+    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+      return false;
+    }
+
+    const isTrackpadPan = event.deltaMode === 0 && event.deltaX !== 0;
+
+    if (!isTrackpadPan) {
+      return false;
+    }
+
+    const panSensitivity = 1.0;
+    const deltaX = -event.deltaX * panSensitivity;
+    const deltaY = -event.deltaY * panSensitivity;
+
+    if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
+      this.eventBus.emit(new DragEvent(deltaX, deltaY));
+    }
+    return true;
   }
 
   private onPointerMove(event: PointerEvent) {
@@ -555,15 +619,51 @@ export class InputHandler {
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
     if (this.uiState.ghostStructure !== null) {
-      this.setGhostStructure(null);
+      this.uiState.ghostStructure = null;
       return;
     }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private setGhostStructure(ghostStructure: UnitType | null) {
-    this.uiState.ghostStructure = ghostStructure;
-    this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
+  private onTouchStart(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      // Solve screen jittering problem
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      this.lastPointerX = (touch1.clientX + touch2.clientX) / 2;
+      this.lastPointerY = (touch1.clientY + touch2.clientY) / 2;
+    }
+  }
+
+  private onTouchMove(event: TouchEvent) {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const centerX = (touch1.clientX + touch2.clientX) / 2;
+      const centerY = (touch1.clientY + touch2.clientY) / 2;
+
+      if (this.lastPointerX !== 0 && this.lastPointerY !== 0) {
+        const deltaX = centerX - this.lastPointerX;
+        const deltaY = centerY - this.lastPointerY;
+
+        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
+          this.eventBus.emit(new DragEvent(deltaX, deltaY));
+        }
+      }
+
+      this.lastPointerX = centerX;
+      this.lastPointerY = centerY;
+    }
+  }
+
+  private onTouchEnd(event: TouchEvent) {
+    if (event.touches.length < 2) {
+      this.lastPointerX = 0;
+      this.lastPointerY = 0;
+    }
   }
 
   private getPinchDistance(): number {

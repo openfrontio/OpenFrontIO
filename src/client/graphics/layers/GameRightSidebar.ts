@@ -7,6 +7,7 @@ import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhi
 import replaySolidIcon from "../../../../resources/images/ReplaySolidIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
+import { GameMode } from "../../../core/game/Game";
 import { GameType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
@@ -15,11 +16,13 @@ import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
 import { ShowSettingsModalEvent } from "./SettingsModal";
+import { FogOfWarLayer } from "./FogOfWarLayer";
 
 @customElement("game-right-sidebar")
 export class GameRightSidebar extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  public fogOfWarLayer: FogOfWarLayer | null = null; // Reference to FogOfWarLayer
 
   @state()
   private _isSinglePlayer: boolean = false;
@@ -57,19 +60,10 @@ export class GameRightSidebar extends LitElement implements Layer {
     if (updates) {
       this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
     }
-    const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
-    if (maxTimerValue !== undefined) {
-      if (this.game.inSpawnPhase()) {
-        this.timer = maxTimerValue * 60;
-      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
-        this.timer = Math.max(0, this.timer - 1);
-      }
-    } else {
-      if (this.game.inSpawnPhase()) {
-        this.timer = 0;
-      } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
-        this.timer++;
-      }
+    if (this.game.inSpawnPhase()) {
+      this.timer = 0;
+    } else if (!this.hasWinner && this.game.ticks() % 10 === 0) {
+      this.timer++;
     }
   }
 
@@ -113,8 +107,87 @@ export class GameRightSidebar extends LitElement implements Layer {
     );
   }
 
+  // Check if there are visible players or bots in Fog of War mode
+  private hasVisiblePlayersOrBots(): boolean {
+    // If not in Fog of War mode, show the sidebar
+    if (!this.game || this.game.config().gameConfig().gameMode !== GameMode.FogOfWar || !this.fogOfWarLayer) {
+      return true;
+    }
+
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) {
+      return false;
+    }
+
+    // Verificar todos os jogadores
+    const playerViews = this.game.playerViews();
+    for (const player of playerViews) {
+      // Ignore the own player
+      if (player.id() === myPlayer.id()) {
+        continue;
+      }
+
+      // Check if the player is alive
+      if (!player.isAlive()) {
+        continue;
+      }
+
+      // Check if the player has name location
+      const nameLocation = player.nameLocation();
+      if (!nameLocation) {
+        continue;
+      }
+
+      // Check if the player is visible (not covered by fog)
+      const x = nameLocation.x;
+      const y = nameLocation.y;
+
+      if (x >= 0 && y >= 0 && x < this.game.width() && y < this.game.height()) {
+        const idx = y * this.game.width() + x;
+        const fogValue = this.fogOfWarLayer.getFogValueAt(idx);
+
+        // If fog is between 0.0 and 0.8 (visible or remembered area), the player is visible
+        if (fogValue < 0.8) {
+          return true;
+        }
+      }
+    }
+
+    // Verificar unidades (bots) de outros jogadores
+    const units = this.game.units();
+    for (const unit of units) {
+      // Check units that don't belong to the current player
+      if (unit.owner().id() !== myPlayer.id()) {
+        // Get the unit position
+        const tile = unit.tile();
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+
+        if (x >= 0 && y >= 0 && x < this.game.width() && y < this.game.height()) {
+          const idx = y * this.game.width() + x;
+          const fogValue = this.fogOfWarLayer.getFogValueAt(idx);
+
+          // If fog is between 0.0 and 0.8 (visible or remembered area), the unit is visible
+          if (fogValue < 0.8) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // If we didn't find any visible player or bot, don't show the sidebar
+    return false;
+  }
+
   render() {
     if (this.game === undefined) return html``;
+
+    // In Fog of War mode, only show the sidebar if there are visible players or bots
+    const shouldShowSidebar = this.hasVisiblePlayersOrBots();
+
+    if (!shouldShowSidebar) {
+      return html``;
+    }
 
     return html`
       <aside
@@ -149,10 +222,6 @@ export class GameRightSidebar extends LitElement implements Layer {
         <div class="flex justify-center items-center mt-2">
           <div
             class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center justify-center text-white px-1"
-            style="${this.game.config().gameConfig().maxTimerValue !==
-              undefined && this.timer < 60
-              ? "color: #ff8080;"
-              : ""}"
           >
             ${this.secondsToHms(this.timer)}
           </div>

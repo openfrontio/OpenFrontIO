@@ -2,12 +2,12 @@ import { LitElement, TemplateResult, html } from "lit";
 import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
+import portIcon from "../../../../resources/images/AnchorIcon.png";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
+import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
@@ -17,6 +17,7 @@ import {
   Relation,
   Unit,
   UnitType,
+  GameMode,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
@@ -31,6 +32,10 @@ import {
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
+// Import FogOfWarLayer for visibility checking
+import { FogOfWarLayer } from "./FogOfWarLayer";
+// Import NameLayer for visibility checking
+import { NameLayer } from "./NameLayer";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -80,6 +85,25 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   private lastMouseUpdate = 0;
 
   private showDetails = true;
+  
+  // Track which players have been seen (visibility memory)
+  private seenPlayers: Set<string> = new Set();
+  
+  // Reference to FogOfWarLayer for visibility checking
+  private fogOfWarLayer: FogOfWarLayer | null = null;
+  
+  // Reference to NameLayer for visibility checking
+  private nameLayer: NameLayer | null = null;
+
+  // Method to set FogOfWarLayer reference
+  public setFogOfWarLayer(fogLayer: FogOfWarLayer) {
+    this.fogOfWarLayer = fogLayer;
+  }
+  
+  // Method to set NameLayer reference
+  public setNameLayer(nameLayer: NameLayer) {
+    this.nameLayer = nameLayer;
+  }
 
   init() {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
@@ -107,7 +131,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.player = null;
   }
 
-  public maybeShow(x: number, y: number) {
+  private maybeShow(x: number, y: number) {
     this.hide();
     const worldCoord = this.transform.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
@@ -120,11 +144,19 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const owner = this.game.owner(tile);
 
     if (owner && owner.isPlayer()) {
-      this.player = owner as PlayerView;
-      this.player.profile().then((p) => {
-        this.playerProfile = p;
-      });
-      this.setVisible(true);
+      const player = owner as PlayerView;
+      
+      // Check if player info should be visible based on fog of war
+      if (this.shouldShowPlayerInfo(player)) {
+        this.player = player;
+        this.player.profile().then((p) => {
+          this.playerProfile = p;
+        });
+        this.setVisible(true);
+        
+        // Mark player as seen
+        this.seenPlayers.add(player.id());
+      }
     } else if (!this.game.isLand(tile)) {
       const units = this.game
         .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
@@ -136,6 +168,22 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         this.setVisible(true);
       }
     }
+  }
+
+  // Check if player info should be shown based on fog of war visibility
+  private shouldShowPlayerInfo(player: PlayerView): boolean {
+    // If no fog layer or not in fog of war mode, show info
+    if (!this.fogOfWarLayer || this.game.config().gameConfig().gameMode !== GameMode.FogOfWar) {
+      return true;
+    }
+    
+    // If we don't have access to the nameLayer, assume it's not visible
+    if (!this.nameLayer) {
+      return false;
+    }
+    
+    // Check if the player's name is visible through the NameLayer
+    return this.nameLayer.isPlayerNameVisible(player);
   }
 
   tick() {
@@ -268,13 +316,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     let playerType = "";
     switch (player.type()) {
       case PlayerType.Bot:
-        playerType = translateText("player_type.bot");
+        playerType = translateText("player_info_overlay.bot");
         break;
       case PlayerType.FakeHuman:
-        playerType = translateText("player_type.nation");
+        playerType = translateText("player_info_overlay.nation");
         break;
       case PlayerType.Human:
-        playerType = translateText("player_type.player");
+        playerType = translateText("player_info_overlay.player");
         break;
     }
 
@@ -366,15 +414,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 )}
                 ${this.displayUnitCount(
                   player,
-                  UnitType.Factory,
-                  factoryIcon,
-                  "player_info_overlay.factories",
-                )}
-                ${this.displayUnitCount(
-                  player,
                   UnitType.Port,
                   portIcon,
                   "player_info_overlay.ports",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Factory,
+                  factoryIcon,
+                  "player_info_overlay.factories",
                 )}
                 ${this.displayUnitCount(
                   player,

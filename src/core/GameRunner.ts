@@ -7,6 +7,7 @@ import {
   Attack,
   Cell,
   Game,
+  GameMode,
   GameUpdates,
   NameViewData,
   Nation,
@@ -81,6 +82,7 @@ export async function createGameRunner(
     game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
+    humans, // Passar os humanos para o GameRunner
   );
   gr.init();
   return gr;
@@ -97,19 +99,34 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    private humans: PlayerInfo[], // Armazenar os humanos
   ) {}
 
   init() {
-    if (this.game.config().isRandomSpawn()) {
-      this.game.addExecution(...this.execManager.spawnPlayers());
-    }
-    if (this.game.config().bots() > 0) {
+    // Check if the game mode is Fog of War to use specific spawn
+    if (this.game.config().gameConfig().gameMode === GameMode.FogOfWar) {
+      // In Fog of War mode, we use spawnFFARPlayers instead of default methods
       this.game.addExecution(
-        ...this.execManager.spawnBots(this.game.config().numBots()),
+        ...this.execManager.spawnFFARPlayers(
+          this.humans,
+          this.game.config().bots()
+        )
       );
-    }
-    if (this.game.config().spawnNPCs()) {
-      this.game.addExecution(...this.execManager.fakeHumanExecutions());
+      
+      // Add executions for fake humans in Fog of War mode
+      if (this.game.config().spawnNPCs()) {
+        this.game.addExecution(...this.execManager.fakeHumanExecutions());
+      }
+    } else {
+      // Default game mode
+      if (this.game.config().bots() > 0) {
+        this.game.addExecution(
+          ...this.execManager.spawnBots(this.game.config().numBots()),
+        );
+      }
+      if (this.game.config().spawnNPCs()) {
+        this.game.addExecution(...this.execManager.fakeHumanExecutions());
+      }
     }
     this.game.addExecution(new WinCheckExecution());
   }
@@ -133,13 +150,9 @@ export class GameRunner {
     this.currTurn++;
 
     let updates: GameUpdates;
-    let tickExecutionDuration: number = 0;
 
     try {
-      const startTime = performance.now();
       updates = this.game.executeNextTick();
-      const endTime = performance.now();
-      tickExecutionDuration = endTime - startTime;
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Game tick error:", error.message);
@@ -180,7 +193,6 @@ export class GameRunner {
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
       updates: updates,
       playerNameViewData: this.playerViewData,
-      tickExecutionDuration: tickExecutionDuration,
     });
     this.isExecuting = false;
   }
@@ -197,7 +209,6 @@ export class GameRunner {
       canAttack: tile !== null && player.canAttack(tile),
       buildableUnits: player.buildableUnits(tile),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),
-      canEmbargoAll: player.canEmbargoAll(),
     } as PlayerActions;
 
     if (tile !== null && this.game.hasOwner(tile)) {
