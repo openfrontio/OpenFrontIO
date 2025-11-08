@@ -47,13 +47,10 @@ export class FakeHumanExecution implements Execution {
   private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
 
-  // Track our transport ships
-  private lastTickTransportShips: Map<
-    number,
-    { unit: Unit; lastTile: TileRef }
-  > = new Map();
-  // Track our trade ships
-  private lastTickTradeShips: Map<number, PlayerID> = new Map();
+  // Track our transport ships we currently own
+  private trackedTransportShips: Set<Unit> = new Set();
+  // Track our trade ships we currently own
+  private trackedTradeShips: Set<Unit> = new Set();
 
   /** MIRV Strategy Constants */
 
@@ -916,27 +913,23 @@ export class FakeHumanExecution implements Execution {
     }
   }
 
-  // Send out a warship if our troop transport ship got destroyed by an enemy
+  // Send out a warship if our transport ship got captured
   private trackTransportShipsAndRetaliate(): void {
     if (this.player === null) return;
 
-    const transports = this.player.units(UnitType.TransportShip);
-    const currentTransportIds = new Set<number>();
-    for (const u of transports) {
-      currentTransportIds.add(u.id());
-      this.lastTickTransportShips.set(u.id(), { unit: u, lastTile: u.tile() });
-    }
-    // Detect destroyed/missing transports from last tick
-    for (const [id, info] of Array.from(
-      this.lastTickTransportShips.entries(),
-    )) {
-      if (!currentTransportIds.has(id)) {
+    // Add any currently owned transport ships to our tracking set
+    this.player
+      .units(UnitType.TransportShip)
+      .forEach((u) => this.trackedTransportShips.add(u));
+
+    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
+    for (const ship of Array.from(this.trackedTransportShips)) {
+      if (!ship.isActive()) {
         // Distinguish between arrival/retreat and enemy destruction
-        const wasDestroyedByEnemy = info.unit.wasDestroyedByEnemy();
-        if (wasDestroyedByEnemy) {
-          this.maybeRetaliateWithWarship(info.lastTile);
+        if (ship.wasDestroyedByEnemy()) {
+          this.maybeRetaliateWithWarship(ship.tile());
         }
-        this.lastTickTransportShips.delete(id);
+        this.trackedTransportShips.delete(ship);
       }
     }
   }
@@ -945,30 +938,21 @@ export class FakeHumanExecution implements Execution {
   private trackTradeShipsAndRetaliate(): void {
     if (this.player === null) return;
 
-    const allTradeShips = this.mg.units(UnitType.TradeShip);
-    const presentTradeIds = new Set<number>();
-    for (const ship of allTradeShips) {
-      const sid = ship.id();
-      presentTradeIds.add(sid);
-      const currentOwner = ship.owner().id();
-      const lastOwner = this.lastTickTradeShips.get(sid);
-      if (
-        lastOwner !== undefined &&
-        lastOwner === this.player.id() &&
-        currentOwner !== this.player.id()
-      ) {
+    // Add any currently owned trade ships to our tracking map
+    this.player
+      .units(UnitType.TradeShip)
+      .forEach((u) => this.trackedTradeShips.add(u));
+
+    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
+    for (const ship of Array.from(this.trackedTradeShips)) {
+      if (!ship.isActive()) {
+        this.trackedTradeShips.delete(ship);
+        continue;
+      }
+      if (ship.owner().id() !== this.player.id()) {
         // Ship was ours and is now owned by someone else -> captured
         this.maybeRetaliateWithWarship(ship.tile());
-      }
-      // Track current owner for next tick if relevant
-      if (lastOwner !== currentOwner) {
-        this.lastTickTradeShips.set(sid, currentOwner);
-      }
-    }
-    // Cleanup entries for ships that no longer exist
-    for (const sid of Array.from(this.lastTickTradeShips.keys())) {
-      if (!presentTradeIds.has(sid)) {
-        this.lastTickTradeShips.delete(sid);
+        this.trackedTradeShips.delete(ship);
       }
     }
   }
