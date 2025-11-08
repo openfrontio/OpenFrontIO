@@ -376,12 +376,43 @@ export class EventsDisplay extends LitElement implements Layer {
       description = translateText(event.message, event.params ?? {});
     }
 
+    // For revoked alliance requests, try to extract focusID from params
+    let focusID: number | undefined = undefined;
+    if (
+      event.message === "events_display.alliance_request_revoked" &&
+      event.params?.name
+    ) {
+      // Find the player by name to get their ID
+      const players = this.game.players();
+      const player = players.find(
+        (p) => p.displayName() === event.params?.name,
+      );
+      if (player) {
+        focusID = player.smallID();
+
+        // Remove the alliance request event (with buttons) for this player
+        // since the request has been revoked
+        const eventsBefore = this.events.length;
+        this.events = this.events.filter(
+          (event) =>
+            !(
+              event.type === MessageType.ALLIANCE_REQUEST &&
+              event.focusID === player.smallID()
+            ),
+        );
+        if (this.events.length !== eventsBefore) {
+          this.requestUpdate();
+        }
+      }
+    }
+
     this.addEvent({
       description: description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
+      focusID: focusID,
     });
   }
 
@@ -442,6 +473,23 @@ export class EventsDisplay extends LitElement implements Layer {
     const recipient = this.game.playerBySmallID(
       update.recipientID,
     ) as PlayerView;
+
+    // Remove any revoked/rejected messages from this same player that don't have buttons
+    // This ensures the new request buttons appear correctly and immediately
+    const eventsBefore = this.events.length;
+    this.events = this.events.filter(
+      (event) =>
+        !(
+          event.type === MessageType.ALLIANCE_REJECTED &&
+          event.focusID === update.requestorID &&
+          (!event.buttons || event.buttons.length === 0) &&
+          (event.description?.includes("revoked") ||
+            event.description?.includes("Revoked"))
+        ),
+    );
+    if (this.events.length !== eventsBefore) {
+      this.requestUpdate();
+    }
 
     this.addEvent({
       description: translateText("events_display.request_alliance", {

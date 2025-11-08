@@ -47,6 +47,23 @@ export class AllianceImpl implements MutableAlliance {
     }
   }
 
+  removeExtensionRequest(player: Player): void {
+    if (this.requestor_ === player) {
+      this.extensionRequestedRequestor_ = false;
+    } else if (this.recipient_ === player) {
+      this.extensionRequestedRecipient_ = false;
+    }
+  }
+
+  hasRequestedExtension(player: Player): boolean {
+    if (this.requestor_ === player) {
+      return this.extensionRequestedRequestor_;
+    } else if (this.recipient_ === player) {
+      return this.extensionRequestedRecipient_;
+    }
+    return false;
+  }
+
   bothAgreedToExtend(): boolean {
     return (
       this.extensionRequestedRequestor_ && this.extensionRequestedRecipient_

@@ -330,6 +330,28 @@ export class GameImpl implements Game {
     });
   }
 
+  revokeAllianceRequest(request: AllianceRequestImpl) {
+    this.allianceRequests = this.allianceRequests.filter(
+      (ar) => ar !== request,
+    );
+    (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
+      request,
+    );
+
+    // Send message to recipient that the request was revoked
+    const requestor = request.requestor();
+    const recipient = request.recipient();
+    this.displayMessage(
+      "events_display.alliance_request_revoked",
+      MessageType.ALLIANCE_REJECTED,
+      recipient.id(),
+      undefined,
+      { name: requestor.displayName() },
+    );
+
+    // Don't send rejection message to requestor - they revoked it themselves
+  }
+
   hasPlayer(id: PlayerID): boolean {
     return this._players.has(id);
   }

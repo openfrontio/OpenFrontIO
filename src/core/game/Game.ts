@@ -379,6 +379,7 @@ export interface Attack {
 export interface AllianceRequest {
   accept(): void;
   reject(): void;
+  revoke(): void;
   requestor(): Player;
   recipient(): Player;
   createdAt(): Tick;
@@ -398,6 +399,8 @@ export interface MutableAlliance extends Alliance {
   other(player: Player): Player;
   bothAgreedToExtend(): boolean;
   addExtensionRequest(player: Player): void;
+  removeExtensionRequest(player: Player): void;
+  hasRequestedExtension(player: Player): boolean;
   id(): number;
   extend(): void;
   onlyOneAgreedToExtend(): boolean;

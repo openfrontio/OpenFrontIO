@@ -445,15 +445,45 @@ export class NameLayer implements Layer {
 
     // Alliance icon
     const existingAlliance = iconsDiv.querySelector('[data-icon="alliance"]');
-    if (myPlayer !== null && myPlayer.isAlliedWith(render.player)) {
-      if (!existingAlliance) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            this.allianceIconImage.src,
-            iconSize,
-            "alliance",
-          ),
+    const isAllied = myPlayer !== null && myPlayer.isAlliedWith(render.player);
+    const hasOutgoingRequest =
+      myPlayer !== null &&
+      myPlayer.data.outgoingAllianceRequests.includes(render.player.id());
+    const hasPendingExtension =
+      myPlayer !== null &&
+      isAllied &&
+      (() => {
+        const alliance = myPlayer
+          .alliances()
+          .find((a) => a.other === render.player.id());
+        return (
+          alliance?.extensionRequestedByMe ??
+          alliance?.extensionRequestedByOther ??
+          false
         );
+      })();
+    const shouldShowYellow = hasOutgoingRequest || hasPendingExtension;
+
+    if (isAllied || shouldShowYellow) {
+      if (!existingAlliance) {
+        const iconElement = this.createIconElement(
+          this.allianceIconImage.src,
+          iconSize,
+          "alliance",
+        );
+        if (shouldShowYellow) {
+          // Apply yellow filter - use sepia, saturation, and hue-rotate to get yellow
+          iconElement.style.filter =
+            "sepia(100%) saturate(200%) hue-rotate(45deg) brightness(1.3)";
+        }
+        iconsDiv.appendChild(iconElement);
+      } else if (shouldShowYellow) {
+        // Update existing icon to yellow
+        (existingAlliance as HTMLElement).style.filter =
+          "sepia(100%) saturate(200%) hue-rotate(45deg) brightness(1.3)";
+      } else {
+        // Reset to normal
+        (existingAlliance as HTMLElement).style.filter = "";
       }
     } else if (existingAlliance) {
       existingAlliance.remove();
@@ -478,13 +508,19 @@ export class NameLayer implements Layer {
       }
 
       if (!existingRequestAlliance) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            AllianceRequestIconImageSrc,
-            iconSize,
-            "alliance-request",
-          ),
+        const iconElement = this.createIconElement(
+          AllianceRequestIconImageSrc,
+          iconSize,
+          "alliance-request",
         );
+        // Apply yellow filter to make it yellow instead of brown
+        iconElement.style.filter =
+          "sepia(100%) saturate(200%) hue-rotate(45deg) brightness(1.3)";
+        iconsDiv.appendChild(iconElement);
+      } else {
+        // Ensure existing icon has yellow filter
+        (existingRequestAlliance as HTMLElement).style.filter =
+          "sepia(100%) saturate(200%) hue-rotate(45deg) brightness(1.3)";
       }
     } else if (existingRequestAlliance) {
       existingRequestAlliance.remove();

@@ -209,6 +209,50 @@ const allyBreakElement: MenuElement = {
   },
 };
 
+const allyRevokeRequestElement: MenuElement = {
+  id: "ally_revoke_request",
+  name: "revoke request",
+  disabled: () => false,
+  displayed: (params: MenuElementParams) => {
+    if (!params.selected) return false;
+    return params.myPlayer.data.outgoingAllianceRequests.includes(
+      params.selected.id(),
+    );
+  },
+  color: COLORS.breakAlly,
+  icon: allianceIcon,
+  action: (params: MenuElementParams) => {
+    params.playerActionHandler.handleRevokeAllianceRequest(
+      params.myPlayer,
+      params.selected!,
+    );
+    params.closeMenu();
+  },
+};
+
+const allyRevokeExtensionElement: MenuElement = {
+  id: "ally_revoke_extension",
+  name: "revoke extension",
+  disabled: () => false,
+  displayed: (params: MenuElementParams) => {
+    if (!params.selected) return false;
+    if (!params.myPlayer.isAlliedWith(params.selected)) return false;
+    const alliance = params.myPlayer
+      .alliances()
+      .find((a) => a.other === params.selected!.id());
+    return alliance?.extensionRequestedByMe === true;
+  },
+  color: COLORS.breakAlly,
+  icon: allianceIcon,
+  action: (params: MenuElementParams) => {
+    params.playerActionHandler.handleRevokeAllianceExtension(
+      params.myPlayer,
+      params.selected!,
+    );
+    params.closeMenu();
+  },
+};
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
@@ -574,7 +618,28 @@ export const rootMenuElement: MenuElement = {
     let ally = allyRequestElement;
     if (params.selected?.isAlliedWith(params.myPlayer)) {
       ally = allyBreakElement;
+    } else {
+      // Check if there's a pending alliance request
+      const hasPendingRequest =
+        params.selected &&
+        params.myPlayer.data.outgoingAllianceRequests.includes(
+          params.selected.id(),
+        );
+      if (hasPendingRequest) {
+        ally = allyRevokeRequestElement;
+      }
     }
+
+    // Check if there's a pending extension request
+    const hasPendingExtension =
+      params.selected &&
+      params.myPlayer.isAlliedWith(params.selected) &&
+      (() => {
+        const alliance = params.myPlayer
+          .alliances()
+          .find((a) => a.other === params.selected!.id());
+        return alliance?.extensionRequestedByMe === true;
+      })();
 
     const tileOwner = params.game.owner(params.tile);
     const isOwnTerritory =
@@ -584,8 +649,18 @@ export const rootMenuElement: MenuElement = {
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, ally, buildMenuElement]
-        : [boatMenuElement, ally, attackMenuElement]),
+        ? [
+            deleteUnitElement,
+            ally,
+            ...(hasPendingExtension ? [allyRevokeExtensionElement] : []),
+            buildMenuElement,
+          ]
+        : [
+            boatMenuElement,
+            ally,
+            ...(hasPendingExtension ? [allyRevokeExtensionElement] : []),
+            attackMenuElement,
+          ]),
     ];
 
     return menuItems.filter((item): item is MenuElement => item !== null);

@@ -35,6 +35,8 @@ export type Intent =
   | AllianceRequestReplyIntent
   | AllianceExtensionIntent
   | BreakAllianceIntent
+  | RevokeAllianceRequestIntent
+  | RevokeAllianceExtensionIntent
   | TargetPlayerIntent
   | EmojiIntent
   | DonateGoldIntent
@@ -60,6 +62,12 @@ export type AllianceRequestReplyIntent = z.infer<
   typeof AllianceRequestReplyIntentSchema
 >;
 export type BreakAllianceIntent = z.infer<typeof BreakAllianceIntentSchema>;
+export type RevokeAllianceRequestIntent = z.infer<
+  typeof RevokeAllianceRequestIntentSchema
+>;
+export type RevokeAllianceExtensionIntent = z.infer<
+  typeof RevokeAllianceExtensionIntentSchema
+>;
 export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
 export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
 export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
@@ -264,6 +272,16 @@ export const BreakAllianceIntentSchema = BaseIntentSchema.extend({
   recipient: ID,
 });
 
+export const RevokeAllianceRequestIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("revokeAllianceRequest"),
+  recipient: ID,
+});
+
+export const RevokeAllianceExtensionIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("revokeAllianceExtension"),
+  recipient: ID,
+});
+
 export const TargetPlayerIntentSchema = BaseIntentSchema.extend({
   type: z.literal("targetPlayer"),
   target: ID,
@@ -358,6 +376,8 @@ const IntentSchema = z.discriminatedUnion("type", [
   AllianceRequestIntentSchema,
   AllianceRequestReplyIntentSchema,
   BreakAllianceIntentSchema,
+  RevokeAllianceRequestIntentSchema,
+  RevokeAllianceExtensionIntentSchema,
   TargetPlayerIntentSchema,
   EmojiIntentSchema,
   DonateGoldIntentSchema,

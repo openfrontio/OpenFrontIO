@@ -564,6 +564,7 @@
     "alliance_request_status": "{name} {status} your alliance request",
     "alliance_accepted": "accepted",
     "alliance_rejected": "rejected",
+    "alliance_request_revoked": "{name} revoked their alliance request",
     "duration_second": "1 second",
     "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
     "duration_seconds_plural": "{seconds} seconds",
@@ -579,6 +580,7 @@
     "reject_alliance": "Reject",
     "alliance_renewed": "Your alliance with {name} has been renewed",
     "wants_to_renew_alliance": "{name} wants to renew your alliance",
+    "alliance_extension_revoked": "{name} revoked their alliance renewal request",
     "ignore": "Ignore",
     "unit_voluntarily_deleted": "Unit voluntarily deleted"
   },
@@ -631,6 +633,8 @@
     "break_alliance": "Break Alliance",
     "alliance": "Alliance",
     "send_alliance": "Send Alliance",
+    "revoke_alliance_request": "Revoke Alliance Request",
+    "revoke_alliance_extension": "Revoke Renewal Request",
     "send_troops": "Send Troops",
     "send_gold": "Send Gold",
     "emotes": "Emojis"

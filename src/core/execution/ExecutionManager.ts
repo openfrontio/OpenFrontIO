@@ -6,6 +6,8 @@ import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecutio
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
+import { RevokeAllianceExtensionExecution } from "./alliance/RevokeAllianceExtensionExecution";
+import { RevokeAllianceRequestExecution } from "./alliance/RevokeAllianceRequestExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { BotSpawner } from "./BotSpawner";
@@ -108,6 +110,12 @@ export class Executor {
         return new ConstructionExecution(player, intent.unit, intent.tile);
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);
+      }
+      case "revokeAllianceRequest": {
+        return new RevokeAllianceRequestExecution(player, intent.recipient);
+      }
+      case "revokeAllianceExtension": {
+        return new RevokeAllianceExtensionExecution(player, intent.recipient);
       }
 
       case "upgrade_structure":

@@ -12,6 +12,8 @@ import {
   SendDonateTroopsIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
+  SendRevokeAllianceExtensionIntentEvent,
+  SendRevokeAllianceRequestIntentEvent,
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
@@ -72,6 +74,14 @@ export class PlayerActionHandler {
 
   handleBreakAlliance(player: PlayerView, recipient: PlayerView) {
     this.eventBus.emit(new SendBreakAllianceIntentEvent(player, recipient));
+  }
+
+  handleRevokeAllianceRequest(player: PlayerView, recipient: PlayerView) {
+    this.eventBus.emit(new SendRevokeAllianceRequestIntentEvent(recipient));
+  }
+
+  handleRevokeAllianceExtension(player: PlayerView, recipient: PlayerView) {
+    this.eventBus.emit(new SendRevokeAllianceExtensionIntentEvent(recipient));
   }
 
   handleTargetPlayer(targetId: string | null) {
