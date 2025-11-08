@@ -77,7 +77,6 @@ export class PlayerPanel extends LitElement implements Layer {
       }
     });
   }
-
   init() {
     this.eventBus.on(MouseUpEvent, () => this.hide());
 
@@ -801,7 +800,7 @@ export class PlayerPanel extends LitElement implements Layer {
       </style>
 
       <div
-        class="fixed inset-0 z-[1001] flex items-center justify-center overflow-auto
+        class="fixed inset-0 z-[10001] flex items-center justify-center overflow-auto
                bg-black/15 backdrop-brightness-110 pointer-events-auto"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
         @wheel=${(e: MouseEvent) => e.stopPropagation()}
@@ -816,70 +815,76 @@ export class PlayerPanel extends LitElement implements Layer {
               class="absolute inset-2 -z-10 rounded-2xl bg-black/25 backdrop-blur-[2px]"
             ></div>
             <div
-              class=${`relative w-full bg-zinc-900/95 p-6 rounded-2xl text-zinc-100 overflow-visible shadow-2xl shadow-black/50
+              class=${`relative w-full bg-zinc-900/95 rounded-2xl text-zinc-100 shadow-2xl shadow-black/50
                  ${other.isTraitor() ? "traitor-ring" : "ring-1 ring-white/5"}`}
             >
-              <!-- Close button -->
-              <button
-                @click=${this.handleClose}
-                class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center
-                     rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
-                aria-label=${translateText("common.close") || "Close"}
-                title=${translateText("common.close") || "Close"}
-              >
-                ✕
-              </button>
+              <div style="overflow: visible;">
+                <div
+                  style="max-height: calc(100vh - 120px - env(safe-area-inset-bottom)); overflow:auto; -webkit-overflow-scrolling: touch; resize: vertical;"
+                >
+                  <div class="sticky top-0 z-20 flex justify-end p-2">
+                    <button
+                      @click=${this.handleClose}
+                      class="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow hover:bg-red-500 transition-colors"
+                      aria-label=${translateText("common.close") || "Close"}
+                      title=${translateText("common.close") || "Close"}
+                    >
+                      ✕
+                    </button>
+                  </div>
 
-              <div
-                class="flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
-              >
-                <!-- Identity (flag, name, type, traitor, relation) -->
-                <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
+                  <div
+                    class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
+                  >
+                    <!-- Identity (flag, name, type, traitor, relation) -->
+                    <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
 
-                ${this.sendTarget
-                  ? html`
-                      <send-resource-modal
-                        .open=${this.sendMode !== "none"}
-                        .mode=${this.sendMode}
-                        .total=${this.sendMode === "troops"
-                          ? myTroopsNum
-                          : myGoldNum}
-                        .uiState=${this.uiState}
-                        .myPlayer=${my}
-                        .target=${this.sendTarget}
-                        .gameView=${this.g}
-                        .eventBus=${this.eventBus}
-                        .format=${this.sendMode === "troops"
-                          ? renderTroops
-                          : renderNumber}
-                        @confirm=${this.confirmSend}
-                        @close=${this.closeSend}
-                      ></send-resource-modal>
-                    `
-                  : ""}
+                    ${this.sendTarget
+                      ? html`
+                          <send-resource-modal
+                            .open=${this.sendMode !== "none"}
+                            .mode=${this.sendMode}
+                            .total=${this.sendMode === "troops"
+                              ? myTroopsNum
+                              : myGoldNum}
+                            .uiState=${this.uiState}
+                            .myPlayer=${my}
+                            .target=${this.sendTarget}
+                            .gameView=${this.g}
+                            .eventBus=${this.eventBus}
+                            .format=${this.sendMode === "troops"
+                              ? renderTroops
+                              : renderNumber}
+                            @confirm=${this.confirmSend}
+                            @close=${this.closeSend}
+                          ></send-resource-modal>
+                        `
+                      : ""}
 
-                <ui-divider></ui-divider>
+                    <ui-divider></ui-divider>
 
-                <!-- Resources -->
-                ${this.renderResources(other)}
+                    <!-- Resources -->
+                    ${this.renderResources(other)}
 
-                <ui-divider></ui-divider>
+                    <ui-divider></ui-divider>
 
-                <!-- Stats: betrayals / trading -->
-                ${this.renderStats(other, my)}
+                    <!-- Stats: betrayals / trading -->
+                    ${this.renderStats(other, my)}
 
-                <ui-divider></ui-divider>
+                    <ui-divider></ui-divider>
 
-                <!-- Alliances list -->
-                ${this.renderAlliances(other)}
+                    <!-- Alliances list -->
+                    ${this.renderAlliances(other)}
 
-                <!-- Alliance time remaining -->
-                ${this.renderAllianceExpiry()}
+                    <!-- Alliance time remaining -->
+                    ${this.renderAllianceExpiry()}
 
-                <ui-divider class="mt-1"></ui-divider>
+                    <ui-divider class="mt-1"></ui-divider>
 
-                <!-- Actions -->
-                ${this.renderActions(my, other)}
+                    <!-- Actions -->
+                    ${this.renderActions(my, other)}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

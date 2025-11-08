@@ -33,17 +33,13 @@ export class TransportShipExecution implements Execution {
 
   private pathFinder: PathFinder;
 
-  private originalOwner: Player;
-
   constructor(
     private attacker: Player,
     private targetID: PlayerID | null,
     private ref: TileRef,
     private startTroops: number,
     private src: TileRef | null,
-  ) {
-    this.originalOwner = this.attacker;
-  }
+  ) {}
 
   activeDuringSpawnPhase(): boolean {
     return false;
@@ -177,43 +173,11 @@ export class TransportShipExecution implements Execution {
     }
     this.lastMove = ticks;
 
-    // Team mate can conquer disconnected player and get their ships
-    // captureUnit has changed the owner of the unit, now update attacker
-    if (
-      this.originalOwner.isDisconnected() &&
-      this.boat.owner() !== this.originalOwner &&
-      this.boat.owner().isOnSameTeam(this.originalOwner)
-    ) {
-      this.attacker = this.boat.owner();
-      this.originalOwner = this.boat.owner(); // for when this owner disconnects too
-    }
-
     if (this.boat.retreating()) {
-      // Ensure retreat source is valid for the new owner
-      if (this.mg.owner(this.src!) !== this.attacker) {
-        // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
-        const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
-        if (newSrc === false) {
-          this.src = null;
-        } else {
-          this.src = newSrc;
-        }
-      }
+      this.dst = this.src!; // src is guaranteed to be set at this point
 
-      if (this.src === null) {
-        console.warn(
-          `TransportShipExecution: retreating but no src found for new attacker`,
-        );
-        this.attacker.addTroops(this.boat.troops());
-        this.boat.delete(false);
-        this.active = false;
-        return;
-      } else {
-        this.dst = this.src;
-
-        if (this.boat.targetTile() !== this.dst) {
-          this.boat.setTargetTile(this.dst);
-        }
+      if (this.boat.targetTile() !== this.dst) {
+        this.boat.setTargetTile(this.dst);
       }
     }
 
