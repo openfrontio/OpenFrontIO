@@ -14,6 +14,7 @@ import hydrogenHitSound from "../../../resources/sounds/effects/hydrogen_hit.mp3
 import hydrogenLaunchSound from "../../../resources/sounds/effects/hydrogen_launch.mp3";
 import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
 import mirvLaunchSound from "../../../resources/sounds/effects/mirv_launch.mp3";
+import samSound from "../../../resources/sounds/effects/sam.mp3";
 import stealBuildingSound from "../../../resources/sounds/effects/stealBuilding.mp3";
 import { UserSettings } from "../../core/game/UserSettings";
 
@@ -28,6 +29,7 @@ export enum SoundEffect {
   HydrogenLaunch = "hydrogen-launch",
   HydrogenHit = "hydrogen-hit",
   MIRVLaunch = "mirv-launch",
+  SAMHit = "sam-hit",
   Click = "click",
   GameWin = "game-win",
   GameOver = "game-over",
@@ -51,6 +53,7 @@ const SOUND_EFFECT_CONFIGS: SoundEffectConfig[] = [
   { effect: SoundEffect.HydrogenLaunch, src: hydrogenLaunchSound },
   { effect: SoundEffect.HydrogenHit, src: hydrogenHitSound },
   { effect: SoundEffect.MIRVLaunch, src: mirvLaunchSound },
+  { effect: SoundEffect.SAMHit, src: samSound },
   { effect: SoundEffect.Click, src: clickSound },
   { effect: SoundEffect.GameWin, src: gameWinSound },
   { effect: SoundEffect.GameOver, src: gameOverSound },

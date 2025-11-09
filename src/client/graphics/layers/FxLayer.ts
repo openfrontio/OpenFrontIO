@@ -623,6 +623,21 @@ export class FxLayer implements Layer {
     this.allFx.push(explosion);
     const shockwave = new ShockwaveFx(x, y, 800, 40);
     this.allFx.push(shockwave);
+
+    // Play SAM hit sound for nuke owner when their nuke is intercepted
+    const my = this.game.myPlayer();
+    if (my) {
+      const nukeOwner = unit.owner();
+      const isNukeOwner = nukeOwner === my;
+      // Check if it's an atom bomb, hydrogen bomb, or MIRV warhead
+      const isNuke =
+        unit.type() === UnitType.AtomBomb ||
+        unit.type() === UnitType.HydrogenBomb ||
+        unit.type() === UnitType.MIRVWarhead;
+      if (isNukeOwner && isNuke) {
+        SoundManager.playSoundEffect(SoundEffect.SAMHit);
+      }
+    }
   }
 
   async init() {

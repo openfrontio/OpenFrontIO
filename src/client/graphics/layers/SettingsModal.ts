@@ -852,6 +852,36 @@ export class SettingsModal extends LitElement implements Layer {
         </button>
 
         <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.SAMHit,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.SAMHit,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.SAMHit, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_sam_hit")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_sam_hit_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.SAMHit)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
           class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
           @click=${() => {
             const enabled = !this.userSettings.isSoundEffectEnabled(

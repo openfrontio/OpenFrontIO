@@ -382,6 +382,11 @@ export class EventsDisplay extends LitElement implements Layer {
       description = translateText(event.message, event.params ?? {});
     }
 
+    // Play SAM hit sound when SAM intercepts a nuke (for SAM owner)
+    if (event.messageType === MessageType.SAM_HIT) {
+      SoundManager.playSoundEffect(SoundEffect.SAMHit);
+    }
+
     this.addEvent({
       description: description,
       createdAt: this.game.ticks(),
