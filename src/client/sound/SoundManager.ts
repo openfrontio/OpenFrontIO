@@ -81,6 +81,12 @@ class SoundManager {
     this.backgroundMusic = BACKGROUND_MUSIC_TRACKS.map((src) =>
       this.createMusicTrack(src),
     );
+    // Randomize which track plays first
+    if (this.backgroundMusic.length > 0) {
+      this.currentTrack = Math.floor(
+        Math.random() * this.backgroundMusic.length,
+      );
+    }
   }
 
   private createMusicTrack(src: string): Howl {
