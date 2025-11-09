@@ -40,6 +40,7 @@ import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
@@ -68,6 +69,7 @@ interface GameEvent {
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
+  eventId?: number; // Internal ID for tracking
 }
 
 @customElement("events-display")
@@ -77,6 +79,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private active: boolean = false;
   private events: GameEvent[] = [];
+  private activeAllianceBrokenEventIds: Set<number> = new Set();
+  private nextEventId: number = 0;
 
   // allianceID -> last checked at tick
   private alliancesCheckedAt = new Map<number, Tick>();
@@ -319,6 +323,8 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private addEvent(event: GameEvent) {
+    // Assign unique ID if not already set
+    event.eventId ??= this.nextEventId++;
     this.events = [...this.events, event];
     if (this._hidden === true) {
       this.newEvents++;
@@ -570,6 +576,8 @@ export class EventsDisplay extends LitElement implements Layer {
           preventClose: true,
         },
       ];
+      // Play alarm sound when someone breaks your alliance (3 times)
+      SoundManager.playSoundEffectNTimes(SoundEffect.Alarm, 3);
       this.addEvent({
         description: translateText("events_display.betrayed_you", {
           name: traitor.name(),
