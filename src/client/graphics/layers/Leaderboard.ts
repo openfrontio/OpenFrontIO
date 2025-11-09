@@ -228,32 +228,49 @@ export class Leaderboard extends LitElement implements Layer {
           ${repeat(
             this.players,
             (p) => p.player.id(),
-            (player) => html`
-              <div
-                class="contents hover:bg-slate-600/60 ${player.isOnSameTeam
-                  ? "font-bold"
-                  : ""} cursor-pointer"
-                @click=${() => this.handleRowClickPlayer(player.player)}
-              >
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.position}
-                </div>
+            (player) => {
+              const isDisconnected = player.player.isDisconnected();
+              const bgClass = player.isMyPlayer
+                ? "bg-white/20"
+                : isDisconnected
+                  ? "bg-red-500/20"
+                  : "bg-green-500/20";
+
+              return html`
                 <div
-                  class="py-1 md:py-2 text-center border-b border-slate-500 truncate"
+                  class="contents hover:bg-slate-600/60 ${player.isOnSameTeam
+                    ? "font-bold"
+                    : ""} cursor-pointer"
+                  @click=${() => this.handleRowClickPlayer(player.player)}
                 >
-                  ${player.name}
+                  <div
+                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
+                  >
+                    ${player.position}
+                  </div>
+                  <div
+                    class="py-1 md:py-2 text-center truncate border-b border-slate-500 ${bgClass}"
+                  >
+                    ${player.name}
+                  </div>
+                  <div
+                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
+                  >
+                    ${player.score}
+                  </div>
+                  <div
+                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
+                  >
+                    ${player.gold}
+                  </div>
+                  <div
+                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
+                  >
+                    ${player.troops}
+                  </div>
                 </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.score}
-                </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.gold}
-                </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.troops}
-                </div>
-              </div>
-            `,
+              `;
+            },
           )}
         </div>
       </div>
