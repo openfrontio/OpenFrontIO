@@ -11,6 +11,7 @@ import {
 } from "../Util";
 import { sanitizeUsername } from "../validations/username";
 import { AttackImpl } from "./AttackImpl";
+import { ALLIANCE_BLOCK_TICKS } from "./constants";
 import {
   Alliance,
   AllianceRequest,
@@ -388,9 +389,6 @@ export class PlayerImpl implements Player {
   }
 
   canSendAllianceRequest(other: Player): boolean {
-    // Block alliance requests/renewals after 40 minutes of game time
-    // 40 minutes = 2400 seconds = 24,000 ticks (10 ticks per second)
-    const ALLIANCE_BLOCK_TICKS = 40 * 60 * 10; // 24,000 ticks
     if (this.mg.ticks() >= ALLIANCE_BLOCK_TICKS) {
       return false;
     }

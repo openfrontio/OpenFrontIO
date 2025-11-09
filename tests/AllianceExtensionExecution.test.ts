@@ -2,6 +2,7 @@ import { AllianceExtensionExecution } from "../src/core/execution/alliance/Allia
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { Game, MessageType, Player, PlayerType } from "../src/core/game/Game";
+import { ALLIANCE_BLOCK_TICKS } from "../src/core/game/constants";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
@@ -187,7 +188,6 @@ describe("AllianceExtensionExecution", () => {
 
     // Advance game to 40 minutes (24,000 ticks)
     // 40 minutes = 2400 seconds = 24,000 ticks (10 ticks per second)
-    const ALLIANCE_BLOCK_TICKS = 40 * 60 * 10;
     const currentTicks = game.ticks();
     const ticksToAdvance = ALLIANCE_BLOCK_TICKS - currentTicks;
 

@@ -5,6 +5,7 @@ import {
   Player,
   PlayerID,
 } from "../../game/Game";
+import { ALLIANCE_BLOCK_TICKS } from "../../game/constants";
 
 export class AllianceExtensionExecution implements Execution {
   constructor(
@@ -13,9 +14,6 @@ export class AllianceExtensionExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    // Block alliance renewals after 40 minutes of game time
-    // 40 minutes = 2400 seconds = 24,000 ticks (10 ticks per second)
-    const ALLIANCE_BLOCK_TICKS = 40 * 60 * 10; // 24,000 ticks
     if (mg.ticks() >= ALLIANCE_BLOCK_TICKS) {
       return;
     }

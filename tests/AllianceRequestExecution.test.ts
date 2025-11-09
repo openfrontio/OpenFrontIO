@@ -1,6 +1,7 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
+import { ALLIANCE_BLOCK_TICKS } from "../src/core/game/constants";
 import { Game, Player, PlayerType, UnitType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
@@ -104,7 +105,6 @@ describe("AllianceRequestExecution", () => {
   test("Blocks new alliance requests after 40 minutes", () => {
     // Advance game to 40 minutes (24,000 ticks)
     // 40 minutes = 2400 seconds = 24,000 ticks (10 ticks per second)
-    const ALLIANCE_BLOCK_TICKS = 40 * 60 * 10;
     const currentTicks = game.ticks();
     const ticksToAdvance = ALLIANCE_BLOCK_TICKS - currentTicks;
 
