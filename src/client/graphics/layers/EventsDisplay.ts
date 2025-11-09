@@ -380,32 +380,32 @@ export class EventsDisplay extends LitElement implements Layer {
 
     // For revoked alliance requests, try to extract focusID from params
     let focusID: number | undefined = undefined;
-    if (
-      event.message === "events_display.alliance_request_revoked" &&
-      event.params?.name
-    ) {
-      // Find the player by name to get their ID
-      const players = this.game.players();
-      const player = players.find(
-        (p) => p.displayName() === event.params?.name,
-      );
-      if (player) {
-        focusID = player.smallID();
+    if (event.message === "events_display.alliance_request_revoked") {
+      // Note: Server must be changed to send the requester's smallID in params.playerID
+      const playerID = event.params?.playerID;
+      if (typeof playerID === "number" && playerID > 0) {
+        // Use direct lookup by smallID instead of fragile name matching
+        const player = this.game.playerBySmallID(playerID) as PlayerView;
+        if (player) {
+          focusID = player.smallID();
 
-        // Remove the alliance request event (with buttons) for this player
-        // since the request has been revoked
-        const eventsBefore = this.events.length;
-        this.events = this.events.filter(
-          (event) =>
-            !(
-              event.type === MessageType.ALLIANCE_REQUEST &&
-              event.focusID === player.smallID()
-            ),
-        );
-        if (this.events.length !== eventsBefore) {
-          this.requestUpdate();
+          // Remove the alliance request event (with buttons) for this player
+          // since the request has been revoked
+          const eventsBefore = this.events.length;
+          this.events = this.events.filter(
+            (event) =>
+              !(
+                event.type === MessageType.ALLIANCE_REQUEST &&
+                event.focusID === playerID
+              ),
+          );
+          if (this.events.length !== eventsBefore) {
+            this.requestUpdate();
+          }
         }
       }
+      // Guard: if playerID is missing/invalid, we skip setting focusID
+      // The event will still be displayed but without focus functionality
     }
 
     this.addEvent({
