@@ -469,9 +469,9 @@ class Client {
         this.patternsModal.open(affiliateCode);
       }
     }
-    if (decodedHash.startsWith("#refresh")) {
-      window.location.href = "/";
-    }
+    // if (decodedHash.startsWith("#refresh")) {
+    //   window.location.href = "/";
+    // }
   }
 
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
@@ -563,9 +563,9 @@ class Client {
         });
 
         // Ensure there's a homepage entry in history before adding the lobby entry
-        if (window.location.hash === "" || window.location.hash === "#") {
-          history.pushState(null, "", window.location.origin + "#refresh");
-        }
+        // if (window.location.hash === "" || window.location.hash === "#") {
+        //   history.pushState(null, "", window.location.origin + "#refresh");
+        // }
         history.pushState(null, "", `#join=${lobby.gameID}`);
       },
     );
