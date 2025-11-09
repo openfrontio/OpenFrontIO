@@ -270,6 +270,34 @@ export class ClientGameRunner {
       SoundEffect.Alarm,
       userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.StealBuilding,
+      userSettings.isSoundEffectEnabled(SoundEffect.StealBuilding),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.AtomLaunch,
+      userSettings.isSoundEffectEnabled(SoundEffect.AtomLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.AtomHit,
+      userSettings.isSoundEffectEnabled(SoundEffect.AtomHit),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.HydrogenLaunch,
+      userSettings.isSoundEffectEnabled(SoundEffect.HydrogenLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.HydrogenHit,
+      userSettings.isSoundEffectEnabled(SoundEffect.HydrogenHit),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.MIRVLaunch,
+      userSettings.isSoundEffectEnabled(SoundEffect.MIRVLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Click,
+      userSettings.isSoundEffectEnabled(SoundEffect.Click),
+    );
     SoundManager.setBackgroundMusicEnabled(
       userSettings.isBackgroundMusicEnabled(),
     );
@@ -502,6 +530,8 @@ export class ClientGameRunner {
     this.myPlayer.actions(tile).then((actions) => {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
+        // Play click sound when successfully initiating an attack
+        SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
@@ -509,6 +539,8 @@ export class ClientGameRunner {
           ),
         );
       } else if (this.canAutoBoat(actions, tile)) {
+        // Play click sound when successfully initiating a boat attack
+        SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
         this.sendBoatAttackIntent(tile);
       }
     });

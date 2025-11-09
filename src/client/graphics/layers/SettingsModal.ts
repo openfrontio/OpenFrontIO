@@ -76,6 +76,30 @@ export class SettingsModal extends LitElement implements Layer {
       SoundEffect.StealBuilding,
       this.userSettings.isSoundEffectEnabled(SoundEffect.StealBuilding),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.AtomLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.AtomLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.AtomHit,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.AtomHit),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.HydrogenLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.HydrogenHit,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenHit),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.MIRVLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.MIRVLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Click,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Click),
+    );
 
     // Load background music enabled state
     SoundManager.setBackgroundMusicEnabled(
@@ -719,6 +743,189 @@ export class SettingsModal extends LitElement implements Layer {
           </div>
           <div class="text-sm text-slate-400">
             ${this.userSettings.isSoundEffectEnabled(SoundEffect.StealBuilding)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.AtomLaunch,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.AtomLaunch,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.AtomLaunch, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_atom_launch")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_atom_launch_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.AtomLaunch)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.AtomHit,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.AtomHit,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.AtomHit, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_atom_hit")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_atom_hit_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.AtomHit)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.HydrogenLaunch,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.HydrogenLaunch,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(
+              SoundEffect.HydrogenLaunch,
+              enabled,
+            );
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_hydrogen_launch")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_hydrogen_launch_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenLaunch)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.HydrogenHit,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.HydrogenHit,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(
+              SoundEffect.HydrogenHit,
+              enabled,
+            );
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_hydrogen_hit")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_hydrogen_hit_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenHit)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.MIRVLaunch,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.MIRVLaunch,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.MIRVLaunch, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_mirv_launch")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_mirv_launch_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.MIRVLaunch)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.Click,
+            );
+            this.userSettings.setSoundEffectEnabled(SoundEffect.Click, enabled);
+            SoundManager.setSoundEffectEnabled(SoundEffect.Click, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_click")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_click_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.Click)
               ? translateText("user_setting.on")
               : translateText("user_setting.off")}
           </div>

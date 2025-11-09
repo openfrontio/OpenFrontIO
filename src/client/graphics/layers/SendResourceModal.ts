@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { within } from "../../../core/Util";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import {
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,
@@ -80,10 +81,12 @@ export class SendResourceModal extends LitElement {
   }
 
   private closeModal() {
+    SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
     this.dispatchEvent(new CustomEvent("close"));
   }
 
   private confirm() {
+    SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
     if (!this.isSenderAlive() || !this.isTargetAlive() || !this.eventBus) {
       return;
     }
@@ -305,6 +308,7 @@ export class SendResourceModal extends LitElement {
                   : "bg-zinc-800 text-zinc-200 ring-zinc-700 hover:bg-zinc-700 hover:text-zinc-50"}"
               @click=${() => {
                 if (dead) return;
+                SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
                 this.selectedPercent = pct;
                 const raw = Math.floor((basis * pct) / 100);
                 this.sendAmount = this.clampSend(raw);

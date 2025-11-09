@@ -3,9 +3,15 @@ import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import alarmSound from "../../../resources/sounds/effects/alarm.mp3";
+import atomHitSound from "../../../resources/sounds/effects/atom_hit.mp3";
+import atomLaunchSound from "../../../resources/sounds/effects/atom_launch.mp3";
 import buildingDestroyedSound from "../../../resources/sounds/effects/building-destory.mp3";
 import buildingSound from "../../../resources/sounds/effects/building.mp3";
+import clickSound from "../../../resources/sounds/effects/click.mp3";
+import hydrogenHitSound from "../../../resources/sounds/effects/hydrogen_hit.mp3";
+import hydrogenLaunchSound from "../../../resources/sounds/effects/hydrogen_launch.mp3";
 import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
+import mirvLaunchSound from "../../../resources/sounds/effects/mirv_launch.mp3";
 import stealBuildingSound from "../../../resources/sounds/effects/stealBuilding.mp3";
 
 export enum SoundEffect {
@@ -14,6 +20,12 @@ export enum SoundEffect {
   Alarm = "alarm",
   BuildingDestroyed = "building-destroyed",
   StealBuilding = "steal-building",
+  AtomLaunch = "atom-launch",
+  AtomHit = "atom-hit",
+  HydrogenLaunch = "hydrogen-launch",
+  HydrogenHit = "hydrogen-hit",
+  MIRVLaunch = "mirv-launch",
+  Click = "click",
 }
 
 class SoundManager {
@@ -52,6 +64,12 @@ class SoundManager {
     this.loadSoundEffect(SoundEffect.Alarm, alarmSound, false);
     this.loadSoundEffect(SoundEffect.BuildingDestroyed, buildingDestroyedSound);
     this.loadSoundEffect(SoundEffect.StealBuilding, stealBuildingSound);
+    this.loadSoundEffect(SoundEffect.AtomLaunch, atomLaunchSound);
+    this.loadSoundEffect(SoundEffect.AtomHit, atomHitSound);
+    this.loadSoundEffect(SoundEffect.HydrogenLaunch, hydrogenLaunchSound);
+    this.loadSoundEffect(SoundEffect.HydrogenHit, hydrogenHitSound);
+    this.loadSoundEffect(SoundEffect.MIRVLaunch, mirvLaunchSound);
+    this.loadSoundEffect(SoundEffect.Click, clickSound);
   }
 
   public playBackgroundMusic(): void {

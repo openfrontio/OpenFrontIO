@@ -415,7 +415,19 @@
     "sound_effect_steal_building": "Steal Building",
     "sound_effect_steal_building_desc": "Sound when capturing enemy buildings",
     "sound_effect_alarm": "Alarm",
-    "sound_effect_alarm_desc": "Alarm notification sound"
+    "sound_effect_alarm_desc": "Alarm notification sound",
+    "sound_effect_atom_launch": "Atom Bomb Launch",
+    "sound_effect_atom_launch_desc": "Sound when launching an atom bomb",
+    "sound_effect_atom_hit": "Atom Bomb Hit",
+    "sound_effect_atom_hit_desc": "Sound when an atom bomb hits its target",
+    "sound_effect_hydrogen_launch": "Hydrogen Bomb Launch",
+    "sound_effect_hydrogen_launch_desc": "Sound when launching a hydrogen bomb",
+    "sound_effect_hydrogen_hit": "Hydrogen Bomb Hit",
+    "sound_effect_hydrogen_hit_desc": "Sound when a hydrogen bomb hits its target",
+    "sound_effect_mirv_launch": "MIRV Launch",
+    "sound_effect_mirv_launch_desc": "Sound when launching a MIRV",
+    "sound_effect_click": "Click",
+    "sound_effect_click_desc": "Sound when clicking menu buttons"
   },
   "chat": {
     "title": "Quick Chat",

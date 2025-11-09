@@ -372,6 +372,30 @@ class Client {
       SoundEffect.StealBuilding,
       this.userSettings.isSoundEffectEnabled(SoundEffect.StealBuilding),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.AtomLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.AtomLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.AtomHit,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.AtomHit),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.HydrogenLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.HydrogenHit,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenHit),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.MIRVLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.MIRVLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Click,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Click),
+    );
     SoundManager.setBackgroundMusicEnabled(
       this.userSettings.isBackgroundMusicEnabled(),
     );

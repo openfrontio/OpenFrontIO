@@ -54,6 +54,34 @@ export class UserSettingModal extends LitElement {
       SoundEffect.Alarm,
       this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.StealBuilding,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.StealBuilding),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.AtomLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.AtomLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.AtomHit,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.AtomHit),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.HydrogenLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.HydrogenHit,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenHit),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.MIRVLaunch,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.MIRVLaunch),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Click,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Click),
+    );
     SoundManager.setBackgroundMusicEnabled(
       this.userSettings.isBackgroundMusicEnabled(),
     );
@@ -855,6 +883,129 @@ export class UserSettingModal extends LitElement {
               SoundEffect.StealBuilding,
               enabled,
             );
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_atom_launch")}"
+        description="${translateText(
+          "user_setting.sound_effect_atom_launch_desc",
+        )}"
+        id="sound-effect-atom-launch-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(
+          SoundEffect.AtomLaunch,
+        )}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.AtomLaunch,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.AtomLaunch, enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_atom_hit")}"
+        description="${translateText(
+          "user_setting.sound_effect_atom_hit_desc",
+        )}"
+        id="sound-effect-atom-hit-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.AtomHit)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.AtomHit,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.AtomHit, enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_hydrogen_launch")}"
+        description="${translateText(
+          "user_setting.sound_effect_hydrogen_launch_desc",
+        )}"
+        id="sound-effect-hydrogen-launch-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(
+          SoundEffect.HydrogenLaunch,
+        )}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.HydrogenLaunch,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(
+              SoundEffect.HydrogenLaunch,
+              enabled,
+            );
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_hydrogen_hit")}"
+        description="${translateText(
+          "user_setting.sound_effect_hydrogen_hit_desc",
+        )}"
+        id="sound-effect-hydrogen-hit-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(
+          SoundEffect.HydrogenHit,
+        )}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.HydrogenHit,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(
+              SoundEffect.HydrogenHit,
+              enabled,
+            );
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_mirv_launch")}"
+        description="${translateText(
+          "user_setting.sound_effect_mirv_launch_desc",
+        )}"
+        id="sound-effect-mirv-launch-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(
+          SoundEffect.MIRVLaunch,
+        )}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.MIRVLaunch,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.MIRVLaunch, enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_click")}"
+        description="${translateText("user_setting.sound_effect_click_desc")}"
+        id="sound-effect-click-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.Click)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(SoundEffect.Click, enabled);
+            SoundManager.setSoundEffectEnabled(SoundEffect.Click, enabled);
           }
         }}
       ></setting-toggle>

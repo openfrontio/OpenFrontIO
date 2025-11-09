@@ -48,6 +48,8 @@ export class FxLayer implements Layer {
   private stealBuildingSoundPlayed: Set<number> = new Set();
   // Track previous owners of buildings to detect ownership changes
   private buildingPreviousOwners: Map<number, number> = new Map();
+  // Track nukes that have already had their launch sound played
+  private nukeLaunchSoundPlayed: Set<number> = new Set();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -269,14 +271,39 @@ export class FxLayer implements Layer {
       }
       case UnitType.AtomBomb: {
         this.createNukeTargetFxIfOwned(unit);
+        // Play launch sound for attacker when nuke first appears
+        if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
+          const my = this.game.myPlayer();
+          if (my && unit.owner() === my) {
+            SoundManager.playSoundEffect(SoundEffect.AtomLaunch);
+          }
+          this.nukeLaunchSoundPlayed.add(unit.id());
+        }
         this.onNukeEvent(unit, 70);
         break;
       }
-      case UnitType.MIRVWarhead:
+      case UnitType.MIRVWarhead: {
+        // Play launch sound for attacker when MIRV first appears
+        if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
+          const my = this.game.myPlayer();
+          if (my && unit.owner() === my) {
+            SoundManager.playSoundEffect(SoundEffect.MIRVLaunch);
+          }
+          this.nukeLaunchSoundPlayed.add(unit.id());
+        }
         this.onNukeEvent(unit, 70);
         break;
+      }
       case UnitType.HydrogenBomb: {
         this.createNukeTargetFxIfOwned(unit);
+        // Play launch sound for attacker when nuke first appears
+        if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
+          const my = this.game.myPlayer();
+          if (my && unit.owner() === my) {
+            SoundManager.playSoundEffect(SoundEffect.HydrogenLaunch);
+          }
+          this.nukeLaunchSoundPlayed.add(unit.id());
+        }
         this.onNukeEvent(unit, 160);
         break;
       }
@@ -547,6 +574,32 @@ export class FxLayer implements Layer {
       tick: currentTick,
     });
     this.recentNukeExplosions.set(nukeTile, explosions);
+
+    // Play hit sound for both attacker and defender
+    const my = this.game.myPlayer();
+    if (my) {
+      const isAttacker = nukeOwner === my;
+      const targetOwner = this.game.owner(nukeTile);
+      const isDefender =
+        targetOwner === my ||
+        (targetOwner.isPlayer() && my.isOnSameTeam(targetOwner));
+
+      // Play hit sound based on nuke type
+      if (unit.type() === UnitType.AtomBomb) {
+        if (isAttacker || isDefender) {
+          SoundManager.playSoundEffect(SoundEffect.AtomHit);
+        }
+      } else if (unit.type() === UnitType.HydrogenBomb) {
+        if (isAttacker || isDefender) {
+          SoundManager.playSoundEffect(SoundEffect.HydrogenHit);
+        }
+      } else if (unit.type() === UnitType.MIRVWarhead) {
+        // MIRV warheads use atom hit sound
+        if (isAttacker || isDefender) {
+          SoundManager.playSoundEffect(SoundEffect.AtomHit);
+        }
+      }
+    }
 
     const nukeFx = nukeFxFactory(
       this.animatedSpriteLoader,
