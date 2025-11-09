@@ -40,6 +40,14 @@ export interface MenuElementParams {
   closeMenu: () => void;
 }
 
+export interface SplitButtonAction {
+  icon: string;
+  action: (params: MenuElementParams) => void;
+  disabled?: (params: MenuElementParams) => boolean;
+  tooltipItems?: TooltipItem[];
+  tooltipKeys?: TooltipKey[];
+}
+
 export interface MenuElement {
   id: string;
   name: string;
@@ -55,6 +63,10 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+  splitButton?: {
+    left: SplitButtonAction;
+    right: SplitButtonAction;
+  }; // For split buttons with two actions
 }
 
 export interface TooltipKey {
@@ -209,13 +221,12 @@ const allyBreakElement: MenuElement = {
   },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
   name: "donate gold",
   disabled: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canDonateGold,
-  color: COLORS.ally,
+  color: COLORS.tooltip.cost, // Yellow/gold color
   icon: donateGoldIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleDonateGold(params.selected!);
@@ -223,7 +234,6 @@ const allyDonateGoldElement: MenuElement = {
   },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateTroopsElement: MenuElement = {
   id: "ally_donate_troops",
   name: "donate troops",
@@ -581,11 +591,22 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
+    // Check if selected player is friendly (allied or on same team)
+    const isFriendly =
+      params.selected && params.myPlayer.isFriendly(params.selected);
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, ally, buildMenuElement]
         : [boatMenuElement, ally, attackMenuElement]),
+      // Add donation buttons if clicking on a friendly player
+      ...(isFriendly && params.playerActions?.interaction?.canDonateGold
+        ? [allyDonateGoldElement]
+        : []),
+      ...(isFriendly && params.playerActions?.interaction?.canDonateTroops
+        ? [allyDonateTroopsElement]
+        : []),
     ];
 
     return menuItems.filter((item): item is MenuElement => item !== null);
