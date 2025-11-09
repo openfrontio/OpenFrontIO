@@ -7,12 +7,13 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import SoundManager, { SoundEffect } from "./sound/SoundManager";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
 
-  @state() private settingsMode: "basic" | "keybinds" = "basic";
+  @state() private settingsMode: "basic" | "keybinds" | "sound" = "basic";
   @state() private keybinds: Record<string, { value: string; key: string }> =
     {};
 
@@ -31,6 +32,31 @@ export class UserSettingModal extends LitElement {
         console.warn("Invalid keybinds JSON:", e);
       }
     }
+
+    // Initialize sound settings
+    SoundManager.setBackgroundMusicVolume(
+      this.userSettings.backgroundMusicVolume(),
+    );
+    SoundManager.setSoundEffectsVolume(this.userSettings.soundEffectsVolume());
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.KaChing,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.KaChing),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Building,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Building),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.BuildingDestroyed,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.BuildingDestroyed),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Alarm,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
+    );
+    SoundManager.setBackgroundMusicEnabled(
+      this.userSettings.isBackgroundMusicEnabled(),
+    );
   }
 
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -241,7 +267,7 @@ export class UserSettingModal extends LitElement {
           <div class="modal-content user-setting-modal">
             <div class="flex mb-4 w-full justify-center">
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-l 
+                class="w-1/3 text-center px-3 py-1 rounded-l 
       ${this.settingsMode === "basic"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -250,7 +276,7 @@ export class UserSettingModal extends LitElement {
                 ${translateText("user_setting.tab_basic")}
               </button>
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-r 
+                class="w-1/3 text-center px-3 py-1 border-l border-r border-gray-600
       ${this.settingsMode === "keybinds"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -258,12 +284,23 @@ export class UserSettingModal extends LitElement {
               >
                 ${translateText("user_setting.tab_keybinds")}
               </button>
+              <button
+                class="w-1/3 text-center px-3 py-1 rounded-r 
+      ${this.settingsMode === "sound"
+                  ? "bg-white/10 text-white"
+                  : "bg-transparent text-gray-400"}"
+                @click=${() => (this.settingsMode = "sound")}
+              >
+                ${translateText("user_setting.tab_sound")}
+              </button>
             </div>
 
             <div class="settings-list">
               ${this.settingsMode === "basic"
                 ? this.renderBasicSettings()
-                : this.renderKeybindSettings()}
+                : this.settingsMode === "keybinds"
+                  ? this.renderKeybindSettings()
+                  : this.renderSoundSettings()}
             </div>
           </div>
         </div>
@@ -644,6 +681,159 @@ export class UserSettingModal extends LitElement {
         .value=${this.keybinds["moveRight"]?.key ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
+    `;
+  }
+
+  private renderSoundSettings() {
+    return html`
+      <!-- Master Volume -->
+      <setting-slider
+        label="${translateText("user_setting.sound_master_volume")}"
+        description="${translateText("user_setting.sound_master_volume_desc")}"
+        min="0"
+        max="100"
+        .value=${Math.max(
+          0,
+          Math.min(100, (this.userSettings.soundEffectsVolume() || 1) * 100),
+        )}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          const sliderValue = e.detail?.value;
+          if (
+            typeof sliderValue === "number" &&
+            !isNaN(sliderValue) &&
+            sliderValue >= 0 &&
+            sliderValue <= 100
+          ) {
+            const volume = sliderValue / 100;
+            this.userSettings.setSoundEffectsVolume(volume);
+            SoundManager.setSoundEffectsVolume(volume);
+          }
+        }}
+      ></setting-slider>
+
+      <!-- Music Group -->
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.sound_music_group")}
+      </div>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_music_enabled")}"
+        description="${translateText("user_setting.sound_music_enabled_desc")}"
+        id="background-music-toggle"
+        .checked=${this.userSettings.isBackgroundMusicEnabled()}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setBackgroundMusicEnabled(enabled);
+            SoundManager.setBackgroundMusicEnabled(enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-slider
+        label="${translateText("user_setting.background_music_volume")}"
+        description=""
+        min="0"
+        max="100"
+        .value=${Math.max(
+          0,
+          Math.min(100, (this.userSettings.backgroundMusicVolume() || 0) * 100),
+        )}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          const sliderValue = e.detail?.value;
+          if (
+            typeof sliderValue === "number" &&
+            !isNaN(sliderValue) &&
+            sliderValue >= 0 &&
+            sliderValue <= 100
+          ) {
+            const volume = sliderValue / 100;
+            this.userSettings.setBackgroundMusicVolume(volume);
+            SoundManager.setBackgroundMusicVolume(volume);
+          }
+        }}
+      ></setting-slider>
+
+      <!-- Sound Effects Group -->
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.sound_effects_group")}
+      </div>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_ka_ching")}"
+        description="${translateText(
+          "user_setting.sound_effect_ka_ching_desc",
+        )}"
+        id="sound-effect-ka-ching-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.KaChing)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.KaChing,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.KaChing, enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_building")}"
+        description="${translateText(
+          "user_setting.sound_effect_building_desc",
+        )}"
+        id="sound-effect-building-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.Building)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.Building,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.Building, enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_building_destroyed")}"
+        description="${translateText(
+          "user_setting.sound_effect_building_destroyed_desc",
+        )}"
+        id="sound-effect-building-destroyed-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(
+          SoundEffect.BuildingDestroyed,
+        )}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.BuildingDestroyed,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(
+              SoundEffect.BuildingDestroyed,
+              enabled,
+            );
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_alarm")}"
+        description="${translateText("user_setting.sound_effect_alarm_desc")}"
+        id="sound-effect-alarm-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(SoundEffect.Alarm, enabled);
+            SoundManager.setSoundEffectEnabled(SoundEffect.Alarm, enabled);
+          }
+        }}
+      ></setting-toggle>
     `;
   }
 

@@ -43,6 +43,7 @@ import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getUserMe, isLoggedIn } from "./jwt";
+import SoundManager, { SoundEffect } from "./sound/SoundManager";
 import "./styles.css";
 
 declare global {
@@ -345,6 +346,31 @@ class Client {
     } else {
       document.documentElement.classList.remove("dark");
     }
+
+    // Initialize sound settings from cookies on page load
+    SoundManager.setBackgroundMusicVolume(
+      this.userSettings.backgroundMusicVolume(),
+    );
+    SoundManager.setSoundEffectsVolume(this.userSettings.soundEffectsVolume());
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.KaChing,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.KaChing),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Building,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Building),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.BuildingDestroyed,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.BuildingDestroyed),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Alarm,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
+    );
+    SoundManager.setBackgroundMusicEnabled(
+      this.userSettings.isBackgroundMusicEnabled(),
+    );
 
     // Attempt to join lobby
     this.handleHash();

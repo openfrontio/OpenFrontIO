@@ -15,7 +15,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
-import SoundManager from "../../sound/SoundManager";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { Layer } from "./Layer";
 
 export class ShowSettingsModalEvent {
@@ -37,6 +37,9 @@ export class SettingsModal extends LitElement implements Layer {
   @state()
   private alternateView: boolean = false;
 
+  @state()
+  private settingsMode: "basic" | "sound" = "basic";
+
   @query(".modal-overlay")
   private modalOverlay!: HTMLElement;
 
@@ -51,6 +54,30 @@ export class SettingsModal extends LitElement implements Layer {
       this.userSettings.backgroundMusicVolume(),
     );
     SoundManager.setSoundEffectsVolume(this.userSettings.soundEffectsVolume());
+
+    // Load individual sound effect settings
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.KaChing,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.KaChing),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Building,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Building),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.BuildingDestroyed,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.BuildingDestroyed),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Alarm,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
+    );
+
+    // Load background music enabled state
+    SoundManager.setBackgroundMusicEnabled(
+      this.userSettings.isBackgroundMusicEnabled(),
+    );
+
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;
@@ -157,17 +184,25 @@ export class SettingsModal extends LitElement implements Layer {
   }
 
   private onVolumeChange(event: Event) {
-    const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
-    this.userSettings.setBackgroundMusicVolume(volume);
-    SoundManager.setBackgroundMusicVolume(volume);
-    this.requestUpdate();
+    const inputValue = (event.target as HTMLInputElement).value;
+    const sliderValue = parseFloat(inputValue);
+    if (!isNaN(sliderValue) && sliderValue >= 0 && sliderValue <= 100) {
+      const volume = sliderValue / 100;
+      this.userSettings.setBackgroundMusicVolume(volume);
+      SoundManager.setBackgroundMusicVolume(volume);
+      this.requestUpdate();
+    }
   }
 
   private onSoundEffectsVolumeChange(event: Event) {
-    const volume = parseFloat((event.target as HTMLInputElement).value) / 100;
-    this.userSettings.setSoundEffectsVolume(volume);
-    SoundManager.setSoundEffectsVolume(volume);
-    this.requestUpdate();
+    const inputValue = (event.target as HTMLInputElement).value;
+    const sliderValue = parseFloat(inputValue);
+    if (!isNaN(sliderValue) && sliderValue >= 0 && sliderValue <= 100) {
+      const volume = sliderValue / 100;
+      this.userSettings.setSoundEffectsVolume(volume);
+      SoundManager.setSoundEffectsVolume(volume);
+      this.requestUpdate();
+    }
   }
 
   render() {
@@ -195,7 +230,9 @@ export class SettingsModal extends LitElement implements Layer {
                 style="vertical-align: middle;"
               />
               <h2 class="text-xl font-semibold text-white">
-                ${translateText("user_setting.tab_basic")}
+                ${this.settingsMode === "basic"
+                  ? translateText("user_setting.tab_basic")
+                  : translateText("user_setting.tab_sound")}
               </h2>
             </div>
             <button
@@ -206,254 +243,449 @@ export class SettingsModal extends LitElement implements Layer {
             </button>
           </div>
 
+          <!-- Tab Navigation -->
+          <div class="flex border-b border-slate-600">
+            <button
+              class="flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
+                .settingsMode === "basic"
+                ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
+                : "text-gray-400 hover:text-white"}"
+              @click=${() => (this.settingsMode = "basic")}
+            >
+              ${translateText("user_setting.tab_basic")}
+            </button>
+            <button
+              class="flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
+                .settingsMode === "sound"
+                ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
+                : "text-gray-400 hover:text-white"}"
+              @click=${() => (this.settingsMode = "sound")}
+            >
+              ${translateText("user_setting.tab_sound")}
+            </button>
+          </div>
+
           <div class="p-4 space-y-3">
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-            >
-              <img src=${musicIcon} alt="musicIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.background_music_volume")}
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  .value=${this.userSettings.backgroundMusicVolume() * 100}
-                  @input=${this.onVolumeChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400">
-                ${Math.round(this.userSettings.backgroundMusicVolume() * 100)}%
-              </div>
-            </div>
-
-            <div
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-            >
-              <img
-                src=${musicIcon}
-                alt="soundEffectsIcon"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.sound_effects_volume")}
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  .value=${this.userSettings.soundEffectsVolume() * 100}
-                  @input=${this.onSoundEffectsVolumeChange}
-                  class="w-full border border-slate-500 rounded-lg"
-                />
-              </div>
-              <div class="text-sm text-slate-400">
-                ${Math.round(this.userSettings.soundEffectsVolume() * 100)}%
-              </div>
-            </div>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-              @click="${this.onTerrainButtonClick}"
-            >
-              <img src=${treeIcon} alt="treeIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.toggle_terrain")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.toggle_view_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.alternateView
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-              @click="${this.onToggleEmojisButtonClick}"
-            >
-              <img src=${emojiIcon} alt="emojiIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.emojis_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.emojis_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.emojis()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-              @click="${this.onToggleDarkModeButtonClick}"
-            >
-              <img
-                src=${darkModeIcon}
-                alt="darkModeIcon"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.dark_mode_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.dark_mode_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.darkMode()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-              @click="${this.onToggleSpecialEffectsButtonClick}"
-            >
-              <img
-                src=${explosionIcon}
-                alt="specialEffects"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.special_effects_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.special_effects_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.fxLayer()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-              @click="${this.onToggleStructureSpritesButtonClick}"
-            >
-              <img
-                src=${structureIcon}
-                alt="structureSprites"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.structure_sprites_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.structure_sprites_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.structureSprites()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-              @click="${this.onToggleRandomNameModeButtonClick}"
-            >
-              <img src=${ninjaIcon} alt="ninjaIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.anonymous_names_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.anonymous_names_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.anonymousNames()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-              @click="${this.onToggleLeftClickOpensMenu}"
-            >
-              <img src=${mouseIcon} alt="mouseIcon" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.left_click_menu")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.left_click_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.leftClickOpensMenu()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
-              @click="${this.onTogglePerformanceOverlayButtonClick}"
-            >
-              <img
-                src=${settingsIcon}
-                alt="performanceIcon"
-                width="20"
-                height="20"
-              />
-              <div class="flex-1">
-                <div class="font-medium">
-                  ${translateText("user_setting.performance_overlay_label")}
-                </div>
-                <div class="text-sm text-slate-400">
-                  ${translateText("user_setting.performance_overlay_desc")}
-                </div>
-              </div>
-              <div class="text-sm text-slate-400">
-                ${this.userSettings.performanceOverlay()
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
-              </div>
-            </button>
-
-            <div class="border-t border-slate-600 pt-3 mt-4">
-              <button
-                class="flex gap-3 items-center w-full text-left p-3 hover:bg-red-600/20 rounded text-red-400 transition-colors"
-                @click="${this.onExitButtonClick}"
-              >
-                <img src=${exitIcon} alt="exitIcon" width="20" height="20" />
-                <div class="flex-1">
-                  <div class="font-medium">
-                    ${translateText("user_setting.exit_game_label")}
-                  </div>
-                  <div class="text-sm text-slate-400">
-                    ${translateText("user_setting.exit_game_info")}
-                  </div>
-                </div>
-              </button>
-            </div>
+            ${this.settingsMode === "basic"
+              ? this.renderBasicSettings()
+              : this.renderSoundSettings()}
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  private renderBasicSettings() {
+    return html`
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        @click="${this.onTerrainButtonClick}"
+      >
+        <img src=${treeIcon} alt="treeIcon" width="20" height="20" />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.toggle_terrain")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.toggle_view_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.alternateView
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        @click="${this.onToggleEmojisButtonClick}"
+      >
+        <img src=${emojiIcon} alt="emojiIcon" width="20" height="20" />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.emojis_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.emojis_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.userSettings.emojis()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        @click="${this.onToggleDarkModeButtonClick}"
+      >
+        <img src=${darkModeIcon} alt="darkModeIcon" width="20" height="20" />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.dark_mode_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.dark_mode_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.userSettings.darkMode()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        @click="${this.onToggleSpecialEffectsButtonClick}"
+      >
+        <img src=${explosionIcon} alt="specialEffects" width="20" height="20" />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.special_effects_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.special_effects_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.userSettings.fxLayer()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        @click="${this.onToggleStructureSpritesButtonClick}"
+      >
+        <img
+          src=${structureIcon}
+          alt="structureSprites"
+          width="20"
+          height="20"
+        />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.structure_sprites_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.structure_sprites_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.userSettings.structureSprites()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        @click="${this.onToggleRandomNameModeButtonClick}"
+      >
+        <img src=${ninjaIcon} alt="ninjaIcon" width="20" height="20" />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.anonymous_names_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.anonymous_names_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.userSettings.anonymousNames()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        @click="${this.onToggleLeftClickOpensMenu}"
+      >
+        <img src=${mouseIcon} alt="mouseIcon" width="20" height="20" />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.left_click_menu")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.left_click_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.userSettings.leftClickOpensMenu()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        @click="${this.onTogglePerformanceOverlayButtonClick}"
+      >
+        <img src=${settingsIcon} alt="performanceIcon" width="20" height="20" />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.performance_overlay_label")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.performance_overlay_desc")}
+          </div>
+        </div>
+        <div class="text-sm text-slate-400">
+          ${this.userSettings.performanceOverlay()
+            ? translateText("user_setting.on")
+            : translateText("user_setting.off")}
+        </div>
+      </button>
+
+      <div class="border-t border-slate-600 pt-3 mt-4">
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-red-600/20 rounded text-red-400 transition-colors"
+          @click="${this.onExitButtonClick}"
+        >
+          <img src=${exitIcon} alt="exitIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.exit_game_label")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.exit_game_info")}
+            </div>
+          </div>
+        </button>
+      </div>
+    `;
+  }
+
+  private renderSoundSettings() {
+    return html`
+      <!-- Master Volume -->
+      <div
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+      >
+        <img src=${musicIcon} alt="musicIcon" width="20" height="20" />
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("user_setting.sound_master_volume")}
+          </div>
+          <div class="text-sm text-slate-400">
+            ${translateText("user_setting.sound_master_volume_desc")}
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            .value=${Math.max(
+              0,
+              Math.min(
+                100,
+                (this.userSettings.soundEffectsVolume() || 1) * 100,
+              ),
+            )}
+            @input=${this.onSoundEffectsVolumeChange}
+            class="w-full border border-slate-500 rounded-lg mt-2"
+          />
+        </div>
+        <div class="text-sm text-slate-400">
+          ${Math.round((this.userSettings.soundEffectsVolume() || 1) * 100)}%
+        </div>
+      </div>
+
+      <!-- Music Group -->
+      <div class="border-t border-slate-600 pt-3 mt-2">
+        <div class="text-center text-white text-base font-semibold mb-3">
+          ${translateText("user_setting.sound_music_group")}
+        </div>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isBackgroundMusicEnabled();
+            this.userSettings.setBackgroundMusicEnabled(enabled);
+            SoundManager.setBackgroundMusicEnabled(enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="musicIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_music_enabled")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_music_enabled_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isBackgroundMusicEnabled()
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <div
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+        >
+          <img src=${musicIcon} alt="musicIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.background_music_volume")}
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              .value=${Math.max(
+                0,
+                Math.min(
+                  100,
+                  (this.userSettings.backgroundMusicVolume() || 0) * 100,
+                ),
+              )}
+              @input=${this.onVolumeChange}
+              class="w-full border border-slate-500 rounded-lg mt-2"
+            />
+          </div>
+          <div class="text-sm text-slate-400">
+            ${Math.round(
+              (this.userSettings.backgroundMusicVolume() || 0) * 100,
+            )}%
+          </div>
+        </div>
+      </div>
+
+      <!-- Sound Effects Group -->
+      <div class="border-t border-slate-600 pt-3 mt-2">
+        <div class="text-center text-white text-base font-semibold mb-3">
+          ${translateText("user_setting.sound_effects_group")}
+        </div>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.KaChing,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.KaChing,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.KaChing, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_ka_ching")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_ka_ching_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.KaChing)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.Building,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.Building,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.Building, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_building")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_building_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.Building)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.BuildingDestroyed,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.BuildingDestroyed,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(
+              SoundEffect.BuildingDestroyed,
+              enabled,
+            );
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_building_destroyed")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText(
+                "user_setting.sound_effect_building_destroyed_desc",
+              )}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(
+              SoundEffect.BuildingDestroyed,
+            )
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.Alarm,
+            );
+            this.userSettings.setSoundEffectEnabled(SoundEffect.Alarm, enabled);
+            SoundManager.setSoundEffectEnabled(SoundEffect.Alarm, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_alarm")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_alarm_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
       </div>
     `;
   }

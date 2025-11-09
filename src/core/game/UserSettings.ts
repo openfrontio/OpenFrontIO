@@ -3,6 +3,35 @@ import { PlayerPattern } from "../Schemas";
 
 const PATTERN_KEY = "territoryPattern";
 
+// Cookie helper functions for sound settings
+function getCookie(name: string): string | null {
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
+    if (cookieName === name) {
+      return decodeURIComponent(cookieValue);
+    }
+  }
+  return null;
+}
+
+function setCookie(
+  name: string,
+  value: string,
+  maxAgeDays: number = 365,
+): void {
+  const maxAge = maxAgeDays * 24 * 60 * 60; // Convert days to seconds
+  const isSecure = window.location.protocol === "https:";
+  const secure = isSecure ? "; Secure" : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Strict${secure}`;
+}
+
+function deleteCookie(name: string): void {
+  const isSecure = window.location.protocol === "https:";
+  const secure = isSecure ? "; Secure" : "";
+  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Strict${secure}`;
+}
+
 export class UserSettings {
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
@@ -184,18 +213,61 @@ export class UserSettings {
   }
 
   backgroundMusicVolume(): number {
-    return this.getFloat("settings.backgroundMusicVolume", 0);
+    const cookieValue = getCookie("settings.backgroundMusicVolume");
+    if (!cookieValue) return 0;
+    const floatValue = parseFloat(cookieValue);
+    if (isNaN(floatValue)) {
+      // Clean up invalid cookie
+      deleteCookie("settings.backgroundMusicVolume");
+      return 0;
+    }
+    return Math.max(0, Math.min(1, floatValue));
   }
 
   setBackgroundMusicVolume(volume: number): void {
-    this.setFloat("settings.backgroundMusicVolume", volume);
+    // Ensure volume is a valid number between 0 and 1
+    const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 0 : volume));
+    setCookie("settings.backgroundMusicVolume", validVolume.toString());
   }
 
   soundEffectsVolume(): number {
-    return this.getFloat("settings.soundEffectsVolume", 1);
+    const cookieValue = getCookie("settings.soundEffectsVolume");
+    if (!cookieValue) return 1;
+    const floatValue = parseFloat(cookieValue);
+    if (isNaN(floatValue)) {
+      // Clean up invalid cookie
+      deleteCookie("settings.soundEffectsVolume");
+      return 1;
+    }
+    return Math.max(0, Math.min(1, floatValue));
   }
 
   setSoundEffectsVolume(volume: number): void {
-    this.setFloat("settings.soundEffectsVolume", volume);
+    // Ensure volume is a valid number between 0 and 1
+    const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 1 : volume));
+    setCookie("settings.soundEffectsVolume", validVolume.toString());
+  }
+
+  isSoundEffectEnabled(soundEffect: string): boolean {
+    const cookieValue = getCookie(`settings.soundEffect.${soundEffect}`);
+    if (!cookieValue) return true; // Default to enabled
+    return cookieValue === "true";
+  }
+
+  setSoundEffectEnabled(soundEffect: string, enabled: boolean): void {
+    setCookie(
+      `settings.soundEffect.${soundEffect}`,
+      enabled ? "true" : "false",
+    );
+  }
+
+  isBackgroundMusicEnabled(): boolean {
+    const cookieValue = getCookie("settings.backgroundMusicEnabled");
+    if (!cookieValue) return true; // Default to enabled
+    return cookieValue === "true";
+  }
+
+  setBackgroundMusicEnabled(enabled: boolean): void {
+    setCookie("settings.backgroundMusicEnabled", enabled ? "true" : "false");
   }
 }

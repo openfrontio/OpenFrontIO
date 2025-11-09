@@ -398,7 +398,22 @@
     "exit_game_label": "Exit Game",
     "exit_game_info": "Return to main menu",
     "background_music_volume": "Background Music Volume",
-    "sound_effects_volume": "Sound Effects Volume"
+    "sound_effects_volume": "Sound Effects Volume",
+    "tab_sound": "Sound",
+    "sound_master_volume": "Master Volume",
+    "sound_master_volume_desc": "Overall volume control for all sounds",
+    "sound_music_group": "Music",
+    "sound_music_enabled": "Background Music",
+    "sound_music_enabled_desc": "Enable or disable background music",
+    "sound_effects_group": "Sound Effects",
+    "sound_effect_ka_ching": "Ka-Ching",
+    "sound_effect_ka_ching_desc": "Money collection sound",
+    "sound_effect_building": "Building",
+    "sound_effect_building_desc": "Building construction sound",
+    "sound_effect_building_destroyed": "Building Destroyed",
+    "sound_effect_building_destroyed_desc": "Building destruction sound",
+    "sound_effect_alarm": "Alarm",
+    "sound_effect_alarm_desc": "Alarm notification sound"
   },
   "chat": {
     "title": "Quick Chat",

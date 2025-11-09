@@ -49,7 +49,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import SoundManager from "./sound/SoundManager";
+import SoundManager, { SoundEffect } from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -250,6 +250,31 @@ export class ClientGameRunner {
   }
 
   public start() {
+    // Initialize sound settings from cookies before playing music
+    const userSettings = new UserSettings();
+    SoundManager.setBackgroundMusicVolume(userSettings.backgroundMusicVolume());
+    SoundManager.setSoundEffectsVolume(userSettings.soundEffectsVolume());
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.KaChing,
+      userSettings.isSoundEffectEnabled(SoundEffect.KaChing),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Building,
+      userSettings.isSoundEffectEnabled(SoundEffect.Building),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.BuildingDestroyed,
+      userSettings.isSoundEffectEnabled(SoundEffect.BuildingDestroyed),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.Alarm,
+      userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
+    );
+    SoundManager.setBackgroundMusicEnabled(
+      userSettings.isBackgroundMusicEnabled(),
+    );
+
+    // Now play music if enabled
     SoundManager.playBackgroundMusic();
     console.log("starting client game");
 

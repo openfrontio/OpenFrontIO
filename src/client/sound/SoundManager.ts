@@ -21,6 +21,8 @@ class SoundManager {
   private soundEffectsVolume: number = 1;
   private backgroundMusicVolume: number = 0;
   private alarmEndHandlers: Map<SoundEffect, () => void> = new Map();
+  private disabledSounds: Set<SoundEffect> = new Set();
+  private backgroundMusicEnabled: boolean = true;
 
   constructor() {
     this.backgroundMusic = [
@@ -51,11 +53,13 @@ class SoundManager {
 
   public playBackgroundMusic(): void {
     if (
-      this.backgroundMusic.length > 0 &&
-      !this.backgroundMusic[this.currentTrack].playing()
+      !this.backgroundMusicEnabled ||
+      this.backgroundMusic.length === 0 ||
+      this.backgroundMusic[this.currentTrack].playing()
     ) {
-      this.backgroundMusic[this.currentTrack].play();
+      return;
     }
+    this.backgroundMusic[this.currentTrack].play();
   }
 
   public stopBackgroundMusic(): void {
@@ -92,6 +96,9 @@ class SoundManager {
   }
 
   public playSoundEffect(name: SoundEffect): void {
+    if (this.disabledSounds.has(name)) {
+      return;
+    }
     const sound = this.soundEffects.get(name);
     if (sound) {
       sound.play();
@@ -99,6 +106,9 @@ class SoundManager {
   }
 
   public playSoundEffectNTimes(name: SoundEffect, times: number): void {
+    if (this.disabledSounds.has(name)) {
+      return;
+    }
     const sound = this.soundEffects.get(name);
     if (!sound) return;
 
@@ -148,6 +158,36 @@ class SoundManager {
       sound.unload();
       this.soundEffects.delete(name);
     }
+  }
+
+  public setSoundEffectEnabled(name: SoundEffect, enabled: boolean): void {
+    if (enabled) {
+      this.disabledSounds.delete(name);
+    } else {
+      this.disabledSounds.add(name);
+      // Stop the sound if it's currently playing
+      const sound = this.soundEffects.get(name);
+      if (sound) {
+        sound.stop();
+      }
+    }
+  }
+
+  public isSoundEffectEnabled(name: SoundEffect): boolean {
+    return !this.disabledSounds.has(name);
+  }
+
+  public setBackgroundMusicEnabled(enabled: boolean): void {
+    this.backgroundMusicEnabled = enabled;
+    if (enabled) {
+      this.playBackgroundMusic();
+    } else {
+      this.stopBackgroundMusic();
+    }
+  }
+
+  public isBackgroundMusicEnabled(): boolean {
+    return this.backgroundMusicEnabled;
   }
 }
 
