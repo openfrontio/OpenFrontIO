@@ -593,7 +593,7 @@ export const rootMenuElement: MenuElement = {
 
     // Check if selected player is friendly (allied or on same team)
     const isFriendly =
-      params.selected && params.myPlayer.isFriendly(params.selected);
+      params.selected && GameView.isFriendly(params.myPlayer, params.selected);
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
