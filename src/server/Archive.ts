@@ -1,10 +1,10 @@
 import z from "zod";
+import { ID } from "../core/BaseSchemas";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
   GameID,
   GameRecord,
   GameRecordSchema,
-  ID,
   PartialGameRecord,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
