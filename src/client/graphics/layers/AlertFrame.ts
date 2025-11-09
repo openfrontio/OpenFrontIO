@@ -6,6 +6,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { Layer } from "./Layer";
 
 // Parameters for the alert animation
@@ -23,6 +24,7 @@ export class AlertFrame extends LitElement implements Layer {
   private isActive = false;
 
   private animationTimeout: number | null = null;
+  private alarmTimeout: number | null = null;
   private seenAttackIds: Set<string> = new Set();
   private lastAlertTick: number = -1;
   // Map of player ID -> tick when we last attacked them
@@ -89,6 +91,8 @@ export class AlertFrame extends LitElement implements Layer {
       this.seenAttackIds.clear();
       this.outgoingAttackTicks.clear();
       this.lastAlertTick = -1;
+      // Stop alarm sound if playing
+      this.stopAlarmSound();
       return;
     }
 
@@ -128,6 +132,42 @@ export class AlertFrame extends LitElement implements Layer {
       this.isActive = true;
       this.lastAlertTick = this.game.ticks();
       this.requestUpdate();
+
+      // Play alarm sound for 3 seconds
+      this.playAlarmSound();
+    }
+  }
+
+  private playAlarmSound() {
+    // Stop any currently playing alarm
+    this.stopAlarmSound();
+
+    // Get the alarm sound and enable looping temporarily
+    const soundEffects = (SoundManager as any).soundEffects;
+    const alarmSound = soundEffects.get(SoundEffect.Alarm);
+    if (alarmSound) {
+      // Enable looping for continuous playback
+      alarmSound.loop(true);
+      SoundManager.playSoundEffect(SoundEffect.Alarm);
+
+      // Stop after 3 seconds
+      this.alarmTimeout = window.setTimeout(() => {
+        this.stopAlarmSound();
+      }, 3000);
+    }
+  }
+
+  private stopAlarmSound() {
+    if (this.alarmTimeout) {
+      clearTimeout(this.alarmTimeout);
+      this.alarmTimeout = null;
+    }
+    SoundManager.stopSoundEffect(SoundEffect.Alarm);
+    // Restore original loop setting
+    const soundEffects = (SoundManager as any).soundEffects;
+    const alarmSound = soundEffects.get(SoundEffect.Alarm);
+    if (alarmSound) {
+      alarmSound.loop(false);
     }
   }
 
@@ -227,6 +267,8 @@ export class AlertFrame extends LitElement implements Layer {
       clearTimeout(this.animationTimeout);
       this.animationTimeout = null;
     }
+    // Stop alarm sound if still playing
+    this.stopAlarmSound();
     this.requestUpdate();
   }
 
