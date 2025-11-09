@@ -214,12 +214,12 @@ export class UserSettings {
 
   backgroundMusicVolume(): number {
     const cookieValue = getCookie("settings.backgroundMusicVolume");
-    if (!cookieValue) return 0;
+    if (!cookieValue) return 0.5;
     const floatValue = parseFloat(cookieValue);
     if (isNaN(floatValue)) {
       // Clean up invalid cookie
       deleteCookie("settings.backgroundMusicVolume");
-      return 0;
+      return 0.5;
     }
     return Math.max(0, Math.min(1, floatValue));
   }
