@@ -6,6 +6,11 @@ import {
   PlayerID,
 } from "../../game/Game";
 
+/**
+ * Execution for requesting an alliance renewal/extension.
+ * If both players agree, the alliance is immediately extended.
+ * If only one player requests, a notification is sent to the other player.
+ */
 export class AllianceExtensionExecution implements Execution {
   constructor(
     private readonly from: Player,
@@ -13,14 +18,17 @@ export class AllianceExtensionExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    // Validate recipient exists
     if (!mg.hasPlayer(this.toID)) {
       console.warn(
         `[AllianceExtensionExecution] Player ${this.toID} not found`,
       );
       return;
     }
+
     const to = mg.player(this.toID);
 
+    // Validate both players are alive
     if (!this.from.isAlive() || !to.isAlive()) {
       console.info(
         `[AllianceExtensionExecution] Player ${this.from.id()} or ${this.toID} is not alive`,
@@ -28,23 +36,26 @@ export class AllianceExtensionExecution implements Execution {
       return;
     }
 
+    // Validate alliance exists
     const alliance = this.from.allianceWith(to);
     if (!alliance) {
       console.warn(
-        `[AllianceExtensionExecution] No alliance to extend between ${this.from.id()} and ${this.toID}`,
+        `[AllianceExtensionExecution] No alliance exists between ${this.from.id()} and ${this.toID}`,
       );
       return;
     }
 
-    // Check if this is a new request (before adding it)
+    // Check extension state before adding this player's request
     const wasOnlyOneAgreed = alliance.onlyOneAgreedToExtend();
 
-    // Mark this player's intent to extend
+    // Add this player's extension request
     alliance.addExtensionRequest(this.from);
 
+    // If both players now agree, extend the alliance immediately
     if (alliance.bothAgreedToExtend()) {
       alliance.extend();
 
+      // Notify both players of the renewal
       mg.displayMessage(
         "events_display.alliance_renewed",
         MessageType.ALLIANCE_ACCEPTED,
@@ -60,8 +71,8 @@ export class AllianceExtensionExecution implements Execution {
         { name: this.from.displayName() },
       );
     } else if (alliance.onlyOneAgreedToExtend() && !wasOnlyOneAgreed) {
-      // Send message to the other player that someone wants to renew
-      // Only send if this is a new request (transition from "none" to "one")
+      // Only one player has requested extension, and this is a new request
+      // Notify the other player that someone wants to renew
       mg.displayMessage(
         "events_display.wants_to_renew_alliance",
         MessageType.RENEW_ALLIANCE,
@@ -73,7 +84,7 @@ export class AllianceExtensionExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    // No-op
+    // No-op - extension request is processed immediately in init()
   }
 
   isActive(): boolean {
