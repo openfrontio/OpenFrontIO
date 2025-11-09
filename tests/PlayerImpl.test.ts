@@ -94,9 +94,6 @@ describe("PlayerImpl", () => {
   });
 
   test("Can't send alliance requests after 40 minutes", () => {
-    // Get initial state (might be true or false depending on game state)
-    const initialCanSend = player.canSendAllianceRequest(other);
-
     // Advance game to 40 minutes (24,000 ticks)
     // 40 minutes = 2400 seconds = 24,000 ticks (10 ticks per second)
     const currentTicks = game.ticks();
@@ -107,14 +104,6 @@ describe("PlayerImpl", () => {
     }
 
     expect(game.ticks()).toBeGreaterThanOrEqual(ALLIANCE_BLOCK_TICKS);
-
-    // Verify alliance requests are blocked after 40 minutes
-    // (regardless of whether they were allowed before)
     expect(player.canSendAllianceRequest(other)).toBe(false);
-
-    // If it was true before, verify it changed
-    if (initialCanSend) {
-      expect(player.canSendAllianceRequest(other)).not.toBe(initialCanSend);
-    }
   });
 });
