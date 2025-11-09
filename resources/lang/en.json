@@ -412,6 +412,8 @@
     "sound_effect_building_desc": "Building construction sound",
     "sound_effect_building_destroyed": "Building Destroyed",
     "sound_effect_building_destroyed_desc": "Building destruction sound",
+    "sound_effect_steal_building": "Steal Building",
+    "sound_effect_steal_building_desc": "Sound when capturing enemy buildings",
     "sound_effect_alarm": "Alarm",
     "sound_effect_alarm_desc": "Alarm notification sound"
   },

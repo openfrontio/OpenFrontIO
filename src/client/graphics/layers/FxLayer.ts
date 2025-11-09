@@ -44,6 +44,10 @@ export class FxLayer implements Layer {
     number,
     { conqueror: number; tick: number }
   > = new Map();
+  // Track tiles where steal building sound has been played to avoid duplicates
+  private stealBuildingSoundPlayed: Set<number> = new Set();
+  // Track previous owners of buildings to detect ownership changes
+  private buildingPreviousOwners: Map<number, number> = new Map();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -144,6 +148,8 @@ export class FxLayer implements Layer {
     for (const [tile, conquest] of this.recentlyConqueredTiles.entries()) {
       if (currentTick - conquest.tick > 2) {
         this.recentlyConqueredTiles.delete(tile);
+        // Also clean up the steal building sound tracking
+        this.stealBuildingSoundPlayed.delete(tile);
       }
     }
   }
@@ -387,14 +393,52 @@ export class FxLayer implements Layer {
   }
 
   onStructureEvent(unit: UnitView) {
+    const my = this.game.myPlayer();
+    const unitTile = unit.tile();
+    const currentOwnerSmallID = unit.owner().smallID();
+
+    // Track previous owner to detect ownership changes
+    const previousOwnerSmallID = this.buildingPreviousOwners.get(unit.id());
+    if (previousOwnerSmallID === undefined) {
+      // Initialize previous owner tracking for new buildings
+      this.buildingPreviousOwners.set(unit.id(), currentOwnerSmallID);
+    } else if (previousOwnerSmallID !== currentOwnerSmallID) {
+      // Update when ownership changes
+      this.buildingPreviousOwners.set(unit.id(), currentOwnerSmallID);
+    }
+
     // Check if building was just completed (becomes active for the first time)
     if (unit.isActive() && !this.seenBuildingUnitIds.has(unit.id())) {
-      const my = this.game.myPlayer();
       // Only play sound for buildings owned by the current player
       if (my && unit.owner() === my) {
         SoundManager.playSoundEffect(SoundEffect.Building);
       }
       this.seenBuildingUnitIds.add(unit.id());
+    }
+
+    // Check if building was captured (ownership changed to current player)
+    if (
+      unit.isActive() &&
+      my &&
+      unit.owner() === my &&
+      previousOwnerSmallID !== undefined &&
+      previousOwnerSmallID !== currentOwnerSmallID &&
+      previousOwnerSmallID !== my.smallID()
+    ) {
+      // Check if the tile was recently conquered by the current player
+      const recentlyConqueredByMe =
+        this.recentlyConqueredTiles.has(unitTile) &&
+        this.recentlyConqueredTiles.get(unitTile)?.conqueror === my.smallID();
+
+      // Only play if tile was recently conquered (not just ownership change from other causes)
+      if (
+        recentlyConqueredByMe &&
+        !this.stealBuildingSoundPlayed.has(unitTile)
+      ) {
+        // Play steal building sound at 50% volume for the attacker
+        SoundManager.playSoundEffect(SoundEffect.StealBuilding, 0.5);
+        this.stealBuildingSoundPlayed.add(unitTile);
+      }
     }
 
     if (!unit.isActive()) {

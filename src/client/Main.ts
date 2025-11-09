@@ -368,6 +368,10 @@ class Client {
       SoundEffect.Alarm,
       this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.StealBuilding,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.StealBuilding),
+    );
     SoundManager.setBackgroundMusicEnabled(
       this.userSettings.isBackgroundMusicEnabled(),
     );

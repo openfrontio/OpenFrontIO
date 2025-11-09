@@ -834,6 +834,30 @@ export class UserSettingModal extends LitElement {
           }
         }}
       ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_steal_building")}"
+        description="${translateText(
+          "user_setting.sound_effect_steal_building_desc",
+        )}"
+        id="sound-effect-steal-building-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(
+          SoundEffect.StealBuilding,
+        )}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.StealBuilding,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(
+              SoundEffect.StealBuilding,
+              enabled,
+            );
+          }
+        }}
+      ></setting-toggle>
     `;
   }
 
