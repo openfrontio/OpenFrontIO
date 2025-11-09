@@ -23,6 +23,7 @@ import {
   TeamCountConfig,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
+import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import "./components/Maps";
@@ -41,6 +42,7 @@ export class HostLobbyModal extends LitElement {
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
+  @state() private spawnImmunityDurationSeconds: number = 5;
   @state() private infiniteGold: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
@@ -345,6 +347,26 @@ export class HostLobbyModal extends LitElement {
                         ? translateText("host_modal.bots_disabled")
                         : this.bots
                     }
+                  </div>
+                </label>
+
+                <label
+                  for="spawn-immunity-duration"
+                  class="option-card"
+                >
+                  <input
+                    type="number"
+                    id="spawn-immunity-duration"
+                    min="0"
+                    max="300"
+                    step="1"
+                    .value=${String(this.spawnImmunityDurationSeconds)}
+                    style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                    @input=${this.handleSpawnImmunityDurationInput}
+                    @keydown=${this.handleSpawnImmunityDurationKeyDown}
+                  />
+                  <div class="option-card-title">
+                    <span>${translateText("host_modal.spawn_immunity_duration")}</span>
                   </div>
                 </label>
 
@@ -685,6 +707,23 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleSpawnImmunityDurationKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleSpawnImmunityDurationInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE+-]/g, "");
+    const value = parseInt(input.value, 10);
+    if (Number.isNaN(value) || value < 0 || value > 300) {
+      return;
+    }
+    this.spawnImmunityDurationSeconds = value;
+    this.putGameConfig();
+  }
+
   private handleRandomSpawnChange(e: Event) {
     this.randomSpawn = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -774,6 +813,7 @@ export class HostLobbyModal extends LitElement {
           randomSpawn: this.randomSpawn,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
+          spawnImmunityDuration: this.spawnImmunityDurationSeconds * 10,
           playerTeams: this.teamCount,
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
