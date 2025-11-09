@@ -737,6 +737,30 @@ export class UserSettingModal extends LitElement {
         ${translateText("user_setting.sound_effects_group")}
       </div>
 
+      <setting-slider
+        label="${translateText("user_setting.sound_effects_volume")}"
+        description=""
+        min="0"
+        max="100"
+        .value=${Math.max(
+          0,
+          Math.min(100, (this.userSettings.soundEffectsVolume() || 1) * 100),
+        )}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          const sliderValue = e.detail?.value;
+          if (
+            typeof sliderValue === "number" &&
+            !isNaN(sliderValue) &&
+            sliderValue >= 0 &&
+            sliderValue <= 100
+          ) {
+            const volume = sliderValue / 100;
+            this.userSettings.setSoundEffectsVolume(volume);
+            SoundManager.setSoundEffectsVolume(volume);
+          }
+        }}
+      ></setting-slider>
+
       <setting-toggle
         label="${translateText("user_setting.sound_effect_ka_ching")}"
         description="${translateText(
