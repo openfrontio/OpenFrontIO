@@ -7,7 +7,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import quickChatData from "../../../../resources/QuickChat.json";
 import { EventBus } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import SoundManager from "../../sound/SoundManager";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 
@@ -222,7 +222,7 @@ export class ChatModal extends LitElement {
   }
 
   private sendChatMessage() {
-    SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
+    SoundManager.playMenuClick();
     console.log("Sent message:", this.previewText);
     console.log("Sender:", this.sender);
     console.log("Recipient:", this.recipient);

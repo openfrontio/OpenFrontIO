@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import SoundManager from "../../sound/SoundManager";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
@@ -445,7 +445,7 @@ export class RadialMenu implements Layer {
         return;
 
       // Play click sound at 45% volume
-      SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
+      SoundManager.playMenuClick();
 
       if (
         this.currentLevel > 0 &&

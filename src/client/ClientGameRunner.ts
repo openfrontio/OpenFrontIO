@@ -49,7 +49,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import SoundManager, { SoundEffect } from "./sound/SoundManager";
+import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -252,63 +252,7 @@ export class ClientGameRunner {
   public start() {
     // Initialize sound settings from cookies before playing music
     const userSettings = new UserSettings();
-    SoundManager.setBackgroundMusicVolume(userSettings.backgroundMusicVolume());
-    SoundManager.setSoundEffectsVolume(userSettings.soundEffectsVolume());
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.KaChing,
-      userSettings.isSoundEffectEnabled(SoundEffect.KaChing),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.Building,
-      userSettings.isSoundEffectEnabled(SoundEffect.Building),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.BuildingDestroyed,
-      userSettings.isSoundEffectEnabled(SoundEffect.BuildingDestroyed),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.Alarm,
-      userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.StealBuilding,
-      userSettings.isSoundEffectEnabled(SoundEffect.StealBuilding),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.AtomLaunch,
-      userSettings.isSoundEffectEnabled(SoundEffect.AtomLaunch),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.AtomHit,
-      userSettings.isSoundEffectEnabled(SoundEffect.AtomHit),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.HydrogenLaunch,
-      userSettings.isSoundEffectEnabled(SoundEffect.HydrogenLaunch),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.HydrogenHit,
-      userSettings.isSoundEffectEnabled(SoundEffect.HydrogenHit),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.MIRVLaunch,
-      userSettings.isSoundEffectEnabled(SoundEffect.MIRVLaunch),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.Click,
-      userSettings.isSoundEffectEnabled(SoundEffect.Click),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.GameWin,
-      userSettings.isSoundEffectEnabled(SoundEffect.GameWin),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.GameOver,
-      userSettings.isSoundEffectEnabled(SoundEffect.GameOver),
-    );
-    SoundManager.setBackgroundMusicEnabled(
-      userSettings.isBackgroundMusicEnabled(),
-    );
+    SoundManager.initializeFromUserSettings(userSettings);
 
     // Now play music if enabled
     SoundManager.playBackgroundMusic();
@@ -539,7 +483,7 @@ export class ClientGameRunner {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
         // Play click sound when successfully initiating an attack
-        SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
+        SoundManager.playMenuClick();
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
@@ -548,7 +492,7 @@ export class ClientGameRunner {
         );
       } else if (this.canAutoBoat(actions, tile)) {
         // Play click sound when successfully initiating a boat attack
-        SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
+        SoundManager.playMenuClick();
         this.sendBoatAttackIntent(tile);
       }
     });

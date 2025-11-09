@@ -15,6 +15,7 @@ import hydrogenLaunchSound from "../../../resources/sounds/effects/hydrogen_laun
 import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
 import mirvLaunchSound from "../../../resources/sounds/effects/mirv_launch.mp3";
 import stealBuildingSound from "../../../resources/sounds/effects/stealBuilding.mp3";
+import { UserSettings } from "../../core/game/UserSettings";
 
 export enum SoundEffect {
   KaChing = "ka-ching",
@@ -32,6 +33,32 @@ export enum SoundEffect {
   GameOver = "game-over",
 }
 
+interface SoundEffectConfig {
+  effect: SoundEffect;
+  src: string;
+  loop?: boolean;
+}
+
+// Configuration for all sound effects
+const SOUND_EFFECT_CONFIGS: SoundEffectConfig[] = [
+  { effect: SoundEffect.KaChing, src: kaChingSound },
+  { effect: SoundEffect.Building, src: buildingSound },
+  { effect: SoundEffect.Alarm, src: alarmSound, loop: false },
+  { effect: SoundEffect.BuildingDestroyed, src: buildingDestroyedSound },
+  { effect: SoundEffect.StealBuilding, src: stealBuildingSound },
+  { effect: SoundEffect.AtomLaunch, src: atomLaunchSound },
+  { effect: SoundEffect.AtomHit, src: atomHitSound },
+  { effect: SoundEffect.HydrogenLaunch, src: hydrogenLaunchSound },
+  { effect: SoundEffect.HydrogenHit, src: hydrogenHitSound },
+  { effect: SoundEffect.MIRVLaunch, src: mirvLaunchSound },
+  { effect: SoundEffect.Click, src: clickSound },
+  { effect: SoundEffect.GameWin, src: gameWinSound },
+  { effect: SoundEffect.GameOver, src: gameOverSound },
+];
+
+// Configuration for background music tracks
+const BACKGROUND_MUSIC_TRACKS = [of4, openfront, war];
+
 class SoundManager {
   private backgroundMusic: Howl[] = [];
   private currentTrack: number = 0;
@@ -43,39 +70,33 @@ class SoundManager {
   private backgroundMusicEnabled: boolean = true;
 
   constructor() {
-    this.backgroundMusic = [
-      new Howl({
-        src: [of4],
-        loop: false,
-        onend: this.playNext.bind(this),
-        volume: 0,
-      }),
-      new Howl({
-        src: [openfront],
-        loop: false,
-        onend: this.playNext.bind(this),
-        volume: 0,
-      }),
-      new Howl({
-        src: [war],
-        loop: false,
-        onend: this.playNext.bind(this),
-        volume: 0,
-      }),
-    ];
-    this.loadSoundEffect(SoundEffect.KaChing, kaChingSound);
-    this.loadSoundEffect(SoundEffect.Building, buildingSound);
-    this.loadSoundEffect(SoundEffect.Alarm, alarmSound, false);
-    this.loadSoundEffect(SoundEffect.BuildingDestroyed, buildingDestroyedSound);
-    this.loadSoundEffect(SoundEffect.StealBuilding, stealBuildingSound);
-    this.loadSoundEffect(SoundEffect.AtomLaunch, atomLaunchSound);
-    this.loadSoundEffect(SoundEffect.AtomHit, atomHitSound);
-    this.loadSoundEffect(SoundEffect.HydrogenLaunch, hydrogenLaunchSound);
-    this.loadSoundEffect(SoundEffect.HydrogenHit, hydrogenHitSound);
-    this.loadSoundEffect(SoundEffect.MIRVLaunch, mirvLaunchSound);
-    this.loadSoundEffect(SoundEffect.Click, clickSound);
-    this.loadSoundEffect(SoundEffect.GameWin, gameWinSound);
-    this.loadSoundEffect(SoundEffect.GameOver, gameOverSound);
+    this.initializeBackgroundMusic();
+    this.initializeSoundEffects();
+  }
+
+  private initializeBackgroundMusic(): void {
+    this.backgroundMusic = BACKGROUND_MUSIC_TRACKS.map((src) =>
+      this.createMusicTrack(src),
+    );
+  }
+
+  private createMusicTrack(src: string): Howl {
+    return new Howl({
+      src: [src],
+      loop: false,
+      onend: this.playNext.bind(this),
+      volume: 0,
+    });
+  }
+
+  private initializeSoundEffects(): void {
+    SOUND_EFFECT_CONFIGS.forEach((config) => {
+      this.loadSoundEffect(config.effect, config.src, config.loop ?? false);
+    });
+  }
+
+  private clampVolume(volume: number): number {
+    return Math.max(0, Math.min(1, volume));
   }
 
   public playBackgroundMusic(): void {
@@ -96,7 +117,7 @@ class SoundManager {
   }
 
   public setBackgroundMusicVolume(volume: number): void {
-    this.backgroundMusicVolume = Math.max(0, Math.min(1, volume));
+    this.backgroundMusicVolume = this.clampVolume(volume);
     this.backgroundMusic.forEach((track) => {
       track.volume(this.backgroundMusicVolume);
     });
@@ -127,18 +148,28 @@ class SoundManager {
       return;
     }
     const sound = this.soundEffects.get(name);
-    if (sound) {
-      if (volume !== undefined) {
-        const originalVolume = sound.volume();
-        sound.volume(volume);
-        sound.play();
-        sound.once("end", () => {
-          sound.volume(originalVolume);
-        });
-      } else {
-        sound.play();
-      }
+    if (!sound) {
+      return;
     }
+
+    if (volume !== undefined) {
+      const originalVolume = sound.volume();
+      sound.volume(this.clampVolume(volume));
+      sound.play();
+      sound.once("end", () => {
+        sound.volume(originalVolume);
+      });
+    } else {
+      sound.play();
+    }
+  }
+
+  /**
+   * Plays the menu click sound effect with a standard volume.
+   * This is a convenience method for the common pattern of playing click sounds in menus.
+   */
+  public playMenuClick(): void {
+    this.playSoundEffect(SoundEffect.Click, 0.45);
   }
 
   public playSoundEffectNTimes(name: SoundEffect, times: number): void {
@@ -175,7 +206,7 @@ class SoundManager {
   }
 
   public setSoundEffectsVolume(volume: number): void {
-    this.soundEffectsVolume = Math.max(0, Math.min(1, volume));
+    this.soundEffectsVolume = this.clampVolume(volume);
     this.soundEffects.forEach((sound) => {
       sound.volume(this.soundEffectsVolume);
     });
@@ -224,6 +255,27 @@ class SoundManager {
 
   public isBackgroundMusicEnabled(): boolean {
     return this.backgroundMusicEnabled;
+  }
+
+  /**
+   * Initializes all sound settings from UserSettings.
+   * This consolidates the repeated pattern of loading sound settings from user preferences.
+   */
+  public initializeFromUserSettings(userSettings: UserSettings): void {
+    // Set volumes
+    this.setBackgroundMusicVolume(userSettings.backgroundMusicVolume());
+    this.setSoundEffectsVolume(userSettings.soundEffectsVolume());
+
+    // Enable/disable all sound effects
+    SOUND_EFFECT_CONFIGS.forEach((config) => {
+      this.setSoundEffectEnabled(
+        config.effect,
+        userSettings.isSoundEffectEnabled(config.effect),
+      );
+    });
+
+    // Set background music enabled state
+    this.setBackgroundMusicEnabled(userSettings.isBackgroundMusicEnabled());
   }
 }
 

@@ -27,7 +27,7 @@ import {
   ShowBuildMenuEvent,
   ShowEmojiMenuEvent,
 } from "../../InputHandler";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import SoundManager from "../../sound/SoundManager";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -388,7 +388,7 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
-    SoundManager.playSoundEffect(SoundEffect.Click, 0.45);
+    SoundManager.playMenuClick();
     if (buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(

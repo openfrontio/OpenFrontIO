@@ -34,65 +34,7 @@ export class UserSettingModal extends LitElement {
     }
 
     // Initialize sound settings
-    SoundManager.setBackgroundMusicVolume(
-      this.userSettings.backgroundMusicVolume(),
-    );
-    SoundManager.setSoundEffectsVolume(this.userSettings.soundEffectsVolume());
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.KaChing,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.KaChing),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.Building,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.Building),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.BuildingDestroyed,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.BuildingDestroyed),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.Alarm,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.StealBuilding,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.StealBuilding),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.AtomLaunch,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.AtomLaunch),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.AtomHit,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.AtomHit),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.HydrogenLaunch,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenLaunch),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.HydrogenHit,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.HydrogenHit),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.MIRVLaunch,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.MIRVLaunch),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.Click,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.Click),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.GameWin,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.GameWin),
-    );
-    SoundManager.setSoundEffectEnabled(
-      SoundEffect.GameOver,
-      this.userSettings.isSoundEffectEnabled(SoundEffect.GameOver),
-    );
-    SoundManager.setBackgroundMusicEnabled(
-      this.userSettings.isBackgroundMusicEnabled(),
-    );
+    SoundManager.initializeFromUserSettings(this.userSettings);
   }
 
   @query("o-modal") private modalEl!: HTMLElement & {
