@@ -427,7 +427,11 @@
     "sound_effect_mirv_launch": "MIRV Launch",
     "sound_effect_mirv_launch_desc": "Sound when launching a MIRV",
     "sound_effect_click": "Click",
-    "sound_effect_click_desc": "Sound when clicking menu buttons"
+    "sound_effect_click_desc": "Sound when clicking menu buttons",
+    "sound_effect_game_win": "Game Win",
+    "sound_effect_game_win_desc": "Sound when you win the game",
+    "sound_effect_game_over": "Game Over",
+    "sound_effect_game_over_desc": "Sound when you die or lose the game"
   },
   "chat": {
     "title": "Quick Chat",

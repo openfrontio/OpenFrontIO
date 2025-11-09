@@ -298,6 +298,14 @@ export class ClientGameRunner {
       SoundEffect.Click,
       userSettings.isSoundEffectEnabled(SoundEffect.Click),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.GameWin,
+      userSettings.isSoundEffectEnabled(SoundEffect.GameWin),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.GameOver,
+      userSettings.isSoundEffectEnabled(SoundEffect.GameOver),
+    );
     SoundManager.setBackgroundMusicEnabled(
       userSettings.isBackgroundMusicEnabled(),
     );

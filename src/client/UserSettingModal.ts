@@ -82,6 +82,14 @@ export class UserSettingModal extends LitElement {
       SoundEffect.Click,
       this.userSettings.isSoundEffectEnabled(SoundEffect.Click),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.GameWin,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.GameWin),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.GameOver,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.GameOver),
+    );
     SoundManager.setBackgroundMusicEnabled(
       this.userSettings.isBackgroundMusicEnabled(),
     );
@@ -1006,6 +1014,44 @@ export class UserSettingModal extends LitElement {
           if (typeof enabled === "boolean") {
             this.userSettings.setSoundEffectEnabled(SoundEffect.Click, enabled);
             SoundManager.setSoundEffectEnabled(SoundEffect.Click, enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_game_win")}"
+        description="${translateText(
+          "user_setting.sound_effect_game_win_desc",
+        )}"
+        id="sound-effect-game-win-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.GameWin)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.GameWin,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.GameWin, enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_effect_game_over")}"
+        description="${translateText(
+          "user_setting.sound_effect_game_over_desc",
+        )}"
+        id="sound-effect-game-over-toggle"
+        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.GameOver)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.GameOver,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.GameOver, enabled);
           }
         }}
       ></setting-toggle>

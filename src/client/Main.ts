@@ -396,6 +396,14 @@ class Client {
       SoundEffect.Click,
       this.userSettings.isSoundEffectEnabled(SoundEffect.Click),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.GameWin,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.GameWin),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.GameOver,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.GameOver),
+    );
     SoundManager.setBackgroundMusicEnabled(
       this.userSettings.isBackgroundMusicEnabled(),
     );

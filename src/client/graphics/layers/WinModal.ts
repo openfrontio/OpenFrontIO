@@ -13,6 +13,7 @@ import {
   patternRelationship,
 } from "../../Cosmetics";
 import { getUserMe } from "../../jwt";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -22,6 +23,7 @@ export class WinModal extends LitElement implements Layer {
   public eventBus: EventBus;
 
   private hasShownDeathModal = false;
+  private hasPlayedSound = false;
 
   @state()
   isVisible = false;
@@ -253,6 +255,17 @@ export class WinModal extends LitElement implements Layer {
     await this.loadPatternContent();
     this.isVisible = true;
     this.requestUpdate();
+
+    // Play appropriate sound effect
+    if (!this.hasPlayedSound) {
+      if (this.isWin) {
+        SoundManager.playSoundEffect(SoundEffect.GameWin);
+      } else {
+        SoundManager.playSoundEffect(SoundEffect.GameOver);
+      }
+      this.hasPlayedSound = true;
+    }
+
     setTimeout(() => {
       this.showButtons = true;
       this.requestUpdate();
@@ -283,6 +296,8 @@ export class WinModal extends LitElement implements Layer {
     ) {
       this.hasShownDeathModal = true;
       this._title = translateText("win_modal.died");
+      this.isWin = false; // Player died, so it's a loss
+      this.hasPlayedSound = false; // Reset to play sound
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
@@ -301,6 +316,7 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        this.hasPlayedSound = false; // Reset to play sound
         this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
@@ -323,6 +339,7 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
+        this.hasPlayedSound = false; // Reset to play sound
         this.show();
       }
     });

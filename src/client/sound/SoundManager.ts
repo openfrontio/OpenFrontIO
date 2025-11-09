@@ -8,6 +8,8 @@ import atomLaunchSound from "../../../resources/sounds/effects/atom_launch.mp3";
 import buildingDestroyedSound from "../../../resources/sounds/effects/building-destory.mp3";
 import buildingSound from "../../../resources/sounds/effects/building.mp3";
 import clickSound from "../../../resources/sounds/effects/click.mp3";
+import gameOverSound from "../../../resources/sounds/effects/game_over.mp3";
+import gameWinSound from "../../../resources/sounds/effects/gamewin.mp3";
 import hydrogenHitSound from "../../../resources/sounds/effects/hydrogen_hit.mp3";
 import hydrogenLaunchSound from "../../../resources/sounds/effects/hydrogen_launch.mp3";
 import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
@@ -26,6 +28,8 @@ export enum SoundEffect {
   HydrogenHit = "hydrogen-hit",
   MIRVLaunch = "mirv-launch",
   Click = "click",
+  GameWin = "game-win",
+  GameOver = "game-over",
 }
 
 class SoundManager {
@@ -70,6 +74,8 @@ class SoundManager {
     this.loadSoundEffect(SoundEffect.HydrogenHit, hydrogenHitSound);
     this.loadSoundEffect(SoundEffect.MIRVLaunch, mirvLaunchSound);
     this.loadSoundEffect(SoundEffect.Click, clickSound);
+    this.loadSoundEffect(SoundEffect.GameWin, gameWinSound);
+    this.loadSoundEffect(SoundEffect.GameOver, gameOverSound);
   }
 
   public playBackgroundMusic(): void {

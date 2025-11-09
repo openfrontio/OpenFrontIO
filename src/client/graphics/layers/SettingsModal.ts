@@ -100,6 +100,14 @@ export class SettingsModal extends LitElement implements Layer {
       SoundEffect.Click,
       this.userSettings.isSoundEffectEnabled(SoundEffect.Click),
     );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.GameWin,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.GameWin),
+    );
+    SoundManager.setSoundEffectEnabled(
+      SoundEffect.GameOver,
+      this.userSettings.isSoundEffectEnabled(SoundEffect.GameOver),
+    );
 
     // Load background music enabled state
     SoundManager.setBackgroundMusicEnabled(
@@ -926,6 +934,66 @@ export class SettingsModal extends LitElement implements Layer {
           </div>
           <div class="text-sm text-slate-400">
             ${this.userSettings.isSoundEffectEnabled(SoundEffect.Click)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors mb-2"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.GameWin,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.GameWin,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.GameWin, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_game_win")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_game_win_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.GameWin)
+              ? translateText("user_setting.on")
+              : translateText("user_setting.off")}
+          </div>
+        </button>
+
+        <button
+          class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded text-white transition-colors"
+          @click=${() => {
+            const enabled = !this.userSettings.isSoundEffectEnabled(
+              SoundEffect.GameOver,
+            );
+            this.userSettings.setSoundEffectEnabled(
+              SoundEffect.GameOver,
+              enabled,
+            );
+            SoundManager.setSoundEffectEnabled(SoundEffect.GameOver, enabled);
+            this.requestUpdate();
+          }}
+        >
+          <img src=${musicIcon} alt="soundIcon" width="20" height="20" />
+          <div class="flex-1">
+            <div class="font-medium">
+              ${translateText("user_setting.sound_effect_game_over")}
+            </div>
+            <div class="text-sm text-slate-400">
+              ${translateText("user_setting.sound_effect_game_over_desc")}
+            </div>
+          </div>
+          <div class="text-sm text-slate-400">
+            ${this.userSettings.isSoundEffectEnabled(SoundEffect.GameOver)
               ? translateText("user_setting.on")
               : translateText("user_setting.off")}
           </div>
