@@ -32,6 +32,7 @@ export class FxLayer implements Layer {
   private allFx: Fx[] = [];
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
   private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
+  private seenBuildingUnitIds: Set<number> = new Set();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -289,6 +290,16 @@ export class FxLayer implements Layer {
   }
 
   onStructureEvent(unit: UnitView) {
+    // Check if building was just completed (becomes active for the first time)
+    if (unit.isActive() && !this.seenBuildingUnitIds.has(unit.id())) {
+      const my = this.game.myPlayer();
+      // Only play sound for buildings owned by the current player
+      if (my && unit.owner() === my) {
+        SoundManager.playSoundEffect(SoundEffect.Building);
+      }
+      this.seenBuildingUnitIds.add(unit.id());
+    }
+
     if (!unit.isActive()) {
       const x = this.game.x(unit.lastTile());
       const y = this.game.y(unit.lastTile());
@@ -299,6 +310,8 @@ export class FxLayer implements Layer {
         FxType.BuildingExplosion,
       );
       this.allFx.push(explosion);
+      // Remove from seen set when building is destroyed
+      this.seenBuildingUnitIds.delete(unit.id());
     }
   }
 
