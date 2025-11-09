@@ -3,6 +3,7 @@ import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import alarmSound from "../../../resources/sounds/effects/alarm.mp3";
+import buildingDestroyedSound from "../../../resources/sounds/effects/building-destory.mp3";
 import buildingSound from "../../../resources/sounds/effects/building.mp3";
 import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
 
@@ -10,6 +11,7 @@ export enum SoundEffect {
   KaChing = "ka-ching",
   Building = "building",
   Alarm = "alarm",
+  BuildingDestroyed = "building-destroyed",
 }
 
 class SoundManager {
@@ -44,6 +46,7 @@ class SoundManager {
     this.loadSoundEffect(SoundEffect.KaChing, kaChingSound);
     this.loadSoundEffect(SoundEffect.Building, buildingSound);
     this.loadSoundEffect(SoundEffect.Alarm, alarmSound, false);
+    this.loadSoundEffect(SoundEffect.BuildingDestroyed, buildingDestroyedSound);
   }
 
   public playBackgroundMusic(): void {

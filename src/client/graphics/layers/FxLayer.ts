@@ -33,6 +33,7 @@ export class FxLayer implements Layer {
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
   private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
   private seenBuildingUnitIds: Set<number> = new Set();
+  private destroyedBuildingUnitIds: Set<number> = new Set();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -301,6 +302,17 @@ export class FxLayer implements Layer {
     }
 
     if (!unit.isActive()) {
+      const my = this.game.myPlayer();
+      // Play building destroyed sound for buildings owned by the current player
+      // Only play once per building destruction
+      if (
+        my &&
+        unit.owner() === my &&
+        !this.destroyedBuildingUnitIds.has(unit.id())
+      ) {
+        SoundManager.playSoundEffect(SoundEffect.BuildingDestroyed);
+        this.destroyedBuildingUnitIds.add(unit.id());
+      }
       const x = this.game.x(unit.lastTile());
       const y = this.game.y(unit.lastTile());
       const explosion = new SpriteFx(
