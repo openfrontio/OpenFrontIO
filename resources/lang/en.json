@@ -249,6 +249,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "spawn_immunity_duration": "Spawn immunity (seconds)",
     "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
