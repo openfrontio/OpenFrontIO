@@ -215,8 +215,10 @@ const allyRevokeRequestElement: MenuElement = {
   disabled: () => false,
   displayed: (params: MenuElementParams) => {
     if (!params.selected) return false;
-    return params.myPlayer.data.outgoingAllianceRequests.includes(
-      params.selected.id(),
+    return (
+      params.myPlayer.data?.outgoingAllianceRequests?.includes(
+        params.selected.id(),
+      ) ?? false
     );
   },
   color: COLORS.breakAlly,
@@ -622,7 +624,7 @@ export const rootMenuElement: MenuElement = {
       // Check if there's a pending alliance request
       const hasPendingRequest =
         params.selected &&
-        params.myPlayer.data.outgoingAllianceRequests.includes(
+        params.myPlayer.data?.outgoingAllianceRequests?.includes(
           params.selected.id(),
         );
       if (hasPendingRequest) {
