@@ -458,7 +458,7 @@ export class SettingsModal extends LitElement implements Layer {
               0,
               Math.min(
                 100,
-                (this.userSettings.soundEffectsVolume() || 1) * 100,
+                (this.userSettings.soundEffectsVolume() ?? 1) * 100,
               ),
             )}
             @input=${this.onSoundEffectsVolumeChange}
@@ -466,7 +466,7 @@ export class SettingsModal extends LitElement implements Layer {
           />
         </div>
         <div class="text-sm text-slate-400">
-          ${Math.round((this.userSettings.soundEffectsVolume() || 1) * 100)}%
+          ${Math.round((this.userSettings.soundEffectsVolume() ?? 1) * 100)}%
         </div>
       </div>
 

@@ -672,7 +672,7 @@ export class UserSettingModal extends LitElement {
         max="100"
         .value=${Math.max(
           0,
-          Math.min(100, (this.userSettings.soundEffectsVolume() || 1) * 100),
+          Math.min(100, (this.userSettings.soundEffectsVolume() ?? 1) * 100),
         )}
         @change=${(e: CustomEvent<{ value: number }>) => {
           const sliderValue = e.detail?.value;
@@ -744,7 +744,7 @@ export class UserSettingModal extends LitElement {
         max="100"
         .value=${Math.max(
           0,
-          Math.min(100, (this.userSettings.soundEffectsVolume() || 1) * 100),
+          Math.min(100, (this.userSettings.soundEffectsVolume() ?? 1) * 100),
         )}
         @change=${(e: CustomEvent<{ value: number }>) => {
           const sliderValue = e.detail?.value;
