@@ -295,7 +295,7 @@ export class FxLayer implements Layer {
         if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            SoundManager.playSoundEffect(SoundEffect.MIRVLaunch);
+            SoundManager.playSoundEffect(SoundEffect.MIRVLaunch, 0.5);
           }
           this.nukeLaunchSoundPlayed.add(unit.id());
         }
