@@ -165,4 +165,48 @@ describe("AllianceExtensionExecution", () => {
 
     displayMessageSpy.mockRestore();
   });
+
+  test("Blocks alliance renewal messages after 40 minutes", () => {
+    jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    jest.spyOn(player2, "isAlive").mockReturnValue(true);
+    jest.spyOn(player1, "isAlive").mockReturnValue(true);
+
+    // Create alliance between player1 and player2
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    game.addExecution(
+      new AllianceRequestReplyExecution(player1.id(), player2, true),
+    );
+    game.executeNextTick();
+    game.executeNextTick();
+
+    expect(player1.allianceWith(player2)).toBeTruthy();
+    expect(player2.allianceWith(player1)).toBeTruthy();
+
+    // Advance game to 40 minutes (24,000 ticks)
+    // 40 minutes = 2400 seconds = 24,000 ticks (10 ticks per second)
+    const ALLIANCE_BLOCK_TICKS = 40 * 60 * 10;
+    const currentTicks = game.ticks();
+    const ticksToAdvance = ALLIANCE_BLOCK_TICKS - currentTicks;
+
+    for (let i = 0; i < ticksToAdvance; i++) {
+      game.executeNextTick();
+    }
+
+    expect(game.ticks()).toBeGreaterThanOrEqual(ALLIANCE_BLOCK_TICKS);
+
+    // Spy on displayMessage to verify it's NOT called
+    const displayMessageSpy = jest.spyOn(game, "displayMessage");
+
+    // Player1 tries to request renewal after 40 minutes
+    game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
+    game.executeNextTick();
+
+    // Verify no renewal message was sent
+    expect(displayMessageSpy).not.toHaveBeenCalled();
+
+    displayMessageSpy.mockRestore();
+  });
 });

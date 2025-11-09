@@ -100,4 +100,29 @@ describe("AllianceRequestExecution", () => {
     expect(player1.isAlliedWith(player2)).toBeFalsy();
     expect(player2.isAlliedWith(player1)).toBeFalsy();
   });
+
+  test("Blocks new alliance requests after 40 minutes", () => {
+    // Advance game to 40 minutes (24,000 ticks)
+    // 40 minutes = 2400 seconds = 24,000 ticks (10 ticks per second)
+    const ALLIANCE_BLOCK_TICKS = 40 * 60 * 10;
+    const currentTicks = game.ticks();
+    const ticksToAdvance = ALLIANCE_BLOCK_TICKS - currentTicks;
+
+    for (let i = 0; i < ticksToAdvance; i++) {
+      game.executeNextTick();
+    }
+
+    expect(game.ticks()).toBeGreaterThanOrEqual(ALLIANCE_BLOCK_TICKS);
+
+    // Try to send alliance request after 40 minutes
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    // Verify no alliance request was created
+    expect(player1.outgoingAllianceRequests().length).toBe(0);
+    expect(player2.incomingAllianceRequests().length).toBe(0);
+    expect(player1.isAlliedWith(player2)).toBeFalsy();
+    expect(player2.isAlliedWith(player1)).toBeFalsy();
+  });
 });
