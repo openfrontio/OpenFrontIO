@@ -156,8 +156,13 @@ class SoundManager {
     }
 
     if (volume !== undefined) {
+      // Skip early if master volume is muted
+      if (this.soundEffectsVolume === 0) {
+        return;
+      }
+      const scaledVolume = this.soundEffectsVolume * (volume ?? 1);
       const originalVolume = sound.volume();
-      sound.volume(this.clampVolume(volume));
+      sound.volume(this.clampVolume(scaledVolume));
       sound.play();
       sound.once("end", () => {
         sound.volume(originalVolume);
