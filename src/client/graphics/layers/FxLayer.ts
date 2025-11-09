@@ -270,6 +270,10 @@ export class FxLayer implements Layer {
         break;
       }
       case UnitType.AtomBomb: {
+        // Clean up any stale building-related entries if unit ID was reused
+        this.destroyedBuildingUnitIds.delete(unit.id());
+        this.buildingPreviousOwners.delete(unit.id());
+
         this.createNukeTargetFxIfOwned(unit);
         // Play launch sound for attacker when nuke first appears
         if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
@@ -283,6 +287,10 @@ export class FxLayer implements Layer {
         break;
       }
       case UnitType.MIRVWarhead: {
+        // Clean up any stale building-related entries if unit ID was reused
+        this.destroyedBuildingUnitIds.delete(unit.id());
+        this.buildingPreviousOwners.delete(unit.id());
+
         // Play launch sound for attacker when MIRV first appears
         if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
           const my = this.game.myPlayer();
@@ -295,6 +303,10 @@ export class FxLayer implements Layer {
         break;
       }
       case UnitType.HydrogenBomb: {
+        // Clean up any stale building-related entries if unit ID was reused
+        this.destroyedBuildingUnitIds.delete(unit.id());
+        this.buildingPreviousOwners.delete(unit.id());
+
         this.createNukeTargetFxIfOwned(unit);
         // Play launch sound for attacker when nuke first appears
         if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
@@ -420,6 +432,9 @@ export class FxLayer implements Layer {
   }
 
   onStructureEvent(unit: UnitView) {
+    // Clean up any stale nuke-related entries if unit ID was reused
+    this.nukeLaunchSoundPlayed.delete(unit.id());
+
     const my = this.game.myPlayer();
     const unitTile = unit.tile();
     const currentOwnerSmallID = unit.owner().smallID();
@@ -470,6 +485,13 @@ export class FxLayer implements Layer {
 
     if (!unit.isActive()) {
       const my = this.game.myPlayer();
+      const unitTile = unit.lastTile();
+
+      // Clean up building-related tracking maps when building is destroyed
+      this.destroyedBuildingUnitIds.delete(unit.id());
+      this.buildingPreviousOwners.delete(unit.id());
+      this.stealBuildingSoundPlayed.delete(unitTile);
+
       if (!my) {
         // No player context, just show explosion
         const x = this.game.x(unit.lastTile());
@@ -485,7 +507,6 @@ export class FxLayer implements Layer {
         return;
       }
 
-      const unitTile = unit.lastTile();
       const recentlyUpdatedTiles = this.game.recentlyUpdatedTiles();
       const tileWasJustConquered = recentlyUpdatedTiles.includes(unitTile);
       const tileOwner = this.game.owner(unitTile);
@@ -541,6 +562,9 @@ export class FxLayer implements Layer {
 
   onNukeEvent(unit: UnitView, radius: number) {
     if (!unit.isActive()) {
+      // Clean up nuke-related tracking maps when nuke is removed/exploded
+      this.nukeLaunchSoundPlayed.delete(unit.id());
+
       const fx = this.nukeTargetFxByUnitId.get(unit.id());
       if (fx) {
         fx.end();
