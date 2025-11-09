@@ -303,6 +303,10 @@ export class FxLayer implements Layer {
 
     if (!unit.isActive()) {
       const my = this.game.myPlayer();
+      const unitTile = unit.lastTile();
+      const recentlyUpdatedTiles = this.game.recentlyUpdatedTiles();
+      const tileWasJustConquered = recentlyUpdatedTiles.includes(unitTile);
+
       // Play building destroyed sound for buildings owned by the current player
       // Only play once per building destruction
       if (
@@ -313,6 +317,26 @@ export class FxLayer implements Layer {
         SoundManager.playSoundEffect(SoundEffect.BuildingDestroyed);
         this.destroyedBuildingUnitIds.add(unit.id());
       }
+
+      // Play building destroyed sound when current player destroys an enemy defense post during an attack
+      // This happens when:
+      // 1. It's a DefensePost
+      // 2. The tile was just conquered (in recentlyUpdatedTiles)
+      // 3. The tile is now owned by the current player (attacker)
+      // 4. The unit was owned by a different player (enemy)
+      // 5. We haven't already played the sound for this unit
+      if (
+        my &&
+        unit.type() === UnitType.DefensePost &&
+        tileWasJustConquered &&
+        this.game.owner(unitTile) === my &&
+        unit.owner() !== my &&
+        !this.destroyedBuildingUnitIds.has(unit.id())
+      ) {
+        SoundManager.playSoundEffect(SoundEffect.BuildingDestroyed);
+        this.destroyedBuildingUnitIds.add(unit.id());
+      }
+
       const x = this.game.x(unit.lastTile());
       const y = this.game.y(unit.lastTile());
       const explosion = new SpriteFx(
