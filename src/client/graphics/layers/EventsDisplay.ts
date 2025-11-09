@@ -68,6 +68,8 @@ interface GameEvent {
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
+  // Server message key (e.g., "events_display.alliance_request_revoked") for stable identification
+  serverMessageKey?: string;
 }
 
 @customElement("events-display")
@@ -413,6 +415,9 @@ export class EventsDisplay extends LitElement implements Layer {
       type: event.messageType,
       unsafeDescription: true,
       focusID: focusID,
+      serverMessageKey: event.message.startsWith("events_display.")
+        ? event.message
+        : undefined,
     });
   }
 
@@ -483,8 +488,7 @@ export class EventsDisplay extends LitElement implements Layer {
           event.type === MessageType.ALLIANCE_REJECTED &&
           event.focusID === update.requestorID &&
           (!event.buttons || event.buttons.length === 0) &&
-          (event.description?.includes("revoked") ||
-            event.description?.includes("Revoked"))
+          event.serverMessageKey === "events_display.alliance_request_revoked"
         ),
     );
     if (this.events.length !== eventsBefore) {
