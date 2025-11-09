@@ -12,23 +12,17 @@ Nuke Wars is a team-based nuclear warfare gamemode where teams battle for territ
 
 ### Preparation Phase
 
-- 3-minute preparation phase at start
+- A configurable slider is in the lobby for changing the preparation time
 - Teams can only build in their territory during this phase
 - Focus on setting up SAM defenses and missile silos
-- Countdown timer shows remaining prep time (3:00 -> 0:00)
+- Countdown timer shows remaining prep time
 
 ### Unit Restrictions
 
 - **Allowed Units:**
-  - Missile Silos: For launching nuclear weapons
-  - SAM Launchers: For missile defense
-  - Atom Bombs: Basic nuclear weapon
-  - Hydrogen Bombs: Advanced nuclear weapon
+  - Any units that do not include the MIRV.
 - **Blocked Units:**
   - MIRV missiles
-  - All conventional military units
-  - Cities and infrastructure buildings
-  - Ships and transport units
 
 ### Combat Phase
 
@@ -53,6 +47,7 @@ Nuke Wars is a team-based nuclear warfare gamemode where teams battle for territ
 - Careful placement of SAM coverage
 - Managing nuclear strikes to maintain territory control
 - Protecting key defensive infrastructure
+- Developing an economy during preparation phase
 
 ## Setup Requirements
 
