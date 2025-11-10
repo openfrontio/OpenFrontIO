@@ -474,6 +474,217 @@ describe("RadialMenuElements", () => {
     });
   });
 
+  describe("Donation buttons", () => {
+    let mockConfig: any;
+
+    beforeEach(() => {
+      mockConfig = {
+        theme: () => ({
+          territoryColor: () => ({
+            lighten: () => ({ alpha: () => ({ toRgbString: () => "#fff" }) }),
+          }),
+        }),
+        isUnitDisabled: jest.fn(() => false),
+        donateGold: jest.fn(() => true),
+        donateTroops: jest.fn(() => true),
+      };
+      mockGame.config = jest.fn(() => mockConfig);
+    });
+
+    it("should show both donation buttons when both are enabled in config", () => {
+      mockConfig.donateGold = jest.fn(() => true);
+      mockConfig.donateTroops = jest.fn(() => true);
+      mockParams.playerActions!.interaction!.canDonateGold = true;
+      mockParams.playerActions!.interaction!.canDonateTroops = true;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeDefined();
+      expect(donateTroopsButton).toBeDefined();
+    });
+
+    it("should show only gold button when only donateGold is enabled", () => {
+      mockConfig.donateGold = jest.fn(() => true);
+      mockConfig.donateTroops = jest.fn(() => false);
+      mockParams.playerActions!.interaction!.canDonateGold = true;
+      mockParams.playerActions!.interaction!.canDonateTroops = true;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeDefined();
+      expect(donateTroopsButton).toBeUndefined();
+    });
+
+    it("should show only troops button when only donateTroops is enabled", () => {
+      mockConfig.donateGold = jest.fn(() => false);
+      mockConfig.donateTroops = jest.fn(() => true);
+      mockParams.playerActions!.interaction!.canDonateGold = true;
+      mockParams.playerActions!.interaction!.canDonateTroops = true;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeUndefined();
+      expect(donateTroopsButton).toBeDefined();
+    });
+
+    it("should not show donation buttons when both are disabled in config", () => {
+      mockConfig.donateGold = jest.fn(() => false);
+      mockConfig.donateTroops = jest.fn(() => false);
+      mockParams.playerActions!.interaction!.canDonateGold = true;
+      mockParams.playerActions!.interaction!.canDonateTroops = true;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeUndefined();
+      expect(donateTroopsButton).toBeUndefined();
+    });
+
+    it("should show donation buttons for enemy players (not just allies)", () => {
+      mockConfig.donateGold = jest.fn(() => true);
+      mockConfig.donateTroops = jest.fn(() => true);
+      const enemyPlayer = {
+        id: () => 2,
+        isAlliedWith: jest.fn(() => false),
+        isPlayer: jest.fn(() => true),
+      } as unknown as PlayerView;
+      mockParams.selected = enemyPlayer;
+      mockParams.playerActions!.interaction!.canDonateGold = true;
+      mockParams.playerActions!.interaction!.canDonateTroops = true;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeDefined();
+      expect(donateTroopsButton).toBeDefined();
+    });
+
+    it("should show donation buttons for allied players", () => {
+      mockConfig.donateGold = jest.fn(() => true);
+      mockConfig.donateTroops = jest.fn(() => true);
+      const allyPlayer = {
+        id: () => 2,
+        isAlliedWith: jest.fn(() => true),
+        isPlayer: jest.fn(() => true),
+      } as unknown as PlayerView;
+      mockParams.selected = allyPlayer;
+      mockParams.playerActions!.interaction!.canDonateGold = true;
+      mockParams.playerActions!.interaction!.canDonateTroops = true;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeDefined();
+      expect(donateTroopsButton).toBeDefined();
+    });
+
+    it("should not show donation buttons when no player is selected", () => {
+      mockConfig.donateGold = jest.fn(() => true);
+      mockConfig.donateTroops = jest.fn(() => true);
+      mockParams.selected = null;
+      mockParams.playerActions!.interaction!.canDonateGold = true;
+      mockParams.playerActions!.interaction!.canDonateTroops = true;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeUndefined();
+      expect(donateTroopsButton).toBeUndefined();
+    });
+
+    it("should not show donation buttons when backend says cannot donate", () => {
+      mockConfig.donateGold = jest.fn(() => true);
+      mockConfig.donateTroops = jest.fn(() => true);
+      mockParams.playerActions!.interaction!.canDonateGold = false;
+      mockParams.playerActions!.interaction!.canDonateTroops = false;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeUndefined();
+      expect(donateTroopsButton).toBeUndefined();
+    });
+
+    it("should show gold button independently when troops disabled but gold enabled", () => {
+      mockConfig.donateGold = jest.fn(() => true);
+      mockConfig.donateTroops = jest.fn(() => false);
+      mockParams.playerActions!.interaction!.canDonateGold = true;
+      mockParams.playerActions!.interaction!.canDonateTroops = false;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeDefined();
+      expect(donateTroopsButton).toBeUndefined();
+    });
+
+    it("should show troops button independently when gold disabled but troops enabled", () => {
+      mockConfig.donateGold = jest.fn(() => false);
+      mockConfig.donateTroops = jest.fn(() => true);
+      mockParams.playerActions!.interaction!.canDonateGold = false;
+      mockParams.playerActions!.interaction!.canDonateTroops = true;
+
+      const subMenu = rootMenuElement.subMenu!(mockParams);
+      const donateGoldButton = subMenu.find(
+        (item) => item.id === "ally_donate_gold",
+      );
+      const donateTroopsButton = subMenu.find(
+        (item) => item.id === "ally_donate_troops",
+      );
+
+      expect(donateGoldButton).toBeUndefined();
+      expect(donateTroopsButton).toBeDefined();
+    });
+  });
+
   describe("Translation integration", () => {
     it("should use translateText for tooltip items in build menu", () => {
       const { translateText } = jest.requireMock("../../../src/client/Utils");
