@@ -724,8 +724,20 @@ export class EventsDisplay extends LitElement implements Layer {
 
     const unitView = this.game.unit(event.unitID);
 
+    // Format the message for NAVAL_INVASION_INBOUND to display formatted troop count
+    let description = event.message;
+    if (event.messageType === MessageType.NAVAL_INVASION_INBOUND && unitView) {
+      // Replace raw troop count with formatted version
+      // Message format: "Boat: {troops} {attackerName}"
+      const formattedTroops = renderTroops(unitView.troops());
+      description = event.message.replace(
+        /Boat: \d+/,
+        `Boat: ${formattedTroops}`,
+      );
+    }
+
     this.addEvent({
-      description: event.message,
+      description: description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,
