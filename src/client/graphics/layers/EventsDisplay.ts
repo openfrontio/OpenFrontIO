@@ -68,6 +68,8 @@ interface GameEvent {
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
+  // Track when a boat started retreating (for NAVAL_INVASION_INBOUND messages)
+  retreatStartedAt?: Tick;
 }
 
 @customElement("events-display")
@@ -213,6 +215,30 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     let remainingEvents = this.events.filter((event) => {
+      // Check if boat retreating message should be deleted after 5 seconds
+      if (event.type === MessageType.NAVAL_INVASION_INBOUND && event.unitView) {
+        const currentUnitView = this.game.unit(event.unitView.id());
+        // First check if unit should be deleted normally (destroyed, landed, etc.)
+        if (event.shouldDelete?.(this.game)) {
+          if (event.onDelete) {
+            event.onDelete();
+          }
+          return false;
+        }
+        // If boat is retreating, track when it started and delete after 5 seconds
+        if (currentUnitView && currentUnitView.retreating()) {
+          // If boat is retreating, track when it started
+          event.retreatStartedAt ??= this.game.ticks();
+          // Delete message 5 seconds (50 ticks) after retreat started
+          if (this.game.ticks() - event.retreatStartedAt >= 50) {
+            if (event.onDelete) {
+              event.onDelete();
+            }
+            return false;
+          }
+        }
+      }
+
       const shouldKeep =
         this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
         !event.shouldDelete?.(this.game);
