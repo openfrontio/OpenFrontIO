@@ -84,9 +84,9 @@ export interface Config {
   isUnitDisabled(unitType: UnitType): boolean;
   bots(): number;
   infiniteGold(): boolean;
-  donateGold(): boolean;
+  readonly donateGold: boolean;
   infiniteTroops(): boolean;
-  donateTroops(): boolean;
+  readonly donateTroops: boolean;
   instantBuild(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;

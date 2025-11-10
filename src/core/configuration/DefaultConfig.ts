@@ -343,13 +343,13 @@ export class DefaultConfig implements Config {
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }
-  donateGold(): boolean {
+  get donateGold(): boolean {
     return this._gameConfig.donateGold;
   }
   infiniteTroops(): boolean {
     return this._gameConfig.infiniteTroops;
   }
-  donateTroops(): boolean {
+  get donateTroops(): boolean {
     return this._gameConfig.donateTroops;
   }
 

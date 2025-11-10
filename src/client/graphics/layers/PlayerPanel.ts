@@ -620,8 +620,8 @@ export class PlayerPanel extends LitElement implements Layer {
     const canEmbargo = this.actions?.interaction?.canEmbargo;
 
     // Check game config to see which donation types are enabled
-    const donateGoldEnabled = this.g.config().donateGold();
-    const donateTroopsEnabled = this.g.config().donateTroops();
+    const donateGoldEnabled = Boolean(this.g.config().donateGold ?? false);
+    const donateTroopsEnabled = Boolean(this.g.config().donateTroops ?? false);
 
     return html`
       <div class="flex flex-col gap-2.5">

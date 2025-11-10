@@ -595,7 +595,7 @@ export class PlayerImpl implements Player {
     }
     if (
       recipient.type() === PlayerType.Human &&
-      this.mg.config().donateGold() === false
+      this.mg.config().donateGold === false
     ) {
       return false;
     }
@@ -618,7 +618,7 @@ export class PlayerImpl implements Player {
     }
     if (
       recipient.type() === PlayerType.Human &&
-      this.mg.config().donateTroops() === false
+      this.mg.config().donateTroops === false
     ) {
       return false;
     }

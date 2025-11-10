@@ -592,8 +592,10 @@ export const rootMenuElement: MenuElement = {
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
     // Check game config to see which donation types are enabled
-    const donateGoldEnabled = params.game.config().donateGold();
-    const donateTroopsEnabled = params.game.config().donateTroops();
+    const donateGoldEnabled = Boolean(params.game.config().donateGold ?? false);
+    const donateTroopsEnabled = Boolean(
+      params.game.config().donateTroops ?? false,
+    );
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,

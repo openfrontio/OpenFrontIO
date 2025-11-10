@@ -485,15 +485,15 @@ describe("RadialMenuElements", () => {
           }),
         }),
         isUnitDisabled: jest.fn(() => false),
-        donateGold: jest.fn(() => true),
-        donateTroops: jest.fn(() => true),
+        donateGold: true,
+        donateTroops: true,
       };
       mockGame.config = jest.fn(() => mockConfig);
     });
 
     it("should show both donation buttons when both are enabled in config", () => {
-      mockConfig.donateGold = jest.fn(() => true);
-      mockConfig.donateTroops = jest.fn(() => true);
+      mockConfig.donateGold = true;
+      mockConfig.donateTroops = true;
       mockParams.playerActions!.interaction!.canDonateGold = true;
       mockParams.playerActions!.interaction!.canDonateTroops = true;
 
@@ -510,8 +510,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should show only gold button when only donateGold is enabled", () => {
-      mockConfig.donateGold = jest.fn(() => true);
-      mockConfig.donateTroops = jest.fn(() => false);
+      mockConfig.donateGold = true;
+      mockConfig.donateTroops = false;
       mockParams.playerActions!.interaction!.canDonateGold = true;
       mockParams.playerActions!.interaction!.canDonateTroops = true;
 
@@ -528,8 +528,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should show only troops button when only donateTroops is enabled", () => {
-      mockConfig.donateGold = jest.fn(() => false);
-      mockConfig.donateTroops = jest.fn(() => true);
+      mockConfig.donateGold = false;
+      mockConfig.donateTroops = true;
       mockParams.playerActions!.interaction!.canDonateGold = true;
       mockParams.playerActions!.interaction!.canDonateTroops = true;
 
@@ -546,8 +546,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should not show donation buttons when both are disabled in config", () => {
-      mockConfig.donateGold = jest.fn(() => false);
-      mockConfig.donateTroops = jest.fn(() => false);
+      mockConfig.donateGold = false;
+      mockConfig.donateTroops = false;
       mockParams.playerActions!.interaction!.canDonateGold = true;
       mockParams.playerActions!.interaction!.canDonateTroops = true;
 
@@ -564,8 +564,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should show donation buttons for enemy players (not just allies)", () => {
-      mockConfig.donateGold = jest.fn(() => true);
-      mockConfig.donateTroops = jest.fn(() => true);
+      mockConfig.donateGold = true;
+      mockConfig.donateTroops = true;
       const enemyPlayer = {
         id: () => 2,
         isAlliedWith: jest.fn(() => false),
@@ -588,8 +588,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should show donation buttons for allied players", () => {
-      mockConfig.donateGold = jest.fn(() => true);
-      mockConfig.donateTroops = jest.fn(() => true);
+      mockConfig.donateGold = true;
+      mockConfig.donateTroops = true;
       const allyPlayer = {
         id: () => 2,
         isAlliedWith: jest.fn(() => true),
@@ -612,8 +612,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should not show donation buttons when no player is selected", () => {
-      mockConfig.donateGold = jest.fn(() => true);
-      mockConfig.donateTroops = jest.fn(() => true);
+      mockConfig.donateGold = true;
+      mockConfig.donateTroops = true;
       mockParams.selected = null;
       mockParams.playerActions!.interaction!.canDonateGold = true;
       mockParams.playerActions!.interaction!.canDonateTroops = true;
@@ -631,8 +631,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should not show donation buttons when backend says cannot donate", () => {
-      mockConfig.donateGold = jest.fn(() => true);
-      mockConfig.donateTroops = jest.fn(() => true);
+      mockConfig.donateGold = true;
+      mockConfig.donateTroops = true;
       mockParams.playerActions!.interaction!.canDonateGold = false;
       mockParams.playerActions!.interaction!.canDonateTroops = false;
 
@@ -649,8 +649,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should show gold button independently when troops disabled but gold enabled", () => {
-      mockConfig.donateGold = jest.fn(() => true);
-      mockConfig.donateTroops = jest.fn(() => false);
+      mockConfig.donateGold = true;
+      mockConfig.donateTroops = false;
       mockParams.playerActions!.interaction!.canDonateGold = true;
       mockParams.playerActions!.interaction!.canDonateTroops = false;
 
@@ -667,8 +667,8 @@ describe("RadialMenuElements", () => {
     });
 
     it("should show troops button independently when gold disabled but troops enabled", () => {
-      mockConfig.donateGold = jest.fn(() => false);
-      mockConfig.donateTroops = jest.fn(() => true);
+      mockConfig.donateGold = false;
+      mockConfig.donateTroops = true;
       mockParams.playerActions!.interaction!.canDonateGold = false;
       mockParams.playerActions!.interaction!.canDonateTroops = true;
 
