@@ -591,20 +591,24 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
-    // Check if selected player is friendly (allied or on same team)
-    const isFriendly =
-      params.selected && GameView.isFriendly(params.myPlayer, params.selected);
+    // Check game config to see which donation types are enabled
+    const donateGoldEnabled = params.game.config().donateGold();
+    const donateTroopsEnabled = params.game.config().donateTroops();
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, ally, buildMenuElement]
         : [boatMenuElement, ally, attackMenuElement]),
-      // Add donation buttons if clicking on a friendly player
-      ...(isFriendly && params.playerActions?.interaction?.canDonateGold
+      // Add donation buttons based on config and availability
+      ...(params.selected &&
+      donateGoldEnabled &&
+      params.playerActions?.interaction?.canDonateGold
         ? [allyDonateGoldElement]
         : []),
-      ...(isFriendly && params.playerActions?.interaction?.canDonateTroops
+      ...(params.selected &&
+      donateTroopsEnabled &&
+      params.playerActions?.interaction?.canDonateTroops
         ? [allyDonateTroopsElement]
         : []),
     ];

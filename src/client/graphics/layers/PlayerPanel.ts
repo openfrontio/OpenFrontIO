@@ -619,6 +619,10 @@ export class PlayerPanel extends LitElement implements Layer {
     const canTarget = this.actions?.interaction?.canTarget;
     const canEmbargo = this.actions?.interaction?.canEmbargo;
 
+    // Check game config to see which donation types are enabled
+    const donateGoldEnabled = this.g.config().donateGold();
+    const donateTroopsEnabled = this.g.config().donateTroops();
+
     return html`
       <div class="flex flex-col gap-2.5">
         <div class="grid auto-cols-fr grid-flow-col gap-1">
@@ -649,7 +653,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "normal",
               })
             : ""}
-          ${canDonateTroops
+          ${canDonateTroops && donateTroopsEnabled
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleDonateTroopClick(e, my, other),
@@ -660,7 +664,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "normal",
               })
             : ""}
-          ${canDonateGold
+          ${canDonateGold && donateGoldEnabled
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleDonateGoldClick(e, my, other),
