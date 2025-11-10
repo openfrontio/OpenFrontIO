@@ -269,6 +269,18 @@ export class UnitImpl implements Unit {
           this.mg
             .stats()
             .boatDestroyTroops(destroyer, this._owner, this._troops);
+          // Notify the defender if the boat was targeting them
+          if (this.targetTile() !== undefined) {
+            const targetTile = this.targetTile()!;
+            const targetOwner = this.mg.owner(targetTile);
+            if (targetOwner.isPlayer() && targetOwner !== this._owner) {
+              this.mg.displayMessage(
+                `${this._owner.displayName()} boat was destroyed`,
+                MessageType.UNIT_DESTROYED,
+                targetOwner.id(),
+              );
+            }
+          }
           break;
         case UnitType.TradeShip:
           this.mg.stats().boatDestroyTrade(destroyer, this._owner);

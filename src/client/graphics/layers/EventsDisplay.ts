@@ -705,12 +705,38 @@ export class EventsDisplay extends LitElement implements Layer {
       highlight: true,
       createdAt: this.game.ticks(),
       unitView: unitView,
+      shouldDelete: (game) => {
+        // Delete the message if the unit doesn't exist or is no longer active
+        // (destroyed, canceled, or landed)
+        if (!unitView) {
+          return true;
+        }
+        const currentUnitView = game.unit(event.unitID);
+        if (!currentUnitView || !currentUnitView.isActive()) {
+          return true;
+        }
+        return false;
+      },
     });
   }
 
   private getEventDescription(
     event: GameEvent,
   ): string | DirectiveResult<typeof UnsafeHTMLDirective> {
+    // Add "(retreating)" for boat attacks when the boat is retreating
+    if (event.type === MessageType.NAVAL_INVASION_INBOUND && event.unitView) {
+      // Get fresh unit view to ensure we have current retreating status
+      const currentUnitView = this.game.unit(event.unitView.id());
+      if (currentUnitView && currentUnitView.retreating()) {
+        const baseDescription = event.description;
+        const retreatingText = ` (${translateText("events_display.retreating")})`;
+        if (event.unsafeDescription) {
+          return unsafeHTML(onlyImages(baseDescription + retreatingText));
+        }
+        return baseDescription + retreatingText;
+      }
+    }
+
     return event.unsafeDescription
       ? unsafeHTML(onlyImages(event.description))
       : event.description;

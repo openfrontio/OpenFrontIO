@@ -1,3 +1,4 @@
+import { renderTroops } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -144,7 +145,7 @@ export class TransportShipExecution implements Execution {
       mg.displayIncomingUnit(
         this.boat.id(),
         // TODO TranslateText
-        `Naval invasion incoming from ${this.attacker.displayName()}`,
+        `Boat: ${renderTroops(this.boat.troops())} ${this.attacker.displayName()}`,
         MessageType.NAVAL_INVASION_INBOUND,
         this.targetID,
       );
