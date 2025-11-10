@@ -118,6 +118,20 @@ export class NameLayer implements Layer {
     this.container.style.zIndex = "2";
     document.body.appendChild(this.container);
 
+    // Add CSS keyframes for traitor icon flashing animation
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes traitorFlash {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
   }
 
@@ -410,16 +424,37 @@ export class NameLayer implements Layer {
     }
 
     // Traitor icon
-    const existingTraitor = iconsDiv.querySelector('[data-icon="traitor"]');
+    let existingTraitor = iconsDiv.querySelector('[data-icon="traitor"]');
     if (render.player.isTraitor()) {
+      const remainingTicks = render.player.getTraitorRemainingTicks();
+      const remainingSeconds = Math.ceil(remainingTicks / 10);
+
       if (!existingTraitor) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            this.traitorIconImage.src,
-            iconSize,
-            "traitor",
-          ),
+        existingTraitor = this.createIconElement(
+          this.traitorIconImage.src,
+          iconSize,
+          "traitor",
         );
+        iconsDiv.appendChild(existingTraitor);
+      }
+
+      // Apply flashing animation - staged speed increases at 15s, 10s, and 5s
+      if (existingTraitor instanceof HTMLImageElement) {
+        if (remainingSeconds <= 15) {
+          let animationDuration = "1s"; // Slow flash at 15 seconds
+
+          if (remainingSeconds <= 5) {
+            animationDuration = "0.4s"; // Faster at 5 seconds
+          } else if (remainingSeconds <= 10) {
+            animationDuration = "0.7s"; // Slightly faster at 10 seconds
+          }
+
+          existingTraitor.style.animation = `traitorFlash ${animationDuration} infinite`;
+          existingTraitor.style.animationTimingFunction = "ease-in-out";
+        } else {
+          // Don't flash if more than 15 seconds remaining
+          existingTraitor.style.animation = "none";
+        }
       }
     } else if (existingTraitor) {
       existingTraitor.remove();
