@@ -472,6 +472,7 @@
   },
   "events_display": {
     "retreating": "ustupuje",
+    "retaliate": "Odpovedať",
     "boat": "Čln",
     "alliance_request_status": "{name} {status} tvoju žiadosť o spojenectvo",
     "alliance_accepted": "prijaté",

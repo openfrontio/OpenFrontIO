@@ -460,6 +460,7 @@
   },
   "events_display": {
     "retreating": "retirerar",
+    "retaliate": "Vedergälla",
     "boat": "Båt",
     "alliance_request_status": "{name} {status} din alliansförfrågan",
     "alliance_accepted": "accepterade",

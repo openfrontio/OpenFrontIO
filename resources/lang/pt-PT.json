@@ -472,6 +472,7 @@
   },
   "events_display": {
     "retreating": "recuando",
+    "retaliate": "Retaliar",
     "boat": "Barco",
     "alliance_request_status": "{name} {status} o seu pedido de aliança",
     "alliance_accepted": "aceitou",
