@@ -1,10 +1,5 @@
 import { Config } from "../../../core/configuration/Config";
-import {
-  AllPlayers,
-  GameMode,
-  PlayerActions,
-  UnitType,
-} from "../../../core/game/Game";
+import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -600,24 +595,16 @@ export const rootMenuElement: MenuElement = {
     const isFriendly =
       params.selected && GameView.isFriendly(params.myPlayer, params.selected);
 
-    // Check if game mode is Team
-    const isTeamMode =
-      params.game.config().gameConfig().gameMode === GameMode.Team;
-
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
         ? [deleteUnitElement, ally, buildMenuElement]
         : [boatMenuElement, ally, attackMenuElement]),
-      // Add donation buttons if clicking on a friendly player in team mode
-      ...(isTeamMode &&
-      isFriendly &&
-      params.playerActions?.interaction?.canDonateGold
+      // Add donation buttons if clicking on a friendly player
+      ...(isFriendly && params.playerActions?.interaction?.canDonateGold
         ? [allyDonateGoldElement]
         : []),
-      ...(isTeamMode &&
-      isFriendly &&
-      params.playerActions?.interaction?.canDonateTroops
+      ...(isFriendly && params.playerActions?.interaction?.canDonateTroops
         ? [allyDonateTroopsElement]
         : []),
     ];

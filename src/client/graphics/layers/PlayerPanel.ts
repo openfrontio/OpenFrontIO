@@ -13,7 +13,6 @@ import breakAllianceIcon from "../../../../resources/images/TraitorIconWhite.svg
 import { EventBus } from "../../../core/EventBus";
 import {
   AllPlayers,
-  GameMode,
   PlayerActions,
   PlayerProfile,
   PlayerType,
@@ -608,7 +607,6 @@ export class PlayerPanel extends LitElement implements Layer {
 
   private renderActions(my: PlayerView, other: PlayerView) {
     const myPlayer = this.g.myPlayer();
-    const isTeamMode = this.g.config().gameConfig().gameMode === GameMode.Team;
     const canDonateGold = this.actions?.interaction?.canDonateGold;
     const canDonateTroops = this.actions?.interaction?.canDonateTroops;
     const canSendAllianceRequest =
@@ -651,7 +649,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "normal",
               })
             : ""}
-          ${isTeamMode && canDonateTroops
+          ${canDonateTroops
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleDonateTroopClick(e, my, other),
@@ -662,7 +660,7 @@ export class PlayerPanel extends LitElement implements Layer {
                 type: "normal",
               })
             : ""}
-          ${isTeamMode && canDonateGold
+          ${canDonateGold
             ? actionButton({
                 onClick: (e: MouseEvent) =>
                   this.handleDonateGoldClick(e, my, other),
