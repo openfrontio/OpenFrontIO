@@ -1,4 +1,3 @@
-import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
@@ -112,7 +111,7 @@ class Client {
     if (!gameVersion) {
       console.warn("Game version element not found");
     }
-    gameVersion.innerText = version;
+    gameVersion.innerText = "OPL 0.16.12";
 
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal || !(newsModal instanceof NewsModal)) {
