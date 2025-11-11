@@ -179,11 +179,11 @@ export class Leaderboard extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
-        <div
-          class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
-          style="grid-template-columns: 30px 100px 70px 55px 75px;"
-        >
-          <div class="contents font-bold bg-gray-700/50">
+        <div class="bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm">
+          <div
+            class="grid font-bold bg-gray-700/50"
+            style="grid-template-columns: 30px 100px 70px 55px 75px;"
+          >
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
               #
             </div>
@@ -238,33 +238,32 @@ export class Leaderboard extends LitElement implements Layer {
 
               return html`
                 <div
-                  class="contents hover:bg-slate-600/60 ${player.isOnSameTeam
-                    ? "font-bold"
-                    : ""} cursor-pointer"
+                  class="grid ${player.isOnSameTeam ? "font-bold" : ""}"
+                  style="grid-template-columns: 30px 100px 70px 55px 75px;"
                   @click=${() => this.handleRowClickPlayer(player.player)}
                 >
                   <div
-                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
+                    class="py-1 md:py-2 text-center border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
                   >
                     ${player.position}
                   </div>
                   <div
-                    class="py-1 md:py-2 text-center truncate border-b border-slate-500 ${bgClass}"
+                    class="py-1 md:py-2 text-center truncate border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
                   >
                     ${player.name}
                   </div>
                   <div
-                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
+                    class="py-1 md:py-2 text-center border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
                   >
                     ${player.score}
                   </div>
                   <div
-                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
+                    class="py-1 md:py-2 text-center border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
                   >
                     ${player.gold}
                   </div>
                   <div
-                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
+                    class="py-1 md:py-2 text-center border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
                   >
                     ${player.troops}
                   </div>
