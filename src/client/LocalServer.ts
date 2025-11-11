@@ -84,6 +84,7 @@ export class LocalServer {
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
+      lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
     } satisfies ServerStartGameMessage);
   }
 
