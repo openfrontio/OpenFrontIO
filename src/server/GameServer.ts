@@ -401,6 +401,7 @@ export class GameServer {
 
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
+      lobbyCreatedAt: this.createdAt,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
@@ -439,6 +440,7 @@ export class GameServer {
           type: "start",
           turns: this.turns.slice(lastTurn),
           gameStartInfo: this.gameStartInfo,
+          lobbyCreatedAt: this.createdAt,
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
@@ -706,6 +708,7 @@ export class GameServer {
           this._startTime ?? 0,
           Date.now(),
           this.winner?.winner,
+          this.createdAt,
         ),
       ),
     );
