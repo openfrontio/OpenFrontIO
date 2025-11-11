@@ -420,7 +420,6 @@ export class InputHandler {
         this.setGhostStructure(UnitType.MIRV);
       }
 
-      // Tab to swap rocket direction
       if (e.code === this.keybinds.swapDirection) {
         e.preventDefault();
         this.eventBus.emit(new SwapRocketDirectionEvent());
