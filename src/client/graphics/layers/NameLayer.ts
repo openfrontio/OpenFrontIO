@@ -119,6 +119,7 @@ export class NameLayer implements Layer {
     document.body.appendChild(this.container);
 
     // Add CSS keyframes for traitor icon flashing animation
+    // Append to container instead of document.head to keep styles scoped to this component
     const style = document.createElement("style");
     style.textContent = `
       @keyframes traitorFlash {
@@ -130,7 +131,7 @@ export class NameLayer implements Layer {
         }
       }
     `;
-    document.head.appendChild(style);
+    this.container.appendChild(style);
 
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
   }
