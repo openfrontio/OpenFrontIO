@@ -515,7 +515,6 @@
   },
   "events_display": {
     "retreating": "visszavonulás",
-    "retaliate": "Visszavágás",
     "boat": "Hajó",
     "alliance_request_status": "{name} {status} a szövetségkérelmedet",
     "alliance_accepted": "elfogadva",
