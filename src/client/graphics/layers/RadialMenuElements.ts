@@ -1,5 +1,10 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  GameMode,
+  PlayerActions,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -633,9 +638,12 @@ export const centerButtonElement: CenterButtonElement = {
 
 // Helper function to check if we should show Donate Troops
 function shouldShowDonateTroops(params: MenuElementParams): boolean {
+  // First check if donations are enabled in game config
   const donateTroopsEnabled = Boolean(
     params.game.config().donateTroops ?? false,
   );
+
+  if (!donateTroopsEnabled) return false;
 
   // Only allow donating troops to teammates or allies
   if (!params.selected) return false;
@@ -645,10 +653,23 @@ function shouldShowDonateTroops(params: MenuElementParams): boolean {
 
   if (!isTeammate && !isAlly) return false;
 
-  return (
-    donateTroopsEnabled &&
-    params.playerActions?.interaction?.canDonateTroops === true
-  );
+  // Check if player can donate troops
+  if (!params.playerActions?.interaction?.canDonateTroops) return false;
+
+  // Check game mode and user setting
+  const gameMode = params.game.config().gameConfig().gameMode;
+
+  // In FFA games, only show if the user setting is enabled
+  if (gameMode === GameMode.FFA) {
+    const quickDonateButtonsInFFA = params.game
+      .config()
+      .userSettings()
+      .quickDonateButtonsInFFA();
+    if (!quickDonateButtonsInFFA) return false;
+  }
+
+  // In Team games, always show (when donations are enabled)
+  return true;
 }
 
 export const rootMenuElement: MenuElement = {
@@ -673,10 +694,30 @@ export const rootMenuElement: MenuElement = {
 
     // Check if we should show Donate Gold instead of Build button
     // Only allow donating gold to teammates or allies
+    const gameMode = params.game.config().gameConfig().gameMode;
+
+    // Helper function to check if quick donate buttons should show
+    const shouldShowQuickDonateButtons = () => {
+      // First check if donations are enabled in game config
+      if (!donateGoldEnabled) return false;
+
+      // In FFA games, check user setting
+      if (gameMode === GameMode.FFA) {
+        const quickDonateButtonsInFFA = params.game
+          .config()
+          .userSettings()
+          .quickDonateButtonsInFFA();
+        return quickDonateButtonsInFFA;
+      }
+
+      // In Team games, always show (when donations are enabled)
+      return true;
+    };
+
     const shouldShowDonateGold =
       isOwnTerritory &&
       params.selected &&
-      donateGoldEnabled &&
+      shouldShowQuickDonateButtons() &&
       params.playerActions?.interaction?.canDonateGold &&
       (params.myPlayer.isOnSameTeam(params.selected) ||
         params.myPlayer.isAlliedWith(params.selected));
@@ -695,7 +736,7 @@ export const rootMenuElement: MenuElement = {
       // Only add Donate Gold here if we're NOT replacing Build button
       // Only allow donating gold to teammates or allies
       ...(params.selected &&
-      donateGoldEnabled &&
+      shouldShowQuickDonateButtons() &&
       params.playerActions?.interaction?.canDonateGold &&
       !shouldShowDonateGold &&
       (params.myPlayer.isOnSameTeam(params.selected) ||

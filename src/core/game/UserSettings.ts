@@ -198,4 +198,15 @@ export class UserSettings {
   setSoundEffectsVolume(volume: number): void {
     this.setFloat("settings.soundEffectsVolume", volume);
   }
+
+  quickDonateButtonsInFFA(): boolean {
+    return this.get("settings.quickDonateButtonsInFFA", false);
+  }
+
+  toggleQuickDonateButtonsInFFA() {
+    this.set(
+      "settings.quickDonateButtonsInFFA",
+      !this.quickDonateButtonsInFFA(),
+    );
+  }
 }

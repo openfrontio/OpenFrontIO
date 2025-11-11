@@ -206,6 +206,13 @@ export class UserSettingModal extends LitElement {
     this.userSettings.set("settings.performanceOverlay", enabled);
   }
 
+  private toggleQuickDonateButtonsInFFA(e: CustomEvent<{ checked: boolean }>) {
+    const enabled = e.detail?.checked;
+    if (typeof enabled !== "boolean") return;
+
+    this.userSettings.toggleQuickDonateButtonsInFFA();
+  }
+
   private handleKeybindChange(
     e: CustomEvent<{ action: string; value: string; key: string }>,
   ) {
@@ -362,6 +369,19 @@ export class UserSettingModal extends LitElement {
         id="performance-overlay-toggle"
         .checked=${this.userSettings.performanceOverlay()}
         @change=${this.togglePerformanceOverlay}
+      ></setting-toggle>
+
+      <!-- 🎁 Quick Donate Buttons in FFA -->
+      <setting-toggle
+        label="${translateText(
+          "user_setting.quick_donate_buttons_in_ffa_label",
+        )}"
+        description="${translateText(
+          "user_setting.quick_donate_buttons_in_ffa_desc",
+        )}"
+        id="quick-donate-buttons-in-ffa-toggle"
+        .checked=${this.userSettings.quickDonateButtonsInFFA()}
+        @change=${this.toggleQuickDonateButtonsInFFA}
       ></setting-toggle>
 
       <!-- ⚔️ Attack Ratio -->
