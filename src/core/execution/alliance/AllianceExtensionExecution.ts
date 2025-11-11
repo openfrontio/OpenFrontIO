@@ -50,14 +50,14 @@ export class AllianceExtensionExecution implements Execution {
         MessageType.ALLIANCE_ACCEPTED,
         this.from.id(),
         undefined,
-        { name: to.displayName() },
+        { otherPlayerID: to.id() },
       );
       mg.displayMessage(
         "events_display.alliance_renewed",
         MessageType.ALLIANCE_ACCEPTED,
         this.toID,
         undefined,
-        { name: this.from.displayName() },
+        { otherPlayerID: this.from.id() },
       );
     } else if (alliance.onlyOneAgreedToExtend() && !wasOnlyOneAgreed) {
       // Send message to the other player that someone wants to renew
@@ -67,7 +67,7 @@ export class AllianceExtensionExecution implements Execution {
         MessageType.RENEW_ALLIANCE,
         this.toID,
         undefined,
-        { name: this.from.displayName() },
+        { otherPlayerID: this.from.id() },
       );
     }
   }

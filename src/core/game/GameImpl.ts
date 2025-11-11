@@ -738,6 +738,7 @@ export class GameImpl implements Game {
     message: string,
     type: MessageType,
     playerID: PlayerID,
+    params?: Record<string, string | number>,
   ): void {
     const id = this.player(playerID).smallID();
 
@@ -747,6 +748,7 @@ export class GameImpl implements Game {
       message: message,
       messageType: type,
       playerID: id,
+      params: params,
     });
   }
 
@@ -897,12 +899,14 @@ export class GameImpl implements Game {
   conquerPlayer(conqueror: Player, conquered: Player) {
     const gold = conquered.gold();
     this.displayMessage(
-      `Conquered ${conquered.displayName()} received ${renderNumber(
-        gold,
-      )} gold`,
+      "events_display.conquered_player",
       MessageType.CONQUERED_PLAYER,
       conqueror.id(),
       gold,
+      {
+        conqueredPlayerID: conquered.id(),
+        gold: renderNumber(gold),
+      },
     );
     conqueror.addGold(gold);
     conquered.removeGold(gold);

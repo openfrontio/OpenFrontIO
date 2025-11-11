@@ -152,7 +152,7 @@ describe("AllianceExtensionExecution", () => {
       MessageType.RENEW_ALLIANCE,
       player2.id(),
       undefined,
-      { name: player1.displayName() },
+      { otherPlayerID: player1.id() },
     );
     expect(displayMessageSpy).toHaveBeenCalledTimes(1);
 

@@ -651,14 +651,24 @@ export class PlayerImpl implements Player {
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
-      `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
+      "events_display.sent_troops_to_player",
       MessageType.SENT_TROOPS_TO_PLAYER,
       this.id(),
+      undefined,
+      {
+        troops: renderTroops(troops),
+        recipientPlayerID: recipient.id(),
+      },
     );
     this.mg.displayMessage(
-      `Received ${renderTroops(troops)} troops from ${this.name()}`,
+      "events_display.received_troops_from_player",
       MessageType.RECEIVED_TROOPS_FROM_PLAYER,
       recipient.id(),
+      undefined,
+      {
+        troops: renderTroops(troops),
+        senderPlayerID: this.id(),
+      },
     );
     return true;
   }
@@ -671,15 +681,24 @@ export class PlayerImpl implements Player {
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
-      `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
+      "events_display.sent_gold_to_player",
       MessageType.SENT_GOLD_TO_PLAYER,
       this.id(),
+      undefined,
+      {
+        gold: renderNumber(gold),
+        recipientPlayerID: recipient.id(),
+      },
     );
     this.mg.displayMessage(
-      `Received ${renderNumber(gold)} gold from ${this.name()}`,
+      "events_display.received_gold_from_player",
       MessageType.RECEIVED_GOLD_FROM_PLAYER,
       recipient.id(),
       gold,
+      {
+        gold: renderNumber(gold),
+        senderPlayerID: this.id(),
+      },
     );
     return true;
   }

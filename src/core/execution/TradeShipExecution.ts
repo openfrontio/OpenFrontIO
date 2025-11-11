@@ -143,10 +143,14 @@ export class TradeShipExecution implements Execution {
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
+        "events_display.received_gold_from_captured_ship",
         MessageType.CAPTURED_ENEMY_UNIT,
         this.tradeShip!.owner().id(),
         gold,
+        {
+          gold: renderNumber(gold),
+          originalOwnerPlayerID: this.origOwner.id(),
+        },
       );
       // Record stats
       this.mg
@@ -156,16 +160,24 @@ export class TradeShipExecution implements Execution {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
+        "events_display.received_gold_from_trade",
         MessageType.RECEIVED_GOLD_FROM_TRADE,
         this._dstPort.owner().id(),
         gold,
+        {
+          gold: renderNumber(gold),
+          tradingPartnerPlayerID: this.srcPort.owner().id(),
+        },
       );
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
+        "events_display.received_gold_from_trade",
         MessageType.RECEIVED_GOLD_FROM_TRADE,
         this.srcPort.owner().id(),
         gold,
+        {
+          gold: renderNumber(gold),
+          tradingPartnerPlayerID: this._dstPort.owner().id(),
+        },
       );
       // Record stats
       this.mg

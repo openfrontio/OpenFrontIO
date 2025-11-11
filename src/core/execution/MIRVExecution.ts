@@ -80,10 +80,12 @@ export class MirvExecution implements Execution {
 
       this.mg.displayIncomingUnit(
         this.nuke.id(),
-        // TODO TranslateText
-        `⚠️⚠️⚠️ ${this.player.name()} - MIRV INBOUND ⚠️⚠️⚠️`,
+        "events_display.mirv_inbound",
         MessageType.MIRV_INBOUND,
         this.targetPlayer.id(),
+        {
+          attackerPlayerID: this.player.id(),
+        },
       );
     }
 

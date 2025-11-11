@@ -286,7 +286,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
       this.addEvent({
         description: translateText("events_display.about_to_expire", {
-          name: other.name(),
+          name: other.displayName(),
         }),
         type: MessageType.RENEW_ALLIANCE,
         duration: this.game.config().allianceExtensionPromptOffset() - 3 * 10, // 3 second buffer
@@ -299,7 +299,7 @@ export class EventsDisplay extends LitElement implements Layer {
           },
           {
             text: translateText("events_display.renew_alliance", {
-              name: other.name(),
+              name: other.displayName(),
             }),
             className: "btn",
             action: () =>
@@ -373,7 +373,43 @@ export class EventsDisplay extends LitElement implements Layer {
 
     let description: string = event.message;
     if (event.message.startsWith("events_display.")) {
-      description = translateText(event.message, event.params ?? {});
+      // Resolve player IDs in params to displayName() for hidden names support
+      // Pattern: Server sends params with keys ending in "PlayerID" (e.g., "recipientPlayerID")
+      // Client resolves these to displayName() and replaces "ID" with "Name" in the key
+      // (e.g., "recipientPlayerID" -> "recipientPlayerName") for translation
+      // This ensures hidden names work correctly and messages are translatable
+      const resolvedParams: Record<string, string | number> = {};
+      if (event.params) {
+        for (const [key, value] of Object.entries(event.params)) {
+          // If param ends with "PlayerID" or "PlayerId", resolve it to displayName
+          if (
+            (key.endsWith("PlayerID") ||
+              key.endsWith("PlayerId") ||
+              key.endsWith("playerID") ||
+              key.endsWith("playerId")) &&
+            (typeof value === "string" || typeof value === "number")
+          ) {
+            try {
+              const player =
+                typeof value === "string"
+                  ? this.game.player(value)
+                  : this.game.playerBySmallID(value);
+              if (player && player instanceof PlayerView) {
+                resolvedParams[key.replace(/ID$/i, "Name")] =
+                  player.displayName();
+              } else {
+                resolvedParams[key] = value;
+              }
+            } catch (e) {
+              // If player not found, keep original value
+              resolvedParams[key] = value;
+            }
+          } else {
+            resolvedParams[key] = value;
+          }
+        }
+      }
+      description = translateText(event.message, resolvedParams);
     }
 
     this.addEvent({
@@ -445,7 +481,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: translateText("events_display.request_alliance", {
-        name: requestor.name(),
+        name: requestor.displayName(),
       }),
       buttons: [
         {
@@ -512,7 +548,7 @@ export class EventsDisplay extends LitElement implements Layer {
     ) as PlayerView;
     this.addEvent({
       description: translateText("events_display.alliance_request_status", {
-        name: recipient.name(),
+        name: recipient.displayName(),
         status: update.accepted
           ? translateText("events_display.alliance_accepted")
           : translateText("events_display.alliance_rejected"),
@@ -552,7 +588,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
       this.addEvent({
         description: translateText("events_display.betrayal_description", {
-          name: betrayed.name(),
+          name: betrayed.displayName(),
           malusPercent: malusPercent,
           durationText: durationText,
         }),
@@ -572,7 +608,7 @@ export class EventsDisplay extends LitElement implements Layer {
       ];
       this.addEvent({
         description: translateText("events_display.betrayed_you", {
-          name: traitor.name(),
+          name: traitor.displayName(),
         }),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
@@ -599,7 +635,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: translateText("events_display.alliance_expired", {
-        name: other.name(),
+        name: other.displayName(),
       }),
       type: MessageType.ALLIANCE_EXPIRED,
       highlight: true,
@@ -617,8 +653,8 @@ export class EventsDisplay extends LitElement implements Layer {
 
     this.addEvent({
       description: translateText("events_display.attack_request", {
-        name: other.name(),
-        target: target.name(),
+        name: other.displayName(),
+        target: target.displayName(),
       }),
       type: MessageType.ATTACK_REQUEST,
       highlight: true,
@@ -698,8 +734,49 @@ export class EventsDisplay extends LitElement implements Layer {
 
     const unitView = this.game.unit(event.unitID);
 
+    let description: string = event.message;
+    // Resolve player IDs in params to displayName() for hidden names support
+    if (event.message.startsWith("events_display.")) {
+      const resolvedParams: Record<string, string | number> = {};
+      if (event.params) {
+        for (const [key, value] of Object.entries(event.params)) {
+          // If param ends with "PlayerID" or "PlayerId", resolve it to displayName
+          if (
+            (key.endsWith("PlayerID") ||
+              key.endsWith("PlayerId") ||
+              key.endsWith("playerID") ||
+              key.endsWith("playerId")) &&
+            (typeof value === "string" || typeof value === "number")
+          ) {
+            try {
+              const player =
+                typeof value === "string"
+                  ? this.game.player(value)
+                  : this.game.playerBySmallID(value);
+              if (player && player instanceof PlayerView) {
+                resolvedParams[key.replace(/ID$/i, "Name")] =
+                  player.displayName();
+              } else {
+                resolvedParams[key] = value;
+              }
+            } catch (e) {
+              // If player not found, keep original value
+              resolvedParams[key] = value;
+            }
+          } else {
+            resolvedParams[key] = value;
+          }
+        }
+      }
+      description = translateText(event.message, resolvedParams);
+      // Add emojis for MIRV messages in code (not in translation)
+      if (event.message === "events_display.mirv_inbound") {
+        description = `⚠️⚠️⚠️ ${description} ⚠️⚠️⚠️`;
+      }
+    }
+
     this.addEvent({
-      description: event.message,
+      description: description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,
@@ -747,7 +824,7 @@ export class EventsDisplay extends LitElement implements Layer {
                     ${renderTroops(attack.troops)}
                     ${(
                       this.game.playerBySmallID(attack.attackerID) as PlayerView
-                    )?.name()}
+                    )?.displayName()}
                     ${attack.retreating
                       ? `(${translateText("events_display.retreating")}...)`
                       : ""}
@@ -778,7 +855,7 @@ export class EventsDisplay extends LitElement implements Layer {
                           this.game.playerBySmallID(
                             attack.targetID,
                           ) as PlayerView
-                        )?.name()}
+                        )?.displayName()}
                       `,
                       onClick: async () => this.attackWarningOnClick(attack),
                       className: "text-left text-blue-400",

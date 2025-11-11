@@ -202,14 +202,24 @@ export class UnitImpl implements Unit {
     this._owner._units.push(this);
     this.mg.addUpdate(this.toUpdate());
     this.mg.displayMessage(
-      `Your ${this.type()} was captured by ${newOwner.displayName()}`,
+      "events_display.unit_captured_by_enemy",
       MessageType.UNIT_CAPTURED_BY_ENEMY,
       this._lastOwner.id(),
+      undefined,
+      {
+        unitType: this.type(),
+        captorPlayerID: newOwner.id(),
+      },
     );
     this.mg.displayMessage(
-      `Captured ${this.type()} from ${this._lastOwner.displayName()}`,
+      "events_display.captured_enemy_unit",
       MessageType.CAPTURED_ENEMY_UNIT,
       newOwner.id(),
+      undefined,
+      {
+        unitType: this.type(),
+        previousOwnerPlayerID: this._lastOwner.id(),
+      },
     );
   }
 
