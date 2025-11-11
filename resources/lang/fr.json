@@ -515,7 +515,6 @@
   },
   "events_display": {
     "retreating": "en retraite",
-    "retaliate": "Contre-attaquer",
     "boat": "Bateau",
     "alliance_request_status": "{name} {status} votre demande d'alliance",
     "alliance_accepted": "a accepté",
