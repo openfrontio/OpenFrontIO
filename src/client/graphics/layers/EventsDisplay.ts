@@ -163,20 +163,26 @@ export class EventsDisplay extends LitElement implements Layer {
       .units(UnitType.TransportShip)
       .filter((u) => u.owner().smallID() === attackerID && u.isActive());
 
+    let fallbackBoat: UnitView | null = null;
+
     for (const boat of boats) {
       const targetTile = boat.targetTile();
       if (!targetTile) continue;
 
       const targetOwnerSmallID = this.game.ownerID(targetTile);
       if (targetOwnerSmallID === target.smallID()) {
-        // Prefer exact troop match, but accept any boat heading to target if no match
+        // Track first boat heading to target as fallback
+        fallbackBoat ??= boat;
+
+        // Prefer exact troop match, return immediately if found
         if (troops === 0 || Math.abs(boat.troops() - troops) < 10) {
           return boat;
         }
       }
     }
 
-    return null;
+    // Return fallback boat if no preferred match found
+    return fallbackBoat;
   }
 
   private renderToggleButton(src: string, category: MessageCategory) {
@@ -773,9 +779,7 @@ export class EventsDisplay extends LitElement implements Layer {
     // Format the message for NAVAL_INVASION_INBOUND to display formatted troop count
     let description = event.message;
     if (event.messageType === MessageType.NAVAL_INVASION_INBOUND && unitView) {
-      const actualTroops = Math.round(Math.round(unitView.troops()) / 10);
-      const cleanTroopsValue = actualTroops * 10;
-      const formattedTroops = renderTroops(cleanTroopsValue);
+      const formattedTroops = this.renderTroopsWholeNumber(unitView.troops());
       description = event.message.replace(
         /Boat: \d+/,
         `Boat: ${formattedTroops}`,
