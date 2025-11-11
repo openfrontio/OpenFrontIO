@@ -515,7 +515,6 @@
   },
   "events_display": {
     "retreating": "отступает",
-    "retaliate": "Контратака",
     "boat": "Лодка",
     "alliance_request_status": "{name} {status} ваш запрос",
     "alliance_accepted": "принял",
