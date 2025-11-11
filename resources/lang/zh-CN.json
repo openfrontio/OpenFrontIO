@@ -515,7 +515,6 @@
   },
   "events_display": {
     "retreating": "正在撤退",
-    "retaliate": "反击",
     "boat": "船",
     "alliance_request_status": "{name} {status}你的联盟请求",
     "alliance_accepted": "已接受",
