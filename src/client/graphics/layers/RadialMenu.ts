@@ -1080,9 +1080,22 @@ export class RadialMenu implements Layer {
         .duration(0)
         .attr("r", this.config.centerButtonSize);
 
+      // Check if centerButtonElement provides a dynamic icon
+      let iconToUse = this.originalCenterButtonIcon;
+      if (
+        this.params &&
+        this.centerButtonElement &&
+        this.centerButtonElement.icon
+      ) {
+        const dynamicIcon = this.centerButtonElement.icon(this.params);
+        if (dynamicIcon !== null) {
+          iconToUse = dynamicIcon;
+        }
+      }
+
       const iconImg = this.menuElement.select(".center-button-icon");
       iconImg
-        .attr("xlink:href", this.originalCenterButtonIcon)
+        .attr("xlink:href", iconToUse)
         .attr("width", this.config.centerIconSize)
         .attr("height", this.config.centerIconSize)
         .attr("x", -this.config.centerIconSize / 2)
@@ -1093,13 +1106,27 @@ export class RadialMenu implements Layer {
 
     const enabled = this.isCenterButtonEnabled();
 
+    // Check if centerButtonElement provides a dynamic color
+    let buttonColor = "#2c3e50"; // Default color
+    if (
+      this.params &&
+      this.centerButtonElement &&
+      this.centerButtonElement.color &&
+      state === "default"
+    ) {
+      const dynamicColor = this.centerButtonElement.color(this.params);
+      if (dynamicColor !== null) {
+        buttonColor = dynamicColor;
+      }
+    }
+
     centerButton
       .select(".center-button-hitbox")
       .style("cursor", enabled ? "pointer" : "not-allowed");
 
     centerButton
       .select(".center-button-visible")
-      .attr("fill", enabled ? "#2c3e50" : "#999999");
+      .attr("fill", enabled ? buttonColor : "#999999");
 
     centerButton
       .select(".center-button-icon")
@@ -1146,6 +1173,10 @@ export class RadialMenu implements Layer {
 
   public setParams(params: MenuElementParams) {
     this.params = params;
+    // Update center button icon if menu is visible
+    if (this.isVisible && this.currentLevel === 0) {
+      this.updateCenterButtonState("default");
+    }
   }
 
   private findMenuItem(id: string): MenuElement | undefined {
