@@ -509,7 +509,6 @@
   },
   "events_display": {
     "retreating": "geri çekiliyor",
-    "retaliate": "Karşı Saldırı",
     "boat": "Tekne",
     "alliance_request_status": "{name} {status} ittifak isteğiniz",
     "alliance_accepted": "kabul edildi",
