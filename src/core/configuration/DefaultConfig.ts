@@ -543,7 +543,8 @@ export class DefaultConfig implements Config {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
           experimental: true,
-          upgradable: true,
+          // TODO change upgradeable to true once upgrade implementation is added
+          upgradable: false,
         };
       case UnitType.Construction:
         return {
