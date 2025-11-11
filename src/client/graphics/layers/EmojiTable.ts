@@ -73,11 +73,11 @@ export class EmojiTable extends LitElement {
 
     return html`
       <div
-        class="fixed inset-0 bg-black/15 backdrop-brightness-110 flex items-center justify-center z-[9998]"
+        class="fixed inset-0 bg-black/15 backdrop-brightness-110 flex items-center justify-center z-[10002]"
         @click=${this.handleBackdropClick}
       >
         <div
-          class="bg-zinc-900/95 p-[6px] flex items-center justify-center rounded-[10px] z-[9999] relative shadow-2xl shadow-black/50 ring-1 ring-white/5"
+          class="bg-zinc-900/95 p-[6px] flex items-center justify-center rounded-[10px] z-[10003] relative shadow-2xl shadow-black/50 ring-1 ring-white/5"
           style="
             width: min(410px, calc(100vw - 60px), calc((100vh - 40px) * 215 / 449));
             aspect-ratio: 215 / 449;
@@ -90,7 +90,7 @@ export class EmojiTable extends LitElement {
           <!-- Close button -->
           <button
             class="absolute -top-3 -right-3 w-7 h-7 flex items-center justify-center
-                    bg-zinc-700 hover:bg-red-500 text-white rounded-full shadow transition-colors z-[10000]"
+                    bg-zinc-700 hover:bg-red-500 text-white rounded-full shadow transition-colors z-[10004]"
             @click=${this.hideTable}
           >
             ✕
