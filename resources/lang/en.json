@@ -678,7 +678,7 @@
     "title": "Skins",
     "colors": "Colors",
     "purchase": "Purchase",
-    "show_only_owned": "Show Only Owned",
+    "show_only_owned": "My Skins",
     "blocked": {
       "login": "You must be logged in to access this skin.",
       "purchase": "Purchase this skin to unlock it."
