@@ -460,7 +460,6 @@
   },
   "events_display": {
     "retreating": "trekken zich terug",
-    "retaliate": "Vergelden",
     "boat": "Boot",
     "alliance_request_status": "{name} heeft je alliantieverzoek {status}",
     "alliance_accepted": "geaccepteerd",
