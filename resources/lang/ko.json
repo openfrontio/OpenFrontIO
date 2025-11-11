@@ -457,7 +457,6 @@
   },
   "events_display": {
     "retreating": "후퇴 중",
-    "retaliate": "보복",
     "boat": "배",
     "alliance_request_status": "{name}이(가) 당신의 동맹 요청을 {status}했습니다",
     "alliance_accepted": "수락",
