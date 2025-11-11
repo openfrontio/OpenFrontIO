@@ -148,8 +148,6 @@ export function bestShoreDeploymentSource(
   if (t === null) return false;
 
   const candidates = candidateShoreTiles(gm, player, t);
-  if (candidates.length === 0) return false;
-
   const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 1);
   const result = aStar.compute();
   if (result !== PathFindResultType.Completed) {
