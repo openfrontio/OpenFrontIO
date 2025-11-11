@@ -3,7 +3,6 @@ import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
-import { PlayerType } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
@@ -182,7 +181,7 @@ export class Leaderboard extends LitElement implements Layer {
       >
         <div
           class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
-          style="grid-template-columns: 30px 100px 50px 70px 55px 75px;"
+          style="grid-template-columns: 30px 100px 70px 55px 75px;"
         >
           <div class="contents font-bold bg-gray-700/50">
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
@@ -190,9 +189,6 @@ export class Leaderboard extends LitElement implements Layer {
             </div>
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
               ${translateText("leaderboard.player")}
-            </div>
-            <div class="py-1 md:py-2 text-center border-b border-slate-500">
-              ${translateText("leaderboard.type")}
             </div>
             <div
               class="py-1 md:py-2 text-center border-b border-slate-500 cursor-pointer whitespace-nowrap"
@@ -240,14 +236,6 @@ export class Leaderboard extends LitElement implements Layer {
                   ? "bg-red-500/20"
                   : "bg-green-500/20";
 
-              const playerType = player.player.data.playerType;
-              const typeIcon =
-                playerType === PlayerType.Bot
-                  ? "🤖"
-                  : playerType === PlayerType.FakeHuman
-                    ? "🏛️"
-                    : "👤";
-
               return html`
                 <div
                   class="contents hover:bg-slate-600/60 ${player.isOnSameTeam
@@ -264,16 +252,6 @@ export class Leaderboard extends LitElement implements Layer {
                     class="py-1 md:py-2 text-center truncate border-b border-slate-500 ${bgClass}"
                   >
                     ${player.name}
-                  </div>
-                  <div
-                    class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
-                    title=${playerType === PlayerType.Bot
-                      ? translateText("player_type.bot")
-                      : playerType === PlayerType.FakeHuman
-                        ? translateText("player_type.nation")
-                        : translateText("player_type.player")}
-                  >
-                    ${typeIcon}
                   </div>
                   <div
                     class="py-1 md:py-2 text-center border-b border-slate-500 ${bgClass}"
