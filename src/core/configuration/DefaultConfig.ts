@@ -173,9 +173,8 @@ export abstract class DefaultServerConfig implements ServerConfig {
   turnIntervalMs(): number {
     return 100;
   }
-
   gameCreationRate(): number {
-    return 30 * 1000;
+    return 60 * 1000;
   }
 
   lobbyMaxPlayers(
@@ -337,6 +336,9 @@ export class DefaultConfig implements Config {
   }
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
+  }
+  isRandomSpawn(): boolean {
+    return this._gameConfig.randomSpawn;
   }
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
@@ -690,7 +692,7 @@ export class DefaultConfig implements Config {
 
     if (attacker.isPlayer() && defender.isPlayer()) {
       if (defender.isDisconnected() && attacker.isOnSameTeam(defender)) {
-        // No troop loss if defender is disconnected and on same team
+        // No troop loss if defender is disconnected.
         mag = 0;
       }
       if (
@@ -918,6 +920,15 @@ export class DefaultConfig implements Config {
 
   defaultSamRange(): number {
     return 70;
+  }
+
+  samRange(level: number): number {
+    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
+    return this.maxSamRange() - 480 / (level + 5);
+  }
+
+  maxSamRange(): number {
+    return 150;
   }
 
   defaultSamMissileSpeed(): number {
