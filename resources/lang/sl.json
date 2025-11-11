@@ -515,7 +515,6 @@
   },
   "events_display": {
     "retreating": "umikanje",
-    "retaliate": "Maščevanje",
     "boat": "Čoln",
     "alliance_request_status": "{name} {status} vašo zahtevo za zavezništvo",
     "alliance_accepted": "sprejema",
