@@ -515,7 +515,6 @@
   },
   "events_display": {
     "retreating": "撤退中",
-    "retaliate": "報復",
     "boat": "ボート",
     "alliance_request_status": "{name}が同盟のリクエストを{status}しました",
     "alliance_accepted": "承認",
