@@ -37,7 +37,7 @@ describe("InputHandler AutoUpgrade", () => {
     eventBus = new EventBus();
 
     inputHandler = new InputHandler(
-      { attackRatio: 20, ghostStructure: null },
+      { attackRatio: 20, ghostStructure: null, rocketDirectionUp: true },
       mockCanvas,
       eventBus,
     );

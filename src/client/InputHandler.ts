@@ -89,6 +89,8 @@ export class GhostStructureChangedEvent implements GameEvent {
   constructor(public readonly ghostStructure: UnitType | null) {}
 }
 
+export class SwapRocketDirectionEvent implements GameEvent {}
+
 export class ShowBuildMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
@@ -200,6 +202,7 @@ export class InputHandler {
       attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
+      swapDirection: "KeyU",
       modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
       buildCity: "Digit1",
@@ -415,6 +418,12 @@ export class InputHandler {
       if (e.code === this.keybinds.buildMIRV) {
         e.preventDefault();
         this.setGhostStructure(UnitType.MIRV);
+      }
+
+      // Tab to swap rocket direction
+      if (e.code === this.keybinds.swapDirection) {
+        e.preventDefault();
+        this.eventBus.emit(new SwapRocketDirectionEvent());
       }
 
       // Shift-D to toggle performance overlay

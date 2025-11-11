@@ -302,6 +302,7 @@ export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
   tile: z.number(),
+  rocketDirectionUp: z.boolean().optional(),
 });
 
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
