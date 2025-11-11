@@ -509,7 +509,6 @@
   },
   "events_display": {
     "retreating": "wycofuje się",
-    "retaliate": "Odpowiedź",
     "boat": "Łódź",
     "alliance_request_status": "{name} {status} twoją prośbę sojuszu",
     "alliance_accepted": "zaakceptował",
