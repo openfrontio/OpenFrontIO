@@ -427,7 +427,8 @@ export class NameLayer implements Layer {
     let existingTraitor = iconsDiv.querySelector('[data-icon="traitor"]');
     if (render.player.isTraitor()) {
       const remainingTicks = render.player.getTraitorRemainingTicks();
-      const remainingSeconds = Math.ceil(remainingTicks / 10);
+      // Use precise seconds (not rounded) for smoother transitions, rounded to 0.5s intervals
+      const remainingSeconds = Math.round((remainingTicks / 10) * 2) / 2;
 
       if (!existingTraitor) {
         existingTraitor = this.createIconElement(
@@ -438,16 +439,22 @@ export class NameLayer implements Layer {
         iconsDiv.appendChild(existingTraitor);
       }
 
-      // Apply flashing animation - staged speed increases at 15s, 10s, and 5s
+      // Apply flashing animation - smooth speed increase starting at 15s
       if (existingTraitor instanceof HTMLImageElement) {
         if (remainingSeconds <= 15) {
-          let animationDuration = "1s"; // Slow flash at 15 seconds
+          // Smooth transition: starts at 1s at 15 seconds, decreases to 0.2s at 0 seconds
+          // Using cubic ease-out for slower, more gradual acceleration
+          const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
+          const normalizedTime = clampedSeconds / 15; // 0 to 1 (1 = 15s remaining, 0 = 0s remaining)
 
-          if (remainingSeconds <= 5) {
-            animationDuration = "0.4s"; // Faster at 5 seconds
-          } else if (remainingSeconds <= 10) {
-            animationDuration = "0.7s"; // Slightly faster at 10 seconds
-          }
+          // Cubic ease-out: slower acceleration, smoother transition
+          const easedProgress = 1 - Math.pow(1 - normalizedTime, 3);
+
+          const maxDuration = 1.0; // Slow flash at 15 seconds
+          const minDuration = 0.2; // Fast flash at 0 seconds
+          const duration =
+            minDuration + (maxDuration - minDuration) * easedProgress;
+          const animationDuration = `${duration.toFixed(2)}s`;
 
           existingTraitor.style.animation = `traitorFlash ${animationDuration} infinite`;
           existingTraitor.style.animationTimingFunction = "ease-in-out";
