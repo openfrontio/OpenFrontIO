@@ -1,5 +1,6 @@
 import {
   Cell,
+  Difficulty,
   Execution,
   Game,
   Gold,
@@ -45,6 +46,11 @@ export class FakeHumanExecution implements Execution {
   private readonly lastNukeSent: [Tick, TileRef][] = [];
   private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
+
+  // Track our transport ships we currently own
+  private trackedTransportShips: Set<Unit> = new Set();
+  // Track our trade ships we currently own
+  private trackedTradeShips: Set<Unit> = new Set();
 
   /** MIRV Strategy Constants */
 
@@ -133,6 +139,16 @@ export class FakeHumanExecution implements Execution {
   }
 
   tick(ticks: number) {
+    // Ship tracking
+    if (
+      this.player !== null &&
+      this.player.isAlive() &&
+      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
+    ) {
+      this.trackTransportShipsAndRetaliate();
+      this.trackTradeShipsAndRetaliate();
+    }
+
     if (ticks % this.attackRate !== this.attackTick) {
       return;
     }
@@ -898,6 +914,70 @@ export class FakeHumanExecution implements Execution {
       this.lastMIRVSent[0][0] + maxAge <= tick
     ) {
       this.lastMIRVSent.shift();
+    }
+  }
+
+  // Send out a warship if our transport ship got captured
+  private trackTransportShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    // Add any currently owned transport ships to our tracking set
+    this.player
+      .units(UnitType.TransportShip)
+      .forEach((u) => this.trackedTransportShips.add(u));
+
+    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
+    for (const ship of Array.from(this.trackedTransportShips)) {
+      if (!ship.isActive()) {
+        // Distinguish between arrival/retreat and enemy destruction
+        if (ship.wasDestroyedByEnemy()) {
+          this.maybeRetaliateWithWarship(ship.tile());
+        }
+        this.trackedTransportShips.delete(ship);
+      }
+    }
+  }
+
+  // Send out a warship if our trade ship got captured
+  private trackTradeShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    // Add any currently owned trade ships to our tracking map
+    this.player
+      .units(UnitType.TradeShip)
+      .forEach((u) => this.trackedTradeShips.add(u));
+
+    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
+    for (const ship of Array.from(this.trackedTradeShips)) {
+      if (!ship.isActive()) {
+        this.trackedTradeShips.delete(ship);
+        continue;
+      }
+      if (ship.owner().id() !== this.player.id()) {
+        // Ship was ours and is now owned by someone else -> captured
+        this.maybeRetaliateWithWarship(ship.tile());
+        this.trackedTradeShips.delete(ship);
+      }
+    }
+  }
+
+  private maybeRetaliateWithWarship(tile: TileRef): void {
+    if (this.player === null) return;
+
+    const { difficulty } = this.mg.config().gameConfig();
+    // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
+    if (
+      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
+      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
+      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
+    ) {
+      const canBuild = this.player.canBuild(UnitType.Warship, tile);
+      if (canBuild === false) {
+        return;
+      }
+      this.mg.addExecution(
+        new ConstructionExecution(this.player, UnitType.Warship, tile),
+      );
     }
   }
 
