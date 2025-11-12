@@ -90,25 +90,10 @@ export class FxLayer implements Layer {
     }
   }
 
-  private calculateAlertIntensity(unit: UnitView): number | undefined {
-    const trajectoryIndex = unit.trajectoryIndex();
-    const trajectoryLength = unit.trajectoryLength();
-    if (
-      trajectoryIndex !== undefined &&
-      trajectoryLength !== undefined &&
-      trajectoryLength > 0
-    ) {
-      // Calculate alert intensity: 0 = start of trajectory, 1 = end of trajectory
-      // Scale based on progress through trajectory
-      return Math.max(0, Math.min(1, trajectoryIndex / trajectoryLength));
-    }
-    return undefined;
-  }
-
   private updateNukeTargetFxRemainingTime() {
-    // Update alert intensity for inbound bombs and check if inbound status changed
+    // Update timer and trajectory data, and check if inbound status changed
     // (e.g., if player recaptures territory while bomb is in flight)
-    // Also update timer information
+    // Alert intensity is computed internally by NukeAreaFx based on trajectory data
     for (const [unitId, fx] of Array.from(
       this.nukeTargetFxByUnitId.entries(),
     )) {
@@ -150,15 +135,12 @@ export class FxLayer implements Layer {
 
       // Only show timer for bombs that are either outbound or inbound
       if (isOutbound || isInbound) {
-        fx.updateTimer(remainingSeconds, isOutbound);
-      }
-
-      // Update alert intensity for inbound bombs
-      if (isInbound) {
-        const alertIntensity = this.calculateAlertIntensity(unit);
-        if (alertIntensity !== undefined) {
-          fx.updateAlertIntensity(alertIntensity);
-        }
+        fx.updateTimer(
+          remainingSeconds,
+          isOutbound,
+          trajectoryIndex,
+          trajectoryLength,
+        );
       }
     }
   }
@@ -192,11 +174,6 @@ export class FxLayer implements Layer {
         const x = this.game.x(targetTile);
         const y = this.game.y(targetTile);
 
-        // Calculate alert intensity for inbound bombs
-        const alertIntensity = isInbound
-          ? (this.calculateAlertIntensity(unit) ?? 0)
-          : 0;
-
         // Calculate remaining time
         const trajectoryIndex = unit.trajectoryIndex();
         const trajectoryLength = unit.trajectoryLength();
@@ -215,9 +192,10 @@ export class FxLayer implements Layer {
           y,
           this.game.config().nukeMagnitudes(unit.type()),
           isInbound,
-          alertIntensity,
           isOutbound,
           remainingSeconds,
+          trajectoryIndex,
+          trajectoryLength,
         );
         this.allFx.push(fx);
         this.nukeTargetFxByUnitId.set(unit.id(), fx);

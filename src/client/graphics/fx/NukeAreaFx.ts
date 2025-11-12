@@ -16,32 +16,47 @@ export class NukeAreaFx implements Fx {
   private readonly baseAlpha = 0.9;
 
   // Alert mode for inbound bombs - flashing increases as impact approaches
-  private alertIntensity: number = 0; // 0 = no alert, 1 = maximum alert (fastest flash)
   private isInbound: boolean = false;
   private isOutbound: boolean = false;
   private remainingSeconds: number | null = null;
+  private trajectoryIndex: number | undefined = undefined;
+  private trajectoryLength: number | undefined = undefined;
 
   constructor(
     private x: number,
     private y: number,
     magnitude: NukeMagnitude,
     isInbound: boolean = false,
-    alertIntensity: number = 0,
     isOutbound: boolean = false,
     remainingSeconds: number | null = null,
+    trajectoryIndex?: number,
+    trajectoryLength?: number,
   ) {
     this.innerDiameter = magnitude.inner;
     this.outerDiameter = magnitude.outer;
     const numDash = Math.max(1, Math.floor(this.outerDiameter / 3));
     this.dashSize = (Math.PI / numDash) * this.outerDiameter;
     this.isInbound = isInbound;
-    this.alertIntensity = alertIntensity;
     this.isOutbound = isOutbound;
     this.remainingSeconds = remainingSeconds;
+    this.trajectoryIndex = trajectoryIndex;
+    this.trajectoryLength = trajectoryLength;
   }
 
-  updateAlertIntensity(intensity: number) {
-    this.alertIntensity = Math.max(0, Math.min(1, intensity));
+  private calculateAlertIntensity(): number {
+    if (
+      this.trajectoryIndex !== undefined &&
+      this.trajectoryLength !== undefined &&
+      this.trajectoryLength > 0
+    ) {
+      // Calculate alert intensity: 0 = start of trajectory, 1 = end of trajectory
+      // Scale based on progress through trajectory
+      return Math.max(
+        0,
+        Math.min(1, this.trajectoryIndex / this.trajectoryLength),
+      );
+    }
+    return 0;
   }
 
   setInbound(isInbound: boolean) {
@@ -52,9 +67,16 @@ export class NukeAreaFx implements Fx {
     return this.isInbound;
   }
 
-  updateTimer(remainingSeconds: number | null, isOutbound: boolean) {
+  updateTimer(
+    remainingSeconds: number | null,
+    isOutbound: boolean,
+    trajectoryIndex?: number,
+    trajectoryLength?: number,
+  ) {
     this.remainingSeconds = remainingSeconds;
     this.isOutbound = isOutbound;
+    this.trajectoryIndex = trajectoryIndex;
+    this.trajectoryLength = trajectoryLength;
   }
 
   end() {
@@ -76,18 +98,20 @@ export class NukeAreaFx implements Fx {
 
     // Add flashing effect for alerting inbound bombs
     // Flash speed increases as alertIntensity increases (0 = slow, 1 = fast)
-    if (this.isInbound && this.alertIntensity > 0 && !this.ended) {
-      // Flash faster as intensity increases: 0.5s per flash at intensity 0, 0.2s per flash at intensity 1
-      const maxFlashPeriod = 500; // ms at intensity 0
-      const minFlashPeriod = 200; // ms at intensity 1
-      const flashPeriod =
-        maxFlashPeriod -
-        (maxFlashPeriod - minFlashPeriod) * this.alertIntensity;
-      const flashPhase = (this.lifeTime % flashPeriod) / flashPeriod;
-      // Flash between 0.6 (60%) and 1.0 (100%) alpha in sinusoidal pattern
-      const flashAlpha =
-        0.6 + 0.4 * (0.5 + 0.5 * Math.sin(flashPhase * Math.PI * 2));
-      alpha = flashAlpha;
+    if (this.isInbound && !this.ended) {
+      const alertIntensity = this.calculateAlertIntensity();
+      if (alertIntensity > 0) {
+        // Flash faster as intensity increases: 0.5s per flash at intensity 0, 0.2s per flash at intensity 1
+        const maxFlashPeriod = 500; // ms at intensity 0
+        const minFlashPeriod = 200; // ms at intensity 1
+        const flashPeriod =
+          maxFlashPeriod - (maxFlashPeriod - minFlashPeriod) * alertIntensity;
+        const flashPhase = (this.lifeTime % flashPeriod) / flashPeriod;
+        // Flash between 0.6 (60%) and 1.0 (100%) alpha in sinusoidal pattern
+        const flashAlpha =
+          0.6 + 0.4 * (0.5 + 0.5 * Math.sin(flashPhase * Math.PI * 2));
+        alpha = flashAlpha;
+      }
     }
 
     ctx.save();
