@@ -24,7 +24,6 @@ export class WinModal extends LitElement implements Layer {
   public soundManager: SoundManager;
 
   private hasShownDeathModal = false;
-  private hasPlayedSound = false;
 
   @state()
   isVisible = false;
@@ -258,13 +257,12 @@ export class WinModal extends LitElement implements Layer {
     this.requestUpdate();
 
     // Play appropriate sound effect
-    if (!this.hasPlayedSound && this.soundManager) {
+    if (this.soundManager) {
       if (this.isWin) {
         this.soundManager.playSoundEffect(SoundEffect.GameWin);
       } else {
         this.soundManager.playSoundEffect(SoundEffect.GameOver);
       }
-      this.hasPlayedSound = true;
     }
 
     setTimeout(() => {
@@ -298,7 +296,6 @@ export class WinModal extends LitElement implements Layer {
       this.hasShownDeathModal = true;
       this._title = translateText("win_modal.died");
       this.isWin = false; // Player died, so it's a loss
-      this.hasPlayedSound = false; // Reset to play sound
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
@@ -317,7 +314,6 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
-        this.hasPlayedSound = false; // Reset to play sound
         this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
@@ -340,7 +336,6 @@ export class WinModal extends LitElement implements Layer {
           });
           this.isWin = false;
         }
-        this.hasPlayedSound = false; // Reset to play sound
         this.show();
       }
     });
