@@ -21,6 +21,7 @@ import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
+import traitorConfirmIcon from "../../../../resources/images/TraitorIconConfirmWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
@@ -198,8 +199,7 @@ export const RadialMenuState = {
 
 const allyBreakElement: MenuElement = {
   id: "ally_break",
-  name:
-    RadialMenuState.breakAlliancePendingId === null ? "break" : "confirm_break",
+  name: "break",
   disabled: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canBreakAlliance,
   displayed: (params: MenuElementParams) =>
@@ -216,7 +216,7 @@ const allyBreakElement: MenuElement = {
       params.closeMenu();
     } else {
       RadialMenuState.breakAlliancePendingId = params.selected?.id() ?? null;
-      // Do NOT close menu here; menu stays open for confirmation
+      // menu stays open for confirmation; menu will be re-rendered by RadialMenu
     }
   },
 };
@@ -594,7 +594,7 @@ export const rootMenuElement: MenuElement = {
           ...allyBreakElement,
           name: "confirm_break",
           color: "#800080",
-          icon: traitorIcon,
+          icon: traitorConfirmIcon,
           text: undefined,
         };
       } else {
