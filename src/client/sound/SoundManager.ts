@@ -168,16 +168,17 @@ class SoundManager {
         return;
       }
       const scaledVolume = this.soundEffectsVolume * (volume ?? 1);
-      const originalVolume = sound.volume();
       sound.volume(this.clampVolume(scaledVolume));
       sound.play();
 
-      // Create a cleanup handler that restores volume and removes itself
+      // Create a cleanup handler that restores volume to current master volume
       let restored = false;
       const cleanup = () => {
         if (!restored) {
           restored = true;
-          sound.volume(originalVolume);
+          // Restore to current master volume, not the original volume
+          // This ensures sounds respect volume changes that occur while playing
+          sound.volume(this.soundEffectsVolume);
           sound.off("end", cleanup);
           sound.off("stop", cleanup);
         }
@@ -187,6 +188,10 @@ class SoundManager {
       sound.once("end", cleanup);
       sound.once("stop", cleanup);
     } else {
+      // Skip early if master volume is muted
+      if (this.soundEffectsVolume === 0) {
+        return;
+      }
       sound.play();
     }
   }
@@ -234,16 +239,17 @@ class SoundManager {
         return;
       }
       const scaledVolume = this.soundEffectsVolume * volume;
-      const originalVolume = soundInstance.volume();
       soundInstance.volume(this.clampVolume(scaledVolume));
       soundInstance.play();
 
-      // Create a cleanup handler that restores volume and removes itself
+      // Create a cleanup handler that restores volume to current master volume
       let restored = false;
       const cleanup = () => {
         if (!restored) {
           restored = true;
-          soundInstance.volume(originalVolume);
+          // Restore to current master volume, not the original volume
+          // This ensures sounds respect volume changes that occur while playing
+          soundInstance.volume(this.soundEffectsVolume);
           soundInstance.off("end", cleanup);
           soundInstance.off("stop", cleanup);
         }
@@ -253,6 +259,10 @@ class SoundManager {
       soundInstance.once("end", cleanup);
       soundInstance.once("stop", cleanup);
     } else {
+      // Skip early if master volume is muted
+      if (this.soundEffectsVolume === 0) {
+        return;
+      }
       soundInstance.play();
     }
 
@@ -289,6 +299,10 @@ class SoundManager {
     if (this.disabledSounds.has(name)) {
       return;
     }
+    // Skip early if master volume is muted
+    if (this.soundEffectsVolume === 0) {
+      return;
+    }
     const sound = this.soundEffects.get(name);
     if (!sound) return;
 
@@ -306,6 +320,12 @@ class SoundManager {
     const onEnd = () => {
       playCount++;
       if (playCount < times) {
+        // Check master volume before each play
+        if (this.soundEffectsVolume === 0) {
+          sound.off("end", onEnd);
+          this.alarmEndHandlers.delete(name);
+          return;
+        }
         sound.play();
       } else {
         sound.off("end", onEnd);
