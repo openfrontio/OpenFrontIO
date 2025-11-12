@@ -69,7 +69,6 @@ interface GameEvent {
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
-  eventId?: number; // Internal ID for tracking
 }
 
 @customElement("events-display")
@@ -80,7 +79,6 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private active: boolean = false;
   private events: GameEvent[] = [];
-  private nextEventId: number = 0;
 
   // allianceID -> last checked at tick
   private alliancesCheckedAt = new Map<number, Tick>();
@@ -323,8 +321,6 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   private addEvent(event: GameEvent) {
-    // Assign unique ID if not already set
-    event.eventId ??= this.nextEventId++;
     this.events = [...this.events, event];
     if (this._hidden === true) {
       this.newEvents++;
