@@ -118,6 +118,21 @@ export class NameLayer implements Layer {
     this.container.style.zIndex = "2";
     document.body.appendChild(this.container);
 
+    // Add CSS keyframes for traitor icon flashing animation
+    // Append to container instead of document.head to keep styles scoped to this component
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes traitorFlash {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+    `;
+    this.container.appendChild(style);
+
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternateViewChange(e));
   }
 
@@ -410,16 +425,44 @@ export class NameLayer implements Layer {
     }
 
     // Traitor icon
-    const existingTraitor = iconsDiv.querySelector('[data-icon="traitor"]');
+    let existingTraitor = iconsDiv.querySelector('[data-icon="traitor"]');
     if (render.player.isTraitor()) {
+      const remainingTicks = render.player.getTraitorRemainingTicks();
+      // Use precise seconds (not rounded) for smoother transitions, rounded to 0.5s intervals
+      const remainingSeconds = Math.round((remainingTicks / 10) * 2) / 2;
+
       if (!existingTraitor) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            this.traitorIconImage.src,
-            iconSize,
-            "traitor",
-          ),
+        existingTraitor = this.createIconElement(
+          this.traitorIconImage.src,
+          iconSize,
+          "traitor",
         );
+        iconsDiv.appendChild(existingTraitor);
+      }
+
+      // Apply flashing animation - smooth speed increase starting at 15s
+      if (existingTraitor instanceof HTMLImageElement) {
+        if (remainingSeconds <= 15) {
+          // Smooth transition: starts at 1s at 15 seconds, decreases to 0.2s at 0 seconds
+          // Using cubic ease-out for slower, more gradual acceleration
+          const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
+          const normalizedTime = clampedSeconds / 15; // 0 to 1 (1 = 15s remaining, 0 = 0s remaining)
+
+          // Cubic ease-out: slower acceleration, smoother transition
+          const easedProgress = 1 - Math.pow(1 - normalizedTime, 3);
+
+          const maxDuration = 1.0; // Slow flash at 15 seconds
+          const minDuration = 0.2; // Fast flash at 0 seconds
+          const duration =
+            minDuration + (maxDuration - minDuration) * easedProgress;
+          const animationDuration = `${duration.toFixed(2)}s`;
+
+          existingTraitor.style.animation = `traitorFlash ${animationDuration} infinite`;
+          existingTraitor.style.animationTimingFunction = "ease-in-out";
+        } else {
+          // Don't flash if more than 15 seconds remaining
+          existingTraitor.style.animation = "none";
+        }
       }
     } else if (existingTraitor) {
       existingTraitor.remove();

@@ -929,6 +929,30 @@ export class EventsDisplay extends LitElement implements Layer {
     `;
   }
 
+  private renderBetrayalDebuffTimer() {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || !myPlayer.isTraitor()) {
+      return html``;
+    }
+
+    const remainingTicks = myPlayer.getTraitorRemainingTicks();
+    const remainingSeconds = Math.ceil(remainingTicks / 10);
+
+    if (remainingSeconds <= 0) {
+      return html``;
+    }
+
+    return html`
+      ${this.renderButton({
+        content: html`${translateText("events_display.betrayal_debuff_ends", {
+          time: remainingSeconds,
+        })}`,
+        className: "text-left text-yellow-400",
+        translate: false,
+      })}
+    `;
+  }
+
   render() {
     if (!this.active || !this._isVisible) {
       return html``;
@@ -1133,6 +1157,24 @@ export class EventsDisplay extends LitElement implements Layer {
                           `
                         : ""}
 
+                      <!--- Betrayal debuff timer row -->
+                      ${(() => {
+                        const myPlayer = this.game.myPlayer();
+                        return (
+                          myPlayer &&
+                          myPlayer.isTraitor() &&
+                          myPlayer.getTraitorRemainingTicks() > 0
+                        );
+                      })()
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderBetrayalDebuffTimer()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
                       <!--- Outgoing attacks row -->
                       ${this.outgoingAttacks.length > 0
                         ? html`
@@ -1171,7 +1213,15 @@ export class EventsDisplay extends LitElement implements Layer {
                       this.incomingAttacks.length === 0 &&
                       this.outgoingAttacks.length === 0 &&
                       this.outgoingLandAttacks.length === 0 &&
-                      this.outgoingBoats.length === 0
+                      this.outgoingBoats.length === 0 &&
+                      !(() => {
+                        const myPlayer = this.game.myPlayer();
+                        return (
+                          myPlayer &&
+                          myPlayer.isTraitor() &&
+                          myPlayer.getTraitorRemainingTicks() > 0
+                        );
+                      })()
                         ? html`
                             <tr>
                               <td

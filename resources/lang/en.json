@@ -582,7 +582,8 @@
     "wants_to_renew_alliance": "{name} wants to renew your alliance",
     "alliance_extension_revoked": "{name} revoked their alliance renewal request",
     "ignore": "Ignore",
-    "unit_voluntarily_deleted": "Unit voluntarily deleted"
+    "unit_voluntarily_deleted": "Unit voluntarily deleted",
+    "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
