@@ -3,35 +3,6 @@ import { PlayerPattern } from "../Schemas";
 
 const PATTERN_KEY = "territoryPattern";
 
-// Cookie helper functions for sound settings
-function getCookie(name: string): string | null {
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
-    if (cookieName === name) {
-      return decodeURIComponent(cookieValue);
-    }
-  }
-  return null;
-}
-
-function setCookie(
-  name: string,
-  value: string,
-  maxAgeDays: number = 365,
-): void {
-  const maxAge = maxAgeDays * 24 * 60 * 60; // Convert days to seconds
-  const isSecure = window.location.protocol === "https:";
-  const secure = isSecure ? "; Secure" : "";
-  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAge}; SameSite=Strict${secure}`;
-}
-
-function deleteCookie(name: string): void {
-  const isSecure = window.location.protocol === "https:";
-  const secure = isSecure ? "; Secure" : "";
-  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Strict${secure}`;
-}
-
 export class UserSettings {
   get(key: string, defaultValue: boolean): boolean {
     const value = localStorage.getItem(key);
@@ -213,79 +184,51 @@ export class UserSettings {
   }
 
   backgroundMusicVolume(): number {
-    const cookieValue = getCookie("settings.backgroundMusicVolume");
-    if (!cookieValue) return 0.5;
-    const floatValue = parseFloat(cookieValue);
-    if (isNaN(floatValue)) {
-      // Clean up invalid cookie
-      deleteCookie("settings.backgroundMusicVolume");
-      return 0.5;
-    }
-    return Math.max(0, Math.min(1, floatValue));
+    const volume = this.getFloat("settings.backgroundMusicVolume", 0.5);
+    return Math.max(0, Math.min(1, volume));
   }
 
   setBackgroundMusicVolume(volume: number): void {
     // Ensure volume is a valid number between 0 and 1
     const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 0 : volume));
-    setCookie("settings.backgroundMusicVolume", validVolume.toString());
+    this.setFloat("settings.backgroundMusicVolume", validVolume);
   }
 
   soundEffectsVolume(): number {
-    const cookieValue = getCookie("settings.soundEffectsVolume");
-    if (!cookieValue) return 1;
-    const floatValue = parseFloat(cookieValue);
-    if (isNaN(floatValue)) {
-      // Clean up invalid cookie
-      deleteCookie("settings.soundEffectsVolume");
-      return 1;
-    }
-    return Math.max(0, Math.min(1, floatValue));
+    const volume = this.getFloat("settings.soundEffectsVolume", 1);
+    return Math.max(0, Math.min(1, volume));
   }
 
   setSoundEffectsVolume(volume: number): void {
     // Ensure volume is a valid number between 0 and 1
     const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 1 : volume));
-    setCookie("settings.soundEffectsVolume", validVolume.toString());
+    this.setFloat("settings.soundEffectsVolume", validVolume);
   }
 
   isSoundEffectEnabled(soundEffect: string): boolean {
-    const cookieValue = getCookie(`settings.soundEffect.${soundEffect}`);
-    if (!cookieValue) return true; // Default to enabled
-    return cookieValue === "true";
+    return this.get(`settings.soundEffect.${soundEffect}`, true);
   }
 
   setSoundEffectEnabled(soundEffect: string, enabled: boolean): void {
-    setCookie(
-      `settings.soundEffect.${soundEffect}`,
-      enabled ? "true" : "false",
-    );
+    this.set(`settings.soundEffect.${soundEffect}`, enabled);
   }
 
   isBackgroundMusicEnabled(): boolean {
-    const cookieValue = getCookie("settings.backgroundMusicEnabled");
-    if (!cookieValue) return true; // Default to enabled
-    return cookieValue === "true";
+    return this.get("settings.backgroundMusicEnabled", true);
   }
 
   setBackgroundMusicEnabled(enabled: boolean): void {
-    setCookie("settings.backgroundMusicEnabled", enabled ? "true" : "false");
+    this.set("settings.backgroundMusicEnabled", enabled);
   }
 
   mirvLaunchVolume(): number {
-    const cookieValue = getCookie("settings.mirvLaunchVolume");
-    if (!cookieValue) return 0.25; // Default to 25%
-    const floatValue = parseFloat(cookieValue);
-    if (isNaN(floatValue)) {
-      // Clean up invalid cookie
-      deleteCookie("settings.mirvLaunchVolume");
-      return 0.25;
-    }
-    return Math.max(0, Math.min(1, floatValue));
+    const volume = this.getFloat("settings.mirvLaunchVolume", 0.25);
+    return Math.max(0, Math.min(1, volume));
   }
 
   setMirvLaunchVolume(volume: number): void {
     // Ensure volume is a valid number between 0 and 1
     const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 0.25 : volume));
-    setCookie("settings.mirvLaunchVolume", validVolume.toString());
+    this.setFloat("settings.mirvLaunchVolume", validVolume);
   }
 }
