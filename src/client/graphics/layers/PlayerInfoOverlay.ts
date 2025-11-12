@@ -465,8 +465,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       return null;
     }
 
-    const owner = unit.owner();
-    const numPorts = owner.totalUnitLevels(UnitType.Port);
+    // Show gold from myPlayer's perspective - how much they would get
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) {
+      return null;
+    }
+
+    const numPorts = myPlayer.totalUnitLevels(UnitType.Port);
 
     return this.game.config().tradeShipGold(distanceTraveled, numPorts);
   }
