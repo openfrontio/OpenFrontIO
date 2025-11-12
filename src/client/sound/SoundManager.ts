@@ -71,6 +71,7 @@ class SoundManager {
   private alarmEndHandlers: Map<SoundEffect, () => void> = new Map();
   private disabledSounds: Set<SoundEffect> = new Set();
   private backgroundMusicEnabled: boolean = true;
+  private activeTimeouts: Map<SoundEffect, number> = new Map();
 
   constructor() {
     this.initializeBackgroundMusic();
@@ -191,6 +192,92 @@ class SoundManager {
   }
 
   /**
+   * Plays a sound effect with optional configuration.
+   * @param options - Configuration object with sound, loop, duration, and volume options
+   */
+  public play(options: {
+    sound: SoundEffect;
+    loop?: boolean;
+    duration?: number;
+    volume?: number;
+  }): void {
+    const { sound, loop, duration, volume } = options;
+
+    if (this.disabledSounds.has(sound)) {
+      return;
+    }
+
+    const soundInstance = this.soundEffects.get(sound);
+    if (!soundInstance) {
+      return;
+    }
+
+    // Stop any existing timeout for this sound
+    const existingTimeout = this.activeTimeouts.get(sound);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      this.activeTimeouts.delete(sound);
+    }
+
+    // Store original loop setting
+    const originalLoop = soundInstance.loop();
+
+    // Set loop if specified
+    if (loop !== undefined) {
+      soundInstance.loop(loop);
+    }
+
+    // Play the sound
+    if (volume !== undefined) {
+      // Skip early if master volume is muted
+      if (this.soundEffectsVolume === 0) {
+        return;
+      }
+      const scaledVolume = this.soundEffectsVolume * volume;
+      const originalVolume = soundInstance.volume();
+      soundInstance.volume(this.clampVolume(scaledVolume));
+      soundInstance.play();
+
+      // Create a cleanup handler that restores volume and removes itself
+      let restored = false;
+      const cleanup = () => {
+        if (!restored) {
+          restored = true;
+          soundInstance.volume(originalVolume);
+          soundInstance.off("end", cleanup);
+          soundInstance.off("stop", cleanup);
+        }
+      };
+
+      // Register cleanup handler for both "end" and "stop" events
+      soundInstance.once("end", cleanup);
+      soundInstance.once("stop", cleanup);
+    } else {
+      soundInstance.play();
+    }
+
+    // Set up duration timeout if specified
+    if (duration !== undefined && duration > 0) {
+      const timeoutId = window.setTimeout(() => {
+        this.stopSoundEffect(sound);
+        // Restore original loop setting
+        soundInstance.loop(originalLoop);
+        this.activeTimeouts.delete(sound);
+      }, duration);
+      this.activeTimeouts.set(sound, timeoutId);
+    } else if (loop !== undefined) {
+      // If loop was changed but no duration, restore it when sound ends
+      const restoreLoop = () => {
+        soundInstance.loop(originalLoop);
+        soundInstance.off("end", restoreLoop);
+        soundInstance.off("stop", restoreLoop);
+      };
+      soundInstance.once("end", restoreLoop);
+      soundInstance.once("stop", restoreLoop);
+    }
+  }
+
+  /**
    * Plays the menu click sound effect with a standard volume.
    * This is a convenience method for the common pattern of playing click sounds in menus.
    */
@@ -242,6 +329,12 @@ class SoundManager {
     const sound = this.soundEffects.get(name);
     if (sound) {
       sound.stop();
+    }
+    // Clear any active timeout for this sound
+    const timeout = this.activeTimeouts.get(name);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.activeTimeouts.delete(name);
     }
   }
 

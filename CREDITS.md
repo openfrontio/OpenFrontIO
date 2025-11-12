@@ -29,11 +29,11 @@ Icons from [The Noun Project](https://thenounproject.com/)
 
 ## Sounds / Music
 
-Game_over.wav by deleted_user_877451 -- https://freesound.org/s/76376/ -- License: Attribution 3.0 (game over sound)
-Victory sting 1 by Victor_Natas -- https://freesound.org/s/741118/ -- License: Attribution 4.0 (game win sound)
-Key.wav by LilMati -- https://freesound.org/s/459694/ -- License: Creative Commons 0 (capture building sound)
-building destuction -- https://uppbeat.io/sfx/building-destruction-smashed-bricks/9374/25200 -- License credit
-Alarm 2_8 by Joao_Janz -- https://freesound.org/s/478290/ -- License: Creative Commons 0 (alarm sound)
-Atom, Hydro, Mriv hit & luanch sounds where made by a openfront github member --- https://github.com/icslucas
-click sound where made by a openfront github member --- https://github.com/icslucas
-sam rocket effect --- https://pixabay.com/service/license-summary/ allowed to use
++Game over sound by deleted_user_877451 — [https://freesound.org/s/76376/](https://freesound.org/s/76376/) — License: Creative Commons Attribution 3.0
++Victory sting 1 by Victor_Natas — [https://freesound.org/s/741118/](https://freesound.org/s/741118/) — License: Creative Commons Attribution 4.0
++Capture building sound by LilMati — [https://freesound.org/s/459694/](https://freesound.org/s/459694/) — License: Creative Commons 0
++Building destruction sound — [https://uppbeat.io/sfx/building-destruction-smashed-bricks/9374/25200](https://uppbeat.io/sfx/building-destruction-smashed-bricks/9374/25200) — License: Uppbeat (check contributor account type)
++Alarm sound by Joao_Janz — [https://freesound.org/s/478290/](https://freesound.org/s/478290/) — License: Creative Commons 0
++Atom, Hydro, MIRV hit and launch sounds created by OpenFrontIO contributor — [https://github.com/icslucas](https://github.com/icslucas)
++Click sound created by OpenFrontIO contributor — [https://github.com/icslucas](https://github.com/icslucas)
++SAM rocket effect — [https://pixabay.com/service/license-summary/](https://pixabay.com/service/license-summary/) — License: Pixabay License

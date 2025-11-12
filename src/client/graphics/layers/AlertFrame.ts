@@ -25,7 +25,6 @@ export class AlertFrame extends LitElement implements Layer {
   private isActive = false;
 
   private animationTimeout: number | null = null;
-  private alarmTimeout: number | null = null;
   private seenAttackIds: Set<string> = new Set();
   private lastAlertTick: number = -1;
   // Map of player ID -> tick when we last attacked them
@@ -146,36 +145,19 @@ export class AlertFrame extends LitElement implements Layer {
     // Stop any currently playing alarm
     this.stopAlarmSound();
 
-    // Get the alarm sound and enable looping temporarily
-    const soundEffects = (this.soundManager as any).soundEffects;
-    const alarmSound = soundEffects?.get(SoundEffect.Alarm);
-    if (alarmSound) {
-      // Enable looping for continuous playback
-      alarmSound.loop(true);
-      this.soundManager.playSoundEffect(SoundEffect.Alarm);
-
-      // Stop after 3 seconds
-      this.alarmTimeout = window.setTimeout(() => {
-        this.stopAlarmSound();
-      }, 3000);
-    }
+    // Play alarm sound with looping for 3 seconds
+    this.soundManager.play({
+      sound: SoundEffect.Alarm,
+      loop: true,
+      duration: 3000,
+    });
   }
 
   private stopAlarmSound() {
-    if (this.alarmTimeout) {
-      clearTimeout(this.alarmTimeout);
-      this.alarmTimeout = null;
-    }
     if (!this.soundManager) {
       return;
     }
     this.soundManager.stopSoundEffect(SoundEffect.Alarm);
-    // Restore original loop setting
-    const soundEffects = (this.soundManager as any).soundEffects;
-    const alarmSound = soundEffects?.get(SoundEffect.Alarm);
-    if (alarmSound) {
-      alarmSound.loop(false);
-    }
   }
 
   private trackOutgoingAttacks() {
