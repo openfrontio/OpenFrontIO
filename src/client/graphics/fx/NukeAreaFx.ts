@@ -1,5 +1,4 @@
 import { NukeMagnitude } from "../../../core/configuration/Config";
-import { translateText } from "../../Utils";
 import { Fx } from "./Fx";
 
 export class NukeAreaFx implements Fx {
@@ -127,13 +126,7 @@ export class NukeAreaFx implements Fx {
       this.remainingSeconds >= 0 &&
       !this.ended
     ) {
-      const incomingText = this.isInbound
-        ? translateText("bomb_timer.incoming")
-        : "";
-      const impactText = translateText("bomb_timer.til_impact", {
-        seconds: this.remainingSeconds,
-      });
-      const text = incomingText ? `${incomingText} ${impactText}` : impactText;
+      const text = `${this.remainingSeconds}s`;
 
       // Set text style
       ctx.font = "bold 10px sans-serif";
