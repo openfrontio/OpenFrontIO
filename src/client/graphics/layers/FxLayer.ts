@@ -34,6 +34,8 @@ export class FxLayer implements Layer {
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
   private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
   private seenBuildingUnitIds: Set<number> = new Set();
+  // Track nuke units that have already had their launch sound played
+  private nukeLaunchSoundsPlayed: Set<number> = new Set();
   // Track recent nuke explosions: Map<tile, {owner, radius, tick}>
   private recentNukeExplosions: Map<
     number,
@@ -290,14 +292,17 @@ export class FxLayer implements Layer {
         this.buildingPreviousOwners.delete(unit.id());
 
         this.createNukeTargetFxIfOwned(unit);
-        // Play launch sound for attacker when nuke first appears
+        // Play launch sound for attacker when nuke first appears (only once)
         if (unit.isActive()) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            this.playSoundOnce(
-              `atom-launch-${unit.id()}`,
-              SoundEffect.AtomLaunch,
-            );
+            if (!this.nukeLaunchSoundsPlayed.has(unit.id())) {
+              this.nukeLaunchSoundsPlayed.add(unit.id());
+              this.playSoundOnce(
+                `atom-launch-${unit.id()}`,
+                SoundEffect.AtomLaunch,
+              );
+            }
           }
         }
         this.onNukeEvent(unit, 70);
@@ -307,15 +312,18 @@ export class FxLayer implements Layer {
         // Clean up any stale building-related entries if unit ID was reused
         this.buildingPreviousOwners.delete(unit.id());
 
-        // Play launch sound for attacker when MIRV first appears
+        // Play launch sound for attacker when MIRV first appears (only once)
         if (unit.isActive()) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            this.playSoundOnce(
-              `mirv-launch-${unit.id()}`,
-              SoundEffect.MIRVLaunch,
-              this.userSettings.mirvLaunchVolume(),
-            );
+            if (!this.nukeLaunchSoundsPlayed.has(unit.id())) {
+              this.nukeLaunchSoundsPlayed.add(unit.id());
+              this.playSoundOnce(
+                `mirv-launch-${unit.id()}`,
+                SoundEffect.MIRVLaunch,
+                this.userSettings.mirvLaunchVolume(),
+              );
+            }
           }
         }
         this.onNukeEvent(unit, 70);
@@ -326,14 +334,17 @@ export class FxLayer implements Layer {
         this.buildingPreviousOwners.delete(unit.id());
 
         this.createNukeTargetFxIfOwned(unit);
-        // Play launch sound for attacker when nuke first appears
+        // Play launch sound for attacker when nuke first appears (only once)
         if (unit.isActive()) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            this.playSoundOnce(
-              `hydrogen-launch-${unit.id()}`,
-              SoundEffect.HydrogenLaunch,
-            );
+            if (!this.nukeLaunchSoundsPlayed.has(unit.id())) {
+              this.nukeLaunchSoundsPlayed.add(unit.id());
+              this.playSoundOnce(
+                `hydrogen-launch-${unit.id()}`,
+                SoundEffect.HydrogenLaunch,
+              );
+            }
           }
         }
         this.onNukeEvent(unit, 160);
@@ -569,6 +580,9 @@ export class FxLayer implements Layer {
 
   onNukeEvent(unit: UnitView, radius: number) {
     if (!unit.isActive()) {
+      // Clean up launch sound tracking when nuke hits or is intercepted
+      this.nukeLaunchSoundsPlayed.delete(unit.id());
+
       const fx = this.nukeTargetFxByUnitId.get(unit.id());
       if (fx) {
         fx.end();

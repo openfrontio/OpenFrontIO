@@ -113,7 +113,7 @@ describe("SoundManager", () => {
       });
 
       it("should not play sound effect multiple times when disabled", () => {
-        soundManager.setSoundEffectEnabled(SoundEffect.Alarm, false);
+        soundManager.toggleSoundEffect(SoundEffect.Alarm, false);
         const soundEffects = (soundManager as any).soundEffects;
         const alarmSound = soundEffects.get(SoundEffect.Alarm);
         soundManager.repeatSound(SoundEffect.Alarm, 3);
@@ -507,7 +507,7 @@ describe("SoundManager", () => {
     });
 
     it("should allow independent enable/disable of sound effects and background music", () => {
-      soundManager.setSoundEffectEnabled(SoundEffect.KaChing, false);
+      soundManager.toggleSoundEffect(SoundEffect.KaChing, false);
       soundManager.setBackgroundMusicEnabled(true);
 
       expect(soundManager.isSoundEffectEnabled(SoundEffect.KaChing)).toBe(

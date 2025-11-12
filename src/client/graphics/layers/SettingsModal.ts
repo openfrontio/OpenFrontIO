@@ -15,7 +15,11 @@ import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import "../../components/SoundSettings";
-import { SoundConfig, SoundManager } from "../../sound/SoundManager";
+import {
+  SoundConfig,
+  SoundEffect,
+  SoundManager,
+} from "../../sound/SoundManager";
 import { Layer } from "./Layer";
 
 export class ShowSettingsModalEvent {
