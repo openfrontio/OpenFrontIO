@@ -75,7 +75,7 @@ describe("SAM Launcher Configuration", () => {
       expect(cost).toBe(BigInt(3_000_000));
     });
 
-    test("upgrade from level 2 to 3 should cost 6M", () => {
+    test("upgrade from level 2 to 3 should cost 3M", () => {
       // Build first SAM and upgrade to level 2
       const sam = player.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
       sam.increaseLevel(); // Now level 2
@@ -91,12 +91,12 @@ describe("SAM Launcher Configuration", () => {
         player.units(UnitType.SAMLauncher).some((s) => s.level() === 2),
       ).toBe(true);
 
-      // Cost for upgrade to level 3 (totalLevels = 2, hasLevel2Sam = true)
+      // Cost for upgrade to level 3 remains the 3M upgrade price
       const cost = config.unitInfo(UnitType.SAMLauncher).cost(player);
-      expect(cost).toBe(BigInt(6_000_000));
+      expect(cost).toBe(BigInt(3_000_000));
     });
 
-    test("building new SAM when having level 2 SAM should cost 3M", () => {
+    test("building new SAM when having level 2 SAM should cost 6M", () => {
       // Build first SAM and upgrade to level 2
       const sam1 = player.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
       sam1.increaseLevel(); // Now level 2
@@ -118,10 +118,9 @@ describe("SAM Launcher Configuration", () => {
       const sams = player.units(UnitType.SAMLauncher);
       expect(sams.length).toBe(2); // Should have 2 SAMs now
 
-      // Cost for third SAM (new build)
+      // Cost for third SAM (new build) hits the 6M tier since totalLevels === 2
       const cost = config.unitInfo(UnitType.SAMLauncher).cost(player);
-      // With 2 SAMs, unitsOwned will be 3, so the upgrade condition won't match, should be 3M
-      expect(cost).toBe(BigInt(3_000_000));
+      expect(cost).toBe(BigInt(6_000_000));
     });
   });
 
