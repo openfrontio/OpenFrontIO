@@ -230,6 +230,10 @@ export class Leaderboard extends LitElement implements Layer {
             (p) => p.player.id(),
             (player) => {
               const isDisconnected = player.player.isDisconnected();
+              // Background colors:
+              // - White for current user
+              // - Red for disconnected players
+              // - Green for connected players (note: cannot distinguish active/idle, only connected vs disconnected)
               const bgClass = player.isMyPlayer
                 ? "bg-white/20"
                 : isDisconnected
