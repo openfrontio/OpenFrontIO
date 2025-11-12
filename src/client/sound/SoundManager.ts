@@ -170,9 +170,21 @@ class SoundManager {
       const originalVolume = sound.volume();
       sound.volume(this.clampVolume(scaledVolume));
       sound.play();
-      sound.once("end", () => {
-        sound.volume(originalVolume);
-      });
+
+      // Create a cleanup handler that restores volume and removes itself
+      let restored = false;
+      const cleanup = () => {
+        if (!restored) {
+          restored = true;
+          sound.volume(originalVolume);
+          sound.off("end", cleanup);
+          sound.off("stop", cleanup);
+        }
+      };
+
+      // Register cleanup handler for both "end" and "stop" events
+      sound.once("end", cleanup);
+      sound.once("stop", cleanup);
     } else {
       sound.play();
     }
