@@ -34,7 +34,6 @@ export class FxLayer implements Layer {
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
   private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
   private seenBuildingUnitIds: Set<number> = new Set();
-  private destroyedBuildingUnitIds: Set<number> = new Set();
   // Track recent nuke explosions: Map<tile, {owner, radius, tick}>
   private recentNukeExplosions: Map<
     number,
@@ -45,12 +44,10 @@ export class FxLayer implements Layer {
     number,
     { conqueror: number; tick: number }
   > = new Map();
-  // Track tiles where steal building sound has been played to avoid duplicates
-  private stealBuildingSoundPlayed: Set<number> = new Set();
+  // Track sounds played this tick to prevent duplicates
+  private soundsPlayedThisTick: Set<string> = new Set();
   // Track previous owners of buildings to detect ownership changes
   private buildingPreviousOwners: Map<number, number> = new Map();
-  // Track nukes that have already had their launch sound played
-  private nukeLaunchSoundPlayed: Set<number> = new Set();
 
   constructor(
     private game: GameView,
@@ -65,6 +62,9 @@ export class FxLayer implements Layer {
   }
 
   tick() {
+    // Clear per-tick sound tracking
+    this.soundsPlayedThisTick.clear();
+
     this.manageBoatTargetFx();
     this.cleanupOldNukeExplosions();
 
@@ -155,10 +155,21 @@ export class FxLayer implements Layer {
     for (const [tile, conquest] of this.recentlyConqueredTiles.entries()) {
       if (currentTick - conquest.tick > 2) {
         this.recentlyConqueredTiles.delete(tile);
-        // Also clean up the steal building sound tracking
-        this.stealBuildingSoundPlayed.delete(tile);
       }
     }
+  }
+
+  // Helper to play sound only once per tick
+  private playSoundOnce(
+    soundKey: string,
+    effect: SoundEffect,
+    volume?: number,
+  ) {
+    if (this.soundsPlayedThisTick.has(soundKey)) {
+      return;
+    }
+    this.soundsPlayedThisTick.add(soundKey);
+    this.soundManager?.playSoundEffect(effect, volume);
   }
 
   private isBuildingNearNukeExplosion(
@@ -276,53 +287,54 @@ export class FxLayer implements Layer {
       }
       case UnitType.AtomBomb: {
         // Clean up any stale building-related entries if unit ID was reused
-        this.destroyedBuildingUnitIds.delete(unit.id());
         this.buildingPreviousOwners.delete(unit.id());
 
         this.createNukeTargetFxIfOwned(unit);
         // Play launch sound for attacker when nuke first appears
-        if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
+        if (unit.isActive()) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            this.soundManager?.playSoundEffect(SoundEffect.AtomLaunch);
+            this.playSoundOnce(
+              `atom-launch-${unit.id()}`,
+              SoundEffect.AtomLaunch,
+            );
           }
-          this.nukeLaunchSoundPlayed.add(unit.id());
         }
         this.onNukeEvent(unit, 70);
         break;
       }
       case UnitType.MIRVWarhead: {
         // Clean up any stale building-related entries if unit ID was reused
-        this.destroyedBuildingUnitIds.delete(unit.id());
         this.buildingPreviousOwners.delete(unit.id());
 
         // Play launch sound for attacker when MIRV first appears
-        if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
+        if (unit.isActive()) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            this.soundManager?.playSoundEffect(
+            this.playSoundOnce(
+              `mirv-launch-${unit.id()}`,
               SoundEffect.MIRVLaunch,
               this.userSettings.mirvLaunchVolume(),
             );
           }
-          this.nukeLaunchSoundPlayed.add(unit.id());
         }
         this.onNukeEvent(unit, 70);
         break;
       }
       case UnitType.HydrogenBomb: {
         // Clean up any stale building-related entries if unit ID was reused
-        this.destroyedBuildingUnitIds.delete(unit.id());
         this.buildingPreviousOwners.delete(unit.id());
 
         this.createNukeTargetFxIfOwned(unit);
         // Play launch sound for attacker when nuke first appears
-        if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
+        if (unit.isActive()) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            this.soundManager?.playSoundEffect(SoundEffect.HydrogenLaunch);
+            this.playSoundOnce(
+              `hydrogen-launch-${unit.id()}`,
+              SoundEffect.HydrogenLaunch,
+            );
           }
-          this.nukeLaunchSoundPlayed.add(unit.id());
         }
         this.onNukeEvent(unit, 160);
         break;
@@ -440,9 +452,6 @@ export class FxLayer implements Layer {
   }
 
   onStructureEvent(unit: UnitView) {
-    // Clean up any stale nuke-related entries if unit ID was reused
-    this.nukeLaunchSoundPlayed.delete(unit.id());
-
     const my = this.game.myPlayer();
     const unitTile = unit.tile();
     const currentOwnerSmallID = unit.owner().smallID();
@@ -461,7 +470,10 @@ export class FxLayer implements Layer {
     if (unit.isActive() && !this.seenBuildingUnitIds.has(unit.id())) {
       // Only play sound for buildings owned by the current player
       if (my && unit.owner() === my) {
-        this.soundManager?.playSoundEffect(SoundEffect.Building);
+        this.playSoundOnce(
+          `building-complete-${unit.id()}`,
+          SoundEffect.Building,
+        );
       }
       this.seenBuildingUnitIds.add(unit.id());
     }
@@ -481,13 +493,13 @@ export class FxLayer implements Layer {
         this.recentlyConqueredTiles.get(unitTile)?.conqueror === my.smallID();
 
       // Only play if tile was recently conquered (not just ownership change from other causes)
-      if (
-        recentlyConqueredByMe &&
-        !this.stealBuildingSoundPlayed.has(unitTile)
-      ) {
+      if (recentlyConqueredByMe) {
         // Play steal building sound at 50% volume for the attacker
-        this.soundManager?.playSoundEffect(SoundEffect.StealBuilding, 0.5);
-        this.stealBuildingSoundPlayed.add(unitTile);
+        this.playSoundOnce(
+          `steal-building-${unitTile}`,
+          SoundEffect.StealBuilding,
+          0.5,
+        );
       }
     }
 
@@ -496,66 +508,12 @@ export class FxLayer implements Layer {
       const unitTile = unit.lastTile();
 
       // Clean up building-related tracking maps when building is destroyed
-      this.destroyedBuildingUnitIds.delete(unit.id());
       this.buildingPreviousOwners.delete(unit.id());
-      this.stealBuildingSoundPlayed.delete(unitTile);
-
-      if (!my) {
-        // No player context, just show explosion
-        const x = this.game.x(unit.lastTile());
-        const y = this.game.y(unit.lastTile());
-        const explosion = new SpriteFx(
-          this.animatedSpriteLoader,
-          x,
-          y,
-          FxType.BuildingExplosion,
-        );
-        this.allFx.push(explosion);
-        this.seenBuildingUnitIds.delete(unit.id());
-        return;
-      }
-
-      const recentlyUpdatedTiles = this.game.recentlyUpdatedTiles();
-      const tileWasJustConquered = recentlyUpdatedTiles.includes(unitTile);
-      const tileOwner = this.game.owner(unitTile);
-      const mySmallID = my.smallID();
-
-      // Check if we should play the destroyed building sound
-      // Play for defender: unit was owned by current player
-      const isDefender = unit.owner() === my;
-
-      // Check if building was destroyed by a nuke owned by current player
-      const destroyedByMyNuke = this.isBuildingNearNukeExplosion(
-        unitTile,
-        mySmallID,
-      );
-
-      // Check if tile was recently conquered by current player (for defense post detection)
-      const recentlyConqueredByMe =
-        this.recentlyConqueredTiles.has(unitTile) &&
-        this.recentlyConqueredTiles.get(unitTile)?.conqueror === mySmallID;
-
-      // Play for attacker: building was destroyed during land attack (including defense posts)
-      // Check both recentlyUpdatedTiles and our tracked recentlyConqueredTiles
-      const isAttackerFromLandConquest =
-        !destroyedByMyNuke &&
-        (tileWasJustConquered || recentlyConqueredByMe) &&
-        tileOwner === my &&
-        unit.owner() !== my;
-
-      // Play sound if:
-      // - Defender: unit was owned by current player (always plays)
-      // - Attacker: building destroyed by nuke OR building destroyed during land conquest
-      if (
-        (isDefender || destroyedByMyNuke || isAttackerFromLandConquest) &&
-        !this.destroyedBuildingUnitIds.has(unit.id())
-      ) {
-        this.soundManager?.playSoundEffect(SoundEffect.BuildingDestroyed);
-        this.destroyedBuildingUnitIds.add(unit.id());
-      }
 
       const x = this.game.x(unit.lastTile());
       const y = this.game.y(unit.lastTile());
+
+      // Create explosion fx
       const explosion = new SpriteFx(
         this.animatedSpriteLoader,
         x,
@@ -563,6 +521,47 @@ export class FxLayer implements Layer {
         FxType.BuildingExplosion,
       );
       this.allFx.push(explosion);
+
+      // Play sound when creating the explosion fx
+      if (my) {
+        const recentlyUpdatedTiles = this.game.recentlyUpdatedTiles();
+        const tileWasJustConquered = recentlyUpdatedTiles.includes(unitTile);
+        const tileOwner = this.game.owner(unitTile);
+        const mySmallID = my.smallID();
+
+        // Check if we should play the destroyed building sound
+        // Play for defender: unit was owned by current player
+        const isDefender = unit.owner() === my;
+
+        // Check if building was destroyed by a nuke owned by current player
+        const destroyedByMyNuke = this.isBuildingNearNukeExplosion(
+          unitTile,
+          mySmallID,
+        );
+
+        // Check if tile was recently conquered by current player (for defense post detection)
+        const recentlyConqueredByMe =
+          this.recentlyConqueredTiles.has(unitTile) &&
+          this.recentlyConqueredTiles.get(unitTile)?.conqueror === mySmallID;
+
+        // Play for attacker: building was destroyed during land attack (including defense posts)
+        const isAttackerFromLandConquest =
+          !destroyedByMyNuke &&
+          (tileWasJustConquered || recentlyConqueredByMe) &&
+          tileOwner === my &&
+          unit.owner() !== my;
+
+        // Play sound if:
+        // - Defender: unit was owned by current player (always plays)
+        // - Attacker: building destroyed by nuke OR building destroyed during land conquest
+        if (isDefender || destroyedByMyNuke || isAttackerFromLandConquest) {
+          this.playSoundOnce(
+            `building-destroyed-${unit.id()}`,
+            SoundEffect.BuildingDestroyed,
+          );
+        }
+      }
+
       // Remove from seen set when building is destroyed
       this.seenBuildingUnitIds.delete(unit.id());
     }
@@ -570,9 +569,6 @@ export class FxLayer implements Layer {
 
   onNukeEvent(unit: UnitView, radius: number) {
     if (!unit.isActive()) {
-      // Clean up nuke-related tracking maps when nuke is removed/exploded
-      this.nukeLaunchSoundPlayed.delete(unit.id());
-
       const fx = this.nukeTargetFxByUnitId.get(unit.id());
       if (fx) {
         fx.end();
@@ -607,7 +603,17 @@ export class FxLayer implements Layer {
     });
     this.recentNukeExplosions.set(nukeTile, explosions);
 
-    // Play hit sound for both attacker and defender
+    // Create explosion fx
+    const nukeFx = nukeFxFactory(
+      this.animatedSpriteLoader,
+      x,
+      y,
+      radius,
+      this.game,
+    );
+    this.allFx = this.allFx.concat(nukeFx);
+
+    // Play hit sound when creating the explosion fx
     const my = this.game.myPlayer();
     if (my) {
       const isAttacker = nukeOwner === my;
@@ -617,35 +623,27 @@ export class FxLayer implements Layer {
         (targetOwner.isPlayer() && my.isOnSameTeam(targetOwner));
 
       // Play hit sound based on nuke type
-      if (unit.type() === UnitType.AtomBomb) {
-        if (isAttacker || isDefender) {
-          this.soundManager?.playSoundEffect(SoundEffect.AtomHit);
-        }
-      } else if (unit.type() === UnitType.HydrogenBomb) {
-        if (isAttacker || isDefender) {
-          this.soundManager?.playSoundEffect(SoundEffect.HydrogenHit);
-        }
-      } else if (unit.type() === UnitType.MIRVWarhead) {
-        // MIRV warheads use atom hit sound
-        if (isAttacker || isDefender) {
-          this.soundManager?.playSoundEffect(SoundEffect.AtomHit);
+      if (isAttacker || isDefender) {
+        if (unit.type() === UnitType.AtomBomb) {
+          this.playSoundOnce(`atom-hit-${nukeTile}`, SoundEffect.AtomHit);
+        } else if (unit.type() === UnitType.HydrogenBomb) {
+          this.playSoundOnce(
+            `hydrogen-hit-${nukeTile}`,
+            SoundEffect.HydrogenHit,
+          );
+        } else if (unit.type() === UnitType.MIRVWarhead) {
+          // MIRV warheads use atom hit sound
+          this.playSoundOnce(`mirv-hit-${nukeTile}`, SoundEffect.AtomHit);
         }
       }
     }
-
-    const nukeFx = nukeFxFactory(
-      this.animatedSpriteLoader,
-      x,
-      y,
-      radius,
-      this.game,
-    );
-    this.allFx = this.allFx.concat(nukeFx);
   }
 
   handleSAMInterception(unit: UnitView) {
     const x = this.game.x(unit.lastTile());
     const y = this.game.y(unit.lastTile());
+
+    // Create explosion fx
     const explosion = new SpriteFx(
       this.animatedSpriteLoader,
       x,
@@ -656,7 +654,7 @@ export class FxLayer implements Layer {
     const shockwave = new ShockwaveFx(x, y, 800, 40);
     this.allFx.push(shockwave);
 
-    // Play SAM hit sound for nuke owner when their nuke is intercepted
+    // Play SAM hit sound when creating the interception fx
     const my = this.game.myPlayer();
     if (my) {
       const nukeOwner = unit.owner();
@@ -667,7 +665,7 @@ export class FxLayer implements Layer {
         unit.type() === UnitType.HydrogenBomb ||
         unit.type() === UnitType.MIRVWarhead;
       if (isNukeOwner && isNuke) {
-        this.soundManager?.playSoundEffect(SoundEffect.SAMHit);
+        this.playSoundOnce(`sam-hit-${unit.id()}`, SoundEffect.SAMHit);
       }
     }
   }
