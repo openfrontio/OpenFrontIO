@@ -183,8 +183,11 @@ export class Transport {
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
 
-  private authPromise: Promise<void>;
-  private resolveAuthPromise: (value: void | PromiseLike<void>) => void;
+  private authPromise: Promise<void> = Promise.resolve();
+  private resolveAuthPromise:
+    | ((value: void | PromiseLike<void>) => void)
+    | null = null;
+  private rejectAuthPromise: ((reason?: any) => void) | null = null;
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
@@ -347,7 +350,13 @@ export class Transport {
         }
         // intercept auth finished message
         if (result.data.type === "authentication-finished") {
-          this.resolveAuthPromise();
+          if (result.data.success && this.resolveAuthPromise !== null) {
+            this.resolveAuthPromise();
+          } else if (!result.data.success && this.rejectAuthPromise !== null) {
+            this.rejectAuthPromise(
+              new Error(result.data.error ?? "Authentication failed"),
+            );
+          }
           return;
         }
         this.onmessage(result.data);
@@ -359,9 +368,8 @@ export class Transport {
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
       if (this.socket === null) return;
-      if (this.resolveAuthPromise) {
-        this.resolveAuthPromise();
-        return;
+      if (this.rejectAuthPromise !== null) {
+        this.rejectAuthPromise(new Error("Socket error during authentication"));
       }
       this.socket.close();
     };
@@ -376,9 +384,10 @@ export class Transport {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();
       }
-      if (this.resolveAuthPromise) {
-        this.resolveAuthPromise();
-        return;
+      if (this.rejectAuthPromise !== null) {
+        this.rejectAuthPromise(
+          new Error(`Connection closed: ${event.reason || "unknown reason"}`),
+        );
       }
     };
   }
@@ -408,15 +417,25 @@ export class Transport {
       return;
     }
 
-    this.authPromise = new Promise<void>((resolve) => {
+    this.authPromise = new Promise<void>((resolve, reject) => {
       this.resolveAuthPromise = resolve;
+      this.rejectAuthPromise = reject;
     });
 
     const authLoadingModal = getAuthModal();
     authLoadingModal.show();
-    await this.authPromise;
-    authLoadingModal.hide();
-    console.log("Authentication finished");
+
+    try {
+      await this.authPromise;
+      console.log("Authentication finished successfully");
+    } catch (error) {
+      console.error("Authentication failed:", error);
+      throw error;
+    } finally {
+      authLoadingModal.hide();
+      this.resolveAuthPromise = null;
+      this.rejectAuthPromise = null;
+    }
   }
 
   leaveGame() {

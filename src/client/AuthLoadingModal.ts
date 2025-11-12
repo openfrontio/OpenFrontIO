@@ -63,5 +63,5 @@ export function getAuthModal(): AuthLoadingModal {
     modal = document.createElement("auth-loading-modal");
     document.body.appendChild(modal);
   }
-  return modal as any as AuthLoadingModal;
+  return modal as AuthLoadingModal;
 }

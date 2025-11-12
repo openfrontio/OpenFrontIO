@@ -411,7 +411,16 @@ export async function startWorker() {
 
         if (!wasFound) {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          // Handle game not found case
+
+          ws.send(
+            JSON.stringify({
+              type: "authentication-finished",
+              success: false,
+              error: "Game not found",
+            } satisfies ServerAuthFinishedMessage),
+          );
+          ws.close(1002, "Game not found");
+          return;
         }
 
         ws.send(
