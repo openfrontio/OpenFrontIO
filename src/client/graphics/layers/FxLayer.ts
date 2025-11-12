@@ -108,6 +108,7 @@ export class FxLayer implements Layer {
   private updateNukeTargetFxRemainingTime() {
     // Update alert intensity for inbound bombs and check if inbound status changed
     // (e.g., if player recaptures territory while bomb is in flight)
+    // Also update timer information
     for (const [unitId, fx] of Array.from(
       this.nukeTargetFxByUnitId.entries(),
     )) {
@@ -122,11 +123,34 @@ export class FxLayer implements Layer {
 
       // Recompute isInbound based on current target tile ownership
       const targetOwner = this.game.owner(targetTile);
-      const isInbound = targetOwner.isPlayer() && targetOwner.id() === my.id();
+      const isInbound =
+        targetOwner.isPlayer() &&
+        (targetOwner.id() === my.id() || my.isOnSameTeam(targetOwner));
 
       // Update inbound flag if it changed
       if (fx.isInboundBomb() !== isInbound) {
         fx.setInbound(isInbound);
+      }
+
+      // Calculate remaining time
+      const trajectoryIndex = unit.trajectoryIndex();
+      const trajectoryLength = unit.trajectoryLength();
+      let remainingSeconds: number | null = null;
+      if (
+        trajectoryIndex !== undefined &&
+        trajectoryLength !== undefined &&
+        trajectoryLength > 0
+      ) {
+        const remainingTicks = trajectoryLength - trajectoryIndex;
+        remainingSeconds = Math.max(0, Math.ceil(remainingTicks / 10));
+      }
+
+      // Determine if bomb is outbound (launched by my player or teammate)
+      const isOutbound = unit.owner() === my || my.isOnSameTeam(unit.owner());
+
+      // Only show timer for bombs that are either outbound or inbound
+      if (isOutbound || isInbound) {
+        fx.updateTimer(remainingSeconds, isOutbound);
       }
 
       // Update alert intensity for inbound bombs
@@ -149,12 +173,14 @@ export class FxLayer implements Layer {
     // Check if bomb is outbound (owned by player or teammate)
     const isOutbound = unit.owner() === my || my.isOnSameTeam(unit.owner());
 
-    // Check if bomb is inbound (targeting player's territory)
+    // Check if bomb is inbound (targeting player's or teammate's territory)
     const targetTile = unit.targetTile();
     let isInbound = false;
     if (targetTile !== undefined) {
       const targetOwner = this.game.owner(targetTile);
-      isInbound = targetOwner.isPlayer() && targetOwner.id() === my.id();
+      isInbound =
+        targetOwner.isPlayer() &&
+        (targetOwner.id() === my.id() || my.isOnSameTeam(targetOwner));
     }
 
     // Show nuke marker for outbound or inbound bombs
@@ -171,12 +197,27 @@ export class FxLayer implements Layer {
           ? (this.calculateAlertIntensity(unit) ?? 0)
           : 0;
 
+        // Calculate remaining time
+        const trajectoryIndex = unit.trajectoryIndex();
+        const trajectoryLength = unit.trajectoryLength();
+        let remainingSeconds: number | null = null;
+        if (
+          trajectoryIndex !== undefined &&
+          trajectoryLength !== undefined &&
+          trajectoryLength > 0
+        ) {
+          const remainingTicks = trajectoryLength - trajectoryIndex;
+          remainingSeconds = Math.max(0, Math.ceil(remainingTicks / 10));
+        }
+
         const fx = new NukeAreaFx(
           x,
           y,
           this.game.config().nukeMagnitudes(unit.type()),
           isInbound,
           alertIntensity,
+          isOutbound,
+          remainingSeconds,
         );
         this.allFx.push(fx);
         this.nukeTargetFxByUnitId.set(unit.id(), fx);

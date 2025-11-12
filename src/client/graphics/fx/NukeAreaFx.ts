@@ -1,4 +1,5 @@
 import { NukeMagnitude } from "../../../core/configuration/Config";
+import { translateText } from "../../Utils";
 import { Fx } from "./Fx";
 
 export class NukeAreaFx implements Fx {
@@ -18,6 +19,8 @@ export class NukeAreaFx implements Fx {
   // Alert mode for inbound bombs - flashing increases as impact approaches
   private alertIntensity: number = 0; // 0 = no alert, 1 = maximum alert (fastest flash)
   private isInbound: boolean = false;
+  private isOutbound: boolean = false;
+  private remainingSeconds: number | null = null;
 
   constructor(
     private x: number,
@@ -25,6 +28,8 @@ export class NukeAreaFx implements Fx {
     magnitude: NukeMagnitude,
     isInbound: boolean = false,
     alertIntensity: number = 0,
+    isOutbound: boolean = false,
+    remainingSeconds: number | null = null,
   ) {
     this.innerDiameter = magnitude.inner;
     this.outerDiameter = magnitude.outer;
@@ -32,6 +37,8 @@ export class NukeAreaFx implements Fx {
     this.dashSize = (Math.PI / numDash) * this.outerDiameter;
     this.isInbound = isInbound;
     this.alertIntensity = alertIntensity;
+    this.isOutbound = isOutbound;
+    this.remainingSeconds = remainingSeconds;
   }
 
   updateAlertIntensity(intensity: number) {
@@ -44,6 +51,11 @@ export class NukeAreaFx implements Fx {
 
   isInboundBomb(): boolean {
     return this.isInbound;
+  }
+
+  updateTimer(remainingSeconds: number | null, isOutbound: boolean) {
+    this.remainingSeconds = remainingSeconds;
+    this.isOutbound = isOutbound;
   }
 
   end() {
@@ -107,6 +119,58 @@ export class NukeAreaFx implements Fx {
     ctx.stroke();
 
     ctx.restore();
+
+    // Draw timer text if applicable (with full opacity, not affected by circle alpha)
+    if (
+      (this.isOutbound || this.isInbound) &&
+      this.remainingSeconds !== null &&
+      this.remainingSeconds >= 0 &&
+      !this.ended
+    ) {
+      const incomingText = this.isInbound
+        ? translateText("bomb_timer.incoming")
+        : "";
+      const impactText = translateText("bomb_timer.til_impact", {
+        seconds: this.remainingSeconds,
+      });
+      const text = incomingText ? `${incomingText} ${impactText}` : impactText;
+
+      // Set text style
+      ctx.font = "bold 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      // Measure text for background sizing
+      const textMetrics = ctx.measureText(text);
+      const padding = 3;
+      const bgWidth = textMetrics.width + padding * 2;
+      const bgHeight = 12 + padding * 2;
+      const offsetY = 25; // Offset further up to avoid blocking
+
+      const bgX = this.x - bgWidth / 2;
+      const bgY = this.y - offsetY - bgHeight / 2;
+
+      // Draw transparent background
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
+
+      // Set text color based on direction
+      if (this.isInbound) {
+        // Red for inbound
+        ctx.fillStyle = "#ff6666";
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+      } else {
+        // Yellow/orange for outbound
+        ctx.fillStyle = "#ffcc66";
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+      }
+
+      // Draw text with lighter stroke for less blocking
+      ctx.lineWidth = 1;
+      ctx.strokeText(text, this.x, this.y - offsetY);
+      ctx.fillText(text, this.x, this.y - offsetY);
+    }
+
     return true;
   }
 }

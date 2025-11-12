@@ -7,7 +7,6 @@ import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
-import { BombTimerLayer } from "./layers/BombTimerLayer";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
@@ -248,7 +247,6 @@ export function createRenderer(
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
-    new BombTimerLayer(game, transformHandler),
     eventsDisplay,
     chatDisplay,
     buildMenu,
