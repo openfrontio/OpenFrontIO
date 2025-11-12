@@ -6,7 +6,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import { SoundEffect, SoundManager } from "../../sound/SoundManager";
 import { Layer } from "./Layer";
 
 // Parameters for the alert animation
@@ -18,6 +18,7 @@ const ALERT_COOLDOWN_TICKS = 15 * 10; // 15 seconds
 @customElement("alert-frame")
 export class AlertFrame extends LitElement implements Layer {
   public game: GameView;
+  public soundManager: SoundManager;
   private userSettings: UserSettings = new UserSettings();
 
   @state()
@@ -139,16 +140,19 @@ export class AlertFrame extends LitElement implements Layer {
   }
 
   private playAlarmSound() {
+    if (!this.soundManager) {
+      return;
+    }
     // Stop any currently playing alarm
     this.stopAlarmSound();
 
     // Get the alarm sound and enable looping temporarily
-    const soundEffects = (SoundManager as any).soundEffects;
-    const alarmSound = soundEffects.get(SoundEffect.Alarm);
+    const soundEffects = (this.soundManager as any).soundEffects;
+    const alarmSound = soundEffects?.get(SoundEffect.Alarm);
     if (alarmSound) {
       // Enable looping for continuous playback
       alarmSound.loop(true);
-      SoundManager.playSoundEffect(SoundEffect.Alarm);
+      this.soundManager.playSoundEffect(SoundEffect.Alarm);
 
       // Stop after 3 seconds
       this.alarmTimeout = window.setTimeout(() => {
@@ -162,10 +166,13 @@ export class AlertFrame extends LitElement implements Layer {
       clearTimeout(this.alarmTimeout);
       this.alarmTimeout = null;
     }
-    SoundManager.stopSoundEffect(SoundEffect.Alarm);
+    if (!this.soundManager) {
+      return;
+    }
+    this.soundManager.stopSoundEffect(SoundEffect.Alarm);
     // Restore original loop setting
-    const soundEffects = (SoundManager as any).soundEffects;
-    const alarmSound = soundEffects.get(SoundEffect.Alarm);
+    const soundEffects = (this.soundManager as any).soundEffects;
+    const alarmSound = soundEffects?.get(SoundEffect.Alarm);
     if (alarmSound) {
       alarmSound.loop(false);
     }

@@ -93,6 +93,7 @@ export interface JoinLobbyEvent {
 class Client {
   private gameStop: (() => void) | null = null;
   private eventBus: EventBus = new EventBus();
+  private soundManager: SoundManager = new SoundManager();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -303,6 +304,7 @@ class Client {
     if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
       console.warn("User settings modal element not found");
     }
+    settingsModal.soundManager = this.soundManager;
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {
@@ -348,7 +350,7 @@ class Client {
     }
 
     // Initialize sound settings from cookies on page load
-    SoundManager.initializeFromUserSettings(this.userSettings);
+    this.soundManager.initializeFromUserSettings(this.userSettings);
 
     // Attempt to join lobby
     this.handleHash();
@@ -491,6 +493,7 @@ class Client {
 
     this.gameStop = joinLobby(
       this.eventBus,
+      this.soundManager,
       {
         gameID: lobby.gameID,
         serverConfig: config,

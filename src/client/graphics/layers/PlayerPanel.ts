@@ -25,7 +25,7 @@ import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import Countries from "../../data/countries.json";
 import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
-import SoundManager from "../../sound/SoundManager";
+import { SoundManager } from "../../sound/SoundManager";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -52,6 +52,7 @@ export class PlayerPanel extends LitElement implements Layer {
   public eventBus: EventBus;
   public emojiTable: EmojiTable;
   public uiState: UIState;
+  public soundManager: SoundManager;
 
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
@@ -140,7 +141,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private handleClose(e: Event) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.hide();
   }
@@ -150,7 +151,7 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.eventBus.emit(new SendAllianceRequestIntentEvent(myPlayer, other));
     this.hide();
@@ -161,7 +162,7 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.eventBus.emit(new SendBreakAllianceIntentEvent(myPlayer, other));
     this.hide();
@@ -182,7 +183,7 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.openSendTroops(other);
   }
@@ -192,7 +193,7 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.openSendGold(other);
   }
@@ -214,7 +215,7 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoIntentEvent(other, "start"));
     this.hide();
@@ -225,26 +226,26 @@ export class PlayerPanel extends LitElement implements Layer {
     myPlayer: PlayerView,
     other: PlayerView,
   ) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoIntentEvent(other, "stop"));
     this.hide();
   }
 
   private onStopTradingAllClick(e: Event) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoAllIntentEvent("start"));
   }
 
   private onStartTradingAllClick(e: Event) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoAllIntentEvent("stop"));
   }
 
   private handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.emojiTable.showTable((emoji: string) => {
       if (myPlayer === other) {
@@ -268,7 +269,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private handleChat(e: Event, sender: PlayerView, other: PlayerView) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
 
     if (!this.ctModal) {
@@ -281,7 +282,7 @@ export class PlayerPanel extends LitElement implements Layer {
   }
 
   private handleTargetClick(e: Event, other: PlayerView) {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     e.stopPropagation();
     this.eventBus.emit(new SendTargetPlayerIntentEvent(other.id()));
     this.hide();
@@ -865,6 +866,7 @@ export class PlayerPanel extends LitElement implements Layer {
                             .target=${this.sendTarget}
                             .gameView=${this.g}
                             .eventBus=${this.eventBus}
+                            .soundManager=${this.soundManager}
                             .format=${this.sendMode === "troops"
                               ? renderTroops
                               : renderNumber}

@@ -7,7 +7,8 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { SoundEffect, SoundManager } from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
@@ -51,7 +52,11 @@ export class FxLayer implements Layer {
   // Track nukes that have already had their launch sound played
   private nukeLaunchSoundPlayed: Set<number> = new Set();
 
-  constructor(private game: GameView) {
+  constructor(
+    private game: GameView,
+    private soundManager: SoundManager,
+    private userSettings: UserSettings,
+  ) {
     this.theme = this.game.config().theme();
   }
 
@@ -279,7 +284,7 @@ export class FxLayer implements Layer {
         if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            SoundManager.playSoundEffect(SoundEffect.AtomLaunch);
+            this.soundManager?.playSoundEffect(SoundEffect.AtomLaunch);
           }
           this.nukeLaunchSoundPlayed.add(unit.id());
         }
@@ -295,7 +300,10 @@ export class FxLayer implements Layer {
         if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            SoundManager.playSoundEffect(SoundEffect.MIRVLaunch, 0.5);
+            this.soundManager?.playSoundEffect(
+              SoundEffect.MIRVLaunch,
+              this.userSettings.mirvLaunchVolume(),
+            );
           }
           this.nukeLaunchSoundPlayed.add(unit.id());
         }
@@ -312,7 +320,7 @@ export class FxLayer implements Layer {
         if (unit.isActive() && !this.nukeLaunchSoundPlayed.has(unit.id())) {
           const my = this.game.myPlayer();
           if (my && unit.owner() === my) {
-            SoundManager.playSoundEffect(SoundEffect.HydrogenLaunch);
+            this.soundManager?.playSoundEffect(SoundEffect.HydrogenLaunch);
           }
           this.nukeLaunchSoundPlayed.add(unit.id());
         }
@@ -397,7 +405,7 @@ export class FxLayer implements Layer {
       return;
     }
 
-    SoundManager.playSoundEffect(SoundEffect.KaChing);
+    this.soundManager?.playSoundEffect(SoundEffect.KaChing);
 
     const conquestFx = conquestFxFactory(
       this.animatedSpriteLoader,
@@ -453,7 +461,7 @@ export class FxLayer implements Layer {
     if (unit.isActive() && !this.seenBuildingUnitIds.has(unit.id())) {
       // Only play sound for buildings owned by the current player
       if (my && unit.owner() === my) {
-        SoundManager.playSoundEffect(SoundEffect.Building);
+        this.soundManager?.playSoundEffect(SoundEffect.Building);
       }
       this.seenBuildingUnitIds.add(unit.id());
     }
@@ -478,7 +486,7 @@ export class FxLayer implements Layer {
         !this.stealBuildingSoundPlayed.has(unitTile)
       ) {
         // Play steal building sound at 50% volume for the attacker
-        SoundManager.playSoundEffect(SoundEffect.StealBuilding, 0.5);
+        this.soundManager?.playSoundEffect(SoundEffect.StealBuilding, 0.5);
         this.stealBuildingSoundPlayed.add(unitTile);
       }
     }
@@ -542,7 +550,7 @@ export class FxLayer implements Layer {
         (isDefender || destroyedByMyNuke || isAttackerFromLandConquest) &&
         !this.destroyedBuildingUnitIds.has(unit.id())
       ) {
-        SoundManager.playSoundEffect(SoundEffect.BuildingDestroyed);
+        this.soundManager?.playSoundEffect(SoundEffect.BuildingDestroyed);
         this.destroyedBuildingUnitIds.add(unit.id());
       }
 
@@ -611,16 +619,16 @@ export class FxLayer implements Layer {
       // Play hit sound based on nuke type
       if (unit.type() === UnitType.AtomBomb) {
         if (isAttacker || isDefender) {
-          SoundManager.playSoundEffect(SoundEffect.AtomHit);
+          this.soundManager?.playSoundEffect(SoundEffect.AtomHit);
         }
       } else if (unit.type() === UnitType.HydrogenBomb) {
         if (isAttacker || isDefender) {
-          SoundManager.playSoundEffect(SoundEffect.HydrogenHit);
+          this.soundManager?.playSoundEffect(SoundEffect.HydrogenHit);
         }
       } else if (unit.type() === UnitType.MIRVWarhead) {
         // MIRV warheads use atom hit sound
         if (isAttacker || isDefender) {
-          SoundManager.playSoundEffect(SoundEffect.AtomHit);
+          this.soundManager?.playSoundEffect(SoundEffect.AtomHit);
         }
       }
     }
@@ -659,7 +667,7 @@ export class FxLayer implements Layer {
         unit.type() === UnitType.HydrogenBomb ||
         unit.type() === UnitType.MIRVWarhead;
       if (isNukeOwner && isNuke) {
-        SoundManager.playSoundEffect(SoundEffect.SAMHit);
+        this.soundManager?.playSoundEffect(SoundEffect.SAMHit);
       }
     }
   }

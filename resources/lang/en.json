@@ -426,6 +426,8 @@
     "sound_effect_hydrogen_hit_desc": "Sound when a hydrogen bomb hits its target",
     "sound_effect_mirv_launch": "MIRV Launch",
     "sound_effect_mirv_launch_desc": "Sound when launching a MIRV",
+    "mirv_launch_volume": "MIRV Launch Volume",
+    "mirv_launch_volume_desc": "Volume for MIRV launch sound effect",
     "sound_effect_sam_hit": "SAM Hit",
     "sound_effect_sam_hit_desc": "Sound when a SAM intercepts an atom bomb, hydrogen bomb, or MIRV warhead",
     "sound_effect_click": "Click",

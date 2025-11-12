@@ -270,4 +270,22 @@ export class UserSettings {
   setBackgroundMusicEnabled(enabled: boolean): void {
     setCookie("settings.backgroundMusicEnabled", enabled ? "true" : "false");
   }
+
+  mirvLaunchVolume(): number {
+    const cookieValue = getCookie("settings.mirvLaunchVolume");
+    if (!cookieValue) return 0.25; // Default to 25%
+    const floatValue = parseFloat(cookieValue);
+    if (isNaN(floatValue)) {
+      // Clean up invalid cookie
+      deleteCookie("settings.mirvLaunchVolume");
+      return 0.25;
+    }
+    return Math.max(0, Math.min(1, floatValue));
+  }
+
+  setMirvLaunchVolume(volume: number): void {
+    // Ensure volume is a valid number between 0 and 1
+    const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 0.25 : volume));
+    setCookie("settings.mirvLaunchVolume", validVolume.toString());
+  }
 }

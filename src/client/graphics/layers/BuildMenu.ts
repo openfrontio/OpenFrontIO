@@ -27,7 +27,7 @@ import {
   ShowBuildMenuEvent,
   ShowEmojiMenuEvent,
 } from "../../InputHandler";
-import SoundManager from "../../sound/SoundManager";
+import { SoundManager } from "../../sound/SoundManager";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,
@@ -126,10 +126,11 @@ export const flattenedBuildTable = buildTable.flat();
 export class BuildMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  public transformHandler: TransformHandler;
   private clickedTile: TileRef;
   public playerActions: PlayerActions | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
-  public transformHandler: TransformHandler;
+  public soundManager: SoundManager;
 
   init() {
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
@@ -388,7 +389,7 @@ export class BuildMenu extends LitElement implements Layer {
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
-    SoundManager.playMenuClick();
+    this.soundManager?.playMenuClick();
     if (buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(

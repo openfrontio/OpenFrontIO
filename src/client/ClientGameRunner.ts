@@ -49,7 +49,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import SoundManager from "./sound/SoundManager";
+import { SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -66,6 +66,7 @@ export interface LobbyConfig {
 
 export function joinLobby(
   eventBus: EventBus,
+  soundManager: SoundManager,
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
@@ -109,6 +110,7 @@ export function joinLobby(
       createClientGame(
         lobbyConfig,
         eventBus,
+        soundManager,
         transport,
         userSettings,
         terrainLoad,
@@ -137,6 +139,7 @@ export function joinLobby(
 async function createClientGame(
   lobbyConfig: LobbyConfig,
   eventBus: EventBus,
+  soundManager: SoundManager,
   transport: Transport,
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
@@ -176,7 +179,7 @@ async function createClientGame(
   );
 
   const canvas = createCanvas();
-  const gameRenderer = createRenderer(canvas, gameView, eventBus);
+  const gameRenderer = createRenderer(canvas, gameView, eventBus, soundManager);
 
   console.log(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
@@ -185,6 +188,7 @@ async function createClientGame(
   return new ClientGameRunner(
     lobbyConfig,
     eventBus,
+    soundManager,
     gameRenderer,
     new InputHandler(gameRenderer.uiState, canvas, eventBus),
     transport,
@@ -211,6 +215,7 @@ export class ClientGameRunner {
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
+    private soundManager: SoundManager,
     private renderer: GameRenderer,
     private input: InputHandler,
     private transport: Transport,
@@ -253,10 +258,10 @@ export class ClientGameRunner {
   public start() {
     // Initialize sound settings from cookies before playing music
     const userSettings = new UserSettings();
-    SoundManager.initializeFromUserSettings(userSettings);
+    this.soundManager.initializeFromUserSettings(userSettings);
 
     // Now play music if enabled
-    SoundManager.playBackgroundMusic();
+    this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
     this.isActive = true;
@@ -434,7 +439,7 @@ export class ClientGameRunner {
   }
 
   public stop() {
-    SoundManager.stopBackgroundMusic();
+    this.soundManager.stopBackgroundMusic();
     if (!this.isActive) return;
 
     this.isActive = false;
@@ -484,7 +489,7 @@ export class ClientGameRunner {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
         // Play click sound when successfully initiating an attack
-        SoundManager.playMenuClick();
+        this.soundManager.playMenuClick();
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
@@ -493,7 +498,7 @@ export class ClientGameRunner {
         );
       } else if (this.canAutoBoat(actions, tile)) {
         // Play click sound when successfully initiating a boat attack
-        SoundManager.playMenuClick();
+        this.soundManager.playMenuClick();
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -604,7 +609,7 @@ export class ClientGameRunner {
       if (this.myPlayer === null) return;
       if (actions.canAttack) {
         // Play click sound when successfully initiating an attack
-        SoundManager.playMenuClick();
+        this.soundManager.playMenuClick();
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),

@@ -293,4 +293,5 @@ class SoundManager {
   }
 }
 
-export default new SoundManager();
+export { SoundManager };
+export default SoundManager;

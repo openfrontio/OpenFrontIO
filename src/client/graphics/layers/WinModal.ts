@@ -13,7 +13,7 @@ import {
   patternRelationship,
 } from "../../Cosmetics";
 import { getUserMe } from "../../jwt";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import { SoundEffect, SoundManager } from "../../sound/SoundManager";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -21,6 +21,7 @@ import { Layer } from "./Layer";
 export class WinModal extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  public soundManager: SoundManager;
 
   private hasShownDeathModal = false;
   private hasPlayedSound = false;
@@ -257,11 +258,11 @@ export class WinModal extends LitElement implements Layer {
     this.requestUpdate();
 
     // Play appropriate sound effect
-    if (!this.hasPlayedSound) {
+    if (!this.hasPlayedSound && this.soundManager) {
       if (this.isWin) {
-        SoundManager.playSoundEffect(SoundEffect.GameWin);
+        this.soundManager.playSoundEffect(SoundEffect.GameWin);
       } else {
-        SoundManager.playSoundEffect(SoundEffect.GameOver);
+        this.soundManager.playSoundEffect(SoundEffect.GameOver);
       }
       this.hasPlayedSound = true;
     }

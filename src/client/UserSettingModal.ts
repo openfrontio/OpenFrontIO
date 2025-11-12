@@ -7,11 +7,12 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
-import SoundManager, { SoundEffect } from "./sound/SoundManager";
+import { SoundEffect, SoundManager } from "./sound/SoundManager";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
+  public soundManager: SoundManager;
 
   @state() private settingsMode: "basic" | "keybinds" | "sound" = "basic";
   @state() private keybinds: Record<string, { value: string; key: string }> =
@@ -34,7 +35,9 @@ export class UserSettingModal extends LitElement {
     }
 
     // Initialize sound settings
-    SoundManager.initializeFromUserSettings(this.userSettings);
+    if (this.soundManager) {
+      this.soundManager.initializeFromUserSettings(this.userSettings);
+    }
   }
 
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -678,7 +681,7 @@ export class UserSettingModal extends LitElement {
           const enabled = e.detail?.checked;
           if (typeof enabled === "boolean") {
             this.userSettings.setSoundEffectEnabled(soundEffect, enabled);
-            SoundManager.setSoundEffectEnabled(soundEffect, enabled);
+            this.soundManager?.setSoundEffectEnabled(soundEffect, enabled);
           }
         }}
       ></setting-toggle>
@@ -707,7 +710,7 @@ export class UserSettingModal extends LitElement {
           ) {
             const volume = sliderValue / 100;
             this.userSettings.setSoundEffectsVolume(volume);
-            SoundManager.setSoundEffectsVolume(volume);
+            this.soundManager?.setSoundEffectsVolume(volume);
           }
         }}
       ></setting-slider>
@@ -726,7 +729,7 @@ export class UserSettingModal extends LitElement {
           const enabled = e.detail?.checked;
           if (typeof enabled === "boolean") {
             this.userSettings.setBackgroundMusicEnabled(enabled);
-            SoundManager.setBackgroundMusicEnabled(enabled);
+            this.soundManager?.setBackgroundMusicEnabled(enabled);
           }
         }}
       ></setting-toggle>
@@ -750,7 +753,7 @@ export class UserSettingModal extends LitElement {
           ) {
             const volume = sliderValue / 100;
             this.userSettings.setBackgroundMusicVolume(volume);
-            SoundManager.setBackgroundMusicVolume(volume);
+            this.soundManager?.setBackgroundMusicVolume(volume);
           }
         }}
       ></setting-slider>
@@ -779,7 +782,7 @@ export class UserSettingModal extends LitElement {
           ) {
             const volume = sliderValue / 100;
             this.userSettings.setSoundEffectsVolume(volume);
-            SoundManager.setSoundEffectsVolume(volume);
+            this.soundManager?.setSoundEffectsVolume(volume);
           }
         }}
       ></setting-slider>
@@ -844,6 +847,28 @@ export class UserSettingModal extends LitElement {
         "user_setting.sound_effect_mirv_launch_desc",
         "sound-effect-mirv-launch-toggle",
       )}
+      <setting-slider
+        label="${translateText("user_setting.mirv_launch_volume")}"
+        description="${translateText("user_setting.mirv_launch_volume_desc")}"
+        min="0"
+        max="100"
+        .value=${Math.max(
+          0,
+          Math.min(100, (this.userSettings.mirvLaunchVolume() ?? 0.25) * 100),
+        )}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          const sliderValue = e.detail?.value;
+          if (
+            typeof sliderValue === "number" &&
+            !isNaN(sliderValue) &&
+            sliderValue >= 0 &&
+            sliderValue <= 100
+          ) {
+            const volume = sliderValue / 100;
+            this.userSettings.setMirvLaunchVolume(volume);
+          }
+        }}
+      ></setting-slider>
       ${this.soundSetting(
         SoundEffect.Click,
         "user_setting.sound_effect_click",
