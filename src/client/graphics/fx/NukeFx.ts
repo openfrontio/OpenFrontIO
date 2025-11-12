@@ -32,53 +32,6 @@ export class ShockwaveFx implements Fx {
 }
 
 /**
- * Fireball effect: draw a growing fireball with red/orange/yellow colors
- */
-export class FireballFx implements Fx {
-  private lifeTime: number = 0;
-  constructor(
-    private x: number,
-    private y: number,
-    private duration: number,
-    private maxRadius: number,
-  ) {}
-
-  renderTick(frameTime: number, ctx: CanvasRenderingContext2D): boolean {
-    this.lifeTime += frameTime;
-    if (this.lifeTime >= this.duration) {
-      return false;
-    }
-    const t = this.lifeTime / this.duration;
-    const radius = t * this.maxRadius;
-
-    // Create gradient from center (bright yellow) to edge (red)
-    const gradient = ctx.createRadialGradient(
-      this.x,
-      this.y,
-      0,
-      this.x,
-      this.y,
-      radius,
-    );
-
-    // Inner core: bright yellow/white
-    gradient.addColorStop(0, `rgba(255, 255, 200, ${1 - t * 0.5})`);
-    gradient.addColorStop(0.3, `rgba(255, 200, 0, ${(1 - t) * 0.9})`);
-    // Middle: orange
-    gradient.addColorStop(0.6, `rgba(255, 100, 0, ${(1 - t) * 0.8})`);
-    // Outer: red
-    gradient.addColorStop(1, `rgba(255, 0, 0, ${(1 - t) * 0.6})`);
-
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    return true;
-  }
-}
-
-/**
  * Spawn @p number of @p type animation within a perimeter
  */
 function addSpriteInCircle(
@@ -113,7 +66,6 @@ function addSpriteInCircle(
 
 /**
  * Explosion effect:
- * - fireball animation
  * - explosion animation
  * - shockwave
  * - ruins and desolation fx
@@ -126,8 +78,6 @@ export function nukeFxFactory(
   game: GameView,
 ): Fx[] {
   const nukeFx: Fx[] = [];
-  // Fireball effect - appears first and expands quickly
-  nukeFx.push(new FireballFx(x, y, 800, radius * 1.2));
   // Explosion animation
   nukeFx.push(new SpriteFx(animatedSpriteLoader, x, y, FxType.Nuke));
   // Shockwave animation
