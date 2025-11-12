@@ -662,6 +662,29 @@ export class UserSettingModal extends LitElement {
     `;
   }
 
+  private soundSetting(
+    soundEffect: SoundEffect,
+    labelKey: string,
+    descriptionKey: string,
+    id: string,
+  ) {
+    return html`
+      <setting-toggle
+        label="${translateText(labelKey)}"
+        description="${translateText(descriptionKey)}"
+        id="${id}"
+        .checked=${this.userSettings.isSoundEffectEnabled(soundEffect)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(soundEffect, enabled);
+            SoundManager.setSoundEffectEnabled(soundEffect, enabled);
+          }
+        }}
+      ></setting-toggle>
+    `;
+  }
+
   private renderSoundSettings() {
     return html`
       <!-- Master Volume -->
@@ -761,266 +784,84 @@ export class UserSettingModal extends LitElement {
         }}
       ></setting-slider>
 
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_ka_ching")}"
-        description="${translateText(
-          "user_setting.sound_effect_ka_ching_desc",
-        )}"
-        id="sound-effect-ka-ching-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.KaChing)}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.KaChing,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(SoundEffect.KaChing, enabled);
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_building")}"
-        description="${translateText(
-          "user_setting.sound_effect_building_desc",
-        )}"
-        id="sound-effect-building-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.Building)}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.Building,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(SoundEffect.Building, enabled);
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_building_destroyed")}"
-        description="${translateText(
-          "user_setting.sound_effect_building_destroyed_desc",
-        )}"
-        id="sound-effect-building-destroyed-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(
-          SoundEffect.BuildingDestroyed,
-        )}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.BuildingDestroyed,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(
-              SoundEffect.BuildingDestroyed,
-              enabled,
-            );
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_alarm")}"
-        description="${translateText("user_setting.sound_effect_alarm_desc")}"
-        id="sound-effect-alarm-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.Alarm)}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(SoundEffect.Alarm, enabled);
-            SoundManager.setSoundEffectEnabled(SoundEffect.Alarm, enabled);
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_steal_building")}"
-        description="${translateText(
-          "user_setting.sound_effect_steal_building_desc",
-        )}"
-        id="sound-effect-steal-building-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(
-          SoundEffect.StealBuilding,
-        )}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.StealBuilding,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(
-              SoundEffect.StealBuilding,
-              enabled,
-            );
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_atom_launch")}"
-        description="${translateText(
-          "user_setting.sound_effect_atom_launch_desc",
-        )}"
-        id="sound-effect-atom-launch-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(
-          SoundEffect.AtomLaunch,
-        )}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.AtomLaunch,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(SoundEffect.AtomLaunch, enabled);
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_atom_hit")}"
-        description="${translateText(
-          "user_setting.sound_effect_atom_hit_desc",
-        )}"
-        id="sound-effect-atom-hit-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.AtomHit)}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.AtomHit,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(SoundEffect.AtomHit, enabled);
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_hydrogen_launch")}"
-        description="${translateText(
-          "user_setting.sound_effect_hydrogen_launch_desc",
-        )}"
-        id="sound-effect-hydrogen-launch-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(
-          SoundEffect.HydrogenLaunch,
-        )}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.HydrogenLaunch,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(
-              SoundEffect.HydrogenLaunch,
-              enabled,
-            );
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_hydrogen_hit")}"
-        description="${translateText(
-          "user_setting.sound_effect_hydrogen_hit_desc",
-        )}"
-        id="sound-effect-hydrogen-hit-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(
-          SoundEffect.HydrogenHit,
-        )}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.HydrogenHit,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(
-              SoundEffect.HydrogenHit,
-              enabled,
-            );
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_mirv_launch")}"
-        description="${translateText(
-          "user_setting.sound_effect_mirv_launch_desc",
-        )}"
-        id="sound-effect-mirv-launch-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(
-          SoundEffect.MIRVLaunch,
-        )}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.MIRVLaunch,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(SoundEffect.MIRVLaunch, enabled);
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_click")}"
-        description="${translateText("user_setting.sound_effect_click_desc")}"
-        id="sound-effect-click-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.Click)}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(SoundEffect.Click, enabled);
-            SoundManager.setSoundEffectEnabled(SoundEffect.Click, enabled);
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_game_win")}"
-        description="${translateText(
-          "user_setting.sound_effect_game_win_desc",
-        )}"
-        id="sound-effect-game-win-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.GameWin)}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.GameWin,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(SoundEffect.GameWin, enabled);
-          }
-        }}
-      ></setting-toggle>
-
-      <setting-toggle
-        label="${translateText("user_setting.sound_effect_game_over")}"
-        description="${translateText(
-          "user_setting.sound_effect_game_over_desc",
-        )}"
-        id="sound-effect-game-over-toggle"
-        .checked=${this.userSettings.isSoundEffectEnabled(SoundEffect.GameOver)}
-        @change=${(e: CustomEvent<{ checked: boolean }>) => {
-          const enabled = e.detail?.checked;
-          if (typeof enabled === "boolean") {
-            this.userSettings.setSoundEffectEnabled(
-              SoundEffect.GameOver,
-              enabled,
-            );
-            SoundManager.setSoundEffectEnabled(SoundEffect.GameOver, enabled);
-          }
-        }}
-      ></setting-toggle>
+      ${this.soundSetting(
+        SoundEffect.KaChing,
+        "user_setting.sound_effect_ka_ching",
+        "user_setting.sound_effect_ka_ching_desc",
+        "sound-effect-ka-ching-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.Building,
+        "user_setting.sound_effect_building",
+        "user_setting.sound_effect_building_desc",
+        "sound-effect-building-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.BuildingDestroyed,
+        "user_setting.sound_effect_building_destroyed",
+        "user_setting.sound_effect_building_destroyed_desc",
+        "sound-effect-building-destroyed-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.Alarm,
+        "user_setting.sound_effect_alarm",
+        "user_setting.sound_effect_alarm_desc",
+        "sound-effect-alarm-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.StealBuilding,
+        "user_setting.sound_effect_steal_building",
+        "user_setting.sound_effect_steal_building_desc",
+        "sound-effect-steal-building-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.AtomLaunch,
+        "user_setting.sound_effect_atom_launch",
+        "user_setting.sound_effect_atom_launch_desc",
+        "sound-effect-atom-launch-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.AtomHit,
+        "user_setting.sound_effect_atom_hit",
+        "user_setting.sound_effect_atom_hit_desc",
+        "sound-effect-atom-hit-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.HydrogenLaunch,
+        "user_setting.sound_effect_hydrogen_launch",
+        "user_setting.sound_effect_hydrogen_launch_desc",
+        "sound-effect-hydrogen-launch-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.HydrogenHit,
+        "user_setting.sound_effect_hydrogen_hit",
+        "user_setting.sound_effect_hydrogen_hit_desc",
+        "sound-effect-hydrogen-hit-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.MIRVLaunch,
+        "user_setting.sound_effect_mirv_launch",
+        "user_setting.sound_effect_mirv_launch_desc",
+        "sound-effect-mirv-launch-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.Click,
+        "user_setting.sound_effect_click",
+        "user_setting.sound_effect_click_desc",
+        "sound-effect-click-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.GameWin,
+        "user_setting.sound_effect_game_win",
+        "user_setting.sound_effect_game_win_desc",
+        "sound-effect-game-win-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.GameOver,
+        "user_setting.sound_effect_game_over",
+        "user_setting.sound_effect_game_over_desc",
+        "sound-effect-game-over-toggle",
+      )}
     `;
   }
 
