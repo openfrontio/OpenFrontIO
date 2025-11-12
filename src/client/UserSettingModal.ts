@@ -863,6 +863,12 @@ export class UserSettingModal extends LitElement {
         "user_setting.sound_effect_mirv_launch_desc",
         "sound-effect-mirv-launch-toggle",
       )}
+      ${this.soundSetting(
+        SoundEffect.SAMHit,
+        "user_setting.sound_effect_sam_hit",
+        "user_setting.sound_effect_sam_hit_desc",
+        "sound-effect-sam-hit-toggle",
+      )}
       <setting-slider
         label="${translateText("user_setting.mirv_launch_volume")}"
         description="${translateText("user_setting.mirv_launch_volume_desc")}"
