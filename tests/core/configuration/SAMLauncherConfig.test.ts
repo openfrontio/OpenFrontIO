@@ -96,6 +96,22 @@ describe("SAM Launcher Configuration", () => {
       expect(cost).toBe(BigInt(3_000_000));
     });
 
+    test("upgrade level 2 SAM to level 3 when another SAM exists should cost 3M", () => {
+      const sam1 = player.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+      sam1.increaseLevel();
+
+      const sam2 = player.buildUnit(UnitType.SAMLauncher, game.ref(2, 1), {});
+      expect(sam2.level()).toBe(1);
+
+      const cost = config.unitInfo(UnitType.SAMLauncher).cost(player, {
+        isUpgrade: true,
+        targetLevel: 3,
+        targetUnitId: sam1.id(),
+      });
+
+      expect(cost).toBe(BigInt(3_000_000));
+    });
+
     test("building new SAM when having level 2 SAM should cost 6M", () => {
       // Build first SAM and upgrade to level 2
       const sam1 = player.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
