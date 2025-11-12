@@ -164,9 +164,9 @@ export class EventsDisplay extends LitElement implements Layer {
     const target = this.game.playerBySmallID(targetID) as PlayerView;
     if (!attacker || !target) return null;
 
-    const boats = this.game
+    const boats = attacker
       .units(UnitType.TransportShip)
-      .filter((u) => u.owner().smallID() === attackerID && u.isActive());
+      .filter((u) => u.isActive());
 
     let fallbackBoat: UnitView | null = null;
 
