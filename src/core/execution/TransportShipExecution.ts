@@ -182,6 +182,11 @@ export class TransportShipExecution implements Execution {
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
+
+    // Update path remaining tiles for the boat
+    const tilesRemaining = this.pathFinder.tileRemaining();
+    this.boat.setPathRemaining(tilesRemaining);
+
     switch (result.type) {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) === this.attacker) {

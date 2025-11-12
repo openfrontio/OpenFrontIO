@@ -142,8 +142,13 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!targetTile || boat.reachedTarget() || !boat.isActive()) {
       return null;
     }
-    const distance = this.game.manhattanDist(boat.tile(), targetTile);
-    return Math.ceil(distance / 10);
+    const tilesRemaining = boat.pathRemaining();
+    if (tilesRemaining === undefined || tilesRemaining === 0) {
+      // Fallback to manhattan distance if pathRemaining is not available
+      const distance = this.game.manhattanDist(boat.tile(), targetTile);
+      return Math.ceil(distance / 10);
+    }
+    return Math.ceil(tilesRemaining / 10);
   }
 
   /**

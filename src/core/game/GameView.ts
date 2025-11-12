@@ -103,6 +103,12 @@ export class UnitView {
     }
     return this.data.retreating;
   }
+  pathRemaining(): number | undefined {
+    if (this.type() !== UnitType.TransportShip) {
+      return undefined;
+    }
+    return this.data.pathRemaining;
+  }
   tile(): TileRef {
     return this.data.pos;
   }

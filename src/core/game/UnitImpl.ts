@@ -40,6 +40,7 @@ export class UnitImpl implements Unit {
   private _trajectoryIndex: number = 0;
   private _trajectory: TrajectoryTile[];
   private _deletionAt: number | null = null;
+  private _pathRemaining: number | undefined; // Only for transport ships
 
   constructor(
     private _type: UnitType,
@@ -139,6 +140,7 @@ export class UnitImpl implements Unit {
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
+      pathRemaining: this._pathRemaining,
     };
   }
 
@@ -463,5 +465,16 @@ export class UnitImpl implements Unit {
       this._loaded = loaded;
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  setPathRemaining(tiles: number | undefined): void {
+    if (this._pathRemaining !== tiles) {
+      this._pathRemaining = tiles;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  pathRemaining(): number | undefined {
+    return this._pathRemaining;
   }
 }
