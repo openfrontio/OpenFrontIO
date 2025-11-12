@@ -37,6 +37,7 @@ export class BotBehavior {
     private triggerRatio: number,
     private reserveRatio: number,
     private expandRatio: number,
+    private maniacFullSender: boolean,
   ) {}
 
   handleAllianceRequests() {
@@ -388,6 +389,22 @@ export class BotBehavior {
   sendAttack(target: Player | TerraNullius) {
     // Skip attacking friendly targets (allies or teammates) - decision to break alliances should be made by caller
     if (target.isPlayer() && this.player.isFriendly(target)) return;
+
+    // Sometimes perform a "full send" between 80% and 100% of current troops if we are a maniac full-sender
+    if (this.maniacFullSender && this.random.chance(10)) {
+      const proportion = this.random.nextFloat(0.8, 1.0);
+      const troopsToSend = Math.floor(this.player.troops() * proportion);
+      if (troopsToSend >= 1) {
+        this.game.addExecution(
+          new AttackExecution(
+            troopsToSend,
+            this.player,
+            target.isPlayer() ? target.id() : this.game.terraNullius().id(),
+          ),
+        );
+        return;
+      }
+    }
 
     const maxTroops = this.game.config().maxTroops(this.player);
     const reserveRatio = target.isPlayer()

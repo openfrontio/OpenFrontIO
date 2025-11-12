@@ -45,7 +45,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
 
     const random = new PseudoRandom(42);
 
-    botBehavior = new BotBehavior(random, game, player, 0.5, 0.5, 0.2);
+    botBehavior = new BotBehavior(random, game, player, 0.5, 0.5, 0.2, false);
   });
 
   function setupAllianceRequest({
@@ -183,6 +183,7 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
       0.5,
       0.5,
       0.2,
+      false,
     );
   });
 
@@ -284,6 +285,7 @@ describe("BotBehavior Attack Behavior", () => {
       0.5,
       0.5,
       0.2,
+      false,
     );
 
     return { testGame, testBot, testHuman, behavior };
@@ -360,6 +362,7 @@ describe("BotBehavior Attack Behavior", () => {
       0.5,
       0.5,
       0.2,
+      false,
     );
 
     // Alliance between nation and human
