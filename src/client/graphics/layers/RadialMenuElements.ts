@@ -694,7 +694,7 @@ export const rootMenuElement: MenuElement = {
 
     // Check if we should show Donate Gold instead of Build button
     // Only allow donating gold to teammates or allies
-    const gameMode = params.game.config().gameConfig.gameMode;
+    const gameMode = params.game.config().gameConfig().gameMode;
 
     // Helper function to check if quick donate buttons should show
     const shouldShowQuickDonateButtons = () => {
