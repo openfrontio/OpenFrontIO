@@ -788,10 +788,10 @@ export class EventsDisplay extends LitElement implements Layer {
         Math.round(unitView.troops()) / 10,
         0,
       );
-      description = event.message.replace(
-        /Boat: \d+/,
-        `Boat: ${formattedTroops}`,
-      );
+      // Parse the message to extract player name (format: "Boat: <number> <name>")
+      const match = event.message.match(/Boat: \d+ (.+)/);
+      const playerName = match ? match[1] : "";
+      description = `${translateText("events_display.boat")}: ${formattedTroops}${playerName ? ` ${playerName}` : ""}`;
     }
 
     this.addEvent({
