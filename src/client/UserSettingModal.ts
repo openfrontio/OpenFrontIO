@@ -698,7 +698,13 @@ export class UserSettingModal extends LitElement {
         max="100"
         .value=${Math.max(
           0,
-          Math.min(100, (this.userSettings.soundEffectsVolume() ?? 1) * 100),
+          Math.min(
+            100,
+            Math.max(
+              (this.userSettings.soundEffectsVolume() ?? 1) * 100,
+              (this.userSettings.backgroundMusicVolume() || 0) * 100,
+            ),
+          ),
         )}
         @change=${(e: CustomEvent<{ value: number }>) => {
           const sliderValue = e.detail?.value;
@@ -709,8 +715,11 @@ export class UserSettingModal extends LitElement {
             sliderValue <= 100
           ) {
             const volume = sliderValue / 100;
+            // Master volume controls both sound effects and background music
             this.userSettings.setSoundEffectsVolume(volume);
+            this.userSettings.setBackgroundMusicVolume(volume);
             this.soundManager?.setSoundEffectsVolume(volume);
+            this.soundManager?.setBackgroundMusicVolume(volume);
           }
         }}
       ></setting-slider>
