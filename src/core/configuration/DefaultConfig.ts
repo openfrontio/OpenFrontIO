@@ -510,11 +510,32 @@ export class DefaultConfig implements Config {
         };
       case UnitType.SAMLauncher:
         return {
-          cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(3_000_000, (numUnits + 1) * 1_500_000),
-            UnitType.SAMLauncher,
-          ),
+          cost: (p: Player) => {
+            if (p.type() === PlayerType.Human && this.infiniteGold()) {
+              return 0n;
+            }
+            const totalLevels = Math.min(
+              p.unitsOwned(UnitType.SAMLauncher),
+              p.unitsConstructed(UnitType.SAMLauncher),
+            );
+
+            // First SAM: 1.5M
+            if (totalLevels === 0) {
+              return BigInt(1_500_000);
+            }
+
+            // Check if player has a SAM at level 2 (upgrading to level 3)
+            const sams = p.units(UnitType.SAMLauncher);
+            const hasLevel2Sam = sams.some((sam) => sam.level() === 2);
+
+            // If totalLevels is 2 and there's a level 2 SAM, we're upgrading to level 3: 6M
+            if (totalLevels === 2 && hasLevel2Sam) {
+              return BigInt(6_000_000);
+            }
+
+            // Otherwise (new SAM or upgrade to level 2): 3M
+            return BigInt(3_000_000);
+          },
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
@@ -923,8 +944,8 @@ export class DefaultConfig implements Config {
   }
 
   samRange(level: number): number {
-    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
-    return this.maxSamRange() - 480 / (level + 5);
+    // Linear scaling: level 1 = 70, level 2 = 85, level 3 = 100 (hydrogen bomb range)
+    return 70 + 15 * (level - 1);
   }
 
   maxSamRange(): number {
