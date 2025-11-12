@@ -1,6 +1,6 @@
-## API Usage
+# API Usage
 
-### List Game Metadata
+## List Game Metadata
 
 Get game IDs and basic metadata for games that started within a specified time range. Results are sorted by start time and paginated.
 
@@ -49,7 +49,7 @@ The response includes a `Content-Range` header indicating pagination (e.g., `gam
 
 ---
 
-### Get Game Info
+## Get Game Info
 
 Retrieve detailed information about a specific game.
 
@@ -77,7 +77,7 @@ curl "https://api.openfront.io/public/game/ABSgwin6?turns=false"
 
 ---
 
-### Get Player Info
+## Get Player Info
 
 Retrieve information and stats for a specific player.
 
