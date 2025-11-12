@@ -7,7 +7,7 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
-import { SoundEffect, SoundManager } from "./sound/SoundManager";
+import { SoundConfig, SoundEffect, SoundManager } from "./sound/SoundManager";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
@@ -36,7 +36,14 @@ export class UserSettingModal extends LitElement {
 
     // Initialize sound settings
     if (this.soundManager) {
-      this.soundManager.initializeFromUserSettings(this.userSettings);
+      const soundConfig: SoundConfig = {
+        backgroundMusicVolume: this.userSettings.backgroundMusicVolume(),
+        soundEffectsVolume: this.userSettings.soundEffectsVolume(),
+        isSoundEffectEnabled: (soundEffect: SoundEffect) =>
+          this.userSettings.isSoundEffectEnabled(soundEffect),
+        isBackgroundMusicEnabled: this.userSettings.isBackgroundMusicEnabled(),
+      };
+      this.soundManager.updateConfig(soundConfig);
     }
   }
 
@@ -681,7 +688,7 @@ export class UserSettingModal extends LitElement {
           const enabled = e.detail?.checked;
           if (typeof enabled === "boolean") {
             this.userSettings.setSoundEffectEnabled(soundEffect, enabled);
-            this.soundManager?.setSoundEffectEnabled(soundEffect, enabled);
+            this.soundManager?.toggleSoundEffect(soundEffect, enabled);
           }
         }}
       ></setting-toggle>

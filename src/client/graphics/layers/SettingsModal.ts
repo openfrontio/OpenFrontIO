@@ -15,7 +15,11 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent, RefreshGraphicsEvent } from "../../InputHandler";
 import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
-import { SoundEffect, SoundManager } from "../../sound/SoundManager";
+import {
+  SoundConfig,
+  SoundEffect,
+  SoundManager,
+} from "../../sound/SoundManager";
 import { Layer } from "./Layer";
 
 export class ShowSettingsModalEvent {
@@ -53,7 +57,14 @@ export class SettingsModal extends LitElement implements Layer {
   init() {
     // Initialize sound settings from user preferences
     if (this.soundManager) {
-      this.soundManager.initializeFromUserSettings(this.userSettings);
+      const soundConfig: SoundConfig = {
+        backgroundMusicVolume: this.userSettings.backgroundMusicVolume(),
+        soundEffectsVolume: this.userSettings.soundEffectsVolume(),
+        isSoundEffectEnabled: (soundEffect: SoundEffect) =>
+          this.userSettings.isSoundEffectEnabled(soundEffect),
+        isBackgroundMusicEnabled: this.userSettings.isBackgroundMusicEnabled(),
+      };
+      this.soundManager.updateConfig(soundConfig);
     }
 
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
@@ -551,10 +562,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.KaChing,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
-              SoundEffect.KaChing,
-              enabled,
-            );
+            this.soundManager?.toggleSoundEffect(SoundEffect.KaChing, enabled);
             this.requestUpdate();
           }}
         >
@@ -584,10 +592,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.Building,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
-              SoundEffect.Building,
-              enabled,
-            );
+            this.soundManager?.toggleSoundEffect(SoundEffect.Building, enabled);
             this.requestUpdate();
           }}
         >
@@ -617,7 +622,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.BuildingDestroyed,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
+            this.soundManager?.toggleSoundEffect(
               SoundEffect.BuildingDestroyed,
               enabled,
             );
@@ -651,10 +656,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.Alarm,
             );
             this.userSettings.setSoundEffectEnabled(SoundEffect.Alarm, enabled);
-            this.soundManager?.setSoundEffectEnabled(
-              SoundEffect.Alarm,
-              enabled,
-            );
+            this.soundManager?.toggleSoundEffect(SoundEffect.Alarm, enabled);
             this.requestUpdate();
           }}
         >
@@ -684,7 +686,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.StealBuilding,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
+            this.soundManager?.toggleSoundEffect(
               SoundEffect.StealBuilding,
               enabled,
             );
@@ -717,7 +719,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.AtomLaunch,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
+            this.soundManager?.toggleSoundEffect(
               SoundEffect.AtomLaunch,
               enabled,
             );
@@ -750,10 +752,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.AtomHit,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
-              SoundEffect.AtomHit,
-              enabled,
-            );
+            this.soundManager?.toggleSoundEffect(SoundEffect.AtomHit, enabled);
             this.requestUpdate();
           }}
         >
@@ -783,7 +782,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.HydrogenLaunch,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
+            this.soundManager?.toggleSoundEffect(
               SoundEffect.HydrogenLaunch,
               enabled,
             );
@@ -816,7 +815,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.HydrogenHit,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
+            this.soundManager?.toggleSoundEffect(
               SoundEffect.HydrogenHit,
               enabled,
             );
@@ -849,7 +848,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.MIRVLaunch,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
+            this.soundManager?.toggleSoundEffect(
               SoundEffect.MIRVLaunch,
               enabled,
             );
@@ -882,10 +881,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.SAMHit,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
-              SoundEffect.SAMHit,
-              enabled,
-            );
+            this.soundManager?.toggleSoundEffect(SoundEffect.SAMHit, enabled);
             this.requestUpdate();
           }}
         >
@@ -912,10 +908,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.Click,
             );
             this.userSettings.setSoundEffectEnabled(SoundEffect.Click, enabled);
-            this.soundManager?.setSoundEffectEnabled(
-              SoundEffect.Click,
-              enabled,
-            );
+            this.soundManager?.toggleSoundEffect(SoundEffect.Click, enabled);
             this.requestUpdate();
           }}
         >
@@ -945,10 +938,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.GameWin,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
-              SoundEffect.GameWin,
-              enabled,
-            );
+            this.soundManager?.toggleSoundEffect(SoundEffect.GameWin, enabled);
             this.requestUpdate();
           }}
         >
@@ -978,10 +968,7 @@ export class SettingsModal extends LitElement implements Layer {
               SoundEffect.GameOver,
               enabled,
             );
-            this.soundManager?.setSoundEffectEnabled(
-              SoundEffect.GameOver,
-              enabled,
-            );
+            this.soundManager?.toggleSoundEffect(SoundEffect.GameOver, enabled);
             this.requestUpdate();
           }}
         >

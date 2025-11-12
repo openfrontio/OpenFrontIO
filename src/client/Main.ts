@@ -43,7 +43,7 @@ import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getUserMe, isLoggedIn } from "./jwt";
-import SoundManager from "./sound/SoundManager";
+import SoundManager, { SoundConfig, SoundEffect } from "./sound/SoundManager";
 import "./styles.css";
 
 declare global {
@@ -350,7 +350,14 @@ class Client {
     }
 
     // Initialize sound settings from cookies on page load
-    this.soundManager.initializeFromUserSettings(this.userSettings);
+    const soundConfig: SoundConfig = {
+      backgroundMusicVolume: this.userSettings.backgroundMusicVolume(),
+      soundEffectsVolume: this.userSettings.soundEffectsVolume(),
+      isSoundEffectEnabled: (soundEffect: SoundEffect) =>
+        this.userSettings.isSoundEffectEnabled(soundEffect),
+      isBackgroundMusicEnabled: this.userSettings.isBackgroundMusicEnabled(),
+    };
+    this.soundManager.updateConfig(soundConfig);
 
     // Attempt to join lobby
     this.handleHash();

@@ -49,7 +49,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
-import { SoundManager } from "./sound/SoundManager";
+import { SoundConfig, SoundEffect, SoundManager } from "./sound/SoundManager";
 
 export interface LobbyConfig {
   serverConfig: ServerConfig;
@@ -258,7 +258,14 @@ export class ClientGameRunner {
   public start() {
     // Initialize sound settings from cookies before playing music
     const userSettings = new UserSettings();
-    this.soundManager.initializeFromUserSettings(userSettings);
+    const soundConfig: SoundConfig = {
+      backgroundMusicVolume: userSettings.backgroundMusicVolume(),
+      soundEffectsVolume: userSettings.soundEffectsVolume(),
+      isSoundEffectEnabled: (soundEffect: SoundEffect) =>
+        userSettings.isSoundEffectEnabled(soundEffect),
+      isBackgroundMusicEnabled: userSettings.isBackgroundMusicEnabled(),
+    };
+    this.soundManager.updateConfig(soundConfig);
 
     // Now play music if enabled
     this.soundManager.playBackgroundMusic();

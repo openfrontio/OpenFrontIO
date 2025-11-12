@@ -16,7 +16,6 @@ import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
 import mirvLaunchSound from "../../../resources/sounds/effects/mirv_launch.mp3";
 import samSound from "../../../resources/sounds/effects/sam.mp3";
 import stealBuildingSound from "../../../resources/sounds/effects/stealBuilding.mp3";
-import { UserSettings } from "../../core/game/UserSettings";
 
 export enum SoundEffect {
   KaChing = "ka-ching",
@@ -39,6 +38,13 @@ interface SoundEffectConfig {
   effect: SoundEffect;
   src: string;
   loop?: boolean;
+}
+
+export interface SoundConfig {
+  backgroundMusicVolume: number;
+  soundEffectsVolume: number;
+  isSoundEffectEnabled: (soundEffect: SoundEffect) => boolean;
+  isBackgroundMusicEnabled: boolean;
 }
 
 // Configuration for all sound effects
@@ -295,7 +301,7 @@ class SoundManager {
     this.playSoundEffect(SoundEffect.Click, 0.45);
   }
 
-  public playSoundEffectNTimes(name: SoundEffect, times: number): void {
+  public repeatSound(name: SoundEffect, times: number): void {
     if (this.disabledSounds.has(name)) {
       return;
     }
@@ -366,7 +372,7 @@ class SoundManager {
     }
   }
 
-  public setSoundEffectEnabled(name: SoundEffect, enabled: boolean): void {
+  public toggleSoundEffect(name: SoundEffect, enabled: boolean): void {
     if (enabled) {
       this.disabledSounds.delete(name);
     } else {
@@ -397,24 +403,24 @@ class SoundManager {
   }
 
   /**
-   * Initializes all sound settings from UserSettings.
+   * Updates sound configuration from a SoundConfig object.
    * This consolidates the repeated pattern of loading sound settings from user preferences.
    */
-  public initializeFromUserSettings(userSettings: UserSettings): void {
+  public updateConfig(config: SoundConfig): void {
     // Set volumes
-    this.setBackgroundMusicVolume(userSettings.backgroundMusicVolume());
-    this.setSoundEffectsVolume(userSettings.soundEffectsVolume());
+    this.setBackgroundMusicVolume(config.backgroundMusicVolume);
+    this.setSoundEffectsVolume(config.soundEffectsVolume);
 
     // Enable/disable all sound effects
-    SOUND_EFFECT_CONFIGS.forEach((config) => {
-      this.setSoundEffectEnabled(
-        config.effect,
-        userSettings.isSoundEffectEnabled(config.effect),
+    SOUND_EFFECT_CONFIGS.forEach((configItem) => {
+      this.toggleSoundEffect(
+        configItem.effect,
+        config.isSoundEffectEnabled(configItem.effect),
       );
     });
 
     // Set background music enabled state
-    this.setBackgroundMusicEnabled(userSettings.isBackgroundMusicEnabled());
+    this.setBackgroundMusicEnabled(config.isBackgroundMusicEnabled);
   }
 }
 

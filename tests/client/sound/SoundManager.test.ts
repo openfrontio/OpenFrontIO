@@ -71,7 +71,7 @@ describe("SoundManager", () => {
       });
 
       it("should not play a sound effect when disabled", () => {
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, false);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, false);
         const soundEffects = (soundManager as any).soundEffects;
         const kaChingSound = soundEffects.get(SoundEffect.KaChing);
         soundManager.playSoundEffect(SoundEffect.KaChing);
@@ -81,8 +81,8 @@ describe("SoundManager", () => {
       });
 
       it("should play sound effect after re-enabling", () => {
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, false);
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, true);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, false);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, true);
         const soundEffects = (soundManager as any).soundEffects;
         const kaChingSound = soundEffects.get(SoundEffect.KaChing);
         soundManager.playSoundEffect(SoundEffect.KaChing);
@@ -100,13 +100,13 @@ describe("SoundManager", () => {
       });
     });
 
-    describe("playSoundEffectNTimes", () => {
+    describe("repeatSound", () => {
       it("should play sound effect multiple times", () => {
         const soundEffects = (soundManager as any).soundEffects;
         const alarmSound = soundEffects.get(SoundEffect.Alarm);
         if (!alarmSound) return;
 
-        soundManager.playSoundEffectNTimes(SoundEffect.Alarm, 3);
+        soundManager.repeatSound(SoundEffect.Alarm, 3);
         expect(alarmSound.stop).toHaveBeenCalled(); // Should stop any currently playing instance
         expect(alarmSound.on).toHaveBeenCalledWith("end", expect.any(Function));
         expect(alarmSound.play).toHaveBeenCalled();
@@ -116,7 +116,7 @@ describe("SoundManager", () => {
         soundManager.setSoundEffectEnabled(SoundEffect.Alarm, false);
         const soundEffects = (soundManager as any).soundEffects;
         const alarmSound = soundEffects.get(SoundEffect.Alarm);
-        soundManager.playSoundEffectNTimes(SoundEffect.Alarm, 3);
+        soundManager.repeatSound(SoundEffect.Alarm, 3);
         if (alarmSound) {
           expect(alarmSound.play).not.toHaveBeenCalled();
         }
@@ -125,7 +125,7 @@ describe("SoundManager", () => {
       it("should stop currently playing instance before playing multiple times", () => {
         const soundEffects = (soundManager as any).soundEffects;
         const alarmSound = soundEffects.get(SoundEffect.Alarm);
-        soundManager.playSoundEffectNTimes(SoundEffect.Alarm, 2);
+        soundManager.repeatSound(SoundEffect.Alarm, 2);
         if (alarmSound) {
           expect(alarmSound.stop).toHaveBeenCalled();
         }
@@ -137,12 +137,12 @@ describe("SoundManager", () => {
         if (!alarmSound) return;
 
         // First call
-        soundManager.playSoundEffectNTimes(SoundEffect.Alarm, 2);
+        soundManager.repeatSound(SoundEffect.Alarm, 2);
         const firstHandler = alarmSound.on.mock.calls[0][1];
 
         // Second call should remove first handler
         alarmSound.on.mockClear();
-        soundManager.playSoundEffectNTimes(SoundEffect.Alarm, 3);
+        soundManager.repeatSound(SoundEffect.Alarm, 3);
         expect(alarmSound.off).toHaveBeenCalledWith("end", firstHandler);
       });
     });
@@ -219,16 +219,16 @@ describe("SoundManager", () => {
       });
     });
 
-    describe("setSoundEffectEnabled", () => {
+    describe("toggleSoundEffect", () => {
       it("should enable a sound effect", () => {
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, true);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, true);
         expect(soundManager.isSoundEffectEnabled(SoundEffect.KaChing)).toBe(
           true,
         );
       });
 
       it("should disable a sound effect", () => {
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, false);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, false);
         expect(soundManager.isSoundEffectEnabled(SoundEffect.KaChing)).toBe(
           false,
         );
@@ -237,7 +237,7 @@ describe("SoundManager", () => {
       it("should stop sound when disabling", () => {
         const soundEffects = (soundManager as any).soundEffects;
         const kaChingSound = soundEffects.get(SoundEffect.KaChing);
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, false);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, false);
         if (kaChingSound) {
           expect(kaChingSound.stop).toHaveBeenCalled();
         }
@@ -249,7 +249,7 @@ describe("SoundManager", () => {
         if (kaChingSound) {
           kaChingSound.stop.mockClear();
         }
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, true);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, true);
         if (kaChingSound) {
           expect(kaChingSound.stop).not.toHaveBeenCalled();
         }
@@ -258,14 +258,14 @@ describe("SoundManager", () => {
 
     describe("isSoundEffectEnabled", () => {
       it("should return true for enabled sound effect", () => {
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, true);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, true);
         expect(soundManager.isSoundEffectEnabled(SoundEffect.KaChing)).toBe(
           true,
         );
       });
 
       it("should return false for disabled sound effect", () => {
-        soundManager.setSoundEffectEnabled(SoundEffect.KaChing, false);
+        soundManager.toggleSoundEffect(SoundEffect.KaChing, false);
         expect(soundManager.isSoundEffectEnabled(SoundEffect.KaChing)).toBe(
           false,
         );
@@ -517,9 +517,9 @@ describe("SoundManager", () => {
     });
 
     it("should handle multiple sound effects independently", () => {
-      soundManager.setSoundEffectEnabled(SoundEffect.KaChing, false);
-      soundManager.setSoundEffectEnabled(SoundEffect.Building, true);
-      soundManager.setSoundEffectEnabled(SoundEffect.Alarm, false);
+      soundManager.toggleSoundEffect(SoundEffect.KaChing, false);
+      soundManager.toggleSoundEffect(SoundEffect.Building, true);
+      soundManager.toggleSoundEffect(SoundEffect.Alarm, false);
 
       expect(soundManager.isSoundEffectEnabled(SoundEffect.KaChing)).toBe(
         false,

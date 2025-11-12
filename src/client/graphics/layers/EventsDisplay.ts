@@ -579,7 +579,7 @@ export class EventsDisplay extends LitElement implements Layer {
       ];
       // Play alarm sound when someone breaks your alliance (3 times)
       if (this.soundManager) {
-        this.soundManager.playSoundEffectNTimes(SoundEffect.Alarm, 3);
+        this.soundManager.repeatSound(SoundEffect.Alarm, 3);
       }
       this.addEvent({
         description: translateText("events_display.betrayed_you", {
