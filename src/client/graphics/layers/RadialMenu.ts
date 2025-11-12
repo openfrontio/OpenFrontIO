@@ -1,4 +1,6 @@
 import * as d3 from "d3";
+import { RadialMenuState } from "./RadialMenuElements";
+// import { breakAlliancePendingId } from "./RadialMenuElements";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
@@ -127,9 +129,12 @@ export class RadialMenu implements Layer {
       .style("left", "0")
       .style("width", "100vw")
       .style("height", "100vh")
-      .on("click", () => {
-        this.hideRadialMenu();
-        this.eventBus.emit(new CloseRadialMenuEvent());
+      .on("click", (event) => {
+        // Only close if not clicking on a menu item
+        if (!event.target.closest(".menu-item-path")) {
+          this.hideRadialMenu();
+          this.eventBus.emit(new CloseRadialMenuEvent());
+        }
       })
       .on("contextmenu", (e) => {
         e.preventDefault();
@@ -151,7 +156,12 @@ export class RadialMenu implements Layer {
       .style("left", "50%")
       .style("transform", "translate(-50%, -50%)")
       .style("pointer-events", "all")
-      .on("click", (event) => this.hideRadialMenu());
+      .on("click", (event) => {
+        // Only close if not clicking on a menu item
+        if (!event.target.closest(".menu-item-path")) {
+          this.hideRadialMenu();
+        }
+      });
 
     const container = svg
       .append("g")
@@ -458,9 +468,14 @@ export class RadialMenu implements Layer {
         this.updateCenterButtonState("back");
       } else {
         d.data.action?.(this.params);
-        // Force transition state to false to ensure menu hides
-        this.isTransitioning = false;
-        this.hideRadialMenu();
+        // Only close if not pending confirmation for break alliance
+        if (
+          !RadialMenuState.breakAlliancePendingId ||
+          RadialMenuState.breakAlliancePendingId !== this.params?.selected?.id()
+        ) {
+          this.isTransitioning = false;
+          this.hideRadialMenu();
+        }
       }
     };
 
@@ -806,10 +821,10 @@ export class RadialMenu implements Layer {
     if (!this.isVisible) {
       return;
     }
-
+    // Reset pending unalley state if menu closes without confirm
+    RadialMenuState.breakAlliancePendingId = null;
     // Force transition state to false to ensure menu hides
     this.isTransitioning = false;
-
     this.menuElement.style("display", "none");
     this.isVisible = false;
     this.selectedItemId = null;

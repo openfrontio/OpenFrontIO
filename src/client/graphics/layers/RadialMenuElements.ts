@@ -191,9 +191,15 @@ const allyRequestElement: MenuElement = {
   },
 };
 
+// Safe-unalley state
+export const RadialMenuState = {
+  breakAlliancePendingId: null as string | null,
+};
+
 const allyBreakElement: MenuElement = {
   id: "ally_break",
-  name: "break",
+  name:
+    RadialMenuState.breakAlliancePendingId === null ? "break" : "confirm_break",
   disabled: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canBreakAlliance,
   displayed: (params: MenuElementParams) =>
@@ -201,11 +207,17 @@ const allyBreakElement: MenuElement = {
   color: COLORS.breakAlly,
   icon: traitorIcon,
   action: (params: MenuElementParams) => {
-    params.playerActionHandler.handleBreakAlliance(
-      params.myPlayer,
-      params.selected!,
-    );
-    params.closeMenu();
+    if (RadialMenuState.breakAlliancePendingId === params.selected?.id()) {
+      params.playerActionHandler.handleBreakAlliance(
+        params.myPlayer,
+        params.selected!,
+      );
+      RadialMenuState.breakAlliancePendingId = null;
+      params.closeMenu();
+    } else {
+      RadialMenuState.breakAlliancePendingId = params.selected?.id() ?? null;
+      // Do NOT close menu here; menu stays open for confirmation
+    }
   },
 };
 
@@ -573,7 +585,27 @@ export const rootMenuElement: MenuElement = {
   subMenu: (params: MenuElementParams) => {
     let ally = allyRequestElement;
     if (params.selected?.isAlliedWith(params.myPlayer)) {
-      ally = allyBreakElement;
+      // If confirmation is pending for this player, show confirm button instead of break
+      if (
+        RadialMenuState.breakAlliancePendingId &&
+        params.selected?.id() === RadialMenuState.breakAlliancePendingId
+      ) {
+        ally = {
+          ...allyBreakElement,
+          name: "confirm_break",
+          color: "#800080",
+          icon: traitorIcon,
+          text: undefined,
+        };
+      } else {
+        ally = {
+          ...allyBreakElement,
+          name: "break",
+          color: COLORS.breakAlly,
+          icon: traitorIcon,
+          text: undefined,
+        };
+      }
     }
 
     const tileOwner = params.game.owner(params.tile);
