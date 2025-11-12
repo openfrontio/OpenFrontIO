@@ -500,8 +500,11 @@ export class NameLayer implements Layer {
           .alliances()
           .find((a) => a.other === render.player.id());
         return (
-          alliance?.extensionRequestedByMe ??
-          alliance?.extensionRequestedByOther ??
+          // the || is the correct way to handle it in this instance
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          alliance?.extensionRequestedByMe ||
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+          alliance?.extensionRequestedByOther ||
           false
         );
       })();
