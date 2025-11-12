@@ -821,7 +821,9 @@ export class EventsDisplay extends LitElement implements Layer {
   ): string | DirectiveResult<typeof UnsafeHTMLDirective> {
     // Add "(retreating)" for boat attacks when the boat is retreating
     if (event.type === MessageType.NAVAL_INVASION_INBOUND && event.unitView) {
-      if (event.unitView.retreating()) {
+      // Get the current unit view to check retreating state dynamically
+      const currentUnitView = this.game.unit(event.unitView.id());
+      if (currentUnitView && currentUnitView.retreating()) {
         const baseDescription = event.description;
         const retreatingText = ` (${translateText("events_display.retreating")})`;
         if (event.unsafeDescription) {
