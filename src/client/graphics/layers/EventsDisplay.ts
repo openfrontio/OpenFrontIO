@@ -779,7 +779,10 @@ export class EventsDisplay extends LitElement implements Layer {
     // Format the message for NAVAL_INVASION_INBOUND to display formatted troop count
     let description = event.message;
     if (event.messageType === MessageType.NAVAL_INVASION_INBOUND && unitView) {
-      const formattedTroops = this.renderTroopsWholeNumber(unitView.troops());
+      const formattedTroops = renderNumber(
+        Math.round(unitView.troops()) / 10,
+        0,
+      );
       description = event.message.replace(
         /Boat: \d+/,
         `Boat: ${formattedTroops}`,
@@ -850,21 +853,6 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
-  /**
-   * Render troops as a whole number (no decimals) for incoming attacks.
-   */
-  private renderTroopsWholeNumber(troops: number): string {
-    const actualTroops = Math.round(Math.round(troops) / 10);
-
-    if (actualTroops >= 1_000_000) {
-      return Math.floor(actualTroops / 1_000_000) + "M";
-    }
-    if (actualTroops >= 1_000) {
-      return Math.floor(actualTroops / 1_000) + "K";
-    }
-    return actualTroops.toString();
-  }
-
   private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
@@ -873,7 +861,7 @@ export class EventsDisplay extends LitElement implements Layer {
               return html`
                 ${this.renderButton({
                   content: html`
-                    ${this.renderTroopsWholeNumber(attack.troops)}
+                    ${renderNumber(Math.round(attack.troops) / 10, 0)}
                     ${(
                       this.game.playerBySmallID(attack.attackerID) as PlayerView
                     )?.name()}
