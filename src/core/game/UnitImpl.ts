@@ -275,9 +275,11 @@ export class UnitImpl implements Unit {
             const targetOwner = this.mg.owner(targetTile);
             if (targetOwner.isPlayer() && targetOwner !== this._owner) {
               this.mg.displayMessage(
-                `${this._owner.displayName()} boat was destroyed`,
+                "events_display.enemy_boat_destroyed",
                 MessageType.UNIT_DESTROYED,
                 targetOwner.id(),
+                undefined,
+                { name: this._owner.displayName() },
               );
             }
           }
