@@ -80,7 +80,6 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private active: boolean = false;
   private events: GameEvent[] = [];
-  private activeAllianceBrokenEventIds: Set<number> = new Set();
   private nextEventId: number = 0;
 
   // allianceID -> last checked at tick
