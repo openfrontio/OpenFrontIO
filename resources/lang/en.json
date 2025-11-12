@@ -582,6 +582,7 @@
     "ignore": "Ignore",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
     "enemy_boat_destroyed": "{name} boat was destroyed"
+    "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
