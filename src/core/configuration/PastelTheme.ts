@@ -7,10 +7,7 @@ import { ColorAllocator } from "./ColorAllocator";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Config";
 
-type ColorCache = Map<string, Colord>;
-
 export class PastelTheme implements Theme {
-  private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
   private humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
   private botColorAllocator = new ColorAllocator(botColors, botColors);

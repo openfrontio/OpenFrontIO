@@ -601,12 +601,14 @@ export class HostLobbyModal extends LitElement {
                                       <div
                                         class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
                                       >
-                                        <span
-                                          class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner"
-                                          style="background:${this.teamHeaderColor(
-                                            tp.team,
-                                          )};"
-                                        ></span>
+                                        ${this.getTeamList().length <= 7
+                                          ? html`<span
+                                              class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner"
+                                              style="background:${this.teamHeaderColor(
+                                                tp.team,
+                                              )};"
+                                            ></span>`
+                                          : null}
                                         <span class="truncate">${tp.team}</span>
                                         <span class="text-white/90"
                                           >${tp.players.length}/${this
@@ -661,12 +663,14 @@ export class HostLobbyModal extends LitElement {
                                       <div
                                         class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
                                       >
-                                        <span
-                                          class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner"
-                                          style="background:${this.teamHeaderColor(
-                                            tp.team,
-                                          )};"
-                                        ></span>
+                                        ${this.getTeamList().length <= 7
+                                          ? html`<span
+                                              class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner"
+                                              style="background:${this.teamHeaderColor(
+                                                tp.team,
+                                              )};"
+                                            ></span>`
+                                          : null}
                                         <span class="truncate">${tp.team}</span>
                                         <span class="text-white/90"
                                           >0/${this.teamMaxSize}</span
