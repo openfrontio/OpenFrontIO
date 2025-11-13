@@ -263,7 +263,10 @@
     "players": "Players",
     "waiting": "Waiting for players...",
     "start": "Start Game",
-    "host_badge": "Host"
+    "host_badge": "Host",
+    "assigned_teams": "Assigned Teams",
+    "empty_teams": "Empty Teams",
+    "empty_team": "Empty"
   },
   "team_colors": {
     "red": "Red",

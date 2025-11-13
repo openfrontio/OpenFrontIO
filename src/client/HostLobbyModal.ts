@@ -2,19 +2,34 @@ import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
-import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
+  blue,
+  green,
+  orange,
+  purple,
+  red,
+  teal,
+  yellow,
+} from "../core/configuration/Colors";
+import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { PastelTheme } from "../core/configuration/PastelTheme";
+import {
+  ColoredTeams,
   Difficulty,
   Duos,
   GameMapSize,
   GameMapType,
   GameMode,
   HumansVsNations,
+  PlayerInfo,
+  PlayerType,
   Quads,
+  Team,
   Trios,
   UnitType,
   mapCategories,
 } from "../core/game/Game";
+import { assignTeams } from "../core/game/TeamAssignment";
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
@@ -56,11 +71,16 @@ export class HostLobbyModal extends LitElement {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
+  @state() private teamPreview: Array<{ team: Team; players: ClientInfo[] }> =
+    [];
+  @state() private teamMaxSize: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
+  // Use same theme color allocator as game
+  private theme: PastelTheme = new PastelTheme();
 
   connectedCallback() {
     super.connectedCallback();
@@ -538,27 +558,161 @@ export class HostLobbyModal extends LitElement {
           </div>
 
           <div class="players-list">
-            ${this.clients.map(
-              (client) => html`
-                <span class="player-tag">
-                  ${client.username}
-                  ${client.clientID === this.lobbyCreatorClientID
-                    ? html`<span class="host-badge"
-                        >(${translateText("host_modal.host_badge")})</span
-                      >`
-                    : html`
-                        <button
-                          class="remove-player-btn"
-                          @click=${() => this.kickPlayer(client.clientID)}
-                          title="Remove ${client.username}"
-                        >
-                          ×
-                        </button>
-                      `}
-                </span>
-              `,
-            )}
-        </div>
+            ${
+              this.gameMode === GameMode.Team
+                ? html`
+                    <div class="flex gap-4 items-stretch max-h-[65vh]">
+                      <div
+                        class="w-60 bg-gray-800 p-2 border border-gray-700 rounded-lg max-h-[65vh] overflow-auto"
+                      >
+                        <div class="font-bold mb-1.5 text-gray-300">
+                          ${translateText("host_modal.players")}
+                        </div>
+                        ${this.clients.map(
+                          (client) =>
+                            html`<div
+                              class="px-2 py-1 rounded bg-gray-700/70 mb-1 text-xs"
+                            >
+                              ${client.username}
+                            </div>`,
+                        )}
+                      </div>
+                      <div
+                        class="flex-1 flex flex-col gap-4 overflow-auto max-h-[65vh] pr-1"
+                      >
+                        ${(() => {
+                          const active = this.teamPreview.filter(
+                            (t) => t.players.length > 0,
+                          );
+                          const empty = this.teamPreview.filter(
+                            (t) => t.players.length === 0,
+                          );
+                          return html`
+                            <div>
+                              <div class="font-semibold text-gray-200 mb-1">
+                                ${translateText("host_modal.assigned_teams")}
+                              </div>
+                              <div class="w-full grid grid-cols-2 gap-3">
+                                ${active.map(
+                                  (tp) => html`
+                                    <div
+                                      class="bg-gray-800 border border-gray-700 rounded-xl flex flex-col"
+                                    >
+                                      <div
+                                        class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
+                                      >
+                                        <span
+                                          class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner"
+                                          style="background:${this.teamHeaderColor(
+                                            tp.team,
+                                          )};"
+                                        ></span>
+                                        <span class="truncate">${tp.team}</span>
+                                        <span class="text-white/90"
+                                          >${tp.players.length}/${this
+                                            .teamMaxSize}</span
+                                        >
+                                      </div>
+                                      <div class="p-2 flex flex-col gap-1.5">
+                                        ${tp.players.map(
+                                          (p) =>
+                                            html`<div
+                                              class="bg-gray-700/70 px-2 py-1 rounded text-xs flex items-center justify-between"
+                                            >
+                                              <span class="truncate"
+                                                >${p.username}</span
+                                              >
+                                              ${p.clientID ===
+                                              this.lobbyCreatorClientID
+                                                ? html`<span
+                                                    class="ml-2 text-[11px] text-green-300"
+                                                    >(${translateText(
+                                                      "host_modal.host_badge",
+                                                    )})</span
+                                                  >`
+                                                : html`<button
+                                                    class="remove-player-btn ml-2"
+                                                    @click=${() =>
+                                                      this.kickPlayer(
+                                                        p.clientID,
+                                                      )}
+                                                    title="Remove ${p.username}"
+                                                  >
+                                                    ×
+                                                  </button>`}
+                                            </div>`,
+                                        )}
+                                      </div>
+                                    </div>
+                                  `,
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <div class="font-semibold text-gray-200 mb-1">
+                                ${translateText("host_modal.empty_teams")}
+                              </div>
+                              <div class="w-full grid grid-cols-2 gap-3">
+                                ${empty.map(
+                                  (tp) => html`
+                                    <div
+                                      class="bg-gray-800 border border-gray-700 rounded-xl flex flex-col"
+                                    >
+                                      <div
+                                        class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
+                                      >
+                                        <span
+                                          class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner"
+                                          style="background:${this.teamHeaderColor(
+                                            tp.team,
+                                          )};"
+                                        ></span>
+                                        <span class="truncate">${tp.team}</span>
+                                        <span class="text-white/90"
+                                          >0/${this.teamMaxSize}</span
+                                        >
+                                      </div>
+                                      <div class="p-2">
+                                        <div
+                                          class="text-[11px] italic text-gray-400"
+                                        >
+                                          ${translateText(
+                                            "host_modal.empty_team",
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  `,
+                                )}
+                              </div>
+                            </div>
+                          `;
+                        })()}
+                      </div>
+                    </div>
+                  `
+                : html`${this.clients.map(
+                    (client) => html`
+                      <span class="player-tag">
+                        ${client.username}
+                        ${client.clientID === this.lobbyCreatorClientID
+                          ? html`<span class="host-badge"
+                              >(${translateText("host_modal.host_badge")})</span
+                            >`
+                          : html`
+                              <button
+                                class="remove-player-btn"
+                                @click=${() => this.kickPlayer(client.clientID)}
+                                title="Remove ${client.username}"
+                              >
+                                ×
+                              </button>
+                            `}
+                      </span>
+                    `,
+                  )}`
+            }
+          </div>
 
         <div class="start-game-button-container">
           <button
@@ -721,11 +875,13 @@ export class HostLobbyModal extends LitElement {
   private async handleGameModeSelection(value: GameMode) {
     this.gameMode = value;
     this.putGameConfig();
+    this.computeTeamPreview();
   }
 
   private async handleTeamCountSelection(value: TeamCountConfig) {
     this.teamCount = value;
     this.putGameConfig();
+    this.computeTeamPreview();
   }
 
   private async putGameConfig() {
@@ -834,6 +990,7 @@ export class HostLobbyModal extends LitElement {
         console.log(`got game info response: ${JSON.stringify(data)}`);
 
         this.clients = data.clients ?? [];
+        this.computeTeamPreview();
       });
   }
 
@@ -846,6 +1003,126 @@ export class HostLobbyModal extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  private getTeamList(): Team[] {
+    if (this.gameMode !== GameMode.Team) return [];
+    const playerCount = this.clients.length;
+    const tc = this.teamCount;
+
+    if (tc === HumansVsNations) {
+      return [ColoredTeams.Humans, ColoredTeams.Nations];
+    }
+
+    let numTeams: number;
+    if (typeof tc === "number") {
+      numTeams = Math.max(2, tc);
+    } else {
+      switch (tc) {
+        case Duos:
+          numTeams = Math.max(2, Math.ceil(playerCount / 2));
+          break;
+        case Trios:
+          numTeams = Math.max(2, Math.ceil(playerCount / 3));
+          break;
+        case Quads:
+          numTeams = Math.max(2, Math.ceil(playerCount / 4));
+          break;
+        default:
+          numTeams = 2;
+      }
+    }
+
+    if (numTeams < 8) {
+      const ordered: Team[] = [
+        ColoredTeams.Red,
+        ColoredTeams.Blue,
+        ColoredTeams.Yellow,
+        ColoredTeams.Green,
+        ColoredTeams.Purple,
+        ColoredTeams.Orange,
+        ColoredTeams.Teal,
+      ];
+      return ordered.slice(0, numTeams);
+    }
+
+    return Array.from({ length: numTeams }, (_, i) => `Team ${i + 1}`);
+  }
+
+  private teamHeaderColor(team: Team): string {
+    // Use the game's theme allocator to guarantee exact match for any team label
+    try {
+      return this.theme.teamColor(team).toHex();
+    } catch {
+      switch (team) {
+        case ColoredTeams.Red:
+          return red.toHex();
+        case ColoredTeams.Blue:
+          return blue.toHex();
+        case ColoredTeams.Yellow:
+          return yellow.toHex();
+        case ColoredTeams.Green:
+          return green.toHex();
+        case ColoredTeams.Purple:
+          return purple.toHex();
+        case ColoredTeams.Orange:
+          return orange.toHex();
+        case ColoredTeams.Teal:
+          return teal.toHex();
+        default:
+          return "#3b3f46";
+      }
+    }
+  }
+
+  private computeTeamPreview() {
+    if (this.gameMode !== GameMode.Team) {
+      this.teamPreview = [];
+      this.teamMaxSize = 0;
+      return;
+    }
+    const teams = this.getTeamList();
+    if (teams.length === 0) {
+      this.teamPreview = [];
+      this.teamMaxSize = 0;
+      return;
+    }
+
+    // HumansVsNations special-case: all human clients should appear under Humans
+    if (this.teamCount === HumansVsNations) {
+      const humansTeam = ColoredTeams.Humans;
+      const nationsTeam = ColoredTeams.Nations;
+      this.teamMaxSize = this.clients.length; // All players on one team
+      this.teamPreview = [
+        { team: humansTeam, players: [...this.clients] },
+        { team: nationsTeam, players: [] },
+      ];
+      return;
+    }
+
+    const players = this.clients.map(
+      (c) =>
+        new PlayerInfo(c.username, PlayerType.Human, c.clientID, c.clientID),
+    );
+    const assignment = assignTeams(players, teams);
+    const buckets = new Map<Team, ClientInfo[]>();
+    for (const t of teams) buckets.set(t, []);
+
+    for (const [p, team] of assignment.entries()) {
+      if (team === "kicked") continue;
+      const bucket = buckets.get(team);
+      if (!bucket) continue;
+      const client =
+        this.clients.find((c) => c.clientID === p.clientID) ??
+        this.clients.find((c) => c.username === p.name);
+      if (client) bucket.push(client);
+    }
+
+    this.teamMaxSize = Math.ceil(this.clients.length / teams.length);
+    this.teamPreview = teams.map((t) => ({
+      team: t,
+      players: buckets.get(t) ?? [],
+    }));
   }
 }
 
