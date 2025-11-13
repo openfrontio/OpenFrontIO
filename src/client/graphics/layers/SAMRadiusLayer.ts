@@ -100,7 +100,7 @@ export class SAMRadiusLayer implements Layer {
    * avoid scanning every SAM on each event.
    */
   private handleMouseMove(event: MouseMoveEvent) {
-    const eventTimestamp = event.timestamp ?? Date.now();
+    const eventTimestamp = Date.now();
 
     const worldCoord = this.transformHandler.screenToWorldCoordinates(
       event.x,
