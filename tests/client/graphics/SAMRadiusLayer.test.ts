@@ -95,7 +95,7 @@ describe("SAMRadiusLayer hover behaviour", () => {
     const layer = new SAMRadiusLayer(game, eventBus, transformHandler, uiState);
     layer.init();
 
-    eventBus.emit(new MouseMoveEvent(100, 150, 1));
+    eventBus.emit(new MouseMoveEvent(100, 150));
 
     expect(uiState.hoveredSamTarget).toBe(samId);
     expect(screenToWorldCoordinates).toHaveBeenCalledWith(100, 150);
@@ -150,11 +150,11 @@ describe("SAMRadiusLayer hover behaviour", () => {
     const layer = new SAMRadiusLayer(game, eventBus, transformHandler, uiState);
     layer.init();
 
-    eventBus.emit(new MouseMoveEvent(10, 20, 1));
+    eventBus.emit(new MouseMoveEvent(10, 20));
     expect(uiState.hoveredSamTarget).toBe(samId);
     expect((layer as any).mapHoverShow).toBe(true);
 
-    eventBus.emit(new MouseMoveEvent(200, 250, 20));
+    eventBus.emit(new MouseMoveEvent(200, 250));
 
     expect(uiState.hoveredSamTarget).toBeNull();
     expect((layer as any).mapHoverShow).toBe(false);
