@@ -909,14 +909,9 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    let cost: Gold;
-    if (unit.type() === UnitType.SAMLauncher) {
-      if (unit.level() >= config.samMaxLevel()) {
-        return false;
-      }
-      cost = config.samUpgradeCost(this, unit.level());
-    } else {
-      cost = this.mg.unitInfo(unit.type()).cost(this);
+    const cost = this.nextUpgradeCost(unit);
+    if (cost === null) {
+      return false;
     }
 
     if (this._gold < cost) {
@@ -927,19 +922,24 @@ export class PlayerImpl implements Player {
   }
 
   upgradeUnit(unit: Unit) {
-    let cost: Gold;
-    if (unit.type() === UnitType.SAMLauncher) {
-      const config = this.mg.config();
-      if (unit.level() >= config.samMaxLevel()) {
-        return;
-      }
-      cost = config.samUpgradeCost(this, unit.level());
-    } else {
-      cost = this.mg.unitInfo(unit.type()).cost(this);
+    const cost = this.nextUpgradeCost(unit);
+    if (cost === null) {
+      return;
     }
     this.removeGold(cost);
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
+  }
+
+  private nextUpgradeCost(unit: Unit): Gold | null {
+    if (unit.type() === UnitType.SAMLauncher) {
+      const config = this.mg.config();
+      if (unit.level() >= config.samMaxLevel()) {
+        return null;
+      }
+      return config.samUpgradeCost(this, unit.level());
+    }
+    return this.mg.unitInfo(unit.type()).cost(this);
   }
 
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
