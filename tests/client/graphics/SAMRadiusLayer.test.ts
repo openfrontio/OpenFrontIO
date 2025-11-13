@@ -74,6 +74,7 @@ describe("SAMRadiusLayer hover behaviour", () => {
       y: jest.fn(() => 6),
       config: () => createConfig(),
       updatesSinceLastTick: jest.fn(() => null),
+      myPlayer: () => ({ smallID: () => 7 }),
     } as unknown as GameView;
 
     const screenToWorldCoordinates = jest.fn().mockReturnValue({ x: 5, y: 6 });
@@ -125,6 +126,7 @@ describe("SAMRadiusLayer hover behaviour", () => {
       y: jest.fn(() => 6),
       config: () => createConfig(),
       updatesSinceLastTick: jest.fn(() => null),
+      myPlayer: () => ({ smallID: () => 7 }),
     } as unknown as GameView;
 
     const screenToWorldCoordinates = jest
