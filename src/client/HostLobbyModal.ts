@@ -1084,7 +1084,7 @@ export class HostLobbyModal extends LitElement {
     const teams = this.getTeamList();
     if (teams.length === 0) {
       this.teamPreview = [];
-      this.teamMaxSize = 0;
+      this.teamMaxSize = 1;
       return;
     }
 
@@ -1118,7 +1118,20 @@ export class HostLobbyModal extends LitElement {
       if (client) bucket.push(client);
     }
 
-    this.teamMaxSize = Math.ceil(this.clients.length / teams.length);
+    // Compute per-team capacity safely and align with common team sizes
+    if (this.teamCount === Duos) {
+      this.teamMaxSize = 2;
+    } else if (this.teamCount === Trios) {
+      this.teamMaxSize = 3;
+    } else if (this.teamCount === Quads) {
+      this.teamMaxSize = 4;
+    } else {
+      // Fallback: divide players across teams; guard against 0 and empty lobbies
+      this.teamMaxSize = Math.max(
+        1,
+        Math.ceil(this.clients.length / teams.length),
+      );
+    }
     this.teamPreview = teams.map((t) => ({
       team: t,
       players: buckets.get(t) ?? [],
