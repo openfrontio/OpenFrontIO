@@ -2,10 +2,12 @@ import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type { GameView } from "../../../core/game/GameView";
-import { ToggleStructureEvent } from "../../InputHandler";
+import { MouseMoveEvent, ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
+
+const SAM_ICON_HOVER_RADIUS = 0.85; // matches the on-screen footprint of the SAM launcher icon
 
 /**
  * Layer responsible for rendering SAM launcher defense radiuses
@@ -18,10 +20,12 @@ export class SAMRadiusLayer implements Layer {
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
   private ghostShow: boolean = false;
+  private mapHoverShow: boolean = false;
   private showStroke: boolean = false;
   private dashOffset = 0;
   private rotationSpeed = 14; // px per second
   private lastTickTime = Date.now();
+  private lastHoveredSamId: number | null = null;
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
@@ -53,14 +57,58 @@ export class SAMRadiusLayer implements Layer {
     this.eventBus.on(ToggleStructureEvent, (e) =>
       this.handleToggleStructure(e),
     );
+    this.eventBus.on(MouseMoveEvent, (e) => this.handleMouseMove(e));
     this.redraw();
   }
 
   private updateStrokeVisibility() {
-    const next = this.hoveredShow || this.ghostShow;
+    const next = this.hoveredShow || this.ghostShow || this.mapHoverShow;
     if (next !== this.showStroke) {
       this.showStroke = next;
       this.needsRedraw = true;
+    }
+  }
+
+  private handleMouseMove(event: MouseMoveEvent) {
+    const worldCoord = this.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+
+    if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
+      this.setHoveredSamTarget(null);
+      return;
+    }
+
+    const hoveredSam = this.game.units(UnitType.SAMLauncher).find((sam) => {
+      if (!sam.isActive()) {
+        return false;
+      }
+      const tile = sam.tile();
+      const dx = worldCoord.x - (this.game.x(tile) + 0.5);
+      const dy = worldCoord.y - (this.game.y(tile) + 0.5);
+      return dx * dx + dy * dy <= SAM_ICON_HOVER_RADIUS * SAM_ICON_HOVER_RADIUS;
+    });
+
+    this.setHoveredSamTarget(hoveredSam?.id() ?? null);
+  }
+
+  private setHoveredSamTarget(targetId: number | null) {
+    if (this.lastHoveredSamId === targetId) {
+      return;
+    }
+
+    this.lastHoveredSamId = targetId;
+
+    if (this.uiState.hoveredSamTarget !== targetId) {
+      this.uiState.hoveredSamTarget = targetId;
+      this.needsRedraw = true;
+    }
+
+    const nextMapHover = targetId !== null;
+    if (this.mapHoverShow !== nextMapHover) {
+      this.mapHoverShow = nextMapHover;
+      this.updateStrokeVisibility();
     }
   }
 
@@ -157,10 +205,11 @@ export class SAMRadiusLayer implements Layer {
       this.samLaunchers.set(sam.id(), sam.owner().smallID()),
     );
 
-    // Draw union of SAM radiuses. Collect circle data then draw union outer arcs only
-    const circles = samLaunchers.map((sam) => {
+    let circles = samLaunchers.map((sam) => {
       const tile = sam.tile();
       return {
+        id: sam.id(),
+        level: sam.level(),
         x: this.game.x(tile),
         y: this.game.y(tile),
         r: this.game.config().samRange(sam.level()),
@@ -168,7 +217,42 @@ export class SAMRadiusLayer implements Layer {
       };
     });
 
-    this.drawCirclesUnion(circles);
+    if (
+      this.uiState.hoveredSamTarget !== null &&
+      !this.hoveredShow &&
+      !this.ghostShow
+    ) {
+      const hovered = circles.find(
+        (circle) => circle.id === this.uiState.hoveredSamTarget,
+      );
+      if (hovered) {
+        const stack = samLaunchers.filter((sam) => {
+          const tile = sam.tile();
+          return (
+            sam.owner().smallID() === hovered.owner &&
+            this.game.x(tile) === hovered.x &&
+            this.game.y(tile) === hovered.y
+          );
+        });
+        circles = stack.map((sam) => {
+          const tile = sam.tile();
+          return {
+            id: sam.id(),
+            level: sam.level(),
+            x: this.game.x(tile),
+            y: this.game.y(tile),
+            r: this.game.config().samRange(sam.level()),
+            owner: sam.owner().smallID(),
+          };
+        });
+      } else {
+        circles = [];
+      }
+    }
+
+    this.drawCirclesUnion(
+      circles.map(({ id: _id, level: _level, ...rest }) => rest),
+    );
   }
 
   /**
