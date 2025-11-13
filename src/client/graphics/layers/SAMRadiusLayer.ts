@@ -8,6 +8,16 @@ import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 const SAM_ICON_HOVER_RADIUS = 0.85; // matches the on-screen footprint of the SAM launcher icon
+const SAM_ICON_HOVER_RADIUS_SQUARED =
+  SAM_ICON_HOVER_RADIUS * SAM_ICON_HOVER_RADIUS;
+
+type CachedSam = {
+  id: number;
+  owner: number;
+  x: number;
+  y: number;
+  radius: number;
+};
 
 /**
  * Layer responsible for rendering SAM launcher defense radiuses
@@ -15,7 +25,9 @@ const SAM_ICON_HOVER_RADIUS = 0.85; // matches the on-screen footprint of the SA
 export class SAMRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
-  private readonly samLaunchers: Map<number, number> = new Map(); // Track SAM launcher IDs -> ownerSmallID
+  private readonly samLaunchers: Map<number, CachedSam> = new Map();
+  private readonly samStacksByTile: Map<string, CachedSam[]> = new Map();
+  private cachedSamCircles: CachedSam[] = [];
   private needsRedraw = true;
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
@@ -26,6 +38,9 @@ export class SAMRadiusLayer implements Layer {
   private rotationSpeed = 14; // px per second
   private lastTickTime = Date.now();
   private lastHoveredSamId: number | null = null;
+  private myPlayerSmallId: number | undefined;
+  private samCachesDirty = true;
+  private lastHoverTileKey: string | null = null;
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
@@ -76,31 +91,47 @@ export class SAMRadiusLayer implements Layer {
     );
 
     if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
+      this.lastHoverTileKey = null;
       this.setHoveredSamTarget(null);
       return;
     }
 
-    const myPlayer = this.game.myPlayer();
-    const mySmallId = myPlayer?.smallID();
+    const mySmallId = this.syncMyPlayerSmallId();
     if (mySmallId === undefined) {
+      this.lastHoverTileKey = null;
       this.setHoveredSamTarget(null);
       return;
     }
 
-    const hoveredSam = this.game.units(UnitType.SAMLauncher).find((sam) => {
-      if (!sam.isActive()) {
-        return false;
-      }
-      if (sam.owner().smallID() !== mySmallId) {
-        return false;
-      }
-      const tile = sam.tile();
-      const dx = worldCoord.x - (this.game.x(tile) + 0.5);
-      const dy = worldCoord.y - (this.game.y(tile) + 0.5);
-      return dx * dx + dy * dy <= SAM_ICON_HOVER_RADIUS * SAM_ICON_HOVER_RADIUS;
+    this.ensureSamCaches();
+
+    const tileX = Math.floor(worldCoord.x);
+    const tileY = Math.floor(worldCoord.y);
+    const tileKey = `${tileX},${tileY}`;
+
+    if (
+      this.lastHoverTileKey === tileKey &&
+      !this.samStacksByTile.has(tileKey) &&
+      this.uiState.hoveredSamTarget === null
+    ) {
+      return;
+    }
+
+    this.lastHoverTileKey = tileKey;
+
+    const stack = this.samStacksByTile.get(tileKey);
+    if (!stack) {
+      this.setHoveredSamTarget(null);
+      return;
+    }
+
+    const hoveredSam = stack.find((sam) => {
+      const dx = worldCoord.x - (sam.x + 0.5);
+      const dy = worldCoord.y - (sam.y + 0.5);
+      return dx * dx + dy * dy <= SAM_ICON_HOVER_RADIUS_SQUARED;
     });
 
-    this.setHoveredSamTarget(hoveredSam?.id() ?? null);
+    this.setHoveredSamTarget(hoveredSam?.id ?? null);
   }
 
   private setHoveredSamTarget(targetId: number | null) {
@@ -131,37 +162,30 @@ export class SAMRadiusLayer implements Layer {
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates?.[GameUpdateType.Unit];
 
-    if (unitUpdates) {
-      let hasChanges = false;
+    this.syncMyPlayerSmallId();
 
+    if (unitUpdates) {
       for (const update of unitUpdates) {
         const unit = this.game.unit(update.id);
+        const cached = this.samLaunchers.get(update.id);
+
         if (unit && unit.type() === UnitType.SAMLauncher) {
-          const wasTracked = this.samLaunchers.has(update.id);
-          const shouldTrack = unit.isActive();
-          const owner = unit.owner().smallID();
-
-          if (wasTracked && !shouldTrack) {
-            // SAM was destroyed
-            this.samLaunchers.delete(update.id);
-            hasChanges = true;
-          } else if (!wasTracked && shouldTrack) {
-            // New SAM was built
-            this.samLaunchers.set(update.id, owner);
-            hasChanges = true;
-          } else if (wasTracked && shouldTrack) {
-            // SAM still exists; check if owner changed
-            const prevOwner = this.samLaunchers.get(update.id);
-            if (prevOwner !== owner) {
-              this.samLaunchers.set(update.id, owner);
-              hasChanges = true;
-            }
+          const ownerSmallId = unit.owner().smallID();
+          if (ownerSmallId === this.myPlayerSmallId) {
+            this.samCachesDirty = true;
+            this.needsRedraw = true;
+            break;
           }
+          if (cached) {
+            this.samCachesDirty = true;
+            this.needsRedraw = true;
+            break;
+          }
+        } else if (!unit && cached) {
+          this.samCachesDirty = true;
+          this.needsRedraw = true;
+          break;
         }
-      }
-
-      if (hasChanges) {
-        this.needsRedraw = true;
       }
     }
 
@@ -204,36 +228,14 @@ export class SAMRadiusLayer implements Layer {
     // Clear the canvas
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    const myPlayer = this.game.myPlayer();
-    const mySmallId = myPlayer?.smallID();
+    const mySmallId = this.syncMyPlayerSmallId();
     if (mySmallId === undefined) {
       return;
     }
 
-    // Get all active SAM launchers
-    const samLaunchers = this.game
-      .units(UnitType.SAMLauncher)
-      .filter(
-        (unit) => unit.isActive() && unit.owner().smallID() === mySmallId,
-      );
+    this.ensureSamCaches();
 
-    // Update our tracking set
-    this.samLaunchers.clear();
-    samLaunchers.forEach((sam) =>
-      this.samLaunchers.set(sam.id(), sam.owner().smallID()),
-    );
-
-    let circles = samLaunchers.map((sam) => {
-      const tile = sam.tile();
-      return {
-        id: sam.id(),
-        level: sam.level(),
-        x: this.game.x(tile),
-        y: this.game.y(tile),
-        r: this.game.config().samRange(sam.level()),
-        owner: sam.owner().smallID(),
-      };
-    });
+    let circles = this.cachedSamCircles;
 
     if (
       this.uiState.hoveredSamTarget !== null &&
@@ -244,33 +246,87 @@ export class SAMRadiusLayer implements Layer {
         (circle) => circle.id === this.uiState.hoveredSamTarget,
       );
       if (hovered) {
-        const stack = samLaunchers.filter((sam) => {
-          const tile = sam.tile();
-          return (
-            sam.owner().smallID() === hovered.owner &&
-            this.game.x(tile) === hovered.x &&
-            this.game.y(tile) === hovered.y
-          );
-        });
-        circles = stack.map((sam) => {
-          const tile = sam.tile();
-          return {
-            id: sam.id(),
-            level: sam.level(),
-            x: this.game.x(tile),
-            y: this.game.y(tile),
-            r: this.game.config().samRange(sam.level()),
-            owner: sam.owner().smallID(),
-          };
-        });
+        const stackKey = `${hovered.x},${hovered.y}`;
+        const stack = this.samStacksByTile.get(stackKey);
+        if (stack) {
+          circles = stack;
+        } else {
+          circles = [];
+        }
       } else {
         circles = [];
       }
     }
 
     this.drawCirclesUnion(
-      circles.map(({ id: _id, level: _level, ...rest }) => rest),
+      circles.map(({ id: _id, radius: r, ...rest }) => ({ ...rest, r })),
     );
+  }
+
+  private ensureSamCaches() {
+    if (!this.samCachesDirty) {
+      return;
+    }
+    this.rebuildSamCaches();
+    this.samCachesDirty = false;
+  }
+
+  private rebuildSamCaches() {
+    this.samStacksByTile.clear();
+    this.cachedSamCircles = [];
+    this.samLaunchers.clear();
+
+    const mySmallId = this.myPlayerSmallId;
+    if (mySmallId === undefined) {
+      return;
+    }
+
+    const config = this.game.config();
+
+    const samLaunchers = this.game
+      .units(UnitType.SAMLauncher)
+      .filter(
+        (unit) => unit.isActive() && unit.owner().smallID() === mySmallId,
+      );
+
+    for (const sam of samLaunchers) {
+      const tile = sam.tile();
+      const x = this.game.x(tile);
+      const y = this.game.y(tile);
+      const cached: CachedSam = {
+        id: sam.id(),
+        owner: mySmallId,
+        x,
+        y,
+        radius: config.samRange(sam.level()),
+      };
+
+      this.cachedSamCircles.push(cached);
+      this.samLaunchers.set(sam.id(), cached);
+
+      const key = `${x},${y}`;
+      const stack = this.samStacksByTile.get(key);
+      if (stack) {
+        stack.push(cached);
+      } else {
+        this.samStacksByTile.set(key, [cached]);
+      }
+    }
+  }
+
+  private syncMyPlayerSmallId(): number | undefined {
+    const current = this.game.myPlayer()?.smallID();
+    if (current !== this.myPlayerSmallId) {
+      this.myPlayerSmallId = current;
+      this.samCachesDirty = true;
+      if (current === undefined) {
+        this.samStacksByTile.clear();
+        this.cachedSamCircles = [];
+        this.samLaunchers.clear();
+        this.lastHoverTileKey = null;
+      }
+    }
+    return this.myPlayerSmallId;
   }
 
   /**
