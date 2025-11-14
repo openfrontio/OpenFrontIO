@@ -4,6 +4,7 @@ import {
   MessageType,
   Player,
   PlayerID,
+  PlayerType,
   TerraNullius,
   Unit,
   UnitType,
@@ -86,6 +87,19 @@ export class TransportShipExecution implements Execution {
       this.target = mg.terraNullius();
     } else {
       this.target = mg.player(this.targetID);
+    }
+
+    if (
+      this.target.isPlayer() &&
+      this.mg.config().numSpawnPhaseTurns() +
+        this.mg.config().spawnImmunityDuration() >
+        this.mg.ticks()
+    ) {
+      const targetPlayer = this.target as Player;
+      if (targetPlayer.type() === PlayerType.Human) {
+        this.active = false;
+        return;
+      }
     }
 
     this.startTroops ??= this.mg
