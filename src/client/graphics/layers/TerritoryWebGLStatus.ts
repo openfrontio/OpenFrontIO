@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import {
   TerritoryWebGLStatusEvent,
+  ToggleTerritoryWebGLDebugBordersEvent,
   ToggleTerritoryWebGLEvent,
 } from "../../InputHandler";
 import { Layer } from "./Layer";
@@ -27,6 +28,9 @@ export class TerritoryWebGLStatus extends LitElement implements Layer {
 
   @state()
   private lastMessage: string | null = null;
+
+  @state()
+  private debugBorders = false;
 
   static styles = css`
     :host {
@@ -135,6 +139,14 @@ export class TerritoryWebGLStatus extends LitElement implements Layer {
     this.eventBus.emit(new ToggleTerritoryWebGLEvent());
   }
 
+  private handleToggleDebugBorders() {
+    if (!this.eventBus) return;
+    this.debugBorders = !this.debugBorders;
+    this.eventBus.emit(
+      new ToggleTerritoryWebGLDebugBordersEvent(this.debugBorders),
+    );
+  }
+
   private statusClass(): string {
     if (!this.enabled) return "status-disabled";
     if (this.enabled && this.active) return "status-active";
@@ -168,6 +180,11 @@ export class TerritoryWebGLStatus extends LitElement implements Layer {
         <div class="actions">
           <button type="button" @click=${this.handleToggle}>
             ${this.enabled ? "Hide WebGL layer" : "Show WebGL layer"}
+          </button>
+          <button type="button" @click=${this.handleToggleDebugBorders}>
+            ${this.debugBorders
+              ? "Disable GL border highlight"
+              : "Highlight GL borders"}
           </button>
         </div>
       </div>

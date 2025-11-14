@@ -42,6 +42,10 @@ export class WebGLBorderRenderer implements BorderRenderer {
     this.renderer?.setHoveredPlayerId(playerSmallId);
   }
 
+  setDebugPulseEnabled(enabled: boolean): void {
+    this.renderer?.setDebugPulseEnabled(enabled);
+  }
+
   updateBorder(
     tile: TileRef,
     owner: PlayerView | null,
@@ -94,38 +98,41 @@ export class WebGLBorderRenderer implements BorderRenderer {
     const relation = this.resolveRelation(owner);
     const color = owner.borderColor(tile, isDefended);
 
+    // Inset borders by 1 tile (0.1 tiles inward) so both countries' borders can be drawn
+    const inset = 0.1;
+
     const segments = [
       {
         dx: 0,
         dy: -1,
-        startX: x,
-        startY: y,
-        endX: x + 1,
-        endY: y,
+        startX: x + inset,
+        startY: y + inset,
+        endX: x + 1 - inset,
+        endY: y + inset,
       },
       {
         dx: 1,
         dy: 0,
-        startX: x + 1,
-        startY: y,
-        endX: x + 1,
-        endY: y + 1,
+        startX: x + 1 - inset,
+        startY: y + inset,
+        endX: x + 1 - inset,
+        endY: y + 1 - inset,
       },
       {
         dx: 0,
         dy: 1,
-        startX: x,
-        startY: y + 1,
-        endX: x + 1,
-        endY: y + 1,
+        startX: x + inset,
+        startY: y + 1 - inset,
+        endX: x + 1 - inset,
+        endY: y + 1 - inset,
       },
       {
         dx: -1,
         dy: 0,
-        startX: x,
-        startY: y,
-        endX: x,
-        endY: y + 1,
+        startX: x + inset,
+        startY: y + inset,
+        endX: x + inset,
+        endY: y + 1 - inset,
       },
     ];
 

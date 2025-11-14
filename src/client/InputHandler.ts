@@ -92,6 +92,10 @@ export class TerritoryWebGLStatusEvent implements GameEvent {
   ) {}
 }
 
+export class ToggleTerritoryWebGLDebugBordersEvent implements GameEvent {
+  constructor(public readonly enabled: boolean) {}
+}
+
 export class ToggleStructureEvent implements GameEvent {
   constructor(public readonly structureTypes: UnitType[] | null) {}
 }

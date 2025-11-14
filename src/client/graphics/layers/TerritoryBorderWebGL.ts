@@ -28,6 +28,8 @@ interface UniformLocations {
   themeFriendly: WebGLUniformLocation | null;
   themeNeutral: WebGLUniformLocation | null;
   themeEnemy: WebGLUniformLocation | null;
+  time: WebGLUniformLocation | null;
+  debugPulse: WebGLUniformLocation | null;
 }
 
 export class TerritoryBorderWebGL {
@@ -71,6 +73,8 @@ export class TerritoryBorderWebGL {
   private hoveredPlayerId = -1;
   private alternativeView = false;
   private needsRedraw = true;
+  private animationStartTime = Date.now();
+  private debugPulseEnabled = false;
 
   private constructor(
     private readonly width: number,
@@ -110,6 +114,8 @@ export class TerritoryBorderWebGL {
         themeFriendly: null,
         themeNeutral: null,
         themeEnemy: null,
+        time: null,
+        debugPulse: null,
       };
       return;
     }
@@ -148,6 +154,8 @@ export class TerritoryBorderWebGL {
       uniform vec4 u_themeFriendly;
       uniform vec4 u_themeNeutral;
       uniform vec4 u_themeEnemy;
+      uniform float u_time;
+      uniform bool u_debugPulse;
 
       varying vec4 v_color;
       varying float v_owner;
@@ -184,6 +192,14 @@ export class TerritoryBorderWebGL {
           color.rgb = mix(color.rgb, vec3(1.0), u_highlightStrength);
         }
 
+        // Optional blinking/pulsing effect to highlight WebGL-drawn borders.
+        // Enabled only when u_debugPulse is true. Pulses between 0.5 and 1.0 opacity
+        // using a smooth sine wave animation with ~1 second period.
+        if (u_debugPulse) {
+          float pulse = 0.75 + 0.25 * sin(u_time * 6.28318); // 2 * PI for full cycle
+          color.a *= pulse;
+        }
+
         gl_FragColor = color;
       }
     `;
@@ -209,6 +225,8 @@ export class TerritoryBorderWebGL {
         themeFriendly: null,
         themeNeutral: null,
         themeEnemy: null,
+        time: null,
+        debugPulse: null,
       };
       return;
     }
@@ -274,6 +292,8 @@ export class TerritoryBorderWebGL {
       themeFriendly: gl.getUniformLocation(program, "u_themeFriendly"),
       themeNeutral: gl.getUniformLocation(program, "u_themeNeutral"),
       themeEnemy: gl.getUniformLocation(program, "u_themeEnemy"),
+      time: gl.getUniformLocation(program, "u_time"),
+      debugPulse: gl.getUniformLocation(program, "u_debugPulse"),
     };
 
     if (this.uniforms.hoveredPlayerId) {
@@ -313,6 +333,14 @@ export class TerritoryBorderWebGL {
     this.needsRedraw = true;
   }
 
+  setDebugPulseEnabled(enabled: boolean) {
+    if (this.debugPulseEnabled === enabled) {
+      return;
+    }
+    this.debugPulseEnabled = enabled;
+    this.needsRedraw = true;
+  }
+
   clearTile(tileIndex: number) {
     this.updateEdges(tileIndex, []);
   }
@@ -342,7 +370,9 @@ export class TerritoryBorderWebGL {
       this.uploadDirtyChunks();
       this.needsRedraw = true;
     }
-    if (!this.needsRedraw) {
+
+    // Always redraw for animation, but check if we have anything to draw
+    if (!this.needsRedraw && this.vertexCount === 0) {
       return;
     }
 
@@ -357,12 +387,24 @@ export class TerritoryBorderWebGL {
       gl.uniform1f(this.uniforms.hoveredPlayerId, this.hoveredPlayerId);
     }
 
+    // Update time uniform for blinking animation
+    if (this.uniforms.time) {
+      const currentTime = (Date.now() - this.animationStartTime) / 1000.0; // Convert to seconds
+      gl.uniform1f(this.uniforms.time, currentTime);
+    }
+
+    if (this.uniforms.debugPulse) {
+      gl.uniform1i(this.uniforms.debugPulse, this.debugPulseEnabled ? 1 : 0);
+    }
+
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (this.vertexCount > 0) {
       gl.drawArrays(gl.LINES, 0, this.vertexCount);
     }
-    this.needsRedraw = false;
+
+    // Always mark as needing redraw for continuous animation
+    this.needsRedraw = true;
   }
 
   private addTileChunk(tileIndex: number): number {
