@@ -4,6 +4,7 @@ import { PlayerView } from "../../../core/game/GameView";
 export interface BorderRenderer {
   setAlternativeView(enabled: boolean): void;
   setHoveredPlayerId(playerSmallId: number | null): void;
+  drawsOwnBorders(): boolean;
 
   updateBorder(
     tile: TileRef,
@@ -19,6 +20,10 @@ export interface BorderRenderer {
 }
 
 export class NullBorderRenderer implements BorderRenderer {
+  drawsOwnBorders(): boolean {
+    return false;
+  }
+
   setAlternativeView() {}
 
   setHoveredPlayerId() {}
