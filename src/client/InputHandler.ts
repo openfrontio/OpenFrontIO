@@ -81,6 +81,17 @@ export class RefreshGraphicsEvent implements GameEvent {}
 
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
+export class ToggleTerritoryWebGLEvent implements GameEvent {}
+
+export class TerritoryWebGLStatusEvent implements GameEvent {
+  constructor(
+    public readonly enabled: boolean,
+    public readonly active: boolean,
+    public readonly supported: boolean,
+    public readonly message?: string,
+  ) {}
+}
+
 export class ToggleStructureEvent implements GameEvent {
   constructor(public readonly structureTypes: UnitType[] | null) {}
 }

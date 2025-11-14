@@ -36,6 +36,7 @@ import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
+import { TerritoryWebGLStatus } from "./layers/TerritoryWebGLStatus";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
@@ -219,6 +220,18 @@ export function createRenderer(
   performanceOverlay.eventBus = eventBus;
   performanceOverlay.userSettings = userSettings;
 
+  let territoryWebGLStatus = document.querySelector(
+    "territory-webgl-status",
+  ) as TerritoryWebGLStatus;
+  if (!(territoryWebGLStatus instanceof TerritoryWebGLStatus)) {
+    territoryWebGLStatus = document.createElement(
+      "territory-webgl-status",
+    ) as TerritoryWebGLStatus;
+    document.body.appendChild(territoryWebGLStatus);
+  }
+  territoryWebGLStatus.eventBus = eventBus;
+  territoryWebGLStatus.userSettings = userSettings;
+
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -236,6 +249,7 @@ export function createRenderer(
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
+    territoryWebGLStatus,
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game, transformHandler),
