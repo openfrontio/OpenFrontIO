@@ -475,6 +475,9 @@ export class TerritoryLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     const now = Date.now();
+    const skipTerritoryCanvas =
+      this.alternativeView && this.borderRenderer.drawsOwnBorders();
+
     if (
       now > this.lastDragTime + this.nodrawDragDuration &&
       now > this.lastRefresh + this.refreshRate
@@ -493,7 +496,13 @@ export class TerritoryLayer implements Layer {
       const w = vx1 - vx0 + 1;
       const h = vy1 - vy0 + 1;
 
-      if (w > 0 && h > 0) {
+      // When WebGL borders are active and we're in alternative view, the 2D
+      // territory buffer (alternativeImageData) is effectively transparent and
+      // all visible work is done by the WebGL layer. Skip putImageData in that
+      // case to avoid unnecessary CPU work each frame.
+      const shouldBlitTerritories = !skipTerritoryCanvas;
+
+      if (w > 0 && h > 0 && shouldBlitTerritories) {
         const putImageStart = FrameProfiler.start();
         this.context.putImageData(
           this.alternativeView ? this.alternativeImageData : this.imageData,
@@ -508,15 +517,17 @@ export class TerritoryLayer implements Layer {
       }
     }
 
-    const drawCanvasStart = FrameProfiler.start();
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
-    );
-    FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
+    if (!skipTerritoryCanvas) {
+      const drawCanvasStart = FrameProfiler.start();
+      context.drawImage(
+        this.canvas,
+        -this.game.width() / 2,
+        -this.game.height() / 2,
+        this.game.width(),
+        this.game.height(),
+      );
+      FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
+    }
 
     const borderRenderStart = FrameProfiler.start();
     this.borderRenderer.render(context);
