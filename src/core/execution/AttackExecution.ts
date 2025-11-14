@@ -93,10 +93,12 @@ export class AttackExecution implements Execution {
     }
 
     if (this.target.isPlayer()) {
+      const targetPlayer = this.target as Player;
       if (
+        targetPlayer.type() === PlayerType.Human &&
         this.mg.config().numSpawnPhaseTurns() +
           this.mg.config().spawnImmunityDuration() >
-        this.mg.ticks()
+          this.mg.ticks()
       ) {
         console.warn("cannot attack player during immunity phase");
         this.active = false;
