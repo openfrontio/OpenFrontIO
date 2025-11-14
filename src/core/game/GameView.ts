@@ -328,29 +328,7 @@ export class PlayerView {
       return this._borderColor;
     }
 
-    const mySmallID = this.smallID();
-    let hasEmbargo = false;
-    let hasFriendly = false;
-
-    for (const n of this.game.neighbors(tile)) {
-      if (!this.game.hasOwner(n)) {
-        continue;
-      }
-
-      const otherOwner = this.game.owner(n);
-      if (!otherOwner.isPlayer() || otherOwner.smallID() === mySmallID) {
-        continue;
-      }
-
-      if (this.hasEmbargo(otherOwner)) {
-        hasEmbargo = true;
-        break;
-      }
-
-      if (this.isFriendly(otherOwner) || otherOwner.isFriendly(this)) {
-        hasFriendly = true;
-      }
-    }
+    const { hasEmbargo, hasFriendly } = this.borderRelationFlags(tile);
 
     let baseColor: Colord;
     let defendedColors: { light: Colord; dark: Colord };
@@ -375,6 +353,39 @@ export class PlayerView {
     const lightTile =
       (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
     return lightTile ? defendedColors.light : defendedColors.dark;
+  }
+
+  /**
+   * Border relation flags for a tile, used by both CPU and WebGL renderers.
+   */
+  borderRelationFlags(tile: TileRef): {
+    hasEmbargo: boolean;
+    hasFriendly: boolean;
+  } {
+    const mySmallID = this.smallID();
+    let hasEmbargo = false;
+    let hasFriendly = false;
+
+    for (const n of this.game.neighbors(tile)) {
+      if (!this.game.hasOwner(n)) {
+        continue;
+      }
+
+      const otherOwner = this.game.owner(n);
+      if (!otherOwner.isPlayer() || otherOwner.smallID() === mySmallID) {
+        continue;
+      }
+
+      if (this.hasEmbargo(otherOwner)) {
+        hasEmbargo = true;
+        break;
+      }
+
+      if (this.isFriendly(otherOwner) || otherOwner.isFriendly(this)) {
+        hasFriendly = true;
+      }
+    }
+    return { hasEmbargo, hasFriendly };
   }
 
   async actions(tile?: TileRef): Promise<PlayerActions> {

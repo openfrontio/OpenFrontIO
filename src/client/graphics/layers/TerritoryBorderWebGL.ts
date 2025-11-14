@@ -17,6 +17,7 @@ export interface BorderEdge {
   color: Colord;
   ownerSmallId: number;
   relation: TileRelation;
+  flags: number;
 }
 
 interface UniformLocations {
@@ -39,7 +40,7 @@ export class TerritoryBorderWebGL {
   private static readonly MAX_VERTICES_PER_TILE =
     TerritoryBorderWebGL.MAX_EDGES_PER_TILE *
     TerritoryBorderWebGL.VERTICES_PER_EDGE;
-  private static readonly FLOATS_PER_VERTEX = 8;
+  private static readonly FLOATS_PER_VERTEX = 9;
   private static readonly FLOATS_PER_TILE =
     TerritoryBorderWebGL.MAX_VERTICES_PER_TILE *
     TerritoryBorderWebGL.FLOATS_PER_VERTEX;
@@ -127,12 +128,14 @@ export class TerritoryBorderWebGL {
       attribute vec4 a_color;
       attribute float a_owner;
       attribute float a_relation;
+      attribute float a_flags;
 
       uniform vec2 u_resolution;
 
       varying vec4 v_color;
       varying float v_owner;
       varying float v_relation;
+      varying float v_flags;
 
       void main() {
         vec2 zeroToOne = a_position / u_resolution;
@@ -142,6 +145,7 @@ export class TerritoryBorderWebGL {
         v_color = a_color;
         v_owner = a_owner;
         v_relation = a_relation;
+        v_flags = a_flags;
       }
     `;
     const fragmentShaderSource = `
@@ -160,6 +164,7 @@ export class TerritoryBorderWebGL {
       varying vec4 v_color;
       varying float v_owner;
       varying float v_relation;
+      varying float v_flags;
 
       vec4 relationColor(float relation) {
         if (relation < 0.5) {
@@ -174,15 +179,93 @@ export class TerritoryBorderWebGL {
         return u_themeEnemy;
       }
 
+      vec3 rgbToHsl(vec3 c) {
+        float maxc = max(c.r, max(c.g, c.b));
+        float minc = min(c.r, min(c.g, c.b));
+        float h = 0.0;
+        float s = 0.0;
+        float l = (maxc + minc) * 0.5;
+        if (maxc != minc) {
+          float d = maxc - minc;
+          s = l > 0.5 ? d / (2.0 - maxc - minc) : d / (maxc + minc);
+          if (maxc == c.r) {
+            h = (c.g - c.b) / d + (c.g < c.b ? 6.0 : 0.0);
+          } else if (maxc == c.g) {
+            h = (c.b - c.r) / d + 2.0;
+          } else {
+            h = (c.r - c.g) / d + 4.0;
+          }
+          h /= 6.0;
+        }
+        return vec3(h, s, l);
+      }
+
+      float hueToRgb(float p, float q, float t) {
+        if (t < 0.0) t += 1.0;
+        if (t > 1.0) t -= 1.0;
+        if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;
+        if (t < 1.0/2.0) return q;
+        if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;
+        return p;
+      }
+
+      vec3 hslToRgb(vec3 hsl) {
+        float h = hsl.x;
+        float s = hsl.y;
+        float l = hsl.z;
+        float r;
+        float g;
+        float b;
+        if (s == 0.0) {
+          r = g = b = l;
+        } else {
+          float q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+          float p = 2.0 * l - q;
+          r = hueToRgb(p, q, h + 1.0/3.0);
+          g = hueToRgb(p, q, h);
+          b = hueToRgb(p, q, h - 1.0/3.0);
+        }
+        return vec3(r, g, b);
+      }
+
+      vec3 darken(vec3 rgb, float amount) {
+        vec3 hsl = rgbToHsl(rgb);
+        hsl.z = clamp(hsl.z - amount, 0.0, 1.0);
+        return hslToRgb(hsl);
+      }
+
       void main() {
         if (v_color.a <= 0.0) {
           discard;
         }
 
         vec4 color = v_color;
+        float flags = v_flags;
+        bool isDefended = mod(flags, 2.0) >= 1.0;
+        flags = floor(flags / 2.0);
+        bool hasFriendly = mod(flags, 2.0) >= 1.0;
+        flags = floor(flags / 2.0);
+        bool hasEmbargo = mod(flags, 2.0) >= 1.0;
+        flags = floor(flags / 2.0);
+        bool lightTile = mod(flags, 2.0) >= 1.0;
+
         if (u_alternativeView) {
           color = relationColor(v_relation);
           color.a = 1.0;
+        } else {
+          // Relationship-based tinting (embargo -> red, friendly -> green)
+          if (hasEmbargo) {
+            color.rgb = mix(color.rgb, vec3(1.0, 0.0, 0.0), 0.35);
+          } else if (hasFriendly) {
+            color.rgb = mix(color.rgb, vec3(0.0, 1.0, 0.0), 0.35);
+          }
+
+          // Defended checkerboard pattern using light/dark variants
+          if (isDefended) {
+            vec3 lightColor = darken(color.rgb, 0.2);
+            vec3 darkColor = darken(color.rgb, 0.4);
+            color.rgb = lightTile ? lightColor : darkColor;
+          }
         }
 
         if (
@@ -242,6 +325,7 @@ export class TerritoryBorderWebGL {
     const colorLocation = gl.getAttribLocation(program, "a_color");
     const ownerLocation = gl.getAttribLocation(program, "a_owner");
     const relationLocation = gl.getAttribLocation(program, "a_relation");
+    const flagsLocation = gl.getAttribLocation(program, "a_flags");
 
     gl.enableVertexAttribArray(positionLocation);
     gl.vertexAttribPointer(
@@ -281,6 +365,16 @@ export class TerritoryBorderWebGL {
       false,
       TerritoryBorderWebGL.STRIDE_BYTES,
       7 * 4,
+    );
+
+    gl.enableVertexAttribArray(flagsLocation);
+    gl.vertexAttribPointer(
+      flagsLocation,
+      1,
+      gl.FLOAT,
+      false,
+      TerritoryBorderWebGL.STRIDE_BYTES,
+      8 * 4,
     );
 
     this.uniforms = {
@@ -468,6 +562,7 @@ export class TerritoryBorderWebGL {
       const a = color.a ?? 1;
       const ownerId = edge.ownerSmallId;
       const relation = edge.relation;
+      const flags = edge.flags;
 
       const vertices = [
         { x: edge.startX, y: edge.startY },
@@ -483,6 +578,7 @@ export class TerritoryBorderWebGL {
         data[cursor + 5] = a;
         data[cursor + 6] = ownerId;
         data[cursor + 7] = relation;
+        data[cursor + 8] = flags;
         cursor += floatsPerVertex;
         writtenVertices++;
       }
@@ -500,6 +596,7 @@ export class TerritoryBorderWebGL {
       data[cursor + 5] = 0;
       data[cursor + 6] = -1;
       data[cursor + 7] = 0;
+      data[cursor + 8] = 0;
       cursor += floatsPerVertex;
     }
 

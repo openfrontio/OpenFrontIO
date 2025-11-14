@@ -96,7 +96,15 @@ export class WebGLBorderRenderer implements BorderRenderer {
     const y = this.game.y(tile);
     const ownerId = owner.smallID();
     const relation = this.resolveRelation(owner);
-    const color = owner.borderColor(tile, isDefended);
+    const color = owner.borderColor();
+    const { hasEmbargo, hasFriendly } = owner.borderRelationFlags(tile);
+    const lightTile =
+      (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
+    const flags =
+      (isDefended ? 1 : 0) |
+      (hasFriendly ? 2 : 0) |
+      (hasEmbargo ? 4 : 0) |
+      (lightTile ? 8 : 0);
 
     // Inset borders by 1 tile (0.1 tiles inward) so both countries' borders can be drawn
     const inset = 0.1;
@@ -149,6 +157,7 @@ export class WebGLBorderRenderer implements BorderRenderer {
         color,
         ownerSmallId: ownerId,
         relation,
+        flags,
       });
     }
 
