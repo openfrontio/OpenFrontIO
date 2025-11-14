@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
+import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 
@@ -30,6 +31,12 @@ export class CeasefireTimer extends LitElement implements Layer {
     if (!this.game || !this.isVisible) {
       return;
     }
+
+    const showTeamOwnershipBar =
+      this.game.config().gameConfig().gameMode === GameMode.Team &&
+      !this.game.inSpawnPhase();
+
+    this.style.top = showTeamOwnershipBar ? "7px" : "0px";
 
     const ceasefireDuration = this.game.config().spawnImmunityDuration();
     const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
