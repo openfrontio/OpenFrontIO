@@ -30,7 +30,7 @@ import {
 } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import { getPlayerIcons } from "./PlayerIcons";
+import { getFirstPlacePlayer, getPlayerIcons } from "./PlayerIcons";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 
 function euclideanDistWorld(
@@ -223,11 +223,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
   }
 
   private renderPlayerNameIcons(player: PlayerView) {
+    const firstPlace = getFirstPlacePlayer(this.game);
     const icons = getPlayerIcons({
       game: this.game,
       player,
       // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
       includeAllianceIcon: false,
+      firstPlace,
     });
 
     if (icons.length === 0) {

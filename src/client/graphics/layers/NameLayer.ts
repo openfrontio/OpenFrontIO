@@ -10,7 +10,11 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import { getPlayerIcons, PlayerIconId } from "./PlayerIcons";
+import {
+  getFirstPlacePlayer,
+  getPlayerIcons,
+  PlayerIconId,
+} from "./PlayerIcons";
 
 class RenderInfo {
   public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements
@@ -38,6 +42,7 @@ export class NameLayer implements Layer {
   private theme: Theme = this.game.config().theme();
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
+  private firstPlace: PlayerView | null = null;
 
   constructor(
     private game: GameView,
@@ -128,6 +133,10 @@ export class NameLayer implements Layer {
     if (this.game.ticks() % 10 !== 0) {
       return;
     }
+
+    // Precompute the first-place player for performance
+    this.firstPlace = getFirstPlacePlayer(this.game);
+
     for (const player of this.game.playerViews()) {
       if (player.isAlive()) {
         if (!this.seenPlayers.has(player)) {
@@ -359,6 +368,7 @@ export class NameLayer implements Layer {
       game: this.game,
       player: render.player,
       includeAllianceIcon: true,
+      firstPlace: this.firstPlace,
     });
 
     // Build a set of desired icon IDs
@@ -394,13 +404,7 @@ export class NameLayer implements Layer {
           | undefined;
 
         if (!imgElement) {
-          const center = icon.id === "target";
-          imgElement = this.createIconElement(
-            icon.src,
-            iconSize,
-            icon.id,
-            center,
-          );
+          imgElement = this.createIconElement(icon.src, iconSize, icon.center);
           iconsDiv.appendChild(imgElement);
           render.icons.set(icon.id, imgElement);
         }
@@ -453,7 +457,6 @@ export class NameLayer implements Layer {
   private createIconElement(
     src: string,
     size: number,
-    id: string,
     center: boolean = false,
   ): HTMLImageElement {
     const icon = document.createElement("img");

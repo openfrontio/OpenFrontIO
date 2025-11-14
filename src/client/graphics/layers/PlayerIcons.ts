@@ -41,9 +41,11 @@ export interface PlayerIconParams {
   player: PlayerView;
   /** Whether the alliance icon (handshake) should be included */
   includeAllianceIcon: boolean;
+  /** Player currently in first place, used for the crown icon */
+  firstPlace: PlayerView | null;
 }
 
-function getFirstPlacePlayer(game: GameView): PlayerView | null {
+export function getFirstPlacePlayer(game: GameView): PlayerView | null {
   const sorted = game
     .playerViews()
     .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
@@ -54,7 +56,7 @@ function getFirstPlacePlayer(game: GameView): PlayerView | null {
 export function getPlayerIcons(
   params: PlayerIconParams,
 ): PlayerIconDescriptor[] {
-  const { game, player, includeAllianceIcon } = params;
+  const { game, player, includeAllianceIcon, firstPlace } = params;
 
   const myPlayer = game.myPlayer();
   const userSettings = game.config().userSettings();
@@ -64,7 +66,7 @@ export function getPlayerIcons(
   const icons: PlayerIconDescriptor[] = [];
 
   // Crown icon for first place
-  if (player === getFirstPlacePlayer(game)) {
+  if (player === firstPlace) {
     icons.push({ id: "crown", kind: "image", src: crownIcon });
   }
 
@@ -130,22 +132,17 @@ export function getPlayerIcons(
   }
 
   // Nuke icon (different color depending on whether the local player is the target)
-  const nukesSentByOtherPlayer = game.units().filter((unit) => {
+  const nukesSentByOtherPlayer = game.units(...nukeTypes).filter((unit) => {
     const isSendingNuke = player.id() === unit.owner().id();
     const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
-    return (
-      nukeTypes.includes(unit.type()) &&
-      isSendingNuke &&
-      notMyPlayer &&
-      unit.isActive()
-    );
+    return isSendingNuke && notMyPlayer && unit.isActive();
   });
 
-  const isMyPlayerTarget = nukesSentByOtherPlayer.find((unit) => {
+  const isMyPlayerTarget = nukesSentByOtherPlayer.some((unit) => {
     const detonationDst = unit.targetTile();
-    if (detonationDst === undefined) return false;
+    if (!detonationDst || !myPlayer) return false;
     const targetId = game.owner(detonationDst).id();
-    return myPlayer && targetId === myPlayer.id();
+    return targetId === myPlayer.id();
   });
 
   if (nukesSentByOtherPlayer.length > 0) {
