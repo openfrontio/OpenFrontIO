@@ -34,7 +34,7 @@ interface UniformLocations {
 }
 
 export class TerritoryBorderWebGL {
-  private static readonly INITIAL_CHUNK_CAPACITY = 256;
+  private static readonly INITIAL_CHUNK_CAPACITY = 65536; // 256;
   private static readonly MAX_EDGES_PER_TILE = 4;
   private static readonly VERTICES_PER_EDGE = 2;
   private static readonly MAX_VERTICES_PER_TILE =
@@ -101,6 +101,15 @@ export class TerritoryBorderWebGL {
     this.vertexData = new Float32Array(
       TerritoryBorderWebGL.INITIAL_CHUNK_CAPACITY *
         TerritoryBorderWebGL.FLOATS_PER_TILE,
+    );
+    // Debug: log initial capacity so we can tune INITIAL_CHUNK_CAPACITY.
+    // This will show up once per renderer creation.
+
+    console.log(
+      "[TerritoryBorderWebGL] initial capacityChunks=",
+      this.capacityChunks,
+      "for map size",
+      `${this.width}x${this.height}`,
     );
 
     if (!this.gl) {
@@ -629,6 +638,17 @@ export class TerritoryBorderWebGL {
     while (nextCapacity < requiredChunks) {
       nextCapacity *= 2;
     }
+    // Debug: log capacity growth so we can see typical ranges in real games.
+
+    console.log(
+      "[TerritoryBorderWebGL] growing capacityChunks",
+      "from",
+      this.capacityChunks,
+      "to",
+      nextCapacity,
+      "requiredChunks=",
+      requiredChunks,
+    );
     const nextData = new Float32Array(
       nextCapacity * TerritoryBorderWebGL.FLOATS_PER_TILE,
     );
