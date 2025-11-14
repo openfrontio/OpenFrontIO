@@ -254,8 +254,8 @@ export class SpriteFactory {
     const context = structureCanvas.getContext("2d")!;
 
     // Use structureColors defined from the PlayerView.
-    const darker = owner.structureDarkColor();
-    const lighter = owner.structureLightColor();
+    const darker = owner.structureColors().dark;
+    const lighter = owner.structureColors().light;
 
     let borderColor: string;
     if (isConstruction) {

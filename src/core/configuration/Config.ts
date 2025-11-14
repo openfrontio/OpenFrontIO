@@ -189,11 +189,8 @@ export interface Theme {
   teamColor(team: Team): Colord;
   // Don't call directly, use PlayerView
   territoryColor(playerInfo: PlayerView): Colord;
-
   // Don't call directly, use PlayerView
-  structureLightColor(territoryColor: Colord): Colord;
-  structureDarkColor(territoryColor: Colord): Colord;
-
+  structureColors(territoryColor: Colord): { light: Colord; dark: Colord };
   // Don't call directly, use PlayerView
   borderColor(territoryColor: Colord): Colord;
   // Don't call directly, use PlayerView

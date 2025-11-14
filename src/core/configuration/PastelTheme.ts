@@ -65,9 +65,42 @@ export class PastelTheme implements Theme {
     return this.nationColorAllocator.assignColor(player.id());
   }
 
-  structureLightColor(territoryColor: Colord): Colord {}
+  structureColors(territoryColor: Colord): { light: Colord; dark: Colord } {
+    const lightLAB = territoryColor.alpha(150 / 255).toLab();
+    const darkLAB = this.borderColor(territoryColor).toLab();
+    let l: Colord = colord(lightLAB);
+    let delta = l.delta(darkLAB);
+    let darker: Colord | null = null;
 
-  structureDarkColor(territoryColor: Colord): Colord {}
+    const limit = 10;
+    const target = 0.5;
+    let count = 0;
+
+    while (delta < target) {
+      if (count <= limit) {
+        darkLAB.l = this.clamp(darkLAB.l - 5, 0, 100);
+      } else if (count > limit && count <= limit * 2) {
+        if (count === limit + 1) darker = colord(darkLAB);
+        darker = darker!.darken(0.05);
+      } else {
+        lightLAB.l = this.clamp(lightLAB.l + 5, 0, 100);
+      }
+      l = colord(lightLAB);
+      darker = darker ?? colord(darkLAB);
+      delta = l.delta(darker.toHex());
+      if (delta >= target) break;
+      count++;
+      if (count > 100) {
+        throw new Error("infinite loop.");
+      }
+      if (count <= limit) darker = null;
+    }
+    return { light: l, dark: darker ?? colord(darkLAB) };
+  }
+
+  private clamp(num: number, low: number, high: number): number {
+    return Math.min(Math.max(low, num), high);
+  }
 
   // Don't call directly, use PlayerView
   borderColor(territoryColor: Colord): Colord {
