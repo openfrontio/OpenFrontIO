@@ -19,12 +19,9 @@ export class AllianceRequestReplyExecution implements Execution {
       return;
     }
     this.requestor = mg.player(this.requestorID);
-  }
 
-  tick(ticks: number): void {
-    if (this.requestor === null) {
-      throw new Error("Not initialized");
-    }
+    // Process the alliance reply immediately in init() instead of tick()
+    // to avoid a one-tick delay that could cause race conditions with donations
     if (this.requestor.isFriendly(this.recipient)) {
       console.warn("already allied");
     } else {
@@ -44,6 +41,10 @@ export class AllianceRequestReplyExecution implements Execution {
       }
     }
     this.active = false;
+  }
+
+  tick(ticks: number): void {
+    // Alliance reply is now processed in init(), so tick() does nothing
   }
 
   isActive(): boolean {
