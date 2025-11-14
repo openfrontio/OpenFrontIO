@@ -254,22 +254,12 @@ export class SpriteFactory {
     const context = structureCanvas.getContext("2d")!;
 
     // Use structureColors defined from the PlayerView.
-    const darker = owner.structureColors().dark;
-    const lighter = owner.structureColors().light;
-
-    let borderColor: string;
-    if (isConstruction) {
-      context.fillStyle = "rgb(198, 198, 198)";
-      borderColor = "rgb(128, 127, 127)";
-    } else {
-      context.fillStyle = lighter
-        .lighten(0.13)
-        .alpha(renderIcon ? 0.65 : 1)
-        .toRgbString();
-      const darken = darker.isLight() ? 0.17 : 0.15;
-      borderColor = darker.darken(darken).toRgbString();
-    }
-    context.strokeStyle = borderColor;
+    context.fillStyle = isConstruction
+      ? "rgb(198,198,198)"
+      : owner.structureColors().light.toRgbString();
+    context.strokeStyle = isConstruction
+      ? "rgb(127,127, 127)"
+      : owner.structureColors().dark.toRgbString();
     context.lineWidth = 1;
     const halfIconSize = iconSize / 2;
 
@@ -397,7 +387,10 @@ export class SpriteFactory {
       };
       const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
       context.drawImage(
-        this.getImageColored(structureInfo.image, borderColor),
+        this.getImageColored(
+          structureInfo.image,
+          owner.structureColors().dark.toRgbString(),
+        ),
         offsetX,
         offsetY,
       );
