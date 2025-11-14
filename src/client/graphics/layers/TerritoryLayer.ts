@@ -20,6 +20,7 @@ import {
   MouseOverEvent,
 } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
+import { BorderRenderer, NullBorderRenderer } from "./BorderRenderer";
 import { Layer } from "./Layer";
 
 export class TerritoryLayer implements Layer {
@@ -46,6 +47,7 @@ export class TerritoryLayer implements Layer {
   private highlightContext: CanvasRenderingContext2D;
 
   private highlightedTerritory: PlayerView | null = null;
+  private borderRenderer: BorderRenderer = new NullBorderRenderer();
 
   private alternativeView = false;
   private lastDragTime = 0;
@@ -263,6 +265,7 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(MouseOverEvent, (e) => this.onMouseOver(e));
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
+      this.borderRenderer.setAlternativeView(this.alternativeView);
     });
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
@@ -303,6 +306,9 @@ export class TerritoryLayer implements Layer {
     }
 
     if (previousTerritory?.id() !== this.highlightedTerritory?.id()) {
+      this.borderRenderer.setHoveredPlayerId(
+        this.highlightedTerritory?.smallID() ?? null,
+      );
       const territories: PlayerView[] = [];
       if (previousTerritory) {
         territories.push(previousTerritory);
@@ -439,6 +445,7 @@ export class TerritoryLayer implements Layer {
         this.game.height(),
       );
     }
+    this.borderRenderer.render(context);
   }
 
   renderTerritory() {
@@ -463,13 +470,15 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  paintTerritory(tile: TileRef, isBorder: boolean = false) {
-    if (isBorder && !this.game.hasOwner(tile)) {
-      return;
-    }
+  paintTerritory(tile: TileRef, _isBorder: boolean = false) {
+    const hasOwner = this.game.hasOwner(tile);
+    const owner = hasOwner ? (this.game.owner(tile) as PlayerView) : null;
+    const isBorderTile = this.game.isBorder(tile);
+    const hasFallout = this.game.hasFallout(tile);
+    let isDefended = false;
 
-    if (!this.game.hasOwner(tile)) {
-      if (this.game.hasFallout(tile)) {
+    if (!owner) {
+      if (hasFallout) {
         this.paintTile(this.imageData, tile, this.theme.falloutColor(), 150);
         this.paintTile(
           this.alternativeImageData,
@@ -477,44 +486,50 @@ export class TerritoryLayer implements Layer {
           this.theme.falloutColor(),
           150,
         );
-        return;
+      } else {
+        this.clearTile(tile);
       }
-      this.clearTile(tile);
-      return;
-    }
-    const owner = this.game.owner(tile) as PlayerView;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const isHighlighted =
-      this.highlightedTerritory &&
-      this.highlightedTerritory.id() === owner.id();
-    const myPlayer = this.game.myPlayer();
-
-    if (this.game.isBorder(tile)) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const playerIsFocused = owner && this.game.focusedPlayer() === owner;
-      if (myPlayer) {
-        const alternativeColor = this.alternateViewColor(owner);
-        this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
-      }
-      const isDefended = this.game.hasUnitNearby(
-        tile,
-        this.game.config().defensePostRange(),
-        UnitType.DefensePost,
-        owner.id(),
-      );
-
-      this.paintTile(
-        this.imageData,
-        tile,
-        owner.borderColor(tile, isDefended),
-        255,
-      );
     } else {
-      // Alternative view only shows borders.
-      this.clearAlternativeTile(tile);
+      const myPlayer = this.game.myPlayer();
 
-      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      if (isBorderTile) {
+        if (myPlayer) {
+          const alternativeColor = this.alternateViewColor(owner);
+          this.paintTile(
+            this.alternativeImageData,
+            tile,
+            alternativeColor,
+            255,
+          );
+        }
+        isDefended = this.game.hasUnitNearby(
+          tile,
+          this.game.config().defensePostRange(),
+          UnitType.DefensePost,
+          owner.id(),
+        );
+
+        this.paintTile(
+          this.imageData,
+          tile,
+          owner.borderColor(tile, isDefended),
+          255,
+        );
+      } else {
+        // Alternative view only shows borders.
+        this.clearAlternativeTile(tile);
+
+        this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      }
     }
+
+    this.borderRenderer.updateBorder(
+      tile,
+      owner,
+      isBorderTile,
+      isDefended,
+      hasFallout,
+    );
   }
 
   alternateViewColor(other: PlayerView): Colord {
@@ -548,6 +563,7 @@ export class TerritoryLayer implements Layer {
   }
 
   clearTile(tile: TileRef) {
+    this.borderRenderer.clearTile(tile);
     const offset = tile * 4;
     this.imageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
     this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
