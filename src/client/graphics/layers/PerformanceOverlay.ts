@@ -56,6 +56,20 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private tickExecutionTimes: number[] = [];
   private tickDelayTimes: number[] = [];
 
+  // Smoothed per-layer render timings (EMA over recent frames)
+  private layerStats: Map<
+    string,
+    { avg: number; max: number; last: number; total: number }
+  > = new Map();
+
+  @state()
+  private layerBreakdown: {
+    name: string;
+    avg: number;
+    max: number;
+    total: number;
+  }[] = [];
+
   static styles = css`
     .performance-overlay {
       position: fixed;
@@ -64,7 +78,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       transform: translateX(-50%);
       background: rgba(0, 0, 0, 0.8);
       color: white;
-      padding: 8px 12px;
+      padding: 8px 16px;
       border-radius: 4px;
       font-family: monospace;
       font-size: 12px;
@@ -72,6 +86,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       user-select: none;
       cursor: move;
       transition: none;
+      min-width: 420px;
     }
 
     .performance-overlay.dragging {
@@ -115,6 +130,66 @@ export class PerformanceOverlay extends LitElement implements Layer {
       user-select: none;
       pointer-events: auto;
     }
+
+    .reset-button {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      height: 20px;
+      padding: 0 6px;
+      background-color: rgba(0, 0, 0, 0.8);
+      border-radius: 4px;
+      color: white;
+      font-size: 10px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      user-select: none;
+      pointer-events: auto;
+    }
+
+    .layers-section {
+      margin-top: 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 4px;
+    }
+
+    .layer-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .layer-name {
+      flex: 0 0 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .layer-bar {
+      flex: 1;
+      height: 6px;
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .layer-bar-fill {
+      height: 100%;
+      background: #38bdf8;
+      border-radius: 3px;
+    }
+
+    .layer-metrics {
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
   `;
 
   constructor() {
@@ -140,7 +215,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
   private handleMouseDown = (e: MouseEvent) => {
     // Don't start dragging if clicking on close button
-    if ((e.target as HTMLElement).classList.contains("close-button")) {
+    const target = e.target as HTMLElement;
+    if (
+      target.classList.contains("close-button") ||
+      target.classList.contains("reset-button")
+    ) {
       return;
     }
 
@@ -179,7 +258,37 @@ export class PerformanceOverlay extends LitElement implements Layer {
     document.removeEventListener("mouseup", this.handleMouseUp);
   };
 
-  updateFrameMetrics(frameDuration: number) {
+  private handleReset = () => {
+    // reset FPS / frame stats
+    this.frameCount = 0;
+    this.lastTime = 0;
+    this.frameTimes = [];
+    this.fpsHistory = [];
+    this.lastSecondTime = 0;
+    this.framesThisSecond = 0;
+    this.currentFPS = 0;
+    this.averageFPS = 0;
+    this.frameTime = 0;
+
+    // reset tick metrics
+    this.tickExecutionTimes = [];
+    this.tickDelayTimes = [];
+    this.tickExecutionAvg = 0;
+    this.tickExecutionMax = 0;
+    this.tickDelayAvg = 0;
+    this.tickDelayMax = 0;
+
+    // reset layer breakdown
+    this.layerStats.clear();
+    this.layerBreakdown = [];
+
+    this.requestUpdate();
+  };
+
+  updateFrameMetrics(
+    frameDuration: number,
+    layerDurations?: Record<string, number>,
+  ) {
     this.isVisible = this.userSettings.performanceOverlay();
 
     if (!this.isVisible) return;
@@ -233,7 +342,44 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.lastTime = now;
     this.frameCount++;
 
+    if (layerDurations) {
+      this.updateLayerStats(layerDurations);
+    }
+
     this.requestUpdate();
+  }
+
+  private updateLayerStats(layerDurations: Record<string, number>) {
+    const alpha = 0.2; // smoothing factor for EMA
+
+    Object.entries(layerDurations).forEach(([name, duration]) => {
+      const existing = this.layerStats.get(name);
+      if (!existing) {
+        this.layerStats.set(name, {
+          avg: duration,
+          max: duration,
+          last: duration,
+          total: duration,
+        });
+      } else {
+        const avg = existing.avg + alpha * (duration - existing.avg);
+        const max = Math.max(existing.max, duration);
+        const total = existing.total + duration;
+        this.layerStats.set(name, { avg, max, last: duration, total });
+      }
+    });
+
+    // Derive contributors sorted by total accumulated time spent
+    const breakdown = Array.from(this.layerStats.entries())
+      .map(([name, stats]) => ({
+        name,
+        avg: stats.avg,
+        max: stats.max,
+        total: stats.total,
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    this.layerBreakdown = breakdown;
   }
 
   updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
@@ -297,12 +443,18 @@ export class PerformanceOverlay extends LitElement implements Layer {
       transform: none;
     `;
 
+    const maxLayerAvg =
+      this.layerBreakdown.length > 0
+        ? Math.max(...this.layerBreakdown.map((l) => l.avg))
+        : 1;
+
     return html`
       <div
         class="performance-overlay ${this.isDragging ? "dragging" : ""}"
         style="${style}"
         @mousedown="${this.handleMouseDown}"
       >
+        <button class="reset-button" @click="${this.handleReset}">Reset</button>
         <button class="close-button" @click="${this.handleClose}">×</button>
         <div class="performance-line">
           FPS:
@@ -332,6 +484,30 @@ export class PerformanceOverlay extends LitElement implements Layer {
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
         </div>
+        ${this.layerBreakdown.length
+          ? html`<div class="layers-section">
+              <div class="performance-line">
+                Layers (avg / max, sorted by total time):
+              </div>
+              ${this.layerBreakdown.map((layer) => {
+                const width = Math.min(
+                  100,
+                  (layer.avg / maxLayerAvg) * 100 || 0,
+                );
+                return html`<div class="layer-row">
+                  <span class="layer-name" title=${layer.name}
+                    >${layer.name}</span
+                  >
+                  <div class="layer-bar">
+                    <div class="layer-bar-fill" style="width: ${width}%;"></div>
+                  </div>
+                  <span class="layer-metrics">
+                    ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
+                  </span>
+                </div>`;
+              })}
+            </div>`
+          : html``}
       </div>
     `;
   }

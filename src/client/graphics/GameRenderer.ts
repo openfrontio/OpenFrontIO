@@ -3,6 +3,7 @@ import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AdTimer } from "./layers/AdTimer";
@@ -357,7 +358,9 @@ export class GameRenderer {
   }
 
   renderGame() {
+    FrameProfiler.clear();
     const start = performance.now();
+    const layerDurations: Record<string, number> = {};
     // Set background
     this.context.fillStyle = this.game
       .config()
@@ -389,7 +392,14 @@ export class GameRenderer {
         needsTransform,
         isTransformActive,
       );
+
+      const layerStart = FrameProfiler.start();
       layer.renderLayer?.(this.context);
+      const layerDuration = performance.now() - layerStart;
+
+      const name = layer.constructor?.name ?? "UnknownLayer";
+      // Accumulate time in case a layer renders multiple times per frame
+      layerDurations[name] = (layerDurations[name] ?? 0) + layerDuration;
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -397,7 +407,13 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    this.performanceOverlay.updateFrameMetrics(duration);
+    const internalTimings = FrameProfiler.consume();
+    const combinedDurations: Record<string, number> = { ...internalTimings };
+    for (const [name, value] of Object.entries(layerDurations)) {
+      combinedDurations[name] = (combinedDurations[name] ?? 0) + value;
+    }
+
+    this.performanceOverlay.updateFrameMetrics(duration, combinedDurations);
 
     if (duration > 50) {
       console.warn(
