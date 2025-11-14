@@ -13,12 +13,15 @@ import { Layer } from "./Layer";
 export class SAMRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
-  private readonly samLaunchers: Set<number> = new Set(); // Track SAM launcher IDs
+  private readonly samLaunchers: Map<number, number> = new Map(); // Track SAM launcher IDs -> ownerSmallID
   private needsRedraw = true;
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
   private ghostShow: boolean = false;
   private showStroke: boolean = false;
+  private dashOffset = 0;
+  private rotationSpeed = 14; // px per second
+  private lastTickTime = Date.now();
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
@@ -78,6 +81,7 @@ export class SAMRadiusLayer implements Layer {
         if (unit && unit.type() === UnitType.SAMLauncher) {
           const wasTracked = this.samLaunchers.has(update.id);
           const shouldTrack = unit.isActive();
+          const owner = unit.owner().smallID();
 
           if (wasTracked && !shouldTrack) {
             // SAM was destroyed
@@ -85,8 +89,15 @@ export class SAMRadiusLayer implements Layer {
             hasChanges = true;
           } else if (!wasTracked && shouldTrack) {
             // New SAM was built
-            this.samLaunchers.add(update.id);
+            this.samLaunchers.set(update.id, owner);
             hasChanges = true;
+          } else if (wasTracked && shouldTrack) {
+            // SAM still exists; check if owner changed
+            const prevOwner = this.samLaunchers.get(update.id);
+            if (prevOwner !== owner) {
+              this.samLaunchers.set(update.id, owner);
+              hasChanges = true;
+            }
           }
         }
       }
@@ -104,6 +115,17 @@ export class SAMRadiusLayer implements Layer {
     this.updateStrokeVisibility();
 
     // Redraw if transform changed or if we need to redraw
+    const now = Date.now();
+    const dt = now - this.lastTickTime;
+    this.lastTickTime = now;
+
+    if (this.showStroke) {
+      this.dashOffset += (this.rotationSpeed * dt) / 1000;
+      if (this.dashOffset > 1e6) this.dashOffset = this.dashOffset % 1000000;
+      // animate by redrawing each frame whilst visible
+      this.needsRedraw = true;
+    }
+
     if (this.transformHandler.hasChanged() || this.needsRedraw) {
       this.redraw();
       this.needsRedraw = false;
@@ -131,7 +153,9 @@ export class SAMRadiusLayer implements Layer {
 
     // Update our tracking set
     this.samLaunchers.clear();
-    samLaunchers.forEach((sam) => this.samLaunchers.add(sam.id()));
+    samLaunchers.forEach((sam) =>
+      this.samLaunchers.set(sam.id(), sam.owner().smallID()),
+    );
 
     // Draw union of SAM radiuses. Collect circle data then draw union outer arcs only
     const circles = samLaunchers.map((sam) => {
@@ -139,7 +163,7 @@ export class SAMRadiusLayer implements Layer {
       return {
         x: this.game.x(tile),
         y: this.game.y(tile),
-        r: this.game.config().defaultSamRange(),
+        r: this.game.config().samRange(sam.level()),
         owner: sam.owner().smallID(),
       };
     });
@@ -158,9 +182,7 @@ export class SAMRadiusLayer implements Layer {
     if (circles.length === 0) return;
 
     // styles
-    const strokeStyleOuter =
-      this.game.myPlayer()?.borderColor().toRgbString() ??
-      "rgba(230, 230, 230, 0.9)";
+    const strokeStyleOuter = "rgba(0, 0, 0, 1)";
 
     // 1) Fill union simply by drawing all full circle paths and filling once
     ctx.save();
@@ -177,8 +199,9 @@ export class SAMRadiusLayer implements Layer {
     if (!this.showStroke) return;
 
     ctx.save();
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.setLineDash([12, 6]);
+    ctx.lineDashOffset = this.dashOffset;
     ctx.strokeStyle = strokeStyleOuter;
 
     const TWO_PI = Math.PI * 2;

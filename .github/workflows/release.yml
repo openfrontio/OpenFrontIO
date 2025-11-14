@@ -28,6 +28,7 @@ jobs:
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name }}
           RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          ADDITIONAL_VERSION_TAG: ${{ github.event.action == 'published' && 'latest' || '' }}
         run: |
           set -euxo pipefail
           cat <<EOF >> $GITHUB_STEP_SUMMARY

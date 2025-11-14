@@ -16,8 +16,4 @@ export enum FxType {
   UnderConstruction = "UnderConstruction",
   Dust = "Dust",
   Conquest = "Conquest",
-  Tentacle = "Tentacle",
-  Shark = "Shark",
-  Bubble = "Bubble",
-  Tornado = "Tornado",
 }

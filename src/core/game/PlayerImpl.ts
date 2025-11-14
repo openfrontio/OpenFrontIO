@@ -71,6 +71,7 @@ export class PlayerImpl implements Player {
   private _troops: bigint;
 
   markedTraitorTick = -1;
+  private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
 
@@ -123,7 +124,6 @@ export class PlayerImpl implements Player {
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
       ar.recipient().id(),
     );
-    const stats = this.mg.stats().getPlayerStats(this);
 
     return {
       type: GameUpdateType.Player,
@@ -174,7 +174,7 @@ export class PlayerImpl implements Player {
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
-      betrayals: stats?.betrayals,
+      betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
     };
   }
@@ -441,9 +441,14 @@ export class PlayerImpl implements Player {
 
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
+    this._betrayalCount++; // Keep count for FakeHumans too
 
-    // Record stats
+    // Record stats (only for real Humans)
     this.mg.stats().betray(this);
+  }
+
+  betrayals(): number {
+    return this._betrayalCount;
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {
@@ -1216,35 +1221,5 @@ export class PlayerImpl implements Player {
 
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
     return bestShoreDeploymentSource(this.mg, this, targetTile);
-  }
-
-  // It's a probability list, so if an element appears twice it's because it's
-  // twice more likely to be picked later.
-  tradingPorts(port: Unit): Unit[] {
-    const ports = this.mg
-      .players()
-      .filter((p) => p !== port.owner() && p.canTrade(port.owner()))
-      .flatMap((p) => p.units(UnitType.Port))
-      .sort((p1, p2) => {
-        return (
-          this.mg.manhattanDist(port.tile(), p1.tile()) -
-          this.mg.manhattanDist(port.tile(), p2.tile())
-        );
-      });
-
-    const weightedPorts: Unit[] = [];
-
-    for (const [i, otherPort] of ports.entries()) {
-      const expanded = new Array(otherPort.level()).fill(otherPort);
-      weightedPorts.push(...expanded);
-      if (i < this.mg.config().proximityBonusPortsNb(ports.length)) {
-        weightedPorts.push(...expanded);
-      }
-      if (port.owner().isFriendly(otherPort.owner())) {
-        weightedPorts.push(...expanded);
-      }
-    }
-
-    return weightedPorts;
   }
 }

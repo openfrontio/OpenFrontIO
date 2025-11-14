@@ -451,6 +451,7 @@ export interface Unit {
   toUpdate(): UnitUpdate;
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
+  wasDestroyedByEnemy(): boolean;
 
   // Train
   trainType(): TrainType | undefined;
@@ -607,6 +608,7 @@ export interface Player {
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
+  betrayals(): number;
 
   // Targeting
   canTarget(other: Player): boolean;
@@ -655,7 +657,6 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
-  tradingPorts(port: Unit): Unit[];
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
