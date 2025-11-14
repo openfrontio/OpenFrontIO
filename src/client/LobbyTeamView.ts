@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { PastelTheme } from "../core/configuration/PastelTheme";
 import {
   ColoredTeams,
@@ -25,8 +25,8 @@ export interface TeamPreviewData {
 export class LobbyTeamView extends LitElement {
   @property({ type: String }) gameMode: GameMode = GameMode.FFA;
   @property({ type: Array }) clients: ClientInfo[] = [];
-  @property({ type: Array }) teamPreview: TeamPreviewData[] = [];
-  @property({ type: Number }) teamMaxSize: number = 0;
+  @state() private teamPreview: TeamPreviewData[] = [];
+  @state() private teamMaxSize: number = 0;
   @property({ type: String }) lobbyCreatorClientID: string = "";
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
@@ -108,7 +108,9 @@ export class LobbyTeamView extends LitElement {
             : html`<button
                 class="remove-player-btn"
                 @click=${() => this.onKickPlayer?.(client.clientID)}
-                title="Remove ${client.username}"
+                title=${translateText("host_modal.remove_player", {
+                  username: client.username,
+                })}
               >
                 ×
               </button>`}
@@ -151,7 +153,9 @@ export class LobbyTeamView extends LitElement {
                       : html`<button
                           class="remove-player-btn ml-2"
                           @click=${() => this.onKickPlayer?.(p.clientID)}
-                          title="Remove ${p.username}"
+                          title=${translateText("host_modal.remove_player", {
+                            username: p.username,
+                          })}
                         >
                           ×
                         </button>`}
@@ -222,34 +226,41 @@ export class LobbyTeamView extends LitElement {
       return;
     }
 
-    const clientMap = new Map(this.clients.map((c) => [c.clientID, c]));
     const players = this.clients.map(
       (c) =>
         new PlayerInfo(c.username, PlayerType.Human, c.clientID, c.clientID),
     );
     const assignment = assignTeams(players, teams);
     const buckets = new Map<Team, ClientInfo[]>();
-    teams.forEach((t) => buckets.set(t, []));
+    for (const t of teams) buckets.set(t, []);
 
-    for (const [player, team] of assignment.entries()) {
-      if (team === "kicked" || !player.clientID) continue;
-      const client = clientMap.get(player.clientID);
-      if (client) buckets.get(team)?.push(client);
+    for (const [p, team] of assignment.entries()) {
+      if (team === "kicked") continue;
+      const bucket = buckets.get(team);
+      if (!bucket) continue;
+      const client =
+        this.clients.find((c) => c.clientID === p.clientID) ??
+        this.clients.find((c) => c.username === p.name);
+      if (client) bucket.push(client);
     }
 
-    // Capacity mapping
-    const sizeMap: Record<string, number> = {
-      [Duos]: 2,
-      [Trios]: 3,
-      [Quads]: 4,
-    };
-    this.teamMaxSize =
-      sizeMap[this.teamCount as any] ||
-      Math.max(1, Math.ceil(this.clients.length / Math.max(teams.length, 1)));
-
-    this.teamPreview = teams.map((team) => ({
-      team,
-      players: buckets.get(team) ?? [],
+    // Compute per-team capacity safely and align with common team sizes
+    if (this.teamCount === Duos) {
+      this.teamMaxSize = 2;
+    } else if (this.teamCount === Trios) {
+      this.teamMaxSize = 3;
+    } else if (this.teamCount === Quads) {
+      this.teamMaxSize = 4;
+    } else {
+      // Fallback: divide players across teams; guard against 0 and empty lobbies
+      this.teamMaxSize = Math.max(
+        1,
+        Math.ceil(this.clients.length / teams.length),
+      );
+    }
+    this.teamPreview = teams.map((t) => ({
+      team: t,
+      players: buckets.get(t) ?? [],
     }));
   }
 }
