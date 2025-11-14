@@ -41,10 +41,10 @@ export function resolveHoverTarget(
   game: GameView,
   worldCoord: { x: number; y: number },
 ): HoverTargetResolution {
-  const tile = game.ref(worldCoord.x, worldCoord.y);
-  if (!tile) {
+  if (!game.isValidCoord(worldCoord.x, worldCoord.y)) {
     return { player: null, unit: null };
   }
+  const tile = game.ref(worldCoord.x, worldCoord.y);
 
   const owner = game.owner(tile);
   if (owner && owner.isPlayer()) {
