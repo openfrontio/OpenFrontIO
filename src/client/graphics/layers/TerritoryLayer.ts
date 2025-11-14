@@ -23,6 +23,7 @@ import {
   ToggleTerritoryWebGLEvent,
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
+import { resolveHoverTarget } from "../HoverTargetResolver";
 import { TransformHandler } from "../TransformHandler";
 import { BorderRenderer, NullBorderRenderer } from "./BorderRenderer";
 import { Layer } from "./Layer";
@@ -281,6 +282,11 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
       this.borderRenderer.setAlternativeView(this.alternativeView);
+      if (this.borderRenderer instanceof WebGLBorderRenderer) {
+        this.borderRenderer.setHoverHighlightOptions(
+          this.hoverHighlightOptions(),
+        );
+      }
     });
     this.eventBus.on(ToggleTerritoryWebGLEvent, () => {
       this.userSettings.toggleTerritoryWebGL();
@@ -305,7 +311,9 @@ export class TerritoryLayer implements Layer {
   }
 
   private updateHighlightedTerritory() {
-    if (!this.alternativeView) {
+    const supportsHover =
+      this.alternativeView || this.borderRenderer.drawsOwnBorders();
+    if (!supportsHover) {
       return;
     }
 
@@ -322,7 +330,7 @@ export class TerritoryLayer implements Layer {
     }
 
     const previousTerritory = this.highlightedTerritory;
-    const territory = this.getTerritoryAtCell(cell);
+    const territory = resolveHoverTarget(this.game, cell).player;
 
     if (territory) {
       this.highlightedTerritory = territory;
@@ -346,19 +354,6 @@ export class TerritoryLayer implements Layer {
         this.redrawBorder(...territories);
       }
     }
-  }
-
-  private getTerritoryAtCell(cell: { x: number; y: number }) {
-    const tile = this.game.ref(cell.x, cell.y);
-    if (!tile) {
-      return null;
-    }
-    // If the tile has no owner, it is either a fallout tile or a terra nullius tile.
-    if (!this.game.hasOwner(tile)) {
-      return null;
-    }
-    const owner = this.game.owner(tile);
-    return owner instanceof PlayerView ? owner : null;
   }
 
   redraw() {
@@ -429,6 +424,7 @@ export class TerritoryLayer implements Layer {
       this.borderRenderer.setHoveredPlayerId(
         this.highlightedTerritory?.smallID() ?? null,
       );
+      renderer.setHoverHighlightOptions(this.hoverHighlightOptions());
       this.emitWebGLStatus(true, true, this.webglSupported);
     } else {
       this.borderRenderer = new NullBorderRenderer();
@@ -439,6 +435,32 @@ export class TerritoryLayer implements Layer {
         "WebGL not available. Using canvas fallback for borders.",
       );
     }
+  }
+
+  /**
+   * Central configuration for WebGL border hover styling.
+   * Keeps main view and alternate view behavior explicit and tweakable.
+   */
+  private hoverHighlightOptions() {
+    const baseColor = this.theme.spawnHighlightSelfColor();
+
+    if (this.alternativeView) {
+      // Alternate view: borders are the primary visual, so make hover stronger
+      return {
+        color: baseColor,
+        strength: 0.8,
+        pulseStrength: 0.45,
+        pulseSpeed: Math.PI * 2,
+      };
+    }
+
+    // Main view: keep highlight noticeable but a bit subtler
+    return {
+      color: baseColor,
+      strength: 0.6,
+      pulseStrength: 0.35,
+      pulseSpeed: Math.PI * 2,
+    };
   }
 
   private emitWebGLStatus(

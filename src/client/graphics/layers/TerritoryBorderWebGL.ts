@@ -24,6 +24,9 @@ interface UniformLocations {
   alternativeView: WebGLUniformLocation | null;
   hoveredPlayerId: WebGLUniformLocation | null;
   highlightStrength: WebGLUniformLocation | null;
+  highlightColor: WebGLUniformLocation | null;
+  hoverPulseStrength: WebGLUniformLocation | null;
+  hoverPulseSpeed: WebGLUniformLocation | null;
   resolution: WebGLUniformLocation | null;
   themeSelf: WebGLUniformLocation | null;
   themeFriendly: WebGLUniformLocation | null;
@@ -31,6 +34,14 @@ interface UniformLocations {
   themeEnemy: WebGLUniformLocation | null;
   time: WebGLUniformLocation | null;
   debugPulse: WebGLUniformLocation | null;
+  hoverPulse: WebGLUniformLocation | null;
+}
+
+export interface HoverHighlightOptions {
+  color?: Colord;
+  strength?: number;
+  pulseStrength?: number;
+  pulseSpeed?: number;
 }
 
 export class TerritoryBorderWebGL {
@@ -76,6 +87,11 @@ export class TerritoryBorderWebGL {
   private needsRedraw = true;
   private animationStartTime = Date.now();
   private debugPulseEnabled = false;
+  private hoverPulseEnabled = false;
+  private hoverHighlightStrength = 0.7;
+  private hoverHighlightColor: [number, number, number] = [1, 1, 1];
+  private hoverPulseStrength = 0.25;
+  private hoverPulseSpeed = 6.28318;
 
   private constructor(
     private readonly width: number,
@@ -119,6 +135,9 @@ export class TerritoryBorderWebGL {
         alternativeView: null,
         hoveredPlayerId: null,
         highlightStrength: null,
+        highlightColor: null,
+        hoverPulseStrength: null,
+        hoverPulseSpeed: null,
         resolution: null,
         themeSelf: null,
         themeFriendly: null,
@@ -126,6 +145,7 @@ export class TerritoryBorderWebGL {
         themeEnemy: null,
         time: null,
         debugPulse: null,
+        hoverPulse: null,
       };
       return;
     }
@@ -163,12 +183,16 @@ export class TerritoryBorderWebGL {
       uniform bool u_alternativeView;
       uniform float u_hoveredPlayerId;
       uniform float u_highlightStrength;
+      uniform vec3 u_highlightColor;
+      uniform float u_hoverPulseStrength;
+      uniform float u_hoverPulseSpeed;
       uniform vec4 u_themeSelf;
       uniform vec4 u_themeFriendly;
       uniform vec4 u_themeNeutral;
       uniform vec4 u_themeEnemy;
       uniform float u_time;
       uniform bool u_debugPulse;
+      uniform bool u_hoverPulse;
 
       varying vec4 v_color;
       varying float v_owner;
@@ -281,7 +305,17 @@ export class TerritoryBorderWebGL {
           u_hoveredPlayerId >= 0.0 &&
           abs(v_owner - u_hoveredPlayerId) < 0.5
         ) {
-          color.rgb = mix(color.rgb, vec3(1.0), u_highlightStrength);
+          float pulse =
+            u_hoverPulse
+              ? (1.0 - u_hoverPulseStrength) +
+                u_hoverPulseStrength *
+                  (0.5 + 0.5 * sin(u_time * u_hoverPulseSpeed))
+              : 1.0;
+          color.rgb = mix(
+            color.rgb,
+            u_highlightColor,
+            u_highlightStrength * pulse
+          );
         }
 
         // Optional blinking/pulsing effect to highlight WebGL-drawn borders.
@@ -312,6 +346,9 @@ export class TerritoryBorderWebGL {
         alternativeView: null,
         hoveredPlayerId: null,
         highlightStrength: null,
+        highlightColor: null,
+        hoverPulseStrength: null,
+        hoverPulseSpeed: null,
         resolution: null,
         themeSelf: null,
         themeFriendly: null,
@@ -319,6 +356,7 @@ export class TerritoryBorderWebGL {
         themeEnemy: null,
         time: null,
         debugPulse: null,
+        hoverPulse: null,
       };
       return;
     }
@@ -390,6 +428,12 @@ export class TerritoryBorderWebGL {
       alternativeView: gl.getUniformLocation(program, "u_alternativeView"),
       hoveredPlayerId: gl.getUniformLocation(program, "u_hoveredPlayerId"),
       highlightStrength: gl.getUniformLocation(program, "u_highlightStrength"),
+      highlightColor: gl.getUniformLocation(program, "u_highlightColor"),
+      hoverPulseStrength: gl.getUniformLocation(
+        program,
+        "u_hoverPulseStrength",
+      ),
+      hoverPulseSpeed: gl.getUniformLocation(program, "u_hoverPulseSpeed"),
       resolution: gl.getUniformLocation(program, "u_resolution"),
       themeSelf: gl.getUniformLocation(program, "u_themeSelf"),
       themeFriendly: gl.getUniformLocation(program, "u_themeFriendly"),
@@ -397,16 +441,33 @@ export class TerritoryBorderWebGL {
       themeEnemy: gl.getUniformLocation(program, "u_themeEnemy"),
       time: gl.getUniformLocation(program, "u_time"),
       debugPulse: gl.getUniformLocation(program, "u_debugPulse"),
+      hoverPulse: gl.getUniformLocation(program, "u_hoverPulse"),
     };
 
     if (this.uniforms.hoveredPlayerId) {
       gl.uniform1f(this.uniforms.hoveredPlayerId, -1);
     }
     if (this.uniforms.highlightStrength) {
-      gl.uniform1f(this.uniforms.highlightStrength, 0.35);
+      gl.uniform1f(
+        this.uniforms.highlightStrength,
+        this.hoverHighlightStrength,
+      );
+    }
+    if (this.uniforms.highlightColor) {
+      const [r, g, b] = this.hoverHighlightColor;
+      gl.uniform3f(this.uniforms.highlightColor, r, g, b);
+    }
+    if (this.uniforms.hoverPulseStrength) {
+      gl.uniform1f(this.uniforms.hoverPulseStrength, this.hoverPulseStrength);
+    }
+    if (this.uniforms.hoverPulseSpeed) {
+      gl.uniform1f(this.uniforms.hoverPulseSpeed, this.hoverPulseSpeed);
     }
     if (this.uniforms.resolution) {
       gl.uniform2f(this.uniforms.resolution, this.width, this.height);
+    }
+    if (this.uniforms.hoverPulse) {
+      gl.uniform1i(this.uniforms.hoverPulse, 0);
     }
     this.applyThemeUniforms();
 
@@ -429,10 +490,35 @@ export class TerritoryBorderWebGL {
 
   setHoveredPlayerId(playerSmallId: number | null) {
     const encoded = playerSmallId ?? -1;
-    if (this.hoveredPlayerId === encoded) {
-      return;
+    let changed = false;
+    if (this.hoveredPlayerId !== encoded) {
+      this.hoveredPlayerId = encoded;
+      changed = true;
     }
-    this.hoveredPlayerId = encoded;
+    const shouldPulse = playerSmallId !== null;
+    if (this.hoverPulseEnabled !== shouldPulse) {
+      this.hoverPulseEnabled = shouldPulse;
+      changed = true;
+    }
+    if (changed) {
+      this.needsRedraw = true;
+    }
+  }
+
+  setHoverHighlightOptions(options: HoverHighlightOptions) {
+    if (options.strength !== undefined) {
+      this.hoverHighlightStrength = Math.max(0, Math.min(1, options.strength));
+    }
+    if (options.color) {
+      const rgba = options.color.rgba;
+      this.hoverHighlightColor = [rgba.r / 255, rgba.g / 255, rgba.b / 255];
+    }
+    if (options.pulseStrength !== undefined) {
+      this.hoverPulseStrength = Math.max(0, Math.min(1, options.pulseStrength));
+    }
+    if (options.pulseSpeed !== undefined) {
+      this.hoverPulseSpeed = Math.max(0, options.pulseSpeed);
+    }
     this.needsRedraw = true;
   }
 
@@ -498,6 +584,25 @@ export class TerritoryBorderWebGL {
 
     if (this.uniforms.debugPulse) {
       gl.uniform1i(this.uniforms.debugPulse, this.debugPulseEnabled ? 1 : 0);
+    }
+    if (this.uniforms.hoverPulse) {
+      gl.uniform1i(this.uniforms.hoverPulse, this.hoverPulseEnabled ? 1 : 0);
+    }
+    if (this.uniforms.highlightStrength) {
+      gl.uniform1f(
+        this.uniforms.highlightStrength,
+        this.hoverHighlightStrength,
+      );
+    }
+    if (this.uniforms.highlightColor) {
+      const [r, g, b] = this.hoverHighlightColor;
+      gl.uniform3f(this.uniforms.highlightColor, r, g, b);
+    }
+    if (this.uniforms.hoverPulseStrength) {
+      gl.uniform1f(this.uniforms.hoverPulseStrength, this.hoverPulseStrength);
+    }
+    if (this.uniforms.hoverPulseSpeed) {
+      gl.uniform1f(this.uniforms.hoverPulseSpeed, this.hoverPulseSpeed);
     }
 
     gl.clearColor(0, 0, 0, 0);
