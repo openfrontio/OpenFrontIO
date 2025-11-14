@@ -350,26 +350,6 @@ export class HostLobbyModal extends LitElement {
                   </div>
                 </label>
 
-                <label
-                  for="spawn-immunity-duration"
-                  class="option-card"
-                >
-                  <input
-                    type="number"
-                    id="spawn-immunity-duration"
-                    min="0"
-                    max="300"
-                    step="1"
-                    .value=${String(this.spawnImmunityDurationSeconds)}
-                    style="width: 60px; color: black; text-align: right; border-radius: 8px;"
-                    @input=${this.handleSpawnImmunityDurationInput}
-                    @keydown=${this.handleSpawnImmunityDurationKeyDown}
-                  />
-                  <div class="option-card-title">
-                    <span>${translateText("host_modal.spawn_immunity_duration")}</span>
-                  </div>
-                </label>
-
                 ${
                   !(
                     this.gameMode === GameMode.Team &&
@@ -544,6 +524,27 @@ export class HostLobbyModal extends LitElement {
                     ${translateText("host_modal.max_timer")}
                   </div>
                 </label>
+
+                <label
+                  for="spawn-immunity-duration"
+                  class="option-card"
+                >
+                  <input
+                    type="number"
+                    id="spawn-immunity-duration"
+                    min="0"
+                    max="300"
+                    step="1"
+                    .value=${String(this.spawnImmunityDurationSeconds)}
+                    style="width: 60px; color: black; text-align: right; border-radius: 8px;"
+                    @input=${this.handleSpawnImmunityDurationInput}
+                    @keydown=${this.handleSpawnImmunityDurationKeyDown}
+                  />
+                  <div class="option-card-title">
+                    <span>${translateText("host_modal.spawn_immunity_duration")}</span>
+                  </div>
+                </label>
+                
                 <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
 
                 <!-- Individual disables for structures/weapons -->
