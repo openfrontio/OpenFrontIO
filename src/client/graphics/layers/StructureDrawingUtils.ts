@@ -253,12 +253,9 @@ export class SpriteFactory {
     structureCanvas.height = Math.ceil(iconSize);
     const context = structureCanvas.getContext("2d")!;
 
-    const tc = owner.territoryColor();
-    const bc = owner.borderColor();
-
-    // Potentially change logic here. Some TC/BC combinations do not provide good color contrast.
-    const darker = bc.luminance() < tc.luminance() ? bc : tc;
-    const lighter = bc.luminance() < tc.luminance() ? tc : bc;
+    // Use structureColors defined from the PlayerView.
+    const darker = owner.structureDarkColor();
+    const lighter = owner.structureLightColor();
 
     let borderColor: string;
     if (isConstruction) {

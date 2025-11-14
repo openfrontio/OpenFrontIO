@@ -65,6 +65,10 @@ export class PastelTheme implements Theme {
     return this.nationColorAllocator.assignColor(player.id());
   }
 
+  structureLightColor(territoryColor: Colord): Colord {}
+
+  structureDarkColor(territoryColor: Colord): Colord {}
+
   // Don't call directly, use PlayerView
   borderColor(territoryColor: Colord): Colord {
     return territoryColor.darken(0.125);
