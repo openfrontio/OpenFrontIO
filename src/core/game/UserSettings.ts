@@ -184,18 +184,51 @@ export class UserSettings {
   }
 
   backgroundMusicVolume(): number {
-    return this.getFloat("settings.backgroundMusicVolume", 0);
+    const volume = this.getFloat("settings.backgroundMusicVolume", 0.5);
+    return Math.max(0, Math.min(1, volume));
   }
 
   setBackgroundMusicVolume(volume: number): void {
-    this.setFloat("settings.backgroundMusicVolume", volume);
+    // Ensure volume is a valid number between 0 and 1
+    const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 0 : volume));
+    this.setFloat("settings.backgroundMusicVolume", validVolume);
   }
 
   soundEffectsVolume(): number {
-    return this.getFloat("settings.soundEffectsVolume", 1);
+    const volume = this.getFloat("settings.soundEffectsVolume", 1);
+    return Math.max(0, Math.min(1, volume));
   }
 
   setSoundEffectsVolume(volume: number): void {
-    this.setFloat("settings.soundEffectsVolume", volume);
+    // Ensure volume is a valid number between 0 and 1
+    const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 1 : volume));
+    this.setFloat("settings.soundEffectsVolume", validVolume);
+  }
+
+  isSoundEffectEnabled(soundEffect: string): boolean {
+    return this.get(`settings.soundEffect.${soundEffect}`, true);
+  }
+
+  setSoundEffectEnabled(soundEffect: string, enabled: boolean): void {
+    this.set(`settings.soundEffect.${soundEffect}`, enabled);
+  }
+
+  isBackgroundMusicEnabled(): boolean {
+    return this.get("settings.backgroundMusicEnabled", true);
+  }
+
+  setBackgroundMusicEnabled(enabled: boolean): void {
+    this.set("settings.backgroundMusicEnabled", enabled);
+  }
+
+  mirvLaunchVolume(): number {
+    const volume = this.getFloat("settings.mirvLaunchVolume", 0.25);
+    return Math.max(0, Math.min(1, volume));
+  }
+
+  setMirvLaunchVolume(volume: number): void {
+    // Ensure volume is a valid number between 0 and 1
+    const validVolume = Math.max(0, Math.min(1, isNaN(volume) ? 0.25 : volume));
+    this.setFloat("settings.mirvLaunchVolume", validVolume);
   }
 }

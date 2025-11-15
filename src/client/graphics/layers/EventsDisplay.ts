@@ -40,6 +40,7 @@ import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
+import { SoundEffect, SoundManager } from "../../sound/SoundManager";
 import { renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
@@ -74,6 +75,7 @@ interface GameEvent {
 export class EventsDisplay extends LitElement implements Layer {
   public eventBus: EventBus;
   public game: GameView;
+  public soundManager: SoundManager;
 
   private active: boolean = false;
   private events: GameEvent[] = [];
@@ -376,6 +378,11 @@ export class EventsDisplay extends LitElement implements Layer {
       description = translateText(event.message, event.params ?? {});
     }
 
+    // Play SAM hit sound when SAM intercepts a nuke (for SAM owner)
+    if (event.messageType === MessageType.SAM_HIT) {
+      this.soundManager?.playSoundEffect(SoundEffect.SAMHit);
+    }
+
     this.addEvent({
       description: description,
       createdAt: this.game.ticks(),
@@ -570,6 +577,10 @@ export class EventsDisplay extends LitElement implements Layer {
           preventClose: true,
         },
       ];
+      // Play alarm sound when someone breaks your alliance (3 times)
+      if (this.soundManager) {
+        this.soundManager.repeatSound(SoundEffect.Alarm, 3);
+      }
       this.addEvent({
         description: translateText("events_display.betrayed_you", {
           name: traitor.name(),

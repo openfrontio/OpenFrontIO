@@ -7,6 +7,7 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import quickChatData from "../../../../resources/QuickChat.json";
 import { EventBus } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
+import { SoundManager } from "../../sound/SoundManager";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 
@@ -46,6 +47,7 @@ export class ChatModal extends LitElement {
   public eventBus: EventBus;
 
   public g: GameView;
+  public soundManager: SoundManager;
 
   quickChatPhrases: Record<
     string,
@@ -221,6 +223,7 @@ export class ChatModal extends LitElement {
   }
 
   private sendChatMessage() {
+    this.soundManager?.playMenuClick();
     console.log("Sent message:", this.previewText);
     console.log("Sender:", this.sender);
     console.log("Recipient:", this.recipient);

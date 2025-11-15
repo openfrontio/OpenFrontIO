@@ -6,6 +6,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { SoundEffect, SoundManager } from "../../sound/SoundManager";
 import { Layer } from "./Layer";
 
 // Parameters for the alert animation
@@ -17,6 +18,7 @@ const ALERT_COOLDOWN_TICKS = 15 * 10; // 15 seconds
 @customElement("alert-frame")
 export class AlertFrame extends LitElement implements Layer {
   public game: GameView;
+  public soundManager: SoundManager;
   private userSettings: UserSettings = new UserSettings();
 
   @state()
@@ -89,6 +91,8 @@ export class AlertFrame extends LitElement implements Layer {
       this.seenAttackIds.clear();
       this.outgoingAttackTicks.clear();
       this.lastAlertTick = -1;
+      // Stop alarm sound if playing
+      this.stopAlarmSound();
       return;
     }
 
@@ -128,7 +132,32 @@ export class AlertFrame extends LitElement implements Layer {
       this.isActive = true;
       this.lastAlertTick = this.game.ticks();
       this.requestUpdate();
+
+      // Play alarm sound for 3 seconds
+      this.playAlarmSound();
     }
+  }
+
+  private playAlarmSound() {
+    if (!this.soundManager) {
+      return;
+    }
+    // Stop any currently playing alarm
+    this.stopAlarmSound();
+
+    // Play alarm sound with looping for 3 seconds
+    this.soundManager.play({
+      sound: SoundEffect.Alarm,
+      loop: true,
+      duration: 3000,
+    });
+  }
+
+  private stopAlarmSound() {
+    if (!this.soundManager) {
+      return;
+    }
+    this.soundManager.stopSoundEffect(SoundEffect.Alarm);
   }
 
   private trackOutgoingAttacks() {
@@ -227,6 +256,8 @@ export class AlertFrame extends LitElement implements Layer {
       clearTimeout(this.animationTimeout);
       this.animationTimeout = null;
     }
+    // Stop alarm sound if still playing
+    this.stopAlarmSound();
     this.requestUpdate();
   }
 

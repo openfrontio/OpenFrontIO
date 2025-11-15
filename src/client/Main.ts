@@ -43,6 +43,7 @@ import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getUserMe, isLoggedIn } from "./jwt";
+import SoundManager, { SoundConfig, SoundEffect } from "./sound/SoundManager";
 import "./styles.css";
 
 declare global {
@@ -92,6 +93,7 @@ export interface JoinLobbyEvent {
 class Client {
   private gameStop: (() => void) | null = null;
   private eventBus: EventBus = new EventBus();
+  private soundManager: SoundManager = new SoundManager();
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -302,6 +304,7 @@ class Client {
     if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
       console.warn("User settings modal element not found");
     }
+    settingsModal.soundManager = this.soundManager;
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {
@@ -345,6 +348,16 @@ class Client {
     } else {
       document.documentElement.classList.remove("dark");
     }
+
+    // Initialize sound settings from cookies on page load
+    const soundConfig: SoundConfig = {
+      backgroundMusicVolume: this.userSettings.backgroundMusicVolume(),
+      soundEffectsVolume: this.userSettings.soundEffectsVolume(),
+      isSoundEffectEnabled: (soundEffect: SoundEffect) =>
+        this.userSettings.isSoundEffectEnabled(soundEffect),
+      isBackgroundMusicEnabled: this.userSettings.isBackgroundMusicEnabled(),
+    };
+    this.soundManager.updateConfig(soundConfig);
 
     // Attempt to join lobby
     this.handleHash();
@@ -487,6 +500,7 @@ class Client {
 
     this.gameStop = joinLobby(
       this.eventBus,
+      this.soundManager,
       {
         gameID: lobby.gameID,
         serverConfig: config,

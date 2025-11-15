@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { within } from "../../../core/Util";
+import { SoundManager } from "../../sound/SoundManager";
 import {
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,
@@ -24,6 +25,8 @@ export class SendResourceModal extends LitElement {
   @property({ attribute: false }) myPlayer: PlayerView | null = null;
   @property({ attribute: false }) target: PlayerView | null = null;
   @property({ attribute: false }) gameView: GameView | null = null;
+
+  @property({ attribute: false }) soundManager: SoundManager | null = null;
 
   @property({ type: String }) heading: string | null = null;
 
@@ -80,10 +83,12 @@ export class SendResourceModal extends LitElement {
   }
 
   private closeModal() {
+    this.soundManager?.playMenuClick();
     this.dispatchEvent(new CustomEvent("close"));
   }
 
   private confirm() {
+    this.soundManager?.playMenuClick();
     if (!this.isSenderAlive() || !this.isTargetAlive() || !this.eventBus) {
       return;
     }
@@ -305,6 +310,7 @@ export class SendResourceModal extends LitElement {
                   : "bg-zinc-800 text-zinc-200 ring-zinc-700 hover:bg-zinc-700 hover:text-zinc-50"}"
               @click=${() => {
                 if (dead) return;
+                this.soundManager?.playMenuClick();
                 this.selectedPercent = pct;
                 const raw = Math.floor((basis * pct) / 100);
                 this.sendAmount = this.clampSend(raw);

@@ -2,6 +2,7 @@ import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
+import { SoundManager } from "../../sound/SoundManager";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
@@ -86,6 +87,7 @@ export class RadialMenu implements Layer {
     private rootMenu: MenuElement,
     private centerButtonElement: CenterButtonElement,
     config: RadialMenuConfig = {},
+    private soundManager: SoundManager,
   ) {
     this.config = {
       menuSize: config.menuSize ?? 190,
@@ -442,6 +444,9 @@ export class RadialMenu implements Layer {
         this.navigationInProgress
       )
         return;
+
+      // Play click sound at 45% volume
+      this.soundManager?.playMenuClick();
 
       if (
         this.currentLevel > 0 &&

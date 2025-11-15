@@ -22,6 +22,7 @@ import {
 
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { ContextMenuEvent } from "../../InputHandler";
+import { SoundManager } from "../../sound/SoundManager";
 
 @customElement("main-radial-menu")
 export class MainRadialMenu extends LitElement implements Layer {
@@ -40,6 +41,7 @@ export class MainRadialMenu extends LitElement implements Layer {
     private buildMenu: BuildMenu,
     private uiState: UIState,
     private playerPanel: PlayerPanel,
+    private soundManager: SoundManager,
   ) {
     super();
 
@@ -61,6 +63,7 @@ export class MainRadialMenu extends LitElement implements Layer {
       rootMenuElement,
       centerButtonElement,
       menuConfig,
+      this.soundManager,
     );
 
     this.playerActionHandler = new PlayerActionHandler(
@@ -84,6 +87,8 @@ export class MainRadialMenu extends LitElement implements Layer {
       if (this.game.myPlayer() === null) {
         return;
       }
+      // Play click sound when opening radial menu
+      this.soundManager?.playMenuClick();
       this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
       this.game
         .myPlayer()!

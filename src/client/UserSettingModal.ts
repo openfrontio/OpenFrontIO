@@ -7,12 +7,14 @@ import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybi
 import "./components/baseComponents/setting/SettingNumber";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
+import { SoundConfig, SoundEffect, SoundManager } from "./sound/SoundManager";
 
 @customElement("user-setting")
 export class UserSettingModal extends LitElement {
   private userSettings: UserSettings = new UserSettings();
+  public soundManager: SoundManager;
 
-  @state() private settingsMode: "basic" | "keybinds" = "basic";
+  @state() private settingsMode: "basic" | "keybinds" | "sound" = "basic";
   @state() private keybinds: Record<string, { value: string; key: string }> =
     {};
 
@@ -30,6 +32,18 @@ export class UserSettingModal extends LitElement {
       } catch (e) {
         console.warn("Invalid keybinds JSON:", e);
       }
+    }
+
+    // Initialize sound settings
+    if (this.soundManager) {
+      const soundConfig: SoundConfig = {
+        backgroundMusicVolume: this.userSettings.backgroundMusicVolume(),
+        soundEffectsVolume: this.userSettings.soundEffectsVolume(),
+        isSoundEffectEnabled: (soundEffect: SoundEffect) =>
+          this.userSettings.isSoundEffectEnabled(soundEffect),
+        isBackgroundMusicEnabled: this.userSettings.isBackgroundMusicEnabled(),
+      };
+      this.soundManager.updateConfig(soundConfig);
     }
   }
 
@@ -241,7 +255,7 @@ export class UserSettingModal extends LitElement {
           <div class="modal-content user-setting-modal">
             <div class="flex mb-4 w-full justify-center">
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-l 
+                class="w-1/3 text-center px-3 py-1 rounded-l 
       ${this.settingsMode === "basic"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -250,7 +264,7 @@ export class UserSettingModal extends LitElement {
                 ${translateText("user_setting.tab_basic")}
               </button>
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-r 
+                class="w-1/3 text-center px-3 py-1 border-l border-r border-gray-600
       ${this.settingsMode === "keybinds"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -258,12 +272,23 @@ export class UserSettingModal extends LitElement {
               >
                 ${translateText("user_setting.tab_keybinds")}
               </button>
+              <button
+                class="w-1/3 text-center px-3 py-1 rounded-r 
+      ${this.settingsMode === "sound"
+                  ? "bg-white/10 text-white"
+                  : "bg-transparent text-gray-400"}"
+                @click=${() => (this.settingsMode = "sound")}
+              >
+                ${translateText("user_setting.tab_sound")}
+              </button>
             </div>
 
             <div class="settings-list">
               ${this.settingsMode === "basic"
                 ? this.renderBasicSettings()
-                : this.renderKeybindSettings()}
+                : this.settingsMode === "keybinds"
+                  ? this.renderKeybindSettings()
+                  : this.renderSoundSettings()}
             </div>
           </div>
         </div>
@@ -644,6 +669,249 @@ export class UserSettingModal extends LitElement {
         .value=${this.keybinds["moveRight"]?.key ?? ""}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
+    `;
+  }
+
+  private soundSetting(
+    soundEffect: SoundEffect,
+    labelKey: string,
+    descriptionKey: string,
+    id: string,
+  ) {
+    return html`
+      <setting-toggle
+        label="${translateText(labelKey)}"
+        description="${translateText(descriptionKey)}"
+        id="${id}"
+        .checked=${this.userSettings.isSoundEffectEnabled(soundEffect)}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setSoundEffectEnabled(soundEffect, enabled);
+            this.soundManager?.toggleSoundEffect(soundEffect, enabled);
+          }
+        }}
+      ></setting-toggle>
+    `;
+  }
+
+  private renderSoundSettings() {
+    return html`
+      <!-- Master Volume -->
+      <setting-slider
+        label="${translateText("user_setting.sound_master_volume")}"
+        description="${translateText("user_setting.sound_master_volume_desc")}"
+        min="0"
+        max="100"
+        .value=${Math.max(
+          0,
+          Math.min(
+            100,
+            Math.max(
+              (this.userSettings.soundEffectsVolume() ?? 0.5) * 100,
+              (this.userSettings.backgroundMusicVolume() ?? 0.5) * 100,
+            ),
+          ),
+        )}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          const sliderValue = e.detail?.value;
+          if (
+            typeof sliderValue === "number" &&
+            !isNaN(sliderValue) &&
+            sliderValue >= 0 &&
+            sliderValue <= 100
+          ) {
+            const volume = sliderValue / 100;
+            // Master volume controls both sound effects and background music
+            this.userSettings.setSoundEffectsVolume(volume);
+            this.userSettings.setBackgroundMusicVolume(volume);
+            this.soundManager?.setSoundEffectsVolume(volume);
+            this.soundManager?.setBackgroundMusicVolume(volume);
+          }
+        }}
+      ></setting-slider>
+
+      <!-- Music Group -->
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.sound_music_group")}
+      </div>
+
+      <setting-toggle
+        label="${translateText("user_setting.sound_music_enabled")}"
+        description="${translateText("user_setting.sound_music_enabled_desc")}"
+        id="background-music-toggle"
+        .checked=${this.userSettings.isBackgroundMusicEnabled()}
+        @change=${(e: CustomEvent<{ checked: boolean }>) => {
+          const enabled = e.detail?.checked;
+          if (typeof enabled === "boolean") {
+            this.userSettings.setBackgroundMusicEnabled(enabled);
+            this.soundManager?.setBackgroundMusicEnabled(enabled);
+          }
+        }}
+      ></setting-toggle>
+
+      <setting-slider
+        label="${translateText("user_setting.background_music_volume")}"
+        description=""
+        min="0"
+        max="100"
+        .value=${Math.max(
+          0,
+          Math.min(
+            100,
+            (this.userSettings.backgroundMusicVolume() ?? 0.5) * 100,
+          ),
+        )}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          const sliderValue = e.detail?.value;
+          if (
+            typeof sliderValue === "number" &&
+            !isNaN(sliderValue) &&
+            sliderValue >= 0 &&
+            sliderValue <= 100
+          ) {
+            const volume = sliderValue / 100;
+            this.userSettings.setBackgroundMusicVolume(volume);
+            this.soundManager?.setBackgroundMusicVolume(volume);
+          }
+        }}
+      ></setting-slider>
+
+      <!-- Sound Effects Group -->
+      <div class="text-center text-white text-base font-semibold mt-5 mb-2">
+        ${translateText("user_setting.sound_effects_group")}
+      </div>
+
+      <setting-slider
+        label="${translateText("user_setting.sound_effects_volume")}"
+        description=""
+        min="0"
+        max="100"
+        .value=${Math.max(
+          0,
+          Math.min(100, (this.userSettings.soundEffectsVolume() ?? 1) * 100),
+        )}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          const sliderValue = e.detail?.value;
+          if (
+            typeof sliderValue === "number" &&
+            !isNaN(sliderValue) &&
+            sliderValue >= 0 &&
+            sliderValue <= 100
+          ) {
+            const volume = sliderValue / 100;
+            this.userSettings.setSoundEffectsVolume(volume);
+            this.soundManager?.setSoundEffectsVolume(volume);
+          }
+        }}
+      ></setting-slider>
+
+      ${this.soundSetting(
+        SoundEffect.KaChing,
+        "user_setting.sound_effect_ka_ching",
+        "user_setting.sound_effect_ka_ching_desc",
+        "sound-effect-ka-ching-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.Building,
+        "user_setting.sound_effect_building",
+        "user_setting.sound_effect_building_desc",
+        "sound-effect-building-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.BuildingDestroyed,
+        "user_setting.sound_effect_building_destroyed",
+        "user_setting.sound_effect_building_destroyed_desc",
+        "sound-effect-building-destroyed-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.Alarm,
+        "user_setting.sound_effect_alarm",
+        "user_setting.sound_effect_alarm_desc",
+        "sound-effect-alarm-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.StealBuilding,
+        "user_setting.sound_effect_steal_building",
+        "user_setting.sound_effect_steal_building_desc",
+        "sound-effect-steal-building-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.AtomLaunch,
+        "user_setting.sound_effect_atom_launch",
+        "user_setting.sound_effect_atom_launch_desc",
+        "sound-effect-atom-launch-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.AtomHit,
+        "user_setting.sound_effect_atom_hit",
+        "user_setting.sound_effect_atom_hit_desc",
+        "sound-effect-atom-hit-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.HydrogenLaunch,
+        "user_setting.sound_effect_hydrogen_launch",
+        "user_setting.sound_effect_hydrogen_launch_desc",
+        "sound-effect-hydrogen-launch-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.HydrogenHit,
+        "user_setting.sound_effect_hydrogen_hit",
+        "user_setting.sound_effect_hydrogen_hit_desc",
+        "sound-effect-hydrogen-hit-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.MIRVLaunch,
+        "user_setting.sound_effect_mirv_launch",
+        "user_setting.sound_effect_mirv_launch_desc",
+        "sound-effect-mirv-launch-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.SAMHit,
+        "user_setting.sound_effect_sam_hit",
+        "user_setting.sound_effect_sam_hit_desc",
+        "sound-effect-sam-hit-toggle",
+      )}
+      <setting-slider
+        label="${translateText("user_setting.mirv_launch_volume")}"
+        description="${translateText("user_setting.mirv_launch_volume_desc")}"
+        min="0"
+        max="100"
+        .value=${Math.max(
+          0,
+          Math.min(100, (this.userSettings.mirvLaunchVolume() ?? 0.25) * 100),
+        )}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          const sliderValue = e.detail?.value;
+          if (
+            typeof sliderValue === "number" &&
+            !isNaN(sliderValue) &&
+            sliderValue >= 0 &&
+            sliderValue <= 100
+          ) {
+            const volume = sliderValue / 100;
+            this.userSettings.setMirvLaunchVolume(volume);
+          }
+        }}
+      ></setting-slider>
+      ${this.soundSetting(
+        SoundEffect.Click,
+        "user_setting.sound_effect_click",
+        "user_setting.sound_effect_click_desc",
+        "sound-effect-click-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.GameWin,
+        "user_setting.sound_effect_game_win",
+        "user_setting.sound_effect_game_win_desc",
+        "sound-effect-game-win-toggle",
+      )}
+      ${this.soundSetting(
+        SoundEffect.GameOver,
+        "user_setting.sound_effect_game_over",
+        "user_setting.sound_effect_game_over_desc",
+        "sound-effect-game-over-toggle",
+      )}
     `;
   }
 

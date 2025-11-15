@@ -3,6 +3,7 @@ import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { SoundManager } from "../sound/SoundManager";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AdTimer } from "./layers/AdTimer";
@@ -45,6 +46,7 @@ export function createRenderer(
   canvas: HTMLCanvasElement,
   game: GameView,
   eventBus: EventBus,
+  soundManager: SoundManager,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
@@ -73,6 +75,7 @@ export function createRenderer(
   buildMenu.game = game;
   buildMenu.eventBus = eventBus;
   buildMenu.transformHandler = transformHandler;
+  buildMenu.soundManager = soundManager;
 
   const leaderboard = document.querySelector("leader-board") as Leaderboard;
   if (!leaderboard || !(leaderboard instanceof Leaderboard)) {
@@ -112,6 +115,7 @@ export function createRenderer(
   }
   eventsDisplay.eventBus = eventBus;
   eventsDisplay.game = game;
+  eventsDisplay.soundManager = soundManager;
 
   const chatDisplay = document.querySelector("chat-display") as ChatDisplay;
   if (!(chatDisplay instanceof ChatDisplay)) {
@@ -136,6 +140,7 @@ export function createRenderer(
   }
   winModal.eventBus = eventBus;
   winModal.game = game;
+  winModal.soundManager = soundManager;
 
   const replayPanel = document.querySelector("replay-panel") as ReplayPanel;
   if (!(replayPanel instanceof ReplayPanel)) {
@@ -161,6 +166,7 @@ export function createRenderer(
   }
   settingsModal.userSettings = userSettings;
   settingsModal.eventBus = eventBus;
+  settingsModal.soundManager = soundManager;
 
   const unitDisplay = document.querySelector("unit-display") as UnitDisplay;
   if (!(unitDisplay instanceof UnitDisplay)) {
@@ -178,6 +184,7 @@ export function createRenderer(
   playerPanel.initEventBus(eventBus);
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
+  playerPanel.soundManager = soundManager;
 
   const chatModal = document.querySelector("chat-modal") as ChatModal;
   if (!(chatModal instanceof ChatModal)) {
@@ -185,6 +192,7 @@ export function createRenderer(
   }
   chatModal.g = game;
   chatModal.initEventBus(eventBus);
+  chatModal.soundManager = soundManager;
 
   const multiTabModal = document.querySelector(
     "multi-tab-modal",
@@ -224,6 +232,7 @@ export function createRenderer(
     console.error("alert frame not found");
   }
   alertFrame.game = game;
+  alertFrame.soundManager = soundManager;
 
   const spawnTimer = document.querySelector("spawn-timer") as SpawnTimer;
   if (!(spawnTimer instanceof SpawnTimer)) {
@@ -242,7 +251,7 @@ export function createRenderer(
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
+    new FxLayer(game, soundManager, userSettings),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
@@ -258,6 +267,7 @@ export function createRenderer(
       buildMenu,
       uiState,
       playerPanel,
+      soundManager,
     ),
     spawnTimer,
     leaderboard,

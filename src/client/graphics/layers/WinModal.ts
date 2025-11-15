@@ -13,6 +13,7 @@ import {
   patternRelationship,
 } from "../../Cosmetics";
 import { getUserMe } from "../../jwt";
+import { SoundEffect, SoundManager } from "../../sound/SoundManager";
 import { SendWinnerEvent } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -20,6 +21,7 @@ import { Layer } from "./Layer";
 export class WinModal extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  public soundManager: SoundManager;
 
   private hasShownDeathModal = false;
 
@@ -253,6 +255,16 @@ export class WinModal extends LitElement implements Layer {
     await this.loadPatternContent();
     this.isVisible = true;
     this.requestUpdate();
+
+    // Play appropriate sound effect
+    if (this.soundManager) {
+      if (this.isWin) {
+        this.soundManager.playSoundEffect(SoundEffect.GameWin);
+      } else {
+        this.soundManager.playSoundEffect(SoundEffect.GameOver);
+      }
+    }
+
     setTimeout(() => {
       this.showButtons = true;
       this.requestUpdate();
@@ -283,6 +295,7 @@ export class WinModal extends LitElement implements Layer {
     ) {
       this.hasShownDeathModal = true;
       this._title = translateText("win_modal.died");
+      this.isWin = false; // Player died, so it's a loss
       this.show();
     }
     const updates = this.game.updatesSinceLastTick();
