@@ -51,6 +51,8 @@ export class HostLobbyModal extends LitElement {
   @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
+  @state() private startingGold: number = 0;
+  @state() private goldMultiplier: number = 1;
   @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
@@ -544,6 +546,44 @@ export class HostLobbyModal extends LitElement {
                     <span>${translateText("host_modal.spawn_immunity_duration")}</span>
                   </div>
                 </label>
+                <label
+                  for="starting-gold"
+                  class="option-card"
+                >
+                  <input
+                    type="number"
+                    id="starting-gold"
+                    min="0"
+                    max="100000000"
+                    step="1000"
+                    .value=${String(this.startingGold)}
+                    style="width: 80px; color: black; text-align: right; border-radius: 8px;"
+                    @input=${this.handleStartingGoldInput}
+                    @keydown=${this.handleStartingGoldKeyDown}
+                  />
+                  <div class="option-card-title">
+                    <span>${translateText("host_modal.starting_gold")}</span>
+                  </div>
+                </label>
+                <label
+                  for="gold-multiplier"
+                  class="option-card"
+                >
+                  <input
+                    type="number"
+                    id="gold-multiplier"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    .value=${String(this.goldMultiplier)}
+                    style="width: 80px; color: black; text-align: right; border-radius: 8px;"
+                    @input=${this.handleGoldMultiplierInput}
+                    @keydown=${this.handleGoldMultiplierKeyDown}
+                  />
+                  <div class="option-card-title">
+                    <span>${translateText("host_modal.gold_multiplier")}</span>
+                  </div>
+                </label>
                 
                 <hr style="width: 100%; border-top: 1px solid #444; margin: 16px 0;" />
 
@@ -633,6 +673,10 @@ export class HostLobbyModal extends LitElement {
     createLobby(this.lobbyCreatorClientID)
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
+        if (lobby.gameConfig) {
+          this.startingGold = lobby.gameConfig.startingGold ?? 0;
+          this.goldMultiplier = lobby.gameConfig.goldMultiplier ?? 1;
+        }
         // join lobby
       })
       .then(() => {
@@ -730,6 +774,42 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleStartingGoldKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E", "."].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleStartingGoldInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE+-]/g, "");
+    const value = parseInt(input.value, 10);
+    if (Number.isNaN(value)) {
+      return;
+    }
+    const clamped = Math.min(100_000_000, Math.max(0, value));
+    this.startingGold = clamped;
+    this.putGameConfig();
+  }
+
+  private handleGoldMultiplierKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleGoldMultiplierInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE]/g, "");
+    const value = parseFloat(input.value);
+    if (Number.isNaN(value)) {
+      return;
+    }
+    const clamped = Math.min(10, Math.max(0, value));
+    this.goldMultiplier = Math.round(clamped * 1000) / 1000;
+    this.putGameConfig();
+  }
+
   private handleInfiniteGoldChange(e: Event) {
     this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -815,6 +895,8 @@ export class HostLobbyModal extends LitElement {
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           spawnImmunityDuration: this.spawnImmunityDurationSeconds * 10,
+          startingGold: this.startingGold,
+          goldMultiplier: this.goldMultiplier,
           playerTeams: this.teamCount,
           ...(this.gameMode === GameMode.Team &&
           this.teamCount === HumansVsNations
@@ -898,6 +980,11 @@ export class HostLobbyModal extends LitElement {
         console.log(`got game info response: ${JSON.stringify(data)}`);
 
         this.clients = data.clients ?? [];
+        if (data.gameConfig) {
+          this.startingGold = data.gameConfig.startingGold ?? this.startingGold;
+          this.goldMultiplier =
+            data.gameConfig.goldMultiplier ?? this.goldMultiplier;
+        }
       });
   }
 

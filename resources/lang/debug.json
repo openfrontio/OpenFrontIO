@@ -96,6 +96,8 @@
     "infinite_gold": "single_modal.infinite_gold",
     "random_spawn": "single_modal.random_spawn",
     "infinite_troops": "single_modal.infinite_troops",
+    "starting_gold": "single_modal.starting_gold",
+    "gold_multiplier": "single_modal.gold_multiplier",
     "disable_nukes": "single_modal.disable_nukes",
     "start": "single_modal.start"
   },
@@ -146,6 +148,8 @@
     "bots": "host_modal.bots",
     "bots_disabled": "host_modal.bots_disabled",
     "spawn_immunity_duration": "host_modal.spawn_immunity_duration",
+    "starting_gold": "host_modal.starting_gold",
+    "gold_multiplier": "host_modal.gold_multiplier",
     "disable_nations": "host_modal.disable_nations",
     "instant_build": "host_modal.instant_build",
     "random_spawn": "host_modal.random_spawn",

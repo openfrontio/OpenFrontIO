@@ -170,8 +170,8 @@ export const GameConfigSchema = z.object({
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
-  // startingGold: z.number().int().min(0).max(10*1000*1000), // maybe in steps instead? good way of setting max? default 0?
-  // incomeMultiplier: z.number().min(0).max(10),
+  startingGold: z.number().int().min(0).max(100_000_000),
+  goldMultiplier: z.number().min(0).max(10),
   spawnImmunityDuration: z.number().int().min(0).max(3000), // In ticks (10 per second)
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),

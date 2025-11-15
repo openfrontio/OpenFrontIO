@@ -121,6 +121,12 @@ export class GameServer {
     if (gameConfig.spawnImmunityDuration !== undefined) {
       this.gameConfig.spawnImmunityDuration = gameConfig.spawnImmunityDuration;
     }
+    if (gameConfig.startingGold !== undefined) {
+      this.gameConfig.startingGold = gameConfig.startingGold;
+    }
+    if (gameConfig.goldMultiplier !== undefined) {
+      this.gameConfig.goldMultiplier = gameConfig.goldMultiplier;
+    }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }

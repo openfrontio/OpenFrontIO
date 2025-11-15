@@ -824,6 +824,13 @@ export class DefaultConfig implements Config {
     return this.infiniteTroops() ? 1_000_000 : 25_000;
   }
 
+  startingGold(playerInfo: PlayerInfo): Gold {
+    if (playerInfo.playerType === PlayerType.Human) {
+      return BigInt(this._gameConfig.startingGold ?? 0);
+    }
+    return 0n;
+  }
+
   maxTroops(player: Player | PlayerView): number {
     const maxTroops =
       player.type() === PlayerType.Human && this.infiniteTroops()
