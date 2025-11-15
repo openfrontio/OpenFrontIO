@@ -23,7 +23,10 @@ import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
-import { PerformanceOverlay } from "./layers/PerformanceOverlay";
+import {
+  FrameBreakdownEntry,
+  PerformanceOverlay,
+} from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -344,6 +347,9 @@ export class GameRenderer {
 
   renderGame() {
     const start = performance.now();
+    const frameBreakdown: FrameBreakdownEntry[] = [];
+
+    const backgroundStart = performance.now();
     // Set background
     this.context.fillStyle = this.game
       .config()
@@ -351,6 +357,10 @@ export class GameRenderer {
       .backgroundColor()
       .toHex();
     this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    frameBreakdown.push({
+      label: "canvas background",
+      duration: performance.now() - backgroundStart,
+    });
 
     const handleTransformState = (
       needsTransform: boolean,
@@ -375,7 +385,14 @@ export class GameRenderer {
         needsTransform,
         isTransformActive,
       );
-      layer.renderLayer?.(this.context);
+      if (layer.renderLayer) {
+        const layerStart = performance.now();
+        layer.renderLayer(this.context);
+        frameBreakdown.push({
+          label: `render ${layer.constructor?.name ?? "Layer"}`,
+          duration: performance.now() - layerStart,
+        });
+      }
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -383,7 +400,7 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    this.performanceOverlay.updateFrameMetrics(duration);
+    this.performanceOverlay.updateFrameMetrics(duration, frameBreakdown);
 
     if (duration > 50) {
       console.warn(

@@ -8,6 +8,11 @@ import {
 } from "../../InputHandler";
 import { Layer } from "./Layer";
 
+export interface FrameBreakdownEntry {
+  label: string;
+  duration: number;
+}
+
 @customElement("performance-overlay")
 export class PerformanceOverlay extends LitElement implements Layer {
   @property({ type: Object })
@@ -24,6 +29,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
   @state()
   private frameTime: number = 0;
+
+  @state()
+  private lastFrameDuration: number = 0;
+
+  @state()
+  private smoothedBreakdown: FrameBreakdownEntry[] = [];
 
   @state()
   private tickExecutionAvg: number = 0;
@@ -55,6 +66,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private dragStart: { x: number; y: number } = { x: 0, y: 0 };
   private tickExecutionTimes: number[] = [];
   private tickDelayTimes: number[] = [];
+  private breakdownAverages: Map<
+    string,
+    { duration: number; lastSeen: number }
+  > = new Map();
+  private readonly breakdownSmoothing = 0.08;
+  private readonly breakdownDecayMs = 4000;
+  private readonly breakdownUpdateInterval = 200;
+  private lastBreakdownPublish = 0;
 
   static styles = css`
     .performance-overlay {
@@ -72,6 +91,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       user-select: none;
       cursor: move;
       transition: none;
+      max-width: 260px;
     }
 
     .performance-overlay.dragging {
@@ -114,6 +134,33 @@ export class PerformanceOverlay extends LitElement implements Layer {
       line-height: 1;
       user-select: none;
       pointer-events: auto;
+    }
+
+    .performance-section-title {
+      margin-top: 6px;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #51a2ff; /* blue-400 */
+    }
+
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      margin: 1px 0;
+    }
+
+    .breakdown-row .label {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .breakdown-row .value {
+      color: #fbbf24; /* amber-400 */
     }
   `;
 
@@ -179,10 +226,16 @@ export class PerformanceOverlay extends LitElement implements Layer {
     document.removeEventListener("mouseup", this.handleMouseUp);
   };
 
-  updateFrameMetrics(frameDuration: number) {
+  updateFrameMetrics(
+    frameDuration: number,
+    breakdown: FrameBreakdownEntry[] = [],
+  ) {
     this.isVisible = this.userSettings.performanceOverlay();
 
     if (!this.isVisible) return;
+
+    this.lastFrameDuration = frameDuration;
+    this.updateBreakdownAverages(breakdown);
 
     const now = performance.now();
 
@@ -206,7 +259,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       const avgFrameTime =
         this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
       this.currentFPS = Math.round(1000 / avgFrameTime);
-      this.frameTime = Math.round(avgFrameTime);
+      this.frameTime = avgFrameTime;
     }
 
     // Track FPS for 60-second average
@@ -236,6 +289,50 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  private updateBreakdownAverages(breakdown: FrameBreakdownEntry[]) {
+    const now = performance.now();
+    let hasChanges = false;
+
+    const validEntries = breakdown.filter(
+      (entry) => Number.isFinite(entry.duration) && entry.duration >= 0,
+    );
+
+    if (validEntries.length > 0) {
+      for (const entry of validEntries) {
+        const existing = this.breakdownAverages.get(entry.label);
+        const previous = existing?.duration ?? entry.duration;
+        const smoothed =
+          previous + this.breakdownSmoothing * (entry.duration - previous);
+        this.breakdownAverages.set(entry.label, {
+          duration: smoothed,
+          lastSeen: now,
+        });
+      }
+      hasChanges = true;
+    }
+
+    for (const [label, info] of this.breakdownAverages) {
+      if (now - info.lastSeen > this.breakdownDecayMs) {
+        this.breakdownAverages.delete(label);
+        hasChanges = true;
+      }
+    }
+
+    if (
+      hasChanges &&
+      now - this.lastBreakdownPublish >= this.breakdownUpdateInterval
+    ) {
+      this.smoothedBreakdown = Array.from(
+        this.breakdownAverages,
+        ([label, info]) => ({
+          label,
+          duration: info.duration,
+        }),
+      );
+      this.lastBreakdownPublish = now;
+    }
+  }
+
   updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
@@ -250,10 +347,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
         const avg =
           this.tickExecutionTimes.reduce((a, b) => a + b, 0) /
           this.tickExecutionTimes.length;
-        this.tickExecutionAvg = Math.round(avg * 100) / 100;
-        this.tickExecutionMax = Math.round(
-          Math.max(...this.tickExecutionTimes),
-        );
+        this.tickExecutionAvg = avg;
+        this.tickExecutionMax = Math.max(...this.tickExecutionTimes);
       }
     }
 
@@ -268,8 +363,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
         const avg =
           this.tickDelayTimes.reduce((a, b) => a + b, 0) /
           this.tickDelayTimes.length;
-        this.tickDelayAvg = Math.round(avg * 100) / 100;
-        this.tickDelayMax = Math.round(Math.max(...this.tickDelayTimes));
+        this.tickDelayAvg = avg;
+        this.tickDelayMax = Math.max(...this.tickDelayTimes);
       }
     }
 
@@ -286,10 +381,48 @@ export class PerformanceOverlay extends LitElement implements Layer {
     return "performance-bad";
   }
 
+  private formatDuration(value?: number): string {
+    if (value === undefined || Number.isNaN(value)) {
+      return "—";
+    }
+
+    const duration = Math.max(value, 0);
+
+    if (duration >= 1) {
+      if (duration >= 100) return `${duration.toFixed(0)}ms`;
+      if (duration >= 10) return `${duration.toFixed(1)}ms`;
+      return `${duration.toFixed(2)}ms`;
+    }
+
+    const micros = duration * 1000;
+    if (micros >= 1) {
+      if (micros >= 100) return `${micros.toFixed(0)}µs`;
+      if (micros >= 10) return `${micros.toFixed(1)}µs`;
+      return `${micros.toFixed(2)}µs`;
+    }
+
+    const nanos = micros * 1000;
+    return `${nanos.toFixed(0)}ns`;
+  }
+
+  private getTopBreakdownEntries(limit: number = 5): FrameBreakdownEntry[] {
+    return [...this.smoothedBreakdown]
+      .sort((a, b) => b.duration - a.duration)
+      .slice(0, limit);
+  }
+
   render() {
     if (!this.isVisible) {
       return html``;
     }
+
+    const frameAvgColor = this.getPerformanceColor(
+      this.frameTime > 0 ? 1000 / this.frameTime : 0,
+    );
+    const lastFrameColor = this.getPerformanceColor(
+      this.lastFrameDuration > 0 ? 1000 / this.lastFrameDuration : 0,
+    );
+    const breakdownEntries = this.getTopBreakdownEntries();
 
     const style = `
       left: ${this.position.x}px;
@@ -303,7 +436,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
         style="${style}"
         @mousedown="${this.handleMouseDown}"
       >
-        <button class="close-button" @click="${this.handleClose}">×</button>
+        <button class="close-button" @click="${this.handleClose}">
+          &times;
+        </button>
         <div class="performance-line">
           FPS:
           <span class="${this.getPerformanceColor(this.currentFPS)}"
@@ -317,20 +452,44 @@ export class PerformanceOverlay extends LitElement implements Layer {
           >
         </div>
         <div class="performance-line">
-          Frame:
-          <span class="${this.getPerformanceColor(1000 / this.frameTime)}"
-            >${this.frameTime}ms</span
+          Frame Avg:
+          <span class="${frameAvgColor}"
+            >${this.formatDuration(this.frameTime)}</span
           >
         </div>
         <div class="performance-line">
+          Last Frame:
+          <span class="${lastFrameColor}"
+            >${this.formatDuration(this.lastFrameDuration)}</span
+          >
+        </div>
+        ${breakdownEntries.length
+          ? html`
+              <div class="performance-section-title">Frame Breakdown</div>
+              ${breakdownEntries.map(
+                (entry) => html`
+                  <div class="breakdown-row">
+                    <span class="label">${entry.label}</span>
+                    <span class="value"
+                      >${this.formatDuration(entry.duration)}</span
+                    >
+                  </div>
+                `,
+              )}
+            `
+          : null}
+        <div class="performance-section-title">Tick Metrics</div>
+        <div class="performance-line">
           Tick Exec:
-          <span>${this.tickExecutionAvg.toFixed(2)}ms</span>
-          (max: <span>${this.tickExecutionMax}ms</span>)
+          <span>${this.formatDuration(this.tickExecutionAvg)}</span>
+          (max:
+          <span>${this.formatDuration(this.tickExecutionMax)}</span>)
         </div>
         <div class="performance-line">
           Tick Delay:
-          <span>${this.tickDelayAvg.toFixed(2)}ms</span>
-          (max: <span>${this.tickDelayMax}ms</span>)
+          <span>${this.formatDuration(this.tickDelayAvg)}</span>
+          (max:
+          <span>${this.formatDuration(this.tickDelayMax)}</span>)
         </div>
       </div>
     `;
