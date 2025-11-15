@@ -174,6 +174,9 @@ export interface Config {
   defaultSamRange(): number;
   samRange(level: number): number;
   maxSamRange(): number;
+  samBuildCost(player: Player): Gold;
+  samUpgradeCost(player: Player, currentLevel: number): Gold;
+  samMaxLevel(): number;
   nukeDeathFactor(
     nukeType: NukeType,
     humans: number,
