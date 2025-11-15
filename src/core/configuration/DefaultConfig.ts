@@ -32,6 +32,7 @@ import { PastelThemeDark } from "./PastelThemeDark";
 
 const DEFENSE_DEBUFF_MIDPOINT = 150_000;
 const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
+const GOLD_MULTIPLIER_PRECISION = 1000n;
 
 const JwksSchema = z.object({
   keys: z
@@ -278,6 +279,26 @@ export class DefaultConfig implements Config {
     return this._userSettings;
   }
 
+  private goldMultiplier(): number {
+    return within(this._gameConfig.goldMultiplier ?? 1, 0, 10);
+  }
+
+  private applyGoldMultiplier(amount: bigint | number): Gold {
+    const base =
+      typeof amount === "bigint" ? amount : BigInt(Math.floor(amount));
+    if (base === 0n) {
+      return 0n;
+    }
+    const multiplier = this.goldMultiplier();
+    if (multiplier === 1) {
+      return base;
+    }
+    const scaledMultiplier = BigInt(
+      Math.round(multiplier * Number(GOLD_MULTIPLIER_PRECISION)),
+    );
+    return (base * scaledMultiplier) / GOLD_MULTIPLIER_PRECISION;
+  }
+
   difficultyModifier(difficulty: Difficulty): number {
     switch (difficulty) {
       case Difficulty.Easy:
@@ -359,15 +380,20 @@ export class DefaultConfig implements Config {
     return (numPlayerFactories + 10) * 16;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
+    let base: Gold;
     switch (rel) {
       case "ally":
-        return 50_000n;
+        base = 50_000n;
+        break;
       case "team":
       case "other":
-        return 25_000n;
+        base = 25_000n;
+        break;
       case "self":
-        return 10_000n;
+        base = 10_000n;
+        break;
     }
+    return this.applyGoldMultiplier(base);
   }
 
   trainStationMinRange(): number {
@@ -388,7 +414,7 @@ export class DefaultConfig implements Config {
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
-    return BigInt(Math.floor(baseGold * bonus));
+    return this.applyGoldMultiplier(Math.floor(baseGold * bonus));
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
@@ -895,10 +921,8 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
-    if (player.type() === PlayerType.Bot) {
-      return 50n;
-    }
-    return 100n;
+    const base = player.type() === PlayerType.Bot ? 50n : 100n;
+    return this.applyGoldMultiplier(base);
   }
 
   nukeMagnitudes(unitType: UnitType): NukeMagnitude {
