@@ -1,4 +1,4 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType, isUnit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ShellExecution } from "./ShellExecution";
 
@@ -12,10 +12,17 @@ export class DefensePostExecution implements Execution {
 
   private alreadySentShell = new Set<Unit>();
 
+  constructor(playerOrUnit: Unit);
+  constructor(playerOrUnit: Player, tile: TileRef);
+
   constructor(
-    private player: Player,
-    private tile: TileRef,
-  ) {}
+    private playerOrUnit: Player | Unit,
+    private tile?: TileRef,
+  ) {
+    if (!isUnit(playerOrUnit) && tile === undefined) {
+      throw new Error("tile is required when playerOrUnit is a Player");
+    }
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -46,21 +53,39 @@ export class DefensePostExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.post === null) {
-      const spawnTile = this.player.canBuild(UnitType.DefensePost, this.tile);
-      if (spawnTile === false) {
-        console.warn("cannot build Defense Post");
-        this.active = false;
-        return;
+      if (isUnit(this.playerOrUnit)) {
+        this.post = this.playerOrUnit;
+      } else {
+        const spawnTile = this.playerOrUnit.canBuild(
+          UnitType.DefensePost,
+          this.tile!,
+        );
+        if (spawnTile === false) {
+          console.warn("cannot build Defense Post");
+          this.active = false;
+          return;
+        }
+        this.post = this.playerOrUnit.buildUnit(
+          UnitType.DefensePost,
+          spawnTile,
+          {},
+        );
       }
-      this.post = this.player.buildUnit(UnitType.DefensePost, spawnTile, {});
     }
     if (!this.post.isActive()) {
       this.active = false;
       return;
     }
 
-    if (this.player !== this.post.owner()) {
-      this.player = this.post.owner();
+    // Do nothing while the structure is under construction
+    if (this.post.isUnderConstruction()) {
+      return;
+    }
+
+    if (!isUnit(this.playerOrUnit)) {
+      if (this.playerOrUnit !== this.post.owner()) {
+        this.playerOrUnit = this.post.owner();
+      }
     }
 
     if (this.target !== null && !this.target.isActive()) {
