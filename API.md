@@ -92,3 +92,19 @@ GET https://api.openfront.io/public/player/:playerId
 ```bash
 curl "https://api.openfront.io/public/player/HabCsQYR"
 ```
+
+### Get Player Sessions
+
+Retrieve a list of games & client ids (session ids) for a specific player.
+
+**Endpoint:**
+
+```
+GET https://api.openfront.io/public/player/:playerId/sessions
+```
+
+**Example:**
+
+```bash
+curl "https://api.openfront.io/public/player/HabCsQYR/sessions"
+```

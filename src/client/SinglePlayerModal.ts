@@ -761,6 +761,7 @@ export class SinglePlayerModal extends LitElement {
                     disableNPCs: this.disableNPCs,
                   }),
             },
+            lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
           },
         } satisfies JoinLobbyEvent,
         bubbles: true,
