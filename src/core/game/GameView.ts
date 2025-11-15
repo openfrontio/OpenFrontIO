@@ -131,6 +131,14 @@ export class UnitView {
     return this.data.targetTile;
   }
 
+  trajectoryIndex(): number | undefined {
+    return this.data.trajectoryIndex;
+  }
+
+  trajectoryLength(): number | undefined {
+    return this.data.trajectoryLength;
+  }
+
   // How "ready" this unit is from 0 to 1.
   missileReadinesss(): number {
     const maxMissiles = this.data.level;
