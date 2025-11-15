@@ -18,9 +18,16 @@ import {
   AlternateViewEvent,
   DragEvent,
   MouseOverEvent,
+  TerritoryWebGLStatusEvent,
+  ToggleTerritoryWebGLDebugBordersEvent,
+  ToggleTerritoryWebGLEvent,
 } from "../../InputHandler";
+import { FrameProfiler } from "../FrameProfiler";
+import { resolveHoverTarget } from "../HoverTargetResolver";
 import { TransformHandler } from "../TransformHandler";
+import { BorderRenderer, NullBorderRenderer } from "./BorderRenderer";
 import { Layer } from "./Layer";
+import { WebGLBorderRenderer } from "./WebGLBorderRenderer";
 
 export class TerritoryLayer implements Layer {
   private userSettings: UserSettings;
@@ -46,6 +53,7 @@ export class TerritoryLayer implements Layer {
   private highlightContext: CanvasRenderingContext2D;
 
   private highlightedTerritory: PlayerView | null = null;
+  private borderRenderer: BorderRenderer = new NullBorderRenderer();
 
   private alternativeView = false;
   private lastDragTime = 0;
@@ -56,6 +64,9 @@ export class TerritoryLayer implements Layer {
   private lastRefresh = 0;
 
   private lastFocusedPlayer: PlayerView | null = null;
+  private lastMyPlayerSmallId: number | null = null;
+  private useWebGL: boolean;
+  private webglSupported = true;
 
   constructor(
     private game: GameView,
@@ -66,6 +77,8 @@ export class TerritoryLayer implements Layer {
     this.userSettings = userSettings;
     this.theme = game.config().theme();
     this.cachedTerritoryPatternsEnabled = undefined;
+    this.lastMyPlayerSmallId = game.myPlayer()?.smallID() ?? null;
+    this.useWebGL = this.userSettings.territoryWebGL();
   }
 
   shouldTransform(): boolean {
@@ -154,6 +167,11 @@ export class TerritoryLayer implements Layer {
         this.paintPlayerBorder(focusedPlayer);
       }
       this.lastFocusedPlayer = focusedPlayer;
+    }
+
+    const currentMyPlayer = this.game.myPlayer()?.smallID() ?? null;
+    if (currentMyPlayer !== this.lastMyPlayerSmallId) {
+      this.redraw();
     }
   }
 
@@ -263,6 +281,22 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(MouseOverEvent, (e) => this.onMouseOver(e));
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
+      this.borderRenderer.setAlternativeView(this.alternativeView);
+      if (this.borderRenderer instanceof WebGLBorderRenderer) {
+        this.borderRenderer.setHoverHighlightOptions(
+          this.hoverHighlightOptions(),
+        );
+      }
+    });
+    this.eventBus.on(ToggleTerritoryWebGLEvent, () => {
+      this.userSettings.toggleTerritoryWebGL();
+      this.useWebGL = this.userSettings.territoryWebGL();
+      this.redraw();
+    });
+    this.eventBus.on(ToggleTerritoryWebGLDebugBordersEvent, (e) => {
+      if (this.borderRenderer instanceof WebGLBorderRenderer) {
+        this.borderRenderer.setDebugPulseEnabled(e.enabled);
+      }
     });
     this.eventBus.on(DragEvent, (e) => {
       // TODO: consider re-enabling this on mobile or low end devices for smoother dragging.
@@ -277,7 +311,9 @@ export class TerritoryLayer implements Layer {
   }
 
   private updateHighlightedTerritory() {
-    if (!this.alternativeView) {
+    const supportsHover =
+      this.alternativeView || this.borderRenderer.drawsOwnBorders();
+    if (!supportsHover) {
       return;
     }
 
@@ -294,7 +330,7 @@ export class TerritoryLayer implements Layer {
     }
 
     const previousTerritory = this.highlightedTerritory;
-    const territory = this.getTerritoryAtCell(cell);
+    const territory = resolveHoverTarget(this.game, cell).player;
 
     if (territory) {
       this.highlightedTerritory = territory;
@@ -303,32 +339,26 @@ export class TerritoryLayer implements Layer {
     }
 
     if (previousTerritory?.id() !== this.highlightedTerritory?.id()) {
-      const territories: PlayerView[] = [];
-      if (previousTerritory) {
-        territories.push(previousTerritory);
+      if (this.borderRenderer.drawsOwnBorders()) {
+        this.borderRenderer.setHoveredPlayerId(
+          this.highlightedTerritory?.smallID() ?? null,
+        );
+      } else {
+        const territories: PlayerView[] = [];
+        if (previousTerritory) {
+          territories.push(previousTerritory);
+        }
+        if (this.highlightedTerritory) {
+          territories.push(this.highlightedTerritory);
+        }
+        this.redrawBorder(...territories);
       }
-      if (this.highlightedTerritory) {
-        territories.push(this.highlightedTerritory);
-      }
-      this.redrawBorder(...territories);
     }
-  }
-
-  private getTerritoryAtCell(cell: { x: number; y: number }) {
-    const tile = this.game.ref(cell.x, cell.y);
-    if (!tile) {
-      return null;
-    }
-    // If the tile has no owner, it is either a fallout tile or a terra nullius tile.
-    if (!this.game.hasOwner(tile)) {
-      return null;
-    }
-    const owner = this.game.owner(tile);
-    return owner instanceof PlayerView ? owner : null;
   }
 
   redraw() {
     console.log("redrew territory layer");
+    this.lastMyPlayerSmallId = this.game.myPlayer()?.smallID() ?? null;
     this.canvas = document.createElement("canvas");
     const context = this.canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
@@ -356,6 +386,8 @@ export class TerritoryLayer implements Layer {
       0,
     );
 
+    this.configureBorderRenderer();
+
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
     const highlightContext = this.highlightCanvas.getContext("2d", {
@@ -369,6 +401,77 @@ export class TerritoryLayer implements Layer {
     this.game.forEachTile((t) => {
       this.paintTerritory(t);
     });
+  }
+
+  private configureBorderRenderer() {
+    if (!this.useWebGL) {
+      this.borderRenderer = new NullBorderRenderer();
+      this.webglSupported = true;
+      this.emitWebGLStatus(
+        false,
+        false,
+        this.webglSupported,
+        "WebGL territory layer hidden.",
+      );
+      return;
+    }
+
+    const renderer = new WebGLBorderRenderer(this.game, this.theme);
+    this.webglSupported = renderer.isSupported();
+    if (renderer.isActive()) {
+      this.borderRenderer = renderer;
+      this.borderRenderer.setAlternativeView(this.alternativeView);
+      this.borderRenderer.setHoveredPlayerId(
+        this.highlightedTerritory?.smallID() ?? null,
+      );
+      renderer.setHoverHighlightOptions(this.hoverHighlightOptions());
+      this.emitWebGLStatus(true, true, this.webglSupported);
+    } else {
+      this.borderRenderer = new NullBorderRenderer();
+      this.emitWebGLStatus(
+        true,
+        false,
+        this.webglSupported,
+        "WebGL not available. Using canvas fallback for borders.",
+      );
+    }
+  }
+
+  /**
+   * Central configuration for WebGL border hover styling.
+   * Keeps main view and alternate view behavior explicit and tweakable.
+   */
+  private hoverHighlightOptions() {
+    const baseColor = this.theme.spawnHighlightSelfColor();
+
+    if (this.alternativeView) {
+      // Alternate view: borders are the primary visual, so make hover stronger
+      return {
+        color: baseColor,
+        strength: 0.8,
+        pulseStrength: 0.45,
+        pulseSpeed: Math.PI * 2,
+      };
+    }
+
+    // Main view: keep highlight noticeable but a bit subtler
+    return {
+      color: baseColor,
+      strength: 0.6,
+      pulseStrength: 0.35,
+      pulseSpeed: Math.PI * 2,
+    };
+  }
+
+  private emitWebGLStatus(
+    enabled: boolean,
+    active: boolean,
+    supported: boolean,
+    message?: string,
+  ) {
+    this.eventBus.emit(
+      new TerritoryWebGLStatusEvent(enabled, active, supported, message),
+    );
   }
 
   redrawBorder(...players: PlayerView[]) {
@@ -394,12 +497,17 @@ export class TerritoryLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     const now = Date.now();
+    const skipTerritoryCanvas =
+      this.alternativeView && this.borderRenderer.drawsOwnBorders();
+
     if (
       now > this.lastDragTime + this.nodrawDragDuration &&
       now > this.lastRefresh + this.refreshRate
     ) {
       this.lastRefresh = now;
+      const renderTerritoryStart = FrameProfiler.start();
       this.renderTerritory();
+      FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
 
       const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
       const vx0 = Math.max(0, topLeft.x);
@@ -410,7 +518,14 @@ export class TerritoryLayer implements Layer {
       const w = vx1 - vx0 + 1;
       const h = vy1 - vy0 + 1;
 
-      if (w > 0 && h > 0) {
+      // When WebGL borders are active and we're in alternative view, the 2D
+      // territory buffer (alternativeImageData) is effectively transparent and
+      // all visible work is done by the WebGL layer. Skip putImageData in that
+      // case to avoid unnecessary CPU work each frame.
+      const shouldBlitTerritories = !skipTerritoryCanvas;
+
+      if (w > 0 && h > 0 && shouldBlitTerritories) {
+        const putImageStart = FrameProfiler.start();
         this.context.putImageData(
           this.alternativeView ? this.alternativeImageData : this.imageData,
           0,
@@ -420,23 +535,40 @@ export class TerritoryLayer implements Layer {
           w,
           h,
         );
+        FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
       }
     }
 
-    context.drawImage(
-      this.canvas,
-      -this.game.width() / 2,
-      -this.game.height() / 2,
-      this.game.width(),
-      this.game.height(),
+    if (!skipTerritoryCanvas) {
+      const drawCanvasStart = FrameProfiler.start();
+      context.drawImage(
+        this.canvas,
+        -this.game.width() / 2,
+        -this.game.height() / 2,
+        this.game.width(),
+        this.game.height(),
+      );
+      FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
+    }
+
+    const borderRenderStart = FrameProfiler.start();
+    this.borderRenderer.render(context);
+    FrameProfiler.end(
+      "TerritoryLayer:borderRenderer.render",
+      borderRenderStart,
     );
     if (this.game.inSpawnPhase()) {
+      const highlightDrawStart = FrameProfiler.start();
       context.drawImage(
         this.highlightCanvas,
         -this.game.width() / 2,
         -this.game.height() / 2,
         this.game.width(),
         this.game.height(),
+      );
+      FrameProfiler.end(
+        "TerritoryLayer:drawHighlightCanvas",
+        highlightDrawStart,
       );
     }
   }
@@ -463,13 +595,17 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  paintTerritory(tile: TileRef, isBorder: boolean = false) {
-    if (isBorder && !this.game.hasOwner(tile)) {
-      return;
-    }
+  paintTerritory(tile: TileRef, _maybeStaleBorder: boolean = false) {
+    const cpuStart = FrameProfiler.start();
+    const hasOwner = this.game.hasOwner(tile);
+    const owner = hasOwner ? (this.game.owner(tile) as PlayerView) : null;
+    const isBorderTile = this.game.isBorder(tile);
+    const hasFallout = this.game.hasFallout(tile);
+    let isDefended = false;
+    const rendererHandlesBorders = this.borderRenderer.drawsOwnBorders();
 
-    if (!this.game.hasOwner(tile)) {
-      if (this.game.hasFallout(tile)) {
+    if (!owner) {
+      if (hasFallout) {
         this.paintTile(this.imageData, tile, this.theme.falloutColor(), 150);
         this.paintTile(
           this.alternativeImageData,
@@ -477,43 +613,67 @@ export class TerritoryLayer implements Layer {
           this.theme.falloutColor(),
           150,
         );
-        return;
+      } else {
+        this.clearTile(tile);
       }
-      this.clearTile(tile);
-      return;
-    }
-    const owner = this.game.owner(tile) as PlayerView;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const isHighlighted =
-      this.highlightedTerritory &&
-      this.highlightedTerritory.id() === owner.id();
-    const myPlayer = this.game.myPlayer();
-
-    if (this.game.isBorder(tile)) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const playerIsFocused = owner && this.game.focusedPlayer() === owner;
-      if (myPlayer) {
-        const alternativeColor = this.alternateViewColor(owner);
-        this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
-      }
-      const isDefended = this.game.hasUnitNearby(
-        tile,
-        this.game.config().defensePostRange(),
-        UnitType.DefensePost,
-        owner.id(),
-      );
-
-      this.paintTile(
-        this.imageData,
-        tile,
-        owner.borderColor(tile, isDefended),
-        255,
-      );
     } else {
-      // Alternative view only shows borders.
-      this.clearAlternativeTile(tile);
+      const myPlayer = this.game.myPlayer();
 
-      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      if (isBorderTile) {
+        isDefended = this.game.hasUnitNearby(
+          tile,
+          this.game.config().defensePostRange(),
+          UnitType.DefensePost,
+          owner.id(),
+        );
+
+        if (rendererHandlesBorders) {
+          this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+        } else {
+          if (myPlayer) {
+            const alternativeColor = this.alternateViewColor(owner);
+            this.paintTile(
+              this.alternativeImageData,
+              tile,
+              alternativeColor,
+              255,
+            );
+          }
+          this.paintTile(
+            this.imageData,
+            tile,
+            owner.borderColor(tile, isDefended),
+            255,
+          );
+        }
+      } else {
+        if (!rendererHandlesBorders) {
+          // Alternative view only shows borders.
+          this.clearAlternativeTile(tile);
+        }
+
+        this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
+      }
+    }
+    FrameProfiler.end("TerritoryLayer:paintTerritory.cpu", cpuStart);
+
+    if (rendererHandlesBorders) {
+      if (_maybeStaleBorder && !isBorderTile) {
+        this.borderRenderer.clearTile(tile);
+      } else {
+        const borderUpdateStart = FrameProfiler.start();
+        this.borderRenderer.updateBorder(
+          tile,
+          owner,
+          isBorderTile,
+          isDefended,
+          hasFallout,
+        );
+        FrameProfiler.end(
+          "TerritoryLayer:borderRenderer.updateBorder",
+          borderUpdateStart,
+        );
+      }
     }
   }
 
@@ -548,6 +708,7 @@ export class TerritoryLayer implements Layer {
   }
 
   clearTile(tile: TileRef) {
+    this.borderRenderer.clearTile(tile);
     const offset = tile * 4;
     this.imageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
     this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
