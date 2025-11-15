@@ -79,11 +79,13 @@ describe("Warship", () => {
       ),
     );
 
+    const srcPort = player2.buildUnit(UnitType.Port, game.ref(coastX, 7), {});
     const tradeShip = player2.buildUnit(
       UnitType.TradeShip,
       game.ref(coastX + 1, 7),
       {
         targetUnit: player2.buildUnit(UnitType.Port, game.ref(coastX, 10), {}),
+        sourceUnit: srcPort,
       },
     );
 
@@ -104,11 +106,13 @@ describe("Warship", () => {
       ),
     );
 
+    const srcPort = player2.buildUnit(UnitType.Port, game.ref(coastX, 12), {});
     const tradeShip = player2.buildUnit(
       UnitType.TradeShip,
       game.ref(coastX + 1, 11),
       {
         targetUnit: player1.buildUnit(UnitType.Port, game.ref(coastX, 11), {}),
+        sourceUnit: srcPort,
       },
     );
 
@@ -134,11 +138,13 @@ describe("Warship", () => {
     );
     game.addExecution(new WarshipExecution(warship));
 
+    const srcPort = player2.buildUnit(UnitType.Port, game.ref(coastX, 7), {});
     const tradeShip = player2.buildUnit(
       UnitType.TradeShip,
       game.ref(coastX + 1, 10),
       {
         targetUnit: player2.buildUnit(UnitType.Port, game.ref(coastX, 10), {}),
+        sourceUnit: srcPort,
       },
     );
 
@@ -186,11 +192,13 @@ describe("Warship", () => {
     );
     game.addExecution(new WarshipExecution(warship));
 
+    const srcPort = player2.buildUnit(UnitType.Port, game.ref(coastX, 12), {});
     const tradeShip = player2.buildUnit(
       UnitType.TradeShip,
       game.ref(coastX + 1, 15),
       {
         targetUnit: player2.buildUnit(UnitType.Port, game.ref(coastX, 10), {}),
+        sourceUnit: srcPort,
       },
     );
 

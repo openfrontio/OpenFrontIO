@@ -407,6 +407,12 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
         this.game.myPlayer()?.isFriendly(unit.owner())) ??
       false;
 
+    // Calculate trade ship gold if applicable
+    let tradeShipGold: bigint | null = null;
+    if (unit.type() === UnitType.TradeShip) {
+      tradeShipGold = this.calculateTradeShipGold(unit);
+    }
+
     return html`
       <div class="p-2">
         <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
@@ -422,9 +428,52 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 </div>
               `
             : ""}
+          ${tradeShipGold !== null
+            ? html`
+                <div class="flex gap-2 text-sm opacity-80 mt-1" translate="no">
+                  <img
+                    src=${goldCoinIcon}
+                    alt=${translateText("player_info_overlay.gold")}
+                    width="15"
+                    height="15"
+                    style="vertical-align: middle;"
+                  />
+                  <span class="text-yellow-400 font-bold">
+                    ${renderNumber(tradeShipGold)}
+                  </span>
+                </div>
+              `
+            : ""}
+          ${unit.type() === UnitType.TransportShip && unit.troops() > 0
+            ? html`
+                <div class="flex gap-2 text-sm opacity-80 mt-1" translate="no">
+                  ${translateText("player_info_overlay.troops")}:
+                  <span class="ml-auto mr-0 font-bold">
+                    ${renderTroops(unit.troops())}
+                  </span>
+                </div>
+              `
+            : ""}
         </div>
       </div>
     `;
+  }
+
+  private calculateTradeShipGold(unit: UnitView): bigint | null {
+    const distanceTraveled = unit.distanceTraveled();
+    if (distanceTraveled === undefined) {
+      return null;
+    }
+
+    // Show gold from myPlayer's perspective - how much they would get
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) {
+      return null;
+    }
+
+    const numPorts = myPlayer.totalUnitLevels(UnitType.Port);
+
+    return this.game.config().tradeShipGold(distanceTraveled, numPorts);
   }
 
   render() {
