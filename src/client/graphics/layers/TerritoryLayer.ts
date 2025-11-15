@@ -595,7 +595,7 @@ export class TerritoryLayer implements Layer {
     }
   }
 
-  paintTerritory(tile: TileRef, _isBorder: boolean = false) {
+  paintTerritory(tile: TileRef, _maybeStaleBorder: boolean = false) {
     const cpuStart = FrameProfiler.start();
     const hasOwner = this.game.hasOwner(tile);
     const owner = hasOwner ? (this.game.owner(tile) as PlayerView) : null;
@@ -647,27 +647,34 @@ export class TerritoryLayer implements Layer {
           );
         }
       } else {
-        // Alternative view only shows borders.
-        this.clearAlternativeTile(tile);
+        if (!rendererHandlesBorders) {
+          // Alternative view only shows borders.
+          this.clearAlternativeTile(tile);
+        }
 
         this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
       }
     }
-
     FrameProfiler.end("TerritoryLayer:paintTerritory.cpu", cpuStart);
 
-    const borderUpdateStart = FrameProfiler.start();
-    this.borderRenderer.updateBorder(
-      tile,
-      owner,
-      isBorderTile,
-      isDefended,
-      hasFallout,
-    );
-    FrameProfiler.end(
-      "TerritoryLayer:borderRenderer.updateBorder",
-      borderUpdateStart,
-    );
+    if (rendererHandlesBorders) {
+      if (_maybeStaleBorder && !isBorderTile) {
+        this.borderRenderer.clearTile(tile);
+      } else {
+        const borderUpdateStart = FrameProfiler.start();
+        this.borderRenderer.updateBorder(
+          tile,
+          owner,
+          isBorderTile,
+          isDefended,
+          hasFallout,
+        );
+        FrameProfiler.end(
+          "TerritoryLayer:borderRenderer.updateBorder",
+          borderUpdateStart,
+        );
+      }
+    }
   }
 
   alternateViewColor(other: PlayerView): Colord {
