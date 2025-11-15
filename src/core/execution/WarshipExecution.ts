@@ -65,15 +65,20 @@ export class WarshipExecution implements Execution {
       this.warship.modifyHealth(1);
     }
 
-    this.warship.setTargetUnit(this.findTargetUnit());
-    if (this.warship.targetUnit()?.type() === UnitType.TradeShip) {
-      this.huntDownTradeShip();
-      return;
+    const spawnImmunityActive = this.isSpawnImmunityActive();
+    if (spawnImmunityActive) {
+      this.warship.setTargetUnit(undefined);
+    } else {
+      this.warship.setTargetUnit(this.findTargetUnit());
+      if (this.warship.targetUnit()?.type() === UnitType.TradeShip) {
+        this.huntDownTradeShip();
+        return;
+      }
     }
 
     this.patrol();
 
-    if (this.warship.targetUnit() !== undefined) {
+    if (!spawnImmunityActive && this.warship.targetUnit() !== undefined) {
       this.shootTarget();
       return;
     }
@@ -282,5 +287,13 @@ export class WarshipExecution implements Execution {
       return this.randomTile(true);
     }
     return undefined;
+  }
+
+  private isSpawnImmunityActive(): boolean {
+    return (
+      this.mg.config().numSpawnPhaseTurns() +
+        this.mg.config().spawnImmunityDuration() >
+      this.mg.ticks()
+    );
   }
 }

@@ -8,6 +8,7 @@ import { UIState } from "./UIState";
 import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
+import { CeasefireTimer } from "./layers/CeasefireTimer";
 import { ChatDisplay } from "./layers/ChatDisplay";
 import { ChatModal } from "./layers/ChatModal";
 import { ControlPanel } from "./layers/ControlPanel";
@@ -232,6 +233,14 @@ export function createRenderer(
   spawnTimer.game = game;
   spawnTimer.transformHandler = transformHandler;
 
+  const ceasefireTimer = document.querySelector(
+    "ceasefire-timer",
+  ) as CeasefireTimer;
+  if (!(ceasefireTimer instanceof CeasefireTimer)) {
+    console.error("ceasefire timer not found");
+  }
+  ceasefireTimer.game = game;
+
   // When updating these layers please be mindful of the order.
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
@@ -260,6 +269,7 @@ export function createRenderer(
       playerPanel,
     ),
     spawnTimer,
+    ceasefireTimer,
     leaderboard,
     gameLeftSidebar,
     unitDisplay,
