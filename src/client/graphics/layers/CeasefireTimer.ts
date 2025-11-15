@@ -41,6 +41,7 @@ export class CeasefireTimer extends LitElement implements Layer {
     const ceasefireDuration = this.game.config().spawnImmunityDuration();
     const spawnPhaseTurns = this.game.config().numSpawnPhaseTurns();
 
+    // hide ceasfire timer if its <= 5 seconds in total
     if (ceasefireDuration <= 5 * 10 || this.game.inSpawnPhase()) {
       this.setInactive();
       return;

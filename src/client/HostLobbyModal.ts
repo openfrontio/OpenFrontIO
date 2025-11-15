@@ -676,6 +676,11 @@ export class HostLobbyModal extends LitElement {
         if (lobby.gameConfig) {
           this.startingGold = lobby.gameConfig.startingGold ?? 0;
           this.goldMultiplier = lobby.gameConfig.goldMultiplier ?? 1;
+          if (typeof lobby.gameConfig.spawnImmunityDuration === "number") {
+            this.spawnImmunityDurationSeconds = Math.floor(
+              lobby.gameConfig.spawnImmunityDuration / 10,
+            );
+          }
         }
         // join lobby
       })
@@ -984,6 +989,11 @@ export class HostLobbyModal extends LitElement {
           this.startingGold = data.gameConfig.startingGold ?? this.startingGold;
           this.goldMultiplier =
             data.gameConfig.goldMultiplier ?? this.goldMultiplier;
+          if (typeof data.gameConfig.spawnImmunityDuration === "number") {
+            this.spawnImmunityDurationSeconds = Math.floor(
+              data.gameConfig.spawnImmunityDuration / 10,
+            );
+          }
         }
       });
   }
