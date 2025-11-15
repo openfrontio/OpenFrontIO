@@ -49,6 +49,7 @@ export class BotExecution implements Execution {
         this.triggerRatio,
         this.reserveRatio,
         this.expandRatio,
+        false,
       );
 
       // Send an attack on the first tick
