@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
-import { translateText } from "../client/Utils";
+import { renderNumber, translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
@@ -29,6 +29,11 @@ import "./components/Difficulties";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import {
+  STARTING_GOLD_PRESETS,
+  startingGoldIndexFromValue,
+  startingGoldValueFromIndex,
+} from "./utilities/StartingGoldPresets";
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -53,6 +58,8 @@ export class HostLobbyModal extends LitElement {
   @state() private randomSpawn: boolean = false;
   @state() private startingGold: number = 0;
   @state() private goldMultiplier: number = 1;
+  @state() private startingGoldEnabled = false;
+  @state() private goldMultiplierEnabled = false;
   @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
@@ -339,9 +346,11 @@ export class HostLobbyModal extends LitElement {
                     min="0"
                     max="400"
                     step="1"
+                    class="option-slider"
+                    style=${this.sliderStyle(this.bots, 0, 400)}
                     @input=${this.handleBotsChange}
                     @change=${this.handleBotsChange}
-                    .value="${String(this.bots)}"
+                    .value=${String(this.bots)}
                   />
                   <div class="option-card-title">
                     <span>${translateText("host_modal.bots")}</span>${
@@ -528,60 +537,103 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
-                  for="spawn-immunity-duration"
+                  for="host-modal-spawn-pvp-immunity"
                   class="option-card"
                 >
                   <input
-                    type="number"
-                    id="spawn-immunity-duration"
+                    type="range"
+                    id="host-modal-spawn-pvp-immunity"
                     min="0"
                     max="300"
-                    step="1"
+                    step="5"
+                    class="option-slider"
+                    style=${this.sliderStyle(
+                      this.spawnImmunityDurationSeconds,
+                      0,
+                      300,
+                    )}
                     .value=${String(this.spawnImmunityDurationSeconds)}
-                    style="width: 60px; color: black; text-align: right; border-radius: 8px;"
-                    @input=${this.handleSpawnImmunityDurationInput}
-                    @keydown=${this.handleSpawnImmunityDurationKeyDown}
+                    @input=${this.handleSpawnImmunityDurationSlider}
                   />
                   <div class="option-card-title">
                     <span>${translateText("host_modal.spawn_immunity_duration")}</span>
+                    ${this.formatSecondsAsClock(
+                      this.spawnImmunityDurationSeconds,
+                    )}
                   </div>
                 </label>
                 <label
-                  for="starting-gold"
-                  class="option-card"
+                  for="host-modal-starting-gold-toggle"
+                  class="option-card ${this.startingGoldEnabled ? "selected" : ""}"
                 >
+                  <div class="checkbox-icon"></div>
                   <input
-                    type="number"
-                    id="starting-gold"
-                    min="0"
-                    max="100000000"
-                    step="1000"
-                    .value=${String(this.startingGold)}
-                    style="width: 80px; color: black; text-align: right; border-radius: 8px;"
-                    @input=${this.handleStartingGoldInput}
-                    @keydown=${this.handleStartingGoldKeyDown}
+                    type="checkbox"
+                    id="host-modal-starting-gold-toggle"
+                    @change=${this.handleStartingGoldToggle}
+                    .checked=${this.startingGoldEnabled}
                   />
+                  ${
+                    this.startingGoldEnabled
+                      ? html`<input
+                          type="range"
+                          id="host-modal-starting-gold-slider"
+                          min="0"
+                          max=${STARTING_GOLD_PRESETS.length - 1}
+                          step="1"
+                          class="option-slider"
+                          style=${this.sliderStyle(
+                            this.getStartingGoldSliderIndex(),
+                            0,
+                            STARTING_GOLD_PRESETS.length - 1,
+                          )}
+                          .value=${String(this.getStartingGoldSliderIndex())}
+                          @input=${this.handleStartingGoldSliderChange}
+                        />`
+                      : ""
+                  }
                   <div class="option-card-title">
                     <span>${translateText("host_modal.starting_gold")}</span>
+                    ${
+                      this.startingGoldEnabled
+                        ? renderNumber(this.startingGold)
+                        : translateText("user_setting.off")
+                    }
                   </div>
                 </label>
                 <label
-                  for="gold-multiplier"
-                  class="option-card"
+                  for="host-modal-gold-multiplier-toggle"
+                  class="option-card ${this.goldMultiplierEnabled ? "selected" : ""}"
                 >
+                  <div class="checkbox-icon"></div>
                   <input
-                    type="number"
-                    id="gold-multiplier"
-                    min="0"
-                    max="10"
-                    step="0.1"
-                    .value=${String(this.goldMultiplier)}
-                    style="width: 80px; color: black; text-align: right; border-radius: 8px;"
-                    @input=${this.handleGoldMultiplierInput}
-                    @keydown=${this.handleGoldMultiplierKeyDown}
+                    type="checkbox"
+                    id="host-modal-gold-multiplier-toggle"
+                    @change=${this.handleGoldMultiplierToggle}
+                    .checked=${this.goldMultiplierEnabled}
                   />
+                  ${
+                    this.goldMultiplierEnabled
+                      ? html`<input
+                          type="range"
+                          id="host-modal-gold-multiplier-slider"
+                          min="0"
+                          max="10"
+                          step="0.1"
+                          class="option-slider"
+                          style=${this.sliderStyle(this.goldMultiplier, 0, 10)}
+                          .value=${this.goldMultiplier.toFixed(1)}
+                          @input=${this.handleGoldMultiplierSliderChange}
+                        />`
+                      : ""
+                  }
                   <div class="option-card-title">
                     <span>${translateText("host_modal.gold_multiplier")}</span>
+                    ${
+                      this.goldMultiplierEnabled
+                        ? this.goldMultiplier.toFixed(1)
+                        : translateText("user_setting.off")
+                    }
                   </div>
                 </label>
                 
@@ -674,8 +726,19 @@ export class HostLobbyModal extends LitElement {
       .then((lobby) => {
         this.lobbyId = lobby.gameID;
         if (lobby.gameConfig) {
-          this.startingGold = lobby.gameConfig.startingGold ?? 0;
-          this.goldMultiplier = lobby.gameConfig.goldMultiplier ?? 1;
+          const startingGoldFromServer =
+            lobby.gameConfig.startingGold ?? STARTING_GOLD_PRESETS[0];
+          this.startingGold = this.snapStartingGoldValue(
+            startingGoldFromServer,
+          );
+          this.startingGoldEnabled = this.startingGold > 0;
+
+          const goldMultiplierFromServer = lobby.gameConfig.goldMultiplier ?? 1;
+          this.goldMultiplier = this.normalizeGoldMultiplier(
+            goldMultiplierFromServer,
+          );
+          this.goldMultiplierEnabled = this.goldMultiplier !== 1;
+
           if (typeof lobby.gameConfig.spawnImmunityDuration === "number") {
             this.spawnImmunityDurationSeconds = Math.floor(
               lobby.gameConfig.spawnImmunityDuration / 10,
@@ -732,7 +795,9 @@ export class HostLobbyModal extends LitElement {
 
   // Modified to include debouncing
   private handleBotsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
+    const slider = e.target as HTMLInputElement;
+    this.updateSliderProgressElement(slider);
+    const value = parseInt(slider.value, 10);
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }
@@ -757,21 +822,25 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private handleSpawnImmunityDurationKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
-
-  private handleSpawnImmunityDurationInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE+-]/g, "");
-    const value = parseInt(input.value, 10);
-    if (Number.isNaN(value) || value < 0 || value > 300) {
+  private handleSpawnImmunityDurationSlider(e: Event) {
+    const slider = e.target as HTMLInputElement;
+    const value = parseInt(slider.value, 10);
+    if (Number.isNaN(value)) {
       return;
     }
-    this.spawnImmunityDurationSeconds = value;
+    const clamped = Math.min(300, Math.max(0, value));
+    this.spawnImmunityDurationSeconds = Math.round(clamped / 5) * 5;
+    slider.value = String(this.spawnImmunityDurationSeconds);
+    this.updateSliderProgressElement(slider);
     this.putGameConfig();
+  }
+
+  private formatSecondsAsClock(seconds: number): string {
+    const minutes = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const remainder = (seconds % 60).toString().padStart(2, "0");
+    return `${minutes}:${remainder}`;
   }
 
   private handleRandomSpawnChange(e: Event) {
@@ -779,39 +848,49 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private handleStartingGoldKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E", "."].includes(e.key)) {
-      e.preventDefault();
+  private handleStartingGoldToggle(e: Event) {
+    const enabled = (e.target as HTMLInputElement).checked;
+    this.startingGoldEnabled = enabled;
+    if (!enabled) {
+      this.startingGold = STARTING_GOLD_PRESETS[0];
     }
-  }
-
-  private handleStartingGoldInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE+-]/g, "");
-    const value = parseInt(input.value, 10);
-    if (Number.isNaN(value)) {
-      return;
-    }
-    const clamped = Math.min(100_000_000, Math.max(0, value));
-    this.startingGold = clamped;
     this.putGameConfig();
   }
 
-  private handleGoldMultiplierKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E"].includes(e.key)) {
-      e.preventDefault();
+  private handleStartingGoldSliderChange(e: Event) {
+    const slider = e.target as HTMLInputElement;
+    this.updateSliderProgressElement(slider);
+    const index = parseInt(slider.value, 10);
+    if (Number.isNaN(index)) {
+      return;
     }
+    this.startingGold = startingGoldValueFromIndex(index);
+    this.startingGoldEnabled = true;
+    this.putGameConfig();
   }
 
-  private handleGoldMultiplierInput(e: Event) {
-    const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE]/g, "");
-    const value = parseFloat(input.value);
+  private getStartingGoldSliderIndex(): number {
+    return startingGoldIndexFromValue(this.startingGold);
+  }
+
+  private handleGoldMultiplierToggle(e: Event) {
+    const enabled = (e.target as HTMLInputElement).checked;
+    this.goldMultiplierEnabled = enabled;
+    if (!enabled) {
+      this.goldMultiplier = 1;
+    }
+    this.putGameConfig();
+  }
+
+  private handleGoldMultiplierSliderChange(e: Event) {
+    const slider = e.target as HTMLInputElement;
+    this.updateSliderProgressElement(slider);
+    const value = parseFloat(slider.value);
     if (Number.isNaN(value)) {
       return;
     }
-    const clamped = Math.min(10, Math.max(0, value));
-    this.goldMultiplier = Math.round(clamped * 1000) / 1000;
+    this.goldMultiplier = this.normalizeGoldMultiplier(value);
+    this.goldMultiplierEnabled = true;
     this.putGameConfig();
   }
 
@@ -928,6 +1007,36 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private snapStartingGoldValue(value: number): number {
+    return startingGoldValueFromIndex(startingGoldIndexFromValue(value));
+  }
+
+  private normalizeGoldMultiplier(value: number): number {
+    const clamped = Math.min(10, Math.max(0, value));
+    return Math.round(clamped * 10) / 10;
+  }
+
+  private sliderStyle(value: number, min: number, max: number): string {
+    if (max === min) return "--progress:0%";
+    const percent = ((value - min) / (max - min)) * 100;
+    return `--progress:${Math.max(0, Math.min(100, percent))}%`;
+  }
+
+  private updateSliderProgressElement(slider: HTMLInputElement): void {
+    const min = Number(slider.min);
+    const max = Number(slider.max);
+    const value = Number(slider.value);
+    if (Number.isNaN(min) || Number.isNaN(max) || max === min) {
+      slider.style.setProperty("--progress", "0%");
+      return;
+    }
+    const percent = ((value - min) / (max - min)) * 100;
+    slider.style.setProperty(
+      "--progress",
+      `${Math.max(0, Math.min(100, percent))}%`,
+    );
+  }
+
   private getRandomMap(): GameMapType {
     const maps = Object.values(GameMapType);
     const randIdx = Math.floor(Math.random() * maps.length);
@@ -986,9 +1095,18 @@ export class HostLobbyModal extends LitElement {
 
         this.clients = data.clients ?? [];
         if (data.gameConfig) {
-          this.startingGold = data.gameConfig.startingGold ?? this.startingGold;
-          this.goldMultiplier =
-            data.gameConfig.goldMultiplier ?? this.goldMultiplier;
+          if (typeof data.gameConfig.startingGold === "number") {
+            const snapped = this.snapStartingGoldValue(
+              data.gameConfig.startingGold,
+            );
+            this.startingGold = snapped;
+          }
+          if (typeof data.gameConfig.goldMultiplier === "number") {
+            const normalized = this.normalizeGoldMultiplier(
+              data.gameConfig.goldMultiplier,
+            );
+            this.goldMultiplier = normalized;
+          }
           if (typeof data.gameConfig.spawnImmunityDuration === "number") {
             this.spawnImmunityDurationSeconds = Math.floor(
               data.gameConfig.spawnImmunityDuration / 10,

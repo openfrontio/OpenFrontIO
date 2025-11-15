@@ -251,7 +251,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
-    "spawn_immunity_duration": "Spawn immunity (seconds)",
+    "spawn_immunity_duration": "Spawn PVP Immunity",
     "starting_gold": "Starting gold",
     "gold_multiplier": "Gold multiplier",
     "nations": "Nations: ",

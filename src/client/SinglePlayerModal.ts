@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import randomMap from "../../resources/images/RandomMap.webp";
-import { translateText } from "../client/Utils";
+import { renderNumber, translateText } from "../client/Utils";
 import {
   Difficulty,
   Duos,
@@ -27,6 +27,13 @@ import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
+import {
+  STARTING_GOLD_PRESETS,
+  startingGoldIndexFromValue,
+  startingGoldValueFromIndex,
+} from "./utilities/StartingGoldPresets";
+
+const DEFAULT_SPAWN_IMMUNITY_DURATION_SECONDS = 5;
 
 @customElement("single-player-modal")
 export class SinglePlayerModal extends LitElement {
@@ -47,6 +54,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private randomSpawn: boolean = false;
   @state() private startingGold: number = 0;
   @state() private goldMultiplier: number = 1;
+  @state() private startingGoldEnabled = false;
+  @state() private goldMultiplierEnabled = false;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
@@ -245,9 +254,11 @@ export class SinglePlayerModal extends LitElement {
                   min="0"
                   max="400"
                   step="1"
+                  class="option-slider"
+                  style=${this.sliderStyle(this.bots, 0, 400)}
                   @input=${this.handleBotsChange}
                   @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
+                  .value=${String(this.bots)}
                 />
                 <div class="option-card-title">
                   <span>${translateText("single_modal.bots")}</span>${this
@@ -311,41 +322,75 @@ export class SinglePlayerModal extends LitElement {
                   ${translateText("single_modal.random_spawn")}
                 </div>
               </label>
-
-              <label for="singleplayer-modal-starting-gold" class="option-card">
+              <label
+                for="singleplayer-modal-starting-gold-toggle"
+                class="option-card ${this.startingGoldEnabled
+                  ? "selected"
+                  : ""}"
+              >
+                <div class="checkbox-icon"></div>
                 <input
-                  type="number"
-                  id="singleplayer-modal-starting-gold"
-                  min="0"
-                  max="100000000"
-                  step="1000"
-                  .value=${String(this.startingGold)}
-                  style="width: 80px; color: black; text-align: right; border-radius: 8px;"
-                  @input=${this.handleStartingGoldChange}
-                  @keydown=${this.handleStartingGoldKeyDown}
+                  type="checkbox"
+                  id="singleplayer-modal-starting-gold-toggle"
+                  @change=${this.handleStartingGoldToggle}
+                  .checked=${this.startingGoldEnabled}
                 />
+                ${this.startingGoldEnabled
+                  ? html`<input
+                      type="range"
+                      id="singleplayer-modal-starting-gold-slider"
+                      min="0"
+                      max=${STARTING_GOLD_PRESETS.length - 1}
+                      step="1"
+                      class="option-slider"
+                      style=${this.sliderStyle(
+                        this.getStartingGoldSliderIndex(),
+                        0,
+                        STARTING_GOLD_PRESETS.length - 1,
+                      )}
+                      .value=${String(this.getStartingGoldSliderIndex())}
+                      @input=${this.handleStartingGoldSliderChange}
+                    />`
+                  : ""}
                 <div class="option-card-title">
-                  ${translateText("single_modal.starting_gold")}
+                  <span>${translateText("single_modal.starting_gold")}</span>
+                  ${this.startingGoldEnabled
+                    ? renderNumber(this.startingGold)
+                    : translateText("user_setting.off")}
                 </div>
               </label>
 
               <label
-                for="singleplayer-modal-gold-multiplier"
-                class="option-card"
+                for="singleplayer-modal-gold-multiplier-toggle"
+                class="option-card ${this.goldMultiplierEnabled
+                  ? "selected"
+                  : ""}"
               >
+                <div class="checkbox-icon"></div>
                 <input
-                  type="number"
-                  id="singleplayer-modal-gold-multiplier"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  .value=${String(this.goldMultiplier)}
-                  style="width: 80px; color: black; text-align: right; border-radius: 8px;"
-                  @input=${this.handleGoldMultiplierChange}
-                  @keydown=${this.handleGoldMultiplierKeyDown}
+                  type="checkbox"
+                  id="singleplayer-modal-gold-multiplier-toggle"
+                  @change=${this.handleGoldMultiplierToggle}
+                  .checked=${this.goldMultiplierEnabled}
                 />
+                ${this.goldMultiplierEnabled
+                  ? html`<input
+                      type="range"
+                      id="singleplayer-modal-gold-multiplier-slider"
+                      min="0"
+                      max="10"
+                      step="0.1"
+                      class="option-slider"
+                      style=${this.sliderStyle(this.goldMultiplier, 0, 10)}
+                      .value=${this.goldMultiplier.toFixed(1)}
+                      @input=${this.handleGoldMultiplierSliderChange}
+                    />`
+                  : ""}
                 <div class="option-card-title">
-                  ${translateText("single_modal.gold_multiplier")}
+                  <span>${translateText("single_modal.gold_multiplier")}</span>
+                  ${this.goldMultiplierEnabled
+                    ? this.goldMultiplier.toFixed(1)
+                    : translateText("user_setting.off")}
                 </div>
               </label>
 
@@ -485,7 +530,9 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private handleBotsChange(e: Event) {
-    const value = parseInt((e.target as HTMLInputElement).value);
+    const slider = e.target as HTMLInputElement;
+    this.updateSliderProgressElement(slider);
+    const value = parseInt(slider.value, 10);
     if (isNaN(value) || value < 0 || value > 400) {
       return;
     }
@@ -500,37 +547,46 @@ export class SinglePlayerModal extends LitElement {
     this.randomSpawn = Boolean((e.target as HTMLInputElement).checked);
   }
 
-  private handleStartingGoldKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E", "."].includes(e.key)) {
-      e.preventDefault();
+  private handleStartingGoldToggle(e: Event) {
+    const enabled = (e.target as HTMLInputElement).checked;
+    this.startingGoldEnabled = enabled;
+    if (!enabled) {
+      this.startingGold = STARTING_GOLD_PRESETS[0];
     }
   }
 
-  private handleStartingGoldChange(e: Event) {
-    const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE+-]/g, "");
-    const value = parseInt(input.value, 10);
+  private handleStartingGoldSliderChange(e: Event) {
+    const slider = e.target as HTMLInputElement;
+    this.updateSliderProgressElement(slider);
+    const index = parseInt(slider.value, 10);
+    if (Number.isNaN(index)) {
+      return;
+    }
+    this.startingGold = startingGoldValueFromIndex(index);
+    this.startingGoldEnabled = true;
+  }
+
+  private getStartingGoldSliderIndex(): number {
+    return startingGoldIndexFromValue(this.startingGold);
+  }
+
+  private handleGoldMultiplierToggle(e: Event) {
+    const enabled = (e.target as HTMLInputElement).checked;
+    this.goldMultiplierEnabled = enabled;
+    if (!enabled) {
+      this.goldMultiplier = 1;
+    }
+  }
+
+  private handleGoldMultiplierSliderChange(e: Event) {
+    const slider = e.target as HTMLInputElement;
+    this.updateSliderProgressElement(slider);
+    const value = parseFloat(slider.value);
     if (Number.isNaN(value)) {
       return;
     }
-    this.startingGold = Math.min(100_000_000, Math.max(0, value));
-  }
-
-  private handleGoldMultiplierKeyDown(e: KeyboardEvent) {
-    if (["-", "+", "e", "E"].includes(e.key)) {
-      e.preventDefault();
-    }
-  }
-
-  private handleGoldMultiplierChange(e: Event) {
-    const input = e.target as HTMLInputElement;
-    input.value = input.value.replace(/[eE]/g, "");
-    const value = parseFloat(input.value);
-    if (Number.isNaN(value)) {
-      return;
-    }
-    const clamped = Math.min(10, Math.max(0, value));
-    this.goldMultiplier = Math.round(clamped * 1000) / 1000;
+    this.goldMultiplier = this.normalizeGoldMultiplier(value);
+    this.goldMultiplierEnabled = true;
   }
 
   private handleInfiniteGoldChange(e: Event) {
@@ -586,6 +642,34 @@ export class SinglePlayerModal extends LitElement {
     this.disabledUnits = checked
       ? [...this.disabledUnits, unit]
       : this.disabledUnits.filter((u) => u !== unit);
+  }
+
+  private normalizeGoldMultiplier(value: number): number {
+    const clamped = Math.min(10, Math.max(0, value));
+    return Math.round(clamped * 10) / 10;
+  }
+
+  private sliderStyle(value: number, min: number, max: number): string {
+    if (max === min) {
+      return "--progress:0%";
+    }
+    const percent = ((value - min) / (max - min)) * 100;
+    return `--progress:${Math.max(0, Math.min(100, percent))}%`;
+  }
+
+  private updateSliderProgressElement(slider: HTMLInputElement): void {
+    const min = Number(slider.min);
+    const max = Number(slider.max);
+    if (Number.isNaN(min) || Number.isNaN(max) || max === min) {
+      slider.style.setProperty("--progress", "0%");
+      return;
+    }
+    const value = Number(slider.value);
+    const percent = ((value - min) / (max - min)) * 100;
+    slider.style.setProperty(
+      "--progress",
+      `${Math.max(0, Math.min(100, percent))}%`,
+    );
   }
 
   private async startGame() {
@@ -657,9 +741,14 @@ export class SinglePlayerModal extends LitElement {
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
               randomSpawn: this.randomSpawn,
-              startingGold: this.startingGold,
-              goldMultiplier: this.goldMultiplier,
-              spawnImmunityDuration: 5 * 10,
+              startingGold: this.startingGoldEnabled
+                ? this.startingGold
+                : STARTING_GOLD_PRESETS[0],
+              goldMultiplier: this.goldMultiplierEnabled
+                ? this.goldMultiplier
+                : 1,
+              spawnImmunityDuration:
+                DEFAULT_SPAWN_IMMUNITY_DURATION_SECONDS * 10,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),

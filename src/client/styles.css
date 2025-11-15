@@ -233,8 +233,7 @@ label.option-card:hover {
   font-size: 14px;
 }
 
-#bots-count,
-#private-lobby-bots-count {
+.option-slider {
   width: 80%;
   height: 16px;
   -webkit-appearance: none;
@@ -243,20 +242,17 @@ label.option-card:hover {
 }
 
 /* Firefox */
-#bots-count::-moz-range-track,
-#private-lobby-bots-count::-moz-range-track {
+.option-slider::-moz-range-track {
   height: 8px;
   background: white;
 }
 
-#bots-count::-moz-range-progress,
-#private-lobby-bots-count::-moz-range-progress {
+.option-slider::-moz-range-progress {
   height: 8px;
   background-color: #0075ff;
 }
 
-#bots-count::-moz-range-thumb,
-#private-lobby-bots-count::-moz-range-thumb {
+.option-slider::-moz-range-thumb {
   height: 16px;
   width: 16px;
   background: #0075ff;
@@ -265,8 +261,7 @@ label.option-card:hover {
 }
 
 /* Chrome */
-#bots-count::-webkit-slider-runnable-track,
-#private-lobby-bots-count::-webkit-slider-runnable-track {
+.option-slider::-webkit-slider-runnable-track {
   height: 8px;
   background: linear-gradient(
     to right,
@@ -275,8 +270,7 @@ label.option-card:hover {
   );
 }
 
-#bots-count::-webkit-slider-thumb,
-#private-lobby-bots-count::-webkit-slider-thumb {
+.option-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   height: 16px;
   width: 16px;
