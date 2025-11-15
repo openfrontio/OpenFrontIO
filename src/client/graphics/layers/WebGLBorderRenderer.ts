@@ -1,6 +1,7 @@
 import { Theme } from "../../../core/configuration/Config";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { FrameProfiler } from "../FrameProfiler";
 import { BorderRenderer } from "./BorderRenderer";
 import {
   BorderEdge,
@@ -58,19 +59,39 @@ export class WebGLBorderRenderer implements BorderRenderer {
     isDefended: boolean,
     _hasFallout: boolean,
   ): void {
+    const span = FrameProfiler.start();
+
     if (!this.renderer) {
+      FrameProfiler.end("WebGLBorderRenderer:updateBorder.noRenderer", span);
       return;
     }
     if (!owner || !isBorder) {
       this.renderer.clearTile(tile as number);
+      FrameProfiler.end("WebGLBorderRenderer:updateBorder.clearTile", span);
       return;
     }
+
+    const buildEdgesSpan = FrameProfiler.start();
     const edges = this.buildBorderEdges(tile, owner, isDefended);
+    FrameProfiler.end(
+      "WebGLBorderRenderer:updateBorder.buildBorderEdges",
+      buildEdgesSpan,
+    );
+
     if (edges.length === 0) {
       this.renderer.clearTile(tile as number);
+      FrameProfiler.end("WebGLBorderRenderer:updateBorder.noEdges", span);
       return;
     }
+
+    const updateEdgesSpan = FrameProfiler.start();
     this.renderer.updateEdges(tile as number, edges);
+    FrameProfiler.end(
+      "WebGLBorderRenderer:updateBorder.renderer.updateEdges",
+      updateEdgesSpan,
+    );
+
+    FrameProfiler.end("WebGLBorderRenderer:updateBorder.total", span);
   }
 
   clearTile(tile: TileRef): void {
@@ -78,10 +99,18 @@ export class WebGLBorderRenderer implements BorderRenderer {
   }
 
   render(context: CanvasRenderingContext2D): void {
+    const span = FrameProfiler.start();
+
     if (!this.renderer) {
+      FrameProfiler.end("WebGLBorderRenderer:render.noRenderer", span);
       return;
     }
+
+    const webglSpan = FrameProfiler.start();
     this.renderer.render();
+    FrameProfiler.end("WebGLBorderRenderer:render.renderer.render", webglSpan);
+
+    const drawImageSpan = FrameProfiler.start();
     context.drawImage(
       this.renderer.canvas,
       -this.game.width() / 2,
@@ -89,6 +118,12 @@ export class WebGLBorderRenderer implements BorderRenderer {
       this.game.width(),
       this.game.height(),
     );
+    FrameProfiler.end(
+      "WebGLBorderRenderer:render.context.drawImage",
+      drawImageSpan,
+    );
+
+    FrameProfiler.end("WebGLBorderRenderer:render.total", span);
   }
 
   private buildBorderEdges(
@@ -96,6 +131,8 @@ export class WebGLBorderRenderer implements BorderRenderer {
     owner: PlayerView,
     isDefended: boolean,
   ): BorderEdge[] {
+    const span = FrameProfiler.start();
+
     const edges: BorderEdge[] = [];
     const x = this.game.x(tile);
     const y = this.game.y(tile);
@@ -165,6 +202,8 @@ export class WebGLBorderRenderer implements BorderRenderer {
         flags,
       });
     }
+
+    FrameProfiler.end("WebGLBorderRenderer:buildBorderEdges", span);
 
     return edges;
   }

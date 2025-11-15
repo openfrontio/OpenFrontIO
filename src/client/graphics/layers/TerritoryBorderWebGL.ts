@@ -1,5 +1,6 @@
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
+import { FrameProfiler } from "../FrameProfiler";
 
 export enum TileRelation {
   Unknown = 0,
@@ -63,8 +64,11 @@ export class TerritoryBorderWebGL {
     height: number,
     theme: Theme,
   ): TerritoryBorderWebGL | null {
+    const span = FrameProfiler.start();
     const renderer = new TerritoryBorderWebGL(width, height, theme);
-    return renderer.isValid() ? renderer : null;
+    const result = renderer.isValid() ? renderer : null;
+    FrameProfiler.end("TerritoryBorderWebGL:create", span);
+    return result;
   }
 
   public readonly canvas: HTMLCanvasElement;
@@ -535,20 +539,46 @@ export class TerritoryBorderWebGL {
   }
 
   updateEdges(tileIndex: number, edges: BorderEdge[]) {
+    const span = FrameProfiler.start();
+
     if (!this.gl || !this.vertexBuffer || !this.program) {
+      FrameProfiler.end(
+        "TerritoryBorderWebGL:updateEdges.noContextOrProgram",
+        span,
+      );
       return;
     }
 
     if (edges.length === 0) {
+      const removeSpan = FrameProfiler.start();
       this.removeTileEdges(tileIndex);
+      FrameProfiler.end(
+        "TerritoryBorderWebGL:updateEdges.removeTileEdges",
+        removeSpan,
+      );
+      FrameProfiler.end("TerritoryBorderWebGL:updateEdges.total", span);
       return;
     }
 
     let chunk = this.tileToChunk.get(tileIndex);
-    chunk ??= this.addTileChunk(tileIndex);
+    if (chunk === undefined) {
+      const addChunkSpan = FrameProfiler.start();
+      chunk = this.addTileChunk(tileIndex);
+      FrameProfiler.end(
+        "TerritoryBorderWebGL:updateEdges.addTileChunk",
+        addChunkSpan,
+      );
+    }
 
+    const writeChunkSpan = FrameProfiler.start();
     this.writeChunk(chunk, edges);
+    FrameProfiler.end(
+      "TerritoryBorderWebGL:updateEdges.writeChunk",
+      writeChunkSpan,
+    );
     this.needsRedraw = true;
+
+    FrameProfiler.end("TerritoryBorderWebGL:updateEdges.total", span);
   }
 
   render() {
@@ -556,7 +586,12 @@ export class TerritoryBorderWebGL {
       return;
     }
     if (this.dirtyChunks.size > 0) {
+      const uploadSpan = FrameProfiler.start();
       this.uploadDirtyChunks();
+      FrameProfiler.end(
+        "TerritoryBorderWebGL:render.uploadDirtyChunks",
+        uploadSpan,
+      );
       this.needsRedraw = true;
     }
 
@@ -566,6 +601,7 @@ export class TerritoryBorderWebGL {
     }
 
     const gl = this.gl;
+    const span = FrameProfiler.start();
     gl.useProgram(this.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
 
@@ -605,18 +641,27 @@ export class TerritoryBorderWebGL {
       gl.uniform1f(this.uniforms.hoverPulseSpeed, this.hoverPulseSpeed);
     }
 
+    const drawSpan = FrameProfiler.start();
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     if (this.vertexCount > 0) {
       gl.drawArrays(gl.LINES, 0, this.vertexCount);
     }
+    FrameProfiler.end("TerritoryBorderWebGL:render.draw", drawSpan);
 
     // Always mark as needing redraw for continuous animation
     this.needsRedraw = true;
+
+    FrameProfiler.end("TerritoryBorderWebGL:render.total", span);
   }
 
   private addTileChunk(tileIndex: number): number {
+    const ensureSpan = FrameProfiler.start();
     this.ensureCapacity(this.usedChunks + 1);
+    FrameProfiler.end(
+      "TerritoryBorderWebGL:addTileChunk.ensureCapacity",
+      ensureSpan,
+    );
     const chunkIndex = this.usedChunks;
     this.usedChunks++;
     this.vertexCount =
@@ -627,8 +672,11 @@ export class TerritoryBorderWebGL {
   }
 
   private removeTileEdges(tileIndex: number) {
+    const span = FrameProfiler.start();
+
     const chunk = this.tileToChunk.get(tileIndex);
     if (chunk === undefined) {
+      FrameProfiler.end("TerritoryBorderWebGL:removeTileEdges.noChunk", span);
       return;
     }
     const lastChunk = this.usedChunks - 1;
@@ -653,11 +701,19 @@ export class TerritoryBorderWebGL {
 
     if (chunk === this.usedChunks) {
       // Removed last chunk; nothing further to update.
+      FrameProfiler.end(
+        "TerritoryBorderWebGL:removeTileEdges.removedLastChunk",
+        span,
+      );
       return;
     }
+
+    FrameProfiler.end("TerritoryBorderWebGL:removeTileEdges.total", span);
   }
 
   private writeChunk(chunk: number, edges: BorderEdge[]) {
+    const span = FrameProfiler.start();
+
     const maxEdges = TerritoryBorderWebGL.MAX_EDGES_PER_TILE;
     const floatsPerVertex = TerritoryBorderWebGL.FLOATS_PER_VERTEX;
     const chunkFloats = TerritoryBorderWebGL.FLOATS_PER_TILE;
@@ -715,6 +771,8 @@ export class TerritoryBorderWebGL {
     }
 
     this.dirtyChunks.add(chunk);
+
+    FrameProfiler.end("TerritoryBorderWebGL:writeChunk", span);
   }
 
   private uploadDirtyChunks() {
@@ -739,6 +797,7 @@ export class TerritoryBorderWebGL {
     if (requiredChunks <= this.capacityChunks) {
       return;
     }
+    const span = FrameProfiler.start();
     let nextCapacity = this.capacityChunks;
     while (nextCapacity < requiredChunks) {
       nextCapacity *= 2;
@@ -775,6 +834,8 @@ export class TerritoryBorderWebGL {
       );
       this.dirtyChunks.clear();
     }
+
+    FrameProfiler.end("TerritoryBorderWebGL:ensureCapacity.grow", span);
   }
 
   private applyThemeUniforms() {
