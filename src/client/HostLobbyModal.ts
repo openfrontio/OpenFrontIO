@@ -1099,13 +1099,21 @@ export class HostLobbyModal extends LitElement {
             const snapped = this.snapStartingGoldValue(
               data.gameConfig.startingGold,
             );
+            const startingGoldChanged = this.startingGold !== snapped;
             this.startingGold = snapped;
+            if (startingGoldChanged) {
+              this.startingGoldEnabled = this.startingGold !== 0;
+            }
           }
           if (typeof data.gameConfig.goldMultiplier === "number") {
             const normalized = this.normalizeGoldMultiplier(
               data.gameConfig.goldMultiplier,
             );
+            const goldMultiplierChanged = this.goldMultiplier !== normalized;
             this.goldMultiplier = normalized;
+            if (goldMultiplierChanged) {
+              this.goldMultiplierEnabled = this.goldMultiplier !== 1;
+            }
           }
           if (typeof data.gameConfig.spawnImmunityDuration === "number") {
             this.spawnImmunityDurationSeconds = Math.floor(
