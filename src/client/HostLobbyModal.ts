@@ -26,7 +26,7 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import "./components/Maps";
-import { JoinLobbyEvent } from "./Main";
+import { JoinLobbyEvent, getPersistentID } from "./Main";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("host-lobby-modal")
@@ -623,6 +623,14 @@ export class HostLobbyModal extends LitElement {
             composed: true,
           }),
         );
+      })
+      .catch((err) => {
+        console.error(`Failed to create lobby: ${err}`);
+        const popup = document.createElement("div");
+        popup.className = "setting-popup";
+        popup.textContent = translateText("private_lobby.creation_error");
+        document.body.appendChild(popup);
+        this.close();
       });
     this.modalEl?.open();
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
@@ -760,32 +768,35 @@ export class HostLobbyModal extends LitElement {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          gameMap: this.selectedMap,
-          gameMapSize: this.compactMap
-            ? GameMapSize.Compact
-            : GameMapSize.Normal,
-          difficulty: this.selectedDifficulty,
-          bots: this.bots,
-          infiniteGold: this.infiniteGold,
-          donateGold: this.donateGold,
-          infiniteTroops: this.infiniteTroops,
-          donateTroops: this.donateTroops,
-          instantBuild: this.instantBuild,
-          randomSpawn: this.randomSpawn,
-          gameMode: this.gameMode,
-          disabledUnits: this.disabledUnits,
-          playerTeams: this.teamCount,
-          ...(this.gameMode === GameMode.Team &&
-          this.teamCount === HumansVsNations
-            ? {
-                disableNPCs: false,
-              }
-            : {
-                disableNPCs: this.disableNPCs,
-              }),
-          maxTimerValue:
-            this.maxTimer === true ? this.maxTimerValue : undefined,
-        } satisfies Partial<GameConfig>),
+          hostPersistentID: getPersistentID(),
+          ...({
+            gameMap: this.selectedMap,
+            gameMapSize: this.compactMap
+              ? GameMapSize.Compact
+              : GameMapSize.Normal,
+            difficulty: this.selectedDifficulty,
+            bots: this.bots,
+            infiniteGold: this.infiniteGold,
+            donateGold: this.donateGold,
+            infiniteTroops: this.infiniteTroops,
+            donateTroops: this.donateTroops,
+            instantBuild: this.instantBuild,
+            randomSpawn: this.randomSpawn,
+            gameMode: this.gameMode,
+            disabledUnits: this.disabledUnits,
+            playerTeams: this.teamCount,
+            ...(this.gameMode === GameMode.Team &&
+            this.teamCount === HumansVsNations
+              ? {
+                  disableNPCs: false,
+                }
+              : {
+                  disableNPCs: this.disableNPCs,
+                }),
+            maxTimerValue:
+              this.maxTimer === true ? this.maxTimerValue : undefined,
+          } satisfies Partial<GameConfig>),
+        }),
       },
     );
     return response;
@@ -817,6 +828,7 @@ export class HostLobbyModal extends LitElement {
     );
     this.close();
     const config = await getServerConfigFromClient();
+
     const response = await fetch(
       `${window.location.origin}/${config.workerPath(this.lobbyId)}/api/start_game/${this.lobbyId}`,
       {
@@ -824,6 +836,7 @@ export class HostLobbyModal extends LitElement {
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ hostPersistentID: getPersistentID() }),
       },
     );
     return response;
@@ -883,7 +896,7 @@ async function createLobby(creatorClientID: string): Promise<GameInfo> {
         headers: {
           "Content-Type": "application/json",
         },
-        // body: JSON.stringify(data), // Include this if you need to send data
+        body: JSON.stringify({ hostPersistentID: getPersistentID() }),
       },
     );
 
