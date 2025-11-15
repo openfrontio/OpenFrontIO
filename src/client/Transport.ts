@@ -24,6 +24,7 @@ import {
   Winner,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
+import { getAuthModal } from "./AuthLoadingModal";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -181,6 +182,12 @@ export class Transport {
 
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
+
+  private authPromise: Promise<void> = Promise.resolve();
+  private resolveAuthPromise:
+    | ((value: void | PromiseLike<void>) => void)
+    | null = null;
+  private rejectAuthPromise: ((reason?: any) => void) | null = null;
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
@@ -341,6 +348,17 @@ export class Transport {
           console.error("Error parsing server message", error);
           return;
         }
+        // intercept auth finished message
+        if (result.data.type === "authentication-finished") {
+          if (result.data.success && this.resolveAuthPromise !== null) {
+            this.resolveAuthPromise();
+          } else if (!result.data.success && this.rejectAuthPromise !== null) {
+            this.rejectAuthPromise(
+              new Error(result.data.error ?? "Authentication failed"),
+            );
+          }
+          return;
+        }
         this.onmessage(result.data);
       } catch (e) {
         console.error("Error in onmessage handler:", e, event.data);
@@ -350,6 +368,9 @@ export class Transport {
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
       if (this.socket === null) return;
+      if (this.rejectAuthPromise !== null) {
+        this.rejectAuthPromise(new Error("Socket error during authentication"));
+      }
       this.socket.close();
     };
     this.socket.onclose = (event: CloseEvent) => {
@@ -362,6 +383,11 @@ export class Transport {
       } else if (event.code !== 1000) {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();
+      }
+      if (this.rejectAuthPromise !== null) {
+        this.rejectAuthPromise(
+          new Error(`Connection closed: ${event.reason || "unknown reason"}`),
+        );
       }
     };
   }
@@ -376,7 +402,7 @@ export class Transport {
     }
   }
 
-  joinGame(numTurns: number) {
+  async joinGame(numTurns: number) {
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
@@ -386,6 +412,30 @@ export class Transport {
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
     } satisfies ClientJoinMessage);
+
+    if (this.isLocal) {
+      return;
+    }
+
+    this.authPromise = new Promise<void>((resolve, reject) => {
+      this.resolveAuthPromise = resolve;
+      this.rejectAuthPromise = reject;
+    });
+
+    const authLoadingModal = getAuthModal();
+    authLoadingModal.show();
+
+    try {
+      await this.authPromise;
+      console.log("Authentication finished successfully");
+    } catch (error) {
+      console.error("Authentication failed:", error);
+      throw error;
+    } finally {
+      authLoadingModal.hide();
+      this.resolveAuthPromise = null;
+      this.rejectAuthPromise = null;
+    }
   }
 
   leaveGame() {
