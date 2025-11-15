@@ -45,6 +45,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
+  @state() private startingGold: number = 0;
+  @state() private goldMultiplier: number = 1;
   @state() private useRandomMap: boolean = false;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
@@ -310,6 +312,43 @@ export class SinglePlayerModal extends LitElement {
                 </div>
               </label>
 
+              <label for="singleplayer-modal-starting-gold" class="option-card">
+                <input
+                  type="number"
+                  id="singleplayer-modal-starting-gold"
+                  min="0"
+                  max="100000000"
+                  step="1000"
+                  .value=${String(this.startingGold)}
+                  style="width: 80px; color: black; text-align: right; border-radius: 8px;"
+                  @input=${this.handleStartingGoldChange}
+                  @keydown=${this.handleStartingGoldKeyDown}
+                />
+                <div class="option-card-title">
+                  ${translateText("single_modal.starting_gold")}
+                </div>
+              </label>
+
+              <label
+                for="singleplayer-modal-gold-multiplier"
+                class="option-card"
+              >
+                <input
+                  type="number"
+                  id="singleplayer-modal-gold-multiplier"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  .value=${String(this.goldMultiplier)}
+                  style="width: 80px; color: black; text-align: right; border-radius: 8px;"
+                  @input=${this.handleGoldMultiplierChange}
+                  @keydown=${this.handleGoldMultiplierKeyDown}
+                />
+                <div class="option-card-title">
+                  ${translateText("single_modal.gold_multiplier")}
+                </div>
+              </label>
+
               <label
                 for="singleplayer-modal-infinite-gold"
                 class="option-card ${this.infiniteGold ? "selected" : ""}"
@@ -461,6 +500,39 @@ export class SinglePlayerModal extends LitElement {
     this.randomSpawn = Boolean((e.target as HTMLInputElement).checked);
   }
 
+  private handleStartingGoldKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E", "."].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleStartingGoldChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE+-]/g, "");
+    const value = parseInt(input.value, 10);
+    if (Number.isNaN(value)) {
+      return;
+    }
+    this.startingGold = Math.min(100_000_000, Math.max(0, value));
+  }
+
+  private handleGoldMultiplierKeyDown(e: KeyboardEvent) {
+    if (["-", "+", "e", "E"].includes(e.key)) {
+      e.preventDefault();
+    }
+  }
+
+  private handleGoldMultiplierChange(e: Event) {
+    const input = e.target as HTMLInputElement;
+    input.value = input.value.replace(/[eE]/g, "");
+    const value = parseFloat(input.value);
+    if (Number.isNaN(value)) {
+      return;
+    }
+    const clamped = Math.min(10, Math.max(0, value));
+    this.goldMultiplier = Math.round(clamped * 1000) / 1000;
+  }
+
   private handleInfiniteGoldChange(e: Event) {
     this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
   }
@@ -585,6 +657,8 @@ export class SinglePlayerModal extends LitElement {
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
               randomSpawn: this.randomSpawn,
+              startingGold: this.startingGold,
+              goldMultiplier: this.goldMultiplier,
               spawnImmunityDuration: 5 * 10,
               disabledUnits: this.disabledUnits
                 .map((u) => Object.values(UnitType).find((ut) => ut === u))

@@ -113,7 +113,7 @@ export class PlayerImpl implements Player {
   ) {
     this._name = sanitizeUsername(playerInfo.name);
     this._troops = toInt(startTroops);
-    this._gold = 0n;
+    this._gold = this.mg.config().startingGold(playerInfo);
     this._displayName = this._name;
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }

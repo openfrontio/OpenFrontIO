@@ -54,6 +54,8 @@ export class GameManager {
         disableNPCs: false,
         infiniteGold: false,
         infiniteTroops: false,
+        startingGold: 0,
+        goldMultiplier: 1,
         maxTimerValue: undefined,
         instantBuild: false,
         randomSpawn: false,

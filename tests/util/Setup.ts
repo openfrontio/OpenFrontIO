@@ -67,6 +67,8 @@ export async function setup(
     spawnImmunityDuration: 0,
     infiniteGold: false,
     infiniteTroops: false,
+    startingGold: 0,
+    goldMultiplier: 1,
     instantBuild: false,
     randomSpawn: false,
     ..._gameConfig,
