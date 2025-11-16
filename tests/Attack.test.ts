@@ -111,6 +111,26 @@ describe("Attack", () => {
     expect(nuke.isActive()).toBe(false);
     expect(defender.units(UnitType.TransportShip)[0].troops()).toBeLessThan(90);
   });
+
+  test("Boat penalty on retreat Transport Ship arrival", async () => {
+    const player_start_troops = defender.troops();
+    const boat_troops = player_start_troops * 0.5;
+
+    sendBoat(game.ref(15, 8), game.ref(10, 5), boat_troops);
+
+    game.executeNextTick();
+
+    const ship = defender.units(UnitType.TransportShip)[0];
+    expect(ship.troops()).toBe(boat_troops);
+    expect(ship.isActive()).toBe(true);
+
+    ship.orderBoatRetreat();
+    game.executeNextTick();
+
+    expect(ship.isActive()).toBe(false);
+    expect(boat_troops).toBeLessThan(defender.troops());
+    expect(defender.troops()).toBeLessThan(player_start_troops);
+  });
 });
 
 let playerA: Player;
