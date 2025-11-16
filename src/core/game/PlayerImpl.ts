@@ -33,6 +33,7 @@ import {
   Team,
   TerraNullius,
   Tick,
+  TransportShipFilter,
   Unit,
   UnitParams,
   UnitType,
@@ -879,7 +880,15 @@ export class PlayerImpl implements Player {
     return b;
   }
 
-  public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
+  public findUnitToUpgrade(
+    type: UnitType,
+    targetTile: TileRef,
+    skipUnitTypeCheck: boolean = false,
+  ): Unit | false {
+    if (!this.canUpgradeUnitType(type, skipUnitTypeCheck)) {
+      return false;
+    }
+
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
       .nearbyUnits(targetTile, range, type)
@@ -888,26 +897,50 @@ export class PlayerImpl implements Player {
       return false;
     }
     const unit = existing[0].unit;
-    if (!this.canUpgradeUnit(unit)) {
+    if (!this.canUpgradeUnit(unit, true)) {
       return false;
     }
+
     return unit;
   }
 
-  public canUpgradeUnit(unit: Unit): boolean {
+  public canUpgradeUnit(
+    unit: Unit,
+    skipUnitTypeCheck: boolean = false,
+  ): boolean {
     if (unit.isMarkedForDeletion()) {
       return false;
     }
-    if (!this.mg.config().unitInfo(unit.type()).upgradable) {
-      return false;
-    }
-    if (this.mg.config().isUnitDisabled(unit.type())) {
-      return false;
-    }
-    if (this._gold < this.mg.config().unitInfo(unit.type()).cost(this)) {
-      return false;
-    }
     if (unit.owner() !== this) {
+      return false;
+    }
+    if (!skipUnitTypeCheck && !this.canUpgradeUnitType(unit.type())) {
+      return false;
+    }
+    return true;
+  }
+
+  private canUpgradeUnitType(
+    unitType: UnitType,
+    skipUnitTypeCheck: boolean = false,
+  ): boolean {
+    if (!this.mg.config().unitInfo(unitType).upgradable) {
+      return false;
+    }
+    if (!skipUnitTypeCheck && !this.canBuildUnitType(unitType)) {
+      return false;
+    }
+    return true;
+  }
+
+  private canBuildUnitType(unitType: UnitType): boolean {
+    if (this.mg.config().isUnitDisabled(unitType)) {
+      return false;
+    }
+    if (this._gold < this.mg.config().unitInfo(unitType).cost(this)) {
+      return false;
+    }
+    if (!this.isAlive()) {
       return false;
     }
     return true;
@@ -920,41 +953,65 @@ export class PlayerImpl implements Player {
     this.recordUnitConstructed(unit.type());
   }
 
-  public buildableUnits(tile: TileRef | null): BuildableUnit[] {
-    const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
-      let canUpgrade: number | false = false;
-      if (!this.mg.inSpawnPhase()) {
-        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
-        if (existingUnit !== false) {
-          canUpgrade = existingUnit.id();
-        }
+  public buildableUnits(
+    tile: TileRef | null,
+    transportShipFilter?: TransportShipFilter,
+  ): BuildableUnit[] {
+    const notInSpawnPhase = !this.mg.inSpawnPhase();
+    let foundShip = false;
+    const result: BuildableUnit[] = [];
+
+    const validTiles =
+      tile !== null && transportShipFilter !== TransportShipFilter.Only
+        ? this.validStructureSpawnTiles(tile)
+        : [];
+
+    for (const u of Object.values(UnitType)) {
+      if (
+        u === UnitType.TransportShip &&
+        transportShipFilter === TransportShipFilter.Exclude
+      ) {
+        continue;
       }
-      return {
+
+      if (transportShipFilter === TransportShipFilter.Only) {
+        if (foundShip) break;
+
+        if (u !== UnitType.TransportShip) continue;
+        else foundShip = true;
+      }
+
+      let canBuild: TileRef | false = false;
+      let canUpgrade: number | false = false;
+
+      if (tile !== null && this.canBuildUnitType(u) && notInSpawnPhase) {
+        canBuild = this.canBuild(u, tile, validTiles, true);
+
+        const existingUnit = this.findUnitToUpgrade(u, tile, true);
+        canUpgrade = existingUnit !== false ? existingUnit.id() : false;
+      }
+
+      result.push({
         type: u,
-        canBuild:
-          this.mg.inSpawnPhase() || tile === null
-            ? false
-            : this.canBuild(u, tile, validTiles),
+        canBuild: canBuild,
         canUpgrade: canUpgrade,
         cost: this.mg.config().unitInfo(u).cost(this),
-      } as BuildableUnit;
-    });
+      } as BuildableUnit);
+    }
+
+    return result;
   }
 
   canBuild(
     unitType: UnitType,
     targetTile: TileRef,
     validTiles: TileRef[] | null = null,
+    skipUnitTypeCheck: boolean = false,
   ): TileRef | false {
-    if (this.mg.config().isUnitDisabled(unitType)) {
+    if (!skipUnitTypeCheck && !this.canBuildUnitType(unitType)) {
       return false;
     }
 
-    const cost = this.mg.unitInfo(unitType).cost(this);
-    if (!this.isAlive() || this.gold() < cost) {
-      return false;
-    }
     switch (unitType) {
       case UnitType.MIRV:
         if (!this.mg.hasOwner(targetTile)) {

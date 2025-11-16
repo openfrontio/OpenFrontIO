@@ -2,6 +2,30 @@ import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
 import { Game, Player, UnitType } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
+interface CacheEntry<T> {
+  tick: number;
+  value: T;
+}
+const transportTileCache = new Map<string, CacheEntry<TileRef | null>>();
+
+function getTileCacheKey(tile: TileRef, tick: number): string {
+  return `transport_${tile}_${tick}`;
+}
+
+let lastCleanupTick = 0;
+
+function cleanupCache(currentTick: number): void {
+  if (currentTick < lastCleanupTick + 20) {
+    return;
+  }
+  lastCleanupTick = currentTick;
+
+  for (const [key, entry] of transportTileCache.entries()) {
+    if (entry.tick < currentTick) {
+      transportTileCache.delete(key);
+    }
+  }
+}
 
 export function canBuildTransportShip(
   game: Game,
@@ -14,16 +38,16 @@ export function canBuildTransportShip(
     return false;
   }
 
-  const dst = targetTransportTile(game, tile);
-  if (dst === null) {
-    return false;
-  }
-
   const other = game.owner(tile);
   if (other === player) {
     return false;
   }
   if (other.isPlayer() && player.isFriendly(other)) {
+    return false;
+  }
+
+  const dst = targetTransportTile(game, tile);
+  if (dst === null) {
     return false;
   }
 
@@ -36,19 +60,7 @@ export function canBuildTransportShip(
       }
     }
 
-    let otherPlayerBordersOcean = false;
-    if (!game.hasOwner(tile)) {
-      otherPlayerBordersOcean = true;
-    } else {
-      for (const bt of (other as Player).borderTiles()) {
-        if (game.isOceanShore(bt)) {
-          otherPlayerBordersOcean = true;
-          break;
-        }
-      }
-    }
-
-    if (myPlayerBordersOcean && otherPlayerBordersOcean) {
+    if (myPlayerBordersOcean) {
       return transportShipSpawn(game, player, dst);
     } else {
       return false;
@@ -93,23 +105,15 @@ function transportShipSpawn(
   return spawn;
 }
 
-export function sourceDstOceanShore(
-  gm: Game,
-  src: Player,
-  tile: TileRef,
-): [TileRef | null, TileRef | null] {
-  const dst = gm.owner(tile);
-  const srcTile = closestShoreFromPlayer(gm, src, tile);
-  let dstTile: TileRef | null = null;
-  if (dst.isPlayer()) {
-    dstTile = closestShoreFromPlayer(gm, dst as Player, tile);
-  } else {
-    dstTile = closestShoreTN(gm, tile, 50);
-  }
-  return [srcTile, dstTile];
-}
-
 export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
+  const currentTick = gm.ticks();
+  const key = getTileCacheKey(tile, currentTick);
+
+  const cached = transportTileCache.get(key);
+  if (cached?.tick === currentTick) {
+    return cached.value;
+  }
+
   const dst = gm.playerBySmallID(gm.ownerID(tile));
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
@@ -117,6 +121,10 @@ export function targetTransportTile(gm: Game, tile: TileRef): TileRef | null {
   } else {
     dstTile = closestShoreTN(gm, tile, 50);
   }
+
+  transportTileCache.set(key, { tick: currentTick, value: dstTile });
+  cleanupCache(currentTick);
+
   return dstTile;
 }
 

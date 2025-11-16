@@ -83,6 +83,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           message.playerID,
           message.x,
           message.y,
+          message.transportShipFilter,
         );
         sendMessage({
           type: "player_actions_result",
