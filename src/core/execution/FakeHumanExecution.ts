@@ -34,6 +34,7 @@ export class FakeHumanExecution implements Execution {
   private behavior: BotBehavior | null = null; // Shared behavior logic for both bots and fakehumans
   private mg: Game;
   private player: Player | null = null;
+  private otherPlayerSpawns: SpawnExecution[] = [];
 
   private attackRate: number;
   private attackTick: number;
@@ -69,6 +70,7 @@ export class FakeHumanExecution implements Execution {
   constructor(
     gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.FakeHuman
+    otherPlayerSpawns?: SpawnExecution[],
   ) {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
@@ -78,6 +80,7 @@ export class FakeHumanExecution implements Execution {
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
     this.reserveRatio = this.random.nextInt(30, 40) / 100;
     this.expandRatio = this.random.nextInt(10, 20) / 100;
+    this.otherPlayerSpawns = otherPlayerSpawns ?? [];
   }
 
   init(mg: Game) {
@@ -627,6 +630,17 @@ export class FakeHumanExecution implements Execution {
         continue;
       }
       const tile = this.mg.ref(x, y);
+
+      const isOtherPlayerSpawnedNearby = this.otherPlayerSpawns.some(
+        (spawn) =>
+          this.mg.manhattanDist(spawn.tile, tile) <
+          this.mg.config().minDistanceBetweenPlayers(),
+      );
+
+      if (isOtherPlayerSpawnedNearby) {
+        continue;
+      }
+
       if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
         if (
           this.mg.terrainType(tile) === TerrainType.Mountain &&

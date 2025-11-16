@@ -128,18 +128,26 @@ export class Executor {
     }
   }
 
-  spawnBots(numBots: number): Execution[] {
-    return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
+  spawnBots(
+    numBots: number,
+    otherPlayerSpawns?: SpawnExecution[],
+  ): SpawnExecution[] {
+    return new BotSpawner(this.mg, this.gameID).spawnBots(
+      numBots,
+      otherPlayerSpawns,
+    );
   }
 
-  spawnPlayers(): Execution[] {
+  spawnPlayers(): SpawnExecution[] {
     return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
-  fakeHumanExecutions(): Execution[] {
+  fakeHumanExecutions(otherPlayerSpawns: SpawnExecution[]): Execution[] {
     const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
-      execs.push(new FakeHumanExecution(this.gameID, nation));
+      execs.push(
+        new FakeHumanExecution(this.gameID, nation, otherPlayerSpawns),
+      );
     }
     return execs;
   }
