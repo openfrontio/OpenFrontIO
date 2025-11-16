@@ -144,7 +144,7 @@ export class TransportShipExecution implements Execution {
       mg.displayIncomingUnit(
         this.boat.id(),
         // TODO TranslateText
-        `Naval invasion incoming from ${this.attacker.displayName()}`,
+        `Boat: ${this.boat.troops()} ${this.attacker.displayName()}`,
         MessageType.NAVAL_INVASION_INBOUND,
         this.targetID,
       );
@@ -182,6 +182,11 @@ export class TransportShipExecution implements Execution {
     }
 
     const result = this.pathFinder.nextTile(this.boat.tile(), this.dst);
+
+    // Update path remaining tiles for the boat
+    const tilesRemaining = this.pathFinder.tileRemaining();
+    this.boat.setPathRemaining(tilesRemaining);
+
     switch (result.type) {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) === this.attacker) {

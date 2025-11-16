@@ -496,6 +496,10 @@ export interface Unit {
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
 
+  // Transport Ships
+  setPathRemaining(tiles: number | undefined): void; // Only for transport ships
+  pathRemaining(): number | undefined; // Only for transport ships
+
   // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;

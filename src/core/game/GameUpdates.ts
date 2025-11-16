@@ -134,6 +134,7 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
+  pathRemaining?: number; // Only for transport ships
 }
 
 export interface AttackUpdate {
