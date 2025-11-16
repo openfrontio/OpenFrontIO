@@ -72,12 +72,13 @@ export class PastelTheme implements Theme {
 
     // Don't want excessive contrast, so incrementally increase contrast within a loop.
     // Define target values, looping limits, and loop counter
-    const loopLimit = 10;
+    const loopLimit = 10; // Switch from darkening border to lightening fill if loopLimit is reached
+    const maxIterations = 50; // maximum number of loops allowed, throw error above this limit
     const contrastTarget = 0.5;
     let loopCount = 0;
 
     while (contrast < contrastTarget) {
-      if (loopCount > 50) {
+      if (loopCount > maxIterations) {
         // Prevent runaway loops
         throw new Error(`Infinite loop detected during structure color calculation. 
           Light color: ${colord(lightLAB).toRgbString()}, 
@@ -104,11 +105,11 @@ export class PastelTheme implements Theme {
   /**
    * Calculates the "delta" between two colors.
    *
-   * If the colors the same, delta = 1.
-   * If the colors are opposite (e.g. #ffffff and #000000), delta = 0
+   * If the colors the same, delta = 0
+   * If the colors are opposite (e.g. #ffffff and #000000), delta = 1
    * @param first the first color to compare
    * @param second the second color to compare
-   * @returns the difference between the two colors in the range [0,1]
+   * @returns the difference between the two colors in the range (typically 0 to ~1)
    * @private
    */
   private contrast(first: LabaColor, second: LabaColor): number {
