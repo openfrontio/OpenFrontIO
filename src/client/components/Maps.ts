@@ -15,6 +15,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Oceania: "Oceania",
   BlackSea: "Black Sea",
   Africa: "Africa",
+  SupremeIsthmus: "Supreme Isthmus",
   Pangaea: "Pangaea",
   Asia: "Asia",
   Mars: "Mars",

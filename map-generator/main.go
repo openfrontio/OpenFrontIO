@@ -49,6 +49,7 @@ var maps = []struct {
 	{Name: "half_land_half_ocean", IsTest: true},
 	{Name: "ocean_and_land", IsTest: true},
 	{Name: "plains", IsTest: true},
+	{Name: "supremeisthmus"},
 }
 
 func outputMapDir(isTest bool) (string, error) {
@@ -68,12 +69,11 @@ func inputMapDir(isTest bool) (string, error) {
 		return "", fmt.Errorf("failed to get working directory: %w", err)
 	}
 	if isTest {
-		return filepath.Join(cwd, "assets", "test_maps"), nil 
+		return filepath.Join(cwd, "assets", "test_maps"), nil
 	} else {
-		return filepath.Join(cwd, "assets", "maps"), nil 
+		return filepath.Join(cwd, "assets", "maps"), nil
 	}
 }
-
 
 func processMap(name string, isTest bool) error {
 	outputMapBaseDir, err := outputMapDir(isTest)
@@ -116,18 +116,18 @@ func processMap(name string, isTest bool) error {
 	}
 
 	manifest["map"] = map[string]interface{}{
-		"width": result.Map.Width,
-		"height": result.Map.Height,
+		"width":          result.Map.Width,
+		"height":         result.Map.Height,
 		"num_land_tiles": result.Map.NumLandTiles,
-	}	
+	}
 	manifest["map4x"] = map[string]interface{}{
-		"width": result.Map4x.Width,
-		"height": result.Map4x.Height,
+		"width":          result.Map4x.Width,
+		"height":         result.Map4x.Height,
 		"num_land_tiles": result.Map4x.NumLandTiles,
 	}
 	manifest["map16x"] = map[string]interface{}{
-		"width": result.Map16x.Width,
-		"height": result.Map16x.Height,
+		"width":          result.Map16x.Width,
+		"height":         result.Map16x.Height,
 		"num_land_tiles": result.Map16x.NumLandTiles,
 	}
 
@@ -147,13 +147,13 @@ func processMap(name string, isTest bool) error {
 	if err := os.WriteFile(filepath.Join(mapDir, "thumbnail.webp"), result.Thumbnail, 0644); err != nil {
 		return fmt.Errorf("failed to write thumbnail for %s: %w", name, err)
 	}
-	
+
 	// Serialize the updated manifest to JSON
 	updatedManifest, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to serialize manifest for %s: %w", name, err)
 	}
-	
+
 	if err := os.WriteFile(filepath.Join(mapDir, "manifest.json"), updatedManifest, 0644); err != nil {
 		return fmt.Errorf("failed to write manifest for %s: %w", name, err)
 	}
@@ -193,6 +193,6 @@ func main() {
 	if err := loadTerrainMaps(); err != nil {
 		log.Fatalf("Error generating terrain maps: %v", err)
 	}
-	
+
 	fmt.Println("Terrain maps generated successfully")
 }

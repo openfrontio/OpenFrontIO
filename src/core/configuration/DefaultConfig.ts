@@ -47,6 +47,7 @@ const JwksSchema = z.object({
 
 const numPlayersConfig = {
   [GameMapType.Africa]: [100, 70, 50],
+  [GameMapType.SupremeIsthmus]: [100, 70, 50],
   [GameMapType.Asia]: [50, 40, 30],
   [GameMapType.Australia]: [70, 40, 30],
   [GameMapType.Achiran]: [40, 36, 30],

@@ -79,6 +79,7 @@ export enum GameMapType {
   Oceania = "Oceania",
   BlackSea = "Black Sea",
   Africa = "Africa",
+  SupremeIsthmus = "Supreme Isthmus",
   Pangaea = "Pangaea",
   Asia = "Asia",
   Mars = "Mars",
@@ -115,6 +116,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.EuropeClassic,
     GameMapType.Asia,
     GameMapType.Africa,
+    GameMapType.SupremeIsthmus,
     GameMapType.Oceania,
   ],
   regional: [
