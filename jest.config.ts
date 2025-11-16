@@ -15,7 +15,7 @@ export default {
     "^.+\\.js$": ["@swc/jest"],
   },
   transformIgnorePatterns: [
-    "node_modules/(?!(nanoid|@jsep|fastpriorityqueue|@datastructures-js)/)",
+    "node_modules/(?!(nanoid|@jsep|fastpriorityqueue|@datastructures-js|lit|lit-html|lit-element|@lit|@lit-labs)/)",
   ],
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
