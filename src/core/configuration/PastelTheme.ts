@@ -110,31 +110,10 @@ export class PastelTheme implements Theme {
     return { light: colord(lightLAB), dark: colord(darkLAB) };
   }
 
-  /**
-   * Calculates the "delta" between two colors.
-   *
-   * If the colors the same, delta = 0
-   * If the colors are opposite (e.g. #ffffff and #000000), delta = 1
-   * @param first the first color to compare
-   * @param second the second color to compare
-   * @returns the difference between the two colors in the range (typically 0 to ~1)
-   * @private
-   */
   private contrast(first: LabaColor, second: LabaColor): number {
     return colord(first).delta(colord(second));
   }
 
-  /**
-   * Clamp a provided number between a high and low reference.
-   *
-   * @param num the number to be clamped
-   * @param low the lower bound for clamping, defaults to 0.
-   * @param high the upper bound for clamping, defaults to 100.
-   * @returns the provided number if num is in range [low, high]
-   *          low if num is < lower bound
-   *          high if num is > upper bound
-   * @private
-   */
   private clamp(num: number, low: number = 0, high: number = 100): number {
     return Math.min(Math.max(low, num), high);
   }
