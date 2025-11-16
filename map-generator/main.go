@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"runtime"
 )
 
 var maps = []struct {
@@ -161,32 +162,35 @@ func processMap(name string, isTest bool) error {
 }
 
 func loadTerrainMaps() error {
-	var wg sync.WaitGroup
-	errChan := make(chan error, len(maps))
+    numWorkers := runtime.NumCPU()
+    var wg sync.WaitGroup
+    errChan := make(chan error, len(maps))
+    sem := make(chan struct{}, numWorkers)
 
-	// Process maps concurrently
-	for _, mapItem := range maps {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := processMap(mapItem.Name, mapItem.IsTest); err != nil {
-				errChan <- err
-			}
-		}()
-	}
+    for _, mapItem := range maps {
+        wg.Add(1)
+        sem <- struct{}{}
+        go func(mapItem struct {
+            Name   string
+            IsTest bool
+        }) {
+            defer wg.Done()
+            defer func() { <-sem }()
+            if err := processMap(mapItem.Name, mapItem.IsTest); err != nil {
+                errChan <- err
+            }
+        }(mapItem)
+    }
 
-	// Wait for all goroutines to complete
-	wg.Wait()
-	close(errChan)
+    wg.Wait()
+    close(errChan)
 
-	// Check for errors
-	for err := range errChan {
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+    for err := range errChan {
+        if err != nil {
+            return err
+        }
+    }
+    return nil
 }
 
 func main() {

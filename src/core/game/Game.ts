@@ -116,7 +116,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.EuropeClassic,
     GameMapType.Asia,
     GameMapType.Africa,
-    GameMapType.SupremeIsthmus,
     GameMapType.Oceania,
   ],
   regional: [
@@ -145,6 +144,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.DeglaciatedAntarctica,
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
+    GameMapType.SupremeIsthmus,
   ],
 };
 
