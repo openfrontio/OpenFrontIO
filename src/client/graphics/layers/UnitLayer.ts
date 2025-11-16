@@ -9,6 +9,7 @@ import {
   AlternateViewEvent,
   ContextMenuEvent,
   MouseUpEvent,
+  ReplaySpeedChangeEvent,
   TouchEvent,
   UnitSelectionEvent,
 } from "../../InputHandler";
@@ -17,6 +18,10 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import {
+  defaultReplaySpeedMultiplier,
+  ReplaySpeedMultiplier,
+} from "../../utilities/ReplaySpeedMultiplier";
 import {
   getColoredSprite,
   isSpriteReady,
@@ -62,7 +67,10 @@ export class UnitLayer implements Layer {
     UnitType.TransportShip,
     UnitType.TradeShip,
   ];
-  private readonly tickIntervalMs: number = 100;
+  private baseTickIntervalMs: number = 100;
+  private tickIntervalMs: number = 100;
+  private replaySpeedMultiplier: ReplaySpeedMultiplier =
+    defaultReplaySpeedMultiplier;
   private lastTickTimestamp = 0;
 
   constructor(
@@ -72,6 +80,11 @@ export class UnitLayer implements Layer {
   ) {
     this.theme = game.config().theme();
     this.transformHandler = transformHandler;
+    this.baseTickIntervalMs = this.game
+      .config()
+      .serverConfig()
+      .turnIntervalMs();
+    this.updateTickInterval();
     this.lastTickTimestamp = this.now();
   }
 
@@ -81,6 +94,14 @@ export class UnitLayer implements Layer {
 
   tick() {
     this.lastTickTimestamp = this.now();
+    const configuredInterval = this.game
+      .config()
+      .serverConfig()
+      .turnIntervalMs();
+    if (configuredInterval !== this.baseTickIntervalMs) {
+      this.baseTickIntervalMs = configuredInterval;
+      this.updateTickInterval();
+    }
     const unitIds = this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
@@ -93,6 +114,9 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(TouchEvent, (e) => this.onTouch(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
+    this.eventBus.on(ReplaySpeedChangeEvent, (e) =>
+      this.onReplaySpeedChange(e.replaySpeedMultiplier),
+    );
     this.redraw();
 
     loadAllSprites();
@@ -567,8 +591,8 @@ export class UnitLayer implements Layer {
     this.interpolationContext.clearRect(
       0,
       0,
-      this.game.width(),
-      this.game.height(),
+      this.interpolationCanvas.width,
+      this.interpolationCanvas.height,
     );
 
     const alpha = this.computeTickAlpha();
@@ -586,18 +610,18 @@ export class UnitLayer implements Layer {
         case UnitType.MIRVWarhead:
           this.renderWarhead(unit, position);
           continue;
+        default:
+          if (!isSpriteReady(unit)) {
+            continue;
+          }
+          this.drawSpriteAtPosition(
+            unit,
+            position,
+            this.getInterpolatedSpriteColor(unit),
+            this.interpolationContext,
+            false,
+          );
       }
-      if (!isSpriteReady(unit)) {
-        continue;
-      }
-      const customColor = this.getInterpolatedSpriteColor(unit);
-      this.drawSpriteAtPosition(
-        unit,
-        position,
-        customColor,
-        this.interpolationContext,
-        false,
-      );
     }
   }
 
@@ -706,6 +730,21 @@ export class UnitLayer implements Layer {
       return 1;
     }
     return Math.max(0, elapsed / this.tickIntervalMs);
+  }
+
+  private onReplaySpeedChange(multiplier: ReplaySpeedMultiplier) {
+    this.replaySpeedMultiplier = multiplier;
+    this.updateTickInterval();
+    this.lastTickTimestamp = this.now();
+  }
+
+  private updateTickInterval() {
+    const baseInterval = this.baseTickIntervalMs;
+    if (baseInterval <= 0) {
+      this.tickIntervalMs = 0;
+      return;
+    }
+    this.tickIntervalMs = baseInterval * this.replaySpeedMultiplier;
   }
 
   private now(): number {
