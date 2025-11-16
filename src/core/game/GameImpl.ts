@@ -330,6 +330,33 @@ export class GameImpl implements Game {
     });
   }
 
+  /**
+   * Revokes a pending alliance request.
+   * Removes it from active requests, archives it, and notifies the recipient.
+   */
+  revokeAllianceRequest(request: AllianceRequestImpl) {
+    // Remove from active alliance requests
+    this.allianceRequests = this.allianceRequests.filter(
+      (ar) => ar !== request,
+    );
+
+    // Archive the request in the requestor's history
+    (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
+      request,
+    );
+
+    // Notify the recipient that the request was revoked
+    const requestor = request.requestor();
+    const recipient = request.recipient();
+    this.displayMessage(
+      "events_display.alliance_request_revoked",
+      MessageType.ALLIANCE_REJECTED,
+      recipient.id(),
+      undefined,
+      { name: requestor.displayName() },
+    );
+  }
+
   hasPlayer(id: PlayerID): boolean {
     return this._players.has(id);
   }

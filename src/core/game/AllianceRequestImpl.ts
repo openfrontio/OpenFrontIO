@@ -37,6 +37,14 @@ export class AllianceRequestImpl implements AllianceRequest {
     this.game.rejectAllianceRequest(this);
   }
 
+  revoke(): void {
+    if (this.status_ !== "pending") {
+      return;
+    }
+    this.status_ = "rejected";
+    this.game.revokeAllianceRequest(this);
+  }
+
   toUpdate(): AllianceRequestUpdate {
     return {
       type: GameUpdateType.AllianceRequest,

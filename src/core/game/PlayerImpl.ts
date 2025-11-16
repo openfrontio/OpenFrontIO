@@ -171,6 +171,9 @@ export class PlayerImpl implements Player {
             other: a.other(this).id(),
             createdAt: a.createdAt(),
             expiresAt: a.expiresAt(),
+            extensionRequestedByMe: a.hasRequestedExtension(this),
+            extensionRequestedByOther:
+              a.onlyOneAgreedToExtend() && !a.hasRequestedExtension(this),
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),

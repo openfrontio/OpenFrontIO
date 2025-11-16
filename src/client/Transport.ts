@@ -65,6 +65,14 @@ export class SendAllianceExtensionIntentEvent implements GameEvent {
   constructor(public readonly recipient: PlayerView) {}
 }
 
+export class SendRevokeAllianceRequestIntentEvent implements GameEvent {
+  constructor(public readonly recipient: PlayerView) {}
+}
+
+export class SendRevokeAllianceExtensionIntentEvent implements GameEvent {
+  constructor(public readonly recipient: PlayerView) {}
+}
+
 export class SendSpawnIntentEvent implements GameEvent {
   constructor(public readonly tile: TileRef) {}
 }
@@ -202,6 +210,12 @@ export class Transport {
     );
     this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
       this.onSendAllianceExtensionIntent(e),
+    );
+    this.eventBus.on(SendRevokeAllianceRequestIntentEvent, (e) =>
+      this.onRevokeAllianceRequestIntent(e),
+    );
+    this.eventBus.on(SendRevokeAllianceExtensionIntentEvent, (e) =>
+      this.onRevokeAllianceExtensionIntent(e),
     );
     this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
@@ -438,6 +452,26 @@ export class Transport {
   ) {
     this.sendIntent({
       type: "allianceExtension",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+    });
+  }
+
+  private onRevokeAllianceRequestIntent(
+    event: SendRevokeAllianceRequestIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "revokeAllianceRequest",
+      clientID: this.lobbyConfig.clientID,
+      recipient: event.recipient.id(),
+    });
+  }
+
+  private onRevokeAllianceExtensionIntent(
+    event: SendRevokeAllianceExtensionIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "revokeAllianceExtension",
       clientID: this.lobbyConfig.clientID,
       recipient: event.recipient.id(),
     });

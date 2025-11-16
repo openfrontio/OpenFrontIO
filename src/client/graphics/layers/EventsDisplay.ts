@@ -68,6 +68,8 @@ interface GameEvent {
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
+  // Server message key (e.g., "events_display.alliance_request_revoked") for stable identification
+  serverMessageKey?: string;
 }
 
 @customElement("events-display")
@@ -376,12 +378,46 @@ export class EventsDisplay extends LitElement implements Layer {
       description = translateText(event.message, event.params ?? {});
     }
 
+    // For revoked alliance requests, try to extract focusID from params
+    let focusID: number | undefined = undefined;
+    if (event.message === "events_display.alliance_request_revoked") {
+      // Note: Server must be changed to send the requester's smallID in params.playerID
+      const playerID = event.params?.playerID;
+      if (typeof playerID === "number" && playerID > 0) {
+        // Use direct lookup by smallID instead of fragile name matching
+        const player = this.game.playerBySmallID(playerID) as PlayerView;
+        if (player) {
+          focusID = player.smallID();
+
+          // Remove the alliance request event (with buttons) for this player
+          // since the request has been revoked
+          const eventsBefore = this.events.length;
+          this.events = this.events.filter(
+            (event) =>
+              !(
+                event.type === MessageType.ALLIANCE_REQUEST &&
+                event.focusID === playerID
+              ),
+          );
+          if (this.events.length !== eventsBefore) {
+            this.requestUpdate();
+          }
+        }
+      }
+      // Guard: if playerID is missing/invalid, we skip setting focusID
+      // The event will still be displayed but without focus functionality
+    }
+
     this.addEvent({
       description: description,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
       unsafeDescription: true,
+      focusID: focusID,
+      serverMessageKey: event.message.startsWith("events_display.")
+        ? event.message
+        : undefined,
     });
   }
 
@@ -442,6 +478,22 @@ export class EventsDisplay extends LitElement implements Layer {
     const recipient = this.game.playerBySmallID(
       update.recipientID,
     ) as PlayerView;
+
+    // Remove any revoked/rejected messages from this same player that don't have buttons
+    // This ensures the new request buttons appear correctly and immediately
+    const eventsBefore = this.events.length;
+    this.events = this.events.filter(
+      (event) =>
+        !(
+          event.type === MessageType.ALLIANCE_REJECTED &&
+          event.focusID === update.requestorID &&
+          (!event.buttons || event.buttons.length === 0) &&
+          event.serverMessageKey === "events_display.alliance_request_revoked"
+        ),
+    );
+    if (this.events.length !== eventsBefore) {
+      this.requestUpdate();
+    }
 
     this.addEvent({
       description: translateText("events_display.request_alliance", {

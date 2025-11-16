@@ -39,6 +39,9 @@ export class AllianceImpl implements MutableAlliance {
     this.mg.expireAlliance(this);
   }
 
+  /**
+   * Marks that the given player has requested to extend this alliance.
+   */
   addExtensionRequest(player: Player): void {
     if (this.requestor_ === player) {
       this.extensionRequestedRequestor_ = true;
@@ -47,16 +50,44 @@ export class AllianceImpl implements MutableAlliance {
     }
   }
 
+  /**
+   * Removes the extension request from the given player.
+   * Used when a player revokes their renewal request.
+   */
+  removeExtensionRequest(player: Player): void {
+    if (this.requestor_ === player) {
+      this.extensionRequestedRequestor_ = false;
+    } else if (this.recipient_ === player) {
+      this.extensionRequestedRecipient_ = false;
+    }
+  }
+
+  /**
+   * Checks if the given player has an active extension request.
+   */
+  hasRequestedExtension(player: Player): boolean {
+    if (this.requestor_ === player) {
+      return this.extensionRequestedRequestor_;
+    } else if (this.recipient_ === player) {
+      return this.extensionRequestedRecipient_;
+    }
+    return false;
+  }
+
+  /**
+   * Returns true if both players have requested to extend the alliance.
+   */
   bothAgreedToExtend(): boolean {
     return (
       this.extensionRequestedRequestor_ && this.extensionRequestedRecipient_
     );
   }
 
+  /**
+   * Returns true if exactly one player has requested to extend the alliance.
+   * False if neither player has requested (both false) or both have requested (both true).
+   */
   onlyOneAgreedToExtend(): boolean {
-    // Requestor / Recipient of the original alliance request, not of the extension request
-    // False if: no expiration or neither requested extension yet (both false), or both agreed to extend (both true)
-    // True if: one requested extension, other didn't yet or actively ignored (one true, one false)
     return (
       this.extensionRequestedRequestor_ !== this.extensionRequestedRecipient_
     );
