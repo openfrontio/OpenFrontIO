@@ -536,10 +536,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     const copyLabel =
       this.copyStatus === "success"
-        ? translateText("error_modal.copied")
+        ? translateText("performance_overlay.copied")
         : this.copyStatus === "error"
-          ? translateText("error_modal.failed_copy")
-          : translateText("error_modal.copy_clipboard");
+          ? translateText("performance_overlay.failed_copy")
+          : translateText("performance_overlay.copy_clipboard");
 
     const maxLayerAvg =
       this.layerBreakdown.length > 0
@@ -552,47 +552,49 @@ export class PerformanceOverlay extends LitElement implements Layer {
         style="${style}"
         @mousedown="${this.handleMouseDown}"
       >
-        <button class="reset-button" @click="${this.handleReset}">Reset</button>
+        <button class="reset-button" @click="${this.handleReset}">
+          ${translateText("performance_overlay.reset")}
+        </button>
         <button
           class="copy-json-button"
           @click="${this.handleCopyJson}"
-          title="Copy current performance metrics as JSON"
+          title="${translateText("performance_overlay.copy_json_title")}"
         >
           ${copyLabel}
         </button>
         <button class="close-button" @click="${this.handleClose}">×</button>
         <div class="performance-line">
-          FPS:
+          ${translateText("performance_overlay.fps")}
           <span class="${this.getPerformanceColor(this.currentFPS)}"
             >${this.currentFPS}</span
           >
         </div>
         <div class="performance-line">
-          Avg (60s):
+          ${translateText("performance_overlay.avg_60s")}
           <span class="${this.getPerformanceColor(this.averageFPS)}"
             >${this.averageFPS}</span
           >
         </div>
         <div class="performance-line">
-          Frame:
+          ${translateText("performance_overlay.frame")}
           <span class="${this.getPerformanceColor(1000 / this.frameTime)}"
             >${this.frameTime}ms</span
           >
         </div>
         <div class="performance-line">
-          Tick Exec:
+          ${translateText("performance_overlay.tick_exec")}
           <span>${this.tickExecutionAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickExecutionMax}ms</span>)
         </div>
         <div class="performance-line">
-          Tick Delay:
+          ${translateText("performance_overlay.tick_delay")}
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
         </div>
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">
               <div class="performance-line">
-                Layers (avg / max, sorted by total time):
+                ${translateText("performance_overlay.layers_header")}
               </div>
               ${this.layerBreakdown.map((layer) => {
                 const width = Math.min(
