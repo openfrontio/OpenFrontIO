@@ -1,0 +1,238 @@
+import { Theme } from "../../../core/configuration/Config";
+import { TileRef } from "../../../core/game/GameMap";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { FrameProfiler } from "../FrameProfiler";
+import { BorderRenderer } from "./BorderRenderer";
+import {
+  BorderEdge,
+  HoverHighlightOptions,
+  TerritoryBorderWebGL,
+  TileRelation,
+} from "./TerritoryBorderWebGL";
+
+export class WebGLBorderRenderer implements BorderRenderer {
+  private readonly renderer: TerritoryBorderWebGL | null;
+
+  constructor(
+    private readonly game: GameView,
+    private readonly theme: Theme,
+  ) {
+    this.renderer = TerritoryBorderWebGL.create(
+      game.width(),
+      game.height(),
+      theme,
+    );
+  }
+
+  drawsOwnBorders(): boolean {
+    return true;
+  }
+
+  isSupported(): boolean {
+    return this.renderer !== null;
+  }
+
+  isActive(): boolean {
+    return this.renderer !== null;
+  }
+
+  setAlternativeView(enabled: boolean): void {
+    this.renderer?.setAlternativeView(enabled);
+  }
+
+  setHoveredPlayerId(playerSmallId: number | null): void {
+    this.renderer?.setHoveredPlayerId(playerSmallId);
+  }
+
+  setDebugPulseEnabled(enabled: boolean): void {
+    this.renderer?.setDebugPulseEnabled(enabled);
+  }
+
+  setHoverHighlightOptions(options: HoverHighlightOptions): void {
+    this.renderer?.setHoverHighlightOptions(options);
+  }
+
+  updateBorder(
+    tile: TileRef,
+    owner: PlayerView | null,
+    isBorder: boolean,
+    isDefended: boolean,
+    _hasFallout: boolean,
+  ): void {
+    const span = FrameProfiler.start();
+
+    if (!this.renderer) {
+      FrameProfiler.end("WebGLBorderRenderer:updateBorder.noRenderer", span);
+      return;
+    }
+    if (!owner || !isBorder) {
+      this.renderer.clearTile(tile as number);
+      FrameProfiler.end("WebGLBorderRenderer:updateBorder.clearTile", span);
+      return;
+    }
+
+    const buildEdgesSpan = FrameProfiler.start();
+    const edges = this.buildBorderEdges(tile, owner, isDefended);
+    FrameProfiler.end(
+      "WebGLBorderRenderer:updateBorder.buildBorderEdges",
+      buildEdgesSpan,
+    );
+
+    if (edges.length === 0) {
+      this.renderer.clearTile(tile as number);
+      FrameProfiler.end("WebGLBorderRenderer:updateBorder.noEdges", span);
+      return;
+    }
+
+    const updateEdgesSpan = FrameProfiler.start();
+    this.renderer.updateEdges(tile as number, edges);
+    FrameProfiler.end(
+      "WebGLBorderRenderer:updateBorder.renderer.updateEdges",
+      updateEdgesSpan,
+    );
+
+    FrameProfiler.end("WebGLBorderRenderer:updateBorder.total", span);
+  }
+
+  clearTile(tile: TileRef): void {
+    this.renderer?.clearTile(tile as number);
+  }
+
+  render(context: CanvasRenderingContext2D): void {
+    const span = FrameProfiler.start();
+
+    if (!this.renderer) {
+      FrameProfiler.end("WebGLBorderRenderer:render.noRenderer", span);
+      return;
+    }
+
+    const webglSpan = FrameProfiler.start();
+    this.renderer.render();
+    FrameProfiler.end("WebGLBorderRenderer:render.renderer.render", webglSpan);
+
+    const drawImageSpan = FrameProfiler.start();
+    context.drawImage(
+      this.renderer.canvas,
+      -this.game.width() / 2,
+      -this.game.height() / 2,
+      this.game.width(),
+      this.game.height(),
+    );
+    FrameProfiler.end(
+      "WebGLBorderRenderer:render.context.drawImage",
+      drawImageSpan,
+    );
+
+    FrameProfiler.end("WebGLBorderRenderer:render.total", span);
+  }
+
+  private buildBorderEdges(
+    tile: TileRef,
+    owner: PlayerView,
+    isDefended: boolean,
+  ): BorderEdge[] {
+    const span = FrameProfiler.start();
+
+    const edges: BorderEdge[] = [];
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    const ownerId = owner.smallID();
+    const relation = this.resolveRelation(owner);
+    const color = owner.borderColor();
+    const { hasEmbargo, hasFriendly } = owner.borderRelationFlags(tile);
+    const lightTile =
+      (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
+    const flags =
+      (isDefended ? 1 : 0) |
+      (hasFriendly ? 2 : 0) |
+      (hasEmbargo ? 4 : 0) |
+      (lightTile ? 8 : 0);
+
+    // Inset borders by 1 tile (0.1 tiles inward) so both countries' borders can be drawn
+    const inset = 0.1;
+
+    const segments = [
+      {
+        dx: 0,
+        dy: -1,
+        startX: x + inset,
+        startY: y + inset,
+        endX: x + 1 - inset,
+        endY: y + inset,
+      },
+      {
+        dx: 1,
+        dy: 0,
+        startX: x + 1 - inset,
+        startY: y + inset,
+        endX: x + 1 - inset,
+        endY: y + 1 - inset,
+      },
+      {
+        dx: 0,
+        dy: 1,
+        startX: x + inset,
+        startY: y + 1 - inset,
+        endX: x + 1 - inset,
+        endY: y + 1 - inset,
+      },
+      {
+        dx: -1,
+        dy: 0,
+        startX: x + inset,
+        startY: y + inset,
+        endX: x + inset,
+        endY: y + 1 - inset,
+      },
+    ];
+
+    for (const segment of segments) {
+      const neighborOwner = this.ownerSmallIdAt(x + segment.dx, y + segment.dy);
+      if (neighborOwner === ownerId) {
+        continue;
+      }
+      edges.push({
+        startX: segment.startX,
+        startY: segment.startY,
+        endX: segment.endX,
+        endY: segment.endY,
+        color,
+        ownerSmallId: ownerId,
+        relation,
+        flags,
+      });
+    }
+
+    FrameProfiler.end("WebGLBorderRenderer:buildBorderEdges", span);
+
+    return edges;
+  }
+
+  private resolveRelation(owner: PlayerView | null): TileRelation {
+    const myPlayer = this.game.myPlayer();
+    if (!owner || !myPlayer) {
+      return TileRelation.Unknown;
+    }
+    if (owner.smallID() === myPlayer.smallID()) {
+      return TileRelation.Self;
+    }
+    if (owner.isFriendly(myPlayer)) {
+      return TileRelation.Friendly;
+    }
+    if (!owner.hasEmbargo(myPlayer)) {
+      return TileRelation.Neutral;
+    }
+    return TileRelation.Enemy;
+  }
+
+  private ownerSmallIdAt(x: number, y: number): number | null {
+    if (!this.game.isValidCoord(x, y)) {
+      return null;
+    }
+    const neighbor = this.game.ref(x, y);
+    if (!this.game.hasOwner(neighbor)) {
+      return null;
+    }
+    return this.game.ownerID(neighbor);
+  }
+}
