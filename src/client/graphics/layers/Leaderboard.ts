@@ -179,11 +179,11 @@ export class Leaderboard extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
-        <div
-          class="grid bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm"
-          style="grid-template-columns: 30px 100px 70px 55px 75px;"
-        >
-          <div class="contents font-bold bg-gray-700/50">
+        <div class="bg-gray-800/70 w-full text-xs md:text-xs lg:text-sm">
+          <div
+            class="grid font-bold bg-gray-700/50"
+            style="grid-template-columns: 30px 100px 70px 55px 75px;"
+          >
             <div class="py-1 md:py-2 text-center border-b border-slate-500">
               #
             </div>
@@ -228,32 +228,52 @@ export class Leaderboard extends LitElement implements Layer {
           ${repeat(
             this.players,
             (p) => p.player.id(),
-            (player) => html`
-              <div
-                class="contents hover:bg-slate-600/60 ${player.isOnSameTeam
-                  ? "font-bold"
-                  : ""} cursor-pointer"
-                @click=${() => this.handleRowClickPlayer(player.player)}
-              >
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.position}
-                </div>
+            (player) => {
+              const isDisconnected = player.player.isDisconnected();
+              // Background colors:
+              // - White for current user
+              // - Red for disconnected players
+              // - Green for connected players (note: cannot distinguish active/idle, only connected vs disconnected)
+              const bgClass = player.isMyPlayer
+                ? "bg-white/20"
+                : isDisconnected
+                  ? "bg-red-500/20"
+                  : "bg-green-500/20";
+
+              return html`
                 <div
-                  class="py-1 md:py-2 text-center border-b border-slate-500 truncate"
+                  class="grid ${player.isOnSameTeam ? "font-bold" : ""}"
+                  style="grid-template-columns: 30px 100px 70px 55px 75px;"
+                  @click=${() => this.handleRowClickPlayer(player.player)}
                 >
-                  ${player.name}
+                  <div
+                    class="py-1 md:py-2 text-center border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
+                  >
+                    ${player.position}
+                  </div>
+                  <div
+                    class="py-1 md:py-2 text-center truncate border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
+                  >
+                    ${player.name}
+                  </div>
+                  <div
+                    class="py-1 md:py-2 text-center border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
+                  >
+                    ${player.score}
+                  </div>
+                  <div
+                    class="py-1 md:py-2 text-center border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
+                  >
+                    ${player.gold}
+                  </div>
+                  <div
+                    class="py-1 md:py-2 text-center border-b border-slate-500 hover:bg-slate-600/60 cursor-pointer ${bgClass}"
+                  >
+                    ${player.troops}
+                  </div>
                 </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.score}
-                </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.gold}
-                </div>
-                <div class="py-1 md:py-2 text-center border-b border-slate-500">
-                  ${player.troops}
-                </div>
-              </div>
-            `,
+              `;
+            },
           )}
         </div>
       </div>
