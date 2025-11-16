@@ -34,14 +34,14 @@ export class UnitLayer implements Layer {
   private context: CanvasRenderingContext2D;
   private transportShipTrailCanvas: HTMLCanvasElement;
   private unitTrailContext: CanvasRenderingContext2D;
+  private interpolationCanvas: HTMLCanvasElement;
+  private interpolationContext: CanvasRenderingContext2D;
 
   private unitToTrail = new Map<UnitView, TileRef[]>();
 
   private theme: Theme;
 
   private alternateView = false;
-
-  private oldShellTile = new Map<UnitView, TileRef>();
 
   private transformHandler: TransformHandler;
 
@@ -50,6 +50,20 @@ export class UnitLayer implements Layer {
 
   // Configuration for unit selection
   private readonly WARSHIP_SELECTION_RADIUS = 10; // Radius in game cells for warship selection hit zone
+  private readonly interpolatedUnitTypes: UnitType[] = [
+    UnitType.SAMMissile,
+    UnitType.AtomBomb,
+    UnitType.HydrogenBomb,
+    UnitType.MIRV,
+    UnitType.MIRVWarhead,
+    UnitType.Shell,
+    UnitType.Warship,
+    UnitType.Train,
+    UnitType.TransportShip,
+    UnitType.TradeShip,
+  ];
+  private readonly tickIntervalMs: number = 100;
+  private lastTickTimestamp = 0;
 
   constructor(
     private game: GameView,
@@ -58,6 +72,7 @@ export class UnitLayer implements Layer {
   ) {
     this.theme = game.config().theme();
     this.transformHandler = transformHandler;
+    this.lastTickTimestamp = this.now();
   }
 
   shouldTransform(): boolean {
@@ -65,6 +80,7 @@ export class UnitLayer implements Layer {
   }
 
   tick() {
+    this.lastTickTimestamp = this.now();
     const unitIds = this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => unit.id);
@@ -200,6 +216,7 @@ export class UnitLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    this.updateInterpolatedUnits();
     context.drawImage(
       this.transportShipTrailCanvas,
       -this.game.width() / 2,
@@ -214,6 +231,15 @@ export class UnitLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    if (this.interpolationCanvas) {
+      context.drawImage(
+        this.interpolationCanvas,
+        -this.game.width() / 2,
+        -this.game.height() / 2,
+        this.game.width(),
+        this.game.height(),
+      );
+    }
   }
 
   onAlternativeViewEvent(event: AlternateViewEvent) {
@@ -230,11 +256,18 @@ export class UnitLayer implements Layer {
     const trailContext = this.transportShipTrailCanvas.getContext("2d");
     if (trailContext === null) throw new Error("2d context not supported");
     this.unitTrailContext = trailContext;
+    this.interpolationCanvas = document.createElement("canvas");
+    const interpolationContext = this.interpolationCanvas.getContext("2d");
+    if (interpolationContext === null)
+      throw new Error("2d context not supported");
+    this.interpolationContext = interpolationContext;
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
     this.transportShipTrailCanvas.width = this.game.width();
     this.transportShipTrailCanvas.height = this.game.height();
+    this.interpolationCanvas.width = this.game.width();
+    this.interpolationCanvas.height = this.game.height();
 
     this.updateUnitsSprites(this.game.units().map((unit) => unit.id()));
 
@@ -310,75 +343,12 @@ export class UnitLayer implements Layer {
       case UnitType.TransportShip:
         this.handleBoatEvent(unit);
         break;
-      case UnitType.Warship:
-        this.handleWarShipEvent(unit);
-        break;
-      case UnitType.Shell:
-        this.handleShellEvent(unit);
-        break;
-      case UnitType.SAMMissile:
-        this.handleMissileEvent(unit);
-        break;
-      case UnitType.TradeShip:
-        this.handleTradeShipEvent(unit);
-        break;
-      case UnitType.Train:
-        this.handleTrainEvent(unit);
-        break;
-      case UnitType.MIRVWarhead:
-        this.handleMIRVWarhead(unit);
-        break;
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
       case UnitType.MIRV:
         this.handleNuke(unit);
         break;
     }
-  }
-
-  private handleWarShipEvent(unit: UnitView) {
-    if (unit.targetUnitId()) {
-      this.drawSprite(unit, colord("rgb(200,0,0)"));
-    } else {
-      this.drawSprite(unit);
-    }
-  }
-
-  private handleShellEvent(unit: UnitView) {
-    const rel = this.relationship(unit);
-
-    // Clear current and previous positions
-    this.clearCell(this.game.x(unit.lastTile()), this.game.y(unit.lastTile()));
-    const oldTile = this.oldShellTile.get(unit);
-    if (oldTile !== undefined) {
-      this.clearCell(this.game.x(oldTile), this.game.y(oldTile));
-    }
-
-    this.oldShellTile.set(unit, unit.lastTile());
-    if (!unit.isActive()) {
-      return;
-    }
-
-    // Paint current and previous positions
-    this.paintCell(
-      this.game.x(unit.tile()),
-      this.game.y(unit.tile()),
-      rel,
-      unit.owner().borderColor(),
-      255,
-    );
-    this.paintCell(
-      this.game.x(unit.lastTile()),
-      this.game.y(unit.lastTile()),
-      rel,
-      unit.owner().borderColor(),
-      255,
-    );
-  }
-
-  // interception missle from SAM
-  private handleMissileEvent(unit: UnitView) {
-    this.drawSprite(unit);
   }
 
   private drawTrail(trail: number[], color: Colord, rel: Relationship) {
@@ -456,35 +426,9 @@ export class UnitLayer implements Layer {
       unit.owner().territoryColor(),
       rel,
     );
-    this.drawSprite(unit);
     if (!unit.isActive()) {
       this.clearTrail(unit);
     }
-  }
-
-  private handleMIRVWarhead(unit: UnitView) {
-    const rel = this.relationship(unit);
-
-    this.clearCell(this.game.x(unit.lastTile()), this.game.y(unit.lastTile()));
-
-    if (unit.isActive()) {
-      // Paint area
-      this.paintCell(
-        this.game.x(unit.tile()),
-        this.game.y(unit.tile()),
-        rel,
-        unit.owner().borderColor(),
-        255,
-      );
-    }
-  }
-
-  private handleTradeShipEvent(unit: UnitView) {
-    this.drawSprite(unit);
-  }
-
-  private handleTrainEvent(unit: UnitView) {
-    this.drawSprite(unit);
   }
 
   private handleBoatEvent(unit: UnitView) {
@@ -541,9 +485,20 @@ export class UnitLayer implements Layer {
   }
 
   drawSprite(unit: UnitView, customTerritoryColor?: Colord) {
-    const x = this.game.x(unit.tile());
-    const y = this.game.y(unit.tile());
+    const position = {
+      x: this.game.x(unit.tile()),
+      y: this.game.y(unit.tile()),
+    };
+    this.drawSpriteAtPosition(unit, position, customTerritoryColor);
+  }
 
+  private drawSpriteAtPosition(
+    unit: UnitView,
+    position: { x: number; y: number },
+    customTerritoryColor?: Colord,
+    context: CanvasRenderingContext2D = this.context,
+    snapToPixel: boolean = true,
+  ) {
     let alternateViewColor: Colord | null = null;
 
     if (this.alternateView) {
@@ -560,17 +515,7 @@ export class UnitLayer implements Layer {
           }
         }
       }
-      switch (rel) {
-        case Relationship.Self:
-          alternateViewColor = this.theme.selfColor();
-          break;
-        case Relationship.Ally:
-          alternateViewColor = this.theme.allyColor();
-          break;
-        case Relationship.Enemy:
-          alternateViewColor = this.theme.enemyColor();
-          break;
-      }
+      alternateViewColor = this.getAlternateViewColor(rel);
     }
 
     const sprite = getColoredSprite(
@@ -583,19 +528,190 @@ export class UnitLayer implements Layer {
     if (unit.isActive()) {
       const targetable = unit.targetable();
       if (!targetable) {
-        this.context.save();
-        this.context.globalAlpha = 0.5;
+        context.save();
+        context.globalAlpha = 0.5;
       }
-      this.context.drawImage(
-        sprite,
-        Math.round(x - sprite.width / 2),
-        Math.round(y - sprite.height / 2),
-        sprite.width,
-        sprite.width,
-      );
+      const offsetX = snapToPixel
+        ? Math.round(position.x - sprite.width / 2)
+        : position.x - sprite.width / 2;
+      const offsetY = snapToPixel
+        ? Math.round(position.y - sprite.height / 2)
+        : position.y - sprite.height / 2;
+      context.drawImage(sprite, offsetX, offsetY, sprite.width, sprite.width);
       if (!targetable) {
-        this.context.restore();
+        context.restore();
       }
     }
+  }
+
+  private interpolatePosition(unit: UnitView, alpha: number) {
+    const startTile = unit.lastTile();
+    const endTile = unit.tile();
+
+    const startX = this.game.x(startTile);
+    const startY = this.game.y(startTile);
+    const endX = this.game.x(endTile);
+    const endY = this.game.y(endTile);
+
+    return {
+      x: startX + (endX - startX) * alpha,
+      y: startY + (endY - startY) * alpha,
+    };
+  }
+
+  private updateInterpolatedUnits() {
+    if (!this.interpolationContext || !this.interpolationCanvas) {
+      return;
+    }
+
+    this.interpolationContext.clearRect(
+      0,
+      0,
+      this.game.width(),
+      this.game.height(),
+    );
+
+    const alpha = this.computeTickAlpha();
+    const missiles = this.game.units(...this.interpolatedUnitTypes);
+
+    for (const unit of missiles) {
+      if (!unit.isActive()) {
+        continue;
+      }
+      const position = this.interpolatePosition(unit, alpha);
+      switch (unit.type()) {
+        case UnitType.Shell:
+          this.renderShell(unit, position);
+          continue;
+        case UnitType.MIRVWarhead:
+          this.renderWarhead(unit, position);
+          continue;
+      }
+      if (!isSpriteReady(unit)) {
+        continue;
+      }
+      const customColor = this.getInterpolatedSpriteColor(unit);
+      this.drawSpriteAtPosition(
+        unit,
+        position,
+        customColor,
+        this.interpolationContext,
+        false,
+      );
+    }
+  }
+
+  private getInterpolatedSpriteColor(unit: UnitView): Colord | undefined {
+    if (unit.type() === UnitType.Warship && unit.targetUnitId()) {
+      return colord("rgb(200,0,0)");
+    }
+    return undefined;
+  }
+
+  private renderShell(unit: UnitView, position: { x: number; y: number }) {
+    const rel = this.relationship(unit);
+    const color = unit.owner().borderColor();
+    this.drawInterpolatedSquare(position, rel, color, 1, 1);
+    this.drawInterpolatedSquare(position, rel, color, 2, 0.4);
+
+    const last = {
+      x: this.game.x(unit.lastTile()),
+      y: this.game.y(unit.lastTile()),
+    };
+    if (last.x !== position.x || last.y !== position.y) {
+      this.drawInterpolatedSegment(last, position, rel, color, 0.7);
+    }
+  }
+
+  private renderWarhead(unit: UnitView, position: { x: number; y: number }) {
+    const rel = this.relationship(unit);
+    const color = unit.owner().borderColor();
+    this.drawInterpolatedSquare(position, rel, color, 1, 1);
+    this.drawInterpolatedSquare(position, rel, color, 2, 0.35);
+
+    const last = {
+      x: this.game.x(unit.lastTile()),
+      y: this.game.y(unit.lastTile()),
+    };
+    if (last.x !== position.x || last.y !== position.y) {
+      this.drawInterpolatedSegment(last, position, rel, color, 0.5);
+    }
+  }
+
+  private drawInterpolatedSquare(
+    position: { x: number; y: number },
+    relationship: Relationship,
+    color: Colord,
+    size: number,
+    alpha: number,
+  ) {
+    if (!this.interpolationContext) {
+      return;
+    }
+    const ctx = this.interpolationContext;
+    ctx.fillStyle = this.resolveInterpolatedColor(relationship, color, alpha);
+    ctx.fillRect(position.x - size / 2, position.y - size / 2, size, size);
+  }
+
+  private drawInterpolatedSegment(
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    relationship: Relationship,
+    color: Colord,
+    alpha: number,
+  ) {
+    if (!this.interpolationContext) {
+      return;
+    }
+    const ctx = this.interpolationContext;
+    ctx.strokeStyle = this.resolveInterpolatedColor(relationship, color, alpha);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+  }
+
+  private resolveInterpolatedColor(
+    relationship: Relationship,
+    color: Colord,
+    alpha: number,
+  ): string {
+    if (this.alternateView) {
+      return this.getAlternateViewColor(relationship)
+        .alpha(alpha)
+        .toRgbString();
+    }
+    return color.alpha(alpha).toRgbString();
+  }
+
+  private getAlternateViewColor(relationship: Relationship): Colord {
+    switch (relationship) {
+      case Relationship.Self:
+        return this.theme.selfColor();
+      case Relationship.Ally:
+        return this.theme.allyColor();
+      case Relationship.Enemy:
+      default:
+        return this.theme.enemyColor();
+    }
+  }
+
+  private computeTickAlpha(): number {
+    const elapsed = Math.min(
+      this.now() - this.lastTickTimestamp,
+      this.tickIntervalMs,
+    );
+    if (this.tickIntervalMs === 0) {
+      return 1;
+    }
+    return Math.max(0, elapsed / this.tickIntervalMs);
+  }
+
+  private now(): number {
+    if (typeof performance !== "undefined" && performance.now) {
+      return performance.now();
+    }
+    return Date.now();
   }
 }
