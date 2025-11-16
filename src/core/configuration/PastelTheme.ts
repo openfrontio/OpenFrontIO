@@ -66,9 +66,12 @@ export class PastelTheme implements Theme {
   }
 
   structureColors(territoryColor: Colord): { light: Colord; dark: Colord } {
-    const lightLAB = territoryColor.alpha(150 / 255).toLab(); // Convert territory color to LAB color space
-    const darkLAB = this.borderColor(territoryColor).toLab(); // Get "border color" from territory color & convert to LAB color space
-    let contrast = this.contrast(lightLAB, darkLAB); // Calculate the contrast of the two provided colors
+    // Convert territory color to LAB color space. Territory color is rendered in game with alpha = 150/255, use that here.
+    const lightLAB = territoryColor.alpha(150 / 255).toLab();
+    // Get "border color" from territory color & convert to LAB color space
+    const darkLAB = this.borderColor(territoryColor).toLab();
+    // Calculate the contrast of the two provided colors
+    let contrast = this.contrast(lightLAB, darkLAB);
 
     // Don't want excessive contrast, so incrementally increase contrast within a loop.
     // Define target values, looping limits, and loop counter
@@ -76,6 +79,9 @@ export class PastelTheme implements Theme {
     const maxIterations = 50; // maximum number of loops allowed, throw error above this limit
     const contrastTarget = 0.5;
     let loopCount = 0;
+
+    // Adjust luminance by 5 in each iteration. This is a balance between speed and not overdoing contrast changes.
+    const luminanceChange = 5;
 
     while (contrast < contrastTarget) {
       if (loopCount > maxIterations) {
@@ -87,12 +93,12 @@ export class PastelTheme implements Theme {
         // Increase the light color if the "loop limit" has been reach
         // (probably due to the dark color already being as dark as it can be)
       } else if (loopCount > loopLimit) {
-        lightLAB.l = this.clamp(lightLAB.l + 5);
+        lightLAB.l = this.clamp(lightLAB.l + luminanceChange);
 
         // Decrease the dark color first to keep the light color as close
         // to the territory color as possible
       } else {
-        darkLAB.l = this.clamp(darkLAB.l - 5);
+        darkLAB.l = this.clamp(darkLAB.l - luminanceChange);
       }
 
       // re-calculate contrast and increment loop counter
