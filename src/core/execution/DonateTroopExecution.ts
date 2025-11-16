@@ -1,7 +1,10 @@
-import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { Difficulty, Execution, Game, Player, PlayerID } from "../game/Game";
+import { PseudoRandom } from "../PseudoRandom";
 
 export class DonateTroopsExecution implements Execution {
   private recipient: Player;
+  private random: PseudoRandom;
+  private mg: Game;
 
   private active = true;
 
@@ -12,8 +15,13 @@ export class DonateTroopsExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    this.mg = mg;
+    this.random = new PseudoRandom(mg.ticks());
+
     if (!mg.hasPlayer(this.recipientID)) {
-      console.warn(`DonateExecution recipient ${this.recipientID} not found`);
+      console.warn(
+        `DonateTroopExecution recipient ${this.recipientID} not found`,
+      );
       this.active = false;
       return;
     }
@@ -31,13 +39,50 @@ export class DonateTroopsExecution implements Execution {
       this.sender.canDonateTroops(this.recipient) &&
       this.sender.donateTroops(this.recipient, this.troops)
     ) {
-      this.recipient.updateRelation(this.sender, 50);
+      // Prevent players from just buying a good relation by sending 1% troops. Instead, a minimum is needed, and it's random.
+      if (this.troops >= this.getMinTroopsForRelationUpdate()) {
+        this.recipient.updateRelation(this.sender, 50);
+      }
     } else {
       console.warn(
         `cannot send troops from ${this.sender} to ${this.recipient}`,
       );
     }
     this.active = false;
+  }
+
+  getMinTroopsForRelationUpdate(): number {
+    const { difficulty } = this.mg.config().gameConfig();
+
+    // ~7.7k - ~9.1k troops (for 100k troops)
+    if (difficulty === Difficulty.Easy)
+      return this.random.nextInt(
+        this.sender.troops() / 13,
+        this.sender.troops() / 11,
+      );
+
+    // ~9.1k - ~11.1k troops (for 100k troops)
+    if (difficulty === Difficulty.Medium)
+      return this.random.nextInt(
+        this.sender.troops() / 11,
+        this.sender.troops() / 9,
+      );
+
+    // ~11.1k - ~14.3k troops (for 100k troops)
+    if (difficulty === Difficulty.Hard)
+      return this.random.nextInt(
+        this.sender.troops() / 9,
+        this.sender.troops() / 7,
+      );
+
+    // ~14.3k - ~20k troops (for 100k troops)
+    if (difficulty === Difficulty.Impossible)
+      return this.random.nextInt(
+        this.sender.troops() / 7,
+        this.sender.troops() / 5,
+      );
+
+    return 0;
   }
 
   isActive(): boolean {
