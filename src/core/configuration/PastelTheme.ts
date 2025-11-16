@@ -86,9 +86,11 @@ export class PastelTheme implements Theme {
     while (contrast < contrastTarget) {
       if (loopCount > maxIterations) {
         // Prevent runaway loops
-        throw new Error(`Infinite loop detected during structure color calculation. 
+        console.warn(`Infinite loop detected during structure color calculation. 
           Light color: ${colord(lightLAB).toRgbString()}, 
-          Dark color: ${colord(darkLAB).toRgbString()}`);
+          Dark color: ${colord(darkLAB).toRgbString()}, 
+          Contrast: ${contrast}`);
+        break;
 
         // Increase the light color if the "loop limit" has been reach
         // (probably due to the dark color already being as dark as it can be)
