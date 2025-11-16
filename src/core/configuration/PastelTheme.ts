@@ -1,4 +1,4 @@
-import { Colord, colord } from "colord";
+import { Colord, colord, LabaColor } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
@@ -66,39 +66,67 @@ export class PastelTheme implements Theme {
   }
 
   structureColors(territoryColor: Colord): { light: Colord; dark: Colord } {
-    const lightLAB = territoryColor.alpha(150 / 255).toLab();
-    const darkLAB = this.borderColor(territoryColor).toLab();
-    let l: Colord = colord(lightLAB);
-    let delta = l.delta(darkLAB);
-    let darker: Colord | null = null;
+    const lightLAB = territoryColor.alpha(150 / 255).toLab(); // Convert territory color to LAB color space
+    const darkLAB = this.borderColor(territoryColor).toLab(); // Get "border color" from territory color & convert to LAB color space
+    let contrast = this.contrast(lightLAB, darkLAB); // Calculate the contrast of the two provided colors
 
-    const limit = 10;
-    const target = 0.5;
-    let count = 0;
+    // Don't want excessive contrast, so incrementally increase contrast within a loop.
+    // Define target values, looping limits, and loop counter
+    const loopLimit = 10;
+    const contrastTarget = 0.5;
+    let loopCount = 0;
 
-    while (delta < target) {
-      if (count <= limit) {
-        darkLAB.l = this.clamp(darkLAB.l - 5, 0, 100);
-      } else if (count > limit && count <= limit * 2) {
-        if (count === limit + 1) darker = colord(darkLAB);
-        darker = darker!.darken(0.05);
+    while (contrast < contrastTarget) {
+      if (loopCount > 50) {
+        // Prevent runaway loops
+        throw new Error(`Infinite loop detected during structure color calculation. 
+          Light color: ${colord(lightLAB).toRgbString()}, 
+          Dark color: ${colord(darkLAB).toRgbString()}`);
+
+        // Increase the light color if the "loop limit" has been reach
+        // (probably due to the dark color already being as dark as it can be)
+      } else if (loopCount > loopLimit) {
+        lightLAB.l = this.clamp(lightLAB.l + 5);
+
+        // Decrease the dark color first to keep the light color as close
+        // to the territory color as possible
       } else {
-        lightLAB.l = this.clamp(lightLAB.l + 5, 0, 100);
+        darkLAB.l = this.clamp(darkLAB.l - 5);
       }
-      l = colord(lightLAB);
-      darker = darker ?? colord(darkLAB);
-      delta = l.delta(darker.toHex());
-      if (delta >= target) break;
-      count++;
-      if (count > 100) {
-        throw new Error("infinite loop.");
-      }
-      if (count <= limit) darker = null;
+
+      // re-calculate contrast and increment loop counter
+      contrast = this.contrast(lightLAB, darkLAB);
+      loopCount++;
     }
-    return { light: l, dark: darker ?? colord(darkLAB) };
+    return { light: colord(lightLAB), dark: colord(darkLAB) };
   }
 
-  private clamp(num: number, low: number, high: number): number {
+  /**
+   * Calculates the "delta" between two colors.
+   *
+   * If the colors the same, delta = 1.
+   * If the colors are opposite (e.g. #ffffff and #000000), delta = 0
+   * @param first the first color to compare
+   * @param second the second color to compare
+   * @returns the difference between the two colors in the range [0,1]
+   * @private
+   */
+  private contrast(first: LabaColor, second: LabaColor): number {
+    return colord(first).delta(colord(second));
+  }
+
+  /**
+   * Clamp a provided number between a high and low reference.
+   *
+   * @param num the number to be clamped
+   * @param low the lower bound for clamping, defaults to 0.
+   * @param high the upper bound for clamping, defaults to 100.
+   * @returns the provided number if num is in range [low, high]
+   *          low if num is < lower bound
+   *          high if num is > upper bound
+   * @private
+   */
+  private clamp(num: number, low: number = 0, high: number = 100): number {
     return Math.min(Math.max(low, num), high);
   }
 
