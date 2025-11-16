@@ -7,6 +7,7 @@ import {
   TogglePerformanceOverlayEvent,
 } from "../../InputHandler";
 import { translateText } from "../../Utils";
+import { FrameProfiler } from "../FrameProfiler";
 import { Layer } from "./Layer";
 
 @customElement("performance-overlay")
@@ -225,6 +226,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   init() {
     this.eventBus.on(TogglePerformanceOverlayEvent, () => {
       this.userSettings.togglePerformanceOverlay();
+      this.setVisible(this.userSettings.performanceOverlay());
     });
     this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
       this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
@@ -233,6 +235,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
   setVisible(visible: boolean) {
     this.isVisible = visible;
+    FrameProfiler.setEnabled(visible);
   }
 
   private handleClose() {
@@ -316,7 +319,13 @@ export class PerformanceOverlay extends LitElement implements Layer {
     frameDuration: number,
     layerDurations?: Record<string, number>,
   ) {
+    const wasVisible = this.isVisible;
     this.isVisible = this.userSettings.performanceOverlay();
+
+    // Update FrameProfiler enabled state when visibility changes
+    if (wasVisible !== this.isVisible) {
+      FrameProfiler.setEnabled(this.isVisible);
+    }
 
     if (!this.isVisible) return;
 

@@ -346,7 +346,6 @@ export class GameRenderer {
   renderGame() {
     FrameProfiler.clear();
     const start = performance.now();
-    const layerDurations: Record<string, number> = {};
     // Set background
     this.context.fillStyle = this.game
       .config()
@@ -381,11 +380,7 @@ export class GameRenderer {
 
       const layerStart = FrameProfiler.start();
       layer.renderLayer?.(this.context);
-      const layerDuration = performance.now() - layerStart;
-
-      const name = layer.constructor?.name ?? "UnknownLayer";
-      // Accumulate time in case a layer renders multiple times per frame
-      layerDurations[name] = (layerDurations[name] ?? 0) + layerDuration;
+      FrameProfiler.end(layer.constructor?.name ?? "UnknownLayer", layerStart);
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -393,13 +388,8 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    const internalTimings = FrameProfiler.consume();
-    const combinedDurations: Record<string, number> = { ...internalTimings };
-    for (const [name, value] of Object.entries(layerDurations)) {
-      combinedDurations[name] = (combinedDurations[name] ?? 0) + value;
-    }
-
-    this.performanceOverlay.updateFrameMetrics(duration, combinedDurations);
+    const layerDurations = FrameProfiler.consume();
+    this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
 
     if (duration > 50) {
       console.warn(
