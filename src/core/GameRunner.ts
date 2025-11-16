@@ -100,6 +100,7 @@ export class GameRunner {
   ) {}
 
   init() {
+    // Accumulate spawn tiles across player types to prevent proximity conflicts
     const playerSpawnTiles: TileRef[] = [];
 
     if (this.game.config().isRandomSpawn()) {
