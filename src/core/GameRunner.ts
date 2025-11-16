@@ -1,7 +1,6 @@
 import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
-import { SpawnExecution } from "./execution/SpawnExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
   AllPlayers,
@@ -101,26 +100,26 @@ export class GameRunner {
   ) {}
 
   init() {
-    const playerSpawns: SpawnExecution[] = [];
+    const playerSpawnTiles: TileRef[] = [];
 
     if (this.game.config().isRandomSpawn()) {
       const humanSpawnExecutions = this.execManager.spawnPlayers();
 
-      playerSpawns.push(...humanSpawnExecutions);
-      this.game.addExecution(...playerSpawns);
+      playerSpawnTiles.push(...humanSpawnExecutions.map(({ tile }) => tile));
+      this.game.addExecution(...humanSpawnExecutions);
     }
     if (this.game.config().bots() > 0) {
       const botSpawnExecutions = this.execManager.spawnBots(
         this.game.config().numBots(),
-        playerSpawns,
+        playerSpawnTiles,
       );
 
-      playerSpawns.push(...botSpawnExecutions);
+      playerSpawnTiles.push(...botSpawnExecutions.map(({ tile }) => tile));
       this.game.addExecution(...botSpawnExecutions);
     }
     if (this.game.config().spawnNPCs()) {
       this.game.addExecution(
-        ...this.execManager.fakeHumanExecutions(playerSpawns),
+        ...this.execManager.fakeHumanExecutions(playerSpawnTiles),
       );
     }
     this.game.addExecution(new WinCheckExecution());

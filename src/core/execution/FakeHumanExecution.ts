@@ -35,7 +35,7 @@ export class FakeHumanExecution implements Execution {
   private behavior: BotBehavior | null = null; // Shared behavior logic for both bots and fakehumans
   private mg: Game;
   private player: Player | null = null;
-  private otherPlayerSpawns: SpawnExecution[] = [];
+  private otherPlayerSpawns: TileRef[] = [];
 
   private attackRate: number;
   private attackTick: number;
@@ -76,7 +76,7 @@ export class FakeHumanExecution implements Execution {
   constructor(
     gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.FakeHuman
-    otherPlayerSpawns?: SpawnExecution[],
+    otherPlayerSpawns?: TileRef[],
   ) {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
@@ -648,8 +648,8 @@ export class FakeHumanExecution implements Execution {
       const tile = this.mg.ref(x, y);
 
       const isOtherPlayerSpawnedNearby = this.otherPlayerSpawns.some(
-        (spawn) =>
-          this.mg.manhattanDist(spawn.tile, tile) <
+        (spawnTile) =>
+          this.mg.manhattanDist(spawnTile, tile) <
           this.mg.config().minDistanceBetweenPlayers(),
       );
 

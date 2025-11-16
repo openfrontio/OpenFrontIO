@@ -1,4 +1,5 @@
 import { Execution, Game } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID, GameID, Intent, Turn } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -128,10 +129,7 @@ export class Executor {
     }
   }
 
-  spawnBots(
-    numBots: number,
-    otherPlayerSpawns?: SpawnExecution[],
-  ): SpawnExecution[] {
+  spawnBots(numBots: number, otherPlayerSpawns?: TileRef[]): SpawnExecution[] {
     return new BotSpawner(this.mg, this.gameID).spawnBots(
       numBots,
       otherPlayerSpawns,
@@ -142,7 +140,7 @@ export class Executor {
     return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
-  fakeHumanExecutions(otherPlayerSpawns: SpawnExecution[]): Execution[] {
+  fakeHumanExecutions(otherPlayerSpawns: TileRef[]): Execution[] {
     const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
       execs.push(

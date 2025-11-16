@@ -17,10 +17,7 @@ export class BotSpawner {
     this.random = new PseudoRandom(simpleHash(gameID));
   }
 
-  spawnBots(
-    numBots: number,
-    otherPlayerSpawns?: SpawnExecution[],
-  ): SpawnExecution[] {
+  spawnBots(numBots: number, otherPlayerSpawns?: TileRef[]): SpawnExecution[] {
     let tries = 0;
     while (this.bots.length < numBots) {
       if (tries > 10000) {
@@ -40,7 +37,7 @@ export class BotSpawner {
 
   spawnBot(
     botName: string,
-    otherPlayerSpawns?: SpawnExecution[],
+    otherPlayerSpawns?: TileRef[],
   ): SpawnExecution | null {
     const tile = this.randTile();
     if (!this.gs.isLand(tile)) {
@@ -56,8 +53,8 @@ export class BotSpawner {
     }
 
     const isOtherPlayerSpawnedNearby = otherPlayerSpawns?.some(
-      (spawn) =>
-        this.gs.manhattanDist(spawn.tile, tile) <
+      (spawnTile) =>
+        this.gs.manhattanDist(spawnTile, tile) <
         this.gs.config().minDistanceBetweenPlayers(),
     );
 
