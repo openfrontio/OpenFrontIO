@@ -47,7 +47,6 @@ export class GameRightSidebar extends LitElement implements Layer {
       this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
       this.game.config().isReplay();
     this._isVisible = true;
-    this.game.inSpawnPhase();
     this.requestUpdate();
   }
 
@@ -118,19 +117,31 @@ export class GameRightSidebar extends LitElement implements Layer {
 
     return html`
       <aside
-        class=${`flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-tl-lg rounded-bl-lg transition-transform duration-300 ease-out transform ${
+        class=${`flex max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-blue-950/70 backdrop-blur-sm shadow-xs rounded-xl transition-transform duration-300 ease-out transform ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
+        <div class="text-white font-bold flex gap-1">
+          ${this.game.myPlayer()?.cosmetics.flag ? html`<img class="w-6 h-6" src="/flags/${this.game.myPlayer()?.cosmetics.flag}.svg">` : ""} 
+          ${this.game.myPlayer()?.name() || ""}
+        </div>
         <div
-          class=${`flex justify-end items-center gap-2 text-white ${
-            this._isReplayVisible ? "mb-2" : ""
-          }`}
+            class="w-[70px] lg:w-20 text-xs md:text-sm lg:text-base flex items-center justify-center text-white"
+            style="${this.game.config().gameConfig().maxTimerValue !==
+              undefined && this.timer < 60
+              ? "color: #ff8080;"
+              : ""}"
+          >
+            ${this.secondsToHms(this.timer)}
+        </div>
+        <div
+          class="flex justify-end items-center gap-2 text-white"
         >
           ${this.maybeRenderReplayButtons()}
+          
           <div
-            class="w-6 h-6 cursor-pointer"
+            class="w-4 h-4 cursor-pointer"
             @click=${this.onSettingsButtonClick}
           >
             <img
@@ -141,30 +152,28 @@ export class GameRightSidebar extends LitElement implements Layer {
               style="vertical-align: middle;"
             />
           </div>
-          <div class="w-6 h-6 cursor-pointer" @click=${this.onExitButtonClick}>
+          <div class="w-4 h-4 cursor-pointer" @click=${this.onExitButtonClick}>
             <img src=${exitIcon} alt="exit" width="20" height="20" />
-          </div>
-        </div>
-        <!-- Timer display below buttons -->
-        <div class="flex justify-center items-center mt-2">
-          <div
-            class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center justify-center text-white px-1"
-            style="${this.game.config().gameConfig().maxTimerValue !==
-              undefined && this.timer < 60
-              ? "color: #ff8080;"
-              : ""}"
-          >
-            ${this.secondsToHms(this.timer)}
           </div>
         </div>
       </aside>
     `;
   }
+  
 
   maybeRenderReplayButtons() {
     if (this._isSinglePlayer || this.game?.config()?.isReplay()) {
-      return html` <div
-          class="w-6 h-6 cursor-pointer"
+      return html`<div class="w-4 h-4 cursor-pointer" @click=${this.onPauseButtonClick}>
+          <img
+            src=${this.isPaused ? playIcon : pauseIcon}
+            alt="play/pause"
+            width="20"
+            height="20"
+            style="vertical-align: middle;"
+          />
+        </div>
+         <div
+          class="w-4 h-4 cursor-pointer"
           @click=${this.toggleReplayPanel}
         >
           <img
@@ -175,15 +184,7 @@ export class GameRightSidebar extends LitElement implements Layer {
             style="vertical-align: middle;"
           />
         </div>
-        <div class="w-6 h-6 cursor-pointer" @click=${this.onPauseButtonClick}>
-          <img
-            src=${this.isPaused ? playIcon : pauseIcon}
-            alt="play/pause"
-            width="20"
-            height="20"
-            style="vertical-align: middle;"
-          />
-        </div>`;
+        `;
     } else {
       return html``;
     }
