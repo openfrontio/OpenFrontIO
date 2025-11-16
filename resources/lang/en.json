@@ -336,6 +336,8 @@
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
+    "quick_donate_buttons_in_ffa_label": "Quick Donate Buttons in FFA",
+    "quick_donate_buttons_in_ffa_desc": "Show quick donate buttons (Donate Troops and Donate Gold) in the radial menu for FFA games. When disabled, these buttons only appear in Team games.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_bug_count_label": "Bug Count",
