@@ -14,8 +14,9 @@ import {
   GameID,
   ID,
   PartialGameRecordSchema,
-  ServerAuthFinishedMessage,
   ServerErrorMessage,
+  ServerJoinFailureMessage,
+  ServerJoinSuccessMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
@@ -414,10 +415,9 @@ export async function startWorker() {
 
           ws.send(
             JSON.stringify({
-              type: "authentication-finished",
-              success: false,
+              type: "join-failure",
               error: "Game not found",
-            } satisfies ServerAuthFinishedMessage),
+            } satisfies ServerJoinFailureMessage),
           );
           ws.close(1002, "Game not found");
           return;
@@ -425,9 +425,8 @@ export async function startWorker() {
 
         ws.send(
           JSON.stringify({
-            type: "authentication-finished",
-            success: true,
-          } satisfies ServerAuthFinishedMessage),
+            type: "join-success",
+          } satisfies ServerJoinSuccessMessage),
         );
         // Handle other message types
       } catch (error) {

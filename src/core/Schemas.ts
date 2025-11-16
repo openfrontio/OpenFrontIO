@@ -91,7 +91,8 @@ export type ClientMessage =
   | ClientLogMessage
   | ClientHashMessage;
 export type ServerMessage =
-  | ServerAuthFinishedMessage
+  | ServerJoinFailureMessage
+  | ServerJoinSuccessMessage
   | ServerTurnMessage
   | ServerStartGameMessage
   | ServerPingMessage
@@ -99,8 +100,11 @@ export type ServerMessage =
   | ServerPrestartMessage
   | ServerErrorMessage;
 
-export type ServerAuthFinishedMessage = z.infer<
-  typeof ServerAuthFinishedMessageSchema
+export type ServerJoinFailureMessage = z.infer<
+  typeof ServerJoinFailureMessageSchema
+>;
+export type ServerJoinSuccessMessage = z.infer<
+  typeof ServerJoinSuccessMessageSchema
 >;
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -448,10 +452,13 @@ export type Winner = z.infer<typeof WinnerSchema>;
 //
 // Server
 //
-export const ServerAuthFinishedMessageSchema = z.object({
-  type: z.literal("authentication-finished"),
-  success: z.boolean(),
-  error: z.string().optional(),
+export const ServerJoinFailureMessageSchema = z.object({
+  type: z.literal("join-failure"),
+  error: z.string(),
+});
+
+export const ServerJoinSuccessMessageSchema = z.object({
+  type: z.literal("join-success"),
 });
 
 export const ServerTurnMessageSchema = z.object({
@@ -493,7 +500,8 @@ export const ServerErrorSchema = z.object({
 });
 
 export const ServerMessageSchema = z.discriminatedUnion("type", [
-  ServerAuthFinishedMessageSchema,
+  ServerJoinFailureMessageSchema,
+  ServerJoinSuccessMessageSchema,
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
   ServerStartGameMessageSchema,

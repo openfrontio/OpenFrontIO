@@ -2,8 +2,8 @@ import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "./Utils";
 
-@customElement("auth-loading-modal")
-export class AuthLoadingModal extends LitElement {
+@customElement("join-modal")
+export class JoinModal extends LitElement {
   @property({ type: Boolean }) visible = false;
 
   createRenderRoot() {
@@ -41,14 +41,14 @@ export class AuthLoadingModal extends LitElement {
           <div
             class="rounded-lg m-2 text-lg font-bold bg-black/20 text-center text-white px-6 py-4"
           >
-            ${translateText("auth_loading_modal.title")}
+            ${translateText("join_modal.title")}
           </div>
           <section class="text-white p-6 text-center">
             <div
               class="animate-spin inline-block w-8 h-8 border-4 border-white border-t-transparent rounded-full"
             ></div>
             <p class="animate-pulse mt-4 opacity-80">
-              ${translateText("auth_loading_modal.please_wait")}
+              ${translateText("join_modal.please_wait")}
             </p>
           </section>
         </div>
@@ -57,11 +57,11 @@ export class AuthLoadingModal extends LitElement {
   }
 }
 
-export function getAuthModal(): AuthLoadingModal {
-  let modal = document.querySelector("auth-loading-modal");
+export function getJoinModal(): JoinModal {
+  let modal = document.querySelector("join-modal");
   if (!modal) {
-    modal = document.createElement("auth-loading-modal");
+    modal = document.createElement("join-modal");
     document.body.appendChild(modal);
   }
-  return modal as AuthLoadingModal;
+  return modal as JoinModal;
 }

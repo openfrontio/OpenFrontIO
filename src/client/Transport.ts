@@ -24,7 +24,6 @@ import {
   Winner,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
-import { getAuthModal } from "./AuthLoadingModal";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -183,11 +182,14 @@ export class Transport {
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
 
-  private authPromise: Promise<void> = Promise.resolve();
-  private resolveAuthPromise:
+  private joinPromise: Promise<void> = Promise.resolve();
+  private resolveJoinPromise:
     | ((value: void | PromiseLike<void>) => void)
     | null = null;
-  private rejectAuthPromise: ((reason?: any) => void) | null = null;
+  private rejectJoinPromise: ((reason?: any) => void) | null = null;
+  private onJoinAttempt: (() => void) | null = null;
+  private onJoinSuccess: (() => void) | null = null;
+  private onJoinFailure: ((error: string) => void) | null = null;
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
@@ -348,14 +350,23 @@ export class Transport {
           console.error("Error parsing server message", error);
           return;
         }
-        // intercept auth finished message
-        if (result.data.type === "authentication-finished") {
-          if (result.data.success && this.resolveAuthPromise !== null) {
-            this.resolveAuthPromise();
-          } else if (!result.data.success && this.rejectAuthPromise !== null) {
-            this.rejectAuthPromise(
-              new Error(result.data.error ?? "Authentication failed"),
-            );
+        // intercept join messages
+        if (result.data.type === "join-success") {
+          if (this.resolveJoinPromise !== null) {
+            this.resolveJoinPromise();
+          }
+          if (this.onJoinSuccess !== null) {
+            this.onJoinSuccess();
+          }
+          return;
+        }
+        if (result.data.type === "join-failure") {
+          const error = result.data.error;
+          if (this.rejectJoinPromise !== null) {
+            this.rejectJoinPromise(new Error(error));
+          }
+          if (this.onJoinFailure !== null) {
+            this.onJoinFailure(error);
           }
           return;
         }
@@ -368,8 +379,11 @@ export class Transport {
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
       if (this.socket === null) return;
-      if (this.rejectAuthPromise !== null) {
-        this.rejectAuthPromise(new Error("Socket error during authentication"));
+      if (this.rejectJoinPromise !== null) {
+        this.rejectJoinPromise(new Error("Socket error during join"));
+      }
+      if (this.onJoinFailure !== null) {
+        this.onJoinFailure("Socket error during join");
       }
       this.socket.close();
     };
@@ -384,9 +398,14 @@ export class Transport {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();
       }
-      if (this.rejectAuthPromise !== null) {
-        this.rejectAuthPromise(
+      if (this.rejectJoinPromise !== null) {
+        this.rejectJoinPromise(
           new Error(`Connection closed: ${event.reason || "unknown reason"}`),
+        );
+      }
+      if (this.onJoinFailure !== null) {
+        this.onJoinFailure(
+          `Connection closed: ${event.reason || "unknown reason"}`,
         );
       }
     };
@@ -402,7 +421,12 @@ export class Transport {
     }
   }
 
-  async joinGame(numTurns: number) {
+  async joinGame(
+    numTurns: number,
+    onJoinAttempt?: () => void,
+    onJoinSuccess?: () => void,
+    onJoinFailure?: (error: string) => void,
+  ) {
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
@@ -417,24 +441,31 @@ export class Transport {
       return;
     }
 
-    this.authPromise = new Promise<void>((resolve, reject) => {
-      this.resolveAuthPromise = resolve;
-      this.rejectAuthPromise = reject;
+    this.onJoinAttempt = onJoinAttempt ?? null;
+    this.onJoinSuccess = onJoinSuccess ?? null;
+    this.onJoinFailure = onJoinFailure ?? null;
+
+    this.joinPromise = new Promise<void>((resolve, reject) => {
+      this.resolveJoinPromise = resolve;
+      this.rejectJoinPromise = reject;
     });
 
-    const authLoadingModal = getAuthModal();
-    authLoadingModal.show();
+    if (this.onJoinAttempt !== null) {
+      this.onJoinAttempt();
+    }
 
     try {
-      await this.authPromise;
-      console.log("Authentication finished successfully");
+      await this.joinPromise;
+      console.log("Join successful");
     } catch (error) {
-      console.error("Authentication failed:", error);
+      console.error("Join failed:", error);
       throw error;
     } finally {
-      authLoadingModal.hide();
-      this.resolveAuthPromise = null;
-      this.rejectAuthPromise = null;
+      this.resolveJoinPromise = null;
+      this.rejectJoinPromise = null;
+      this.onJoinAttempt = null;
+      this.onJoinSuccess = null;
+      this.onJoinFailure = null;
     }
   }
 

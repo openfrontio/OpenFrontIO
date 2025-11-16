@@ -775,8 +775,8 @@
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
   },
-  "auth_loading_modal": {
-    "title": "Authenticating...",
+  "join_modal": {
+    "title": "Joining game...",
     "please_wait": "Please wait while we authenticate you"
   }
 }

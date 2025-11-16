@@ -17,6 +17,7 @@ import "./GoogleAdElement";
 import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import { getJoinModal } from "./JoinModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
@@ -565,6 +566,22 @@ class Client {
           history.pushState(null, "", window.location.origin + "#refresh");
         }
         history.pushState(null, "", `#join=${lobby.gameID}`);
+      },
+      // onJoinAttempt - called when join attempt starts
+      () => {
+        const joinModal = getJoinModal();
+        joinModal.show();
+      },
+      // onJoinSuccess
+      () => {
+        const joinModal = getJoinModal();
+        joinModal.hide();
+      },
+      // onJoinFailure
+      (error: string) => {
+        const joinModal = getJoinModal();
+        joinModal.hide();
+        console.error("Join failed:", error);
       },
     );
   }
