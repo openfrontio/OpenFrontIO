@@ -160,11 +160,13 @@ export class TerritoryLayer implements Layer {
 
     const focusedPlayer = this.game.focusedPlayer();
     if (focusedPlayer !== this.lastFocusedPlayer) {
-      if (this.lastFocusedPlayer) {
-        this.paintPlayerBorder(this.lastFocusedPlayer);
-      }
-      if (focusedPlayer) {
-        this.paintPlayerBorder(focusedPlayer);
+      if (!this.borderRenderer.drawsOwnBorders()) {
+        if (this.lastFocusedPlayer) {
+          this.paintPlayerBorder(this.lastFocusedPlayer);
+        }
+        if (focusedPlayer) {
+          this.paintPlayerBorder(focusedPlayer);
+        }
       }
       this.lastFocusedPlayer = focusedPlayer;
     }
@@ -590,7 +592,7 @@ export class TerritoryLayer implements Layer {
       const tile = entry.tile;
       this.paintTerritory(tile);
       for (const neighbor of this.game.neighbors(tile)) {
-        this.paintTerritory(neighbor, true);
+        this.paintTerritory(neighbor, true); //this is a misuse of the _Border parameter, making it a maybe stale border
       }
     }
   }
