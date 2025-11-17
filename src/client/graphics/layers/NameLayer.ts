@@ -1,4 +1,5 @@
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
+import allianceIconFaded from "../../../../resources/images/AllianceIconFaded.svg";
 import allianceRequestBlackIcon from "../../../../resources/images/AllianceRequestBlackIcon.svg";
 import allianceRequestWhiteIcon from "../../../../resources/images/AllianceRequestWhiteIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
@@ -48,6 +49,7 @@ export class NameLayer implements Layer {
   private allianceRequestBlackIconImage: HTMLImageElement;
   private allianceRequestWhiteIconImage: HTMLImageElement;
   private allianceIconImage: HTMLImageElement;
+  private allianceIconFadedImage: HTMLImageElement;
   private targetIconImage: HTMLImageElement;
   private crownIconImage: HTMLImageElement;
   private embargoBlackIconImage: HTMLImageElement;
@@ -72,6 +74,8 @@ export class NameLayer implements Layer {
     this.disconnectedIconImage.src = disconnectedIcon;
     this.allianceIconImage = new Image();
     this.allianceIconImage.src = allianceIcon;
+    this.allianceIconFadedImage = new Image();
+    this.allianceIconFadedImage.src = allianceIconFaded;
     this.allianceRequestBlackIconImage = new Image();
     this.allianceRequestBlackIconImage.src = allianceRequestBlackIcon;
     this.allianceRequestWhiteIconImage = new Image();
@@ -487,16 +491,60 @@ export class NameLayer implements Layer {
     }
 
     // Alliance icon
-    const existingAlliance = iconsDiv.querySelector('[data-icon="alliance"]');
+    const existingAlliance = iconsDiv.querySelector(
+      '[data-icon="alliance"]',
+    ) as HTMLElement | null;
     if (myPlayer !== null && myPlayer.isAlliedWith(render.player)) {
+      // Compute remaining alliance fraction (0..1)
+      const allianceView = myPlayer
+        .alliances()
+        .find((a) => a.other === render.player.id());
+      let fraction = 0;
+      if (allianceView) {
+        const remaining = Math.max(
+          0,
+          allianceView.expiresAt - this.game.ticks(),
+        );
+        const duration = Math.max(1, this.game.config().allianceDuration());
+        fraction = Math.max(0, Math.min(1, remaining / duration));
+      }
+
+      const showRenewPrompt = (() => {
+        if (!allianceView) return false;
+        const remainingTicks = allianceView.expiresAt - this.game.ticks();
+        return (
+          remainingTicks <= this.game.config().allianceExtensionPromptOffset()
+        );
+      })();
       if (!existingAlliance) {
         iconsDiv.appendChild(
-          this.createIconElement(
-            this.allianceIconImage.src,
-            iconSize,
-            "alliance",
-          ),
+          this.createAllianceProgressIcon(iconSize, fraction, showRenewPrompt),
         );
+      } else {
+        // Update the progress cropping on the existing element
+        existingAlliance.style.width = `${iconSize}px`;
+        existingAlliance.style.height = `${iconSize}px`;
+        const overlay = existingAlliance.querySelector(
+          ".alliance-progress-overlay",
+        ) as HTMLDivElement | null;
+        if (overlay) {
+          // Correct crop accounting for top whitespace in SVG.
+          // Icon total height: 834px; active (colored) shape starts ~154px from top.
+          // We want visible green portion proportional to remaining fraction.
+          const TOTAL_HEIGHT = 834;
+          const TOP_OFFSET = 154; // pixels until first green content
+          const activeHeight = TOTAL_HEIGHT - TOP_OFFSET; // 680px
+          const topCutPx = TOP_OFFSET + (1 - fraction) * activeHeight;
+          const topCut = ((topCutPx / TOTAL_HEIGHT) * 100).toFixed(2); // percent of total height to crop
+          // Slight horizontal overscan to avoid subpixel gaps on the sides
+          overlay.style.clipPath = `inset(${topCut}% -2px 0 -2px)`;
+        }
+        // Ensure inner images keep correct size
+        const imgs = existingAlliance.getElementsByTagName("img");
+        for (const img of imgs) {
+          img.style.width = `${iconSize}px`;
+          img.style.height = `${iconSize}px`;
+        }
       }
     } else if (existingAlliance) {
       existingAlliance.remove();
@@ -676,5 +724,56 @@ export class NameLayer implements Layer {
       icon.style.transform = "translateY(-50%)";
     }
     return icon;
+  }
+
+  private createAllianceProgressIcon(
+    size: number,
+    fraction: number,
+  ): HTMLDivElement {
+    // Wrapper
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-icon", "alliance");
+    wrapper.setAttribute("dark-mode", this.userSettings.darkMode().toString());
+    wrapper.style.position = "relative";
+    wrapper.style.width = `${size}px`;
+    wrapper.style.height = `${size}px`;
+    wrapper.style.display = "inline-block";
+
+    // Base white icon (full)
+    const base = document.createElement("img");
+    base.src = this.allianceIconFadedImage.src;
+    base.style.width = `${size}px`;
+    base.style.height = `${size}px`;
+    base.style.display = "block";
+    base.setAttribute("dark-mode", this.userSettings.darkMode().toString());
+    wrapper.appendChild(base);
+
+    // Overlay container for green portion, clipped from the top via clip-path
+    const overlay = document.createElement("div");
+    overlay.className = "alliance-progress-overlay";
+    overlay.style.position = "absolute";
+    overlay.style.left = "0";
+    overlay.style.top = "0";
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    // Correct crop accounting for top whitespace in SVG.
+    const TOTAL_HEIGHT = 834;
+    const TOP_OFFSET = 154;
+    const activeHeight = TOTAL_HEIGHT - TOP_OFFSET;
+    const topCutPx = TOP_OFFSET + (1 - fraction) * activeHeight;
+    const topCut = ((topCutPx / TOTAL_HEIGHT) * 100).toFixed(2);
+    // Slight horizontal overscan to avoid subpixel gaps on the sides
+    overlay.style.clipPath = `inset(${topCut}% -2px 0 -2px)`;
+
+    const colored = document.createElement("img");
+    colored.src = this.allianceIconImage.src; // green icon
+    colored.style.width = `${size}px`;
+    colored.style.height = `${size}px`;
+    colored.style.display = "block";
+    colored.setAttribute("dark-mode", this.userSettings.darkMode().toString());
+    overlay.appendChild(colored);
+
+    wrapper.appendChild(overlay);
+    return wrapper;
   }
 }
