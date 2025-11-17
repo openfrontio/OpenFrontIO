@@ -190,6 +190,8 @@ export class PlayerView {
 
   private _territoryColor: Colord;
   private _borderColor: Colord;
+  // Update here to include structure light and dark colors
+  private _structureColors: { light: Colord; dark: Colord };
   private _defendedBorderColors: { light: Colord; dark: Colord };
 
   constructor(
@@ -235,6 +237,11 @@ export class PlayerView {
       this._territoryColor = defaultTerritoryColor;
     }
 
+    this._structureColors = this.game
+      .config()
+      .theme()
+      .structureColors(this._territoryColor);
+
     const maybeFocusedBorderColor =
       this.game.myClientID() === this.data.clientID
         ? this.game.config().theme().focusedBorderColor()
@@ -266,6 +273,10 @@ export class PlayerView {
       this.game.y(tile),
     );
     return isPrimary ? this._territoryColor : this._borderColor;
+  }
+
+  structureColors(): { light: Colord; dark: Colord } {
+    return this._structureColors;
   }
 
   borderColor(tile?: TileRef, isDefended: boolean = false): Colord {
