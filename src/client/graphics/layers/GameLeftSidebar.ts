@@ -87,7 +87,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   render() {
     return html`
       <aside
-        class=${`fixed top-[20px] left-0 z-[1000] flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-tr-lg rounded-br-lg transition-transform duration-300 ease-out transform ${
+        class=${`fixed top-1 left-1 z-[1000] flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto bg-blue-950/70 backdrop-blur-sm shadow-xs rounded-xl transition-transform duration-300 ease-out transform ${
           this.isVisible ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -105,11 +105,9 @@ export class GameLeftSidebar extends LitElement implements Layer {
             `
           : null}
         <div
-          class=${`flex items-center gap-2 space-x-2 text-white ${
-            this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
-          }`}
+          class=${`flex items-center gap-2 space-x-2 text-white`}
         >
-          <div class="w-6 h-6 cursor-pointer" @click=${this.toggleLeaderboard}>
+          <div class="w-6 h-6 m-2 cursor-pointer" @click=${this.toggleLeaderboard}>
             <img
               src=${this.isLeaderboardShow
                 ? leaderboardSolidIcon
@@ -137,7 +135,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
               `
             : null}
         </div>
-        <div class="block lg:flex flex-wrap gap-2">
+        <div class="block lg:flex flex-wrap">
           <leader-board .visible=${this.isLeaderboardShow}></leader-board>
           <team-stats
             class="flex-1"
