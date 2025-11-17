@@ -118,7 +118,7 @@ export class PlayerExecution implements Execution {
     if (main === undefined) throw new Error("No clusters");
     this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
     const surroundedBy = this.surroundedBySamePlayer(main);
-    if (surroundedBy && !this.player.isFriendly(surroundedBy)) {
+    if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
       this.removeCluster(main);
     }
 
@@ -132,12 +132,8 @@ export class PlayerExecution implements Execution {
   private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
     const enemies = new Set<number>();
     for (const tile of cluster) {
-      const isOceanShore = this.mg.isOceanShore(tile);
-      if (this.mg.isOceanShore(tile) && !isOceanShore) {
-        continue;
-      }
       if (
-        isOceanShore ||
+        this.mg.isOceanShore(tile) ||
         this.mg.isOnEdgeOfMap(tile) ||
         this.mg.neighbors(tile).some((n) => !this.mg?.hasOwner(n))
       ) {

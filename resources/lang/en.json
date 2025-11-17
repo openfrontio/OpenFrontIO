@@ -135,17 +135,20 @@
   },
   "single_modal": {
     "title": "Single Player",
+    "random_spawn": "Random spawn",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "instant_build": "Instant build",
     "infinite_gold": "Infinite gold",
     "infinite_troops": "Infinite troops",
-    "compact_map": "Mini Map",
+    "compact_map": "Compact Map",
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
+    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "start": "Start Game"
   },
@@ -157,6 +160,7 @@
   "account_modal": {
     "title": "Account",
     "logged_in_as": "Logged in as {email}",
+    "fetching_account": "Fetching account information...",
     "logged_in_with_discord": "Logged in with Discord",
     "recovery_email_sent": "Recovery email sent to {email}"
   },
@@ -192,7 +196,9 @@
     "japan": "Japan",
     "yenisei": "Yenisei",
     "pluto": "Pluto",
-    "montreal": "Montreal"
+    "montreal": "Montreal",
+    "achiran": "Achiran",
+    "baikalnukewars": "Baikal (Nuke Wars)"
   },
   "map_categories": {
     "continental": "Continental",
@@ -220,6 +226,7 @@
     "teams_Duos": "Duos (teams of 2)",
     "teams_Trios": "Trios (teams of 3)",
     "teams_Quads": "Quads (teams of 4)",
+    "teams_hvn": "Humans Vs Nations",
     "teams": "{num} teams"
   },
   "matchmaking_modal": {
@@ -242,6 +249,7 @@
     "options_title": "Options",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
+    "nations": "Nations: ",
     "disable_nations": "Disable Nations",
     "max_timer": "Game length (minutes)",
     "instant_build": "Instant build",
@@ -250,10 +258,12 @@
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
     "compact_map": "Mini Map",
+    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
     "waiting": "Waiting for players...",
+    "random_spawn": "Random spawn",
     "start": "Start Game",
     "host_badge": "Host"
   },
@@ -269,8 +279,8 @@
   },
   "game_starting_modal": {
     "title": "Game is Starting...",
-    "code_license": "Code licensed under AGPL-3.0",
-    "desc": "Preparing for the lobby to start. Please wait."
+    "credits": "Credits",
+    "code_license": "Code licensed under AGPL-3.0 (no warranty)"
   },
   "difficulty": {
     "difficulty": "Difficulty",
@@ -322,8 +332,8 @@
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
     "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
-    "territory_patterns_label": "🏳️ Territory Patterns",
-    "territory_patterns_desc": "Choose whether to display territory pattern designs in game",
+    "territory_patterns_label": "🏳️ Territory Skins",
+    "territory_patterns_desc": "Choose whether to display territory skin designs in game",
     "performance_overlay_label": "Performance Overlay",
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "easter_writing_speed_label": "Writing Speed Multiplier",
@@ -352,6 +362,8 @@
     "build_atom_bomb_desc": "Build an Atom Bomb under your cursor.",
     "build_hydrogen_bomb": "Build Hydrogen Bomb",
     "build_hydrogen_bomb_desc": "Build a Hydrogen Bomb under your cursor.",
+    "build_mirv": "Build MIRV",
+    "build_mirv_desc": "Build a MIRV under your cursor.",
     "attack_ratio_controls": "Attack Ratio Controls",
     "attack_ratio_up": "Increase Attack Ratio",
     "attack_ratio_up_desc": "Increase attack ratio by 10%",
@@ -502,7 +514,13 @@
     "exit": "Exit Game",
     "keep": "Keep Playing",
     "spectate": "Spectate",
-    "wishlist": "Wishlist on Steam!"
+    "wishlist": "Wishlist on Steam!",
+    "ofm_winter": "OpenFront Masters Winter Tournament!",
+    "ofm_winter_description": "Join the competitive tournament and compete against the best players",
+    "join_tournament": "Join Tournament",
+    "join_discord": "Join Our Discord Community!",
+    "discord_description": "Connect with other players, get updates, and share strategies",
+    "join_server": "Join Server"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -560,8 +578,10 @@
     "accept_alliance": "Accept",
     "reject_alliance": "Reject",
     "alliance_renewed": "Your alliance with {name} has been renewed",
+    "wants_to_renew_alliance": "{name} wants to renew your alliance",
     "ignore": "Ignore",
-    "unit_voluntarily_deleted": "Unit voluntarily deleted"
+    "unit_voluntarily_deleted": "Unit voluntarily deleted",
+    "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends"
   },
   "unit_info_modal": {
     "structure_info": "Structure Info",
@@ -602,6 +622,8 @@
     "nuke": "Nukes sent by them to you",
     "start_trade": "Start Trading",
     "stop_trade": "Stop Trading",
+    "stop_trade_all": "Stop Trading with All",
+    "start_trade_all": "Start Trading with All",
     "alliances": "Alliances",
     "flag": "Flag",
     "chat": "Chat",
@@ -643,53 +665,40 @@
     "copy_clipboard": "Copy to clipboard",
     "copied": "Copied!",
     "failed_copy": "Failed to copy",
+    "spawn_failed": {
+      "title": "Spawn failed",
+      "description": "Automatic spawn selection failed. You can't play this game."
+    },
     "desync_notice": "You are desynced from other players. What you see might differ from other players."
   },
+  "performance_overlay": {
+    "reset": "Reset",
+    "copy_json_title": "Copy current performance metrics as JSON",
+    "copy_clipboard": "Copy JSON",
+    "copied": "Copied!",
+    "failed_copy": "Failed to copy",
+    "fps": "FPS:",
+    "avg_60s": "Avg (60s):",
+    "frame": "Frame:",
+    "tick_exec": "Tick Exec:",
+    "tick_delay": "Tick Delay:",
+    "layers_header": "Layers (avg / max, sorted by total time):"
+  },
   "heads_up_message": {
-    "choose_spawn": "Choose a starting location"
+    "choose_spawn": "Choose a starting location",
+    "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
   },
   "territory_patterns": {
     "title": "Skins",
     "colors": "Colors",
     "purchase": "Purchase",
+    "show_only_owned": "My Skins",
     "blocked": {
-      "login": "You must be logged in to access this pattern.",
-      "purchase": "Purchase this pattern to unlock it."
+      "login": "You must be logged in to access this skin.",
+      "purchase": "Purchase this skin to unlock it."
     },
     "pattern": {
-      "default": "Default",
-      "custom": "Custom",
-      "stripes_v": "Vertical",
-      "stripes_h": "Horizontal",
-      "horizontal_stripes": "Horizontal (Alt)",
-      "vertical_bars": "Vertical (Alt)",
-      "checkerboard": "Checkerboard",
-      "choco": "Choco",
-      "diagonal": "Diagonal",
-      "cross": "Cross",
-      "mini_cross": "Mini Cross",
-      "sword": "Sword",
-      "sparse_dots": "Sparse Dots",
-      "evan": "Evan",
-      "diagonal_stripe": "Diagonal Stripe",
-      "mountain_ridge": "Mountain Ridge",
-      "scattered_dots": "Scattered Dots",
-      "circuit_board": "Circuit Board",
-      "shells": "Shells",
-      "-w-": ".w.",
-      "white_rabbit": "White Rabbit",
-      "goat": "Goat",
-      "cats": "Cats",
-      "cursor": "Cursor",
-      "hand": "Hand",
-      "radiation": "Radiation",
-      "openfront_qr": "OpenFront.io QR code",
-      "openfront": "OpenFront",
-      "t_rex": "T-Rex",
-      "embelem": "Emblem",
-      "contributor": "Contributor",
-      "grogu_head": "Grogu Head",
-      "grogu": "Grogu"
+      "default": "Default"
     }
   },
   "flag_input": {

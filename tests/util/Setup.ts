@@ -67,6 +67,7 @@ export async function setup(
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
+    randomSpawn: false,
     ..._gameConfig,
   };
   const config = new TestConfig(

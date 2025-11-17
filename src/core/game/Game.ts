@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -52,6 +53,7 @@ export type Team = string;
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
 export const Quads = "Quads" as const;
+export const HumansVsNations = "Humans Vs Nations" as const;
 
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
@@ -62,6 +64,8 @@ export const ColoredTeams: Record<string, Team> = {
   Orange: "Orange",
   Green: "Green",
   Bot: "Bot",
+  Humans: "Humans",
+  Nations: "Nations",
 } as const;
 
 export enum GameMapType {
@@ -95,6 +99,8 @@ export enum GameMapType {
   Yenisei = "Yenisei",
   Pluto = "Pluto",
   Montreal = "Montreal",
+  Achiran = "Achiran",
+  BaikalNukeWars = "Baikal (Nuke Wars)",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -135,6 +141,8 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Pluto,
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
+    GameMapType.Achiran,
+    GameMapType.BaikalNukeWars,
   ],
 };
 
@@ -202,6 +210,7 @@ const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
   UnitType.Port,
+  UnitType.Factory,
 ]);
 
 export function isStructureType(type: UnitType): boolean {
@@ -263,7 +272,9 @@ export interface UnitParamsMap {
 
   [UnitType.City]: Record<string, never>;
 
-  [UnitType.MIRV]: Record<string, never>;
+  [UnitType.MIRV]: {
+    targetTile?: number;
+  };
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
@@ -404,13 +415,7 @@ export class PlayerInfo {
     public readonly id: PlayerID,
     public readonly nation?: Nation | null,
   ) {
-    // Compute clan from name
-    if (!name.startsWith("[") || !name.includes("]")) {
-      this.clan = null;
-    } else {
-      const clanMatch = name.match(/^\[([a-zA-Z]{2,5})\]/);
-      this.clan = clanMatch ? clanMatch[1] : null;
-    }
+    this.clan = getClanTag(name);
   }
 }
 
@@ -446,6 +451,7 @@ export interface Unit {
   toUpdate(): UnitUpdate;
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
+  wasDestroyedByEnemy(): boolean;
 
   // Train
   trainType(): TrainType | undefined;
@@ -602,6 +608,7 @@ export interface Player {
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
+  betrayals(): number;
 
   // Targeting
   canTarget(other: Player): boolean;
@@ -621,6 +628,8 @@ export interface Player {
   donateGold(recipient: Player, gold: Gold): boolean;
   canDeleteUnit(): boolean;
   recordDeleteUnit(): void;
+  canEmbargoAll(): boolean;
+  recordEmbargoAll(): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
@@ -648,7 +657,6 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
-  tradingPorts(port: Unit): Unit[];
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
@@ -743,6 +751,7 @@ export interface PlayerActions {
   canAttack: boolean;
   buildableUnits: BuildableUnit[];
   canSendEmojiAllPlayers: boolean;
+  canEmbargoAll?: boolean;
   interaction?: PlayerInteraction;
 }
 

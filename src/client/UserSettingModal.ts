@@ -523,8 +523,8 @@ export class UserSettingModal extends LitElement {
 
       <setting-keybind
         action="buildMIRV"
-        label=${translateText("user_setting.build_MIRV")}
-        description=${translateText("user_setting.build_MIRV_desc")}
+        label=${translateText("user_setting.build_mirv")}
+        description=${translateText("user_setting.build_mirv_desc")}
         defaultKey="Digit0"
         .value=${this.keybinds["buildMIRV"]?.key ?? ""}
         @change=${this.handleKeybindChange}

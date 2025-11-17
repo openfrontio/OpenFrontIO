@@ -21,7 +21,7 @@ import {
   ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
-import { createPartialGameRecord } from "../core/Util";
+import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 export enum GamePhase {
@@ -114,6 +114,9 @@ export class GameServer {
     }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
+    }
+    if (gameConfig.randomSpawn !== undefined) {
+      this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
@@ -398,6 +401,7 @@ export class GameServer {
 
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
+      lobbyCreatedAt: this.createdAt,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
@@ -436,6 +440,7 @@ export class GameServer {
           type: "start",
           turns: this.turns.slice(lastTurn),
           gameStartInfo: this.gameStartInfo,
+          lobbyCreatedAt: this.createdAt,
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
@@ -689,6 +694,7 @@ export class GameServer {
             this.allClients.get(player.clientID)?.persistentID ?? "",
           stats,
           cosmetics: player.cosmetics,
+          clanTag: getClanTag(player.username) ?? undefined,
         } satisfies PlayerRecord;
       },
     );
@@ -702,6 +708,7 @@ export class GameServer {
           this._startTime ?? 0,
           Date.now(),
           this.winner?.winner,
+          this.createdAt,
         ),
       ),
     );
