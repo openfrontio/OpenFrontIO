@@ -671,6 +671,19 @@
     },
     "desync_notice": "You are desynced from other players. What you see might differ from other players."
   },
+  "performance_overlay": {
+    "reset": "Reset",
+    "copy_json_title": "Copy current performance metrics as JSON",
+    "copy_clipboard": "Copy JSON",
+    "copied": "Copied!",
+    "failed_copy": "Failed to copy",
+    "fps": "FPS:",
+    "avg_60s": "Avg (60s):",
+    "frame": "Frame:",
+    "tick_exec": "Tick Exec:",
+    "tick_delay": "Tick Delay:",
+    "layers_header": "Layers (avg / max, sorted by total time):"
+  },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
     "random_spawn": "Random spawn is enabled. Selecting starting location for you..."
