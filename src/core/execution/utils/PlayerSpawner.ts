@@ -69,6 +69,7 @@ export class PlayerSpawner {
         continue;
       }
 
+      player.setSpawnTile(spawnLand);
       this.players.push(new SpawnExecution(player.info(), spawnLand));
     }
 

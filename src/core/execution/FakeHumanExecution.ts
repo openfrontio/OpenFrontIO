@@ -76,7 +76,6 @@ export class FakeHumanExecution implements Execution {
   constructor(
     gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.FakeHuman
-    otherPlayerSpawns?: TileRef[],
   ) {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
@@ -86,7 +85,6 @@ export class FakeHumanExecution implements Execution {
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
     this.reserveRatio = this.random.nextInt(30, 40) / 100;
     this.expandRatio = this.random.nextInt(10, 20) / 100;
-    this.otherPlayerSpawns = otherPlayerSpawns ?? [];
   }
 
   init(mg: Game) {
@@ -162,6 +160,7 @@ export class FakeHumanExecution implements Execution {
         console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
       }
+      this.mg.addPlayer(this.nation.playerInfo).setSpawnTile(rl);
       this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
       return;
     }
@@ -647,11 +646,18 @@ export class FakeHumanExecution implements Execution {
       }
       const tile = this.mg.ref(x, y);
 
-      const isOtherPlayerSpawnedNearby = this.otherPlayerSpawns.some(
-        (spawnTile) =>
+      const isOtherPlayerSpawnedNearby = this.mg.allPlayers().some((player) => {
+        const spawnTile = player.spawnTile();
+
+        if (spawnTile === undefined) {
+          return;
+        }
+
+        return (
           this.mg.manhattanDist(spawnTile, tile) <
-          this.mg.config().minDistanceBetweenPlayers(),
-      );
+          this.mg.config().minDistanceBetweenPlayers()
+        );
+      });
 
       if (isOtherPlayerSpawnedNearby) {
         continue;

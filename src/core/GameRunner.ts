@@ -101,27 +101,17 @@ export class GameRunner {
 
   init() {
     // Accumulate spawn tiles across player types to prevent proximity conflicts
-    const playerSpawnTiles: TileRef[] = [];
 
     if (this.game.config().isRandomSpawn()) {
-      const humanSpawnExecutions = this.execManager.spawnPlayers();
-
-      playerSpawnTiles.push(...humanSpawnExecutions.map(({ tile }) => tile));
-      this.game.addExecution(...humanSpawnExecutions);
+      this.game.addExecution(...this.execManager.spawnPlayers());
     }
     if (this.game.config().bots() > 0) {
-      const botSpawnExecutions = this.execManager.spawnBots(
-        this.game.config().numBots(),
-        playerSpawnTiles,
+      this.game.addExecution(
+        ...this.execManager.spawnBots(this.game.config().numBots()),
       );
-
-      playerSpawnTiles.push(...botSpawnExecutions.map(({ tile }) => tile));
-      this.game.addExecution(...botSpawnExecutions);
     }
     if (this.game.config().spawnNPCs()) {
-      this.game.addExecution(
-        ...this.execManager.fakeHumanExecutions(playerSpawnTiles),
-      );
+      this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
     this.game.addExecution(new WinCheckExecution());
   }
