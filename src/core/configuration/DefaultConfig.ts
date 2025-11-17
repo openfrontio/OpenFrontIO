@@ -8,6 +8,7 @@ import {
   GameMode,
   GameType,
   Gold,
+  HumansVsNations,
   Player,
   PlayerInfo,
   PlayerType,
@@ -50,6 +51,7 @@ const numPlayersConfig = {
   [GameMapType.Australia]: [70, 40, 30],
   [GameMapType.Achiran]: [40, 36, 30],
   [GameMapType.Baikal]: [100, 70, 50],
+  [GameMapType.BaikalNukeWars]: [100, 70, 50],
   [GameMapType.BetweenTwoSeas]: [70, 50, 40],
   [GameMapType.BlackSea]: [50, 30, 30],
   [GameMapType.Britannia]: [50, 30, 20],
@@ -195,6 +197,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
       case Quads:
         p -= p % 4;
         break;
+      case HumansVsNations:
+        // For HumansVsNations, return the base team player count
+        break;
       default:
         p -= p % numPlayerTeams;
         break;
@@ -213,6 +218,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   workerPortByIndex(index: number): number {
     return 3001 + index;
+  }
+  enableMatchmaking(): boolean {
+    return false;
   }
 }
 
@@ -328,6 +336,9 @@ export class DefaultConfig implements Config {
   }
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
+  }
+  isRandomSpawn(): boolean {
+    return this._gameConfig.randomSpawn;
   }
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
@@ -579,6 +590,7 @@ export class DefaultConfig implements Config {
   deletionMarkDuration(): Tick {
     return 30 * 10;
   }
+
   deleteUnitCooldown(): Tick {
     return 30 * 10;
   }
@@ -908,6 +920,15 @@ export class DefaultConfig implements Config {
 
   defaultSamRange(): number {
     return 70;
+  }
+
+  samRange(level: number): number {
+    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
+    return this.maxSamRange() - 480 / (level + 5);
+  }
+
+  maxSamRange(): number {
+    return 150;
   }
 
   defaultSamMissileSpeed(): number {

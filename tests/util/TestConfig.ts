@@ -54,6 +54,10 @@ export class TestConfig extends DefaultConfig {
     return 20;
   }
 
+  samRange(level: number): number {
+    return 20;
+  }
+
   spawnImmunityDuration(): Tick {
     return 0;
   }

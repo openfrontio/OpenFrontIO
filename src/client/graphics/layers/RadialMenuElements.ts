@@ -583,16 +583,10 @@ export const rootMenuElement: MenuElement = {
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
-      boatMenuElement,
-      ally,
+      ...(isOwnTerritory
+        ? [deleteUnitElement, ally, buildMenuElement]
+        : [boatMenuElement, ally, attackMenuElement]),
     ];
-
-    if (isOwnTerritory) {
-      menuItems.push(buildMenuElement);
-      menuItems.push(deleteUnitElement);
-    } else {
-      menuItems.push(attackMenuElement);
-    }
 
     return menuItems.filter((item): item is MenuElement => item !== null);
   },

@@ -7,6 +7,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -67,10 +68,13 @@ const TEAM_COUNTS = [
   Duos,
   Trios,
   Quads,
+  HumansVsNations,
 ] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
+
+  constructor(private disableTeams: boolean = false) {}
 
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
@@ -89,8 +93,10 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
+      maxTimerValue: undefined,
       instantBuild: false,
-      disableNPCs: mode === GameMode.Team,
+      randomSpawn: false,
+      disableNPCs: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
       bots: 400,
@@ -138,14 +144,18 @@ export class MapPlaylist {
       if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
         return false;
       }
-      if (!this.addNextMap(this.mapsPlaylist, team1, GameMode.Team)) {
-        return false;
+      if (!this.disableTeams) {
+        if (!this.addNextMap(this.mapsPlaylist, team1, GameMode.Team)) {
+          return false;
+        }
       }
       if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
         return false;
       }
-      if (!this.addNextMap(this.mapsPlaylist, team2, GameMode.Team)) {
-        return false;
+      if (!this.disableTeams) {
+        if (!this.addNextMap(this.mapsPlaylist, team2, GameMode.Team)) {
+          return false;
+        }
       }
       if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
         return false;

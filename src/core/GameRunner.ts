@@ -100,6 +100,9 @@ export class GameRunner {
   ) {}
 
   init() {
+    if (this.game.config().isRandomSpawn()) {
+      this.game.addExecution(...this.execManager.spawnPlayers());
+    }
     if (this.game.config().bots() > 0) {
       this.game.addExecution(
         ...this.execManager.spawnBots(this.game.config().numBots()),

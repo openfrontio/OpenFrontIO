@@ -109,8 +109,14 @@ export class GameServer {
     if (gameConfig.donateTroops !== undefined) {
       this.gameConfig.donateTroops = gameConfig.donateTroops;
     }
+    if (gameConfig.maxTimerValue !== undefined) {
+      this.gameConfig.maxTimerValue = gameConfig.maxTimerValue;
+    }
     if (gameConfig.instantBuild !== undefined) {
       this.gameConfig.instantBuild = gameConfig.instantBuild;
+    }
+    if (gameConfig.randomSpawn !== undefined) {
+      this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
@@ -395,6 +401,7 @@ export class GameServer {
 
     const result = GameStartInfoSchema.safeParse({
       gameID: this.id,
+      lobbyCreatedAt: this.createdAt,
       config: this.gameConfig,
       players: this.activeClients.map((c) => ({
         username: c.username,
@@ -433,6 +440,7 @@ export class GameServer {
           type: "start",
           turns: this.turns.slice(lastTurn),
           gameStartInfo: this.gameStartInfo,
+          lobbyCreatedAt: this.createdAt,
         } satisfies ServerStartGameMessage),
       );
     } catch (error) {
@@ -700,6 +708,7 @@ export class GameServer {
           this._startTime ?? 0,
           Date.now(),
           this.winner?.winner,
+          this.createdAt,
         ),
       ),
     );
@@ -827,7 +836,7 @@ export class GameServer {
 
     const ratio = `${potentialWinner.ips.size}/${activeUniqueIPs.size}`;
     this.log.info(
-      `recieved winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
+      `received winner vote ${clientMsg.winner}, ${ratio} votes for this winner`,
       {
         clientID: client.clientID,
       },

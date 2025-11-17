@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
-import { translateText } from "../../Utils";
+import { getSvgAspectRatio, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
   CenterButtonElement,
@@ -542,7 +542,7 @@ export class RadialMenu implements Layer {
             .style("opacity", disabled ? 0.5 : 1)
             .text(d.data.text);
         } else {
-          content
+          const imgSel = content
             .append("image")
             .attr("xlink:href", d.data.icon!)
             .attr("width", this.config.iconSize)
@@ -550,6 +550,25 @@ export class RadialMenu implements Layer {
             .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
             .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2)
             .attr("opacity", disabled ? 0.5 : 1);
+
+          getSvgAspectRatio(d.data.icon!).then((aspect) => {
+            if (!aspect || aspect === 1) return;
+
+            let width = this.config.iconSize;
+            let height = this.config.iconSize;
+            const biggerLength = Math.round(width * aspect);
+            if (aspect > 1) {
+              width = biggerLength;
+            } else {
+              height = biggerLength;
+            }
+
+            imgSel
+              .attr("width", width)
+              .attr("height", height)
+              .attr("x", arc.centroid(d)[0] - width / 2)
+              .attr("y", arc.centroid(d)[1] - height / 2);
+          });
 
           if (this.params && d.data.cooldown?.(this.params)) {
             const cooldown = Math.ceil(d.data.cooldown?.(this.params));

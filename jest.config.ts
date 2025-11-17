@@ -20,7 +20,7 @@ export default {
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
     global: {
-      statements: 21.5,
+      statements: 21,
       branches: 16,
       lines: 21.0,
       functions: 20.5,

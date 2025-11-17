@@ -71,6 +71,7 @@ export class PlayerImpl implements Player {
   private _troops: bigint;
 
   markedTraitorTick = -1;
+  private _betrayalCount: number = 0;
 
   private embargoes = new Map<PlayerID, Embargo>();
 
@@ -123,7 +124,6 @@ export class PlayerImpl implements Player {
     const outgoingAllianceRequests = this.outgoingAllianceRequests().map((ar) =>
       ar.recipient().id(),
     );
-    const stats = this.mg.stats().getPlayerStats(this);
 
     return {
       type: GameUpdateType.Player,
@@ -174,7 +174,7 @@ export class PlayerImpl implements Player {
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
-      betrayals: stats?.betrayals,
+      betrayals: this._betrayalCount,
       lastDeleteUnitTick: this.lastDeleteUnitTick,
     };
   }
@@ -441,9 +441,14 @@ export class PlayerImpl implements Player {
 
   markTraitor(): void {
     this.markedTraitorTick = this.mg.ticks();
+    this._betrayalCount++; // Keep count for FakeHumans too
 
-    // Record stats
+    // Record stats (only for real Humans)
     this.mg.stats().betray(this);
+  }
+
+  betrayals(): number {
+    return this._betrayalCount;
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest | null {
@@ -900,6 +905,9 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (this._gold < this.mg.config().unitInfo(unit.type()).cost(this)) {
+      return false;
+    }
+    if (unit.owner() !== this) {
       return false;
     }
     return true;

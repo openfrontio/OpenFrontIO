@@ -3,6 +3,7 @@ import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AdTimer } from "./layers/AdTimer";
@@ -22,11 +23,13 @@ import { Leaderboard } from "./layers/Leaderboard";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
+import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
+import { SAMRadiusLayer } from "./layers/SAMRadiusLayer";
 import { SettingsModal } from "./layers/SettingsModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureIconsLayer } from "./layers/StructureIconsLayer";
@@ -201,6 +204,12 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
+  const samRadiusLayer = new SAMRadiusLayer(
+    game,
+    eventBus,
+    transformHandler,
+    uiState,
+  );
 
   const performanceOverlay = document.querySelector(
     "performance-overlay",
@@ -232,9 +241,11 @@ export function createRenderer(
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game, transformHandler),
     structureLayer,
+    samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
     new FxLayer(game),
     new UILayer(game, eventBus, transformHandler),
+    new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
@@ -333,6 +344,7 @@ export class GameRenderer {
   }
 
   renderGame() {
+    FrameProfiler.clear();
     const start = performance.now();
     // Set background
     this.context.fillStyle = this.game
@@ -365,7 +377,10 @@ export class GameRenderer {
         needsTransform,
         isTransformActive,
       );
+
+      const layerStart = FrameProfiler.start();
       layer.renderLayer?.(this.context);
+      FrameProfiler.end(layer.constructor?.name ?? "UnknownLayer", layerStart);
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -373,7 +388,8 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    this.performanceOverlay.updateFrameMetrics(duration);
+    const layerDurations = FrameProfiler.consume();
+    this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
 
     if (duration > 50) {
       console.warn(
