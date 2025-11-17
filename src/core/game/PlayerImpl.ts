@@ -102,7 +102,7 @@ export class PlayerImpl implements Player {
   public _outgoingLandAttacks: Attack[] = [];
 
   private _hasSpawned = false;
-  private _spawnTile: TileRef;
+  private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
 
   constructor(

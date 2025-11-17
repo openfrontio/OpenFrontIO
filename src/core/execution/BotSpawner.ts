@@ -53,7 +53,7 @@ export class BotSpawner {
       const spawnTile = player.spawnTile();
 
       if (spawnTile === undefined) {
-        return;
+        return false;
       }
 
       return (

@@ -35,7 +35,6 @@ export class FakeHumanExecution implements Execution {
   private behavior: BotBehavior | null = null; // Shared behavior logic for both bots and fakehumans
   private mg: Game;
   private player: Player | null = null;
-  private otherPlayerSpawns: TileRef[] = [];
 
   private attackRate: number;
   private attackTick: number;
@@ -650,7 +649,7 @@ export class FakeHumanExecution implements Execution {
         const spawnTile = player.spawnTile();
 
         if (spawnTile === undefined) {
-          return;
+          return false;
         }
 
         return (
