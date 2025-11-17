@@ -40,14 +40,6 @@ export class BotSpawner {
     if (!this.gs.isLand(tile)) {
       return null;
     }
-    for (const spawn of this.bots) {
-      if (
-        this.gs.manhattanDist(spawn.tile, tile) <
-        this.gs.config().minDistanceBetweenPlayers()
-      ) {
-        return null;
-      }
-    }
 
     const isOtherPlayerSpawnedNearby = this.gs.allPlayers().some((player) => {
       const spawnTile = player.spawnTile();
