@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { PastelTheme } from "../core/configuration/PastelTheme";
 import {
   ColoredTeams,
@@ -32,7 +33,7 @@ export class LobbyTeamView extends LitElement {
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
 
   private theme: PastelTheme = new PastelTheme();
-  private showTeamColors: boolean = false;
+  @state() private showTeamColors: boolean = false;
 
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
@@ -61,35 +62,49 @@ export class LobbyTeamView extends LitElement {
   private renderTeamMode() {
     const active = this.teamPreview.filter((t) => t.players.length > 0);
     const empty = this.teamPreview.filter((t) => t.players.length === 0);
-    return html` <div class="flex gap-4 items-stretch max-h-[65vh]">
+    return html` <div
+      class="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch max-h-[65vh]"
+    >
       <div
-        class="w-60 bg-gray-800 p-2 border border-gray-700 rounded-lg max-h-[65vh] overflow-auto"
+        class="w-full md:w-60 bg-gray-800 p-2 border border-gray-700 rounded-lg max-h-40 md:max-h-[65vh] overflow-auto"
       >
-        <div class="font-bold mb-1.5 text-gray-300">
+        <div class="font-bold mb-1.5 text-gray-300 text-sm">
           ${translateText("host_modal.players")}
         </div>
-        ${this.clients.map(
+        ${repeat(
+          this.clients,
+          (c) => c.clientID ?? c.username,
           (client) =>
             html`<div class="px-2 py-1 rounded bg-gray-700/70 mb-1 text-xs">
               ${client.username}
             </div>`,
         )}
       </div>
-      <div class="flex-1 flex flex-col gap-4 overflow-auto max-h-[65vh] pr-1">
+      <div
+        class="flex-1 flex flex-col gap-3 md:gap-4 overflow-auto max-h-[65vh] md:pr-1"
+      >
         <div>
-          <div class="font-semibold text-gray-200 mb-1">
+          <div class="font-semibold text-gray-200 mb-1 text-sm">
             ${translateText("host_modal.assigned_teams")}
           </div>
-          <div class="w-full grid grid-cols-2 gap-3">
-            ${active.map((preview) => this.renderTeamCard(preview, false))}
+          <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
+            ${repeat(
+              active,
+              (p) => p.team,
+              (preview) => this.renderTeamCard(preview, false),
+            )}
           </div>
         </div>
         <div>
-          <div class="font-semibold text-gray-200 mb-1">
+          <div class="font-semibold text-gray-200 mb-1 text-sm">
             ${translateText("host_modal.empty_teams")}
           </div>
-          <div class="w-full grid grid-cols-2 gap-3">
-            ${empty.map((preview) => this.renderTeamCard(preview, true))}
+          <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
+            ${repeat(
+              empty,
+              (p) => p.team,
+              (preview) => this.renderTeamCard(preview, true),
+            )}
           </div>
         </div>
       </div>
@@ -97,7 +112,9 @@ export class LobbyTeamView extends LitElement {
   }
 
   private renderFreeForAll() {
-    return html`${this.clients.map(
+    return html`${repeat(
+      this.clients,
+      (c) => c.clientID ?? c.username,
       (client) =>
         html`<span class="player-tag">
           ${client.username}
@@ -109,6 +126,9 @@ export class LobbyTeamView extends LitElement {
                 class="remove-player-btn"
                 @click=${() => this.onKickPlayer?.(client.clientID)}
                 title=${translateText("host_modal.remove_player", {
+                  username: client.username,
+                })}
+                aria-label=${translateText("host_modal.remove_player", {
                   username: client.username,
                 })}
               >
@@ -140,7 +160,9 @@ export class LobbyTeamView extends LitElement {
             ? html`<div class="text-[11px] italic text-gray-400">
                 ${translateText("host_modal.empty_team")}
               </div>`
-            : preview.players.map(
+            : repeat(
+                preview.players,
+                (p) => p.clientID ?? p.username,
                 (p) =>
                   html` <div
                     class="bg-gray-700/70 px-2 py-1 rounded text-xs flex items-center justify-between"
@@ -156,6 +178,12 @@ export class LobbyTeamView extends LitElement {
                           title=${translateText("host_modal.remove_player", {
                             username: p.username,
                           })}
+                          aria-label=${translateText(
+                            "host_modal.remove_player",
+                            {
+                              username: p.username,
+                            },
+                          )}
                         >
                           ×
                         </button>`}
