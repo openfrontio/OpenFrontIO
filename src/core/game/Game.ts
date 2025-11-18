@@ -597,7 +597,7 @@ export interface Player {
   decayRelations(): void;
   isOnSameTeam(other: Player): boolean;
   // Either allied or on same team.
-  isFriendly(other: Player): boolean;
+  isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
   team(): Team | null;
   clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
