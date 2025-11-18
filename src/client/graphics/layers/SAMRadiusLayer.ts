@@ -7,11 +7,7 @@ import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
-const TILE_KEY_SHIFT = 16;
-const TILE_KEY_MASK = 0xffff;
-
-const encodeTileKey = (x: number, y: number): number =>
-  ((x & TILE_KEY_MASK) << TILE_KEY_SHIFT) | (y & TILE_KEY_MASK);
+const encodeTileKey = (x: number, y: number): string => `${x},${y}`;
 
 type CachedSam = {
   id: number;
@@ -29,7 +25,7 @@ export class SAMRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
   private readonly samLaunchers: Map<number, CachedSam> = new Map();
-  private readonly samStacksByTile: Map<number, CachedSam[]> = new Map();
+  private readonly samStacksByTile: Map<string, CachedSam[]> = new Map();
   private cachedSamCircles: CachedSam[] = [];
   private needsRedraw = true;
   // track whether the stroke should be shown due to hover or due to an active build ghost
