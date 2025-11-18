@@ -62,8 +62,7 @@ export interface EdgeMetrics {
  */
 export interface StationTraffic {
   trainCount: number; // Current number of trains at station
-  recentArrivals: number; // Trains arrived in last N ticks
-  heat: number; // Congestion heat (0-1, decays over time)
+  heat: number; // Congestion heat (unbounded, decays over time)
   lastHeatUpdate: number;
 }
 
@@ -148,8 +147,18 @@ export class TrainStation {
   private lastOriginatorBroadcast: number = 0;
   private routesChanged: boolean = false;
   private changedRoutes: Set<TrainStation> = new Set();
-  private maxHops: number = 20;
-  private routeStaleThreshold: number = 500; // ticks
+
+  private readonly maxHops: number = 20;
+  private readonly routeStaleThreshold: number = 500; // ticks
+  private readonly trainSearchRadius = 1; // Search up to x hops away for optimal routes through neighbors
+  // Disabling broadcasts turns routing into local-only mode!
+  // Implications:
+  // - Stations only know routes their own trains discovered
+  // - No network-wide knowledge sharing (via boradcast)
+  // - Trains get stuck in loops more easily
+  // - System becomes more like individual A* pathfinding
+
+  private readonly enableBroadcasts: boolean = false; // Enable/disable BATMAN broadcast protocol
 
   // Lazy cleanup optimization
   private cleanupIndex: number = 0;
@@ -158,21 +167,19 @@ export class TrainStation {
   // Local greedy routing properties
   private edgeMetrics: Map<TrainStation, EdgeMetrics> = new Map();
   private traffic: StationTraffic;
-  private profitSensitivity: number = 0.3; // How much profit-per-distance boosts scores
-  private distanceSensitivity: number = 0.2; // How much distance increases duration penalties
-  private stationHeatSensitivity: number = 0.4; // How much station heat reduces scores
-  private recencyDecayFactor: number = 0.1; // Exponential decay rate for recency penalties
-  private maxRecencyPenalty: number = 1; // Maximum penalty for immediate revisits
-  // Disabling broadcasts turns routing into local-only mode!
-  // Implications:
-  // - Stations only know routes their own trains discovered
-  // - No network-wide knowledge sharing (BATMAN protocol disabled)
-  // - Trains get stuck in loops more easily
-  // - Route discovery becomes slower and less efficient
-  // - System becomes more like individual A* pathfinding
-  // - Lower memory usage but higher train congestion
-  private enableBroadcasts: boolean = false; // Enable/disable BATMAN broadcast protocol
-  private randomChoiceProbability: number = 0.1; // Probability of making random choice instead of best (0.1 = 10%)
+  private readonly profitSensitivity: number = 0.3; // How much profit-per-distance boosts scores
+
+  private readonly distanceSensitivity: number = 0.2; // How much distance increases duration penalties
+  private readonly stationHeatSensitivity: number = 0.4; // How much station heat reduces scores
+  private readonly heatDecayInterval: number = 60; // How often heat decays (ticks)
+  private readonly heatDecayFactor: number = 1 - 0.1; // How much heat decays per time (0.95 = 5% decay)
+  private readonly recencyDecayFactor: number = 1 - 0.2; // How much recency penalties decay per time (0.8 = 20% decay)
+  private readonly maxRecencyPenalty: number = 1; // Maximum penalty for immediate revisits
+
+  private readonly randomChoiceProbability: number = 0.1; // Probability of making random choice instead of best (0.1 = 10%)
+
+  // Pre-computed decay factors for performance (avoid Math.pow in hot path)
+  private readonly recencyDecayPowers: number[];
 
   constructor(
     private mg: Game,
@@ -187,7 +194,6 @@ export class TrainStation {
     // Initialize traffic tracking
     this.traffic = {
       trainCount: 0,
-      recentArrivals: 0,
       heat: 0,
       lastHeatUpdate: mg.ticks(),
     };
@@ -202,6 +208,15 @@ export class TrainStation {
       lastUpdate: mg.ticks(),
     });
     this.changedRoutes.add(this);
+
+    // Pre-compute recency decay factors for performance
+    // Size matches TrainExecution.recentMemorySize (50) to avoid wasted space
+    this.recencyDecayPowers = new Array(50); // max hops, fixme
+    this.recencyDecayPowers[0] = 1.0; // stationsAgo - 1 = 0: full penalty
+    for (let i = 1; i < this.recencyDecayPowers.length; i++) {
+      this.recencyDecayPowers[i] =
+        this.recencyDecayPowers[i - 1] * this.recencyDecayFactor;
+    }
   }
 
   tradeAvailable(otherPlayer: Player): boolean {
@@ -527,10 +542,9 @@ export class TrainStation {
    */
   onTrainArrival(trainExecution: TrainExecution): void {
     this.traffic.trainCount++;
-    this.traffic.recentArrivals++;
 
-    // Increase station heat
-    this.traffic.heat = Math.min(1.0, this.traffic.heat + 0.1);
+    // Increase station heat (unbounded)
+    this.traffic.heat += 0.1;
     this.traffic.lastHeatUpdate = this.mg.ticks();
   }
 
@@ -559,9 +573,12 @@ export class TrainStation {
 
     // Apply graduated recency penalty based on stations ago
     if (stationsAgo > 0) {
-      const penaltyStrength =
-        Math.pow(this.recencyDecayFactor, stationsAgo - 1) *
-        this.maxRecencyPenalty;
+      const exponent = stationsAgo - 1;
+      const decayFactor =
+        exponent < this.recencyDecayPowers.length
+          ? this.recencyDecayPowers[exponent]
+          : Math.pow(this.recencyDecayFactor, exponent);
+      const penaltyStrength = decayFactor * this.maxRecencyPenalty;
       const recencyPenalty = 1.0 - penaltyStrength;
       score *= recencyPenalty;
     }
@@ -570,7 +587,7 @@ export class TrainStation {
     score *= 1 - this.stationHeatSensitivity * neighborTrafficHeat;
 
     // Ensure unvisited stations get a minimum exploration score
-    // This prevents zero-profit unvisited stations(facttories) from being ignored
+    // This prevents zero-profit unvisited stations(factories) from being ignored
     if (stationsAgo < 0 && score <= 0) {
       score = 0.2; // Small positive score to encourage exploration
     }
@@ -600,30 +617,89 @@ export class TrainStation {
     recentStations: TrainStation[],
     trainOwner: Player,
   ): TrainStation | null {
-    // First priority: Check if we have a known route to the destination
-    const knownNextHop = this.getNextHop(destination);
-    if (knownNextHop && this.neighbors().includes(knownNextHop)) {
-      // We have a known route and the next hop is a valid neighbor
-      // With some probability, still explore instead of following known route
-      if (this.random.next() >= this.randomChoiceProbability) {
-        return knownNextHop;
-      }
-      // Otherwise, fall through to exploration mode
+    const neighbors = this.neighbors();
+
+    // First check: Pure exploration mode - if randomChoiceProbability triggers, pick completely random neighbor
+    if (
+      this.random.next() < this.randomChoiceProbability &&
+      neighbors.length > 0
+    ) {
+      const randomIndex = this.random.nextInt(0, neighbors.length);
+      return neighbors[randomIndex];
     }
 
-    // Second priority: Local greedy routing for exploration/unknown routes
-    // Trains pick highest-scoring neighbors without considering direction toward destination.
+    // Main routing logic: Check known routes (local + distributed when enabled)
+    const nextHop = this.findBestRouteTo(destination, neighbors);
+    if (nextHop) {
+      // With some probability, still explore instead of following known route
+      if (this.random.next() >= this.randomChoiceProbability) {
+        return nextHop;
+      }
+      // Otherwise, fall through to greedy routing
+    }
+
+    // Fallback: Local greedy routing for exploration/unknown routes
+    return this.chooseGreedyNeighbor(neighbors, recentStations, trainOwner);
+  }
+
+  /**
+   * Find the best known route to destination, considering both local and distributed knowledge
+   */
+  private findBestRouteTo(
+    destination: TrainStation,
+    neighbors: TrainStation[],
+  ): TrainStation | null {
+    // Always check current station first
+    const localNextHop = this.getNextHop(destination);
+    if (localNextHop && neighbors.includes(localNextHop)) {
+      return localNextHop;
+    }
+
+    // If distributed routing is enabled, check neighbors for better routes
+    if (this.trainSearchRadius > 0) {
+      const routeOptions: Array<{
+        neighbor: TrainStation;
+        totalHopCount: number;
+      }> = [];
+
+      for (const neighbor of neighbors) {
+        const neighborRoute = neighbor.routingTable.get(destination.tile());
+        if (neighborRoute && neighborRoute.hopCount <= this.trainSearchRadius) {
+          const timeSinceUpdate = this.mg.ticks() - neighborRoute.lastUpdate;
+          if (timeSinceUpdate <= this.routeStaleThreshold) {
+            routeOptions.push({
+              neighbor,
+              totalHopCount: neighborRoute.hopCount + 1, // +1 for the hop to this neighbor
+            });
+          }
+        }
+      }
+
+      if (routeOptions.length > 0) {
+        // Sort by total hop count to find the shortest path
+        routeOptions.sort((a, b) => a.totalHopCount - b.totalHopCount);
+        return routeOptions[0].neighbor;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Choose neighbor using greedy routing based on profit/distance/traffic
+   */
+  private chooseGreedyNeighbor(
+    neighbors: TrainStation[],
+    recentStations: TrainStation[],
+    trainOwner: Player,
+  ): TrainStation | null {
     const validNeighbors: Array<{ station: TrainStation; score: number }> = [];
 
-    // Evaluate all neighboring stations
-    for (const neighbor of this.neighbors()) {
+    for (const neighbor of neighbors) {
       const edge = this.edgeMetrics.get(neighbor);
       if (!edge) continue;
 
-      // Calculate actual profit based on train owner's relationship with station
       const actualProfit = this.calculateActualProfit(trainOwner, neighbor);
-
-      // Calculate how many stations ago this neighbor was visited
       const stationsAgo = this.getStationsAgo(neighbor, recentStations);
       const neighborTrafficHeat = neighbor.getTraffic().heat;
       const score = this.calculateEdgeScore(
@@ -637,28 +713,21 @@ export class TrainStation {
     }
 
     if (validNeighbors.length === 0) {
-      return null; // No valid neighbors
+      return null;
     }
 
-    // With some probability, make a random choice instead of the best
-    if (this.random.next() < this.randomChoiceProbability) {
-      // Random choice: pick any valid neighbor uniformly
-      const randomIndex = this.random.nextInt(0, validNeighbors.length);
-      return validNeighbors[randomIndex].station;
-    } else {
-      // Best choice: pick the highest scoring neighbor
-      let bestStation: TrainStation | null = null;
-      let bestScore = -Infinity;
+    // Pick the highest scoring neighbor
+    let bestStation: TrainStation | null = null;
+    let bestScore = -Infinity;
 
-      for (const { station, score } of validNeighbors) {
-        if (score > bestScore) {
-          bestScore = score;
-          bestStation = station;
-        }
+    for (const { station, score } of validNeighbors) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestStation = station;
       }
-
-      return bestStation;
     }
+
+    return bestStation;
   }
 
   /**
@@ -723,20 +792,12 @@ export class TrainStation {
     const timeSinceUpdate = currentTime - this.traffic.lastHeatUpdate;
 
     // Decay heat over time
-    if (timeSinceUpdate > 50) {
-      // Every 50 ticks
-      this.traffic.heat *= 0.95; // Decay heat by 5%
+    if (timeSinceUpdate > this.heatDecayInterval) {
+      // Every 5 ticks
+      this.traffic.heat *= this.heatDecayFactor;
       this.traffic.lastHeatUpdate = currentTime;
-
-      // Reset recent arrivals periodically
-      if (timeSinceUpdate > 200) {
-        this.traffic.recentArrivals = 0;
-      }
     }
   }
-
-  // ===== END LOCAL GREEDY ROUTING METHODS =====
-  // ===== END BATMAN ROUTING METHODS =====
 
   onTrainStop(trainExecution: TrainExecution) {
     // Update traffic - train has arrived

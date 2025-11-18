@@ -713,6 +713,7 @@ export interface Game extends GameMap {
 
   addExecution(...exec: Execution[]): void;
   recordTrainArrival(steps: number): void;
+  recordTrainRemovedDueToHopLimit(steps: number): void;
   displayMessage(
     message: string,
     type: MessageType,
