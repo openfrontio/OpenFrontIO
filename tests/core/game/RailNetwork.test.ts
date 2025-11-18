@@ -22,6 +22,7 @@ const createMockStation = (unitId: number): any => {
     addRailroad: jest.fn(),
     getRailroads: jest.fn(() => railroads),
     clearRailroads: jest.fn(),
+    onStationRemoved: jest.fn(),
   };
 };
 
