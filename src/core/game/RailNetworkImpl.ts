@@ -107,6 +107,7 @@ export class RailNetworkImpl implements RailNetwork {
 
     const neighbors = station.neighbors();
     this.disconnectFromNetwork(station);
+    station.onStationRemoved();
     this.stationManager.removeStation(station);
 
     const cluster = station.getCluster();
