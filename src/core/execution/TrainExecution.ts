@@ -25,13 +25,12 @@ export class TrainExecution implements Execution {
   private speed: number = 2;
   // Journey tracking for organic route discovery - simplified to immediate neighbors only
   private hasProcessedArrival: boolean = false;
-  private journeyPreviousStation: TrainStation | null = null; // Immediate previous station
   private journeyHopCount: number = 0;
 
   // Local greedy routing properties
   private recentStations: TrainStation[] = []; // Recently visited stations (for loop prevention)
   private maxHops: number = 50; // Maximum hops before giving up
-  private recentMemorySize: number = 30; // How many recent stations to remember
+  private recentMemorySize: number = 50; // How many recent stations to remember
 
   constructor(
     private railNetwork: RailNetwork,
@@ -39,9 +38,7 @@ export class TrainExecution implements Execution {
     private source: TrainStation,
     private destination: TrainStation,
     private numCars: number,
-  ) {
-    this.journeyPreviousStation = null; // Starting station has no previous
-  }
+  ) {}
 
   public owner(): Player {
     return this.player;
@@ -283,6 +280,9 @@ export class TrainExecution implements Execution {
       // Check if we've exceeded max hops
       if (this.journeyHopCount >= this.maxHops) {
         // Give up - we've wandered too long
+        if (this.mg) {
+          this.mg.recordTrainRemovedDueToHopLimit(this.journeyHopCount);
+        }
         this.active = false;
         return null;
       }
@@ -320,7 +320,6 @@ export class TrainExecution implements Execution {
       // Update journey tracking - remember where we came from BEFORE changing currentStation
       // This should happen after arrival processing but before departure
       this.journeyHopCount++;
-      this.journeyPreviousStation = this.currentStation;
 
       this.currentStation = nextHop;
       this.currentRailroad = railroad;
