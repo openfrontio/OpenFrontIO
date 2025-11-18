@@ -20,9 +20,19 @@ export class TrainExecution implements Execution {
   private currentTile: number = 0;
   private spacing = 2;
   private usedTiles: TileRef[] = []; // used for cars behind
-  private stations: TrainStation[] = [];
   private currentRailroad: OrientedRailroad | null = null;
+  private currentStation: TrainStation | null = null;
   private speed: number = 2;
+  // Journey tracking for organic route discovery - simplified to immediate neighbors only
+  private journeySource: TrainStation | null;
+  private hasProcessedArrival: boolean = false;
+  private journeyPreviousStation: TrainStation | null = null; // Immediate previous station
+  private journeyHopCount: number = 0;
+
+  // Local greedy routing properties
+  private recentStations: TrainStation[] = []; // Recently visited stations (for loop prevention)
+  private maxHops: number = 50; // Maximum hops before giving up
+  private recentMemorySize: number = 30; // How many recent stations to remember
 
   constructor(
     private railNetwork: RailNetwork,
@@ -30,33 +40,83 @@ export class TrainExecution implements Execution {
     private source: TrainStation,
     private destination: TrainStation,
     private numCars: number,
-  ) {}
+  ) {
+    // Initialize journey tracking - journeySource is the first city/port visited
+    const sourceType = source.unit.type();
+    this.journeySource =
+      sourceType === UnitType.City || sourceType === UnitType.Port
+        ? source
+        : null;
+    this.journeyPreviousStation = null; // Starting station has no previous
+  }
 
   public owner(): Player {
     return this.player;
   }
 
+  /**
+   * Share journey information with a station for organic route discovery
+   */
+  public shareJourneyInfo(): {
+    journeySource: TrainStation | null;
+    routeInformation: Array<{
+      destination: TrainStation;
+      nextHop: TrainStation | null;
+      distance: number;
+    }>;
+  } {
+    const routeInformation: Array<{
+      destination: TrainStation;
+      nextHop: TrainStation | null;
+      distance: number;
+    }> = [];
+
+    // Derive routing info from recentStations array
+    // recentStations = [oldest, ..., previous, current]
+    const immediatePrevious =
+      this.recentStations.length > 1
+        ? this.recentStations[this.recentStations.length - 2]
+        : null;
+
+    // Only share routes to stations we visited (not the current station we're at)
+    for (let i = 0; i < this.recentStations.length - 1; i++) {
+      const destination = this.recentStations[i];
+      // For reverse routing: to reach any destination, go through the station we came from
+      const nextHop = immediatePrevious;
+      // Distance from current station to this destination
+      const distance = this.recentStations.length - 1 - i;
+
+      routeInformation.push({
+        destination,
+        nextHop,
+        distance,
+      });
+    }
+
+    return {
+      journeySource: this.journeySource,
+      routeInformation,
+    };
+  }
+
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    const stations = this.railNetwork.findStationsPath(
-      this.source,
-      this.destination,
-    );
-    if (!stations || stations.length <= 1) {
+
+    // Validate that source and destination are active
+    if (!this.source.isActive() || !this.destination.isActive()) {
       this.active = false;
       return;
     }
 
-    this.stations = stations;
-    const railroad = getOrientedRailroad(this.stations[0], this.stations[1]);
-    if (railroad) {
-      this.currentRailroad = railroad;
-    } else {
+    // If source and destination are the same, we're already there
+    if (this.source === this.destination) {
       this.active = false;
       return;
     }
 
-    const spawn = this.player.canBuild(UnitType.Train, this.stations[0].tile());
+    this.currentStation = this.source;
+
+    const spawn = this.player.canBuild(UnitType.Train, this.source.tile());
     if (spawn === false) {
       console.warn(`cannot build train`);
       this.active = false;
@@ -98,6 +158,12 @@ export class TrainExecution implements Execution {
     if (this.train === null) {
       return;
     }
+
+    // Record train arrival statistics
+    if (this.mg) {
+      this.mg.recordTrainArrival(this.journeyHopCount);
+    }
+
     this.train.setReachedTarget();
     this.cars.forEach((car: Unit) => {
       car.setReachedTarget();
@@ -140,11 +206,7 @@ export class TrainExecution implements Execution {
   }
 
   private activeSourceOrDestination(): boolean {
-    return (
-      this.stations.length > 1 &&
-      this.stations[1].isActive() &&
-      this.stations[0].isActive()
-    );
+    return this.source.isActive() && this.destination.isActive();
   }
 
   /**
@@ -187,49 +249,112 @@ export class TrainExecution implements Execution {
     }
   }
 
-  private nextStation() {
-    if (this.stations.length > 2) {
-      this.stations.shift();
-      const railRoad = getOrientedRailroad(this.stations[0], this.stations[1]);
-      if (railRoad) {
-        this.currentRailroad = railRoad;
-        return true;
-      }
-    }
-    return false;
-  }
+  private isAtStation(): boolean {
+    if (!this.train || !this.currentStation || !this.mg) return false;
 
-  private canTradeWithDestination() {
+    // Check if train is at the current station's tile
+    const trainTile = this.train.tile();
     return (
-      this.stations.length > 1 && this.stations[1].tradeAvailable(this.player)
+      this.mg.x(trainTile) === this.mg.x(this.currentStation.tile()) &&
+      this.mg.y(trainTile) === this.mg.y(this.currentStation.tile())
     );
   }
 
   private getNextTile(): TileRef | null {
-    if (this.currentRailroad === null || !this.canTradeWithDestination()) {
-      return null;
-    }
-    this.saveTraversedTiles(this.currentTile, this.speed);
-    this.currentTile = this.currentTile + this.speed;
-    const leftOver = this.currentTile - this.currentRailroad.getTiles().length;
-    if (leftOver >= 0) {
-      // Station reached, pick the next station
-      this.stationReached();
-      if (!this.nextStation()) {
-        return null; // Destination reached (or no valid connection)
+    // If we're at a station, decide where to go next
+    if (this.isAtStation()) {
+      // Process arrival if we haven't already for this station visit
+      if (!this.hasProcessedArrival) {
+        this.stationReached(); // Handle arrival at current station
+        this.hasProcessedArrival = true;
       }
-      this.currentTile = leftOver;
-      this.saveTraversedTiles(0, leftOver);
+
+      // Check if we've reached the destination
+      if (this.currentStation === this.destination) {
+        this.targetReached();
+        return null;
+      }
+
+      // Check if we've exceeded max hops
+      if (this.journeyHopCount >= this.maxHops) {
+        // Give up - we've wandered too long
+        this.active = false;
+        return null;
+      }
+
+      // Use local greedy routing to choose next station
+      const nextHop = this.currentStation!.chooseNextStation(
+        this.destination,
+        this.recentStations,
+        this.player,
+      );
+
+      if (!nextHop) {
+        // No good options available - stay and wait
+        return null;
+      }
+
+      // Get railroad to next hop
+      const railroad = getOrientedRailroad(this.currentStation!, nextHop);
+      if (!railroad) {
+        return null; // No direct connection
+      }
+
+      // Reset arrival flag since we're departing
+      this.hasProcessedArrival = false;
+
+      // Notify current station that train is departing
+      this.currentStation!.onTrainDepartureFromStation(this);
+
+      // Update recent stations memory for loop prevention
+      this.recentStations.push(nextHop);
+      if (this.recentStations.length > this.recentMemorySize) {
+        this.recentStations.shift(); // Remove oldest
+      }
+
+      // Update journey tracking - remember where we came from BEFORE changing currentStation
+      // This should happen after arrival processing but before departure
+      this.journeyHopCount++;
+      this.journeyPreviousStation = this.currentStation;
+
+      this.currentStation = nextHop;
+      this.currentRailroad = railroad;
+      this.currentTile = 0;
     }
-    return this.currentRailroad.getTiles()[this.currentTile];
+
+    // Follow current railroad
+    if (
+      this.currentRailroad &&
+      this.currentTile < this.currentRailroad.getTiles().length
+    ) {
+      this.saveTraversedTiles(this.currentTile, this.speed);
+      this.currentTile += this.speed;
+
+      if (this.currentTile >= this.currentRailroad.getTiles().length) {
+        // We've reached the next station
+        this.currentTile = this.currentRailroad.getTiles().length - 1;
+      }
+
+      return this.currentRailroad.getTiles()[this.currentTile];
+    }
+
+    return null;
   }
 
   private stationReached() {
-    if (this.mg === null || this.player === null) {
+    if (this.mg === null || this.player === null || !this.currentStation) {
       throw new Error("Not initialized");
     }
-    this.stations[1].onTrainStop(this);
-    return;
+
+    // Set journeySource to first city/port visited (if not already set)
+    if (this.journeySource === null) {
+      const stationType = this.currentStation.unit.type();
+      if (stationType === UnitType.City || stationType === UnitType.Port) {
+        this.journeySource = this.currentStation;
+      }
+    }
+
+    this.currentStation.onTrainStop(this);
   }
 
   isActive(): boolean {
