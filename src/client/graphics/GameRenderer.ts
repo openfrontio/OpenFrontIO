@@ -53,7 +53,6 @@ export function createRenderer(
   const uiState: UIState = {
     attackRatio: 70,
     ghostStructure: null,
-    hoveredSamTarget: null,
   };
 
   //hide when the game renders

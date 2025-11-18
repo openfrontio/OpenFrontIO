@@ -5,7 +5,7 @@
 import { SAMRadiusLayer } from "../../../src/client/graphics/layers/SAMRadiusLayer";
 import type { TransformHandler } from "../../../src/client/graphics/TransformHandler";
 import type { UIState } from "../../../src/client/graphics/UIState";
-import { MouseMoveEvent } from "../../../src/client/InputHandler";
+import { ToggleStructureEvent } from "../../../src/client/InputHandler";
 import { EventBus } from "../../../src/core/EventBus";
 import { UnitType } from "../../../src/core/game/Game";
 import type { TileRef } from "../../../src/core/game/GameMap";
@@ -28,7 +28,7 @@ const createMockContext = () =>
     strokeStyle: "",
   }) as unknown as CanvasRenderingContext2D;
 
-describe("SAMRadiusLayer hover behaviour", () => {
+describe("SAMRadiusLayer visibility controls", () => {
   let canvasCtxSpy: jest.SpyInstance;
 
   beforeEach(() => {
@@ -54,10 +54,9 @@ describe("SAMRadiusLayer hover behaviour", () => {
     samRange: () => 70,
   });
 
-  test("sets hoveredSamTarget when pointer moves over an active SAM", () => {
+  test("toggle events control SAM stroke visibility", () => {
     const tileRef = 99 as TileRef;
-    const samId = 42;
-    const samUnit = createSamUnit(tileRef, samId);
+    const samUnit = createSamUnit(tileRef, 42);
 
     const unitsMock = jest
       .fn()
@@ -77,10 +76,8 @@ describe("SAMRadiusLayer hover behaviour", () => {
       myPlayer: () => ({ smallID: () => 7 }),
     } as unknown as GameView;
 
-    const screenToWorldCoordinates = jest.fn().mockReturnValue({ x: 5, y: 6 });
-
     const transformHandler = {
-      screenToWorldCoordinates,
+      screenToWorldCoordinates: jest.fn().mockReturnValue({ x: 5, y: 6 }),
       hasChanged: jest.fn(() => false),
       scale: 1,
     } as unknown as TransformHandler;
@@ -88,40 +85,30 @@ describe("SAMRadiusLayer hover behaviour", () => {
     const uiState: UIState = {
       attackRatio: 70,
       ghostStructure: null,
-      hoveredSamTarget: null,
     };
 
     const eventBus = new EventBus();
     const layer = new SAMRadiusLayer(game, eventBus, transformHandler, uiState);
     layer.init();
 
-    eventBus.emit(new MouseMoveEvent(100, 150));
+    expect((layer as any).showStroke).toBe(false);
 
-    expect(uiState.hoveredSamTarget).toBe(samId);
-    expect(screenToWorldCoordinates).toHaveBeenCalledWith(100, 150);
-    expect(unitsMock).toHaveBeenCalledWith(UnitType.SAMLauncher);
-    expect((layer as any).mapHoverShow).toBe(true);
+    eventBus.emit(new ToggleStructureEvent([UnitType.SAMLauncher]));
+
+    expect((layer as any).showStroke).toBe(true);
     expect((layer as any).needsRedraw).toBe(true);
+
+    eventBus.emit(new ToggleStructureEvent(null));
+
+    expect((layer as any).showStroke).toBe(false);
   });
 
-  test("clears hoveredSamTarget when pointer leaves valid SAM tile", () => {
-    const tileRef = 1337 as TileRef;
-    const samId = 77;
-    const samUnit = createSamUnit(tileRef, samId);
-
-    const unitsMock = jest
-      .fn()
-      .mockImplementation((type: UnitType) =>
-        type === UnitType.SAMLauncher ? [samUnit] : [],
-      );
-
+  test("ghost structures force SAM stroke visibility during tick", () => {
     const game = {
       width: () => 256,
       height: () => 256,
-      isValidCoord: jest
-        .fn()
-        .mockImplementation((x: number, y: number) => x === 5 && y === 6),
-      units: unitsMock,
+      isValidCoord: jest.fn(() => true),
+      units: jest.fn(() => []),
       x: jest.fn(() => 5),
       y: jest.fn(() => 6),
       config: () => createConfig(),
@@ -129,35 +116,30 @@ describe("SAMRadiusLayer hover behaviour", () => {
       myPlayer: () => ({ smallID: () => 7 }),
     } as unknown as GameView;
 
-    const screenToWorldCoordinates = jest
-      .fn()
-      .mockReturnValueOnce({ x: 5, y: 6 })
-      .mockReturnValue({ x: 100, y: 100 });
-
     const transformHandler = {
-      screenToWorldCoordinates,
+      screenToWorldCoordinates: jest.fn().mockReturnValue({ x: 5, y: 6 }),
       hasChanged: jest.fn(() => false),
       scale: 1,
     } as unknown as TransformHandler;
 
     const uiState: UIState = {
       attackRatio: 70,
-      ghostStructure: null,
-      hoveredSamTarget: null,
+      ghostStructure: UnitType.SAMLauncher,
     };
 
     const eventBus = new EventBus();
     const layer = new SAMRadiusLayer(game, eventBus, transformHandler, uiState);
     layer.init();
 
-    eventBus.emit(new MouseMoveEvent(10, 20));
-    expect(uiState.hoveredSamTarget).toBe(samId);
-    expect((layer as any).mapHoverShow).toBe(true);
+    expect((layer as any).showStroke).toBe(false);
 
-    eventBus.emit(new MouseMoveEvent(200, 250));
+    layer.tick();
 
-    expect(uiState.hoveredSamTarget).toBeNull();
-    expect((layer as any).mapHoverShow).toBe(false);
-    expect(screenToWorldCoordinates).toHaveBeenCalledTimes(2);
+    expect((layer as any).showStroke).toBe(true);
+
+    uiState.ghostStructure = null;
+    layer.tick();
+
+    expect((layer as any).showStroke).toBe(false);
   });
 });

@@ -2,17 +2,13 @@ import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type { GameView } from "../../../core/game/GameView";
-import { MouseMoveEvent, ToggleStructureEvent } from "../../InputHandler";
+import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
-const SAM_ICON_HOVER_RADIUS = 0.85; // matches the on-screen footprint of the SAM launcher icon
-const SAM_ICON_HOVER_RADIUS_SQUARED =
-  SAM_ICON_HOVER_RADIUS * SAM_ICON_HOVER_RADIUS;
 const TILE_KEY_SHIFT = 16;
 const TILE_KEY_MASK = 0xffff;
-const HOVER_DEDUP_WINDOW_MS = 16;
 
 const encodeTileKey = (x: number, y: number): number =>
   ((x & TILE_KEY_MASK) << TILE_KEY_SHIFT) | (y & TILE_KEY_MASK);
@@ -38,17 +34,12 @@ export class SAMRadiusLayer implements Layer {
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
   private ghostShow: boolean = false;
-  private mapHoverShow: boolean = false;
   private showStroke: boolean = false;
   private dashOffset = 0;
   private rotationSpeed = 14; // px per second
   private lastTickTime = Date.now();
-  private lastHoveredSamId: number | null = null;
   private myPlayerSmallId: number | undefined;
   private samCachesDirty = true;
-  private lastHoverTileKey: number | null = null;
-  private lastProcessedHoverTarget: number | null = null;
-  private lastHoverEventTimestamp = 0;
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
@@ -80,104 +71,17 @@ export class SAMRadiusLayer implements Layer {
     this.eventBus.on(ToggleStructureEvent, (e) =>
       this.handleToggleStructure(e),
     );
-    this.eventBus.on(MouseMoveEvent, (e) => this.handleMouseMove(e));
     this.syncMyPlayerSmallId();
     this.ensureSamCaches();
     this.redraw();
   }
 
   private updateStrokeVisibility() {
-    const next = this.hoveredShow || this.ghostShow || this.mapHoverShow;
+    const next = this.hoveredShow || this.ghostShow;
     if (next !== this.showStroke) {
       this.showStroke = next;
       this.needsRedraw = true;
     }
-  }
-
-  /**
-   * Responds to pointer movement by locating the active SAM stack on the hovered tile and
-   * updating the UI state with the matched SAM identifier. Uses cached tile lookups to
-   * avoid scanning every SAM on each event.
-   */
-  private handleMouseMove(event: MouseMoveEvent) {
-    const eventTimestamp = Date.now();
-
-    const worldCoord = this.transformHandler.screenToWorldCoordinates(
-      event.x,
-      event.y,
-    );
-
-    if (!this.game.isValidCoord(worldCoord.x, worldCoord.y)) {
-      this.applyHoverResult(null, eventTimestamp, null);
-      return;
-    }
-
-    const mySmallId = this.syncMyPlayerSmallId();
-    if (mySmallId === undefined) {
-      this.applyHoverResult(null, eventTimestamp, null);
-      return;
-    }
-
-    this.ensureSamCaches();
-
-    const tileX = Math.floor(worldCoord.x);
-    const tileY = Math.floor(worldCoord.y);
-    const tileKey = encodeTileKey(tileX, tileY);
-
-    const stack = this.samStacksByTile.get(tileKey);
-    if (!stack) {
-      this.applyHoverResult(tileKey, eventTimestamp, null);
-      return;
-    }
-
-    const hoveredSam = stack.find((sam) => {
-      const dx = worldCoord.x - (sam.x + 0.5);
-      const dy = worldCoord.y - (sam.y + 0.5);
-      return dx * dx + dy * dy <= SAM_ICON_HOVER_RADIUS_SQUARED;
-    });
-
-    this.applyHoverResult(tileKey, eventTimestamp, hoveredSam?.id ?? null);
-  }
-
-  private setHoveredSamTarget(targetId: number | null) {
-    if (this.lastHoveredSamId === targetId) {
-      return;
-    }
-
-    this.lastHoveredSamId = targetId;
-
-    if (this.uiState.hoveredSamTarget !== targetId) {
-      this.uiState.hoveredSamTarget = targetId;
-      this.needsRedraw = true;
-    }
-
-    const nextMapHover = targetId !== null;
-    if (this.mapHoverShow !== nextMapHover) {
-      this.mapHoverShow = nextMapHover;
-      this.updateStrokeVisibility();
-    }
-  }
-
-  private applyHoverResult(
-    tileKey: number | null,
-    eventTimestamp: number,
-    targetId: number | null,
-  ) {
-    if (
-      this.lastHoverTileKey === tileKey &&
-      this.lastProcessedHoverTarget === targetId &&
-      eventTimestamp - this.lastHoverEventTimestamp <= HOVER_DEDUP_WINDOW_MS
-    ) {
-      this.lastHoverTileKey = tileKey;
-      this.lastProcessedHoverTarget = targetId;
-      this.lastHoverEventTimestamp = eventTimestamp;
-      return;
-    }
-
-    this.lastHoverTileKey = tileKey;
-    this.lastProcessedHoverTarget = targetId;
-    this.lastHoverEventTimestamp = eventTimestamp;
-    this.setHoveredSamTarget(targetId);
   }
 
   shouldTransform(): boolean {
@@ -262,31 +166,11 @@ export class SAMRadiusLayer implements Layer {
 
     this.ensureSamCaches();
 
-    let circles = this.cachedSamCircles;
-
-    if (
-      this.uiState.hoveredSamTarget !== null &&
-      !this.hoveredShow &&
-      !this.ghostShow
-    ) {
-      const hovered = circles.find(
-        (circle) => circle.id === this.uiState.hoveredSamTarget,
-      );
-      if (hovered) {
-        const stackKey = encodeTileKey(hovered.x, hovered.y);
-        const stack = this.samStacksByTile.get(stackKey);
-        if (stack) {
-          circles = stack;
-        } else {
-          circles = [];
-        }
-      } else {
-        circles = [];
-      }
-    }
-
     this.drawCirclesUnion(
-      circles.map(({ id: _id, radius: r, ...rest }) => ({ ...rest, r })),
+      this.cachedSamCircles.map(({ id: _id, radius: r, ...rest }) => ({
+        ...rest,
+        r,
+      })),
     );
   }
 
@@ -347,14 +231,6 @@ export class SAMRadiusLayer implements Layer {
         this.samStacksByTile.set(key, [cached]);
       }
     }
-
-    const hoveredTarget = this.uiState.hoveredSamTarget;
-    if (hoveredTarget !== null && !this.samLaunchers.has(hoveredTarget)) {
-      this.lastHoverTileKey = null;
-      this.lastProcessedHoverTarget = null;
-      this.lastHoverEventTimestamp = 0;
-      this.setHoveredSamTarget(null);
-    }
   }
 
   /**
@@ -370,9 +246,6 @@ export class SAMRadiusLayer implements Layer {
         this.samStacksByTile.clear();
         this.cachedSamCircles = [];
         this.samLaunchers.clear();
-        this.lastHoverTileKey = null;
-        this.lastProcessedHoverTarget = null;
-        this.lastHoverEventTimestamp = 0;
       }
     }
     return this.myPlayerSmallId;
