@@ -79,10 +79,11 @@ export class GameImpl implements Game {
   private unitGrid: UnitGrid;
 
   // Train statistics tracking
-  private trainArrivalTimes: number[] = []; // timestamps of recent train arrivals
-  private completedTrainSteps: number[] = []; // steps of recently completed trains
+  private arrivalsSinceLastPrint = 0;
+  private completedStepsSinceLastPrint = 0;
   private activeTrainSteps = 0; // total steps taken by currently active trains (updated each tick)
   private lastStatsPrint = 0; // last time we printed stats
+  private hopLimitRemovalsSinceLastPrint = 0;
 
   private playerTeams: Team[];
   private botTeam: Team = ColoredTeams.Bot;
@@ -464,20 +465,12 @@ export class GameImpl implements Game {
 
   // Train statistics tracking methods
   recordTrainArrival(steps: number) {
-    this.trainArrivalTimes.push(this._ticks);
-    this.completedTrainSteps.push(steps);
+    this.arrivalsSinceLastPrint++;
+    this.completedStepsSinceLastPrint += steps;
+  }
 
-    // Clean up old data (keep only last 60 seconds)
-    const cutoffTime = this._ticks - 60;
-    this.trainArrivalTimes = this.trainArrivalTimes.filter(
-      (time) => time > cutoffTime,
-    );
-    // Keep same number of completed train steps as arrival times
-    if (this.completedTrainSteps.length > this.trainArrivalTimes.length) {
-      this.completedTrainSteps = this.completedTrainSteps.slice(
-        -this.trainArrivalTimes.length,
-      );
-    }
+  recordTrainRemovedDueToHopLimit(_steps: number) {
+    this.hopLimitRemovalsSinceLastPrint++;
   }
 
   getActiveTrainCount(): number {
@@ -487,10 +480,8 @@ export class GameImpl implements Game {
   }
 
   getAverageCompletedTrainSteps(): number {
-    if (this.completedTrainSteps.length === 0) return 0;
-
-    const sum = this.completedTrainSteps.reduce((a, b) => a + b, 0);
-    return sum / this.completedTrainSteps.length;
+    if (this.arrivalsSinceLastPrint === 0) return 0;
+    return this.completedStepsSinceLastPrint / this.arrivalsSinceLastPrint;
   }
 
   getAverageActiveTrainSteps(): number {
@@ -502,16 +493,21 @@ export class GameImpl implements Game {
   }
 
   printTrainStats() {
-    const arrivalsLast60s = this.trainArrivalTimes.length;
+    const arrivalsLastInterval = this.arrivalsSinceLastPrint;
     const activeTrains = this.getActiveTrainCount();
     const avgCompletedSteps =
       Math.round(this.getAverageCompletedTrainSteps() * 100) / 100;
     const avgActiveSteps =
       Math.round(this.getAverageActiveTrainSteps() * 100) / 100;
+    const hopLimitRemovals = this.hopLimitRemovalsSinceLastPrint;
 
     console.log(
-      `🚂 Trains: ${arrivalsLast60s} arrived (${avgCompletedSteps} avg steps), ${activeTrains} active (${avgActiveSteps} avg steps)`,
+      `🚂 Trains: ${arrivalsLastInterval} arrived (${avgCompletedSteps} avg steps), ${activeTrains} active (${avgActiveSteps} avg steps), ${hopLimitRemovals} removed (hop limit)`,
     );
+
+    this.arrivalsSinceLastPrint = 0;
+    this.completedStepsSinceLastPrint = 0;
+    this.hopLimitRemovalsSinceLastPrint = 0;
   }
 
   playerView(id: PlayerID): Player {
