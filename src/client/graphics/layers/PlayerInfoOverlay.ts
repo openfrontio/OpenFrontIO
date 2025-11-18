@@ -28,9 +28,9 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import { getFirstPlacePlayer, getPlayerIcons } from "./PlayerIcons";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 
 function euclideanDistWorld(

@@ -8,13 +8,13 @@ import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
-import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
 import {
   getFirstPlacePlayer,
   getPlayerIcons,
   PlayerIconId,
-} from "./PlayerIcons";
+} from "../PlayerIcons";
+import { TransformHandler } from "../TransformHandler";
+import { Layer } from "./Layer";
 
 class RenderInfo {
   public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements

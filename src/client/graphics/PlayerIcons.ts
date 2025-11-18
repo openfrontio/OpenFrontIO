@@ -1,16 +1,16 @@
-import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
-import allianceRequestBlackIcon from "../../../../resources/images/AllianceRequestBlackIcon.svg";
-import allianceRequestWhiteIcon from "../../../../resources/images/AllianceRequestWhiteIcon.svg";
-import crownIcon from "../../../../resources/images/CrownIcon.svg";
-import disconnectedIcon from "../../../../resources/images/DisconnectedIcon.svg";
-import embargoBlackIcon from "../../../../resources/images/EmbargoBlackIcon.svg";
-import embargoWhiteIcon from "../../../../resources/images/EmbargoWhiteIcon.svg";
-import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
-import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
-import targetIcon from "../../../../resources/images/TargetIcon.svg";
-import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
-import { AllPlayers, nukeTypes } from "../../../core/game/Game";
-import { GameView, PlayerView } from "../../../core/game/GameView";
+import allianceIcon from "../../../resources/images/AllianceIcon.svg";
+import allianceRequestBlackIcon from "../../../resources/images/AllianceRequestBlackIcon.svg";
+import allianceRequestWhiteIcon from "../../../resources/images/AllianceRequestWhiteIcon.svg";
+import crownIcon from "../../../resources/images/CrownIcon.svg";
+import disconnectedIcon from "../../../resources/images/DisconnectedIcon.svg";
+import embargoBlackIcon from "../../../resources/images/EmbargoBlackIcon.svg";
+import embargoWhiteIcon from "../../../resources/images/EmbargoWhiteIcon.svg";
+import nukeRedIcon from "../../../resources/images/NukeIconRed.svg";
+import nukeWhiteIcon from "../../../resources/images/NukeIconWhite.svg";
+import targetIcon from "../../../resources/images/TargetIcon.svg";
+import traitorIcon from "../../../resources/images/TraitorIcon.svg";
+import { AllPlayers, nukeTypes } from "../../core/game/Game";
+import { GameView, PlayerView } from "../../core/game/GameView";
 
 export type PlayerIconId =
   | "crown"
