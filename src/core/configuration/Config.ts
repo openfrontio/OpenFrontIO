@@ -88,6 +88,7 @@ export interface Config {
   infiniteTroops(): boolean;
   donateTroops(): boolean;
   instantBuild(): boolean;
+  isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
@@ -263,6 +264,8 @@ export interface Theme {
   teamColor(team: Team): Colord;
   // Don't call directly, use PlayerView
   territoryColor(playerInfo: PlayerView): Colord;
+  // Don't call directly, use PlayerView
+  structureColors(territoryColor: Colord): { light: Colord; dark: Colord };
   // Don't call directly, use PlayerView
   borderColor(territoryColor: Colord): Colord;
   // Don't call directly, use PlayerView

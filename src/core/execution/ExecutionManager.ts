@@ -26,6 +26,7 @@ import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
+import { PlayerSpawner } from "./utils/PlayerSpawner";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -131,6 +132,10 @@ export class Executor {
 
   spawnBots(numBots: number): Execution[] {
     return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
+  }
+
+  spawnPlayers(): Execution[] {
+    return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
   fakeHumanExecutions(): Execution[] {

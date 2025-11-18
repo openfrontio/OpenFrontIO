@@ -451,6 +451,7 @@ export interface Unit {
   toUpdate(): UnitUpdate;
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
+  wasDestroyedByEnemy(): boolean;
 
   // Train
   trainType(): TrainType | undefined;
@@ -594,7 +595,7 @@ export interface Player {
   decayRelations(): void;
   isOnSameTeam(other: Player): boolean;
   // Either allied or on same team.
-  isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
+  isFriendly(other: Player): boolean;
   team(): Team | null;
   clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];

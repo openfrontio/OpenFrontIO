@@ -240,12 +240,6 @@ export class AttackExecution implements Execution {
         this._owner.id(),
       );
     }
-    if (this.removeTroops === false) {
-      // startTroops are always added to attack troops at init but not always removed from owner troops
-      // subtract startTroops from attack troops so we don't give back startTroops to owner that were never removed
-      this.attack.setTroops(this.attack.troops() - (this.startTroops ?? 0));
-    }
-
     const survivors = this.attack.troops() - deaths;
     this._owner.addTroops(survivors);
     this.attack.delete();

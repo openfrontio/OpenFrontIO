@@ -3,6 +3,7 @@ import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
 import { AdTimer } from "./layers/AdTimer";
@@ -343,6 +344,7 @@ export class GameRenderer {
   }
 
   renderGame() {
+    FrameProfiler.clear();
     const start = performance.now();
     // Set background
     this.context.fillStyle = this.game
@@ -375,7 +377,10 @@ export class GameRenderer {
         needsTransform,
         isTransformActive,
       );
+
+      const layerStart = FrameProfiler.start();
       layer.renderLayer?.(this.context);
+      FrameProfiler.end(layer.constructor?.name ?? "UnknownLayer", layerStart);
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
@@ -383,7 +388,8 @@ export class GameRenderer {
     requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
-    this.performanceOverlay.updateFrameMetrics(duration);
+    const layerDurations = FrameProfiler.consume();
+    this.performanceOverlay.updateFrameMetrics(duration, layerDurations);
 
     if (duration > 50) {
       console.warn(

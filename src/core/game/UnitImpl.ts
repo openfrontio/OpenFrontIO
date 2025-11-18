@@ -24,6 +24,7 @@ export class UnitImpl implements Unit {
   private _retreating: boolean = false;
   private _targetedBySAM = false;
   private _reachedTarget = false;
+  private _wasDestroyedByEnemy: boolean = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
@@ -252,6 +253,10 @@ export class UnitImpl implements Unit {
     if (!this.isActive()) {
       throw new Error(`cannot delete ${this} not active`);
     }
+
+    // Record whether this unit was destroyed by an enemy (vs. arrived / retreated)
+    this._wasDestroyedByEnemy = destroyer !== undefined;
+
     this._owner._units = this._owner._units.filter((b) => b !== this);
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
@@ -289,6 +294,10 @@ export class UnitImpl implements Unit {
 
   isActive(): boolean {
     return this._active;
+  }
+
+  wasDestroyedByEnemy(): boolean {
+    return this._wasDestroyedByEnemy;
   }
 
   retreating(): boolean {

@@ -56,7 +56,7 @@
 
       .bg-image {
         content: "";
-        background-image: url("/images/EuropeBackground.webp");
+        background-image: url("/images/EuropeBackgroundBlurred.webp");
         background-position: center;
         background-attachment: fixed;
         background-size: cover;
@@ -73,7 +73,6 @@
         position: absolute;
         width: 100%;
         height: 100vh;
-        backdrop-filter: blur(5px);
       }
 
       .dark .bg-image {
@@ -220,9 +219,7 @@
             ></button>
           </territory-patterns-modal>
           <username-input class="relative w-full"></username-input>
-          <news-button
-            class="w-[20%] md:w-[15%] component-hideable"
-          ></news-button>
+          <news-button class="w-[20%] component-hideable"></news-button>
         </div>
         <div></div>
         <div>
