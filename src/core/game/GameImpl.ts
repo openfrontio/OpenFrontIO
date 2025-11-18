@@ -78,6 +78,12 @@ export class GameImpl implements Game {
   private updates: GameUpdates = createGameUpdatesMap();
   private unitGrid: UnitGrid;
 
+  // Train statistics tracking
+  private trainArrivalTimes: number[] = []; // timestamps of recent train arrivals
+  private completedTrainSteps: number[] = []; // steps of recently completed trains
+  private activeTrainSteps = 0; // total steps taken by currently active trains (updated each tick)
+  private lastStatsPrint = 0; // last time we printed stats
+
   private playerTeams: Team[];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
@@ -347,12 +353,21 @@ export class GameImpl implements Game {
 
   executeNextTick(): GameUpdates {
     this.updates = createGameUpdatesMap();
+
+    // Reset active train steps counter for this tick
+    this.activeTrainSteps = 0;
+
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
         e.isActive()
       ) {
         e.tick(this._ticks);
+
+        // Track steps for active trains
+        if (e.constructor.name === "TrainExecution") {
+          this.activeTrainSteps += (e as any).journeyHopCount ?? 0;
+        }
       }
     });
     const inited: Execution[] = [];
@@ -381,6 +396,13 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
+
+    // Print train statistics every 60 ticks (~60 seconds)
+    if (this._ticks - this.lastStatsPrint >= 60) {
+      this.printTrainStats();
+      this.lastStatsPrint = this._ticks;
+    }
+
     this._ticks++;
     return this.updates;
   }
@@ -437,6 +459,58 @@ export class GameImpl implements Game {
     this.execs = this.execs.filter((execution) => execution !== exec);
     this.unInitExecs = this.unInitExecs.filter(
       (execution) => execution !== exec,
+    );
+  }
+
+  // Train statistics tracking methods
+  recordTrainArrival(steps: number) {
+    this.trainArrivalTimes.push(this._ticks);
+    this.completedTrainSteps.push(steps);
+
+    // Clean up old data (keep only last 60 seconds)
+    const cutoffTime = this._ticks - 60;
+    this.trainArrivalTimes = this.trainArrivalTimes.filter(
+      (time) => time > cutoffTime,
+    );
+    // Keep same number of completed train steps as arrival times
+    if (this.completedTrainSteps.length > this.trainArrivalTimes.length) {
+      this.completedTrainSteps = this.completedTrainSteps.slice(
+        -this.trainArrivalTimes.length,
+      );
+    }
+  }
+
+  getActiveTrainCount(): number {
+    return this.executions().filter(
+      (exec) => exec.constructor.name === "TrainExecution" && exec.isActive(),
+    ).length;
+  }
+
+  getAverageCompletedTrainSteps(): number {
+    if (this.completedTrainSteps.length === 0) return 0;
+
+    const sum = this.completedTrainSteps.reduce((a, b) => a + b, 0);
+    return sum / this.completedTrainSteps.length;
+  }
+
+  getAverageActiveTrainSteps(): number {
+    const activeTrains = this.getActiveTrainCount();
+    if (activeTrains === 0) return 0;
+
+    // Return average steps for currently active trains
+    return this.activeTrainSteps / activeTrains;
+  }
+
+  printTrainStats() {
+    const arrivalsLast60s = this.trainArrivalTimes.length;
+    const activeTrains = this.getActiveTrainCount();
+    const avgCompletedSteps =
+      Math.round(this.getAverageCompletedTrainSteps() * 100) / 100;
+    const avgActiveSteps =
+      Math.round(this.getAverageActiveTrainSteps() * 100) / 100;
+
+    console.log(
+      `🚂 Trains: ${arrivalsLast60s} arrived (${avgCompletedSteps} avg steps), ${activeTrains} active (${avgActiveSteps} avg steps)`,
     );
   }
 

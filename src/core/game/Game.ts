@@ -712,6 +712,7 @@ export interface Game extends GameMap {
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
+  recordTrainArrival(steps: number): void;
   displayMessage(
     message: string,
     type: MessageType,
