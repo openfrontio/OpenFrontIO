@@ -45,6 +45,10 @@ export class TrainStationExecution implements Execution {
       this.active = false;
       return;
     }
+
+    // Handle periodic routing broadcasts
+    this.station.tick();
+
     this.spawnTrain(this.station, ticks);
   }
 
