@@ -41,7 +41,6 @@ describe("Alliance Donation", () => {
   });
 
   test("Can donate gold after alliance formed by reply", () => {
-    // Player 1 sends request, player 2 accepts
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
@@ -55,7 +54,6 @@ describe("Alliance Donation", () => {
     expect(player1.isFriendly(player2)).toBeTruthy();
     expect(player2.isFriendly(player1)).toBeTruthy();
 
-    // Try to donate gold
     expect(player1.canDonateGold(player2)).toBeTruthy();
     const goldBefore = player2.gold();
     const success = player1.donateGold(player2, 100n);
@@ -64,7 +62,6 @@ describe("Alliance Donation", () => {
   });
 
   test("Can donate troops after alliance formed by reply", () => {
-    // Player 1 sends request, player 2 accepts
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
@@ -76,7 +73,6 @@ describe("Alliance Donation", () => {
     expect(player1.isAlliedWith(player2)).toBeTruthy();
     expect(player2.isAlliedWith(player1)).toBeTruthy();
 
-    // Try to donate troops
     expect(player1.canDonateTroops(player2)).toBeTruthy();
     const troopsBefore = player2.troops();
     const success = player1.donateTroops(player2, 100);
@@ -85,11 +81,9 @@ describe("Alliance Donation", () => {
   });
 
   test("Can donate gold after alliance formed by mutual request", () => {
-    // Player 1 sends request to player 2
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
-    // Player 2 sends request back to player 1 (auto-accepts)
     game.addExecution(new AllianceRequestExecution(player2, player1.id()));
     game.executeNextTick();
 
@@ -98,7 +92,6 @@ describe("Alliance Donation", () => {
     expect(player1.isFriendly(player2)).toBeTruthy();
     expect(player2.isFriendly(player1)).toBeTruthy();
 
-    // Try to donate gold
     expect(player1.canDonateGold(player2)).toBeTruthy();
     const goldBefore = player2.gold();
     const success = player1.donateGold(player2, 100n);
@@ -107,18 +100,15 @@ describe("Alliance Donation", () => {
   });
 
   test("Can donate troops after alliance formed by mutual request", () => {
-    // Player 1 sends request to player 2
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
-    // Player 2 sends request back to player 1 (auto-accepts)
     game.addExecution(new AllianceRequestExecution(player2, player1.id()));
     game.executeNextTick();
 
     expect(player1.isAlliedWith(player2)).toBeTruthy();
     expect(player2.isAlliedWith(player1)).toBeTruthy();
 
-    // Try to donate troops
     expect(player1.canDonateTroops(player2)).toBeTruthy();
     const troopsBefore = player2.troops();
     const success = player1.donateTroops(player2, 100);
@@ -127,29 +117,21 @@ describe("Alliance Donation", () => {
   });
 
   test("Can donate immediately after accepting alliance (race condition)", () => {
-    // This test verifies the bug fix for issue where donations failed
-    // when attempted in the same tick as alliance acceptance
 
-    // Player 1 sends request to player 2
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
-    // Player 2 accepts AND player 1 tries to donate in the same turn
-    // This simulates the race condition that occurred in real gameplay
     const goldBefore = player2.gold();
     game.addExecution(
       new AllianceRequestReplyExecution(player1.id(), player2, true),
     );
     game.addExecution(new DonateGoldExecution(player1, player2.id(), 100));
 
-    // Execute once to init both executions (alliance is created in init)
     game.executeNextTick();
 
-    // Alliance should be created now (before donation ticks)
     expect(player1.isAlliedWith(player2)).toBeTruthy();
     expect(player2.isAlliedWith(player1)).toBeTruthy();
 
-    // Execute again for donation to tick
     game.executeNextTick();
 
     // Donation should have succeeded
