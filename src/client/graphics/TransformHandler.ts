@@ -248,13 +248,51 @@ export class TransformHandler {
     // Adjust the offset
     this.offsetX = zoomPointX - (canvasX - this.game.width() / 2) / this.scale;
     this.offsetY = zoomPointY - (canvasY - this.game.height() / 2) / this.scale;
+    this.clampOffsets();
     this.changed = true;
+  }
+
+  private clampOffsets() {
+    const canvasRect = this.boundingRect();
+    const canvasWidth = canvasRect.width;
+    const canvasHeight = canvasRect.height;
+    const gameWidth = this.game.width();
+    const gameH = this.game.height();
+    const scale = this.scale;
+
+    // Allow panning so that up to half of the viewport can be outside the map on each side.
+    // This lets a map corner be placed at the screen center, but no further.
+    // Derivation (X axis):
+    //   gameLeftX = -gameWidth/(2*scale) + offsetX + gameWidth/2 >= -vw/2
+    //   gameRightX = (canvasWidth - gameWidth/2)/scale + offsetX + gameWidth/2 <= gameWidth + vw/2
+    // Solving gives:
+    //   minOffsetX = -gameWidth/2 + (gameWidth - canvasWidth) / (2*scale)
+    //   maxOffsetX =  gameWidth/2 + (gameWidth - canvasWidth) / (2*scale)
+    const minOffsetX = -gameWidth / 2 + (gameWidth - canvasWidth) / (2 * scale);
+    const maxOffsetX = gameWidth / 2 + (gameWidth - canvasWidth) / (2 * scale);
+
+    const minOffsetY = -gameH / 2 + (gameH - canvasHeight) / (2 * scale);
+    const maxOffsetY = gameH / 2 + (gameH - canvasHeight) / (2 * scale);
+
+    // Clamp offsets within computed bounds on each axis
+    if (this.offsetX < minOffsetX) {
+      this.offsetX = minOffsetX;
+    } else if (this.offsetX > maxOffsetX) {
+      this.offsetX = maxOffsetX;
+    }
+
+    if (this.offsetY < minOffsetY) {
+      this.offsetY = minOffsetY;
+    } else if (this.offsetY > maxOffsetY) {
+      this.offsetY = maxOffsetY;
+    }
   }
 
   onMove(event: DragEvent) {
     this.clearTarget();
     this.offsetX -= event.deltaX / this.scale;
     this.offsetY -= event.deltaY / this.scale;
+    this.clampOffsets();
     this.changed = true;
   }
 

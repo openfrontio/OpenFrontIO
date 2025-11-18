@@ -1,0 +1,19 @@
+{
+  "map": {
+    "height": 1564,
+    "num_land_tiles": 1968430,
+    "width": 2500
+  },
+  "map16x": {
+    "height": 391,
+    "num_land_tiles": 120323,
+    "width": 625
+  },
+  "map4x": {
+    "height": 782,
+    "num_land_tiles": 488353,
+    "width": 1250
+  },
+  "name": "Baikal (Nuke Wars)",
+  "nations": []
+}
