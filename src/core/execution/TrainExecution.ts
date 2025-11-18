@@ -11,6 +11,12 @@ import { RailNetwork } from "../game/RailNetwork";
 import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";
 import { TrainStation } from "../game/TrainStation";
 
+type MoveResult =
+  | { kind: "move"; tile: TileRef }
+  | { kind: "arrived" }
+  | { kind: "hopLimit" }
+  | { kind: "stuck" };
+
 export class TrainExecution implements Execution {
   private active = true;
   private mg: Game | null = null;
@@ -136,12 +142,24 @@ export class TrainExecution implements Execution {
       return;
     }
 
-    const tile = this.getNextTile();
-    if (tile) {
-      this.updateCarsPositions(tile);
-    } else {
-      this.targetReached();
-      this.deleteTrain();
+    const result = this.getNextStep();
+    switch (result.kind) {
+      case "move":
+        this.updateCarsPositions(result.tile);
+        break;
+      case "arrived":
+        this.targetReached();
+        this.deleteTrain();
+        break;
+      case "hopLimit":
+        if (this.mg) {
+          this.mg.recordTrainRemovedDueToHopLimit(this.journeyHopCount);
+        }
+        this.deleteTrain();
+        break;
+      case "stuck":
+        this.deleteTrain();
+        break;
     }
   }
 
@@ -262,7 +280,7 @@ export class TrainExecution implements Execution {
     );
   }
 
-  private getNextTile(): TileRef | null {
+  private getNextStep(): MoveResult {
     // If we're at a station, decide where to go next
     if (this.isAtStation()) {
       // Process arrival if we haven't already for this station visit
@@ -273,18 +291,14 @@ export class TrainExecution implements Execution {
 
       // Check if we've reached the destination
       if (this.currentStation === this.destination) {
-        this.targetReached();
-        return null;
+        return { kind: "arrived" };
       }
 
       // Check if we've exceeded max hops
       if (this.journeyHopCount >= this.maxHops) {
         // Give up - we've wandered too long
-        if (this.mg) {
-          this.mg.recordTrainRemovedDueToHopLimit(this.journeyHopCount);
-        }
         this.active = false;
-        return null;
+        return { kind: "hopLimit" };
       }
 
       // Use local greedy routing to choose next station
@@ -295,14 +309,16 @@ export class TrainExecution implements Execution {
       );
 
       if (!nextHop) {
-        // No good options available - stay and wait
-        return null;
+        // No good options available - treat as stuck
+        this.active = false;
+        return { kind: "stuck" };
       }
 
       // Get railroad to next hop
       const railroad = getOrientedRailroad(this.currentStation!, nextHop);
       if (!railroad) {
-        return null; // No direct connection
+        this.active = false;
+        return { kind: "stuck" }; // No direct connection
       }
 
       // Reset arrival flag since we're departing
@@ -339,10 +355,14 @@ export class TrainExecution implements Execution {
         this.currentTile = this.currentRailroad.getTiles().length - 1;
       }
 
-      return this.currentRailroad.getTiles()[this.currentTile];
+      return {
+        kind: "move",
+        tile: this.currentRailroad.getTiles()[this.currentTile],
+      };
     }
 
-    return null;
+    this.active = false;
+    return { kind: "stuck" };
   }
 
   private stationReached() {
