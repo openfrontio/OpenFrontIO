@@ -745,9 +745,16 @@ export class TrainStation {
   private processJourneyInformation(trainExecution: TrainExecution): void {
     const journeyInfo = trainExecution.shareJourneyInfo();
 
-    // Only process journey information if the train has established a journey source (visited a city/port)
-    if (!journeyInfo.journeySource) {
-      // Train hasn't visited a city/port yet, skip journey processing
+    // Only process journey information if the train has visited cities/ports in its recent journey
+    const hasVisitedMeaningfulStations = journeyInfo.routeInformation.some(
+      (routeInfo) => {
+        const stationType = routeInfo.destination.unit.type();
+        return stationType === UnitType.City || stationType === UnitType.Port;
+      },
+    );
+
+    if (!hasVisitedMeaningfulStations) {
+      // Train hasn't visited any cities/ports in its recent journey segment, skip journey processing
       return;
     }
 

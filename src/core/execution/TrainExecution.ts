@@ -24,7 +24,6 @@ export class TrainExecution implements Execution {
   private currentStation: TrainStation | null = null;
   private speed: number = 2;
   // Journey tracking for organic route discovery - simplified to immediate neighbors only
-  private journeySource: TrainStation | null;
   private hasProcessedArrival: boolean = false;
   private journeyPreviousStation: TrainStation | null = null; // Immediate previous station
   private journeyHopCount: number = 0;
@@ -41,12 +40,6 @@ export class TrainExecution implements Execution {
     private destination: TrainStation,
     private numCars: number,
   ) {
-    // Initialize journey tracking - journeySource is the first city/port visited
-    const sourceType = source.unit.type();
-    this.journeySource =
-      sourceType === UnitType.City || sourceType === UnitType.Port
-        ? source
-        : null;
     this.journeyPreviousStation = null; // Starting station has no previous
   }
 
@@ -58,7 +51,6 @@ export class TrainExecution implements Execution {
    * Share journey information with a station for organic route discovery
    */
   public shareJourneyInfo(): {
-    journeySource: TrainStation | null;
     routeInformation: Array<{
       destination: TrainStation;
       nextHop: TrainStation | null;
@@ -78,8 +70,22 @@ export class TrainExecution implements Execution {
         ? this.recentStations[this.recentStations.length - 2]
         : null;
 
-    // Only share routes to stations we visited (not the current station we're at)
-    for (let i = 0; i < this.recentStations.length - 1; i++) {
+    // Find the start index for sharing journey information
+    // Only share information about stations visited since the last time we passed through the current station
+    let startIndex = 0;
+    const currentStation = this.recentStations[this.recentStations.length - 1];
+
+    // Look for the last occurrence of current station before the current visit
+    for (let i = this.recentStations.length - 2; i >= 0; i--) {
+      if (this.recentStations[i] === currentStation) {
+        // Found the last previous visit to this station, start sharing from after that visit
+        startIndex = i + 1;
+        break;
+      }
+    }
+
+    // Only share routes to stations we visited since our last visit to this station (not including current)
+    for (let i = startIndex; i < this.recentStations.length - 1; i++) {
       const destination = this.recentStations[i];
       // For reverse routing: to reach any destination, go through the station we came from
       const nextHop = immediatePrevious;
@@ -94,7 +100,6 @@ export class TrainExecution implements Execution {
     }
 
     return {
-      journeySource: this.journeySource,
       routeInformation,
     };
   }
@@ -344,14 +349,6 @@ export class TrainExecution implements Execution {
   private stationReached() {
     if (this.mg === null || this.player === null || !this.currentStation) {
       throw new Error("Not initialized");
-    }
-
-    // Set journeySource to first city/port visited (if not already set)
-    if (this.journeySource === null) {
-      const stationType = this.currentStation.unit.type();
-      if (stationType === UnitType.City || stationType === UnitType.Port) {
-        this.journeySource = this.currentStation;
-      }
     }
 
     this.currentStation.onTrainStop(this);
