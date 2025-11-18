@@ -22,7 +22,8 @@ type CachedSam = {
 };
 
 /**
- * Layer responsible for rendering SAM launcher defense radiuses
+ * Layer responsible for rendering SAM launcher defense radiuses for the local player.
+ * Uses an offscreen canvas and cached metadata to minimize per-frame work.
  */
 export class SAMRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
@@ -47,6 +48,13 @@ export class SAMRadiusLayer implements Layer {
     this.updateStrokeVisibility();
   }
 
+  /**
+   * Creates a SAM radius layer tied to the provided game view and UI state.
+   * @param game reactive game view reference
+   * @param eventBus global event bus for UI events
+   * @param transformHandler helper for camera transformations
+   * @param uiState shared UI state controlling toggle visibility
+   */
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
@@ -63,6 +71,7 @@ export class SAMRadiusLayer implements Layer {
     this.canvas.height = this.game.height();
   }
 
+  /** Initializes event listeners and builds the initial SAM caches. */
   init() {
     // Listen for game updates to detect SAM launcher changes
     // Also listen for UI toggle structure events so we can show borders when
@@ -88,6 +97,10 @@ export class SAMRadiusLayer implements Layer {
     return true;
   }
 
+  /**
+   * Runs every frame to keep cached SAM data aligned with the game state and animate
+   * dashed stroke offsets when coverage is visible.
+   */
   tick() {
     // Check for updates to SAM launchers
     const updates = this.game.updatesSinceLastTick();
@@ -155,6 +168,7 @@ export class SAMRadiusLayer implements Layer {
     );
   }
 
+  /** Redraws the offscreen canvas using the latest cached SAM circles. */
   redraw() {
     // Clear the canvas
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -174,10 +188,7 @@ export class SAMRadiusLayer implements Layer {
     );
   }
 
-  /**
-   * Rebuilds cached SAM metadata on demand. Subsequent calls are cheap unless the dirty
-   * flag is set by game updates or ownership changes.
-   */
+  /** Rebuilds cached SAM metadata when the dirty flag is set. */
   private ensureSamCaches() {
     if (!this.samCachesDirty) {
       return;
@@ -186,10 +197,7 @@ export class SAMRadiusLayer implements Layer {
     this.samCachesDirty = false;
   }
 
-  /**
-   * Recomputes the per-tile SAM stacks and flat circle list used for hover detection and
-   * radius rendering. Only considers active SAMs owned by the local player.
-   */
+  /** Recomputes per-tile SAM stacks and flattened circles for the current player. */
   private rebuildSamCaches() {
     this.samStacksByTile.clear();
     this.cachedSamCircles = [];
@@ -233,10 +241,7 @@ export class SAMRadiusLayer implements Layer {
     }
   }
 
-  /**
-   * Keeps the cached player small ID in sync with the game view. Invalidate SAM caches
-   * when the local player context changes.
-   */
+  /** Keeps cached SAM data aligned with the current player's small ID. */
   private syncMyPlayerSmallId(): number | undefined {
     const current = this.game.myPlayer()?.smallID();
     if (current !== this.myPlayerSmallId) {
@@ -252,8 +257,8 @@ export class SAMRadiusLayer implements Layer {
   }
 
   /**
-   * Draw union of multiple circles: fill the union, then stroke only the outer arcs
-   * so overlapping circles appear as one combined shape.
+   * Draws the union of cached SAM circles, optionally outlining exposed outer arcs.
+   * @param circles flattened list of circle descriptors
    */
   private drawCirclesUnion(
     circles: Array<{ x: number; y: number; r: number; owner: number }>,
