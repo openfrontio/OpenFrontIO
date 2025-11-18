@@ -8,6 +8,7 @@ import embargoBlackIcon from "../../../../resources/images/EmbargoBlackIcon.svg"
 import embargoWhiteIcon from "../../../../resources/images/EmbargoWhiteIcon.svg";
 import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
 import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
+import questionMarkIcon from "../../../../resources/images/QuestionMarkIcon.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
@@ -50,6 +51,7 @@ export class NameLayer implements Layer {
   private allianceRequestWhiteIconImage: HTMLImageElement;
   private allianceIconImage: HTMLImageElement;
   private allianceIconFadedImage: HTMLImageElement;
+  private questionMarkIconImage: HTMLImageElement;
   private targetIconImage: HTMLImageElement;
   private crownIconImage: HTMLImageElement;
   private embargoBlackIconImage: HTMLImageElement;
@@ -76,6 +78,8 @@ export class NameLayer implements Layer {
     this.allianceIconImage.src = allianceIcon;
     this.allianceIconFadedImage = new Image();
     this.allianceIconFadedImage.src = allianceIconFaded;
+    this.questionMarkIconImage = new Image();
+    this.questionMarkIconImage.src = questionMarkIcon;
     this.allianceRequestBlackIconImage = new Image();
     this.allianceRequestBlackIconImage.src = allianceRequestBlackIcon;
     this.allianceRequestWhiteIconImage = new Image();
@@ -355,6 +359,36 @@ export class NameLayer implements Layer {
       return;
     }
 
+    // Handle icons that need frequent updates (before throttle check)
+    const iconsDiv = render.element.querySelector(
+      ".player-icons",
+    ) as HTMLDivElement;
+    const iconSize = Math.min(render.fontSize * 1.5, 48);
+    const myPlayer = this.game.myPlayer();
+
+    // Update alliance icon question mark (needs to be responsive to extension requests)
+    const existingAlliance = iconsDiv.querySelector(
+      '[data-icon="alliance"]',
+    ) as HTMLElement | null;
+    if (
+      existingAlliance &&
+      myPlayer !== null &&
+      myPlayer.isAlliedWith(render.player)
+    ) {
+      const allianceView = myPlayer
+        .alliances()
+        .find((a) => a.other === render.player.id());
+      if (allianceView) {
+        const hasExtensionRequest = allianceView.hasExtensionRequest;
+        const questionMark = existingAlliance.querySelector(
+          ".alliance-question-mark",
+        ) as HTMLImageElement | null;
+        if (questionMark) {
+          questionMark.style.display = hasExtensionRequest ? "block" : "none";
+        }
+      }
+    }
+
     // Throttle updates
     const now = Date.now();
     if (now - render.lastRenderCalc <= this.renderRefreshRate) {
@@ -404,11 +438,6 @@ export class NameLayer implements Layer {
     }
 
     // Handle icons
-    const iconsDiv = render.element.querySelector(
-      ".player-icons",
-    ) as HTMLDivElement;
-    const iconSize = Math.min(render.fontSize * 1.5, 48);
-    const myPlayer = this.game.myPlayer();
     const isDarkMode = this.userSettings.darkMode();
 
     // Crown icon
@@ -491,15 +520,13 @@ export class NameLayer implements Layer {
     }
 
     // Alliance icon
-    const existingAlliance = iconsDiv.querySelector(
-      '[data-icon="alliance"]',
-    ) as HTMLElement | null;
     if (myPlayer !== null && myPlayer.isAlliedWith(render.player)) {
       // Compute remaining alliance fraction (0..1)
       const allianceView = myPlayer
         .alliances()
         .find((a) => a.other === render.player.id());
       let fraction = 0;
+      let hasExtensionRequest = false;
       if (allianceView) {
         const remaining = Math.max(
           0,
@@ -507,18 +534,16 @@ export class NameLayer implements Layer {
         );
         const duration = Math.max(1, this.game.config().allianceDuration());
         fraction = Math.max(0, Math.min(1, remaining / duration));
+        hasExtensionRequest = allianceView.hasExtensionRequest;
       }
 
-      const showRenewPrompt = (() => {
-        if (!allianceView) return false;
-        const remainingTicks = allianceView.expiresAt - this.game.ticks();
-        return (
-          remainingTicks <= this.game.config().allianceExtensionPromptOffset()
-        );
-      })();
       if (!existingAlliance) {
         iconsDiv.appendChild(
-          this.createAllianceProgressIcon(iconSize, fraction, showRenewPrompt),
+          this.createAllianceProgressIcon(
+            iconSize,
+            fraction,
+            hasExtensionRequest,
+          ),
         );
       } else {
         // Update the progress cropping on the existing element
@@ -528,17 +553,9 @@ export class NameLayer implements Layer {
           ".alliance-progress-overlay",
         ) as HTMLDivElement | null;
         if (overlay) {
-          // Correct crop accounting for top whitespace in SVG.
-          // Icon total height: 834px; active (colored) shape starts ~154px from top.
-          // We want visible green portion proportional to remaining fraction.
-          const TOTAL_HEIGHT = 834;
-          const TOP_OFFSET = 154; // pixels until first green content
-          const activeHeight = TOTAL_HEIGHT - TOP_OFFSET; // 680px
-          const topCutPx = TOP_OFFSET + (1 - fraction) * activeHeight;
-          const topCut = ((topCutPx / TOTAL_HEIGHT) * 100).toFixed(2); // percent of total height to crop
-          // Slight horizontal overscan to avoid subpixel gaps on the sides
-          overlay.style.clipPath = `inset(${topCut}% -2px 0 -2px)`;
+          overlay.style.clipPath = this.computeAllianceClipPath(fraction);
         }
+        // Note: question mark visibility is already updated above, before throttle
         // Ensure inner images keep correct size
         const imgs = existingAlliance.getElementsByTagName("img");
         for (const img of imgs) {
@@ -729,6 +746,7 @@ export class NameLayer implements Layer {
   private createAllianceProgressIcon(
     size: number,
     fraction: number,
+    hasExtensionRequest: boolean,
   ): HTMLDivElement {
     // Wrapper
     const wrapper = document.createElement("div");
@@ -756,14 +774,7 @@ export class NameLayer implements Layer {
     overlay.style.top = "0";
     overlay.style.width = "100%";
     overlay.style.height = "100%";
-    // Correct crop accounting for top whitespace in SVG.
-    const TOTAL_HEIGHT = 834;
-    const TOP_OFFSET = 154;
-    const activeHeight = TOTAL_HEIGHT - TOP_OFFSET;
-    const topCutPx = TOP_OFFSET + (1 - fraction) * activeHeight;
-    const topCut = ((topCutPx / TOTAL_HEIGHT) * 100).toFixed(2);
-    // Slight horizontal overscan to avoid subpixel gaps on the sides
-    overlay.style.clipPath = `inset(${topCut}% -2px 0 -2px)`;
+    overlay.style.clipPath = this.computeAllianceClipPath(fraction);
 
     const colored = document.createElement("img");
     colored.src = this.allianceIconImage.src; // green icon
@@ -774,6 +785,28 @@ export class NameLayer implements Layer {
     overlay.appendChild(colored);
 
     wrapper.appendChild(overlay);
+
+    // Question mark overlay (shown when there's a pending extension request)
+    const questionMark = document.createElement("img");
+    questionMark.className = "alliance-question-mark";
+    questionMark.src = this.questionMarkIconImage.src;
+    questionMark.style.position = "absolute";
+    questionMark.style.left = "0";
+    questionMark.style.top = "0";
+    questionMark.style.width = `${size}px`;
+    questionMark.style.height = `${size}px`;
+    questionMark.style.display = hasExtensionRequest ? "block" : "none";
+    questionMark.style.pointerEvents = "none";
+    questionMark.setAttribute(
+      "dark-mode",
+      this.userSettings.darkMode().toString(),
+    );
+    wrapper.appendChild(questionMark);
+
     return wrapper;
+  }
+  private computeAllianceClipPath(fraction: number): string {
+    const topCut = 20 + (1 - fraction) * 80 * 0.78; // min 20%, max 100%
+    return `inset(${topCut.toFixed(2)}% -2px 0 -2px)`;
   }
 }
