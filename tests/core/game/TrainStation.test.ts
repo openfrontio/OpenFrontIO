@@ -21,6 +21,8 @@ describe("TrainStation", () => {
       }),
       addUpdate: jest.fn(),
       addExecution: jest.fn(),
+      x: jest.fn((tile) => tile?.x ?? 0),
+      y: jest.fn((tile) => tile?.y ?? 0),
     } as any;
 
     player = {
@@ -42,6 +44,7 @@ describe("TrainStation", () => {
       loadCargo: jest.fn(),
       owner: jest.fn().mockReturnValue(player),
       level: jest.fn(),
+      shareJourneyInfo: jest.fn().mockReturnValue({ routeInformation: [] }),
     } as any;
   });
 
@@ -71,6 +74,7 @@ describe("TrainStation", () => {
   it("checks trade availability (same owner)", () => {
     const otherUnit = {
       owner: jest.fn().mockReturnValue(unit.owner()),
+      tile: jest.fn().mockReturnValue({ x: 0, y: 0 }),
     } as any;
 
     const station = new TrainStation(game, unit);
