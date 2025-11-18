@@ -20,8 +20,6 @@ export class AllianceRequestReplyExecution implements Execution {
     }
     this.requestor = mg.player(this.requestorID);
 
-    // Process the alliance reply immediately in init() instead of tick()
-    // to avoid a one-tick delay that could cause race conditions with donations
     if (this.requestor.isFriendly(this.recipient)) {
       console.warn("already allied");
     } else {
@@ -44,7 +42,6 @@ export class AllianceRequestReplyExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    // Alliance reply is now processed in init(), so tick() does nothing
   }
 
   isActive(): boolean {
