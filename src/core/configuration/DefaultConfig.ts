@@ -337,6 +337,9 @@ export class DefaultConfig implements Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
+  isRandomSpawn(): boolean {
+    return this._gameConfig.randomSpawn;
+  }
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }
@@ -378,9 +381,10 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under 200
+    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
+    const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
-      100_000 / (1 + Math.exp(-0.03 * (dist - 200))) + 100 * dist;
+      100_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 100 * dist;
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
@@ -584,10 +588,11 @@ export class DefaultConfig implements Config {
     return 10 * 10;
   }
   deletionMarkDuration(): Tick {
-    return 15 * 10;
+    return 30 * 10;
   }
+
   deleteUnitCooldown(): Tick {
-    return 15 * 10;
+    return 30 * 10;
   }
   emojiMessageDuration(): Tick {
     return 5 * 10;
@@ -784,6 +789,10 @@ export class DefaultConfig implements Config {
     return 20;
   }
 
+  tradeShipShortRangeDebuff(): number {
+    return 300;
+  }
+
   proximityBonusPortsNb(totalPorts: number) {
     return within(totalPorts / 3, 4, totalPorts);
   }
@@ -911,6 +920,15 @@ export class DefaultConfig implements Config {
 
   defaultSamRange(): number {
     return 70;
+  }
+
+  samRange(level: number): number {
+    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
+    return this.maxSamRange() - 480 / (level + 5);
+  }
+
+  maxSamRange(): number {
+    return 150;
   }
 
   defaultSamMissileSpeed(): number {

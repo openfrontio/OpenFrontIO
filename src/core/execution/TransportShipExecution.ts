@@ -179,17 +179,18 @@ export class TransportShipExecution implements Execution {
 
     // Team mate can conquer disconnected player and get their ships
     // captureUnit has changed the owner of the unit, now update attacker
+    const boatOwner = this.boat.owner();
     if (
       this.originalOwner.isDisconnected() &&
-      this.boat.owner() !== this.originalOwner &&
-      this.boat.owner().isOnSameTeam(this.originalOwner)
+      boatOwner !== this.originalOwner &&
+      boatOwner.isOnSameTeam(this.originalOwner)
     ) {
-      this.attacker = this.boat.owner();
-      this.originalOwner = this.boat.owner(); // for when this owner disconnects too
+      this.attacker = boatOwner;
+      this.originalOwner = boatOwner; // for when this owner disconnects too
     }
 
     if (this.boat.retreating()) {
-      // Ensure retreat source is valid for the new owner
+      // Ensure retreat source is still valid for (new) owner
       if (this.mg.owner(this.src!) !== this.attacker) {
         // Use bestTransportShipSpawn, not canBuild because of its max boats check etc
         const newSrc = this.attacker.bestTransportShipSpawn(this.dst);
