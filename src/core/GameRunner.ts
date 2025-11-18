@@ -100,8 +100,6 @@ export class GameRunner {
   ) {}
 
   init() {
-    // Accumulate spawn tiles across player types to prevent proximity conflicts
-
     if (this.game.config().isRandomSpawn()) {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
