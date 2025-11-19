@@ -1,6 +1,3 @@
-import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
-import allianceIconFaded from "../../../../resources/images/AllianceIconFaded.svg";
-import questionMarkIcon from "../../../../resources/images/QuestionMarkIcon.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
@@ -12,6 +9,8 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import {
+  computeAllianceClipPath,
+  createAllianceProgressIcon,
   getFirstPlacePlayer,
   getPlayerIcons,
   PlayerIconId,
@@ -40,9 +39,6 @@ export class NameLayer implements Layer {
   private rand = new PseudoRandom(10);
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
-  private allianceIconImage: HTMLImageElement;
-  private allianceIconFadedImage: HTMLImageElement;
-  private questionMarkIconImage: HTMLImageElement;
   private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
   private theme: Theme = this.game.config().theme();
@@ -55,12 +51,8 @@ export class NameLayer implements Layer {
     private transformHandler: TransformHandler,
     private eventBus: EventBus,
   ) {
-    this.allianceIconImage = new Image();
-    this.allianceIconImage.src = allianceIcon;
-    this.allianceIconFadedImage = new Image();
-    this.allianceIconFadedImage.src = allianceIconFaded;
-    this.questionMarkIconImage = new Image();
-    this.questionMarkIconImage.src = questionMarkIcon;
+    this.shieldIconImage = new Image();
+    this.shieldIconImage.src = shieldIcon;
     this.shieldIconImage = new Image();
     this.shieldIconImage.src = shieldIcon;
   }
@@ -435,10 +427,11 @@ export class NameLayer implements Layer {
           }
 
           if (!allianceWrapper) {
-            allianceWrapper = this.createAllianceProgressIcon(
+            allianceWrapper = createAllianceProgressIcon(
               iconSize,
               fraction,
               hasExtensionRequest,
+              this.userSettings.darkMode(),
             );
             iconsDiv.appendChild(allianceWrapper);
             render.icons.set(icon.id, allianceWrapper);
@@ -451,7 +444,7 @@ export class NameLayer implements Layer {
               ".alliance-progress-overlay",
             ) as HTMLDivElement | null;
             if (overlay) {
-              overlay.style.clipPath = this.computeAllianceClipPath(fraction);
+              overlay.style.clipPath = computeAllianceClipPath(fraction);
             }
 
             const questionMark = allianceWrapper.querySelector(
@@ -544,73 +537,5 @@ export class NameLayer implements Layer {
       icon.style.transform = "translateY(-50%)";
     }
     return icon;
-  }
-
-  private createAllianceProgressIcon(
-    size: number,
-    fraction: number,
-    hasExtensionRequest: boolean,
-  ): HTMLDivElement {
-    // Wrapper
-    const wrapper = document.createElement("div");
-    wrapper.setAttribute("data-icon", "alliance");
-    wrapper.setAttribute("dark-mode", this.userSettings.darkMode().toString());
-    wrapper.style.position = "relative";
-    wrapper.style.width = `${size}px`;
-    wrapper.style.height = `${size}px`;
-    wrapper.style.display = "inline-block";
-
-    // Base faded icon (full)
-    const base = document.createElement("img");
-    base.src = this.allianceIconFadedImage.src;
-    base.style.width = `${size}px`;
-    base.style.height = `${size}px`;
-    base.style.display = "block";
-    base.setAttribute("dark-mode", this.userSettings.darkMode().toString());
-    wrapper.appendChild(base);
-
-    // Overlay container for green portion, clipped from the top via clip-path
-    const overlay = document.createElement("div");
-    overlay.className = "alliance-progress-overlay";
-    overlay.style.position = "absolute";
-    overlay.style.left = "0";
-    overlay.style.top = "0";
-    overlay.style.width = "100%";
-    overlay.style.height = "100%";
-    overlay.style.clipPath = this.computeAllianceClipPath(fraction);
-
-    const colored = document.createElement("img");
-    colored.src = this.allianceIconImage.src; // green icon
-    colored.style.width = `${size}px`;
-    colored.style.height = `${size}px`;
-    colored.style.display = "block";
-    colored.setAttribute("dark-mode", this.userSettings.darkMode().toString());
-    overlay.appendChild(colored);
-
-    wrapper.appendChild(overlay);
-
-    // Question mark overlay (shown when there's a pending extension request)
-    const questionMark = document.createElement("img");
-    questionMark.className = "alliance-question-mark";
-    questionMark.src = this.questionMarkIconImage.src;
-    questionMark.style.position = "absolute";
-    questionMark.style.left = "0";
-    questionMark.style.top = "0";
-    questionMark.style.width = `${size}px`;
-    questionMark.style.height = `${size}px`;
-    questionMark.style.display = hasExtensionRequest ? "block" : "none";
-    questionMark.style.pointerEvents = "none";
-    questionMark.setAttribute(
-      "dark-mode",
-      this.userSettings.darkMode().toString(),
-    );
-    wrapper.appendChild(questionMark);
-
-    return wrapper;
-  }
-
-  private computeAllianceClipPath(fraction: number): string {
-    const topCut = 20 + (1 - fraction) * 80 * 0.78; // min 20%, max 82.40%
-    return `inset(${topCut.toFixed(2)}% -2px 0 -2px)`;
   }
 }
