@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import { PastelTheme } from "../core/configuration/PastelTheme";
+import { PastelTheme } from "../../core/configuration/PastelTheme";
 import {
   ColoredTeams,
   Duos,
@@ -12,10 +12,10 @@ import {
   Quads,
   Team,
   Trios,
-} from "../core/game/Game";
-import { assignTeams } from "../core/game/TeamAssignment";
-import { ClientInfo, TeamCountConfig } from "../core/Schemas";
-import { translateText } from "./Utils";
+} from "../../core/game/Game";
+import { assignTeams } from "../../core/game/TeamAssignment";
+import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
+import { translateText } from "../Utils";
 
 export interface TeamPreviewData {
   team: Team;
@@ -125,9 +125,6 @@ export class LobbyTeamView extends LitElement {
             : html`<button
                 class="remove-player-btn"
                 @click=${() => this.onKickPlayer?.(client.clientID)}
-                title=${translateText("host_modal.remove_player", {
-                  username: client.username,
-                })}
                 aria-label=${translateText("host_modal.remove_player", {
                   username: client.username,
                 })}
@@ -175,9 +172,6 @@ export class LobbyTeamView extends LitElement {
                       : html`<button
                           class="remove-player-btn ml-2"
                           @click=${() => this.onKickPlayer?.(p.clientID)}
-                          title=${translateText("host_modal.remove_player", {
-                            username: p.username,
-                          })}
                           aria-label=${translateText(
                             "host_modal.remove_player",
                             {

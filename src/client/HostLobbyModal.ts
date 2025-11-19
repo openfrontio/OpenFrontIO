@@ -25,8 +25,8 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/LobbyTeamView";
 import "./components/Maps";
-import "./LobbyTeamView";
 import { JoinLobbyEvent } from "./Main";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
