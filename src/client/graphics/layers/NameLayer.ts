@@ -1,31 +1,26 @@
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
 import allianceIconFaded from "../../../../resources/images/AllianceIconFaded.svg";
-import allianceRequestBlackIcon from "../../../../resources/images/AllianceRequestBlackIcon.svg";
-import allianceRequestWhiteIcon from "../../../../resources/images/AllianceRequestWhiteIcon.svg";
-import crownIcon from "../../../../resources/images/CrownIcon.svg";
-import disconnectedIcon from "../../../../resources/images/DisconnectedIcon.svg";
-import embargoBlackIcon from "../../../../resources/images/EmbargoBlackIcon.svg";
-import embargoWhiteIcon from "../../../../resources/images/EmbargoWhiteIcon.svg";
-import nukeRedIcon from "../../../../resources/images/NukeIconRed.svg";
-import nukeWhiteIcon from "../../../../resources/images/NukeIconWhite.svg";
 import questionMarkIcon from "../../../../resources/images/QuestionMarkIcon.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconBlack.svg";
-import targetIcon from "../../../../resources/images/TargetIcon.svg";
-import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import { Theme } from "../../../core/configuration/Config";
-import { AllPlayers, Cell, nukeTypes } from "../../../core/game/Game";
+import { Cell } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
+import {
+  getFirstPlacePlayer,
+  getPlayerIcons,
+  PlayerIconId,
+} from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 class RenderInfo {
-  public icons: Map<string, HTMLImageElement> = new Map(); // Track icon elements
+  public icons: Map<PlayerIconId, HTMLElement> = new Map(); // Track icon elements
 
   constructor(
     public player: PlayerView,
@@ -45,57 +40,27 @@ export class NameLayer implements Layer {
   private rand = new PseudoRandom(10);
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
-  private traitorIconImage: HTMLImageElement;
-  private disconnectedIconImage: HTMLImageElement;
-  private allianceRequestBlackIconImage: HTMLImageElement;
-  private allianceRequestWhiteIconImage: HTMLImageElement;
   private allianceIconImage: HTMLImageElement;
   private allianceIconFadedImage: HTMLImageElement;
   private questionMarkIconImage: HTMLImageElement;
-  private targetIconImage: HTMLImageElement;
-  private crownIconImage: HTMLImageElement;
-  private embargoBlackIconImage: HTMLImageElement;
-  private embargoWhiteIconImage: HTMLImageElement;
-  private nukeWhiteIconImage: HTMLImageElement;
-  private nukeRedIconImage: HTMLImageElement;
   private shieldIconImage: HTMLImageElement;
   private container: HTMLDivElement;
-  private firstPlace: PlayerView | null = null;
   private theme: Theme = this.game.config().theme();
   private userSettings: UserSettings = new UserSettings();
   private isVisible: boolean = true;
+  private firstPlace: PlayerView | null = null;
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
     private eventBus: EventBus,
   ) {
-    this.traitorIconImage = new Image();
-    this.traitorIconImage.src = traitorIcon;
-    this.disconnectedIconImage = new Image();
-    this.disconnectedIconImage.src = disconnectedIcon;
     this.allianceIconImage = new Image();
     this.allianceIconImage.src = allianceIcon;
     this.allianceIconFadedImage = new Image();
     this.allianceIconFadedImage.src = allianceIconFaded;
     this.questionMarkIconImage = new Image();
     this.questionMarkIconImage.src = questionMarkIcon;
-    this.allianceRequestBlackIconImage = new Image();
-    this.allianceRequestBlackIconImage.src = allianceRequestBlackIcon;
-    this.allianceRequestWhiteIconImage = new Image();
-    this.allianceRequestWhiteIconImage.src = allianceRequestWhiteIcon;
-    this.crownIconImage = new Image();
-    this.crownIconImage.src = crownIcon;
-    this.targetIconImage = new Image();
-    this.targetIconImage.src = targetIcon;
-    this.embargoBlackIconImage = new Image();
-    this.embargoBlackIconImage.src = embargoBlackIcon;
-    this.embargoWhiteIconImage = new Image();
-    this.embargoWhiteIconImage.src = embargoWhiteIcon;
-    this.nukeWhiteIconImage = new Image();
-    this.nukeWhiteIconImage.src = nukeWhiteIcon;
-    this.nukeRedIconImage = new Image();
-    this.nukeRedIconImage.src = nukeRedIcon;
     this.shieldIconImage = new Image();
     this.shieldIconImage.src = shieldIcon;
   }
@@ -180,12 +145,9 @@ export class NameLayer implements Layer {
     if (this.game.ticks() % 10 !== 0) {
       return;
     }
-    const sorted = this.game
-      .playerViews()
-      .sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
-    if (sorted.length > 0) {
-      this.firstPlace = sorted[0];
-    }
+
+    // Precompute the first-place player for performance
+    this.firstPlace = getFirstPlacePlayer(this.game);
 
     for (const player of this.game.playerViews()) {
       if (player.isAlive()) {
@@ -359,36 +321,6 @@ export class NameLayer implements Layer {
       return;
     }
 
-    // Handle icons that need frequent updates (before throttle check)
-    const iconsDiv = render.element.querySelector(
-      ".player-icons",
-    ) as HTMLDivElement;
-    const iconSize = Math.min(render.fontSize * 1.5, 48);
-    const myPlayer = this.game.myPlayer();
-
-    // Update alliance icon question mark (needs to be responsive to extension requests)
-    const existingAlliance = iconsDiv.querySelector(
-      '[data-icon="alliance"]',
-    ) as HTMLElement | null;
-    if (
-      existingAlliance &&
-      myPlayer !== null &&
-      myPlayer.isAlliedWith(render.player)
-    ) {
-      const allianceView = myPlayer
-        .alliances()
-        .find((a) => a.other === render.player.id());
-      if (allianceView) {
-        const hasExtensionRequest = allianceView.hasExtensionRequest;
-        const questionMark = existingAlliance.querySelector(
-          ".alliance-question-mark",
-        ) as HTMLImageElement | null;
-        if (questionMark) {
-          questionMark.style.display = hasExtensionRequest ? "block" : "none";
-        }
-      }
-    }
-
     // Throttle updates
     const now = Date.now();
     if (now - render.lastRenderCalc <= this.renderRefreshRate) {
@@ -438,282 +370,155 @@ export class NameLayer implements Layer {
     }
 
     // Handle icons
-    const isDarkMode = this.userSettings.darkMode();
+    const iconsDiv = render.element.querySelector(
+      ".player-icons",
+    ) as HTMLDivElement;
+    const iconSize = Math.min(render.fontSize * 1.5, 48);
 
-    // Crown icon
-    const existingCrown = iconsDiv.querySelector('[data-icon="crown"]');
-    if (render.player === this.firstPlace) {
-      if (!existingCrown) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            this.crownIconImage.src,
-            iconSize,
-            "crown",
-            false,
-          ),
-        );
-      }
-    } else if (existingCrown) {
-      existingCrown.remove();
-    }
-
-    // Traitor icon
-    let existingTraitor = iconsDiv.querySelector('[data-icon="traitor"]');
-    if (render.player.isTraitor()) {
-      const remainingTicks = render.player.getTraitorRemainingTicks();
-      // Use precise seconds (not rounded) for smoother transitions, rounded to 0.5s intervals
-      const remainingSeconds = Math.round((remainingTicks / 10) * 2) / 2;
-
-      if (!existingTraitor) {
-        existingTraitor = this.createIconElement(
-          this.traitorIconImage.src,
-          iconSize,
-          "traitor",
-        );
-        iconsDiv.appendChild(existingTraitor);
-      }
-
-      // Apply flashing animation - smooth speed increase starting at 15s
-      if (existingTraitor instanceof HTMLImageElement) {
-        if (remainingSeconds <= 15) {
-          // Smooth transition: starts at 1s at 15 seconds, decreases to 0.2s at 0 seconds
-          // Using cubic ease-out for slower, more gradual acceleration
-          const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
-          const normalizedTime = clampedSeconds / 15; // 0 to 1 (1 = 15s remaining, 0 = 0s remaining)
-
-          // Cubic ease-out: slower acceleration, smoother transition
-          const easedProgress = 1 - Math.pow(1 - normalizedTime, 3);
-
-          const maxDuration = 1.0; // Slow flash at 15 seconds
-          const minDuration = 0.2; // Fast flash at 0 seconds
-          const duration =
-            minDuration + (maxDuration - minDuration) * easedProgress;
-          const animationDuration = `${duration.toFixed(2)}s`;
-
-          existingTraitor.style.animation = `traitorFlash ${animationDuration} infinite`;
-          existingTraitor.style.animationTimingFunction = "ease-in-out";
-        } else {
-          // Don't flash if more than 15 seconds remaining
-          existingTraitor.style.animation = "none";
-        }
-      }
-    } else if (existingTraitor) {
-      existingTraitor.remove();
-    }
-
-    // Disconnected icon
-    const existingDisconnected = iconsDiv.querySelector(
-      '[data-icon="disconnected"]',
-    );
-    if (render.player.isDisconnected()) {
-      if (!existingDisconnected) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            this.disconnectedIconImage.src,
-            iconSize,
-            "disconnected",
-          ),
-        );
-      }
-    } else if (existingDisconnected) {
-      existingDisconnected.remove();
-    }
-
-    // Alliance icon
-    if (myPlayer !== null && myPlayer.isAlliedWith(render.player)) {
-      // Compute remaining alliance fraction (0..1)
-      const allianceView = myPlayer
-        .alliances()
-        .find((a) => a.other === render.player.id());
-      let fraction = 0;
-      let hasExtensionRequest = false;
-      if (allianceView) {
-        const remaining = Math.max(
-          0,
-          allianceView.expiresAt - this.game.ticks(),
-        );
-        const duration = Math.max(1, this.game.config().allianceDuration());
-        fraction = Math.max(0, Math.min(1, remaining / duration));
-        hasExtensionRequest = allianceView.hasExtensionRequest;
-      }
-
-      if (!existingAlliance) {
-        iconsDiv.appendChild(
-          this.createAllianceProgressIcon(
-            iconSize,
-            fraction,
-            hasExtensionRequest,
-          ),
-        );
-      } else {
-        // Update the progress cropping on the existing element
-        existingAlliance.style.width = `${iconSize}px`;
-        existingAlliance.style.height = `${iconSize}px`;
-        const overlay = existingAlliance.querySelector(
-          ".alliance-progress-overlay",
-        ) as HTMLDivElement | null;
-        if (overlay) {
-          overlay.style.clipPath = this.computeAllianceClipPath(fraction);
-        }
-        // Note: question mark visibility is already updated above, before throttle
-        // Ensure inner images keep correct size
-        const imgs = existingAlliance.getElementsByTagName("img");
-        for (const img of imgs) {
-          img.style.width = `${iconSize}px`;
-          img.style.height = `${iconSize}px`;
-        }
-      }
-    } else if (existingAlliance) {
-      existingAlliance.remove();
-    }
-
-    // Alliance request icon
-    let existingRequestAlliance = iconsDiv.querySelector(
-      '[data-icon="alliance-request"]',
-    );
-    const isThemeAllianceRequestIcon =
-      existingRequestAlliance?.getAttribute("dark-mode") ===
-      isDarkMode.toString();
-    const AllianceRequestIconImageSrc = isDarkMode
-      ? this.allianceRequestWhiteIconImage.src
-      : this.allianceRequestBlackIconImage.src;
-
-    if (myPlayer !== null && render.player.isRequestingAllianceWith(myPlayer)) {
-      // Create new icon to match theme
-      if (existingRequestAlliance && !isThemeAllianceRequestIcon) {
-        existingRequestAlliance.remove();
-        existingRequestAlliance = null;
-      }
-
-      if (!existingRequestAlliance) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            AllianceRequestIconImageSrc,
-            iconSize,
-            "alliance-request",
-          ),
-        );
-      }
-    } else if (existingRequestAlliance) {
-      existingRequestAlliance.remove();
-    }
-
-    // Target icon
-    const existingTarget = iconsDiv.querySelector('[data-icon="target"]');
-    if (
-      myPlayer !== null &&
-      new Set(myPlayer.transitiveTargets()).has(render.player)
-    ) {
-      if (!existingTarget) {
-        iconsDiv.appendChild(
-          this.createIconElement(
-            this.targetIconImage.src,
-            iconSize,
-            "target",
-            true,
-          ),
-        );
-      }
-    } else if (existingTarget) {
-      existingTarget.remove();
-    }
-
-    // Emoji handling
-    const existingEmoji = iconsDiv.querySelector('[data-icon="emoji"]');
-    const emojis = render.player
-      .outgoingEmojis()
-      .filter(
-        (emoji) =>
-          emoji.recipientID === AllPlayers ||
-          emoji.recipientID === myPlayer?.smallID(),
-      );
-
-    if (this.game.config().userSettings()?.emojis() && emojis.length > 0) {
-      if (!existingEmoji) {
-        const emojiDiv = document.createElement("div");
-        emojiDiv.setAttribute("data-icon", "emoji");
-        emojiDiv.style.fontSize = `${iconSize}px`;
-        emojiDiv.textContent = emojis[0].message;
-        emojiDiv.style.position = "absolute";
-        emojiDiv.style.top = "50%";
-        emojiDiv.style.transform = "translateY(-50%)";
-        iconsDiv.appendChild(emojiDiv);
-      }
-    } else if (existingEmoji) {
-      existingEmoji.remove();
-    }
-
-    // Embargo icon
-    let existingEmbargo = iconsDiv.querySelector('[data-icon="embargo"]');
-    const isThemeEmbargoIcon =
-      existingEmbargo?.getAttribute("dark-mode") === isDarkMode.toString();
-    const embargoIconImageSrc = isDarkMode
-      ? this.embargoWhiteIconImage.src
-      : this.embargoBlackIconImage.src;
-
-    if (myPlayer?.hasEmbargo(render.player)) {
-      // Create new icon to match theme
-      if (existingEmbargo && !isThemeEmbargoIcon) {
-        existingEmbargo.remove();
-        existingEmbargo = null;
-      }
-
-      if (!existingEmbargo) {
-        iconsDiv.appendChild(
-          this.createIconElement(embargoIconImageSrc, iconSize, "embargo"),
-        );
-      }
-    } else if (existingEmbargo) {
-      existingEmbargo.remove();
-    }
-
-    const nukesSentByOtherPlayer = this.game.units().filter((unit) => {
-      const isSendingNuke = render.player.id() === unit.owner().id();
-      const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
-      return (
-        nukeTypes.includes(unit.type()) &&
-        isSendingNuke &&
-        notMyPlayer &&
-        unit.isActive()
-      );
+    // Compute which icons should be shown for this player using shared logic
+    const icons = getPlayerIcons({
+      game: this.game,
+      player: render.player,
+      includeAllianceIcon: true,
+      firstPlace: this.firstPlace,
     });
-    const isMyPlayerTarget = nukesSentByOtherPlayer.find((unit) => {
-      const detonationDst = unit.targetTile();
-      if (detonationDst === undefined) return false;
-      const targetId = this.game.owner(detonationDst).id();
-      return myPlayer && targetId === myPlayer.id();
-    });
-    const existingNuke = iconsDiv.querySelector(
-      '[data-icon="nuke"]',
-    ) as HTMLImageElement;
 
-    if (existingNuke) {
-      if (nukesSentByOtherPlayer.length === 0) {
-        existingNuke.remove();
-      } else if (
-        isMyPlayerTarget &&
-        existingNuke.src !== this.nukeRedIconImage.src
-      ) {
-        existingNuke.src = this.nukeRedIconImage.src;
-      } else if (
-        !isMyPlayerTarget &&
-        existingNuke.src !== this.nukeWhiteIconImage.src
-      ) {
-        existingNuke.src = this.nukeWhiteIconImage.src;
-      }
-    } else if (nukesSentByOtherPlayer.length > 0) {
-      if (!existingNuke) {
-        const icon = isMyPlayerTarget
-          ? this.nukeRedIconImage.src
-          : this.nukeWhiteIconImage.src;
-        iconsDiv.appendChild(this.createIconElement(icon, iconSize, "nuke"));
+    // Build a set of desired icon IDs
+    const desiredIconIds = new Set(icons.map((icon) => icon.id));
+
+    // Remove any icons that are no longer needed
+    for (const [id, element] of render.icons) {
+      if (!desiredIconIds.has(id)) {
+        element.remove();
+        render.icons.delete(id);
       }
     }
-    // Update all icon sizes
-    const icons = iconsDiv.getElementsByTagName("img");
+
+    // Add or update icons that should be shown
     for (const icon of icons) {
-      icon.style.width = `${iconSize}px`;
-      icon.style.height = `${iconSize}px`;
+      if (icon.kind === "emoji" && icon.text) {
+        let emojiDiv = render.icons.get(icon.id) as HTMLDivElement | undefined;
+
+        if (!emojiDiv) {
+          emojiDiv = document.createElement("div");
+          emojiDiv.style.position = "absolute";
+          emojiDiv.style.top = "50%";
+          emojiDiv.style.transform = "translateY(-50%)";
+          iconsDiv.appendChild(emojiDiv);
+          render.icons.set(icon.id, emojiDiv);
+        }
+
+        emojiDiv.textContent = icon.text;
+        emojiDiv.style.fontSize = `${iconSize}px`;
+      } else if (icon.kind === "image" && icon.src) {
+        // Special handling for alliance icon with progress indicator
+        if (icon.id === "alliance") {
+          let allianceWrapper = render.icons.get(icon.id) as
+            | HTMLDivElement
+            | undefined;
+
+          const myPlayer = this.game.myPlayer();
+          const allianceView = myPlayer
+            ?.alliances()
+            .find((a) => a.other === render.player.id());
+
+          let fraction = 0;
+          let hasExtensionRequest = false;
+          if (allianceView) {
+            const remaining = Math.max(
+              0,
+              allianceView.expiresAt - this.game.ticks(),
+            );
+            const duration = Math.max(1, this.game.config().allianceDuration());
+            fraction = Math.max(0, Math.min(1, remaining / duration));
+            hasExtensionRequest = allianceView.hasExtensionRequest;
+          }
+
+          if (!allianceWrapper) {
+            allianceWrapper = this.createAllianceProgressIcon(
+              iconSize,
+              fraction,
+              hasExtensionRequest,
+            );
+            iconsDiv.appendChild(allianceWrapper);
+            render.icons.set(icon.id, allianceWrapper);
+          } else {
+            // Update existing alliance icon
+            allianceWrapper.style.width = `${iconSize}px`;
+            allianceWrapper.style.height = `${iconSize}px`;
+
+            const overlay = allianceWrapper.querySelector(
+              ".alliance-progress-overlay",
+            ) as HTMLDivElement | null;
+            if (overlay) {
+              overlay.style.clipPath = this.computeAllianceClipPath(fraction);
+            }
+
+            const questionMark = allianceWrapper.querySelector(
+              ".alliance-question-mark",
+            ) as HTMLImageElement | null;
+            if (questionMark) {
+              questionMark.style.display = hasExtensionRequest
+                ? "block"
+                : "none";
+            }
+
+            // Update inner image sizes
+            const imgs = allianceWrapper.getElementsByTagName("img");
+            for (const img of imgs) {
+              img.style.width = `${iconSize}px`;
+              img.style.height = `${iconSize}px`;
+            }
+          }
+          continue; // Skip regular image handling
+        }
+
+        let imgElement = render.icons.get(icon.id) as
+          | HTMLImageElement
+          | undefined;
+
+        if (!imgElement) {
+          imgElement = this.createIconElement(icon.src, iconSize, icon.center);
+          iconsDiv.appendChild(imgElement);
+          render.icons.set(icon.id, imgElement);
+        }
+
+        // Update src if it changed (e.g., nuke red/white or dark-mode icons)
+        if (imgElement.src !== icon.src) {
+          imgElement.src = icon.src;
+        }
+
+        imgElement.style.width = `${iconSize}px`;
+        imgElement.style.height = `${iconSize}px`;
+
+        // Traitor flashing - smooth speed increase starting at 15s
+        if (icon.id === "traitor") {
+          const remainingTicks = render.player.getTraitorRemainingTicks();
+          // Use precise seconds (not rounded) for smoother transitions, rounded to 0.5s intervals
+          const remainingSeconds = Math.round((remainingTicks / 10) * 2) / 2;
+
+          if (remainingSeconds <= 15) {
+            // Smooth transition: starts at 1s at 15 seconds, decreases to 0.2s at 0 seconds
+            // Using cubic ease-out for slower, more gradual acceleration
+            const clampedSeconds = Math.max(0, Math.min(15, remainingSeconds));
+            const normalizedTime = clampedSeconds / 15; // 0 to 1 (1 = 15s remaining, 0 = 0s remaining)
+
+            // Cubic ease-out: slower acceleration, smoother transition
+            const easedProgress = 1 - Math.pow(1 - normalizedTime, 3);
+            const maxDuration = 1.0; // Slow flash at 15 seconds
+            const minDuration = 0.2; // Fast flash at 0 seconds
+            const duration =
+              minDuration + (maxDuration - minDuration) * easedProgress;
+            const animationDuration = `${duration.toFixed(2)}s`;
+
+            imgElement.style.animation = `traitorFlash ${animationDuration} infinite`;
+            imgElement.style.animationTimingFunction = "ease-in-out";
+          } else {
+            // Don't flash if more than 15 seconds remaining
+            imgElement.style.animation = "none";
+          }
+        }
+      }
     }
 
     // Position element with scale
@@ -726,14 +531,12 @@ export class NameLayer implements Layer {
   private createIconElement(
     src: string,
     size: number,
-    id: string,
     center: boolean = false,
   ): HTMLImageElement {
     const icon = document.createElement("img");
     icon.src = src;
     icon.style.width = `${size}px`;
     icon.style.height = `${size}px`;
-    icon.setAttribute("data-icon", id);
     icon.setAttribute("dark-mode", this.userSettings.darkMode().toString());
     if (center) {
       icon.style.position = "absolute";
@@ -757,7 +560,7 @@ export class NameLayer implements Layer {
     wrapper.style.height = `${size}px`;
     wrapper.style.display = "inline-block";
 
-    // Base white icon (full)
+    // Base faded icon (full)
     const base = document.createElement("img");
     base.src = this.allianceIconFadedImage.src;
     base.style.width = `${size}px`;
@@ -805,8 +608,9 @@ export class NameLayer implements Layer {
 
     return wrapper;
   }
+
   private computeAllianceClipPath(fraction: number): string {
-    const topCut = 20 + (1 - fraction) * 80 * 0.78; // min 20%, max 100%
+    const topCut = 20 + (1 - fraction) * 80 * 0.78; // min 20%, max 82.40%
     return `inset(${topCut.toFixed(2)}% -2px 0 -2px)`;
   }
 }
