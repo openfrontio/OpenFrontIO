@@ -16,6 +16,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
 import {
   AlternateViewEvent,
+  ContextMenuEvent,
   DragEvent,
   MouseOverEvent,
   TerritoryWebGLStatusEvent,
@@ -281,6 +282,7 @@ export class TerritoryLayer implements Layer {
 
   init() {
     this.eventBus.on(MouseOverEvent, (e) => this.onMouseOver(e));
+    this.eventBus.on(ContextMenuEvent, (e) => this.onMouseOver(e));
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
       this.borderRenderer.setAlternativeView(this.alternativeView);
