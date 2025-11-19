@@ -5,6 +5,7 @@ import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import "./ClanLeaderboardModal";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
@@ -204,6 +205,18 @@ class Client {
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
       hlpModal.open();
+    });
+
+    const clanStatsModal = document.querySelector(
+      "clan-leaderboard-modal",
+    ) as HTMLElement & { open?: () => void };
+    if (!clanStatsModal) {
+      console.warn("Clan leaderboard modal element not found");
+    }
+    const clanStatsButton = document.getElementById("clan-stats-button");
+    if (clanStatsButton === null) throw new Error("Missing clan-stats-button");
+    clanStatsButton.addEventListener("click", () => {
+      clanStatsModal?.open?.();
     });
 
     const flagInputModal = document.querySelector(
