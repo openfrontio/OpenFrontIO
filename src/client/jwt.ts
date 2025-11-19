@@ -32,26 +32,6 @@ export function getApiBase() {
 }
 
 function getToken(): string | null {
-  // Check window hash
-  const { hash } = window.location;
-  if (hash.startsWith("#")) {
-    const params = new URLSearchParams(hash.slice(1));
-    const token = params.get("token");
-    if (token) {
-      localStorage.setItem("token", token);
-      params.delete("token");
-      params.toString();
-    }
-    // Clean the URL
-    history.replaceState(
-      null,
-      "",
-      window.location.pathname +
-        window.location.search +
-        (params.size > 0 ? "#" + params.toString() : ""),
-    );
-  }
-
   // Check cookie
   const cookie = document.cookie
     .split(";")
@@ -83,21 +63,16 @@ export function discordLogin() {
 export async function tokenLogin(token: string): Promise<string | null> {
   const response = await fetch(
     `${getApiBase()}/login/token?login-token=${token}`,
+    {
+      credentials: "include",
+    },
   );
   if (response.status !== 200) {
     console.error("Token login failed", response);
     return null;
   }
   const json = await response.json();
-  const { jwt, email } = json;
-  const payload = decodeJwt(jwt);
-  const result = TokenPayloadSchema.safeParse(payload);
-  if (!result.success) {
-    console.error("Invalid token", result.error, result.error.message);
-    return null;
-  }
-  clearToken();
-  localStorage.setItem("token", jwt);
+  const { email } = json;
   return email;
 }
 
