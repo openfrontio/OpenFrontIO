@@ -41,8 +41,7 @@ export class AllianceRequestReplyExecution implements Execution {
     this.active = false;
   }
 
-  tick(ticks: number): void {
-  }
+  tick(ticks: number): void {}
 
   isActive(): boolean {
     return this.active;
