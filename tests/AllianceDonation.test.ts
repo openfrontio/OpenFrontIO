@@ -117,7 +117,6 @@ describe("Alliance Donation", () => {
   });
 
   test("Can donate immediately after accepting alliance (race condition)", () => {
-
     game.addExecution(new AllianceRequestExecution(player1, player2.id()));
     game.executeNextTick();
 
