@@ -618,6 +618,9 @@ export class DefaultConfig implements Config {
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.
   }
+  minDistanceBetweenPlayers(): number {
+    return 30;
+  }
 
   percentageTilesOwnedToWin(): number {
     if (this._gameConfig.gameMode === GameMode.Team) {
@@ -692,7 +695,7 @@ export class DefaultConfig implements Config {
 
     if (attacker.isPlayer() && defender.isPlayer()) {
       if (defender.isDisconnected() && attacker.isOnSameTeam(defender)) {
-        // No troop loss if defender is disconnected.
+        // No troop loss if defender is disconnected and on same team
         mag = 0;
       }
       if (

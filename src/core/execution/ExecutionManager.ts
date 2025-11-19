@@ -133,11 +133,11 @@ export class Executor {
     }
   }
 
-  spawnBots(numBots: number): Execution[] {
+  spawnBots(numBots: number): SpawnExecution[] {
     return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
   }
 
-  spawnPlayers(): Execution[] {
+  spawnPlayers(): SpawnExecution[] {
     return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
