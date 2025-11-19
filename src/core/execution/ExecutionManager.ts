@@ -128,11 +128,11 @@ export class Executor {
     }
   }
 
-  spawnBots(numBots: number): SpawnExecution[] {
+  spawnBots(numBots: number): Execution[] {
     return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
   }
 
-  spawnPlayers(): SpawnExecution[] {
+  spawnPlayers(): Execution[] {
     return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
