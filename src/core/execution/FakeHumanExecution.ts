@@ -159,7 +159,6 @@ export class FakeHumanExecution implements Execution {
         console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
       }
-      this.mg.addPlayer(this.nation.playerInfo).setSpawnTile(rl);
       this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
       return;
     }
@@ -644,24 +643,6 @@ export class FakeHumanExecution implements Execution {
         continue;
       }
       const tile = this.mg.ref(x, y);
-
-      const isOtherPlayerSpawnedNearby = this.mg.allPlayers().some((player) => {
-        const spawnTile = player.spawnTile();
-
-        if (spawnTile === undefined) {
-          return false;
-        }
-
-        return (
-          this.mg.manhattanDist(spawnTile, tile) <
-          this.mg.config().minDistanceBetweenPlayers()
-        );
-      });
-
-      if (isOtherPlayerSpawnedNearby) {
-        continue;
-      }
-
       if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
         if (
           this.mg.terrainType(tile) === TerrainType.Mountain &&

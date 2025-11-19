@@ -40,33 +40,15 @@ export class BotSpawner {
     if (!this.gs.isLand(tile)) {
       return null;
     }
-
-    const isOtherPlayerSpawnedNearby = this.gs.allPlayers().some((player) => {
-      const spawnTile = player.spawnTile();
-
-      if (spawnTile === undefined) {
-        return false;
+    for (const spawn of this.bots) {
+      if (this.gs.manhattanDist(spawn.tile, tile) < 30) {
+        return null;
       }
-
-      return (
-        this.gs.manhattanDist(spawnTile, tile) <
-        this.gs.config().minDistanceBetweenPlayers()
-      );
-    });
-
-    if (isOtherPlayerSpawnedNearby) {
-      return null;
     }
-
-    const playerInfo = new PlayerInfo(
-      botName,
-      PlayerType.Bot,
-      null,
-      this.random.nextID(),
+    return new SpawnExecution(
+      new PlayerInfo(botName, PlayerType.Bot, null, this.random.nextID()),
+      tile,
     );
-    this.gs.addPlayer(playerInfo).setSpawnTile(tile);
-
-    return new SpawnExecution(playerInfo, tile);
   }
 
   private randomBotName(): string {
