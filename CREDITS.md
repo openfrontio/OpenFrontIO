@@ -25,4 +25,6 @@ Licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 
 ## Icons
 
-Icons from [The Noun Project](https://thenounproject.com/)
+### [The Noun Project](https://thenounproject.com/)
+
+Stats icon by [Meko](https://thenounproject.com/mekoda/) – https://thenounproject.com/icon/stats-4942475/
