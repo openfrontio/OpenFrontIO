@@ -171,6 +171,10 @@ export class PlayerImpl implements Player {
             other: a.other(this).id(),
             createdAt: a.createdAt(),
             expiresAt: a.expiresAt(),
+            hasExtensionRequest:
+              a.expiresAt() <=
+              this.mg.ticks() +
+                this.mg.config().allianceExtensionPromptOffset(),
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
@@ -789,8 +793,8 @@ export class PlayerImpl implements Player {
     return this._team === other.team();
   }
 
-  isFriendly(other: Player): boolean {
-    if (other.isDisconnected()) {
+  isFriendly(other: Player, treatAFKFriendly: boolean = false): boolean {
+    if (other.isDisconnected() && !treatAFKFriendly) {
       return false;
     }
     return this.isOnSameTeam(other) || this.isAlliedWith(other);

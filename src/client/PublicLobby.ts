@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
-import { GameMapType, GameMode } from "../core/game/Game";
+import { GameMapType, GameMode, HumansVsNations } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
@@ -161,7 +161,9 @@ export class PublicLobby extends LitElement {
               >
                 ${lobby.gameConfig.gameMode === GameMode.Team
                   ? typeof teamCount === "string"
-                    ? translateText(`public_lobby.teams_${teamCount}`)
+                    ? teamCount === HumansVsNations
+                      ? translateText("public_lobby.teams_hvn")
+                      : translateText(`public_lobby.teams_${teamCount}`)
                     : translateText("public_lobby.teams", {
                         num: teamCount ?? 0,
                       })
