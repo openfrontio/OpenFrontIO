@@ -61,6 +61,10 @@ export class UserSettings {
     return this.get("settings.structureSprites", true);
   }
 
+  territoryWebGL() {
+    return this.get("settings.territoryWebGL", true);
+  }
+
   darkMode() {
     return this.get("settings.darkMode", false);
   }
@@ -113,6 +117,10 @@ export class UserSettings {
 
   toggleStructureSprites() {
     this.set("settings.structureSprites", !this.structureSprites());
+  }
+
+  toggleTerritoryWebGL() {
+    this.set("settings.territoryWebGL", !this.territoryWebGL());
   }
 
   toggleTerritoryPatterns() {

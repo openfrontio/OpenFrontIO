@@ -15,10 +15,8 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
-  Unit,
   UnitType,
 } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
@@ -28,29 +26,10 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { resolveHoverTarget } from "../HoverTargetResolver";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
-
-function euclideanDistWorld(
-  coord: { x: number; y: number },
-  tileRef: TileRef,
-  game: GameView,
-): number {
-  const x = game.x(tileRef);
-  const y = game.y(tileRef);
-  const dx = coord.x - x;
-  const dy = coord.y - y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
-    const distA = euclideanDistWorld(coord, a.tile(), game);
-    const distB = euclideanDistWorld(coord, b.tile(), game);
-    return distA - distB;
-  };
-}
 
 @customElement("player-info-overlay")
 export class PlayerInfoOverlay extends LitElement implements Layer {
@@ -114,27 +93,16 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       return;
     }
 
-    const tile = this.game.ref(worldCoord.x, worldCoord.y);
-    if (!tile) return;
-
-    const owner = this.game.owner(tile);
-
-    if (owner && owner.isPlayer()) {
-      this.player = owner as PlayerView;
+    const target = resolveHoverTarget(this.game, worldCoord);
+    if (target.player) {
+      this.player = target.player;
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
       this.setVisible(true);
-    } else if (!this.game.isLand(tile)) {
-      const units = this.game
-        .units(UnitType.Warship, UnitType.TradeShip, UnitType.TransportShip)
-        .filter((u) => euclideanDistWorld(worldCoord, u.tile(), this.game) < 50)
-        .sort(distSortUnitWorld(worldCoord, this.game));
-
-      if (units.length > 0) {
-        this.unit = units[0];
-        this.setVisible(true);
-      }
+    } else if (target.unit) {
+      this.unit = target.unit;
+      this.setVisible(true);
     }
   }
 
