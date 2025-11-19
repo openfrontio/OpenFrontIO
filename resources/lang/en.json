@@ -165,6 +165,18 @@
     "logged_in_with_discord": "Logged in with Discord",
     "recovery_email_sent": "Recovery email sent to {email}"
   },
+  "stats_modal": {
+    "title": "Stats",
+    "clan_stats": "Clan Stats",
+    "loading": "Loading...",
+    "error": "Error loading clan stats",
+    "no_stats": "No clan stats available",
+    "clan": "Clan",
+    "games": "Games",
+    "win_score": "Win Score",
+    "loss_score": "Loss Score",
+    "win_loss_ratio": "Win/Loss"
+  },
   "map": {
     "map": "Map",
     "world": "World",

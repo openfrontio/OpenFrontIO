@@ -547,8 +547,6 @@ export interface Player {
 
   hasSpawned(): boolean;
   setHasSpawned(hasSpawned: boolean): void;
-  setSpawnTile(spawnTile: TileRef): void;
-  spawnTile(): TileRef | undefined;
 
   // Territory
   tiles(): ReadonlySet<TileRef>;
