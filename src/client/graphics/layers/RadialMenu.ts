@@ -387,66 +387,9 @@ export class RadialMenu implements Layer {
     >,
     level: number,
   ) {
-    const onHover = (
-      d: d3.PieArcDatum<MenuElement>,
-      path: any,
-      event?: MouseEvent,
-    ) => {
+    const onHover = (d: d3.PieArcDatum<MenuElement>, path: any) => {
       const disabled = this.params === null || d.data.disabled(this.params);
-
-      // Handle split button tooltips
-      if (d.data.splitButton && event) {
-        const pathElement = path.node() as SVGPathElement;
-        const svg = pathElement.ownerSVGElement;
-        if (svg) {
-          const pt = svg.createSVGPoint();
-          pt.x = event.clientX;
-          pt.y = event.clientY;
-          const svgPoint = pt.matrixTransform(svg.getScreenCTM()?.inverse());
-
-          const innerRadius = this.getInnerRadiusForLevel(level);
-          const outerRadius = this.getOuterRadiusForLevel(level);
-          const arc = d3
-            .arc<d3.PieArcDatum<MenuElement>>()
-            .innerRadius(innerRadius)
-            .outerRadius(outerRadius);
-          const centroid = arc.centroid(d);
-
-          const clickAngle = Math.atan2(
-            svgPoint.y - centroid[1],
-            svgPoint.x - centroid[0],
-          );
-
-          const arcMidAngle = (d.startAngle + d.endAngle) / 2;
-
-          const normalizeAngle = (angle: number) => {
-            while (angle < 0) angle += 2 * Math.PI;
-            while (angle >= 2 * Math.PI) angle -= 2 * Math.PI;
-            return angle;
-          };
-
-          const normalizedClickAngle = normalizeAngle(clickAngle);
-          const normalizedMidAngle = normalizeAngle(arcMidAngle);
-
-          let angleDiff = normalizedClickAngle - normalizedMidAngle;
-          if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-          if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-          const isLeftHalf = angleDiff < 0;
-          const splitAction = isLeftHalf
-            ? d.data.splitButton.left
-            : d.data.splitButton.right;
-
-          if (splitAction.tooltipItems && splitAction.tooltipItems.length > 0) {
-            this.showTooltip(splitAction.tooltipItems);
-          } else if (
-            splitAction.tooltipKeys &&
-            splitAction.tooltipKeys.length > 0
-          ) {
-            this.showTooltip(splitAction.tooltipKeys);
-          }
-        }
-      } else if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
+      if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
         this.showTooltip(d.data.tooltipItems);
       } else if (d.data.tooltipKeys && d.data.tooltipKeys.length > 0) {
         this.showTooltip(d.data.tooltipKeys);
@@ -507,68 +450,6 @@ export class RadialMenu implements Layer {
       )
         return;
 
-      // Handle split button clicks
-      if (d.data.splitButton) {
-        const mouseEvent = event as MouseEvent;
-        const pathElement = event.target as SVGPathElement;
-
-        // Get mouse position relative to the SVG
-        const svg = pathElement.ownerSVGElement;
-        if (!svg) return;
-        const pt = svg.createSVGPoint();
-        pt.x = mouseEvent.clientX;
-        pt.y = mouseEvent.clientY;
-        const svgPoint = pt.matrixTransform(svg.getScreenCTM()?.inverse());
-
-        // Get arc centroid
-        const innerRadius = this.getInnerRadiusForLevel(level);
-        const outerRadius = this.getOuterRadiusForLevel(level);
-        const arc = d3
-          .arc<d3.PieArcDatum<MenuElement>>()
-          .innerRadius(innerRadius)
-          .outerRadius(outerRadius);
-        const centroid = arc.centroid(d);
-
-        // Calculate angle from centroid to click point
-        const clickAngle = Math.atan2(
-          svgPoint.y - centroid[1],
-          svgPoint.x - centroid[0],
-        );
-
-        // Get the arc's midpoint angle
-        const arcMidAngle = (d.startAngle + d.endAngle) / 2;
-
-        // Normalize angles to [0, 2π]
-        const normalizeAngle = (angle: number) => {
-          while (angle < 0) angle += 2 * Math.PI;
-          while (angle >= 2 * Math.PI) angle -= 2 * Math.PI;
-          return angle;
-        };
-
-        const normalizedClickAngle = normalizeAngle(clickAngle);
-        const normalizedMidAngle = normalizeAngle(arcMidAngle);
-
-        // Determine which half: compare to midpoint angle
-        // Account for wrap-around by checking both directions
-        let angleDiff = normalizedClickAngle - normalizedMidAngle;
-        if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-        if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-        // Left half is counter-clockwise from midpoint (negative angle diff)
-        // Right half is clockwise from midpoint (positive angle diff)
-        const isLeftHalf = angleDiff < 0;
-
-        const splitAction = isLeftHalf
-          ? d.data.splitButton.left
-          : d.data.splitButton.right;
-        if (!splitAction.disabled || !splitAction.disabled(this.params)) {
-          splitAction.action(this.params);
-          this.isTransitioning = false;
-          this.hideRadialMenu();
-        }
-        return;
-      }
-
       const subMenu = d.data.subMenu?.(this.params);
       if (subMenu && subMenu.length > 0) {
         this.navigationInProgress = true;
@@ -597,8 +478,8 @@ export class RadialMenu implements Layer {
       const pathId = d.data.id;
       const path = d3.select(`path[data-id="${pathId}"]`);
 
-      path.on("mouseover", function (event) {
-        onHover(d, path, event as MouseEvent);
+      path.on("mouseover", function () {
+        onHover(d, path);
       });
 
       path.on("mouseout", function () {
@@ -607,9 +488,6 @@ export class RadialMenu implements Layer {
 
       path.on("mousemove", function (event) {
         handleMouseMove(event as MouseEvent);
-        if (d.data.splitButton) {
-          onHover(d, path, event as MouseEvent);
-        }
       });
 
       path.on("click", function (event) {
@@ -650,79 +528,6 @@ export class RadialMenu implements Layer {
         const contentId = d.data.id;
         const content = d3.select(`g[data-id="${contentId}"]`);
         const disabled = this.isItemDisabled(d.data);
-        const centroid = arc.centroid(d);
-
-        // Handle split buttons
-        if (d.data.splitButton) {
-          const iconSize = this.config.iconSize;
-          const spacing = iconSize * 0.3; // Space between icons
-          const totalWidth = iconSize * 2 + spacing;
-
-          // Left icon
-          const leftDisabled =
-            disabled ||
-            (d.data.splitButton.left.disabled &&
-              d.data.splitButton.left.disabled(this.params!));
-          const leftImgSel = content
-            .append("image")
-            .attr("xlink:href", d.data.splitButton.left.icon)
-            .attr("width", iconSize)
-            .attr("height", iconSize)
-            .attr("x", centroid[0] - totalWidth / 2)
-            .attr("y", centroid[1] - iconSize / 2)
-            .attr("opacity", leftDisabled ? 0.5 : 1);
-
-          getSvgAspectRatio(d.data.splitButton.left.icon).then((aspect) => {
-            if (!aspect || aspect === 1) return;
-            let width = iconSize;
-            let height = iconSize;
-            const biggerLength = Math.round(width * aspect);
-            if (aspect > 1) {
-              width = biggerLength;
-            } else {
-              height = biggerLength;
-            }
-            leftImgSel
-              .attr("width", width)
-              .attr("height", height)
-              .attr("x", centroid[0] - totalWidth / 2)
-              .attr("y", centroid[1] - height / 2);
-          });
-
-          // Right icon
-          const rightDisabled =
-            disabled ||
-            (d.data.splitButton.right.disabled &&
-              d.data.splitButton.right.disabled(this.params!));
-          const rightImgSel = content
-            .append("image")
-            .attr("xlink:href", d.data.splitButton.right.icon)
-            .attr("width", iconSize)
-            .attr("height", iconSize)
-            .attr("x", centroid[0] + totalWidth / 2 - iconSize)
-            .attr("y", centroid[1] - iconSize / 2)
-            .attr("opacity", rightDisabled ? 0.5 : 1);
-
-          getSvgAspectRatio(d.data.splitButton.right.icon).then((aspect) => {
-            if (!aspect || aspect === 1) return;
-            let width = iconSize;
-            let height = iconSize;
-            const biggerLength = Math.round(width * aspect);
-            if (aspect > 1) {
-              width = biggerLength;
-            } else {
-              height = biggerLength;
-            }
-            rightImgSel
-              .attr("width", width)
-              .attr("height", height)
-              .attr("x", centroid[0] + totalWidth / 2 - width)
-              .attr("y", centroid[1] - height / 2);
-          });
-
-          this.menuIcons.set(contentId, content as any);
-          return;
-        }
 
         if (d.data.text) {
           content
