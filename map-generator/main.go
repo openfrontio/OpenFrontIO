@@ -28,6 +28,7 @@ var maps = []struct {
 	{Name: "europeclassic"},
 	{Name: "falklandislands"},
 	{Name: "faroeislands"},
+	{Name: "fourislands"},
 	{Name: "gatewaytotheatlantic"},
 	{Name: "giantworldmap"},
 	{Name: "halkidiki"},

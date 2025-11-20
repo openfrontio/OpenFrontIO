@@ -60,6 +60,7 @@ const numPlayersConfig = {
   [GameMapType.Europe]: [100, 70, 50],
   [GameMapType.EuropeClassic]: [50, 30, 30],
   [GameMapType.FalklandIslands]: [50, 30, 20],
+  [GameMapType.FourIslands]: [20, 15, 10],
   [GameMapType.FaroeIslands]: [20, 15, 10],
   [GameMapType.GatewayToTheAtlantic]: [100, 70, 50],
   [GameMapType.GiantWorldMap]: [100, 70, 50],
