@@ -100,4 +100,42 @@ describe("AllianceRequestExecution", () => {
     expect(player1.isAlliedWith(player2)).toBeFalsy();
     expect(player2.isAlliedWith(player1)).toBeFalsy();
   });
+
+  test("incoming nukes are detonated when alliance is accepted", () => {
+    const player3 = game.player("player3");
+    player3.conquer(game.ref(0, 2));
+
+    game.config().nukeAllianceBreakThreshold = () => 100; // Set high threshold so nuke doesn't break alliance requests
+
+    // Player 1 launches a nuke at player 3
+    constructionExecution(game, player1, 0, 0, UnitType.MissileSilo);
+    const nukeExecution = new NukeExecution(
+      UnitType.AtomBomb,
+      player1,
+      game.ref(0, 2),
+      null,
+    );
+    game.addExecution(nukeExecution);
+    game.executeNextTick(); // Init the execution
+    game.executeNextTick(); // Nuke is launched
+
+    expect(player1.units(UnitType.AtomBomb).length).toBe(1);
+    expect(nukeExecution.isActive()).toBe(true);
+
+    // During flight, player 3 creates alliance request to player 1 directly
+    const allianceRequest = player3.createAllianceRequest(player1);
+    expect(allianceRequest).not.toBeNull();
+    expect(player3.outgoingAllianceRequests().length).toBe(1);
+    expect(player1.incomingAllianceRequests().length).toBe(1);
+
+    // Player 1 accepts the alliance request
+    allianceRequest!.accept();
+
+    // Alliance is formed
+    expect(player1.isAlliedWith(player3)).toBeTruthy();
+    expect(player3.isAlliedWith(player1)).toBeTruthy();
+
+    // Nuke should be destroyed when alliance is accepted
+    expect(player1.units(UnitType.AtomBomb).length).toBe(0);
+  });
 });

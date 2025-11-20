@@ -290,6 +290,9 @@ export class GameImpl implements Game {
       );
     }
 
+    // Detonate any incoming nukes between the two players
+    this.detonateIncomingNukesBetweenPlayers(requestor, recipient);
+
     // Create and register the new alliance
     const alliance = new AllianceImpl(
       this,
@@ -314,6 +317,47 @@ export class GameImpl implements Game {
       request: request.toUpdate(),
       accepted: true,
     });
+  }
+
+  private detonateIncomingNukesBetweenPlayers(
+    player1: Player,
+    player2: Player,
+  ) {
+    // Find all nukes that are in flight between the two players
+    const nukesToDetonate: Unit[] = [];
+
+    for (const nuke of this.units(
+      UnitType.AtomBomb,
+      UnitType.HydrogenBomb,
+      UnitType.MIRV,
+      UnitType.MIRVWarhead,
+    )) {
+      const nukeOwner = nuke.owner();
+      const targetTile = nuke.targetTile();
+
+      if (!targetTile || !nuke.isActive()) {
+        continue;
+      }
+
+      const targetOwner = this.owner(targetTile);
+
+      // Check if this nuke is from player1 to player2 or vice versa
+      if (
+        (nukeOwner === player1 && targetOwner === player2) ||
+        (nukeOwner === player2 && targetOwner === player1)
+      ) {
+        nukesToDetonate.push(nuke);
+      }
+    }
+
+    // Detonate all found nukes immediately at their current position
+    for (const nuke of nukesToDetonate) {
+      console.log(
+        `Detonating nuke from ${nuke.owner().name()} due to alliance formation`,
+      );
+      // Delete the nuke to trigger immediate detonation
+      nuke.delete(false);
+    }
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
