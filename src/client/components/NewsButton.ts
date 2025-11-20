@@ -19,19 +19,30 @@ export class NewsButton extends LitElement {
     try {
       const lastSeenVersion = localStorage.getItem("version");
       this.isActive = lastSeenVersion !== version;
+      if (this.isActive) {
+        setTimeout(() => {
+          this.openNewsModel();
+        }, 500);
+      }
     } catch (error) {
       // Fallback to NOT showing notification if localStorage fails
       this.isActive = false;
     }
+    localStorage.setItem("version", version);
   }
 
   private handleClick() {
     localStorage.setItem("version", version);
     this.isActive = false;
+    this.openNewsModel();
+  }
 
+  private openNewsModel() {
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (newsModal) {
       newsModal.open();
+    } else {
+      console.log("no newsModal");
     }
   }
 

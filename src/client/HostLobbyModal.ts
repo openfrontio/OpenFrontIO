@@ -25,6 +25,7 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -48,6 +49,7 @@ export class HostLobbyModal extends LitElement {
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
+  @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
@@ -391,6 +393,22 @@ export class HostLobbyModal extends LitElement {
                 </label>
 
                 <label
+                  for="random-spawn"
+                  class="option-card ${this.randomSpawn ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="random-spawn"
+                    @change=${this.handleRandomSpawnChange}
+                    .checked=${this.randomSpawn}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.random_spawn")}
+                  </div>
+                </label>
+
+                <label
                   for="donate-gold"
                   class="option-card ${this.donateGold ? "selected" : ""}"
                 >
@@ -537,27 +555,13 @@ export class HostLobbyModal extends LitElement {
             }
           </div>
 
-          <div class="players-list">
-            ${this.clients.map(
-              (client) => html`
-                <span class="player-tag">
-                  ${client.username}
-                  ${client.clientID === this.lobbyCreatorClientID
-                    ? html`<span class="host-badge"
-                        >(${translateText("host_modal.host_badge")})</span
-                      >`
-                    : html`
-                        <button
-                          class="remove-player-btn"
-                          @click=${() => this.kickPlayer(client.clientID)}
-                          title="Remove ${client.username}"
-                        >
-                          ×
-                        </button>
-                      `}
-                </span>
-              `,
-            )}
+          <lobby-team-view
+            .gameMode=${this.gameMode}
+            .clients=${this.clients}
+            .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+            .teamCount=${this.teamCount}
+            .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+          ></lobby-team-view>
         </div>
 
         <div class="start-game-button-container">
@@ -668,6 +672,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleRandomSpawnChange(e: Event) {
+    this.randomSpawn = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private handleInfiniteGoldChange(e: Event) {
     this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -749,6 +758,7 @@ export class HostLobbyModal extends LitElement {
           infiniteTroops: this.infiniteTroops,
           donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
+          randomSpawn: this.randomSpawn,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
