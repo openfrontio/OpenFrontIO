@@ -3,6 +3,7 @@ import CopyPlugin from "copy-webpack-plugin";
 import ESLintPlugin from "eslint-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import path from "path";
+import TerserPlugin from "terser-webpack-plugin";
 import { fileURLToPath } from "url";
 import webpack from "webpack";
 
@@ -169,6 +170,25 @@ export default async (env, argv) => {
           },
         },
       },
+      minimizer: isProduction
+        ? [
+            new TerserPlugin({
+              terserOptions: {
+                keep_classnames: (name) =>
+                  /Layer$|Display$|Menu$|Timer$|Sidebar$|Panel$|Overlay$|Modal$/.test(
+                    name,
+                  ) ||
+                  name === "Leaderboard" ||
+                  name === "TeamStats" ||
+                  name === "HeadsUpMessage" ||
+                  name === "AlertFrame" ||
+                  name === "TerritoryWebGLStatus" ||
+                  name === "MainRadialMenu" ||
+                  name === "AdTimer",
+              },
+            }),
+          ]
+        : [],
     },
     devServer: isProduction
       ? {}
