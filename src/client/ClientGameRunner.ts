@@ -33,6 +33,7 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
@@ -47,6 +48,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -201,6 +203,10 @@ export class ClientGameRunner {
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private goToPlayerTimeout: NodeJS.Timeout | null = null;
+
+  private lastTickReceiveTime: number = 0;
+  private currentTickDelay: number | undefined = undefined;
 
   constructor(
     private lobby: LobbyConfig,
@@ -239,6 +245,7 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       update.winner,
+      this.lobby.gameStartInfo.lobbyCreatedAt,
     );
     endGame(record);
   }
@@ -292,6 +299,14 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.renderer.tick();
 
+      // Emit tick metrics event for performance overlay
+      this.eventBus.emit(
+        new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
+      );
+
+      // Reset tick delay for next measurement
+      this.currentTickDelay = undefined;
+
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
@@ -314,6 +329,39 @@ export class ClientGameRunner {
       if (message.type === "start") {
         this.hasJoined = true;
         console.log("starting game!");
+
+        if (this.gameView.config().isRandomSpawn()) {
+          const goToPlayer = () => {
+            const myPlayer = this.gameView.myPlayer();
+
+            if (this.gameView.inSpawnPhase() && !myPlayer?.hasSpawned()) {
+              this.goToPlayerTimeout = setTimeout(goToPlayer, 1000);
+              return;
+            }
+
+            if (!myPlayer) {
+              return;
+            }
+
+            if (!this.gameView.inSpawnPhase() && !myPlayer.hasSpawned()) {
+              showErrorModal(
+                "spawn_failed",
+                translateText("error_modal.spawn_failed.description"),
+                this.lobby.gameID,
+                this.lobby.clientID,
+                true,
+                false,
+                translateText("error_modal.spawn_failed.title"),
+              );
+              return;
+            }
+
+            this.eventBus.emit(new GoToPlayerEvent(myPlayer));
+          };
+
+          goToPlayer();
+        }
+
         for (const turn of message.turns) {
           if (turn.turnNumber < this.turnsSeen) {
             continue;
@@ -359,6 +407,14 @@ export class ClientGameRunner {
           this.transport.joinGame(0);
           return;
         }
+        // Track when we receive the turn to calculate delay
+        const now = Date.now();
+        if (this.lastTickReceiveTime > 0) {
+          // Calculate delay between receiving turn messages
+          this.currentTickDelay = now - this.lastTickReceiveTime;
+        }
+        this.lastTickReceiveTime = now;
+
         if (this.turnsSeen !== message.turn.turnNumber) {
           console.error(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
@@ -383,6 +439,10 @@ export class ClientGameRunner {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
     }
+    if (this.goToPlayerTimeout) {
+      clearTimeout(this.goToPlayerTimeout);
+      this.goToPlayerTimeout = null;
+    }
   }
 
   private inputEvent(event: MouseUpEvent) {
@@ -401,7 +461,8 @@ export class ClientGameRunner {
     if (
       this.gameView.isLand(tile) &&
       !this.gameView.hasOwner(tile) &&
-      this.gameView.inSpawnPhase()
+      this.gameView.inSpawnPhase() &&
+      !this.gameView.config().isRandomSpawn()
     ) {
       this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;
@@ -423,15 +484,8 @@ export class ClientGameRunner {
             this.myPlayer.troops() * this.renderer.uiState.attackRatio,
           ),
         );
-      } else if (this.canBoatAttack(actions, tile)) {
+      } else if (this.canAutoBoat(actions, tile)) {
         this.sendBoatAttackIntent(tile);
-      }
-
-      const owner = this.gameView.owner(tile);
-      if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
       }
     });
   }
@@ -519,7 +573,7 @@ export class ClientGameRunner {
     }
 
     this.myPlayer.actions(tile).then((actions) => {
-      if (!actions.canAttack && this.canBoatAttack(actions, tile)) {
+      if (this.canBoatAttack(actions) !== false) {
         this.sendBoatAttackIntent(tile);
       }
     });
@@ -567,7 +621,7 @@ export class ClientGameRunner {
     return this.gameView.ref(cell.x, cell.y);
   }
 
-  private canBoatAttack(actions: PlayerActions, tile: TileRef): boolean {
+  private canBoatAttack(actions: PlayerActions): false | TileRef {
     const bu = actions.buildableUnits.find(
       (bu) => bu.type === UnitType.TransportShip,
     );
@@ -575,11 +629,7 @@ export class ClientGameRunner {
       console.warn(`no transport ship buildable units`);
       return false;
     }
-    return (
-      bu.canBuild !== false &&
-      this.shouldBoat(tile, bu.canBuild) &&
-      this.gameView.isLand(tile)
-    );
+    return bu.canBuild;
   }
 
   private sendBoatAttackIntent(tile: TileRef) {
@@ -598,59 +648,24 @@ export class ClientGameRunner {
     });
   }
 
-  private shouldBoat(tile: TileRef, src: TileRef) {
+  private canAutoBoat(actions: PlayerActions, tile: TileRef): boolean {
+    if (!this.gameView.isLand(tile)) return false;
+
+    const canBuild = this.canBoatAttack(actions);
+    if (canBuild === false) return false;
+
     // TODO: Global enable flag
     // TODO: Global limit autoboat to nearby shore flag
     // if (!enableAutoBoat) return false;
     // if (!limitAutoBoatNear) return true;
-    const distanceSquared = this.gameView.euclideanDistSquared(tile, src);
+    const distanceSquared = this.gameView.euclideanDistSquared(tile, canBuild);
     const limit = 100;
     const limitSquared = limit * limit;
-    if (distanceSquared > limitSquared) return false;
-    return true;
+    return distanceSquared < limitSquared;
   }
 
   private onMouseMove(event: MouseMoveEvent) {
     this.lastMousePosition = { x: event.x, y: event.y };
-    this.checkTileUnderCursor();
-  }
-
-  private checkTileUnderCursor() {
-    if (!this.lastMousePosition || !this.renderer.transformHandler) return;
-
-    const cell = this.renderer.transformHandler.screenToWorldCoordinates(
-      this.lastMousePosition.x,
-      this.lastMousePosition.y,
-    );
-
-    if (!cell || !this.gameView.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-
-    const tile = this.gameView.ref(cell.x, cell.y);
-
-    if (this.gameView.isLand(tile)) {
-      const owner = this.gameView.owner(tile);
-      if (owner.isPlayer()) {
-        this.gameView.setFocusedPlayer(owner as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
-      }
-    } else {
-      const units = this.gameView
-        .nearbyUnits(tile, 50, [
-          UnitType.Warship,
-          UnitType.TradeShip,
-          UnitType.TransportShip,
-        ])
-        .sort((a, b) => a.distSquared - b.distSquared);
-
-      if (units.length > 0) {
-        this.gameView.setFocusedPlayer(units[0].unit.owner() as PlayerView);
-      } else {
-        this.gameView.setFocusedPlayer(null);
-      }
-    }
   }
 
   private onConnectionCheck() {

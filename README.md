@@ -16,6 +16,17 @@ This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Assets: CC BY-SA 4.0](https://img.shields.io/badge/Assets-CC%20BY--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-sa/4.0/)
 
+## License
+
+OpenFront source code is licensed under the **GNU Affero General Public License v3.0** with additional attribution requirements:
+
+- Any forks or derivative works must display attribution (e.g., "Based on OpenFront", "Derived from OpenFront", "Powered by OpenFront", or "Fork of OpenFront") prominently on the main menu and/or initial title screen.
+
+See the `ADDITIONAL TERMS` section in [LICENSE](LICENSE) for complete requirements.
+
+For asset licensing, see [LICENSE-ASSETS](LICENSE-ASSETS).  
+For license history, see [LICENSING.md](LICENSING.md).
+
 ## 🌟 Features
 
 - **Real-time Strategy Gameplay**: Expand your territory and engage in strategic battles
@@ -80,6 +91,9 @@ npm run start:server-dev
 
 Sometimes it's useful to connect to production servers when replaying a game, testing user profiles, purchases, or login flow.
 
+> To replay a production game, make sure you're on the same commit that the game you want to replay was executed on, you can find the `gitCommit` value via `https://api.openfront.io/game/[gameId]`.
+> Unfinished games cannot be replayed on localhost.
+
 To connect to staging api servers:
 
 ```bash
@@ -124,10 +138,6 @@ npm run dev:prod
 - `/src/server` - Backend game server
 - `/resources` - Static assets (images, maps, etc.)
 
-## 📝 License
-
-This project is licensed under the terms found in the [LICENSE](LICENSE) file.
-
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -144,11 +154,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 Translators are welcome! Please feel free to help translate into your language.
 How to help?
 
-1. Request to join the dev [Discord](https://discord.gg/K9zernJB5z) (in the application form, say you want to help translate)
-1. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
-1. Login if you already have an account/ Sign up if you don't have one
-1. Select the language you want to translate in/ If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
-1. Translate the strings
+1. Join the translation [Discord](https://discord.gg/3zZzacjWFr)
+2. Go to the project's Crowdin translation page: [https://crowdin.com/project/openfront-mls](https://crowdin.com/project/openfront-mls)
+3. Login if you already have an account / Sign up if you don't have one
+4. Join the project
+5. Select the language you want to translate in. If your language isn't on the list, click the "Request New Language" button and enter the language you want added there.
+6. Translate the strings
+
+Feel free to ask questions in the translation Discord server!
 
 ### Project Governance
 

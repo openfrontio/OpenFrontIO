@@ -49,7 +49,7 @@ export class TerrainLayer implements Layer {
     this.theme = this.game.config().theme();
     this.game.forEachTile((tile) => {
       const terrainColor = this.theme.terrainColor(this.game, tile);
-      // TODO: isn'te tileref and index the same?
+      // TODO: isn't tileref and index the same?
       const index = this.game.y(tile) * this.game.width() + this.game.x(tile);
       const offset = index * 4;
       this.imageData.data[offset] = terrainColor.rgba.r;

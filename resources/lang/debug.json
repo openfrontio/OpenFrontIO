@@ -94,6 +94,7 @@
     "disable_nations": "single_modal.disable_nations",
     "instant_build": "single_modal.instant_build",
     "infinite_gold": "single_modal.infinite_gold",
+    "random_spawn": "single_modal.random_spawn",
     "infinite_troops": "single_modal.infinite_troops",
     "disable_nukes": "single_modal.disable_nukes",
     "start": "single_modal.start"
@@ -146,6 +147,7 @@
     "bots_disabled": "host_modal.bots_disabled",
     "disable_nations": "host_modal.disable_nations",
     "instant_build": "host_modal.instant_build",
+    "random_spawn": "host_modal.random_spawn",
     "infinite_gold": "host_modal.infinite_gold",
     "infinite_troops": "host_modal.infinite_troops",
     "disable_nukes": "host_modal.disable_nukes",
@@ -166,6 +168,7 @@
     "Impossible": "difficulty.Impossible"
   },
   "heads_up_message": {
-    "choose_spawn": "heads_up_message.choose_spawn"
+    "choose_spawn": "heads_up_message.choose_spawn",
+    "random_spawn": "heads_up_message.random_spawn"
   }
 }

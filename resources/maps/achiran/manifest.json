@@ -1,0 +1,44 @@
+{
+  "map": {
+    "height": 1700,
+    "num_land_tiles": 1149943,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 425,
+    "num_land_tiles": 69861,
+    "width": 500
+  },
+  "map4x": {
+    "height": 850,
+    "num_land_tiles": 284530,
+    "width": 1000
+  },
+  "name": "Achiran",
+  "nations": [
+    {
+      "coordinates": [785, 985],
+      "flag": "ie",
+      "name": "Inishmore",
+      "strength": 1
+    },
+    {
+      "coordinates": [1360, 1360],
+      "flag": "ie",
+      "name": "Inishmann",
+      "strength": 2
+    },
+    {
+      "coordinates": [1630, 1515],
+      "flag": "ie",
+      "name": "Inisheer",
+      "strength": 1
+    },
+    {
+      "coordinates": [1400, 480],
+      "flag": "ie",
+      "name": "Achill",
+      "strength": 2
+    }
+  ]
+}

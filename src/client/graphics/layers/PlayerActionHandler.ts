@@ -12,7 +12,6 @@ import {
   SendDonateTroopsIntentEvent,
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
-  SendQuickChatEvent,
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
@@ -95,10 +94,6 @@ export class PlayerActionHandler {
 
   handleEmoji(targetPlayer: PlayerView | "AllPlayers", emojiIndex: number) {
     this.eventBus.emit(new SendEmojiIntentEvent(targetPlayer, emojiIndex));
-  }
-
-  handleQuickChat(recipient: PlayerView, chatKey: string, params: any = {}) {
-    this.eventBus.emit(new SendQuickChatEvent(recipient, chatKey, params));
   }
 
   handleDeleteUnit(unitId: number) {

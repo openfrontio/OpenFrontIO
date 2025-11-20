@@ -14,6 +14,7 @@ interface Entry {
   gold: string;
   troops: string;
   isMyPlayer: boolean;
+  isOnSameTeam: boolean;
   player: PlayerView;
 }
 
@@ -115,6 +116,9 @@ export class Leaderboard extends LitElement implements Layer {
         gold: renderNumber(player.gold()),
         troops: renderNumber(troops),
         isMyPlayer: player === myPlayer,
+        isOnSameTeam:
+          myPlayer !== null &&
+          (player === myPlayer || player.isOnSameTeam(myPlayer)),
         player: player,
       };
     });
@@ -143,6 +147,7 @@ export class Leaderboard extends LitElement implements Layer {
           gold: renderNumber(myPlayer.gold()),
           troops: renderNumber(myPlayerTroops),
           isMyPlayer: true,
+          isOnSameTeam: true,
           player: myPlayer,
         });
       }
@@ -225,7 +230,7 @@ export class Leaderboard extends LitElement implements Layer {
             (p) => p.player.id(),
             (player) => html`
               <div
-                class="contents hover:bg-slate-600/60 ${player.isMyPlayer
+                class="contents hover:bg-slate-600/60 ${player.isOnSameTeam
                   ? "font-bold"
                   : ""} cursor-pointer"
                 @click=${() => this.handleRowClickPlayer(player.player)}

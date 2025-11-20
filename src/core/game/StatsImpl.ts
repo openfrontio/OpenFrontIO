@@ -74,11 +74,8 @@ export class StatsImpl implements Stats {
   private _addBetrayal(player: Player, value: BigIntLike) {
     const data = this._makePlayerStats(player);
     if (data === undefined) return;
-    if (data.betrayals === undefined) {
-      data.betrayals = _bigint(value);
-    } else {
-      data.betrayals += _bigint(value);
-    }
+    data.betrayals ??= 0n;
+    data.betrayals += _bigint(value);
   }
 
   private _addBoat(
@@ -267,4 +264,6 @@ export class StatsImpl implements Stats {
   playerKilled(player: Player, tick: number): void {
     this._addPlayerKilled(player, tick);
   }
+
+  lobbyFillTime(fillTimeMs: number): void {}
 }

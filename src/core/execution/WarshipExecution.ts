@@ -55,6 +55,7 @@ export class WarshipExecution implements Execution {
       this.warship.delete();
       return;
     }
+
     const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
     if (hasPort) {
       this.warship.modifyHealth(1);
@@ -88,7 +89,7 @@ export class WarshipExecution implements Execution {
       if (
         unit.owner() === this.warship.owner() ||
         unit === this.warship ||
-        unit.owner().isFriendly(this.warship.owner()) ||
+        unit.owner().isFriendly(this.warship.owner(), true) ||
         this.alreadySentShell.has(unit)
       ) {
         continue;

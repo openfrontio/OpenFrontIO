@@ -1,4 +1,4 @@
-import { Colord, extend } from "colord";
+import { colord, Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
 import Color from "colorjs.io";
@@ -47,6 +47,10 @@ export class ColorAllocator {
         return greenTeamColors;
       case ColoredTeams.Bot:
         return botTeamColors;
+      case ColoredTeams.Humans:
+        return blueTeamColors;
+      case ColoredTeams.Nations:
+        return redTeamColors;
       default:
         return [this.assignColor(team)];
     }
@@ -83,7 +87,11 @@ export class ColorAllocator {
 
   assignTeamColor(team: Team): Colord {
     const teamColors = this.getTeamColorVariations(team);
-    return teamColors[0];
+    const rgb = teamColors[0].toRgb();
+    rgb.r = Math.round(rgb.r);
+    rgb.g = Math.round(rgb.g);
+    rgb.b = Math.round(rgb.b);
+    return colord(rgb);
   }
 
   assignTeamPlayerColor(team: Team, playerId: string): Colord {
