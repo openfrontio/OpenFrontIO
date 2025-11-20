@@ -179,6 +179,7 @@ export interface AllianceView {
   other: PlayerID;
   createdAt: Tick;
   expiresAt: Tick;
+  hasExtensionRequest: boolean;
 }
 
 export interface AllianceRequestUpdate {
