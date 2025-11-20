@@ -369,6 +369,8 @@ export interface Attack {
   delete(): void;
   // The tile the attack originated from, mostly used for boat attacks.
   sourceTile(): TileRef | null;
+  // Unit ID for boat attacks (TransportShip), undefined for land attacks.
+  unitID(): number | undefined;
   addBorderTile(tile: TileRef): void;
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
@@ -652,6 +654,7 @@ export interface Player {
     troops: number,
     sourceTile: TileRef | null,
     border: Set<number>,
+    unitID?: number,
   ): Attack;
   outgoingAttacks(): Attack[];
   incomingAttacks(): Attack[];

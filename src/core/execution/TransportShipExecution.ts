@@ -204,6 +204,7 @@ export class TransportShipExecution implements Execution {
         if (this.target.isPlayer() && this.attacker.isFriendly(this.target)) {
           this.attacker.addTroops(this.boat.troops());
         } else {
+          const boatID = this.boat.id();
           this.mg.addExecution(
             new AttackExecution(
               this.boat.troops(),
@@ -211,6 +212,7 @@ export class TransportShipExecution implements Execution {
               this.targetID,
               this.dst,
               false,
+              boatID,
             ),
           );
         }

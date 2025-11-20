@@ -153,16 +153,33 @@ export class EventsDisplay extends LitElement implements Layer {
 
   /**
    * Find the boat unit associated with an attack.
-   * Matches boats by owner, target territory, and optionally troop count.
+   * Uses unit ID if available, otherwise falls back to matching by owner, target territory, and troop count.
    */
   private findBoatForAttack(
     attackerID: number,
     targetID: number,
     troops: number,
+    unitID?: number,
   ): UnitView | null {
     const attacker = this.game.playerBySmallID(attackerID) as PlayerView;
+    if (!attacker) return null;
+
+    // If unit ID is provided, try to find the boat directly by ID
+    if (unitID !== undefined) {
+      const boat = this.game.unit(unitID);
+      if (
+        boat &&
+        boat.type() === UnitType.TransportShip &&
+        boat.owner() === attacker &&
+        boat.isActive()
+      ) {
+        return boat;
+      }
+    }
+
+    // Fallback to matching by owner, target territory, and troop count
     const target = this.game.playerBySmallID(targetID) as PlayerView;
-    if (!attacker || !target) return null;
+    if (!target) return null;
 
     const boats = attacker
       .units(UnitType.TransportShip)
@@ -897,6 +914,7 @@ export class EventsDisplay extends LitElement implements Layer {
                       myPlayer.smallID(),
                       attack.targetID,
                       attack.troops,
+                      attack.unitID,
                     )
                   : null;
                 const timeRemaining =

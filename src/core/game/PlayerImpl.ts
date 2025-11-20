@@ -152,6 +152,7 @@ export class PlayerImpl implements Player {
           troops: a.troops(),
           id: a.id(),
           retreating: a.retreating(),
+          unitID: a.unitID(),
         } satisfies AttackUpdate;
       }),
       incomingAttacks: this._incomingAttacks.map((a) => {
@@ -161,6 +162,7 @@ export class PlayerImpl implements Player {
           troops: a.troops(),
           id: a.id(),
           retreating: a.retreating(),
+          unitID: a.unitID(),
         } satisfies AttackUpdate;
       }),
       outgoingAllianceRequests: outgoingAllianceRequests,
@@ -1153,6 +1155,7 @@ export class PlayerImpl implements Player {
     troops: number,
     sourceTile: TileRef | null,
     border: Set<number>,
+    unitID?: number,
   ): Attack {
     const attack = new AttackImpl(
       this._pseudo_random.nextID(),
@@ -1162,6 +1165,7 @@ export class PlayerImpl implements Player {
       sourceTile,
       border,
       this.mg,
+      unitID,
     );
     this._outgoingAttacks.push(attack);
     if (target.isPlayer()) {

@@ -143,6 +143,7 @@ export interface AttackUpdate {
   troops: number;
   id: string;
   retreating: boolean;
+  unitID?: number; // Unit ID for boat attacks (TransportShip)
 }
 
 export interface PlayerUpdate {

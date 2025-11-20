@@ -26,6 +26,7 @@ export class AttackExecution implements Execution {
   private mg: Game;
 
   private attack: Attack | null = null;
+  private _unitID: number | undefined;
 
   constructor(
     private startTroops: number | null = null,
@@ -33,7 +34,10 @@ export class AttackExecution implements Execution {
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
     private removeTroops: boolean = true,
-  ) {}
+    unitID?: number,
+  ) {
+    this._unitID = unitID;
+  }
 
   public targetID(): PlayerID | null {
     return this._targetID;
@@ -114,6 +118,7 @@ export class AttackExecution implements Execution {
       this.startTroops,
       this.sourceTile,
       new Set<TileRef>(),
+      this._unitID,
     );
 
     if (this.sourceTile !== null) {
