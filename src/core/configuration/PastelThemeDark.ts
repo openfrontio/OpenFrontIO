@@ -4,10 +4,10 @@ import { GameMap, TileRef } from "../game/GameMap";
 import { PastelTheme } from "./PastelTheme";
 
 export class PastelThemeDark extends PastelTheme {
-  private darkShore = colord({ r: 134, g: 133, b: 88 });
+  private darkShore = colord("rgb(134,133,88)");
 
-  private darkWater = colord({ r: 14, g: 11, b: 30 });
-  private darkShorelineWater = colord({ r: 50, g: 50, b: 50 });
+  private darkWater = colord("rgb(14,11,30)");
+  private darkShorelineWater = colord("rgb(50,50,50)");
 
   terrainColor(gm: GameMap, tile: TileRef): Colord {
     const mag = gm.magnitude(tile);

@@ -1,4 +1,4 @@
-import { Colord, colord } from "colord";
+import { Colord, colord, LabaColor } from "colord";
 import { PseudoRandom } from "../PseudoRandom";
 import { PlayerType, Team, TerrainType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
@@ -7,45 +7,42 @@ import { ColorAllocator } from "./ColorAllocator";
 import { botColors, fallbackColors, humanColors, nationColors } from "./Colors";
 import { Theme } from "./Config";
 
-type ColorCache = Map<string, Colord>;
-
 export class PastelTheme implements Theme {
-  private borderColorCache: ColorCache = new Map<string, Colord>();
   private rand = new PseudoRandom(123);
   private humanColorAllocator = new ColorAllocator(humanColors, fallbackColors);
   private botColorAllocator = new ColorAllocator(botColors, botColors);
   private teamColorAllocator = new ColorAllocator(humanColors, fallbackColors);
   private nationColorAllocator = new ColorAllocator(nationColors, nationColors);
 
-  private background = colord({ r: 60, g: 60, b: 60 });
-  private shore = colord({ r: 204, g: 203, b: 158 });
+  private background = colord("rgb(60,60,60)");
+  private shore = colord("rgb(204,203,158)");
   private falloutColors = [
-    colord({ r: 120, g: 255, b: 71 }), // Original color
-    colord({ r: 130, g: 255, b: 85 }), // Slightly lighter
-    colord({ r: 110, g: 245, b: 65 }), // Slightly darker
-    colord({ r: 125, g: 255, b: 75 }), // Warmer tint
-    colord({ r: 115, g: 250, b: 68 }), // Cooler tint
+    colord("rgb(120,255,71)"), // Original color
+    colord("rgb(130,255,85)"), // Slightly lighter
+    colord("rgb(110,245,65)"), // Slightly darker
+    colord("rgb(125,255,75)"), // Warmer tint
+    colord("rgb(115,250,68)"), // Cooler tint
   ];
-  private water = colord({ r: 70, g: 132, b: 180 });
-  private shorelineWater = colord({ r: 100, g: 143, b: 255 });
+  private water = colord("rgb(70,132,180)");
+  private shorelineWater = colord("rgb(100,143,255)");
 
   /** Alternate View colors for self, green */
-  private _selfColor = colord({ r: 0, g: 255, b: 0 });
+  private _selfColor = colord("rgb(0,255,0)");
   /** Alternate View colors for allies, yellow */
-  private _allyColor = colord({ r: 255, g: 255, b: 0 });
+  private _allyColor = colord("rgb(255,255,0)");
   /** Alternate View colors for neutral, gray */
-  private _neutralColor = colord({ r: 128, g: 128, b: 128 });
+  private _neutralColor = colord("rgb(128,128,128)");
   /** Alternate View colors for enemies, red */
-  private _enemyColor = colord({ r: 255, g: 0, b: 0 });
+  private _enemyColor = colord("rgb(255,0,0)");
 
   /** Default spawn highlight colors for other players in FFA, yellow */
-  private _spawnHighlightColor = colord({ r: 255, g: 213, b: 79 });
+  private _spawnHighlightColor = colord("rgb(255,213,79)");
   /** Added non-default spawn highlight colors for self, full white */
-  private _spawnHighlightSelfColor = colord({ r: 255, g: 255, b: 255 });
+  private _spawnHighlightSelfColor = colord("rgb(255,255,255)");
   /** Added non-default spawn highlight colors for teammates, green */
-  private _spawnHighlightTeamColor = colord({ r: 0, g: 255, b: 0 });
+  private _spawnHighlightTeamColor = colord("rgb(0,255,0)");
   /** Added non-default spawn highlight colors for enemies, red */
-  private _spawnHighlightEnemyColor = colord({ r: 255, g: 0, b: 0 });
+  private _spawnHighlightEnemyColor = colord("rgb(255,0,0)");
 
   teamColor(team: Team): Colord {
     return this.teamColorAllocator.assignTeamColor(team);
@@ -65,6 +62,59 @@ export class PastelTheme implements Theme {
     return this.nationColorAllocator.assignColor(player.id());
   }
 
+  structureColors(territoryColor: Colord): { light: Colord; dark: Colord } {
+    // Convert territory color to LAB color space. Territory color is rendered in game with alpha = 150/255, use that here.
+    const lightLAB = territoryColor.alpha(150 / 255).toLab();
+    // Get "border color" from territory color & convert to LAB color space
+    const darkLAB = this.borderColor(territoryColor).toLab();
+    // Calculate the contrast of the two provided colors
+    let contrast = this.contrast(lightLAB, darkLAB);
+
+    // Don't want excessive contrast, so incrementally increase contrast within a loop.
+    // Define target values, looping limits, and loop counter
+    const loopLimit = 10; // Switch from darkening border to lightening fill if loopLimit is reached
+    const maxIterations = 50; // maximum number of loops allowed, throw error above this limit
+    const contrastTarget = 0.5;
+    let loopCount = 0;
+
+    // Adjust luminance by 5 in each iteration. This is a balance between speed and not overdoing contrast changes.
+    const luminanceChange = 5;
+
+    while (contrast < contrastTarget) {
+      if (loopCount > maxIterations) {
+        // Prevent runaway loops
+        console.warn(`Infinite loop detected during structure color calculation. 
+          Light color: ${colord(lightLAB).toRgbString()}, 
+          Dark color: ${colord(darkLAB).toRgbString()}, 
+          Contrast: ${contrast}`);
+        break;
+
+        // Increase the light color if the "loop limit" has been reach
+        // (probably due to the dark color already being as dark as it can be)
+      } else if (loopCount > loopLimit) {
+        lightLAB.l = this.clamp(lightLAB.l + luminanceChange);
+
+        // Decrease the dark color first to keep the light color as close
+        // to the territory color as possible
+      } else {
+        darkLAB.l = this.clamp(darkLAB.l - luminanceChange);
+      }
+
+      // re-calculate contrast and increment loop counter
+      contrast = this.contrast(lightLAB, darkLAB);
+      loopCount++;
+    }
+    return { light: colord(lightLAB), dark: colord(darkLAB) };
+  }
+
+  private contrast(first: LabaColor, second: LabaColor): number {
+    return colord(first).delta(colord(second));
+  }
+
+  private clamp(num: number, low: number = 0, high: number = 100): number {
+    return Math.min(Math.max(low, num), high);
+  }
+
   // Don't call directly, use PlayerView
   borderColor(territoryColor: Colord): Colord {
     return territoryColor.darken(0.125);
@@ -81,7 +131,7 @@ export class PastelTheme implements Theme {
   }
 
   focusedBorderColor(): Colord {
-    return colord({ r: 230, g: 230, b: 230 });
+    return colord("rgb(230,230,230)");
   }
 
   textColor(player: PlayerView): string {

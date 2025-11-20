@@ -56,7 +56,7 @@
 
       .bg-image {
         content: "";
-        background-image: url("/images/EuropeBackground.webp");
+        background-image: url("/images/EuropeBackgroundBlurred.webp");
         background-position: center;
         background-attachment: fixed;
         background-size: cover;
@@ -73,7 +73,6 @@
         position: absolute;
         width: 100%;
         height: 100vh;
-        backdrop-filter: blur(5px);
       }
 
       .dark .bg-image {
@@ -220,9 +219,7 @@
             ></button>
           </territory-patterns-modal>
           <username-input class="relative w-full"></username-input>
-          <news-button
-            class="w-[20%] md:w-[15%] component-hideable"
-          ></news-button>
+          <news-button class="w-[20%] component-hideable"></news-button>
         </div>
         <div></div>
         <div>
@@ -408,6 +405,7 @@
     <spawn-timer></spawn-timer>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
+    <stats-button></stats-button>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <user-setting></user-setting>
@@ -415,7 +413,7 @@
     <news-modal></news-modal>
     <game-left-sidebar></game-left-sidebar>
     <flag-input-modal></flag-input-modal>
-    <fps-display></fps-display>
+    <performance-overlay></performance-overlay>
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"

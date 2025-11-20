@@ -2,7 +2,13 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
+import {
+  Cell,
+  ColoredTeams,
+  PlayerType,
+  Team,
+  UnitType,
+} from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -13,6 +19,7 @@ import {
   DragEvent,
   MouseOverEvent,
 } from "../../InputHandler";
+import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -170,6 +177,7 @@ export class TerritoryLayer implements Layer {
       .filter((p) => p.type() === PlayerType.Human);
 
     const focusedPlayer = this.game.focusedPlayer();
+    const teamColors = Object.values(ColoredTeams);
     for (const human of humans) {
       if (human === focusedPlayer) {
         continue;
@@ -191,7 +199,15 @@ export class TerritoryLayer implements Layer {
         // In Team games, the spawn highlight color becomes that player's team color
         // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
         const team = human.team();
-        if (team !== null) color = this.theme.teamColor(team);
+        if (team !== null && teamColors.includes(team)) {
+          color = this.theme.teamColor(team);
+        } else {
+          if (myPlayer.isFriendly(human)) {
+            color = this.theme.spawnHighlightTeamColor();
+          } else {
+            color = this.theme.spawnHighlightColor();
+          }
+        }
       }
 
       for (const tile of this.game.bfs(
@@ -223,13 +239,24 @@ export class TerritoryLayer implements Layer {
     const radius =
       minRad + (maxRad - minRad) * (0.5 + 0.5 * Math.sin(this.borderAnimTime));
 
+    const baseColor = this.theme.spawnHighlightSelfColor(); //white
+    let teamColor: Colord | null = null;
+
+    const team: Team | null = focusedPlayer.team();
+    if (team !== null && Object.values(ColoredTeams).includes(team)) {
+      teamColor = this.theme.teamColor(team).alpha(0.5);
+    } else {
+      teamColor = baseColor;
+    }
+
     this.drawBreathingRing(
       center.x,
       center.y,
       minRad,
       maxRad,
       radius,
-      this.theme.spawnHighlightSelfColor(), // Always draw breathing ring with self spawn highlight color
+      baseColor, // Always draw white static semi-transparent ring
+      teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
     );
   }
 
@@ -373,7 +400,9 @@ export class TerritoryLayer implements Layer {
       now > this.lastRefresh + this.refreshRate
     ) {
       this.lastRefresh = now;
+      const renderTerritoryStart = FrameProfiler.start();
       this.renderTerritory();
+      FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
 
       const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
       const vx0 = Math.max(0, topLeft.x);
@@ -385,6 +414,7 @@ export class TerritoryLayer implements Layer {
       const h = vy1 - vy0 + 1;
 
       if (w > 0 && h > 0) {
+        const putImageStart = FrameProfiler.start();
         this.context.putImageData(
           this.alternativeView ? this.alternativeImageData : this.imageData,
           0,
@@ -394,9 +424,11 @@ export class TerritoryLayer implements Layer {
           w,
           h,
         );
+        FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
       }
     }
 
+    const drawCanvasStart = FrameProfiler.start();
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -404,13 +436,19 @@ export class TerritoryLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
     if (this.game.inSpawnPhase()) {
+      const highlightDrawStart = FrameProfiler.start();
       context.drawImage(
         this.highlightCanvas,
         -this.game.width() / 2,
         -this.game.height() / 2,
         this.game.width(),
         this.game.height(),
+      );
+      FrameProfiler.end(
+        "TerritoryLayer:drawHighlightCanvas",
+        highlightDrawStart,
       );
     }
   }
@@ -566,7 +604,8 @@ export class TerritoryLayer implements Layer {
     minRad: number,
     maxRad: number,
     radius: number,
-    color: Colord,
+    transparentColor: Colord,
+    breathingColor: Colord,
   ) {
     const ctx = this.highlightContext;
     if (!ctx) return;
@@ -574,17 +613,16 @@ export class TerritoryLayer implements Layer {
     // Draw a semi-transparent ring around the starting location
     ctx.beginPath();
     // Transparency matches the highlight color provided
-    const transparent = color.toHex() + "00";
-    const c = color.toHex();
+    const transparent = transparentColor.alpha(0);
     const radGrad = ctx.createRadialGradient(cx, cy, minRad, cx, cy, maxRad);
 
     // Pixels with radius < minRad are transparent
-    radGrad.addColorStop(0, transparent);
+    radGrad.addColorStop(0, transparent.toRgbString());
     // The ring then starts with solid highlight color
-    radGrad.addColorStop(0.01, c);
-    radGrad.addColorStop(0.1, c);
+    radGrad.addColorStop(0.01, transparentColor.toRgbString());
+    radGrad.addColorStop(0.1, transparentColor.toRgbString());
     // The outer edge of the ring is transparent
-    radGrad.addColorStop(1, transparent);
+    radGrad.addColorStop(1, transparent.toRgbString());
 
     // Draw an arc at the max radius and fill with the created radial gradient
     ctx.arc(cx, cy, maxRad, 0, Math.PI * 2);
@@ -592,15 +630,16 @@ export class TerritoryLayer implements Layer {
     ctx.closePath();
     ctx.fill();
 
+    const breatheInner = breathingColor.alpha(0);
     // Draw a solid ring around the starting location with outer radius = the breathing radius
     ctx.beginPath();
     const radGrad2 = ctx.createRadialGradient(cx, cy, minRad, cx, cy, radius);
     // Pixels with radius < minRad are transparent
-    radGrad2.addColorStop(0, transparent);
+    radGrad2.addColorStop(0, breatheInner.toRgbString());
     // The ring then starts with solid highlight color
-    radGrad2.addColorStop(0.01, c);
+    radGrad2.addColorStop(0.01, breathingColor.toRgbString());
     // The ring is solid throughout
-    radGrad2.addColorStop(1, c);
+    radGrad2.addColorStop(1, breathingColor.toRgbString());
 
     // Draw an arc at the current breathing radius and fill with the created "gradient"
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
