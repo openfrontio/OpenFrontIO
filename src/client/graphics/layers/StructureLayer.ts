@@ -15,7 +15,7 @@ import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
-const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
+const underConstructionColor = colord("rgb(150,150,150)");
 
 // Base radius values and scaling factor for unit borders and territories
 const BASE_BORDER_RADIUS = 16.5;

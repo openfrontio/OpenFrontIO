@@ -14,6 +14,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Quads,
   Trios,
   UnitType,
@@ -149,6 +150,7 @@ const TeamCountConfigSchema = z.union([
   z.literal(Duos),
   z.literal(Trios),
   z.literal(Quads),
+  z.literal(HumansVsNations),
 ]);
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
@@ -165,6 +167,7 @@ export const GameConfigSchema = z.object({
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
+  randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
   disabledUnits: z.enum(UnitType).array().optional(),
@@ -425,6 +428,7 @@ export const PlayerSchema = z.object({
 
 export const GameStartInfoSchema = z.object({
   gameID: ID,
+  lobbyCreatedAt: z.number(),
   config: GameConfigSchema,
   players: PlayerSchema.array(),
 });
@@ -461,6 +465,7 @@ export const ServerStartGameMessageSchema = z.object({
   // Turns the client missed if they are late to the game.
   turns: TurnSchema.array(),
   gameStartInfo: GameStartInfoSchema,
+  lobbyCreatedAt: z.number(),
 });
 
 export const ServerDesyncSchema = z.object({
@@ -545,6 +550,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 
 export const PlayerRecordSchema = PlayerSchema.extend({
   persistentID: PersistentIdSchema.nullable(), // WARNING: PII
+  clanTag: z.string().optional(),
   stats: PlayerStatsSchema,
 });
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
@@ -556,6 +562,7 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   duration: z.number().nonnegative(),
   num_turns: z.number(),
   winner: WinnerSchema,
+  lobbyFillTime: z.number().nonnegative(),
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 

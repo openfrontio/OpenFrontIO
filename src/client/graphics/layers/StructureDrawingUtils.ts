@@ -253,25 +253,13 @@ export class SpriteFactory {
     structureCanvas.height = Math.ceil(iconSize);
     const context = structureCanvas.getContext("2d")!;
 
-    const tc = owner.territoryColor();
-    const bc = owner.borderColor();
-
-    const darker = bc.luminance() < tc.luminance() ? bc : tc;
-    const lighter = bc.luminance() < tc.luminance() ? tc : bc;
-
-    let borderColor: string;
-    if (isConstruction) {
-      context.fillStyle = "rgb(198, 198, 198)";
-      borderColor = "rgb(128, 127, 127)";
-    } else {
-      context.fillStyle = lighter
-        .lighten(0.13)
-        .alpha(renderIcon ? 0.65 : 1)
-        .toRgbString();
-      const darken = darker.isLight() ? 0.17 : 0.15;
-      borderColor = darker.darken(darken).toRgbString();
-    }
-    context.strokeStyle = borderColor;
+    // Use structureColors defined from the PlayerView.
+    context.fillStyle = isConstruction
+      ? "rgb(198,198,198)"
+      : owner.structureColors().light.toRgbString();
+    context.strokeStyle = isConstruction
+      ? "rgb(127,127, 127)"
+      : owner.structureColors().dark.toRgbString();
     context.lineWidth = 1;
     const halfIconSize = iconSize / 2;
 
@@ -399,7 +387,10 @@ export class SpriteFactory {
       };
       const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
       context.drawImage(
-        this.getImageColored(structureInfo.image, borderColor),
+        this.getImageColored(
+          structureInfo.image,
+          owner.structureColors().dark.toRgbString(),
+        ),
         offsetX,
         offsetY,
       );
@@ -427,6 +418,7 @@ export class SpriteFactory {
     type: UnitType,
     stage: PIXI.Container,
     pos: { x: number; y: number },
+    level?: number,
   ): PIXI.Container | null {
     if (stage === undefined) throw new Error("Not initialized");
     const parentContainer = new PIXI.Container();
@@ -434,7 +426,7 @@ export class SpriteFactory {
     let radius = 0;
     switch (type) {
       case UnitType.SAMLauncher:
-        radius = this.game.config().defaultSamRange();
+        radius = this.game.config().samRange(level ?? 1);
         break;
       case UnitType.Factory:
         radius = this.game.config().trainStationMaxRange();
@@ -453,7 +445,8 @@ export class SpriteFactory {
     }
     circle
       .circle(0, 0, radius)
-      .stroke({ width: 1, color: 0xffffff, alpha: 0.2 });
+      .fill({ color: 0xffffff, alpha: 0.2 })
+      .stroke({ width: 1, color: 0xffffff, alpha: 0.5 });
     parentContainer.addChild(circle);
     parentContainer.position.set(pos.x, pos.y);
     parentContainer.scale.set(this.transformHandler.scale);

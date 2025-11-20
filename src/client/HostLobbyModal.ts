@@ -9,6 +9,7 @@ import {
   GameMapSize,
   GameMapType,
   GameMode,
+  HumansVsNations,
   Quads,
   Trios,
   UnitType,
@@ -24,6 +25,7 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -47,6 +49,7 @@ export class HostLobbyModal extends LitElement {
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
   @state() private instantBuild: boolean = false;
+  @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
@@ -284,7 +287,18 @@ export class HostLobbyModal extends LitElement {
                       ${translateText("host_modal.team_count")}
                     </div>
                     <div class="option-cards">
-                      ${[2, 3, 4, 5, 6, 7, Quads, Trios, Duos].map(
+                      ${[
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        Quads,
+                        Trios,
+                        Duos,
+                        HumansVsNations,
+                      ].map(
                         (o) => html`
                           <div
                             class="option-card ${this.teamCount === o
@@ -294,7 +308,9 @@ export class HostLobbyModal extends LitElement {
                           >
                             <div class="option-card-title">
                               ${typeof o === "string"
-                                ? translateText(`public_lobby.teams_${o}`)
+                                ? o === HumansVsNations
+                                  ? translateText("public_lobby.teams_hvn")
+                                  : translateText(`public_lobby.teams_${o}`)
                                 : translateText("public_lobby.teams", {
                                     num: o,
                                   })}
@@ -313,41 +329,52 @@ export class HostLobbyModal extends LitElement {
               ${translateText("host_modal.options_title")}
             </div>
             <div class="option-cards">
-              <label for="bots-count" class="option-card">
-                <input
-                  type="range"
-                  id="bots-count"
-                  min="0"
-                  max="400"
-                  step="1"
-                  @input=${this.handleBotsChange}
-                  @change=${this.handleBotsChange}
-                  .value="${String(this.bots)}"
-                />
-                <div class="option-card-title">
-                  <span>${translateText("host_modal.bots")}</span>${
-                    this.bots === 0
-                      ? translateText("host_modal.bots_disabled")
-                      : this.bots
-                  }
-                </div>
-              </label>
-
-                <label
-                  for="disable-npcs"
-                  class="option-card ${this.disableNPCs ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
+                <label for="bots-count" class="option-card">
                   <input
-                    type="checkbox"
-                    id="disable-npcs"
-                    @change=${this.handleDisableNPCsChange}
-                    .checked=${this.disableNPCs}
+                    type="range"
+                    id="bots-count"
+                    min="0"
+                    max="400"
+                    step="1"
+                    @input=${this.handleBotsChange}
+                    @change=${this.handleBotsChange}
+                    .value="${String(this.bots)}"
                   />
                   <div class="option-card-title">
-                    ${translateText("host_modal.disable_nations")}
+                    <span>${translateText("host_modal.bots")}</span>${
+                      this.bots === 0
+                        ? translateText("host_modal.bots_disabled")
+                        : this.bots
+                    }
                   </div>
                 </label>
+
+                ${
+                  !(
+                    this.gameMode === GameMode.Team &&
+                    this.teamCount === HumansVsNations
+                  )
+                    ? html`
+                        <label
+                          for="disable-npcs"
+                          class="option-card ${this.disableNPCs
+                            ? "selected"
+                            : ""}"
+                        >
+                          <div class="checkbox-icon"></div>
+                          <input
+                            type="checkbox"
+                            id="disable-npcs"
+                            @change=${this.handleDisableNPCsChange}
+                            .checked=${this.disableNPCs}
+                          />
+                          <div class="option-card-title">
+                            ${translateText("host_modal.disable_nations")}
+                          </div>
+                        </label>
+                      `
+                    : ""
+                }
 
                 <label
                   for="instant-build"
@@ -362,6 +389,22 @@ export class HostLobbyModal extends LitElement {
                   />
                   <div class="option-card-title">
                     ${translateText("host_modal.instant_build")}
+                  </div>
+                </label>
+
+                <label
+                  for="random-spawn"
+                  class="option-card ${this.randomSpawn ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="random-spawn"
+                    @change=${this.handleRandomSpawnChange}
+                    .checked=${this.randomSpawn}
+                  />
+                  <div class="option-card-title">
+                    ${translateText("host_modal.random_spawn")}
                   </div>
                 </label>
 
@@ -512,27 +555,13 @@ export class HostLobbyModal extends LitElement {
             }
           </div>
 
-          <div class="players-list">
-            ${this.clients.map(
-              (client) => html`
-                <span class="player-tag">
-                  ${client.username}
-                  ${client.clientID === this.lobbyCreatorClientID
-                    ? html`<span class="host-badge"
-                        >(${translateText("host_modal.host_badge")})</span
-                      >`
-                    : html`
-                        <button
-                          class="remove-player-btn"
-                          @click=${() => this.kickPlayer(client.clientID)}
-                          title="Remove ${client.username}"
-                        >
-                          ×
-                        </button>
-                      `}
-                </span>
-              `,
-            )}
+          <lobby-team-view
+            .gameMode=${this.gameMode}
+            .clients=${this.clients}
+            .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+            .teamCount=${this.teamCount}
+            .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+          ></lobby-team-view>
         </div>
 
         <div class="start-game-button-container">
@@ -643,6 +672,11 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private handleRandomSpawnChange(e: Event) {
+    this.randomSpawn = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+
   private handleInfiniteGoldChange(e: Event) {
     this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
@@ -718,16 +752,24 @@ export class HostLobbyModal extends LitElement {
             ? GameMapSize.Compact
             : GameMapSize.Normal,
           difficulty: this.selectedDifficulty,
-          disableNPCs: this.disableNPCs,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
           donateGold: this.donateGold,
           infiniteTroops: this.infiniteTroops,
           donateTroops: this.donateTroops,
           instantBuild: this.instantBuild,
+          randomSpawn: this.randomSpawn,
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
+          ...(this.gameMode === GameMode.Team &&
+          this.teamCount === HumansVsNations
+            ? {
+                disableNPCs: false,
+              }
+            : {
+                disableNPCs: this.disableNPCs,
+              }),
           maxTimerValue:
             this.maxTimer === true ? this.maxTimerValue : undefined,
         } satisfies Partial<GameConfig>),
