@@ -13,6 +13,7 @@ import { ConstructionExecution } from "./ConstructionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
+import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { FakeHumanExecution } from "./FakeHumanExecution";
@@ -25,6 +26,7 @@ import { SpawnExecution } from "./SpawnExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
+import { PlayerSpawner } from "./utils/PlayerSpawner";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -100,6 +102,8 @@ export class Executor {
         return new DonateGoldExecution(player, intent.recipient, intent.gold);
       case "embargo":
         return new EmbargoExecution(player, intent.targetID, intent.action);
+      case "embargo_all":
+        return new EmbargoAllExecution(player, intent.action);
       case "build_unit":
         return new ConstructionExecution(player, intent.unit, intent.tile);
       case "allianceExtension": {
@@ -126,6 +130,10 @@ export class Executor {
 
   spawnBots(numBots: number): Execution[] {
     return new BotSpawner(this.mg, this.gameID).spawnBots(numBots);
+  }
+
+  spawnPlayers(): Execution[] {
+    return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
   }
 
   fakeHumanExecutions(): Execution[] {

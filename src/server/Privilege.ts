@@ -2,6 +2,7 @@ import { fetchUrl } from "../client/CosmeticPackLoader";
 import { Cosmetics } from "../core/CosmeticSchemas";
 import { decodePatternData } from "../core/PatternDecoder";
 import {
+  FlagSchema,
   PlayerColor,
   PlayerCosmeticRefs,
   PlayerCosmetics,
@@ -42,6 +43,16 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
       } catch (e) {
         return { type: "forbidden", reason: "invalid color: " + e.message };
       }
+    }
+    if (refs.flag) {
+      const result = FlagSchema.safeParse(refs.flag);
+      if (!result.success) {
+        return {
+          type: "forbidden",
+          reason: "invalid flag: " + result.error.message,
+        };
+      }
+      cosmetics.flag = result.data;
     }
 
     const pack = {

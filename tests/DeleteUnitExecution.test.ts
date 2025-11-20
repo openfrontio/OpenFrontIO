@@ -10,6 +10,7 @@ import {
 } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { setup } from "./util/Setup";
+import { executeTicks } from "./util/utils";
 
 describe("DeleteUnitExecution Security Tests", () => {
   let game: Game;
@@ -52,6 +53,8 @@ describe("DeleteUnitExecution Security Tests", () => {
       game.executeNextTick();
     }
 
+    executeTicks(game, game.config().deleteUnitCooldown() + 1);
+
     player = game.player(player1Info.id);
     enemyPlayer = game.player(player2Info.id);
 
@@ -66,6 +69,9 @@ describe("DeleteUnitExecution Security Tests", () => {
     if (!tileOwner.isPlayer() || tileOwner.id() !== player.id()) {
       throw new Error("Unit is not on player's territory");
     }
+
+    game.config().deleteUnitCooldown = () => 10;
+    game.config().deletionMarkDuration = () => 10;
   });
 
   describe("Security Validations", () => {
@@ -79,6 +85,7 @@ describe("DeleteUnitExecution Security Tests", () => {
       execution.init(game, 0);
 
       expect(execution.isActive()).toBe(false);
+      expect(enemyUnit.isMarkedForDeletion()).toBe(false);
     });
 
     it("should prevent deleting units on enemy territory", () => {
@@ -90,6 +97,7 @@ describe("DeleteUnitExecution Security Tests", () => {
         execution.init(game, 0);
 
         expect(execution.isActive()).toBe(false);
+        expect(unit.isMarkedForDeletion()).toBe(false);
       }
     });
 
@@ -100,15 +108,7 @@ describe("DeleteUnitExecution Security Tests", () => {
       execution.init(game, 0);
 
       expect(execution.isActive()).toBe(false);
-    });
-
-    it("should allow deleting the last city (suicide)", () => {
-      jest.spyOn(game, "inSpawnPhase").mockReturnValue(false);
-
-      const execution = new DeleteUnitExecution(player, unit.id());
-      execution.init(game, 0);
-
-      expect(unit.isActive()).toBe(false);
+      expect(unit.isMarkedForDeletion()).toBe(false);
     });
 
     it("should allow deleting units when all conditions are met", () => {
@@ -117,7 +117,32 @@ describe("DeleteUnitExecution Security Tests", () => {
       const execution = new DeleteUnitExecution(player, unit.id());
       execution.init(game, 0);
 
+      expect(unit.isMarkedForDeletion()).toBe(true);
+    });
+
+    it("should delete after deletion delay", () => {
+      jest.spyOn(game, "inSpawnPhase").mockReturnValue(false);
+
+      const execution = new DeleteUnitExecution(player, unit.id());
+      game.addExecution(execution);
+
+      game.executeNextTick();
+      expect(unit.isMarkedForDeletion()).toBe(true);
+      expect(unit.isOverdueDeletion()).toBe(false);
+      executeTicks(game, game.config().deletionMarkDuration() + 1);
       expect(unit.isActive()).toBe(false);
+    });
+
+    it("should reset deletion if captured", () => {
+      jest.spyOn(game, "inSpawnPhase").mockReturnValue(false);
+
+      const execution = new DeleteUnitExecution(player, unit.id());
+      game.addExecution(execution);
+      game.executeNextTick();
+      expect(unit.isMarkedForDeletion()).toBe(true);
+      unit.setOwner(enemyPlayer);
+      expect(unit.isMarkedForDeletion()).toBe(false);
+      expect(unit.isActive()).toBe(true);
     });
   });
 });

@@ -7,7 +7,9 @@ import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
+  ContextMenuEvent,
   MouseUpEvent,
+  TouchEvent,
   UnitSelectionEvent,
 } from "../../InputHandler";
 import { MoveWarshipIntentEvent } from "../../Transport";
@@ -85,6 +87,7 @@ export class UnitLayer implements Layer {
   init() {
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternativeViewEvent(e));
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
+    this.eventBus.on(TouchEvent, (e) => this.onTouch(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
     this.redraw();
     loadAllSprites(this.pack);
@@ -92,16 +95,10 @@ export class UnitLayer implements Layer {
 
   /**
    * Find player-owned warships near the given cell within a configurable radius
-   * @param cell The cell to check
+   * @param clickRef The tile to check
    * @returns Array of player's warships in range, sorted by distance (closest first)
    */
-  private findWarshipsNearCell(cell: { x: number; y: number }): UnitView[] {
-    if (!this.game.isValidCoord(cell.x, cell.y)) {
-      // The cell coordinate were invalid (user probably clicked outside the map), therefore no warships can be found
-      return [];
-    }
-    const clickRef = this.game.ref(cell.x, cell.y);
-
+  private findWarshipsNearCell(clickRef: TileRef): UnitView[] {
     // Only select warships owned by the player
     return this.game
       .units(UnitType.Warship)
@@ -120,29 +117,75 @@ export class UnitLayer implements Layer {
       });
   }
 
-  private onMouseUp(event: MouseUpEvent) {
-    // Convert screen coordinates to world coordinates
+  private onMouseUp(
+    event: MouseUpEvent,
+    clickRef?: TileRef,
+    nearbyWarships?: UnitView[],
+  ) {
+    if (clickRef === undefined) {
+      // Convert screen coordinates to world coordinates
+      const cell = this.transformHandler.screenToWorldCoordinates(
+        event.x,
+        event.y,
+      );
+      if (!this.game.isValidCoord(cell.x, cell.y)) return;
+
+      clickRef = this.game.ref(cell.x, cell.y);
+    }
+    if (!this.game.isOcean(clickRef)) return;
+
+    if (this.selectedUnit) {
+      this.eventBus.emit(
+        new MoveWarshipIntentEvent(this.selectedUnit.id(), clickRef),
+      );
+      // Deselect
+      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
+      return;
+    }
+
+    // Find warships near this tile, sorted by distance
+    nearbyWarships ??= this.findWarshipsNearCell(clickRef);
+    if (nearbyWarships.length > 0) {
+      // Toggle selection of the closest warship
+      this.eventBus.emit(new UnitSelectionEvent(nearbyWarships[0], true));
+    }
+  }
+
+  private onTouch(event: TouchEvent) {
     const cell = this.transformHandler.screenToWorldCoordinates(
       event.x,
       event.y,
     );
 
-    // Find warships near this cell, sorted by distance
-    const nearbyWarships = this.findWarshipsNearCell(cell);
+    const clickRef = this.game.ref(cell.x, cell.y);
+    if (!this.game.isOcean(clickRef)) {
+      // No isValidCoord/Ref check yet, that is done for ContextMenuEvent later
+      // No warship to find because no Ocean tile, open Radial Menu
+      this.eventBus.emit(new ContextMenuEvent(event.x, event.y));
+      return;
+    }
+
+    if (!this.game.isValidRef(clickRef)) {
+      return;
+    }
 
     if (this.selectedUnit) {
-      const clickRef = this.game.ref(cell.x, cell.y);
-      if (this.game.isOcean(clickRef)) {
-        this.eventBus.emit(
-          new MoveWarshipIntentEvent(this.selectedUnit.id(), clickRef),
-        );
-      }
-      // Deselect
-      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
-    } else if (nearbyWarships.length > 0) {
-      // Toggle selection of the closest warship
-      const clickedUnit = nearbyWarships[0];
-      this.eventBus.emit(new UnitSelectionEvent(clickedUnit, true));
+      // Reuse the mouse logic, send clickRef to avoid fetching it again
+      this.onMouseUp(new MouseUpEvent(event.x, event.y), clickRef);
+      return;
+    }
+
+    const nearbyWarships = this.findWarshipsNearCell(clickRef);
+
+    if (nearbyWarships.length > 0) {
+      this.onMouseUp(
+        new MouseUpEvent(event.x, event.y),
+        clickRef,
+        nearbyWarships,
+      );
+    } else {
+      // No warships selected or nearby, open Radial Menu
+      this.eventBus.emit(new ContextMenuEvent(event.x, event.y));
     }
   }
 
@@ -306,7 +349,7 @@ export class UnitLayer implements Layer {
 
   private handleWarShipEvent(unit: UnitView) {
     if (unit.targetUnitId()) {
-      this.drawSprite(unit, colord({ r: 200, b: 0, g: 0 }));
+      this.drawSprite(unit, colord("rgb(200,0,0)"));
     } else {
       this.drawSprite(unit);
     }

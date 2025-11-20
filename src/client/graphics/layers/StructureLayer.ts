@@ -15,7 +15,7 @@ import { PlayerPack } from "../../../core/Schemas";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
-const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
+const underConstructionColor = colord("rgb(150,150,150)");
 
 // Base radius values and scaling factor for unit borders and territories
 const BASE_BORDER_RADIUS = 16.5;

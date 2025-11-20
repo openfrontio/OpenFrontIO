@@ -2,7 +2,7 @@ import * as d3 from "d3";
 import backIcon from "../../../../resources/images/BackIconWhite.svg";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { CloseViewEvent } from "../../InputHandler";
-import { translateText } from "../../Utils";
+import { getSvgAspectRatio, translateText } from "../../Utils";
 import { Layer } from "./Layer";
 import {
   CenterButtonElement,
@@ -149,10 +149,6 @@ export class RadialMenu implements Layer {
       .style("position", "absolute")
       .style("top", "50%")
       .style("left", "50%")
-      .style(
-        "transition",
-        `top ${this.config.menuTransitionDuration}ms ease, left ${this.config.menuTransitionDuration}ms ease`,
-      )
       .style("transform", "translate(-50%, -50%)")
       .style("pointer-events", "all")
       .on("click", (event) => this.hideRadialMenu());
@@ -546,7 +542,7 @@ export class RadialMenu implements Layer {
             .style("opacity", disabled ? 0.5 : 1)
             .text(d.data.text);
         } else {
-          content
+          const imgSel = content
             .append("image")
             .attr("xlink:href", d.data.icon!)
             .attr("width", this.config.iconSize)
@@ -554,6 +550,39 @@ export class RadialMenu implements Layer {
             .attr("x", arc.centroid(d)[0] - this.config.iconSize / 2)
             .attr("y", arc.centroid(d)[1] - this.config.iconSize / 2)
             .attr("opacity", disabled ? 0.5 : 1);
+
+          getSvgAspectRatio(d.data.icon!).then((aspect) => {
+            if (!aspect || aspect === 1) return;
+
+            let width = this.config.iconSize;
+            let height = this.config.iconSize;
+            const biggerLength = Math.round(width * aspect);
+            if (aspect > 1) {
+              width = biggerLength;
+            } else {
+              height = biggerLength;
+            }
+
+            imgSel
+              .attr("width", width)
+              .attr("height", height)
+              .attr("x", arc.centroid(d)[0] - width / 2)
+              .attr("y", arc.centroid(d)[1] - height / 2);
+          });
+
+          if (this.params && d.data.cooldown?.(this.params)) {
+            const cooldown = Math.ceil(d.data.cooldown?.(this.params));
+            content
+              .append("text")
+              .attr("class", `cooldown-text`)
+              .text(cooldown + "s")
+              .attr("fill", "white")
+              .attr("opacity", disabled ? 0.5 : 1)
+              .attr("font-size", "14px")
+              .attr("font-weight", "bold")
+              .attr("x", arc.centroid(d)[0] - this.config.iconSize / 4)
+              .attr("y", arc.centroid(d)[1] + this.config.iconSize / 2 + 7);
+          }
         }
 
         this.menuIcons.set(contentId, content as any);
@@ -997,6 +1026,17 @@ export class RadialMenu implements Layer {
           const imageElement = icon.select("image");
           if (!imageElement.empty()) {
             imageElement.attr("opacity", disabled ? 0.5 : 1);
+          }
+
+          // Update cooldown text if applicable
+          const cooldownElement = icon.select(".cooldown-text");
+          if (this.params && !cooldownElement.empty() && item.cooldown) {
+            const cooldown = Math.ceil(item.cooldown(this.params));
+            if (cooldown <= 0) {
+              cooldownElement.remove();
+            } else {
+              cooldownElement.text(cooldown + "s");
+            }
           }
         }
       }
