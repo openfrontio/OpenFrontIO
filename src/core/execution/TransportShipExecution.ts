@@ -1,3 +1,4 @@
+import { renderTroops } from "../../client/Utils";
 import {
   Execution,
   Game,
@@ -14,6 +15,7 @@ import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { AttackExecution } from "./AttackExecution";
 
+const malusForRetreat = 25;
 export class TransportShipExecution implements Execution {
   private lastMove: number;
 
@@ -222,14 +224,23 @@ export class TransportShipExecution implements Execution {
     switch (result.type) {
       case PathFindResultType.Completed:
         if (this.mg.owner(this.dst) === this.attacker) {
-          this.attacker.addTroops(this.boat.troops());
+          const deaths = this.boat.troops() * (malusForRetreat / 100);
+          const survivors = this.boat.troops() - deaths;
+          this.attacker.addTroops(survivors);
           this.boat.delete(false);
           this.active = false;
 
           // Record stats
           this.mg
             .stats()
-            .boatArriveTroops(this.attacker, this.target, this.boat.troops());
+            .boatArriveTroops(this.attacker, this.target, survivors);
+          if (deaths) {
+            this.mg.displayMessage(
+              `Attack cancelled, ${renderTroops(deaths)} soldiers killed during retreat.`,
+              MessageType.ATTACK_CANCELLED,
+              this.attacker.id(),
+            );
+          }
           return;
         }
         this.attacker.conquer(this.dst);
