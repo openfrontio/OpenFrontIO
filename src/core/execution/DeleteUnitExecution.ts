@@ -1,8 +1,9 @@
-import { Execution, Game, MessageType, Player } from "../game/Game";
+import { Execution, Game, MessageType, Player, Unit } from "../game/Game";
 
 export class DeleteUnitExecution implements Execution {
   private active: boolean = true;
   private mg: Game;
+  private unit: Unit | null = null;
 
   constructor(
     private player: Player,
@@ -33,6 +34,7 @@ export class DeleteUnitExecution implements Execution {
       this.active = false;
       return;
     }
+    this.unit = unit;
 
     const tileOwner = mg.owner(unit.tile());
     if (!tileOwner.isPlayer() || tileOwner.id() !== this.player.id()) {
@@ -61,19 +63,29 @@ export class DeleteUnitExecution implements Execution {
       return;
     }
 
-    unit.delete(false);
     this.player.recordDeleteUnit();
-
-    this.mg.displayMessage(
-      `events_display.unit_voluntarily_deleted`,
-      MessageType.UNIT_DESTROYED,
-      this.player.id(),
-    );
-
-    this.active = false;
+    unit.markForDeletion();
   }
 
-  tick(ticks: number) {}
+  tick(ticks: number) {
+    if (!this.active || !this.unit) {
+      return;
+    }
+    if (!this.unit.isActive()) {
+      this.active = false;
+      return;
+    }
+    if (this.unit.isOverdueDeletion()) {
+      this.unit.delete(false);
+
+      this.mg.displayMessage(
+        `events_display.unit_voluntarily_deleted`,
+        MessageType.UNIT_DESTROYED,
+        this.player.id(),
+      );
+      this.active = false;
+    }
+  }
 
   isActive(): boolean {
     return this.active;

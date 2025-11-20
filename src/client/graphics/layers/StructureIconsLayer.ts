@@ -16,6 +16,7 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
+  GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
   ToggleStructureEvent as ToggleStructuresEvent,
@@ -58,6 +59,7 @@ export class StructureIconsLayer implements Layer {
   private ghostUnit: {
     container: PIXI.Container;
     range: PIXI.Container | null;
+    rangeLevel?: number;
     buildableUnit: BuildableUnit;
   } | null = null;
   private pixicanvas: HTMLCanvasElement;
@@ -277,6 +279,9 @@ export class StructureIconsLayer implements Layer {
 
         this.ghostUnit.buildableUnit = unit;
 
+        const targetLevel = this.resolveGhostRangeLevel(unit);
+        this.updateGhostRange(targetLevel);
+
         if (unit.canUpgrade) {
           this.potentialUpgrade = this.renders.find(
             (r) =>
@@ -369,12 +374,11 @@ export class StructureIconsLayer implements Layer {
         { x: localX, y: localY },
         type,
       ),
-      range: this.factory.createRange(type, this.ghostStage, {
-        x: localX,
-        y: localY,
-      }),
+      range: null,
       buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
     };
+    const baseLevel = this.resolveGhostRangeLevel(this.ghostUnit.buildableUnit);
+    this.updateGhostRange(baseLevel);
   }
 
   private clearGhostStructure() {
@@ -393,6 +397,50 @@ export class StructureIconsLayer implements Layer {
   private removeGhostStructure() {
     this.clearGhostStructure();
     this.uiState.ghostStructure = null;
+    this.eventBus.emit(new GhostStructureChangedEvent(null));
+  }
+
+  private resolveGhostRangeLevel(
+    buildableUnit: BuildableUnit,
+  ): number | undefined {
+    if (buildableUnit.type !== UnitType.SAMLauncher) {
+      return undefined;
+    }
+    if (buildableUnit.canUpgrade !== false) {
+      const existing = this.game.unit(buildableUnit.canUpgrade);
+      if (existing) {
+        return existing.level() + 1;
+      } else {
+        console.error("Failed to find existing SAMLauncher for upgrade");
+      }
+    }
+
+    return 1;
+  }
+
+  private updateGhostRange(level?: number) {
+    if (!this.ghostUnit) {
+      return;
+    }
+
+    if (this.ghostUnit.range && this.ghostUnit.rangeLevel === level) {
+      return;
+    }
+
+    this.ghostUnit.range?.destroy();
+    this.ghostUnit.range = null;
+    this.ghostUnit.rangeLevel = level;
+
+    const position = this.ghostUnit.container.position;
+    const range = this.factory.createRange(
+      this.ghostUnit.buildableUnit.type,
+      this.ghostStage,
+      { x: position.x, y: position.y },
+      level,
+    );
+    if (range) {
+      this.ghostUnit.range = range;
+    }
   }
 
   private toggleStructures(toggleStructureType: UnitType[] | null): void {
@@ -417,6 +465,7 @@ export class StructureIconsLayer implements Layer {
       const render = this.findRenderByUnit(unitView);
       if (render) {
         this.checkForConstructionState(render, unitView);
+        this.checkForDeletionState(render, unitView);
         this.checkForOwnershipChange(render, unitView);
         this.checkForLevelChange(render, unitView);
       }
@@ -463,6 +512,16 @@ export class StructureIconsLayer implements Layer {
         render.iconContainer.filters = [];
         render.dotContainer.filters = [];
       }
+    }
+  }
+
+  private checkForDeletionState(render: StructureRenderInfo, unit: UnitView) {
+    if (unit.markedForDeletion() !== false) {
+      render.iconContainer?.destroy();
+      render.dotContainer?.destroy();
+      render.iconContainer = this.createIconSprite(unit);
+      render.dotContainer = this.createDotSprite(unit);
+      this.modifyVisibility(render);
     }
   }
 

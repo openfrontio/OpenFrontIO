@@ -99,10 +99,7 @@ export class SpriteFactory {
 
   private invalidateTextureCache(unitType: UnitType) {
     for (const key of Array.from(this.textureCache.keys())) {
-      if (
-        key.endsWith(`-${unitType}-icon`) ||
-        key === `construction-${unitType}-icon`
-      ) {
+      if (key.includes(`-${unitType}`)) {
         this.textureCache.delete(key);
       }
     }
@@ -115,7 +112,13 @@ export class SpriteFactory {
     structureType: UnitType,
   ): PIXI.Container {
     const parentContainer = new PIXI.Container();
-    const texture = this.createTexture(structureType, player, false, true);
+    const texture = this.createTexture(
+      structureType,
+      player,
+      false,
+      false,
+      true,
+    );
     const sprite = new PIXI.Sprite(texture);
     sprite.anchor.set(0.5);
     sprite.alpha = 0.5;
@@ -139,6 +142,7 @@ export class SpriteFactory {
     const worldPos = new Cell(this.game.x(tile), this.game.y(tile));
     const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
 
+    const isMarkedForDeletion = unit.markedForDeletion() !== false;
     const isConstruction = unit.type() === UnitType.Construction;
     const constructionType = unit.constructionType();
     const structureType = isConstruction ? constructionType! : unit.type();
@@ -156,6 +160,7 @@ export class SpriteFactory {
         structureType,
         unit.owner(),
         isConstruction,
+        isMarkedForDeletion,
         type === "icon",
       );
       const sprite = new PIXI.Sprite(texture);
@@ -202,19 +207,30 @@ export class SpriteFactory {
     type: UnitType,
     owner: PlayerView,
     isConstruction: boolean,
+    isMarkedForDeletion: boolean,
     renderIcon: boolean,
   ): PIXI.Texture {
-    const cacheKey = isConstruction
-      ? `construction-${type}` + (renderIcon ? "-icon" : "")
-      : `${this.theme.territoryColor(owner).toRgbString()}-${type}` +
-        (renderIcon ? "-icon" : "");
+    const cacheKeyBase = isConstruction
+      ? `construction-${type}`
+      : `${this.theme.territoryColor(owner).toRgbString()}-${type}`;
+    const cacheKey =
+      cacheKeyBase +
+      (renderIcon ? "-icon" : "") +
+      (isMarkedForDeletion ? "-deleted" : "");
 
     if (this.textureCache.has(cacheKey)) {
       return this.textureCache.get(cacheKey)!;
     }
     const shape = STRUCTURE_SHAPES[type];
     const texture = shape
-      ? this.createIcon(owner, type, isConstruction, shape, renderIcon)
+      ? this.createIcon(
+          owner,
+          type,
+          isConstruction,
+          isMarkedForDeletion,
+          shape,
+          renderIcon,
+        )
       : PIXI.Texture.EMPTY;
     this.textureCache.set(cacheKey, texture);
     return texture;
@@ -224,6 +240,7 @@ export class SpriteFactory {
     owner: PlayerView,
     structureType: UnitType,
     isConstruction: boolean,
+    isMarkedForDeletion: boolean,
     shape: string,
     renderIcon: boolean,
   ): PIXI.Texture {
@@ -236,25 +253,13 @@ export class SpriteFactory {
     structureCanvas.height = Math.ceil(iconSize);
     const context = structureCanvas.getContext("2d")!;
 
-    const tc = owner.territoryColor();
-    const bc = owner.borderColor();
-
-    const darker = bc.luminance() < tc.luminance() ? bc : tc;
-    const lighter = bc.luminance() < tc.luminance() ? tc : bc;
-
-    let borderColor: string;
-    if (isConstruction) {
-      context.fillStyle = "rgb(198, 198, 198)";
-      borderColor = "rgb(128, 127, 127)";
-    } else {
-      context.fillStyle = lighter
-        .lighten(0.13)
-        .alpha(renderIcon ? 0.65 : 1)
-        .toRgbString();
-      const darken = darker.isLight() ? 0.17 : 0.15;
-      borderColor = darker.darken(darken).toRgbString();
-    }
-    context.strokeStyle = borderColor;
+    // Use structureColors defined from the PlayerView.
+    context.fillStyle = isConstruction
+      ? "rgb(198,198,198)"
+      : owner.structureColors().light.toRgbString();
+    context.strokeStyle = isConstruction
+      ? "rgb(127,127, 127)"
+      : owner.structureColors().dark.toRgbString();
     context.lineWidth = 1;
     const halfIconSize = iconSize / 2;
 
@@ -370,11 +375,8 @@ export class SpriteFactory {
     }
 
     const structureInfo = this.structuresInfos.get(structureType);
-    if (!structureInfo?.image) {
-      return PIXI.Texture.from(structureCanvas);
-    }
 
-    if (renderIcon) {
+    if (structureInfo?.image && renderIcon) {
       const SHAPE_OFFSETS = {
         triangle: [6, 11],
         square: [5, 5],
@@ -385,11 +387,30 @@ export class SpriteFactory {
       };
       const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
       context.drawImage(
-        this.getImageColored(structureInfo.image, borderColor),
+        this.getImageColored(
+          structureInfo.image,
+          owner.structureColors().dark.toRgbString(),
+        ),
         offsetX,
         offsetY,
       );
     }
+
+    if (isMarkedForDeletion) {
+      context.save();
+      context.strokeStyle = "rgba(255, 64, 64, 0.95)";
+      context.lineWidth = Math.max(2, Math.round(iconSize * 0.12));
+      context.lineCap = "round";
+      const padding = Math.max(2, iconSize * 0.12);
+      context.beginPath();
+      context.moveTo(padding, padding);
+      context.lineTo(iconSize - padding, iconSize - padding);
+      context.moveTo(iconSize - padding, padding);
+      context.lineTo(padding, iconSize - padding);
+      context.stroke();
+      context.restore();
+    }
+
     return PIXI.Texture.from(structureCanvas);
   }
 
@@ -397,6 +418,7 @@ export class SpriteFactory {
     type: UnitType,
     stage: PIXI.Container,
     pos: { x: number; y: number },
+    level?: number,
   ): PIXI.Container | null {
     if (stage === undefined) throw new Error("Not initialized");
     const parentContainer = new PIXI.Container();
@@ -404,7 +426,7 @@ export class SpriteFactory {
     let radius = 0;
     switch (type) {
       case UnitType.SAMLauncher:
-        radius = this.game.config().defaultSamRange();
+        radius = this.game.config().samRange(level ?? 1);
         break;
       case UnitType.Factory:
         radius = this.game.config().trainStationMaxRange();
@@ -423,7 +445,8 @@ export class SpriteFactory {
     }
     circle
       .circle(0, 0, radius)
-      .stroke({ width: 1, color: 0xffffff, alpha: 0.2 });
+      .fill({ color: 0xffffff, alpha: 0.2 })
+      .stroke({ width: 1, color: 0xffffff, alpha: 0.5 });
     parentContainer.addChild(circle);
     parentContainer.position.set(pos.x, pos.y);
     parentContainer.scale.set(this.transformHandler.scale);

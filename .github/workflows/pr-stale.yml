@@ -8,7 +8,6 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     permissions:
-      issues: write
       pull-requests: write
     steps:
       - uses: actions/stale@8f717f0dfca33b78d3c933452e42558e4456c8e7
@@ -21,6 +20,6 @@ jobs:
           exempt-pr-assignees: evanpelle
           exempt-pr-labels: "will not stale"
           stale-pr-label: "Stale"
-          stale-pr-message: "This pull request is stale because it has been open for 14 days with no activity. If you want to keep this pull request open, add a comment or update the branch."
-          close-pr-message: "This pull request has been closed because twenty-eight days have passed without activity. If someone wants to keep working on it, feel free to take the code."
+          stale-pr-message: "This pull request is stale because it has been open for fourteen days with no activity. If you want to keep this pull request open, add a comment or update the branch."
+          close-pr-message: "This pull request has been closed because fourteen days have passed without activity. If you want to continue work on the code, comment or create a new PR."
           close-pr-label: "Orphaned"

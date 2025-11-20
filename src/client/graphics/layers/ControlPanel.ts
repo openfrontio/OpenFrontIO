@@ -85,7 +85,6 @@ export class ControlPanel extends LitElement implements Layer {
       this.updateTroopIncrease();
     }
 
-    this._troops = player.troops();
     this._maxTroops = this.game.config().maxTroops(player);
     this._gold = player.gold();
     this._troops = player.troops();

@@ -1,5 +1,6 @@
 import {
   Cell,
+  Difficulty,
   Execution,
   Game,
   Gold,
@@ -17,19 +18,21 @@ import { TileRef, euclDistFN } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
+import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { MirvExecution } from "./MIRVExecution";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
 import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
-import { closestTwoTiles } from "./Util";
+import { calculateTerritoryCenter, closestTwoTiles } from "./Util";
 import { BotBehavior, EMOJI_HECKLE } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
-  private behavior: BotBehavior | null = null;
+  private behavior: BotBehavior | null = null; // Shared behavior logic for both bots and fakehumans
   private mg: Game;
   private player: Player | null = null;
 
@@ -41,11 +44,37 @@ export class FakeHumanExecution implements Execution {
 
   private readonly lastEmojiSent = new Map<Player, Tick>();
   private readonly lastNukeSent: [Tick, TileRef][] = [];
+  private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
+
+  // Track our transport ships we currently own
+  private trackedTransportShips: Set<Unit> = new Set();
+  // Track our trade ships we currently own
+  private trackedTradeShips: Set<Unit> = new Set();
+
+  /** MIRV Strategy Constants */
+
+  /** Ticks until MIRV can be attempted again */
+  private static readonly MIRV_COOLDOWN_TICKS = 20;
+
+  /** Odds of aborting a MIRV attempt */
+  private static readonly MIRV_HESITATION_ODDS = 7;
+
+  /** Threshold for team victory denial */
+  private static readonly VICTORY_DENIAL_TEAM_THRESHOLD = 0.8;
+
+  /** Threshold for individual victory denial */
+  private static readonly VICTORY_DENIAL_INDIVIDUAL_THRESHOLD = 0.65;
+
+  /** Multiplier for steamroll city gap threshold */
+  private static readonly STEAMROLL_CITY_GAP_MULTIPLIER = 1.3;
+
+  /** Minimum city count for leader to trigger steam roll detection */
+  private static readonly STEAMROLL_MIN_LEADER_CITIES = 10;
 
   constructor(
     gameID: GameID,
-    private nation: Nation,
+    private nation: Nation, // Nation contains PlayerInfo with PlayerType.FakeHuman
   ) {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
@@ -110,7 +139,19 @@ export class FakeHumanExecution implements Execution {
   }
 
   tick(ticks: number) {
-    if (ticks % this.attackRate !== this.attackTick) return;
+    // Ship tracking
+    if (
+      this.player !== null &&
+      this.player.isAlive() &&
+      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
+    ) {
+      this.trackTransportShipsAndRetaliate();
+      this.trackTradeShipsAndRetaliate();
+    }
+
+    if (ticks % this.attackRate !== this.attackTick) {
+      return;
+    }
 
     if (this.mg.inSpawnPhase()) {
       const rl = this.randomSpawnLand();
@@ -157,30 +198,8 @@ export class FakeHumanExecution implements Execution {
     this.behavior.handleAllianceExtensionRequests();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
+    this.considerMIRV();
     this.maybeAttack();
-  }
-
-  /**
-   * TODO: Implement strategic betrayal logic
-   * Currently this just breaks alliances without strategic consideration.
-   * Future implementation should consider:
-   * - Relative strength (troop count, territory size) compared to target
-   * - Risk vs reward of betrayal
-   * - Potential impact on relations with other players
-   * - Timing (don't betray when already fighting other enemies)
-   * - Strategic value of target's territory
-   * - If target is distracted
-   */
-  private maybeConsiderBetrayal(target: Player): boolean {
-    if (this.player === null) throw new Error("not initialized");
-
-    const alliance = this.player.allianceWith(target);
-
-    if (!alliance) return false;
-
-    this.player.breakAlliance(alliance);
-
-    return true;
   }
 
   private maybeAttack() {
@@ -194,40 +213,44 @@ export class FakeHumanExecution implements Execution {
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
 
+    let borderingEnemies: Player[] = [];
     if (enemyborder.length === 0) {
-      if (this.random.chance(10)) {
+      if (this.random.chance(5)) {
         this.sendBoatRandomly();
       }
-      return;
-    }
-    if (this.random.chance(20)) {
-      this.sendBoatRandomly();
-      return;
-    }
+    } else {
+      if (this.random.chance(10)) {
+        this.sendBoatRandomly();
+        return;
+      }
 
-    const borderPlayers = enemyborder.map((t) =>
-      this.mg.playerBySmallID(this.mg.ownerID(t)),
-    );
-    if (borderPlayers.some((o) => !o.isPlayer())) {
-      this.behavior.sendAttack(this.mg.terraNullius());
-      return;
-    }
+      const borderPlayers = enemyborder.map((t) =>
+        this.mg.playerBySmallID(this.mg.ownerID(t)),
+      );
+      if (borderPlayers.some((o) => !o.isPlayer())) {
+        this.behavior.sendAttack(this.mg.terraNullius());
+        return;
+      }
 
-    const enemies = borderPlayers
-      .filter((o) => o.isPlayer())
-      .sort((a, b) => a.troops() - b.troops());
+      borderingEnemies = borderPlayers
+        .filter((o) => o.isPlayer())
+        .sort((a, b) => a.troops() - b.troops());
 
-    // 5% chance to send a random alliance request
-    if (this.random.chance(20)) {
-      const toAlly = this.random.randElement(enemies);
-      if (this.player.canSendAllianceRequest(toAlly)) {
-        this.player.createAllianceRequest(toAlly);
+      // 5% chance to send a random alliance request
+      if (this.random.chance(20)) {
+        const toAlly = this.random.randElement(borderingEnemies);
+        if (this.player.canSendAllianceRequest(toAlly)) {
+          this.mg.addExecution(
+            new AllianceRequestExecution(this.player, toAlly.id()),
+          );
+        }
       }
     }
 
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
-    const enemy = this.behavior.selectEnemy(enemies);
+
+    const enemy = this.behavior.selectEnemy(borderingEnemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
     this.maybeSendNuke(enemy);
@@ -259,7 +282,7 @@ export class FakeHumanExecution implements Execution {
     if (
       silos.length === 0 ||
       this.player.gold() < this.cost(UnitType.AtomBomb) ||
-      other.type() === PlayerType.Bot ||
+      other.type() === PlayerType.Bot || // Don't nuke bots (as opposed to fakehumans and humans)
       this.player.isOnSameTeam(other)
     ) {
       return;
@@ -586,9 +609,14 @@ export class FakeHumanExecution implements Execution {
 
     const src = this.random.randElement(oceanShore);
 
-    const dst = this.randomBoatTarget(src, 150);
+    // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
+    let dst = this.randomBoatTarget(src, 150, true);
     if (dst === null) {
-      return;
+      // None found? Then look for players
+      dst = this.randomBoatTarget(src, 150, false);
+      if (dst === null) {
+        return;
+      }
     }
 
     this.mg.addExecution(
@@ -628,7 +656,11 @@ export class FakeHumanExecution implements Execution {
     return null;
   }
 
-  private randomBoatTarget(tile: TileRef, dist: number): TileRef | null {
+  private randomBoatTarget(
+    tile: TileRef,
+    dist: number,
+    highInterestOnly: boolean = false,
+  ): TileRef | null {
     if (this.player === null) throw new Error("not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
@@ -643,14 +675,310 @@ export class FakeHumanExecution implements Execution {
         continue;
       }
       const owner = this.mg.owner(randTile);
-      if (!owner.isPlayer()) {
-        return randTile;
+      if (owner === this.player) {
+        continue;
       }
-      if (!owner.isFriendly(this.player)) {
-        return randTile;
+      // Don't spam boats into players that are more than twice as large as us
+      if (owner.isPlayer() && owner.troops() > this.player.troops() * 2) {
+        continue;
+      }
+      // High-interest targeting: prioritize unowned tiles or tiles owned by bots
+      if (highInterestOnly) {
+        if (!owner.isPlayer() || owner.type() === PlayerType.Bot) {
+          return randTile;
+        }
+      } else {
+        // Normal targeting: return unowned tiles or tiles owned by non-friendly players
+        if (!owner.isPlayer() || !owner.isFriendly(this.player)) {
+          return randTile;
+        }
       }
     }
     return null;
+  }
+
+  // MIRV Strategy Methods
+  private considerMIRV(): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    if (this.player.units(UnitType.MissileSilo).length === 0) {
+      return false;
+    }
+    if (this.player.gold() < this.cost(UnitType.MIRV)) {
+      return false;
+    }
+
+    this.removeOldMIRVEvents();
+    if (this.lastMIRVSent.length > 0) {
+      return false;
+    }
+
+    if (this.random.chance(FakeHumanExecution.MIRV_HESITATION_ODDS)) {
+      this.triggerMIRVCooldown();
+      return false;
+    }
+
+    const inboundMIRVSender = this.selectCounterMirvTarget();
+    if (inboundMIRVSender) {
+      this.maybeSendMIRV(inboundMIRVSender);
+      return true;
+    }
+
+    const victoryDenialTarget = this.selectVictoryDenialTarget();
+    if (victoryDenialTarget) {
+      this.maybeSendMIRV(victoryDenialTarget);
+      return true;
+    }
+
+    const steamrollStopTarget = this.selectSteamrollStopTarget();
+    if (steamrollStopTarget) {
+      this.maybeSendMIRV(steamrollStopTarget);
+      return true;
+    }
+
+    return false;
+  }
+
+  private selectCounterMirvTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const attackers = this.getValidMirvTargetPlayers().filter((p) =>
+      this.isInboundMIRVFrom(p),
+    );
+    if (attackers.length === 0) return null;
+    attackers.sort((a, b) => b.numTilesOwned() - a.numTilesOwned());
+    return attackers[0];
+  }
+
+  private selectVictoryDenialTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const totalLand = this.mg.numLandTiles();
+    if (totalLand === 0) return null;
+    let best: { p: Player; severity: number } | null = null;
+    for (const p of this.getValidMirvTargetPlayers()) {
+      let severity = 0;
+      const team = p.team();
+      if (team !== null) {
+        const teamMembers = this.mg
+          .players()
+          .filter((x) => x.team() === team && x.isPlayer());
+        const teamTerritory = teamMembers
+          .map((x) => x.numTilesOwned())
+          .reduce((a, b) => a + b, 0);
+        const teamShare = teamTerritory / totalLand;
+        if (teamShare >= FakeHumanExecution.VICTORY_DENIAL_TEAM_THRESHOLD) {
+          // Only consider the largest team member as the target when team exceeds threshold
+          let largestMember: Player | null = null;
+          let largestTiles = -1;
+          for (const member of teamMembers) {
+            const tiles = member.numTilesOwned();
+            if (tiles > largestTiles) {
+              largestTiles = tiles;
+              largestMember = member;
+            }
+          }
+          if (largestMember === p) {
+            severity = teamShare;
+          } else {
+            severity = 0; // Skip non-largest members
+          }
+        }
+      } else {
+        const share = p.numTilesOwned() / totalLand;
+        if (share >= FakeHumanExecution.VICTORY_DENIAL_INDIVIDUAL_THRESHOLD)
+          severity = share;
+      }
+      if (severity > 0) {
+        if (best === null || severity > best.severity) best = { p, severity };
+      }
+    }
+    return best ? best.p : null;
+  }
+
+  private selectSteamrollStopTarget(): Player | null {
+    if (this.player === null) throw new Error("not initialized");
+    const validTargets = this.getValidMirvTargetPlayers();
+
+    if (validTargets.length === 0) return null;
+
+    const allPlayers = this.mg
+      .players()
+      .filter((p) => p.isPlayer())
+      .map((p) => ({ p, cityCount: this.countCities(p) }))
+      .sort((a, b) => b.cityCount - a.cityCount);
+
+    if (allPlayers.length < 2) return null;
+
+    const topPlayer = allPlayers[0];
+
+    if (topPlayer.cityCount <= FakeHumanExecution.STEAMROLL_MIN_LEADER_CITIES)
+      return null;
+
+    const secondHighest = allPlayers[1].cityCount;
+
+    const threshold =
+      secondHighest * FakeHumanExecution.STEAMROLL_CITY_GAP_MULTIPLIER;
+
+    if (topPlayer.cityCount >= threshold) {
+      return validTargets.some((p) => p === topPlayer.p) ? topPlayer.p : null;
+    }
+
+    return null;
+  }
+
+  // MIRV Helper Methods
+  private mirvTargetsCache: {
+    tick: number;
+    players: Player[];
+  } | null = null;
+
+  private getValidMirvTargetPlayers(): Player[] {
+    const MIRV_TARGETS_CACHE_TICKS = 2 * 10; // 2 seconds
+    if (this.player === null) throw new Error("not initialized");
+
+    if (
+      this.mirvTargetsCache &&
+      this.mg.ticks() - this.mirvTargetsCache.tick < MIRV_TARGETS_CACHE_TICKS
+    ) {
+      return this.mirvTargetsCache.players;
+    }
+
+    const players = this.mg.players().filter((p) => {
+      return (
+        p !== this.player &&
+        p.isPlayer() &&
+        p.type() !== PlayerType.Bot &&
+        !this.player!.isOnSameTeam(p)
+      );
+    });
+
+    this.mirvTargetsCache = { tick: this.mg.ticks(), players };
+    return players;
+  }
+
+  private isInboundMIRVFrom(attacker: Player): boolean {
+    if (this.player === null) throw new Error("not initialized");
+    const enemyMirvs = attacker.units(UnitType.MIRV);
+    for (const mirv of enemyMirvs) {
+      const dst = mirv.targetTile();
+      if (!dst) continue;
+      if (!this.mg.hasOwner(dst)) continue;
+      const owner = this.mg.owner(dst);
+      if (owner === this.player) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private countCities(p: Player): number {
+    return p.unitCount(UnitType.City);
+  }
+
+  private calculateTerritoryCenter(target: Player): TileRef | null {
+    return calculateTerritoryCenter(this.mg, target);
+  }
+
+  // MIRV Execution Methods
+  private maybeSendMIRV(enemy: Player): void {
+    if (this.player === null) throw new Error("not initialized");
+
+    this.maybeSendEmoji(enemy);
+
+    const centerTile = this.calculateTerritoryCenter(enemy);
+    if (centerTile && this.player.canBuild(UnitType.MIRV, centerTile)) {
+      this.sendMIRV(centerTile);
+      return;
+    }
+  }
+
+  private sendMIRV(tile: TileRef): void {
+    if (this.player === null) throw new Error("not initialized");
+    this.triggerMIRVCooldown(tile);
+    this.mg.addExecution(new MirvExecution(this.player, tile));
+  }
+
+  private triggerMIRVCooldown(tile?: TileRef): void {
+    if (this.player === null) throw new Error("not initialized");
+    this.removeOldMIRVEvents();
+    const tick = this.mg.ticks();
+    // Use provided tile or any tile from player's territory for cooldown tracking
+    const cooldownTile =
+      tile ?? Array.from(this.player.tiles())[0] ?? this.mg.ref(0, 0);
+    this.lastMIRVSent.push([tick, cooldownTile]);
+  }
+
+  private removeOldMIRVEvents() {
+    const maxAge = FakeHumanExecution.MIRV_COOLDOWN_TICKS;
+    const tick = this.mg.ticks();
+    while (
+      this.lastMIRVSent.length > 0 &&
+      this.lastMIRVSent[0][0] + maxAge <= tick
+    ) {
+      this.lastMIRVSent.shift();
+    }
+  }
+
+  // Send out a warship if our transport ship got captured
+  private trackTransportShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    // Add any currently owned transport ships to our tracking set
+    this.player
+      .units(UnitType.TransportShip)
+      .forEach((u) => this.trackedTransportShips.add(u));
+
+    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
+    for (const ship of Array.from(this.trackedTransportShips)) {
+      if (!ship.isActive()) {
+        // Distinguish between arrival/retreat and enemy destruction
+        if (ship.wasDestroyedByEnemy()) {
+          this.maybeRetaliateWithWarship(ship.tile());
+        }
+        this.trackedTransportShips.delete(ship);
+      }
+    }
+  }
+
+  // Send out a warship if our trade ship got captured
+  private trackTradeShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    // Add any currently owned trade ships to our tracking map
+    this.player
+      .units(UnitType.TradeShip)
+      .forEach((u) => this.trackedTradeShips.add(u));
+
+    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
+    for (const ship of Array.from(this.trackedTradeShips)) {
+      if (!ship.isActive()) {
+        this.trackedTradeShips.delete(ship);
+        continue;
+      }
+      if (ship.owner().id() !== this.player.id()) {
+        // Ship was ours and is now owned by someone else -> captured
+        this.maybeRetaliateWithWarship(ship.tile());
+        this.trackedTradeShips.delete(ship);
+      }
+    }
+  }
+
+  private maybeRetaliateWithWarship(tile: TileRef): void {
+    if (this.player === null) return;
+
+    const { difficulty } = this.mg.config().gameConfig();
+    // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
+    if (
+      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
+      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
+      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
+    ) {
+      const canBuild = this.player.canBuild(UnitType.Warship, tile);
+      if (canBuild === false) {
+        return;
+      }
+      this.mg.addExecution(
+        new ConstructionExecution(this.player, UnitType.Warship, tile),
+      );
+    }
   }
 
   isActive(): boolean {
