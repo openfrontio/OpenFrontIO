@@ -60,6 +60,7 @@
     "ui_options_desc": "Les éléments suivants peuvent être trouvés à l'intérieur :",
     "ui_playeroverlay": "Informations sur le joueur",
     "ui_playeroverlay_desc": "Lorsque vous survolez un pays, le panneau d'informations sur le joueur s'affichent dans Options. Il montre le type de joueur : Humain, Nation (bot intelligent), ou Bot ; l'attitude d'une nation à votre égard. allant de l'Hostile à l'Amical ; et les troupes en défense, l'or, le nombre de navires de guerre et les différents bâtiments que le joueur possède.",
+    "ui_wilderness": "Région sauvage",
     "option_pause": "Mettre en pause/Continuer la partie - Disponible uniquement dans le mode solo.",
     "option_timer": "Chronomètre - Temps écoulé depuis le début du jeu.",
     "option_exit": "Bouton de sortie.",
@@ -89,6 +90,8 @@
     "build_desc": "Description",
     "build_city": "Ville",
     "build_city_desc": "Utile quand vous ne pouvez agrandir votre territoire ou quand vous atteignez votre limite de population.",
+    "build_factory": "Usine",
+    "build_factory_desc": "Crée automatiquement des chemins de fer avec les structures à proximité, et fait apparaître des trains sporadiquement.",
     "build_defense": "Poste de défense",
     "build_defense_desc": "Augmente les défenses autour des frontières voisines, qui montrent un motif en damier. Les attaques des ennemis sont plus lentes et font plus de blessés.",
     "build_port": "Port",
@@ -112,7 +115,8 @@
     "icon_ally": "Poignée de main - Allié. Ce joueur est votre allié.",
     "icon_embargo": "Signe dollar barré - Embargo. Ce joueur a cessé de commercer avec vous automatiquement ou manuellement.",
     "icon_request": "Enveloppe - Demande d'alliance. Ce joueur vous a envoyé une demande d'alliance.",
-    "info_enemy_panel": "Panneau d'information de l'ennemi"
+    "info_enemy_panel": "Panneau d'information de l'ennemi",
+    "exit_confirmation": "Êtes-vous sûr de vouloir quitter le jeu ?"
   },
   "single_modal": {
     "title": "Joueur seul",
@@ -255,16 +259,27 @@
     "tab_keybinds": "Raccourcis clavier",
     "dark_mode_label": "Mode sombre",
     "dark_mode_desc": "Basculer l'apparence du site entre les thèmes clairs et sombres",
+    "dark_mode_enabled": "Mode sombre activé",
+    "light_mode_enabled": "Mode jour activé",
     "emojis_label": "Émojis",
+    "emojis_visible": "Les émojis sont visibles",
+    "emojis_hidden": "Les émojis sont masqués",
     "emojis_desc": "Afficher/Masquer les émoticônes dans le jeu",
     "alert_frame_label": "Fenêtre d'alertes",
     "alert_frame_desc": "Activer/désactiver la fenêtre d'alertes. Lorsqu'elle est activée, la fenêtre s'affichera lorsque vous serez trahi.",
     "special_effects_label": "Effets spéciaux",
     "special_effects_desc": "Activer/désactiver les effets spéciaux. Désactiver pour améliorer les performances",
+    "special_effects_enabled": "Effets spéciaux activés",
+    "special_effects_disabled": "Effets spéciaux désactivés",
     "anonymous_names_label": "Noms masqués",
     "anonymous_names_desc": "Cacher le vrai nom des joueurs avec des noms aléatoires sur votre écran.",
+    "anonymous_names_enabled": "Noms anonymes activés",
+    "real_names_shown": "Noms réels affichés",
     "left_click_label": "Clic gauche pour ouvrir le menu",
     "left_click_desc": "Activé, un clic gauche ouvre le menu et le bouton épée d'attaque. Désactivé, un clic gauche attaque directement.",
+    "left_click_menu": "Menu Clic gauche",
+    "left_click_opens_menu": "Un clic gauche ouvre le menu",
+    "right_click_opens_menu": "Un clic droit ouvre le menu",
     "attack_ratio_label": "⚔️ Ratio d'attaque",
     "attack_ratio_desc": "Quel pourcentage de vos troupes envoyer dans une attaque (1–100%)",
     "troop_ratio_label": "🪖🛠️ Ratio des troupes et des ouvriers",
@@ -305,7 +320,14 @@
     "move_right": "Caméra Droite",
     "move_right_desc": "Déplacer la caméra vers la droite",
     "reset": "Réinitialiser",
-    "unbind": "Détacher"
+    "unbind": "Détacher",
+    "on": "Activé",
+    "off": "Désactivé",
+    "toggle_terrain": "Activer/désactiver le terrain",
+    "terrain_enabled": "Affichage du terrain activé",
+    "terrain_disabled": "Affichage du terrain désactivé",
+    "exit_game_label": "Quitter la partie",
+    "exit_game_info": "Retour au menu principal"
   },
   "chat": {
     "title": "Discussion",
@@ -389,8 +411,9 @@
       "sam_launcher": "Protège contre les bombes nucléaires",
       "warship": "Capture les navires commerciaux, détruit les navires de guerre et les bateaux",
       "port": "Envoie des navires commerciaux pour produire de l'or",
-      "defense_post": "Augmente les défenses des frontières voisines",
-      "city": "Augmente la population maximale"
+      "defense_post": "Augmente les défenses des frontières proches",
+      "city": "Augmente la population maximale",
+      "factory": "Crée des chemins de fer et fait apparaître des trains"
     },
     "not_enough_money": "Pas assez d'argent"
   },
@@ -412,9 +435,7 @@
     "team": "Équipe",
     "owned": "Possédé",
     "gold": "Or",
-    "troops": "Troupes",
-    "show_top_5": "Afficher le Top 5",
-    "show_all": "Tout afficher"
+    "troops": "Troupes"
   },
   "player_info_overlay": {
     "type": "Type",
@@ -437,9 +458,22 @@
   "events_display": {
     "retreating": "en retraite",
     "boat": "Bateau",
+    "alliance_request_status": "{name} {status} votre demande d'alliance",
+    "alliance_accepted": "a accepté",
+    "alliance_rejected": "a refusé",
+    "duration_second": "1 seconde",
+    "betrayal_description": "Vous avez rompu votre alliance avec {name}, ce qui fait de vous un TRAÎTRE (affaiblissement de défense de {malusPercent}% pendant {durationText})",
+    "duration_seconds_plural": "{seconds} secondes",
+    "betrayed_you": "{name} a rompu son alliance avec vous",
     "about_to_expire": "Votre alliance avec {name} est sur le point d'expirer!",
+    "alliance_expired": "Votre alliance avec {name} a expiré",
+    "attack_request": "{name} vous demande d'attaquer {target}",
+    "sent_emoji": "Envoyé à {name} : {emoji}",
     "renew_alliance": "Demander le renouvellement",
+    "request_alliance": "{name} demande une alliance !",
     "focus": "Focaliser",
+    "accept_alliance": "Accepter",
+    "reject_alliance": "Refuser",
     "alliance_renewed": "Votre alliance avec {name} a été renouvelée",
     "ignore": "Ignorer"
   },
@@ -483,7 +517,8 @@
   },
   "replay_panel": {
     "replay_speed": "Vitesse de relecture",
-    "game_speed": "Vitesse de jeu"
+    "game_speed": "Vitesse de jeu",
+    "fastest_game_speed": "max"
   },
   "error_modal": {
     "crashed": "Le jeu a planté !",
@@ -538,5 +573,11 @@
       "grogu_head": "Tête de Grogu",
       "grogu": "Grogu"
     }
+  },
+  "auth": {
+    "login_required": "La connexion est nécessaire pour accéder à ce site Web.",
+    "redirecting": "Vous êtes en cours de redirection...",
+    "not_authorized": "Vous n'êtes pas autorisé à accéder à ce site web.",
+    "contact_admin": "Si vous pensez que vous voyez ce message par erreur, veuillez contacter l'administrateur du site."
   }
 }

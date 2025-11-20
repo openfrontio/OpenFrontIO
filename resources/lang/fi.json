@@ -43,7 +43,7 @@
     "action_reset_gfx": "Palauta grafiikat",
     "ui_section": "Pelin käyttöliittymä",
     "ui_leaderboard": "Pistetaulukko",
-    "ui_your_team": "Tiimisi:",
+    "ui_your_team": "Tiimisi: ",
     "ui_leaderboard_desc": "Näyttää pelin parhaat pelaajat, sekä heidän kullan, sotilaiden ja maan (%) määrän. Painamalla \"Näytä kaikki\" näet kaikki pelin pelaajat. Jos et halua nähdä pistetaulukkoa, paina \"Sulje\".",
     "ui_control": "Ohjauspaneeli",
     "ui_control_desc": "Ohjauspaneeli sisältää seuraavat toiminnot:",
@@ -60,6 +60,7 @@
     "ui_options_desc": "Sisältää seuraavat toiminnot:",
     "ui_playeroverlay": "Pelaajan tietojen peittokuva",
     "ui_playeroverlay_desc": "Kun pidät hiirtä maan päällä, pelaajan tietojen peittokuva näytetään asetusten alla. Se näyttää onko pelaaja ihminen, kansakunta (eli järkevä botti) vai botti. Kansakunnan asenne sinua kohtaan vaihtelee vihamielisestä ystävälliseen. Peittokuva näyttää myös pelaajan puolustavien joukkojen, kullan, sotalaivojen ja erilaisten rakennusten määrän.",
+    "ui_wilderness": "Erämaa",
     "option_pause": "Pysäytä/Epäpysäytä peli - Saatavilla vain yhden pelaajan tilassa.",
     "option_timer": "Ajastin - Aikaa pelin alusta.",
     "option_exit": "Poistu pelistä -painike.",
@@ -89,6 +90,8 @@
     "build_desc": "Kuvaus",
     "build_city": "Kaupunki",
     "build_city_desc": "Lisää enimmäisväkilukuasi. Hyödyllinen, kun et voi laajentaa aluettasi tai, jos haluat muuten lisätä väkilukuasi.",
+    "build_factory": "Tehdas",
+    "build_factory_desc": "Luo rautateitä automaattisesti lähellä rakennuksia ja lähettää junia satunnaisesti.",
     "build_defense": "Puolustustorni",
     "build_defense_desc": "Lisää puolustuksen tehokkuutta rajojen läheisyydessä. Vihollisten hyökkäykset puolustustornin lähellä ovat hitaampia ja niissä on enemmän uhreja.",
     "build_port": "Satama",
@@ -112,7 +115,8 @@
     "icon_ally": "Kädenpuristus - liittolainen. Tämä pelaaja on liittolaisesi.",
     "icon_embargo": "Yliviivattu dollari - kauppasaarto. Tämä pelaaja on lopettanut kapuankäynnin kanssasi automaattisesti tai manuaalisesti.",
     "icon_request": "Kirjekutsu - Liittopyyntö. Tämä pelaaja on lähettänyt sinulle liittokutsun.",
-    "info_enemy_panel": "Vihollisen tietopaneeli"
+    "info_enemy_panel": "Vihollisen tietopaneeli",
+    "exit_confirmation": "Haluatko varmasti poistua pelistä?"
   },
   "single_modal": {
     "title": "Yksinpeli",
@@ -125,7 +129,7 @@
     "infinite_gold": "Loputon kulta",
     "infinite_troops": "Loputtomat joukot",
     "disable_nukes": "Poista ydinohjukset käytöstä",
-    "enables_title": "Aktivoi asetukset",
+    "enables_title": "Säädä asetuksia",
     "start": "Aloita peli"
   },
   "map": {
@@ -203,7 +207,7 @@
     "instant_build": "Välitön rakentaminen",
     "infinite_gold": "Loputon kulta",
     "infinite_troops": "Loputtomat joukot",
-    "enables_title": "Aktivoi asetukset",
+    "enables_title": "Säädä asetuksia",
     "player": "Pelaaja",
     "players": "pelaajaa",
     "waiting": "Odotetaan pelaajia...",
@@ -255,16 +259,27 @@
     "tab_keybinds": "Näppäinasetukset",
     "dark_mode_label": "Tumma tila",
     "dark_mode_desc": "Vaihda sivuston ulkonäköä vaaleiden ja tummien teemojen välillä",
+    "dark_mode_enabled": "Tumma tila käytössä",
+    "light_mode_enabled": "Vaalea tila käytössä",
     "emojis_label": "Hymiöt",
+    "emojis_visible": "Hymiöt näkyvissä",
+    "emojis_hidden": "Hymiöt on piilotettu",
     "emojis_desc": "Valitse, ovatko hymiöt näkyvissä pelissä",
     "alert_frame_label": "Hälytyskehys",
     "alert_frame_desc": "Laita hälytyskehys pois tai päälle. Kun päällä, kehys näkyy, kun sinut petetään.",
     "special_effects_label": "Erikoistehosteet",
     "special_effects_desc": "Valitse, ovatko erikoistehosteet päällä. Poista ne käytöstä parantaaksesi suorituskykyä",
+    "special_effects_enabled": "Erikoistehosteet käytössä",
+    "special_effects_disabled": "Erikoistehosteet poistettu käytöstä",
     "anonymous_names_label": "Piilotetut nimet",
     "anonymous_names_desc": "Korvaa pelaajien oikeat nimet satunnaisilla nimillä.",
+    "anonymous_names_enabled": "Anonyymit nimet käytössä",
+    "real_names_shown": "Todelliset nimet näytetään",
     "left_click_label": "Hiiren vasen nappi valikon avaamiseen",
     "left_click_desc": "Kun päällä, hiiren vasen nappi avaa valikon, mistä voit hyökätä painamalla miekkaa. Kun pois päältä, vasen nappi hyökkää suoraan.",
+    "left_click_menu": "Hiiren vasemman napin valikko",
+    "left_click_opens_menu": "Hiiren vasen nappi avaa valikon",
+    "right_click_opens_menu": "Hiiren oikea nappi avaa valikon",
     "attack_ratio_label": "⚔️ Hyökkäyksen osuus",
     "attack_ratio_desc": "Mikä osuus joukoistasi lähetetään hyökkäykseen (1–100%)",
     "troop_ratio_label": "🪖🛠️ Joukkojen ja työntekijöiden suhde",
@@ -305,7 +320,14 @@
     "move_right": "Siirrä kameraa oikeaan",
     "move_right_desc": "Siirrä kameraa oikealle",
     "reset": "Palauta",
-    "unbind": "Irrota"
+    "unbind": "Irrota",
+    "on": "Päällä",
+    "off": "Pois",
+    "toggle_terrain": "Vaihda maastoa",
+    "terrain_enabled": "Maastonäkymä käytössä",
+    "terrain_disabled": "Maastonäkymä pois käytöstä",
+    "exit_game_label": "Poistu pelistä",
+    "exit_game_info": "Palaa päävalikkoon"
   },
   "chat": {
     "title": "Pikaviestit",
@@ -389,8 +411,9 @@
       "sam_launcher": "Puolustaa saapuvia ohjuksia vastaan",
       "warship": "Kaappaa kauppa-aluksia, tuhoaa laivoja ja veneitä",
       "port": "Lähettää kauppa-aluksia tuottaakseen kultaa",
-      "defense_post": "Lisää läheisten rajojen puolustusta",
-      "city": "Lisää enimmäisväkilukuasi"
+      "defense_post": "Parantaa läheisten rajojen puolustusta",
+      "city": "Lisää enimmäisväkilukuasi",
+      "factory": "Luo rautateitä ja lähettää junia"
     },
     "not_enough_money": "Ei tarpeeksi rahaa"
   },
@@ -412,9 +435,7 @@
     "team": "Tiimi",
     "owned": "Maata",
     "gold": "Kultaa",
-    "troops": "Joukkoja",
-    "show_top_5": "Näytä top 5",
-    "show_all": "Näytä kaikki"
+    "troops": "Joukkoja"
   },
   "player_info_overlay": {
     "type": "Tyyppi",
@@ -437,9 +458,22 @@
   "events_display": {
     "retreating": "peräännytään",
     "boat": "Vene",
+    "alliance_request_status": "{name} {status} sinun liittokutsusi",
+    "alliance_accepted": "hyväksyi",
+    "alliance_rejected": "hylkäsi",
+    "duration_second": "1 sekunti",
+    "betrayal_description": "Rikkoit liiton pelaajan {name} kanssa, tehden sinusta PETTURIN ({malusPercent}% puolustuksen huononnus {durationText})",
+    "duration_seconds_plural": "{seconds} sekuntia",
+    "betrayed_you": "{name} rikkoi liittonsa kanssasi",
     "about_to_expire": "Liittosi pelaajan {name} kanssa on vanhentumassa!",
+    "alliance_expired": "Liittosi pelaajan {name} kanssa vanhentui",
+    "attack_request": "{name} pyytää, että hyökkäät {target}",
+    "sent_emoji": "Lähetit pelaajalle {name}: {emoji}",
     "renew_alliance": "Pyydä liitolle jatkoa",
+    "request_alliance": "{name} pyytää liittoutumista!",
     "focus": "Keskitä",
+    "accept_alliance": "Hyväksy",
+    "reject_alliance": "Hylkää",
     "alliance_renewed": "Liittosi pelaajan {name} kanssa sai jatkoa",
     "ignore": "Sivuuta"
   },
@@ -483,7 +517,8 @@
   },
   "replay_panel": {
     "replay_speed": "Uusinnan nopeus",
-    "game_speed": "Pelin nopeus"
+    "game_speed": "Pelin nopeus",
+    "fastest_game_speed": "max"
   },
   "error_modal": {
     "crashed": "Peli kaatui!",
@@ -538,5 +573,11 @@
       "grogu_head": "Grogun pää",
       "grogu": "Grogu"
     }
+  },
+  "auth": {
+    "login_required": "Kirjautuminen vaaditaan tälle verkkosivustolle pääsemiseen.",
+    "redirecting": "Sinut uudelleenohjataan...",
+    "not_authorized": "Sinulla ei ole oikeutta käyttää tätä verkkosivustoa.",
+    "contact_admin": "Jos uskot näkeväsi tämän viestin virheenä, ota yhteyttä sivuston ylläpitoon."
   }
 }

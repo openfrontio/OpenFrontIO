@@ -13,7 +13,7 @@ import { AllPlayers, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { flattenedEmojiTable } from "../../../core/Util";
-import { MouseUpEvent } from "../../InputHandler";
+import { CloseViewEvent, MouseUpEvent } from "../../InputHandler";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
@@ -166,6 +166,10 @@ export class PlayerPanel extends LitElement implements Layer {
 
   init() {
     this.eventBus.on(MouseUpEvent, (e: MouseEvent) => this.hide());
+
+    this.eventBus.on(CloseViewEvent, (e) => {
+      this.hide();
+    });
 
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
   }

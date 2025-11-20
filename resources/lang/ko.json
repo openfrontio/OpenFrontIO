@@ -60,6 +60,7 @@
     "ui_options_desc": "다음 요소들이 포함되어 있습니다:",
     "ui_playeroverlay": "플레이어 정보 오버레이",
     "ui_playeroverlay_desc": "나라 위에 마우스를 올리면 옵션 아래에 플레이어 정보 오버레이가 표시됩니다. 여기서는 플레이어 유형(사람, 국가(똑똑한 봇), 봇), 국가의 당신에 대한 태도(적대적부터 우호적까지), 방어 중인 병력과 골드, 그리고 보유한 군함과 다양한 건물 수를 확인할 수 있습니다.",
+    "ui_wilderness": "무주지",
     "option_pause": "게임 일시정지/재개 - 혼자 하기 모드에서만 사용 가능합니다.",
     "option_timer": "타이머 - 게임 시작 후 경과 시간을 보여줍니다.",
     "option_exit": "종료 버튼.",
@@ -89,6 +90,8 @@
     "build_desc": "설명",
     "build_city": "도시",
     "build_city_desc": "최대 인구를 증가시킵니다. 영토를 확장할 수 없거나 인구 제한에 도달할 뻔할 때 유용합니다.",
+    "build_factory": "공장",
+    "build_factory_desc": "인근 구조물로 자동으로 철도를 만들고, 가끔 기차를 생성합니다.",
     "build_defense": "방어 진지",
     "build_defense_desc": "체크무늬 패턴을 보이는 근처 국경 주변의 방어력을 강화합니다. 적의 공격 속도가 느려지고 사상자가 증가합니다.",
     "build_port": "항구",
@@ -112,7 +115,8 @@
     "icon_ally": "악수 - 동맹. 이 플레이어는 당신의 동맹입니다.",
     "icon_embargo": "달러 금지 표지 - 금수 조치. 이 플레이어는 자동 또는 수동으로 당신과의 교역을 중단했습니다.",
     "icon_request": "봉투 - 동맹 요청. 이 플레이어가 당신에게 동맹을 요청했습니다.",
-    "info_enemy_panel": "적 정보판"
+    "info_enemy_panel": "적 정보판",
+    "exit_confirmation": "정말 게임을 종료 하시겠습니까?"
   },
   "single_modal": {
     "title": "혼자 하기",
@@ -131,7 +135,7 @@
   "map": {
     "map": "지도",
     "world": "세계",
-    "giantworldmap": "거대한 지구 맵",
+    "giantworldmap": "거대한 세계",
     "europe": "유럽",
     "mena": "중동과 북아프리카",
     "northamerica": "북미",
@@ -255,16 +259,27 @@
     "tab_keybinds": "키 설정",
     "dark_mode_label": "다크 모드",
     "dark_mode_desc": "밝은 테마/어두운 테마로 전환합니다.",
+    "dark_mode_enabled": "다크 모드 적용됨",
+    "light_mode_enabled": "라이트 모드 적용됨",
     "emojis_label": "이모지",
+    "emojis_visible": "이모티콘 활성화됨",
+    "emojis_hidden": "이모티콘 숨김 처리 됨",
     "emojis_desc": "게임 내에서 감정 표현을 표시할지 여부를 선택합니다.",
     "alert_frame_label": "경고 프레임",
     "alert_frame_desc": "경고 프레임을 전환합니다. 활성화하면 배신당했을 때 프레임이 표시됩니다.",
     "special_effects_label": "특수 효과",
     "special_effects_desc": "특수 효과를 켜고 끕니다. 성능을 향상시키려면 비활성화하세요.",
+    "special_effects_enabled": "특수 효과 적용됨",
+    "special_effects_disabled": "특수 효과 해제됨",
     "anonymous_names_label": "이름 감추기",
     "anonymous_names_desc": "화면에 무작위 이름을 표시하여 실제 플레이어 이름을 숨깁니다.",
+    "anonymous_names_enabled": "익명 활성화됨",
+    "real_names_shown": "이름 보임",
     "left_click_label": "좌클릭으로 메뉴 열기",
     "left_click_desc": "켜짐 상태에서는 마우스 왼쪽 클릭 시 메뉴가 열리고 검 버튼 공격이 활성화됩니다. 꺼짐 상태에서는 마우스 왼쪽 클릭 시 바로 공격이 활성화됩니다.",
+    "left_click_menu": "좌클릭 메뉴",
+    "left_click_opens_menu": "좌클릭으로 메뉴 열기",
+    "right_click_opens_menu": "우클릭으로 메뉴 열기",
     "attack_ratio_label": "⚔️ 공격 비율",
     "attack_ratio_desc": "공격에 보낼 병력 비율 (1~100%)",
     "troop_ratio_label": "🪖🛠️ 병력과 일꾼 비율",
@@ -305,7 +320,14 @@
     "move_right": "오른쪽으로 카메라 이동",
     "move_right_desc": "카메라를 오른쪽으로 이동",
     "reset": "초기화",
-    "unbind": "바인딩 해제"
+    "unbind": "바인딩 해제",
+    "on": "켬",
+    "off": "끔",
+    "toggle_terrain": "지형 보기",
+    "terrain_enabled": "지형 보기 활성화됨",
+    "terrain_disabled": "지형 보기 비활성화됨",
+    "exit_game_label": "게임 나가기",
+    "exit_game_info": "주 메뉴로 돌아가기"
   },
   "chat": {
     "title": "빠른 채팅",
@@ -390,7 +412,8 @@
       "warship": "무역선을 포획하고, 함선을 파괴합니다",
       "port": "무역선을 보내 금을 생산합니다",
       "defense_post": "주변 경계의 방어력을 강화합니다",
-      "city": "최대 인구 수를 증가시킵니다"
+      "city": "최대 인구 수를 증가시킵니다",
+      "factory": "철도를 만들고 기차를 생성합니다"
     },
     "not_enough_money": "돈이 부족합니다"
   },
@@ -412,9 +435,7 @@
     "team": "팀",
     "owned": "소유함",
     "gold": "금",
-    "troops": "병력",
-    "show_top_5": "상위 5위 표시",
-    "show_all": "모두 보기"
+    "troops": "병력"
   },
   "player_info_overlay": {
     "type": "유형",
@@ -437,9 +458,22 @@
   "events_display": {
     "retreating": "후퇴 중",
     "boat": "배",
+    "alliance_request_status": "{name}이(가) 당신의 동맹 요청을 {status}했습니다",
+    "alliance_accepted": "수락",
+    "alliance_rejected": "거부",
+    "duration_second": "1초",
+    "betrayal_description": "{name}와의 동맹을 파기했습니다. 당신은 이제 배신자입니다. (방어력 {malusPercent}% 감소, 지속 시간: {durationText})",
+    "duration_seconds_plural": "{seconds}초",
+    "betrayed_you": "{name}이(가) 당신과의 동맹을 파기했습니다",
     "about_to_expire": "{name}와(과)의 동맹이 곧 만료됩니다!",
+    "alliance_expired": "{name}와(과)의 동맹이 만료되었습니다",
+    "attack_request": "{name}이(가) 당신에게 {target}을(를) 공격해 달라고 요청했습니다",
+    "sent_emoji": "{name} 에게: {emoji}",
     "renew_alliance": "갱신 요청",
+    "request_alliance": "{name}이(가) 동맹을 요청했습니다!",
     "focus": "초점",
+    "accept_alliance": "수락",
+    "reject_alliance": "거절",
     "alliance_renewed": "{name}와(과)의 동맹이 갱신되었습니다",
     "ignore": "무시하기"
   },
@@ -483,7 +517,8 @@
   },
   "replay_panel": {
     "replay_speed": "리플레이 속도",
-    "game_speed": "게임 속도"
+    "game_speed": "게임 속도",
+    "fastest_game_speed": "최대"
   },
   "error_modal": {
     "crashed": "게임이 튕겼습니다!",
@@ -538,5 +573,11 @@
       "grogu_head": "그로구 머리",
       "grogu": "그로구"
     }
+  },
+  "auth": {
+    "login_required": "이 웹사이트에 접속하려면 로그인해야 합니다.",
+    "redirecting": "다른 페이지로 이동 중입니다...",
+    "not_authorized": "이 웹사이트에 접근할 권한이 없습니다.",
+    "contact_admin": "이 메시지가 잘못 표시되었다고 생각되면 웹사이트 관리자에게 문의하십시오."
   }
 }

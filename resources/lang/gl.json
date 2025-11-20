@@ -60,6 +60,7 @@
     "ui_options_desc": "Dentro, os seguintes elementos pódense atopar:",
     "ui_playeroverlay": "Panel de información do xogador",
     "ui_playeroverlay_desc": "Ó pasar o cursor sobre un país, a información do xogador móstrase baixo Opcións. Aparece o tipo de xogador: Humano, Nación (bot intelixente) ou Bot; a actitude da nación cara ti, que pode ir de hostil até amistoso; e as tropas defensoras, o ouro, e tamén o número de buques de guerra e edificios que o xogador ten.",
+    "ui_wilderness": "Monte",
     "option_pause": "Pausar ou retomar a partida — Só dispoñible no modo de un xogador.",
     "option_timer": "Temporizador — Tempo transcorrido dende o inicio da partida.",
     "option_exit": "Botón de saída.",
@@ -89,6 +90,8 @@
     "build_desc": "Descrición",
     "build_city": "Cidade",
     "build_city_desc": "Aumenta a túa poboación máxima. Útil cando xa non podes expandirte máis ou estás preto de acadar o teu límite de poboación.",
+    "build_factory": "Fábrica",
+    "build_factory_desc": "Constrúe vías férreas automaticamente con edificios próximos e xera trens de forma esporádica.",
     "build_defense": "Posto de defensa",
     "build_defense_desc": "Aumenta as defensas das fronteiras próximas, indicado cun padrón de cadros. Como consecuencia, os ataques inimigos son máis lentos e sofren máis perdas.",
     "build_port": "Porto",
@@ -98,7 +101,7 @@
     "build_silo": "Silo nuclear",
     "build_silo_desc": "Permite o lanzamento de mísiles.",
     "build_sam": "Lanzador SAM",
-    "build_sam_desc": "Pode interceptar mísiles inimigos nun alcance de 100 píxeles. Ten un 100 % de probabilidade de acerto contra a bomba atómica, un 80 % contra a bomba de hidróxeno e un 50 % contra as cabezas individuais de MIRV. O mísil ten un tempo de recarga de 7,5 segundos.",
+    "build_sam_desc": "Pode interceptar mísiles inimigos nun alcance de 100 píxeles. Ten un 100% de probabilidade de acerto contra a bomba atómica, un 80% contra a bomba de hidróxeno e un 50 % contra as cabezas individuais de MIRV. O mísil ten un tempo de recarga de 7,5 segundos.",
     "build_atom": "Bomba atómica",
     "build_atom_desc": "Pequena bomba explosiva que destrúe territorio, edificios, barcos de transporte e buques de guerra. Aparece no silo máis próximo e cae na zona onde fixeches clic.",
     "build_hydrogen": "Bomba de hidróxeno",
@@ -112,7 +115,8 @@
     "icon_ally": "Aperta de mans — Aliado. Este xogador é o teu aliado.",
     "icon_embargo": "Dólar con stop — Embargo. Este xogador parou o comercio contigo de forma automática ou manual.",
     "icon_request": "Sobre — Solicitude de alianza. Este xogador enviouche unha solicitude de alianza.",
-    "info_enemy_panel": "Panel de información de inimigos"
+    "info_enemy_panel": "Panel de información de inimigos",
+    "exit_confirmation": "Seguro que queres saír da partida?"
   },
   "single_modal": {
     "title": "Un xogador",
@@ -255,16 +259,27 @@
     "tab_keybinds": "Atallos de tecla",
     "dark_mode_label": "Modo escuro",
     "dark_mode_desc": "Alternar a aparencia do xogo entre modo claro e escuro",
+    "dark_mode_enabled": "Modo escuro activado",
+    "light_mode_enabled": "Modo claro activado",
     "emojis_label": "Emojis",
+    "emojis_visible": "Emojis visíbeis",
+    "emojis_hidden": "Emojis escondidos",
     "emojis_desc": "Alternar a mostra emojis no xogo",
     "alert_frame_label": "Cadro de alerta",
     "alert_frame_desc": "Alternar o cadro de alerta. Se está activado, o cadro mostrarase cando te traizoen.",
     "special_effects_label": "Efectos especiais",
     "special_effects_desc": "Alternar efectos especiais. Desactívaos para mellorar o rendemento",
+    "special_effects_enabled": "Efectos especiais activados",
+    "special_effects_disabled": "Efectos especiais desactivados",
     "anonymous_names_label": "Nomes ocultos",
     "anonymous_names_desc": "Oculta os nomes dos xogadores verdadeiros e mostra uns aleatorios.",
+    "anonymous_names_enabled": "Nomes anónimos",
+    "real_names_shown": "Nomes reais",
     "left_click_label": "Clic esquerdo para abrir o menú",
     "left_click_desc": "Cando está ACTIVADO, o clic esquerdo abre o menú e o botón da espada ataca. Cando está DESACTIVADO, o clic esquerdo ataca directamente.",
+    "left_click_menu": "Menú do clic esquerdo",
+    "left_click_opens_menu": "Clic esquerdo abre o menú",
+    "right_click_opens_menu": "Clic dereito abre o menú",
     "attack_ratio_label": "⚔️ Proporción de atacantes",
     "attack_ratio_desc": "Porcentaxe das túas tropas para enviar nun ataque (1–100%)",
     "troop_ratio_label": "🪖🛠️ Proporción entre tropas e traballadores",
@@ -305,7 +320,14 @@
     "move_right": "Mover cámara dereita",
     "move_right_desc": "Move a cámara cara á a dereita",
     "reset": "Restabelecer",
-    "unbind": "Desvincular"
+    "unbind": "Desvincular",
+    "on": "Activado",
+    "off": "Desactivado",
+    "toggle_terrain": "Activar terreo",
+    "terrain_enabled": "Vista xeográfica activada",
+    "terrain_disabled": "Vista xeográfica desactivada",
+    "exit_game_label": "Saír da partida",
+    "exit_game_info": "Volver ó menú principal"
   },
   "chat": {
     "title": "Chat rápido",
@@ -389,8 +411,9 @@
       "sam_launcher": "Defende contra mísiles entrantes",
       "warship": "Captura barcos comerciais e destrúe barcos de guerra",
       "port": "Envía barcos comerciais para xerar ouro",
-      "defense_post": "Reforza a defensa das fronteiras próximas",
-      "city": "Aumenta a poboación máxima"
+      "defense_post": "Reforza as defensas das fronteiras próximas",
+      "city": "Aumenta a poboación máxima",
+      "factory": "Constrúe vías férreas e xera trens"
     },
     "not_enough_money": "Non tes ouro dabondo"
   },
@@ -412,9 +435,7 @@
     "team": "Equipo",
     "owned": "Controlado",
     "gold": "Ouro",
-    "troops": "Tropas",
-    "show_top_5": "Mostrar os 5 primeiros",
-    "show_all": "Mostrar todos"
+    "troops": "Tropas"
   },
   "player_info_overlay": {
     "type": "Tipo",
@@ -437,9 +458,22 @@
   "events_display": {
     "retreating": "retirando",
     "boat": "Barco",
+    "alliance_request_status": "{name} {status} a túa solicitude de alianza",
+    "alliance_accepted": "aceptou",
+    "alliance_rejected": "rexeitou",
+    "duration_second": "1 segundo",
+    "betrayal_description": "Rompiches a túa alianza con {name}, converténdote nun TRAIDOR (desvantaxe de defensa de {malusPercent}% por {durationText})",
+    "duration_seconds_plural": "{seconds} segundos",
+    "betrayed_you": "{name} rompeu a súa alianza contigo",
     "about_to_expire": "A túa alianza con {name} está a piques de expirar!",
+    "alliance_expired": "A túa alianza con {name} expirou",
+    "attack_request": "{name} pídeche que ataques a {target}",
+    "sent_emoji": "A {name}: {emoji}",
     "renew_alliance": "Solicitar renovación",
+    "request_alliance": "{name} pídeche unha alianza!",
     "focus": "Enfocar",
+    "accept_alliance": "Aceptar",
+    "reject_alliance": "Rexeitar",
     "alliance_renewed": "Renovouse a túa alianza con {name}",
     "ignore": "Ignorar"
   },
@@ -483,7 +517,8 @@
   },
   "replay_panel": {
     "replay_speed": "Velocidade de reprodución",
-    "game_speed": "Velocidade da partida"
+    "game_speed": "Velocidade da partida",
+    "fastest_game_speed": "máx."
   },
   "error_modal": {
     "crashed": "O xogo caeu!",
@@ -538,5 +573,11 @@
       "grogu_head": "Cabeza de Grogu",
       "grogu": "Grogu"
     }
+  },
+  "auth": {
+    "login_required": "Debes iniciar sesión para acceder a este sitio.",
+    "redirecting": "Estámosche a redirixir...",
+    "not_authorized": "Non tes autorización para acceder a este sitio.",
+    "contact_admin": "Se cres que esta mensaxe é un erro, por favor contacta co administrador do sitio."
   }
 }

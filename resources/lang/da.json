@@ -60,6 +60,7 @@
     "ui_options_desc": "Følgende elementer findes indenfor:",
     "ui_playeroverlay": "Spillerinfo-overlay",
     "ui_playeroverlay_desc": "Når du holder musen over et land, vises spillerinfo-overlayet under ‘Indstillinger’. Det viser spillertypen: Menneske, Nation (smart bot) eller Bot. Adfærd: fra fjendtlig til venlig. Derudover vises forsvarende tropper, guld samt antallet af krigsskibe og forskellige bygninger, spilleren har.",
+    "ui_wilderness": "Ødemark",
     "option_pause": "Pause/Unpause spillet - Kun tilgængelig i singleplayer-tilstand.",
     "option_timer": "Timer – Tid gået siden spillets start.",
     "option_exit": "Afslut knap.",
@@ -89,6 +90,8 @@
     "build_desc": "Beskrivelse",
     "build_city": "By",
     "build_city_desc": "Øger din maksimale befolkning. Nyttig, når du ikke kan udvide dit territorium, eller du er ved at ramme befolkningsgrænsen.",
+    "build_factory": "Fabrik",
+    "build_factory_desc": "Opretter automatisk jernbaner ved nærliggende strukturer og sender tog afsted med mellemrum.",
     "build_defense": "Forsvarspost",
     "build_defense_desc": "Øger forsvaret omkring nærliggende grænser, som viser et ternet mønster. Angreb fra fjender er langsommere og har flere tab.",
     "build_port": "Havn",
@@ -112,7 +115,8 @@
     "icon_ally": "Håndtryk - Allieret. Denne spiller er din allierede.",
     "icon_embargo": "Dollar-stoptegn – Embargo. Denne spiller har stoppet handlen med dig automatisk eller manuelt.",
     "icon_request": "Konvolut - anmodning om Alliance. Denne spiller har sendt dig en allianceanmodning.",
-    "info_enemy_panel": "Fjende-info panel"
+    "info_enemy_panel": "Fjende-info panel",
+    "exit_confirmation": "Er du sikker på du vil afslutte spillet?"
   },
   "single_modal": {
     "title": "Enkeltspiller",
@@ -255,16 +259,27 @@
     "tab_keybinds": "Genvejstaster",
     "dark_mode_label": "Mørk Tilstand",
     "dark_mode_desc": "Skift webstedets udseende mellem lyst og mørkt tema",
+    "dark_mode_enabled": "Mørk tilstand aktiveret",
+    "light_mode_enabled": "Lys tilstand aktiveret",
     "emojis_label": "Emojis",
+    "emojis_visible": "Emojis er synlige",
+    "emojis_hidden": "Emojis er skjult",
     "emojis_desc": "Skift mellem om emojis vises i spillet",
     "alert_frame_label": "Advarselsramme",
     "alert_frame_desc": "Slå alarmrammen til og fra. Når den er aktiveret, vises rammen, når du bliver forrådt.",
     "special_effects_label": "Specialeffekter",
     "special_effects_desc": "Slå specialeffekter til eller fra. Deaktivér for at forbedre ydeevnen",
+    "special_effects_enabled": "Specialeffekter aktiveret",
+    "special_effects_disabled": "Specialeffekter deaktiveret",
     "anonymous_names_label": "Skjulte Navne",
     "anonymous_names_desc": "Skjul rigtige spillernavne med tilfældige navne på din skærm.",
+    "anonymous_names_enabled": "Anonyme navne er aktiveret",
+    "real_names_shown": "Rigtige navne vist",
     "left_click_label": "Venstreklik for at Åbne Menuen",
     "left_click_desc": "Når den er TIL, åbner venstreklik menuen, og sværdknappen angriber. Når den er FRA, angriber venstreklik direkte.",
+    "left_click_menu": "Venstre Klik Menu",
+    "left_click_opens_menu": "Venstreklik åbner menu",
+    "right_click_opens_menu": "Højreklik åbner menu",
     "attack_ratio_label": "⚔️ Angrebsforhold",
     "attack_ratio_desc": "Hvor stor en procentdel af dine tropper skal sendes i et angreb (1–100%)",
     "troop_ratio_label": "🪖🛠️ Forholdet mellem tropper og arbejdere",
@@ -305,7 +320,14 @@
     "move_right": "Flyt Kamera Til Højre",
     "move_right_desc": "Flyt kameraet til højre",
     "reset": "Nulstil",
-    "unbind": "Fjern tilknytning"
+    "unbind": "Fjern tilknytning",
+    "on": "Til",
+    "off": "Fra",
+    "toggle_terrain": "Slå Terræn Til/Fra",
+    "terrain_enabled": "Terrænvisning aktiveret",
+    "terrain_disabled": "Terrænvisning deaktiveret",
+    "exit_game_label": "Afslut Spil",
+    "exit_game_info": "Tilbage til hovedmenu"
   },
   "chat": {
     "title": "Hurtig Chat",
@@ -390,7 +412,8 @@
       "warship": "Indfanger handelsskibe, ødelægger skibe og både",
       "port": "Sender handelsskibe for at generere guld",
       "defense_post": "Forstærker forsvaret af nærliggende grænser",
-      "city": "Forøger maks. befolkning"
+      "city": "Øger maksimal befolkning",
+      "factory": "Opretter jernbaner og sender tog afsted"
     },
     "not_enough_money": "Ikke nok penge"
   },
@@ -412,9 +435,7 @@
     "team": "Hold",
     "owned": "Ejet",
     "gold": "Guld",
-    "troops": "Tropper",
-    "show_top_5": "Vis Top 5",
-    "show_all": "Vis alle"
+    "troops": "Tropper"
   },
   "player_info_overlay": {
     "type": "Type",
@@ -437,9 +458,22 @@
   "events_display": {
     "retreating": "trækker sig tilbage",
     "boat": "Båd",
+    "alliance_request_status": "{name} {status} din allianceanmodning",
+    "alliance_accepted": "accepteret",
+    "alliance_rejected": "afvist",
+    "duration_second": "1 sekund",
+    "betrayal_description": "Du har brudt din alliance med {name}, og er nu en FORRÆDER (forsvarsstraffe på {malusPercent}% i {durationText})",
+    "duration_seconds_plural": "{seconds} sekunder",
+    "betrayed_you": "{name} har brudt sin alliance med dig",
     "about_to_expire": "Din alliance med {name} er ved at udløbe!",
+    "alliance_expired": "Din alliance med {name} er udløbet",
+    "attack_request": "{name} anmoder om, at du angriber {target}",
+    "sent_emoji": "Sendt {name}: {emoji}",
     "renew_alliance": "Anmod om fornyelse",
+    "request_alliance": "{name} anmoder om alliance!",
     "focus": "Fokus",
+    "accept_alliance": "Acceptér",
+    "reject_alliance": "Afvis",
     "alliance_renewed": "Din alliance med {name} er blevet fornyet",
     "ignore": "Ignorér"
   },
@@ -460,7 +494,7 @@
     "default": "Standard"
   },
   "control_panel": {
-    "pop": "Befolk",
+    "pop": "Befolkning",
     "gold": "Guld",
     "troops": "Tropper",
     "workers": "Arbejdere",
@@ -483,7 +517,8 @@
   },
   "replay_panel": {
     "replay_speed": "Genafspilnings hastighed",
-    "game_speed": "Spil hastighed"
+    "game_speed": "Spil hastighed",
+    "fastest_game_speed": "maks"
   },
   "error_modal": {
     "crashed": "Spillet crashede!",
@@ -538,5 +573,11 @@
       "grogu_head": "Grogu Hoved",
       "grogu": "Grogu"
     }
+  },
+  "auth": {
+    "login_required": "Login er påkrævet for at få adgang til denne hjemmeside.",
+    "redirecting": "Du bliver omdirigeret...",
+    "not_authorized": "Du har ikke adgang til denne hjemmeside.",
+    "contact_admin": "Hvis du mener, at du ser denne besked ved en fejl, bedes du kontakte hjemmesidens administrator."
   }
 }

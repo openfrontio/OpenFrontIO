@@ -13,10 +13,11 @@ import {
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import { MouseMoveEvent } from "../../InputHandler";
+import { ContextMenuEvent, MouseMoveEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import { CloseRadialMenuEvent } from "./RadialMenu";
 
 function euclideanDistWorld(
   coord: { x: number; y: number },
@@ -69,6 +70,10 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     this.eventBus.on(MouseMoveEvent, (e: MouseMoveEvent) =>
       this.onMouseEvent(e),
     );
+    this.eventBus.on(ContextMenuEvent, (e: ContextMenuEvent) =>
+      this.maybeShow(e.x, e.y),
+    );
+    this.eventBus.on(CloseRadialMenuEvent, () => this.hide());
     this._isActive = true;
   }
 
@@ -165,6 +170,18 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     }
   }
 
+  private displayUnitCount(
+    player: PlayerView,
+    type: UnitType,
+    description: string,
+  ) {
+    return !this.game.config().isUnitDisabled(type)
+      ? html`<div class="text-sm opacity-80" translate="no">
+          ${translateText(description)}: ${player.totalUnitLevels(type)}
+        </div>`
+      : "";
+  }
+
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
@@ -250,26 +267,36 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
           ${translateText("player_info_overlay.gold")}:
           ${renderNumber(player.gold())}
         </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.ports")}:
-          ${player.totalUnitLevels(UnitType.Port)}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.cities")}:
-          ${player.totalUnitLevels(UnitType.City)}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.missile_launchers")}:
-          ${player.totalUnitLevels(UnitType.MissileSilo)}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.sams")}:
-          ${player.totalUnitLevels(UnitType.SAMLauncher)}
-        </div>
-        <div class="text-sm opacity-80" translate="no">
-          ${translateText("player_info_overlay.warships")}:
-          ${player.units(UnitType.Warship).length}
-        </div>
+        ${this.displayUnitCount(
+          player,
+          UnitType.Port,
+          "player_info_overlay.ports",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.City,
+          "player_info_overlay.cities",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.Factory,
+          "player_info_overlay.factories",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.MissileSilo,
+          "player_info_overlay.missile_launchers",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.SAMLauncher,
+          "player_info_overlay.sams",
+        )}
+        ${this.displayUnitCount(
+          player,
+          UnitType.Warship,
+          "player_info_overlay.warships",
+        )}
         ${relationHtml}
       </div>
     `;
@@ -312,7 +339,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
 
     return html`
       <div
-        class="hidden lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
+        class="block lg:flex fixed top-[150px] right-0 w-full z-50 flex-col max-w-[180px]"
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
