@@ -28,6 +28,7 @@ import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import { SendKickPlayerIntentEvent } from "./Transport";
@@ -542,6 +543,7 @@ class Client {
           "news-modal",
           "flag-input-modal",
           "account-button",
+          "stats-button",
           "token-login",
           "matchmaking-modal",
         ].forEach((tag) => {
