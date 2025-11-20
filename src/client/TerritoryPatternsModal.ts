@@ -2,12 +2,17 @@ import type { TemplateResult } from "lit";
 import { html, LitElement, render } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { UserMeResponse } from "../core/ApiSchemas";
-import { Pattern } from "../core/CosmeticSchemas";
+import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
+import { PlayerPattern } from "../core/Schemas";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { renderPatternPreview } from "./components/PatternButton";
-import { fetchPatterns, handlePurchase } from "./Cosmetics";
+import {
+  fetchCosmetics,
+  handlePurchase,
+  patternRelationship,
+} from "./Cosmetics";
 import { translateText } from "./Utils";
 
 @customElement("territory-patterns-modal")
@@ -19,9 +24,13 @@ export class TerritoryPatternsModal extends LitElement {
 
   public previewButton: HTMLElement | null = null;
 
-  @state() private selectedPattern: Pattern | null;
+  @state() private selectedPattern: PlayerPattern | null;
+  @state() private selectedColor: string | null = null;
 
-  private patterns: Map<string, Pattern> = new Map();
+  @state() private activeTab: "patterns" | "colors" = "patterns";
+  @state() private showOnlyOwned: boolean = false;
+
+  private cosmetics: Cosmetics | null = null;
 
   private userSettings: UserSettings = new UserSettings();
 
@@ -29,20 +38,35 @@ export class TerritoryPatternsModal extends LitElement {
 
   private affiliateCode: string | null = null;
 
+  private userMeResponse: UserMeResponse | false = false;
+
   constructor() {
     super();
   }
 
-  async onUserMe(userMeResponse: UserMeResponse | null) {
-    if (userMeResponse === null) {
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener(
+      "userMeResponse",
+      (event: CustomEvent<UserMeResponse | false>) => {
+        this.onUserMe(event.detail);
+      },
+    );
+  }
+
+  async onUserMe(userMeResponse: UserMeResponse | false) {
+    if (userMeResponse === false) {
       this.userSettings.setSelectedPatternName(undefined);
       this.selectedPattern = null;
+      this.selectedColor = null;
     }
-    this.patterns = await fetchPatterns(userMeResponse);
-    const storedPatternName = this.userSettings.getSelectedPatternName();
-    if (storedPatternName) {
-      this.selectedPattern = this.patterns.get(storedPatternName) ?? null;
-    }
+    this.userMeResponse = userMeResponse;
+    this.cosmetics = await fetchCosmetics();
+    this.selectedPattern =
+      this.cosmetics !== null
+        ? this.userSettings.getSelectedPatternName(this.cosmetics)
+        : null;
+    this.selectedColor = this.userSettings.getSelectedColor() ?? null;
     this.refresh();
   }
 
@@ -50,43 +74,116 @@ export class TerritoryPatternsModal extends LitElement {
     return this;
   }
 
+  private renderTabNavigation(): TemplateResult {
+    return html`
+      <div class="flex border-b border-gray-600 mb-4 justify-center">
+        <button
+          class="px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
+            .activeTab === "patterns"
+            ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
+            : "text-gray-400 hover:text-white"}"
+          @click=${() => (this.activeTab = "patterns")}
+        >
+          ${translateText("territory_patterns.title")}
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium transition-colors duration-200 ${this
+            .activeTab === "colors"
+            ? "text-blue-400 border-b-2 border-blue-400 bg-blue-400/10"
+            : "text-gray-400 hover:text-white"}"
+          @click=${() => (this.activeTab = "colors")}
+        >
+          ${translateText("territory_patterns.colors")}
+        </button>
+      </div>
+    `;
+  }
+
   private renderPatternGrid(): TemplateResult {
     const buttons: TemplateResult[] = [];
-    for (const [name, pattern] of this.patterns) {
-      if (this.affiliateCode === null) {
-        if (pattern.affiliateCode !== null && pattern.product !== null) {
-          // Patterns with affiliate code are not for sale by default.
+    for (const pattern of Object.values(this.cosmetics?.patterns ?? {})) {
+      const colorPalettes = [...(pattern.colorPalettes ?? []), null];
+      for (const colorPalette of colorPalettes) {
+        const rel = patternRelationship(
+          pattern,
+          colorPalette,
+          this.userMeResponse,
+          this.affiliateCode,
+        );
+        if (rel === "blocked") {
           continue;
         }
-      } else {
-        if (pattern.affiliateCode !== this.affiliateCode) {
+        if (this.showOnlyOwned && rel !== "owned") {
           continue;
         }
+        buttons.push(html`
+          <pattern-button
+            .pattern=${pattern}
+            .colorPalette=${this.cosmetics?.colorPalettes?.[
+              colorPalette?.name ?? ""
+            ] ?? null}
+            .requiresPurchase=${rel === "purchasable"}
+            .onSelect=${(p: PlayerPattern | null) => this.selectPattern(p)}
+            .onPurchase=${(p: Pattern, colorPalette: ColorPalette | null) =>
+              handlePurchase(p, colorPalette)}
+          ></pattern-button>
+        `);
       }
-
-      buttons.push(html`
-        <pattern-button
-          .pattern=${pattern}
-          .onSelect=${(p: Pattern | null) => this.selectPattern(p)}
-          .onPurchase=${(p: Pattern) => handlePurchase(p)}
-        ></pattern-button>
-      `);
     }
 
     return html`
-      <div
-        class="flex flex-wrap gap-4 p-2"
-        style="justify-content: center; align-items: flex-start;"
-      >
-        ${this.affiliateCode === null
-          ? html`
-              <pattern-button
-                .pattern=${null}
-                .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
-              ></pattern-button>
-            `
-          : html``}
-        ${buttons}
+      <div class="flex flex-col gap-2">
+        <div class="flex justify-center">
+          <button
+            class="px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg ${this
+              .showOnlyOwned
+              ? "bg-blue-500 text-white hover:bg-blue-600"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"}"
+            @click=${() => {
+              this.showOnlyOwned = !this.showOnlyOwned;
+            }}
+          >
+            ${translateText("territory_patterns.show_only_owned")}
+          </button>
+        </div>
+        <div
+          class="flex flex-wrap gap-4 p-2"
+          style="justify-content: center; align-items: flex-start;"
+        >
+          ${this.affiliateCode === null
+            ? html`
+                <pattern-button
+                  .pattern=${null}
+                  .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
+                ></pattern-button>
+              `
+            : html``}
+          ${buttons}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderColorSwatchGrid(): TemplateResult {
+    const hexCodes = (
+      this.userMeResponse === false
+        ? []
+        : (this.userMeResponse.player.flares ?? [])
+    )
+      .filter((flare) => flare.startsWith("color:"))
+      .map((flare) => "#" + flare.split(":")[1]);
+    return html`
+      <div class="flex flex-wrap gap-3 p-2 justify-center items-center">
+        ${hexCodes.map(
+          (hexCode) => html`
+            <div
+              class="w-12 h-12 rounded-lg border-2 border-white/30 cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg"
+              style="background-color: ${hexCode};"
+              title="${hexCode}"
+              @click=${() => this.selectColor(hexCode)}
+            ></div>
+          `,
+        )}
       </div>
     `;
   }
@@ -96,9 +193,14 @@ export class TerritoryPatternsModal extends LitElement {
     return html`
       <o-modal
         id="territoryPatternsModal"
-        title="${translateText("territory_patterns.title")}"
+        title="${this.activeTab === "patterns"
+          ? translateText("territory_patterns.title")
+          : translateText("territory_patterns.colors")}"
       >
-        ${this.renderPatternGrid()}
+        ${this.renderTabNavigation()}
+        ${this.activeTab === "patterns"
+          ? this.renderPatternGrid()
+          : this.renderColorSwatchGrid()}
       </o-modal>
     `;
   }
@@ -115,19 +217,50 @@ export class TerritoryPatternsModal extends LitElement {
     this.modalEl?.close();
   }
 
-  private selectPattern(pattern: Pattern | null) {
-    this.userSettings.setSelectedPatternName(pattern?.name);
+  private selectPattern(pattern: PlayerPattern | null) {
+    this.selectedColor = null;
+    this.userSettings.setSelectedColor(undefined);
+    if (pattern === null) {
+      this.userSettings.setSelectedPatternName(undefined);
+    } else {
+      const name =
+        pattern.colorPalette?.name === undefined
+          ? pattern.name
+          : `${pattern.name}:${pattern.colorPalette.name}`;
+
+      this.userSettings.setSelectedPatternName(`pattern:${name}`);
+    }
     this.selectedPattern = pattern;
     this.refresh();
     this.close();
   }
 
+  private selectColor(hexCode: string) {
+    this.selectedPattern = null;
+    this.userSettings.setSelectedPatternName(undefined);
+    this.selectedColor = hexCode;
+    this.userSettings.setSelectedColor(hexCode);
+    this.refresh();
+    this.close();
+  }
+
+  private renderColorPreview(
+    hexCode: string,
+    width: number,
+    height: number,
+  ): TemplateResult {
+    return html`
+      <div
+        class="rounded"
+        style="width: ${width}px; height: ${height}px; background-color: ${hexCode};"
+      ></div>
+    `;
+  }
+
   public async refresh() {
-    const preview = renderPatternPreview(
-      this.selectedPattern?.pattern ?? null,
-      48,
-      48,
-    );
+    const preview = this.selectedColor
+      ? this.renderColorPreview(this.selectedColor, 48, 48)
+      : renderPatternPreview(this.selectedPattern ?? null, 48, 48);
     this.requestUpdate();
 
     // Wait for the DOM to be updated and the o-modal element to be available

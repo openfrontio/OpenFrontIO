@@ -2,12 +2,12 @@ import { LitElement, TemplateResult, html } from "lit";
 import { ref } from "lit-html/directives/ref.js";
 import { customElement, property, state } from "lit/decorators.js";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
-import portIcon from "../../../../resources/images/AnchorIcon.png";
 import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
-import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
+import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
+import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
@@ -28,6 +28,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
@@ -221,6 +222,33 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return renderDuration(remainingSeconds);
   }
 
+  private renderPlayerNameIcons(player: PlayerView) {
+    const firstPlace = getFirstPlacePlayer(this.game);
+    const icons = getPlayerIcons({
+      game: this.game,
+      player,
+      // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
+      includeAllianceIcon: false,
+      firstPlace,
+    });
+
+    if (icons.length === 0) {
+      return html``;
+    }
+
+    return html`<span class="flex items-center gap-1 ml-1 shrink-0">
+      ${icons.map((icon) =>
+        icon.kind === "emoji" && icon.text
+          ? html`<span class="text-sm shrink-0" translate="no"
+              >${icon.text}</span
+            >`
+          : icon.kind === "image" && icon.src
+            ? html`<img src=${icon.src} alt="" class="w-4 h-4 shrink-0" />`
+            : html``,
+      )}
+    </span>`;
+  }
+
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
@@ -268,13 +296,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     let playerType = "";
     switch (player.type()) {
       case PlayerType.Bot:
-        playerType = translateText("player_info_overlay.bot");
+        playerType = translateText("player_type.bot");
         break;
       case PlayerType.FakeHuman:
-        playerType = translateText("player_info_overlay.nation");
+        playerType = translateText("player_type.nation");
         break;
       case PlayerType.Human:
-        playerType = translateText("player_info_overlay.player");
+        playerType = translateText("player_type.player");
         break;
     }
 
@@ -306,7 +334,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                 />`
             : html``}
-          ${player.name()}
+          <span>${player.name()}</span>
+          ${this.renderPlayerNameIcons(player)}
         </button>
 
         <!-- Collapsible section -->
@@ -366,15 +395,15 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                 )}
                 ${this.displayUnitCount(
                   player,
-                  UnitType.Port,
-                  portIcon,
-                  "player_info_overlay.ports",
-                )}
-                ${this.displayUnitCount(
-                  player,
                   UnitType.Factory,
                   factoryIcon,
                   "player_info_overlay.factories",
+                )}
+                ${this.displayUnitCount(
+                  player,
+                  UnitType.Port,
+                  portIcon,
+                  "player_info_overlay.ports",
                 )}
                 ${this.displayUnitCount(
                   player,

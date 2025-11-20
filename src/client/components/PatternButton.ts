@@ -1,8 +1,14 @@
+import { Colord } from "colord";
 import { base64url } from "jose";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Pattern } from "../../core/CosmeticSchemas";
+import {
+  ColorPalette,
+  DefaultPattern,
+  Pattern,
+} from "../../core/CosmeticSchemas";
 import { PatternDecoder } from "../../core/PatternDecoder";
+import { PlayerPattern } from "../../core/Schemas";
 import { translateText } from "../Utils";
 
 export const BUTTON_WIDTH = 150;
@@ -12,17 +18,23 @@ export class PatternButton extends LitElement {
   @property({ type: Object })
   pattern: Pattern | null = null;
 
-  @property({ type: Function })
-  onSelect?: (pattern: Pattern | null) => void;
+  @property({ type: Object })
+  colorPalette: ColorPalette | null = null;
+
+  @property({ type: Boolean })
+  requiresPurchase: boolean = false;
 
   @property({ type: Function })
-  onPurchase?: (pattern: Pattern) => void;
+  onSelect?: (pattern: PlayerPattern | null) => void;
+
+  @property({ type: Function })
+  onPurchase?: (pattern: Pattern, colorPalette: ColorPalette | null) => void;
 
   createRenderRoot() {
     return this;
   }
 
-  private translatePatternName(prefix: string, patternName: string): string {
+  private translateCosmetic(prefix: string, patternName: string): string {
     const translation = translateText(`${prefix}.${patternName}`);
     if (translation.startsWith(prefix)) {
       return patternName
@@ -35,55 +47,75 @@ export class PatternButton extends LitElement {
   }
 
   private handleClick() {
-    const isDefaultPattern = this.pattern === null;
-    if (isDefaultPattern || this.pattern?.product === null) {
-      this.onSelect?.(this.pattern);
+    if (this.pattern === null) {
+      this.onSelect?.(null);
+      return;
     }
+    this.onSelect?.({
+      name: this.pattern!.name,
+      patternData: this.pattern!.pattern,
+      colorPalette: this.colorPalette ?? undefined,
+    } satisfies PlayerPattern);
   }
 
   private handlePurchase(e: Event) {
     e.stopPropagation();
     if (this.pattern?.product) {
-      this.onPurchase?.(this.pattern);
+      this.onPurchase?.(this.pattern, this.colorPalette ?? null);
     }
   }
 
   render() {
     const isDefaultPattern = this.pattern === null;
-    const isPurchasable = !isDefaultPattern && this.pattern?.product !== null;
 
     return html`
       <div
-        class="flex flex-col items-center gap-2 p-3 bg-white/10 rounded-lg max-w-[200px]"
+        class="flex flex-col items-center gap-1 p-1 bg-white/10 rounded-lg max-w-[200px]"
       >
         <button
-          class="bg-white/90 border-2 border-black/10 rounded-lg p-2 cursor-pointer transition-all duration-200 w-full
+          class="bg-white/90 border-2 border-black/10 rounded-lg cursor-pointer transition-all duration-200 w-full
                  hover:bg-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/20
                  disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
-          ?disabled=${isPurchasable}
+          ?disabled=${this.requiresPurchase}
           @click=${this.handleClick}
         >
-          <div class="text-sm font-bold text-gray-800 mb-2 text-center">
+          <div class="text-sm font-bold text-gray-800 mb-1 text-center">
             ${isDefaultPattern
               ? translateText("territory_patterns.pattern.default")
-              : this.translatePatternName(
+              : this.translateCosmetic(
                   "territory_patterns.pattern",
                   this.pattern!.name,
                 )}
           </div>
+          ${this.colorPalette !== null
+            ? html`
+                <div class="text-xs font-bold text-gray-800 mb-1 text-center">
+                  ${this.translateCosmetic(
+                    "territory_patterns.color_palette",
+                    this.colorPalette!.name,
+                  )}
+                </div>
+              `
+            : null}
           <div
             class="w-[120px] h-[120px] flex items-center justify-center bg-white rounded p-1 mx-auto"
             style="overflow: hidden;"
           >
             ${renderPatternPreview(
-              this.pattern?.pattern ?? null,
+              this.pattern !== null
+                ? ({
+                    name: this.pattern!.name,
+                    patternData: this.pattern!.pattern,
+                    colorPalette: this.colorPalette ?? undefined,
+                  } satisfies PlayerPattern)
+                : DefaultPattern,
               BUTTON_WIDTH,
               BUTTON_WIDTH,
             )}
           </div>
         </button>
 
-        ${isPurchasable
+        ${this.requiresPurchase
           ? html`
               <button
                 class="w-full px-4 py-2 bg-green-500 text-white border-0 rounded-md text-sm font-semibold cursor-pointer transition-colors duration-200
@@ -101,16 +133,15 @@ export class PatternButton extends LitElement {
 }
 
 export function renderPatternPreview(
-  pattern: string | null,
+  pattern: PlayerPattern | null,
   width: number,
   height: number,
 ): TemplateResult {
   if (pattern === null) {
     return renderBlankPreview(width, height);
   }
-  const dataUrl = generatePreviewDataUrl(pattern, width, height);
   return html`<img
-    src="${dataUrl}"
+    src="${generatePreviewDataUrl(pattern, width, height)}"
     alt="Pattern preview"
     class="w-full h-full object-contain"
     style="image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;"
@@ -155,16 +186,21 @@ function renderBlankPreview(width: number, height: number): TemplateResult {
 }
 
 const patternCache = new Map<string, string>();
-const DEFAULT_PATTERN_B64 = "AAAAAA"; // Empty 2x2 pattern
-const COLOR_SET = [0, 0, 0, 255]; // Black
-const COLOR_UNSET = [255, 255, 255, 255]; // White
+const DEFAULT_PRIMARY = new Colord("#ffffff").toRgb(); // White
+const DEFAULT_SECONDARY = new Colord("#000000").toRgb(); // Black
 function generatePreviewDataUrl(
-  pattern?: string,
+  pattern?: PlayerPattern,
   width?: number,
   height?: number,
 ): string {
-  pattern ??= DEFAULT_PATTERN_B64;
-  const patternLookupKey = `${pattern}-${width}-${height}`;
+  pattern ??= DefaultPattern;
+  const patternLookupKey = [
+    pattern.name,
+    pattern.colorPalette?.primaryColor ?? "undefined",
+    pattern.colorPalette?.secondaryColor ?? "undefined",
+    width,
+    height,
+  ].join("-");
 
   if (patternCache.has(patternLookupKey)) {
     return patternCache.get(patternLookupKey)!;
@@ -173,7 +209,14 @@ function generatePreviewDataUrl(
   // Calculate canvas size
   let decoder: PatternDecoder;
   try {
-    decoder = new PatternDecoder(pattern, base64url.decode);
+    decoder = new PatternDecoder(
+      {
+        name: pattern.name,
+        patternData: pattern.patternData,
+        colorPalette: pattern.colorPalette,
+      },
+      base64url.decode,
+    );
   } catch (e) {
     console.error("Error decoding pattern", e);
     return "";
@@ -201,14 +244,20 @@ function generatePreviewDataUrl(
   // Create an image
   const imageData = ctx.createImageData(width, height);
   const data = imageData.data;
+  const primary = pattern.colorPalette?.primaryColor
+    ? new Colord(pattern.colorPalette.primaryColor).toRgb()
+    : DEFAULT_PRIMARY;
+  const secondary = pattern.colorPalette?.secondaryColor
+    ? new Colord(pattern.colorPalette.secondaryColor).toRgb()
+    : DEFAULT_SECONDARY;
   let i = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const rgba = decoder.isSet(x, y) ? COLOR_SET : COLOR_UNSET;
-      data[i++] = rgba[0]; // Red
-      data[i++] = rgba[1]; // Green
-      data[i++] = rgba[2]; // Blue
-      data[i++] = rgba[3]; // Alpha
+      const rgba = decoder.isPrimary(x, y) ? primary : secondary;
+      data[i++] = rgba.r;
+      data[i++] = rgba.g;
+      data[i++] = rgba.b;
+      data[i++] = 255; // Alpha
     }
   }
 

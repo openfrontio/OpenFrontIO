@@ -1,0 +1,77 @@
+{
+  "name": "japan",
+  "nations": [
+    {
+      "coordinates": [1895, 288],
+      "name": "Hokkaido",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1647, 897],
+      "name": "Tohoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1613, 1133],
+      "name": "Kanto",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1391, 1194],
+      "name": "Chubu",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1191, 1370],
+      "name": "Kansai",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [932, 1308],
+      "name": "Chugoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [949, 1454],
+      "name": "Shikoku",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [709, 1570],
+      "name": "Kyushu",
+      "strength": 2,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [397, 2283],
+      "name": "Okinawa",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1493, 1246],
+      "name": "Mount Fuji",
+      "strength": 1,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1565, 1178],
+      "name": "Tokyo",
+      "strength": 3,
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1158, 1290],
+      "name": "Kyoto",
+      "strength": 3,
+      "flag": "jp"
+    }
+  ]
+}

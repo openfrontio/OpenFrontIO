@@ -2,6 +2,7 @@ import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
+import { UIState } from "./graphics/UIState";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -12,6 +13,12 @@ export class MouseUpEvent implements GameEvent {
 }
 
 export class MouseOverEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+export class TouchEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
@@ -75,7 +82,11 @@ export class RefreshGraphicsEvent implements GameEvent {}
 export class TogglePerformanceOverlayEvent implements GameEvent {}
 
 export class ToggleStructureEvent implements GameEvent {
-  constructor(public readonly structureType: UnitType | null) {}
+  constructor(public readonly structureTypes: UnitType[] | null) {}
+}
+
+export class GhostStructureChangedEvent implements GameEvent {
+  constructor(public readonly ghostStructure: UnitType | null) {}
 }
 
 export class ShowBuildMenuEvent implements GameEvent {
@@ -114,6 +125,13 @@ export class AutoUpgradeEvent implements GameEvent {
   ) {}
 }
 
+export class TickMetricsEvent implements GameEvent {
+  constructor(
+    public readonly tickExecutionDuration?: number,
+    public readonly tickDelay?: number,
+  ) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
@@ -136,14 +154,39 @@ export class InputHandler {
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
 
-  private userSettings: UserSettings = new UserSettings();
+  private readonly userSettings: UserSettings = new UserSettings();
 
   constructor(
+    public uiState: UIState,
     private canvas: HTMLCanvasElement,
     private eventBus: EventBus,
   ) {}
 
   initialize() {
+    let saved: Record<string, string> = {};
+    try {
+      const parsed = JSON.parse(
+        localStorage.getItem("settings.keybinds") ?? "{}",
+      );
+      // flatten { key: {key, value} } → { key: value } and accept legacy string values
+      saved = Object.fromEntries(
+        Object.entries(parsed)
+          .map(([k, v]) => {
+            if (v && typeof v === "object" && "value" in (v as any)) {
+              return [k, (v as any).value as string];
+            }
+            if (typeof v === "string") return [k, v];
+            return [k, undefined];
+          })
+          .filter(([, v]) => typeof v === "string" && v !== "Null"),
+      ) as Record<string, string>;
+    } catch (e) {
+      console.warn("Invalid keybinds JSON:", e);
+    }
+
+    // Mac users might have different keybinds
+    const isMac = /Mac/.test(navigator.userAgent);
+
     this.keybinds = {
       toggleView: "Space",
       centerCamera: "KeyC",
@@ -153,29 +196,31 @@ export class InputHandler {
       moveRight: "KeyD",
       zoomOut: "KeyQ",
       zoomIn: "KeyE",
-      attackRatioDown: "Digit1",
-      attackRatioUp: "Digit2",
+      attackRatioDown: "KeyT",
+      attackRatioUp: "KeyY",
       boatAttack: "KeyB",
       groundAttack: "KeyG",
-      modifierKey: "ControlLeft",
+      modifierKey: isMac ? "MetaLeft" : "ControlLeft",
       altKey: "AltLeft",
-      ...JSON.parse(localStorage.getItem("settings.keybinds") ?? "{}"),
+      buildCity: "Digit1",
+      buildFactory: "Digit2",
+      buildPort: "Digit3",
+      buildDefensePost: "Digit4",
+      buildMissileSilo: "Digit5",
+      buildSamLauncher: "Digit6",
+      buildWarship: "Digit7",
+      buildAtomBomb: "Digit8",
+      buildHydrogenBomb: "Digit9",
+      buildMIRV: "Digit0",
+      ...saved,
     };
-
-    // Mac users might have different keybinds
-    const isMac = /Mac/.test(navigator.userAgent);
-    if (isMac) {
-      this.keybinds.modifierKey = "MetaLeft"; // Use Command key on Mac
-    }
 
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
     this.canvas.addEventListener(
       "wheel",
       (e) => {
-        if (!this.onTrackpadPan(e)) {
-          this.onScroll(e);
-        }
+        this.onScroll(e);
         this.onShiftScroll(e);
         e.preventDefault();
       },
@@ -187,16 +232,6 @@ export class InputHandler {
       if (e.movementX || e.movementY) {
         this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
       }
-    });
-
-    this.canvas.addEventListener("touchstart", (e) => this.onTouchStart(e), {
-      passive: false,
-    });
-    this.canvas.addEventListener("touchmove", (e) => this.onTouchMove(e), {
-      passive: false,
-    });
-    this.canvas.addEventListener("touchend", (e) => this.onTouchEnd(e), {
-      passive: false,
     });
     this.pointers.clear();
 
@@ -266,6 +301,7 @@ export class InputHandler {
       if (e.code === "Escape") {
         e.preventDefault();
         this.eventBus.emit(new CloseViewEvent());
+        this.setGhostStructure(null);
       }
 
       if (
@@ -329,6 +365,56 @@ export class InputHandler {
       if (e.code === this.keybinds.centerCamera) {
         e.preventDefault();
         this.eventBus.emit(new CenterCameraEvent());
+      }
+
+      if (e.code === this.keybinds.buildCity) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.City);
+      }
+
+      if (e.code === this.keybinds.buildFactory) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.Factory);
+      }
+
+      if (e.code === this.keybinds.buildPort) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.Port);
+      }
+
+      if (e.code === this.keybinds.buildDefensePost) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.DefensePost);
+      }
+
+      if (e.code === this.keybinds.buildMissileSilo) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.MissileSilo);
+      }
+
+      if (e.code === this.keybinds.buildSamLauncher) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.SAMLauncher);
+      }
+
+      if (e.code === this.keybinds.buildAtomBomb) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.AtomBomb);
+      }
+
+      if (e.code === this.keybinds.buildHydrogenBomb) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.HydrogenBomb);
+      }
+
+      if (e.code === this.keybinds.buildWarship) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.Warship);
+      }
+
+      if (e.code === this.keybinds.buildMIRV) {
+        e.preventDefault();
+        this.setGhostStructure(UnitType.MIRV);
       }
 
       // Shift-D to toggle performance overlay
@@ -396,7 +482,7 @@ export class InputHandler {
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
       if (event.pointerType === "touch") {
-        this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
+        this.eventBus.emit(new TouchEvent(event.x, event.y));
         event.preventDefault();
         return;
       }
@@ -425,27 +511,6 @@ export class InputHandler {
       const ratio = scrollValue > 0 ? -10 : 10;
       this.eventBus.emit(new AttackRatioEvent(ratio));
     }
-  }
-
-  private onTrackpadPan(event: WheelEvent): boolean {
-    if (event.shiftKey || event.ctrlKey || event.metaKey) {
-      return false;
-    }
-
-    const isTrackpadPan = event.deltaMode === 0 && event.deltaX !== 0;
-
-    if (!isTrackpadPan) {
-      return false;
-    }
-
-    const panSensitivity = 1.0;
-    const deltaX = -event.deltaX * panSensitivity;
-    const deltaY = -event.deltaY * panSensitivity;
-
-    if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
-      this.eventBus.emit(new DragEvent(deltaX, deltaY));
-    }
-    return true;
   }
 
   private onPointerMove(event: PointerEvent) {
@@ -489,48 +554,16 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    if (this.uiState.ghostStructure !== null) {
+      this.setGhostStructure(null);
+      return;
+    }
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private onTouchStart(event: TouchEvent) {
-    if (event.touches.length === 2) {
-      event.preventDefault();
-      // Solve screen jittering problem
-      const touch1 = event.touches[0];
-      const touch2 = event.touches[1];
-      this.lastPointerX = (touch1.clientX + touch2.clientX) / 2;
-      this.lastPointerY = (touch1.clientY + touch2.clientY) / 2;
-    }
-  }
-
-  private onTouchMove(event: TouchEvent) {
-    if (event.touches.length === 2) {
-      event.preventDefault();
-
-      const touch1 = event.touches[0];
-      const touch2 = event.touches[1];
-      const centerX = (touch1.clientX + touch2.clientX) / 2;
-      const centerY = (touch1.clientY + touch2.clientY) / 2;
-
-      if (this.lastPointerX !== 0 && this.lastPointerY !== 0) {
-        const deltaX = centerX - this.lastPointerX;
-        const deltaY = centerY - this.lastPointerY;
-
-        if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) {
-          this.eventBus.emit(new DragEvent(deltaX, deltaY));
-        }
-      }
-
-      this.lastPointerX = centerX;
-      this.lastPointerY = centerY;
-    }
-  }
-
-  private onTouchEnd(event: TouchEvent) {
-    if (event.touches.length < 2) {
-      this.lastPointerX = 0;
-      this.lastPointerY = 0;
-    }
+  private setGhostStructure(ghostStructure: UnitType | null) {
+    this.uiState.ghostStructure = ghostStructure;
+    this.eventBus.emit(new GhostStructureChangedEvent(ghostStructure));
   }
 
   private getPinchDistance(): number {

@@ -14,6 +14,7 @@ import {
 import {
   createPartialGameRecord,
   decompressGameRecord,
+  getClanTag,
   replacer,
 } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
@@ -83,6 +84,7 @@ export class LocalServer {
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
+      lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
     } satisfies ServerStartGameMessage);
   }
 
@@ -187,6 +189,8 @@ export class LocalServer {
         username: this.lobbyConfig.playerName,
         clientID: this.lobbyConfig.clientID,
         stats: this.allPlayersStats[this.lobbyConfig.clientID],
+        cosmetics: this.lobbyConfig.gameStartInfo?.players[0].cosmetics,
+        clanTag: getClanTag(this.lobbyConfig.playerName) ?? undefined,
       },
     ];
     if (this.lobbyConfig.gameStartInfo === undefined) {
@@ -232,7 +236,7 @@ export class LocalServer {
   }
 }
 
-async function compress(data: string): Promise<Uint8Array> {
+async function compress(data: string): Promise<ArrayBuffer> {
   const stream = new CompressionStream("gzip");
   const writer = stream.writable.getWriter();
   const reader = stream.readable.getReader();
@@ -261,5 +265,5 @@ async function compress(data: string): Promise<Uint8Array> {
     offset += chunk.length;
   }
 
-  return compressedData;
+  return compressedData.buffer;
 }

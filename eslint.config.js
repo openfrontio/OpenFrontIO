@@ -40,9 +40,7 @@ export default [
     rules: {
       // Disable rules that would fail. The failures should be fixed, and the entries here removed.
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unused-expressions": "off",
-      "@typescript-eslint/no-unused-vars": "off",
-      "no-case-declarations": "off",
+      "no-unused-vars": "off",
     },
   },
   {
@@ -50,6 +48,14 @@ export default [
       // Enable rules
       "@typescript-eslint/prefer-nullish-coalescing": "error",
       eqeqeq: "error",
+      "no-case-declarations": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "none",
+          caughtErrors: "none",
+        },
+      ],
     },
   },
 ];

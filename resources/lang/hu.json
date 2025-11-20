@@ -94,11 +94,11 @@
     "build_city": "Város",
     "build_city_desc": "Növeli a maximális populációdat. Hasznos, ha nem tudsz terjeszkedni, vagy ha hamarosan eléred a népességkorlátot.",
     "build_factory": "Gyár",
-    "build_factory_desc": "Automatikusan vasútvonalakat hoz létre a közeli épületek között, és időnként vonatokat indít.",
+    "build_factory_desc": "Automatikusan vasútvonalakat épít a közeli városokhoz, kikötőkhöz és egyéb gyárakhoz, valamint összekapcsolódhat a szomszédos szövetségesekkel is. A vonatok rendszeresen indulnak, és fix mennyiségű aranyat adnak minden épületért, amit az útvonal mentén meglátogatnak. Extra arany jár a szomszédok épületeinek meglátogatásáért.",
     "build_defense": "Védelmi állomás",
     "build_defense_desc": "Növeli a védekezést a közeli határok mentén, amelyek sakktáblaszerű mintázattal jelennek meg. Az ellenséges támadások lassabbak lesznek, és több veszteséggel járnak.",
     "build_port": "Kikötő",
-    "build_port_desc": "Csak víz közelében építhető. Lehetővé teszi Hadihajók építését. Automatikusan kereskedő hajókat küld az országod és más országok kikötői között (kivéve ha a kereskedés le van állítva), aranyat adva mindkét félnek. A kereskedés automatikusan leáll, ha megtámadsz egy játékost vagy téged támadnak meg. 5 perc elteltével, vagy ha újra szövetségesek lesztek, a kereskedés folytatódik. A kereskedést manuálisan is ki- vagy bekapcsolhatod a ‘Kereskedés leállítása’ vagy a ‘Kereskedés indítása’ gombbal.",
+    "build_port_desc": "Csak víz közelében építhető. Lehetővé teszi hadihajók építését. Automatikusan kereskedőhajókat küld az országod kikötői és más országok kikötői között (kivéve, ha a kereskedelem le van állítva), aranyat adva mindkét félnek. A kereskedelem automatikusan leáll, ha megtámadsz egy játékost, vagy téged támad meg egy játékos. 5 perc elteltével a kereskedelem automatikusan újraindul, vagy azonnal, ha szövetségesekké váltok. A kereskedelmet manuálisan is válthatod a „Kereskedelem leállítása” vagy a „Kereskedelem indítása” opcióval.",
     "build_warship": "Hadihajó",
     "build_warship_desc": "Egy területen járőrözik, elfogja az ellenséges kereskedő hajókat, és elpusztítja azok hajóit (szállítóhajó) és Hadihajóit. A legközelebbi Kikötőből indul, és azon a területet járőrözik, ahová először kattintottál az építéshez. A Hadihajókat irányíthatod úgy, hogy támadás-kattintasz (lásd a ‘Támadás’ műveletet a Gyorsbillentyűk alatt), majd támadás-kattintasz arra az új területre, ahová szeretnéd őket mozgatni.",
     "build_silo": "Rakétasiló állomás",
@@ -131,9 +131,21 @@
     "instant_build": "Instant építés",
     "infinite_gold": "Végtelen arany",
     "infinite_troops": "Végtelen katonák",
+    "compact_map": "Mini térkép",
     "disable_nukes": "Nukleáris fegyverek letiltása",
     "enables_title": "Beállítások engedélyezése",
     "start": "Játék indítása"
+  },
+  "token_login_modal": {
+    "title": "Bejelentkezés folyamatban...",
+    "logging_in": "Bejelentkezés folyamatban...",
+    "success": "Sikeresen bejelentkeztél, mint {email}!"
+  },
+  "account_modal": {
+    "title": "Felhasználói fiók",
+    "logged_in_as": "Bejelentkezve, mint {email}",
+    "logged_in_with_discord": "Bejelentkezve Discord fiókkal",
+    "recovery_email_sent": "Helyreállítási e-mail elküldve a(z) {email} címre"
   },
   "map": {
     "map": "Térkép",
@@ -147,7 +159,6 @@
     "africa": "Afrika",
     "asia": "Ázsia",
     "mars": "Mars",
-    "marsrevised": "Mars (Új verzió)",
     "southamerica": "Dél-Amerika",
     "britannia": "Anglia",
     "gatewaytotheatlantic": "Kapu az Atlanti-óceánhoz",
@@ -165,8 +176,10 @@
     "halkidiki": "Halkidiki",
     "straitofgibraltar": "Gibraltári-szoros",
     "italia": "Olaszország",
+    "japan": "Japán",
     "yenisei": "Jenisej",
-    "pluto": "Plútó"
+    "pluto": "Plútó",
+    "montreal": "Montreal"
   },
   "map_categories": {
     "continental": "Kontinentális",
@@ -184,8 +197,9 @@
     "join_lobby": "Csatlakozás lobbyhoz",
     "checking": "Lobby ellenőrzése...",
     "not_found": "Lobby nem található. Kérlek, ellenőrizd az azonosítót, és próbáld újra.",
-    "error": "Hiba történt. Kérlek, próbáld újra.",
-    "joined_waiting": "Sikeresen csatlakoztál! Várakozás a játék kezdésére..."
+    "error": "Hiba történt. \nKérjük próbáld újra, vagy lépj kapcsolatba velünk.",
+    "joined_waiting": "Sikeresen csatlakoztál! Várakozás a játék kezdésére...",
+    "version_mismatch": "Ez a játék egy másik verzióval lett létrehozva. Nem lehet csatlakozni."
   },
   "public_lobby": {
     "join": "Csatlakozás a következő játékhoz",
@@ -212,7 +226,10 @@
     "disable_nations": "Országok letiltása",
     "instant_build": "Azonnali építés",
     "infinite_gold": "Végtelen arany",
+    "donate_gold": "Arany adományozása",
     "infinite_troops": "Végtelen katonák",
+    "donate_troops": "Katonák adományozása",
+    "compact_map": "Mini térkép",
     "enables_title": "Beállítások engedélyezése",
     "player": "Játékos",
     "players": "Játékosok",
@@ -236,9 +253,9 @@
   },
   "difficulty": {
     "difficulty": "Nehézség",
-    "Relaxed": "Laza",
-    "Balanced": "Kiegyensúlyozott",
-    "Intense": "Intenzív",
+    "Easy": "Könnyű",
+    "Medium": "Közepes",
+    "Hard": "Nehéz",
     "Impossible": "Lehetetlen"
   },
   "game_mode": {
@@ -250,10 +267,10 @@
   },
   "unit_type": {
     "city": "Város",
-    "defense_post": "Védelmi poszt",
+    "defense_post": "Védelmi állás",
     "port": "Kikötő",
     "warship": "Hadihajó",
-    "missile_silo": "Rakéta siló",
+    "missile_silo": "Rakétasiló",
     "sam_launcher": "Rakétaelhárító rendszer",
     "atom_bomb": "Atombomba",
     "hydrogen_bomb": "Hidrogénbomba",
@@ -300,6 +317,8 @@
     "territory_patterns_desc": "Válaszd ki, hogy megjelenjenek-e a területmintázatok a játékban",
     "performance_overlay_label": "Teljesítmény kijelző",
     "performance_overlay_desc": "Kapcsoló a teljesítmény kijelzőhöz. Ha engedélyezve van, a teljesítmény kijelző megjelenik. A játék közben nyomd meg a Shift-D-t a váltáshoz.",
+    "performance_overlay_enabled": "Teljesítmény kijelző engedélyezve",
+    "performance_overlay_disabled": "Teljesítmény kijelző letiltva",
     "easter_writing_speed_label": "Írási sebesség szorzó",
     "easter_writing_speed_desc": "Állítsd be, milyen gyorsan szimulálod a kódolást (x1–x100)",
     "easter_bug_count_label": "Hiba számláló",
@@ -363,26 +382,31 @@
     },
     "help": {
       "troops": "Kérlek, küldj katonákat!",
+      "troops_frontlines": "Küldj csapatokat a frontvonalra!",
       "gold": "Kérlek, küldj aranyat!",
       "no_attack": "Kérlek, ne támadj meg!",
       "sorry_attack": "Bocsánat, nem akartalak megtámadni.",
       "alliance": "Szövetség?",
       "help_defend": "Segíts védekezni [P1] ellen!",
-      "team_up": "Fogjunk össze [P1] ellen!"
+      "trade_partners": "Legyünk kereskedelmi partnerek!"
     },
     "attack": {
       "attack": "Támadd meg [P1]-t!",
       "mirv": "Indíts MIRV-et [P1] ellen!",
       "focus": "Koncentrált támadás [P1] ellen!",
-      "finish": "Végezzük ki [P1]-t!"
+      "finish": "Végezzük ki [P1]-t!",
+      "build_warships": "Építs hadihajókat!"
     },
     "defend": {
       "defend": "Védd meg [P1]-t!",
+      "defend_from": "Véddekezz [P1] ellen!",
       "dont_attack": "Ne támadd meg [P1]-t!",
-      "ally": "[P1] a szövetségesem!"
+      "ally": "[P1] a szövetségesem!",
+      "build_posts": "Építs védelmi állomásokat!"
     },
     "greet": {
       "hello": "Szia!",
+      "good_job": "Szép munka!",
       "good_luck": "Sok szerencsét!",
       "have_fun": "Jó szórakozást!",
       "gg": "GG!",
@@ -393,13 +417,19 @@
       "thanks": "Köszi!",
       "oops": "Bocsi, rossz gomb!",
       "trust_me": "Bízhatsz bennem. Ígérem!",
-      "trust_broken": "Megbíztam benned..."
+      "trust_broken": "Megbíztam benned...",
+      "ruining_games": "Elrontod mindkettőnk játékát.",
+      "dont_do_that": "Ne csináld!",
+      "same_team": "A te oldaladon vagyok!"
     },
     "misc": {
       "go": "Gyerünk!",
       "strategy": "Kiváló stratégia!",
       "fun": "Ez a játék szórakoztató!",
-      "pr": "Mikor lesz végre összevonva a PR-om...?"
+      "team_up": "Fogjunk össze [P1] ellen!",
+      "pr": "Mikor lesz végre összevonva a PR-om...?",
+      "build_closer": "Építs közelebb, hogy vonatokat kapj!",
+      "coastline": "Kérlek, engedd, hogy legyen tengerpartom."
     },
     "warnings": {
       "strong": "[P1] erős.",
@@ -410,10 +440,14 @@
       "has_allies": "[P1] sok szövetségessel rendelkezik.",
       "no_allies": "[P1] nem rendelkezik szövetségessekkel.",
       "betrayed": "[P1] elárulta a szövetségesét!",
+      "betrayed_me": "[P1] elárult engem!",
       "getting_big": "[P1] túl gyorsan fejlődik!",
       "danger_base": "[P1] védtelen!",
       "saving_for_mirv": "[P1] MIRV indítására gyűjt.",
-      "mirv_ready": "[P1] elég arannyal rendelkezik egy MIRV indításához!"
+      "mirv_ready": "[P1] elég arannyal rendelkezik egy MIRV indításához!",
+      "snowballing": "[P1] túl gyorsan fejlődik!",
+      "cheating": "[P1] csal!",
+      "stop_trading": "Állítsd le a kereskedést [P1]!"
     }
   },
   "build_menu": {
@@ -432,6 +466,8 @@
     "not_enough_money": "Nincs elég pénz"
   },
   "win_modal": {
+    "support_openfront": "Támogasd az OpenFrontot!",
+    "territory_pattern": "Vásárolj egy területi mintát az OpenFront támogatásához!",
     "died": "Meghaltál",
     "your_team": "A csapatod nyert!",
     "other_team": "A(z) {team} csapat győzött!",
@@ -449,7 +485,13 @@
     "team": "Csapat",
     "owned": "Birtokolt",
     "gold": "Arany",
-    "troops": "Katonák"
+    "troops": "Katonák",
+    "launchers": "Kilövő állomások",
+    "sams": "Rakétaelhárítók",
+    "warships": "Hadihajók",
+    "cities": "Városok",
+    "show_control": "Vezérlés megjelenítése",
+    "show_units": "Egységek megjelenítése"
   },
   "player_info_overlay": {
     "type": "Típus",
@@ -457,7 +499,8 @@
     "nation": "Nemzet",
     "player": "Játékos",
     "team": "Csapat",
-    "d_troops": "Védekező katonák",
+    "alliance_timeout": "Szövetség felbomlik",
+    "troops": "Katonák",
     "a_troops": "Támadó katonák",
     "gold": "Arany",
     "ports": "Kikötők",
@@ -477,7 +520,7 @@
     "alliance_accepted": "elfogadva",
     "alliance_rejected": "elutasítva",
     "duration_second": "1 másodperc",
-    "betrayal_description": "Szövetség megszegve a következő játékossal: {name}, így ÁRULÓ lettél ({malusPercent}% védelmi büntetés {durationText}-re)",
+    "betrayal_description": "Szövetség megszegve a következő játékossal: {name}, így ÁRULÓ lettél ({malusPercent}% védelmi büntetés {durationText}-re)”",
     "duration_seconds_plural": "{seconds} másodperc",
     "betrayed_you": "{name} felbontotta a szövetségét veled",
     "about_to_expire": "A szövetséged hamarosan lejár a következő játékossal: {name}!",
@@ -527,7 +570,8 @@
     "yes": "Igen",
     "no": "Nem",
     "none": "Egyik sem",
-    "alliances": "Szövetségek"
+    "alliances": "Szövetségek",
+    "flag": "Zászló"
   },
   "replay_panel": {
     "replay_speed": "Visszajátszás sebessége",
@@ -589,6 +633,11 @@
       "grogu": "Grogu"
     }
   },
+  "flag_input": {
+    "title": "Zászló kiválasztása",
+    "button_title": "Válassz egy zászlót!",
+    "search_flag": "Keresés..."
+  },
   "spawn_ad": {
     "loading": "Hírdetés betöltése..."
   },
@@ -601,5 +650,63 @@
   "radial_menu": {
     "delete_unit_title": "Egység törlése",
     "delete_unit_description": "Kattints a legközelebbi egység törléséhez"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Profilkép"
+  },
+  "player_stats_table": {
+    "building_stats": "Épületstatisztikák",
+    "ship_arrivals": "Hajóérkezések",
+    "nuke_stats": "Nukleáris statisztikák",
+    "player_metrics": "Játékos mutatók",
+    "building": "Épület",
+    "ship_type": "Hajó típus",
+    "weapon": "Fegyver",
+    "built": "Épített",
+    "destroyed": "Megsemmisült",
+    "captured": "Elfoglalva",
+    "lost": "Elveszett",
+    "hits": "Találatok",
+    "launched": "Elindított",
+    "landed": "Célba ért",
+    "sent": "Elküldött",
+    "arrived": "Megérkezett",
+    "attack": "Támadás",
+    "received": "Fogadott",
+    "cancelled": "Megszakítva",
+    "count": "Mennyiség",
+    "gold": "Arany",
+    "workers": "Munkások",
+    "war": "Háború",
+    "trade": "Kereskedelem",
+    "steal": "Lopás",
+    "unit": {
+      "city": "Város",
+      "port": "Kikötő",
+      "defp": "Védelmi állás",
+      "saml": "Rakétaelhárító rendszer",
+      "silo": "Rakétasiló",
+      "wshp": "Hadihajó",
+      "fact": "Gyár",
+      "trade": "Kereskedelmi hajó",
+      "trans": "Szállítóhajó",
+      "abomb": "Atombomba",
+      "hbomb": "Hidrogénbomba",
+      "mirv": "MIRV",
+      "mirvw": "MIRV robbanófej"
+    }
+  },
+  "game_list": {
+    "recent_games": "Legutóbbi Játékok",
+    "game_id": "Játék azonosító",
+    "mode": "Mód",
+    "mode_ffa": "Mindenki mindenki ellen",
+    "mode_team": "Csapat",
+    "view": "Nézet",
+    "details": "Részletek",
+    "started": "Elkezdődött",
+    "map": "Térkép",
+    "difficulty": "Nehézség",
+    "type": "Típus"
   }
 }

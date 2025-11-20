@@ -15,7 +15,7 @@ import { euclDistFN, isometricDistFN } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 
-const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
+const underConstructionColor = colord("rgb(150,150,150)");
 
 // Base radius values and scaling factor for unit borders and territories
 const BASE_BORDER_RADIUS = 16.5;
@@ -138,7 +138,9 @@ export class StructureLayer implements Layer {
 
     Promise.all(
       Array.from(this.unitIcons.values()).map((img) =>
-        img.decode?.().catch(() => {}),
+        img.decode?.().catch((err) => {
+          console.warn("Failed to decode unit icon image:", err);
+        }),
       ),
     ).finally(() => {
       this.game.units().forEach((u) => this.handleUnitRendering(u));
@@ -190,7 +192,7 @@ export class StructureLayer implements Layer {
         new Cell(this.game.x(tile), this.game.y(tile)),
         unit.type() === UnitType.Construction
           ? underConstructionColor
-          : this.theme.territoryColor(unit.owner()),
+          : unit.owner().territoryColor(),
         130,
       );
     }
@@ -203,7 +205,7 @@ export class StructureLayer implements Layer {
 
     const config = this.unitConfigs[unitType];
     let icon: HTMLImageElement | undefined;
-    let borderColor = this.theme.borderColor(unit.owner());
+    let borderColor = unit.owner().borderColor();
 
     // Handle cooldown states and special icons
     if (unit.type() === UnitType.Construction) {
@@ -244,8 +246,9 @@ export class StructureLayer implements Layer {
     height: number,
     unit: UnitView,
   ) {
-    let color = this.theme.borderColor(unit.owner());
+    let color = unit.owner().borderColor();
     if (unit.type() === UnitType.Construction) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       color = underConstructionColor;
     }
 

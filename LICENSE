@@ -659,3 +659,26 @@ specific requirements.
 if any, to sign a "copyright disclaimer" for the program, if necessary.
 For more information on this, and how to apply and follow the GNU AGPL, see
 <https://www.gnu.org/licenses/>.
+
+=== ADDITIONAL TERMS (AGPL v3 Section 7) ===
+
+Attribution Requirement:
+
+All versions of this software, including modified versions, must display 
+attribution to the original OpenFront project prominently on the main menu 
+or initial title screen where it is clearly visible to users.
+
+The attribution must include one of the following text statements:
+- "Based on OpenFront"
+- "Derived from OpenFront"
+- "Powered by OpenFront"
+- "Fork of OpenFront"
+
+This attribution text must be reasonably prominent and clearly readable.
+A link to https://openfront.io may be included alongside the attribution.
+
+Modified versions may use their own game title and branding, but may not 
+use "OpenFront" as the primary title or imply official endorsement.
+
+These attribution requirements are additional terms under Section 7 of 
+the GNU Affero General Public License v3, which governs this software.

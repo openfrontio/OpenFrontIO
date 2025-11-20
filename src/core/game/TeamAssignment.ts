@@ -33,6 +33,7 @@ export function assignTeams(
   );
 
   // First, assign clan players
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   for (const [_, clanPlayers] of sortedClans) {
     // Try to keep the clan together on the team with fewer players
     let team: Team | null = null;

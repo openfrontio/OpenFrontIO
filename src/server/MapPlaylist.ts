@@ -7,6 +7,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Quads,
   Trios,
 } from "../core/game/Game";
@@ -24,6 +25,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Africa: 7,
   Asia: 6,
   Australia: 4,
+  Achiran: 5,
   Baikal: 5,
   BetweenTwoSeas: 5,
   BlackSea: 6,
@@ -38,6 +40,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Halkidiki: 4,
   Iceland: 4,
   Italia: 6,
+  Japan: 6,
   Mars: 3,
   Mena: 6,
   Montreal: 6,
@@ -66,10 +69,13 @@ const TEAM_COUNTS = [
   Duos,
   Trios,
   Quads,
+  HumansVsNations,
 ] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
   private mapsPlaylist: MapWithMode[] = [];
+
+  constructor(private disableTeams: boolean = false) {}
 
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
@@ -79,8 +85,8 @@ export class MapPlaylist {
 
     // Create the default public game config (from your GameManager)
     return {
-      donateGold: false,
-      donateTroops: false,
+      donateGold: mode === GameMode.Team,
+      donateTroops: mode === GameMode.Team,
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
       gameType: GameType.Public,
@@ -88,8 +94,10 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
+      maxTimerValue: undefined,
       instantBuild: false,
-      disableNPCs: mode === GameMode.Team,
+      randomSpawn: false,
+      disableNPCs: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
       bots: 400,
@@ -127,18 +135,30 @@ export class MapPlaylist {
     const rand = new PseudoRandom(Date.now());
 
     const ffa1: GameMapType[] = rand.shuffleArray([...maps]);
+    const team1: GameMapType[] = rand.shuffleArray([...maps]);
     const ffa2: GameMapType[] = rand.shuffleArray([...maps]);
-    const team: GameMapType[] = rand.shuffleArray([...maps]);
+    const team2: GameMapType[] = rand.shuffleArray([...maps]);
+    const ffa3: GameMapType[] = rand.shuffleArray([...maps]);
 
     this.mapsPlaylist = [];
     for (let i = 0; i < maps.length; i++) {
       if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
         return false;
       }
+      if (!this.disableTeams) {
+        if (!this.addNextMap(this.mapsPlaylist, team1, GameMode.Team)) {
+          return false;
+        }
+      }
       if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
         return false;
       }
-      if (!this.addNextMap(this.mapsPlaylist, team, GameMode.Team)) {
+      if (!this.disableTeams) {
+        if (!this.addNextMap(this.mapsPlaylist, team2, GameMode.Team)) {
+          return false;
+        }
+      }
+      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
         return false;
       }
     }

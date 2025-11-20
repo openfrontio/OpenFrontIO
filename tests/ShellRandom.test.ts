@@ -85,7 +85,6 @@ describe("Shell Random Damage", () => {
       expect(damage).toBeLessThanOrEqual(maxExpectedDamage);
     });
 
-    const uniqueDamages = new Set(damages);
     expect(damages.length).toBeGreaterThan(0);
   });
 
@@ -231,16 +230,6 @@ describe("Shell Random Damage", () => {
 
     expect(damages.length).toBeGreaterThan(0);
 
-    const baseDamage = game.config().unitInfo(UnitType.Shell).damage ?? 250;
-    const expectedDamages = [
-      Math.round((baseDamage / 250) * 200),
-      Math.round((baseDamage / 250) * 225),
-      Math.round((baseDamage / 250) * 250),
-      Math.round((baseDamage / 250) * 275),
-      Math.round((baseDamage / 250) * 300),
-      Math.round((baseDamage / 250) * 325),
-    ];
-
     const uniqueDamages = new Set(damages);
     expect(uniqueDamages.size).toBeGreaterThan(0);
 
@@ -265,7 +254,6 @@ describe("Shell Random Damage", () => {
     );
     const initialHealth = target.health();
 
-    const seed = 12345;
     const shell1 = new ShellExecution(
       game.ref(coastX, 10),
       player1,

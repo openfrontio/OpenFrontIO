@@ -33,9 +33,13 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Halkidiki: "Halkidiki",
   StraitOfGibraltar: "Strait of Gibraltar",
   Italia: "Italia",
+  Japan: "Japan",
   Yenisei: "Yenisei",
   Pluto: "Pluto",
   Montreal: "Montreal",
+  Achiran: "Achiran",
+  BaikalNukeWars: "Baikal (Nuke Wars)",
+  FourIslands: "Four Islands",
 };
 
 @customElement("map-display")

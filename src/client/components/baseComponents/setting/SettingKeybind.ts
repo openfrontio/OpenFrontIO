@@ -23,12 +23,19 @@ export class SettingKeybind extends LitElement {
         <div class="setting-label-group">
           <label class="setting-label block mb-1">${this.label}</label>
 
-          <div class="setting-keybind-box">
-            <div class="setting-keybind-description">${this.description}</div>
+          <div class="setting-keybind-box flex flex-wrap items-start gap-2">
+            <div
+              class="setting-keybind-description flex-1 min-w-[240px] max-w-full whitespace-normal break-words text-sm text-gray-300"
+              style="word-break: break-word;"
+            >
+              ${this.description}
+            </div>
 
-            <div class="flex items-center gap-2">
+            <div
+              class="flex flex-wrap items-center gap-2 gap-y-1 basis-full sm:basis-auto min-w-0"
+            >
               <span
-                class="setting-key"
+                class="setting-key shrink-0"
                 tabindex="0"
                 @keydown=${this.handleKeydown}
                 @click=${this.startListening}
@@ -37,13 +44,13 @@ export class SettingKeybind extends LitElement {
               </span>
 
               <button
-                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition"
+                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition whitespace-normal break-words max-w-full"
                 @click=${this.resetToDefault}
               >
                 ${translateText("user_setting.reset")}
               </button>
               <button
-                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition"
+                class="text-xs text-gray-400 hover:text-white border border-gray-500 px-2 py-0.5 rounded transition whitespace-normal break-words max-w-full"
                 @click=${this.unbindKey}
               >
                 ${translateText("user_setting.unbind")}
@@ -80,7 +87,7 @@ export class SettingKeybind extends LitElement {
 
     this.dispatchEvent(
       new CustomEvent("change", {
-        detail: { action: this.action, value: code },
+        detail: { action: this.action, value: code, key: e.key },
         bubbles: true,
         composed: true,
       }),

@@ -2,7 +2,7 @@ import { Config } from "../../../core/configuration/Config";
 import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
-import { flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { renderNumber, translateText } from "../../Utils";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
@@ -51,6 +51,7 @@ export interface MenuElement {
   tooltipItems?: TooltipItem[];
   tooltipKeys?: TooltipKey[];
 
+  cooldown?: (params: MenuElementParams) => number;
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
@@ -106,6 +107,7 @@ export enum Slot {
   Delete = "delete",
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoChatElement: MenuElement = {
   id: "info_chat",
   name: "chat",
@@ -123,6 +125,7 @@ const infoChatElement: MenuElement = {
       })),
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyTargetElement: MenuElement = {
   id: "ally_target",
   name: "target",
@@ -138,6 +141,7 @@ const allyTargetElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyTradeElement: MenuElement = {
   id: "ally_trade",
   name: "trade",
@@ -153,6 +157,7 @@ const allyTradeElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyEmbargoElement: MenuElement = {
   id: "ally_embargo",
   name: "embargo",
@@ -204,6 +209,7 @@ const allyBreakElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
   name: "donate gold",
@@ -217,6 +223,7 @@ const allyDonateGoldElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateTroopsElement: MenuElement = {
   id: "ally_donate_troops",
   name: "donate troops",
@@ -230,6 +237,7 @@ const allyDonateTroopsElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoPlayerElement: MenuElement = {
   id: "info_player",
   name: "player",
@@ -241,6 +249,7 @@ const infoPlayerElement: MenuElement = {
   },
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const infoEmojiElement: MenuElement = {
   id: "info_emoji",
   name: "emoji",
@@ -263,7 +272,7 @@ const infoEmojiElement: MenuElement = {
                 : params.selected;
             params.playerActionHandler.handleEmoji(
               targetPlayer!,
-              flattenedEmojiTable.indexOf(emoji),
+              flattenedEmojiTable.indexOf(emoji as Emoji),
             );
             params.emojiTable.hideTable();
           });
@@ -417,6 +426,7 @@ export const attackMenuElement: MenuElement = {
 export const deleteUnitElement: MenuElement = {
   id: Slot.Delete,
   name: "delete",
+  cooldown: (params: MenuElementParams) => params.myPlayer.deleteUnitCooldown(),
   disabled: (params: MenuElementParams) => {
     const tileOwner = params.game.owner(params.tile);
     const isLand = params.game.isLand(params.tile);
@@ -433,7 +443,7 @@ export const deleteUnitElement: MenuElement = {
       return true;
     }
 
-    if (!params.myPlayer.canDeleteUnit()) {
+    if (params.myPlayer.deleteUnitCooldown() > 0) {
       return true;
     }
 
@@ -442,8 +452,10 @@ export const deleteUnitElement: MenuElement = {
       .units()
       .filter(
         (unit) =>
+          unit.constructionType() === undefined &&
+          unit.markedForDeletion() === false &&
           params.game.manhattanDist(unit.tile(), params.tile) <=
-          DELETE_SELECTION_RADIUS,
+            DELETE_SELECTION_RADIUS,
       );
 
     return myUnits.length === 0;
@@ -571,16 +583,10 @@ export const rootMenuElement: MenuElement = {
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
-      boatMenuElement,
-      ally,
+      ...(isOwnTerritory
+        ? [deleteUnitElement, ally, buildMenuElement]
+        : [boatMenuElement, ally, attackMenuElement]),
     ];
-
-    if (isOwnTerritory) {
-      menuItems.push(buildMenuElement);
-      menuItems.push(deleteUnitElement);
-    } else {
-      menuItems.push(attackMenuElement);
-    }
 
     return menuItems.filter((item): item is MenuElement => item !== null);
   },

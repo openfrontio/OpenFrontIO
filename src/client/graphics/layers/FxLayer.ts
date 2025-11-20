@@ -7,10 +7,12 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
+import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
@@ -29,6 +31,7 @@ export class FxLayer implements Layer {
 
   private allFx: Fx[] = [];
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
+  private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
 
   constructor(private game: GameView) {
     this.theme = this.game.config().theme();
@@ -86,6 +89,32 @@ export class FxLayer implements Layer {
     }
   }
 
+  // Register a persistent nuke target marker for the current player or teammates
+  private createNukeTargetFxIfOwned(unit: UnitView) {
+    const my = this.game.myPlayer();
+    if (!my) return;
+    // Show nuke marker owned by the player or by players on the same team
+    if (
+      (unit.owner() === my || my.isOnSameTeam(unit.owner())) &&
+      unit.isActive()
+    ) {
+      if (!this.nukeTargetFxByUnitId.has(unit.id())) {
+        const t = unit.targetTile();
+        if (t !== undefined) {
+          const x = this.game.x(t);
+          const y = this.game.y(t);
+          const fx = new NukeAreaFx(
+            x,
+            y,
+            this.game.config().nukeMagnitudes(unit.type()),
+          );
+          this.allFx.push(fx);
+          this.nukeTargetFxByUnitId.set(unit.id(), fx);
+        }
+      }
+    }
+  }
+
   onBonusEvent(bonus: BonusEventUpdate) {
     if (this.game.player(bonus.player) !== this.game.myPlayer()) {
       // Only display text fx for the current player
@@ -115,37 +144,38 @@ export class FxLayer implements Layer {
     this.allFx.push(textFx);
   }
 
-  addTargetFx(x: number, y: number) {
-    const fx = new TargetFx(x, y, 1200, 12);
-    this.allFx.push(fx);
-  }
-
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
       case UnitType.TransportShip: {
         const my = this.game.myPlayer();
         if (!my) return;
         if (unit.owner() !== my) return;
-        if (!unit.isActive()) return;
+        if (!unit.isActive() || unit.retreating()) return;
         if (this.boatTargetFxByUnitId.has(unit.id())) return;
         const t = unit.targetTile();
         if (t !== undefined) {
           const x = this.game.x(t);
           const y = this.game.y(t);
           // persistent until boat finishes or retreats
-          const fx = new TargetFx(x, y, 0, 12, true);
+          const fx = new TargetFx(x, y, 0, true);
           this.allFx.push(fx);
           this.boatTargetFxByUnitId.set(unit.id(), fx);
         }
         break;
       }
-      case UnitType.AtomBomb:
+      case UnitType.AtomBomb: {
+        this.createNukeTargetFxIfOwned(unit);
+        this.onNukeEvent(unit, 70);
+        break;
+      }
       case UnitType.MIRVWarhead:
         this.onNukeEvent(unit, 70);
         break;
-      case UnitType.HydrogenBomb:
+      case UnitType.HydrogenBomb: {
+        this.createNukeTargetFxIfOwned(unit);
         this.onNukeEvent(unit, 160);
         break;
+      }
       case UnitType.Warship:
         this.onWarshipEvent(unit);
         break;
@@ -154,6 +184,14 @@ export class FxLayer implements Layer {
         break;
       case UnitType.Train:
         this.onTrainEvent(unit);
+        break;
+      case UnitType.DefensePost:
+      case UnitType.City:
+      case UnitType.Port:
+      case UnitType.MissileSilo:
+      case UnitType.SAMLauncher:
+      case UnitType.Factory:
+        this.onStructureEvent(unit);
         break;
     }
   }
@@ -216,6 +254,8 @@ export class FxLayer implements Layer {
       return;
     }
 
+    SoundManager.playSoundEffect(SoundEffect.KaChing);
+
     const conquestFx = conquestFxFactory(
       this.animatedSpriteLoader,
       conquest,
@@ -248,8 +288,27 @@ export class FxLayer implements Layer {
     }
   }
 
+  onStructureEvent(unit: UnitView) {
+    if (!unit.isActive()) {
+      const x = this.game.x(unit.lastTile());
+      const y = this.game.y(unit.lastTile());
+      const explosion = new SpriteFx(
+        this.animatedSpriteLoader,
+        x,
+        y,
+        FxType.BuildingExplosion,
+      );
+      this.allFx.push(explosion);
+    }
+  }
+
   onNukeEvent(unit: UnitView, radius: number) {
     if (!unit.isActive()) {
+      const fx = this.nukeTargetFxByUnitId.get(unit.id());
+      if (fx) {
+        fx.end();
+        this.nukeTargetFxByUnitId.delete(unit.id());
+      }
       if (!unit.reachedTarget()) {
         this.handleSAMInterception(unit);
       } else {

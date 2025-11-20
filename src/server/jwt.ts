@@ -27,7 +27,7 @@ export async function verifyClientToken(
     const issuer = config.jwtIssuer();
     const audience = config.jwtAudience();
     const key = await config.jwkPublicKey();
-    const { payload, protectedHeader } = await jwtVerify(token, key, {
+    const { payload } = await jwtVerify(token, key, {
       algorithms: ["EdDSA"],
       issuer,
       audience,

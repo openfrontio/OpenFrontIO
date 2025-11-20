@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
-import { GameMapType, GameMode } from "../core/game/Game";
+import { GameMapType, GameMode, HumansVsNations } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
@@ -17,6 +17,7 @@ export class PublicLobby extends LitElement {
   private currLobby: GameInfo | null = null;
   private debounceDelay: number = 750;
   private lobbyIDToStart = new Map<GameID, number>();
+  private lobbiesFetchInFlight: Promise<GameInfo[]> | null = null;
 
   createRenderRoot() {
     return this;
@@ -73,16 +74,26 @@ export class PublicLobby extends LitElement {
   }
 
   async fetchLobbies(): Promise<GameInfo[]> {
-    try {
-      const response = await fetch(`/api/public_lobbies`);
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      return data.lobbies;
-    } catch (error) {
-      console.error("Error fetching lobbies:", error);
-      throw error;
+    if (this.lobbiesFetchInFlight) {
+      return this.lobbiesFetchInFlight;
     }
+
+    this.lobbiesFetchInFlight = (async () => {
+      try {
+        const response = await fetch(`/api/public_lobbies`);
+        if (!response.ok)
+          throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        return data.lobbies as GameInfo[];
+      } catch (error) {
+        console.error("Error fetching lobbies:", error);
+        throw error;
+      } finally {
+        this.lobbiesFetchInFlight = null;
+      }
+    })();
+
+    return this.lobbiesFetchInFlight;
   }
 
   public stop() {
@@ -150,7 +161,9 @@ export class PublicLobby extends LitElement {
               >
                 ${lobby.gameConfig.gameMode === GameMode.Team
                   ? typeof teamCount === "string"
-                    ? translateText(`public_lobby.teams_${teamCount}`)
+                    ? teamCount === HumansVsNations
+                      ? translateText("public_lobby.teams_hvn")
+                      : translateText(`public_lobby.teams_${teamCount}`)
                     : translateText("public_lobby.teams", {
                         num: teamCount ?? 0,
                       })

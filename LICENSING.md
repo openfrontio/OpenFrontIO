@@ -39,6 +39,46 @@ This document provides comprehensive licensing information for the OpenFront.io 
   - Added Creative Commons BY-SA 4.0 for all assets
   - All new code is AGPL v3.0 only
 
+### Phase 4: Mixed Asset Licensing
+
+- **Starting After:** c2cf2ce65f74ac91859f68a84aec89aeda5722ee
+- **Date:** September 28, 2025
+- **Licenses:**
+  - **Code:** AGPL v3.0 (unchanged from Phase 3)
+  - **Open Assets (/resources):** Creative Commons BY-SA 4.0 (unchanged from Phase 3)
+  - **Proprietary Assets (/proprietary):** All Rights Reserved
+- **Copyright Holders:** OpenFront LLC and Contributors
+- **Changes:**
+  - Added `/proprietary` directory for copyrighted assets
+  - Established dual-track asset licensing structure
+  - Open assets in `/resources` remain CC BY-SA 4.0
+  - Proprietary assets override open assets during build process
+  - Contributors retain copyright while granting usage rights to OpenFront LLC
+
+### Phase 5: AGPL with Additional Attribution Terms
+
+- **Starting After:** 136cfa1316dd584bece48f7ad9f8f17e8603f1c7
+- **Date:** October 12, 2025
+- **Changes:**
+  - Added Section 7 attribution requirement to AGPL v3.0
+  - All forks must display "Based on OpenFront" (or similar) on main menu
+  - Make clear that "OpenFront" is a registered trademark
+
+### Phase 6: Clarified AGPL Additional Attribution Terms
+
+- **Starting After:** e7497bfb767c4bf3e1e00eac0a13de995419f8b5
+- **Date:** October 14, 2025
+- **Changes:**
+  - Added additional Section 7 attribution requirements to the LICENSE
+  - Removed trademark notice from LICENSE file as it's unnecessary
+
+### Phase 7: Update AGPL Additional Attribution Terms
+
+- **Starting After:** f161c94ff475092811fc49be79138fc37a446179
+- **Date:** October 18, 2025
+- **Changes:**
+  - Updated Section 7 attribution requirements in the LICENSE
+
 ## Important Notes
 
 ### For Code:
@@ -69,6 +109,7 @@ All assets included in this repository (graphics, sounds, music, models) are lic
 - Premium skins, models, and textures
 - Sound effects and music accessed via API
 - Any assets not explicitly included in this repository
+- Any asset in the proprietary/ folder
 
 These external assets are:
 

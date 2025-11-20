@@ -23,6 +23,9 @@ export interface Stats {
   // Player betrays another player
   betray(player: Player): void;
 
+  // Time between lobby creation and game start (ms)
+  lobbyFillTime(fillTimeMs: number): void;
+
   // Player sends a trade ship to target
   boatSendTrade(player: Player, target: Player): void;
 
@@ -93,4 +96,7 @@ export interface Stats {
 
   // Player loses a unit of type
   unitLose(player: Player, type: OtherUnitType): void;
+
+  // player was killed (0 tiles)
+  playerKilled(player: Player, tick: number): void;
 }

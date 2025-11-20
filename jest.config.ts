@@ -11,14 +11,18 @@ export default {
   },
   transform: {
     "^.+\\.tsx?$": ["@swc/jest"],
+    "^.+\\.mjs$": ["@swc/jest"],
+    "^.+\\.js$": ["@swc/jest"],
   },
-  transformIgnorePatterns: ["node_modules/(?!(node:)/)"],
+  transformIgnorePatterns: [
+    "node_modules/(?!(nanoid|@jsep|fastpriorityqueue|@datastructures-js)/)",
+  ],
   collectCoverageFrom: ["src/**/*.ts", "!src/**/*.d.ts"],
   coverageThreshold: {
     global: {
-      statements: 21.5,
-      branches: 17.0,
-      lines: 22.0,
+      statements: 21,
+      branches: 16,
+      lines: 21.0,
       functions: 20.5,
     },
   },

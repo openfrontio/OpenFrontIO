@@ -20,6 +20,7 @@ import hu from "../../resources/lang/hu.json";
 import it from "../../resources/lang/it.json";
 import ja from "../../resources/lang/ja.json";
 import ko from "../../resources/lang/ko.json";
+import mk from "../../resources/lang/mk.json";
 import nl from "../../resources/lang/nl.json";
 import pl from "../../resources/lang/pl.json";
 import pt_BR from "../../resources/lang/pt-BR.json";
@@ -74,6 +75,7 @@ export class LangSelector extends LitElement {
     "sv-SE": sv_SE,
     "zh-CN": zh_CN,
     ko,
+    mk,
     gl,
     sl,
     sk,

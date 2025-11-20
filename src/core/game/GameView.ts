@@ -1,7 +1,9 @@
+import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { Config } from "../configuration/Config";
+import { ColorPalette } from "../CosmeticSchemas";
 import { PatternDecoder } from "../PatternDecoder";
-import { ClientID, GameID, Player } from "../Schemas";
+import { ClientID, GameID, Player, PlayerCosmetics } from "../Schemas";
 import { createRandomName } from "../Util";
 import { WorkerClient } from "../worker/WorkerClient";
 import {
@@ -38,11 +40,6 @@ import { UnitGrid, UnitPredicate } from "./UnitGrid";
 import { UserSettings } from "./UserSettings";
 
 const userSettings: UserSettings = new UserSettings();
-
-interface PlayerCosmetics {
-  pattern?: string | undefined;
-  flag?: string | undefined;
-}
 
 export class UnitView {
   public _wasUpdated = true;
@@ -88,6 +85,10 @@ export class UnitView {
 
   targetable(): boolean {
     return this.data.targetable;
+  }
+
+  markedForDeletion(): number | false {
+    return this.data.markedForDeletion;
   }
 
   type(): UnitType {
@@ -181,6 +182,12 @@ export class PlayerView {
   public anonymousName: string | null = null;
   private decoder?: PatternDecoder;
 
+  private _territoryColor: Colord;
+  private _borderColor: Colord;
+  // Update here to include structure light and dark colors
+  private _structureColors: { light: Colord; dark: Colord };
+  private _defendedBorderColors: { light: Colord; dark: Colord };
+
   constructor(
     private game: GameView,
     public data: PlayerUpdate,
@@ -195,21 +202,96 @@ export class PlayerView {
         this.data.playerType,
       );
     }
+
+    const defaultTerritoryColor = this.game
+      .config()
+      .theme()
+      .territoryColor(this);
+    const defaultBorderColor = this.game
+      .config()
+      .theme()
+      .borderColor(defaultTerritoryColor);
+
+    const pattern = this.cosmetics.pattern;
+    if (pattern) {
+      pattern.colorPalette ??= {
+        name: "",
+        primaryColor: defaultTerritoryColor.toHex(),
+        secondaryColor: defaultBorderColor.toHex(),
+      } satisfies ColorPalette;
+    }
+
+    if (this.team() === null) {
+      this._territoryColor = colord(
+        this.cosmetics.color?.color ??
+          this.cosmetics.pattern?.colorPalette?.primaryColor ??
+          defaultTerritoryColor.toHex(),
+      );
+    } else {
+      this._territoryColor = defaultTerritoryColor;
+    }
+
+    this._structureColors = this.game
+      .config()
+      .theme()
+      .structureColors(this._territoryColor);
+
+    const maybeFocusedBorderColor =
+      this.game.myClientID() === this.data.clientID
+        ? this.game.config().theme().focusedBorderColor()
+        : defaultBorderColor;
+
+    this._borderColor = new Colord(
+      pattern?.colorPalette?.secondaryColor ??
+        this.cosmetics.color?.color ??
+        maybeFocusedBorderColor.toHex(),
+    );
+
+    this._defendedBorderColors = this.game
+      .config()
+      .theme()
+      .defendedBorderColors(this._borderColor);
+
     this.decoder =
       this.cosmetics.pattern === undefined
         ? undefined
         : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
   }
 
-  patternDecoder(): PatternDecoder | undefined {
-    return this.decoder;
-  }
-
-  async actions(tile: TileRef): Promise<PlayerActions> {
-    return this.game.worker.playerInteraction(
-      this.id(),
+  territoryColor(tile?: TileRef): Colord {
+    if (tile === undefined || this.decoder === undefined) {
+      return this._territoryColor;
+    }
+    const isPrimary = this.decoder.isPrimary(
       this.game.x(tile),
       this.game.y(tile),
+    );
+    return isPrimary ? this._territoryColor : this._borderColor;
+  }
+
+  structureColors(): { light: Colord; dark: Colord } {
+    return this._structureColors;
+  }
+
+  borderColor(tile?: TileRef, isDefended: boolean = false): Colord {
+    if (tile === undefined || !isDefended) {
+      return this._borderColor;
+    }
+
+    const x = this.game.x(tile);
+    const y = this.game.y(tile);
+    const lightTile =
+      (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
+    return lightTile
+      ? this._defendedBorderColors.light
+      : this._defendedBorderColors.dark;
+  }
+
+  async actions(tile?: TileRef): Promise<PlayerActions> {
+    return this.game.worker.playerInteraction(
+      this.id(),
+      tile && this.game.x(tile),
+      tile && this.game.y(tile),
     );
   }
 
@@ -345,6 +427,9 @@ export class PlayerView {
   isTraitor(): boolean {
     return this.data.isTraitor;
   }
+  getTraitorRemainingTicks(): number {
+    return Math.max(0, this.data.traitorRemainingTicks ?? 0);
+  }
   outgoingEmojis(): EmojiMessage[] {
     return this.data.outgoingEmojis;
   }
@@ -356,8 +441,18 @@ export class PlayerView {
     return this.data.isDisconnected;
   }
 
-  canDeleteUnit(): boolean {
-    return true;
+  lastDeleteUnitTick(): Tick {
+    return this.data.lastDeleteUnitTick;
+  }
+
+  deleteUnitCooldown(): number {
+    return (
+      Math.max(
+        0,
+        this.game.config().deleteUnitCooldown() -
+          (this.game.ticks() + 1 - this.lastDeleteUnitTick()),
+      ) / 10
+    );
   }
 }
 
@@ -369,7 +464,6 @@ export class GameView implements GameMap {
   private updatedTiles: TileRef[] = [];
 
   private _myPlayer: PlayerView | null = null;
-  private _focusedPlayer: PlayerView | null = null;
 
   private unitGrid: UnitGrid;
 
@@ -391,16 +485,13 @@ export class GameView implements GameMap {
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
-      this.humans.map((h) => [
-        h.clientID,
-        { flag: h.flag, pattern: h.pattern } satisfies PlayerCosmetics,
-      ]),
+      this.humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
     for (const nation of this._mapData.nations) {
       // Nations don't have client ids, so we use their name as the key instead.
       this._cosmetics.set(nation.name, {
         flag: nation.flag,
-      });
+      } satisfies PlayerCosmetics);
     }
   }
 
@@ -500,7 +591,7 @@ export class GameView implements GameMap {
     tile: TileRef,
     searchRange: number,
     type: UnitType,
-    playerId: PlayerID,
+    playerId?: PlayerID,
   ) {
     return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
   }
@@ -689,10 +780,6 @@ export class GameView implements GameMap {
   }
 
   focusedPlayer(): PlayerView | null {
-    // TODO: renable when performance issues are fixed.
     return this.myPlayer();
-  }
-  setFocusedPlayer(player: PlayerView | null): void {
-    this._focusedPlayer = player;
   }
 }

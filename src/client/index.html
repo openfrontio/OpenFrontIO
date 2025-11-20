@@ -30,7 +30,7 @@
     />
     <meta
       property="og:image"
-      content="https://openfront.io/resources/images/GameplayScreenshot.png"
+      content="https://openfront.io/images/GameplayScreenshot.png"
     />
     <meta property="og:type" content="game" />
 
@@ -56,7 +56,7 @@
 
       .bg-image {
         content: "";
-        background-image: url("/images/EuropeBackground.webp");
+        background-image: url("/images/EuropeBackgroundBlurred.webp");
         background-position: center;
         background-attachment: fixed;
         background-size: cover;
@@ -73,7 +73,6 @@
         position: absolute;
         width: 100%;
         height: 100vh;
-        backdrop-filter: blur(5px);
       }
 
       .dark .bg-image {
@@ -91,11 +90,17 @@
       document.documentElement.className = "preload";
     </script>
 
-    <!-- Playwire ads -->
+    <!-- Publift/Fuse ads -->
+    <script
+      async
+      src="https://cdn.fuseplatform.net/publift/tags/2/4121/fuse.js"
+    ></script>
+
     <script>
-      window.ramp = window.ramp || {};
-      window.ramp.que = window.ramp.que || [];
-      window.ramp.passiveMode = true;
+      window.googletag = window.googletag || { cmd: [] };
+      googletag.cmd.push(function () {
+        googletag.pubads().set("page_url", "http://openfront.io ");
+      });
     </script>
 
     <!-- Analytics -->
@@ -197,7 +202,7 @@
     </header>
     <div class="bg-image"></div>
 
-    <gutter-ad-modal></gutter-ad-modal>
+    <gutter-ads></gutter-ads>
 
     <!-- Main container with responsive padding -->
     <main class="flex justify-center flex-grow">
@@ -214,13 +219,14 @@
             ></button>
           </territory-patterns-modal>
           <username-input class="relative w-full"></username-input>
-          <news-button
-            class="w-[20%] md:w-[15%] component-hideable"
-          ></news-button>
+          <news-button class="w-[20%] component-hideable"></news-button>
         </div>
         <div></div>
         <div>
           <public-lobby class="block"></public-lobby>
+        </div>
+        <div>
+          <matchmaking-button class="w-[20%] md:w-[15%]"></matchmaking-button>
         </div>
         <div class="container__row container__row--equal">
           <o-button
@@ -286,7 +292,6 @@
     <div id="app"></div>
     <div id="radialMenu" class="radial-menu"></div>
     <div class="flex gap-2 fixed right-[10px] top-[10px] z-50 flex-col">
-      <options-menu></options-menu>
       <player-info-overlay></player-info-overlay>
     </div>
     <div
@@ -314,7 +319,7 @@
     <!-- Footer section -->
     <footer class="l-footer">
       <div class="l-footer__content">
-        <div class="l-footer__col">
+        <div class="l-footer__col t-text-white">
           <a
             href="https://youtu.be/jvHEvbko3uw?si=znspkP84P76B1w5I"
             data-i18n="main.how_to_play"
@@ -333,13 +338,20 @@
           </a>
           <a
             target="_blank"
+            href="https://www.reddit.com/r/Openfront/"
+            class="t-link"
+          >
+            <span data-i18n="main.reddit"> Reddit </span>
+          </a>
+          <a
+            target="_blank"
             href="https://discord.gg/jRpxXvG42t"
             class="t-link"
           >
             <span data-i18n="main.join_discord"> Join the Discord! </span>
           </a>
         </div>
-        <div class="l-footer__col t-text-white">
+        <div class="l-footer__col t-text-white space-x-4">
           <a
             href="https://github.com/openfrontio/OpenFrontIO"
             class="t-link inline-flex items-center space-x-2"
@@ -351,7 +363,7 @@
               alt="GitHub"
               width="20"
               height="20"
-              class="ml-2 mr-4"
+              class="ml-2"
             />
           </a>
           <a
@@ -370,16 +382,6 @@
           >
             Terms of Service
           </a>
-          <p style="text-align: center">
-            <a
-              href="https://www.playwire.com/contact-direct-sales"
-              data-i18n="main.advertise"
-              class="t-link"
-              target="_blank"
-              rel="noopener"
-              >Advertise</a
-            >
-          </p>
         </div>
       </div>
     </footer>
@@ -400,17 +402,18 @@
     </div>
     <settings-modal></settings-modal>
     <player-panel></player-panel>
+    <spawn-timer></spawn-timer>
     <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
+    <stats-button></stats-button>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <user-setting></user-setting>
     <multi-tab-modal></multi-tab-modal>
     <news-modal></news-modal>
     <game-left-sidebar></game-left-sidebar>
-    <spawn-ad></spawn-ad>
     <flag-input-modal></flag-input-modal>
-    <fps-display></fps-display>
+    <performance-overlay></performance-overlay>
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"
@@ -438,9 +441,6 @@
         });
       });
     </script>
-
-    <!-- Playwire ads -->
-    <script async src="//cdn.intergient.com/1025558/75940/ramp.js"></script>
 
     <!-- Analytics -->
     <script

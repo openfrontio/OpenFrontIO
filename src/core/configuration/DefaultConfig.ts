@@ -8,6 +8,7 @@ import {
   GameMode,
   GameType,
   Gold,
+  HumansVsNations,
   Player,
   PlayerInfo,
   PlayerType,
@@ -48,7 +49,9 @@ const numPlayersConfig = {
   [GameMapType.Africa]: [100, 70, 50],
   [GameMapType.Asia]: [50, 40, 30],
   [GameMapType.Australia]: [70, 40, 30],
+  [GameMapType.Achiran]: [40, 36, 30],
   [GameMapType.Baikal]: [100, 70, 50],
+  [GameMapType.BaikalNukeWars]: [100, 70, 50],
   [GameMapType.BetweenTwoSeas]: [70, 50, 40],
   [GameMapType.BlackSea]: [50, 30, 30],
   [GameMapType.Britannia]: [50, 30, 20],
@@ -57,12 +60,14 @@ const numPlayersConfig = {
   [GameMapType.Europe]: [100, 70, 50],
   [GameMapType.EuropeClassic]: [50, 30, 30],
   [GameMapType.FalklandIslands]: [50, 30, 20],
+  [GameMapType.FourIslands]: [20, 15, 10],
   [GameMapType.FaroeIslands]: [20, 15, 10],
   [GameMapType.GatewayToTheAtlantic]: [100, 70, 50],
   [GameMapType.GiantWorldMap]: [100, 70, 50],
   [GameMapType.Halkidiki]: [100, 50, 40],
   [GameMapType.Iceland]: [50, 40, 30],
   [GameMapType.Italia]: [50, 30, 20],
+  [GameMapType.Japan]: [20, 15, 10],
   [GameMapType.Mars]: [70, 40, 30],
   [GameMapType.Mena]: [70, 50, 40],
   [GameMapType.Montreal]: [60, 40, 30],
@@ -194,6 +199,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
       case Quads:
         p -= p % 4;
         break;
+      case HumansVsNations:
+        // For HumansVsNations, return the base team player count
+        break;
       default:
         p -= p % numPlayerTeams;
         break;
@@ -212,6 +220,9 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   workerPortByIndex(index: number): number {
     return 3001 + index;
+  }
+  enableMatchmaking(): boolean {
+    return false;
   }
 }
 
@@ -328,6 +339,9 @@ export class DefaultConfig implements Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
+  isRandomSpawn(): boolean {
+    return this._gameConfig.randomSpawn;
+  }
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }
@@ -344,7 +358,7 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 20;
+    return (numPlayerFactories + 10) * 16;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     switch (rel) {
@@ -369,7 +383,10 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    const baseGold = Math.floor(100_000 + 100 * dist);
+    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
+    const debuff = this.tradeShipShortRangeDebuff();
+    const baseGold =
+      100_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 100 * dist;
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
@@ -569,8 +586,15 @@ export class DefaultConfig implements Config {
   donateCooldown(): Tick {
     return 10 * 10;
   }
+  embargoAllCooldown(): Tick {
+    return 10 * 10;
+  }
+  deletionMarkDuration(): Tick {
+    return 30 * 10;
+  }
+
   deleteUnitCooldown(): Tick {
-    return 5 * 10;
+    return 30 * 10;
   }
   emojiMessageDuration(): Tick {
     return 5 * 10;
@@ -669,6 +693,10 @@ export class DefaultConfig implements Config {
     }
 
     if (attacker.isPlayer() && defender.isPlayer()) {
+      if (defender.isDisconnected() && attacker.isOnSameTeam(defender)) {
+        // No troop loss if defender is disconnected and on same team
+        mag = 0;
+      }
       if (
         attacker.type() === PlayerType.Human &&
         defender.type() === PlayerType.Bot
@@ -761,6 +789,10 @@ export class DefaultConfig implements Config {
 
   radiusPortSpawn() {
     return 20;
+  }
+
+  tradeShipShortRangeDebuff(): number {
+    return 300;
   }
 
   proximityBonusPortsNb(totalPorts: number) {
@@ -890,6 +922,15 @@ export class DefaultConfig implements Config {
 
   defaultSamRange(): number {
     return 70;
+  }
+
+  samRange(level: number): number {
+    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
+    return this.maxSamRange() - 480 / (level + 5);
+  }
+
+  maxSamRange(): number {
+    return 150;
   }
 
   defaultSamMissileSpeed(): number {

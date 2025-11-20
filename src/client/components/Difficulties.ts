@@ -74,6 +74,7 @@ export class DifficultyDisplay extends LitElement {
       ></path>
     </svg>`;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const kingSkull = html`<svg
       stroke="currentColor"
       fill="currentColor"

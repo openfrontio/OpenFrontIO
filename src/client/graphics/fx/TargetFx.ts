@@ -4,12 +4,14 @@ export class TargetFx implements Fx {
   private lifeTime = 0;
   private ended = false;
   private endFade = 300;
+  private offset = 0;
+  private rotationSpeed = 14; // px per seconds
+  private radius = 4;
 
   constructor(
     private x: number,
     private y: number,
     private duration = 0,
-    private radius = 8,
     private persistent = false,
   ) {}
 
@@ -36,26 +38,26 @@ export class TargetFx implements Fx {
     const fadeAlpha =
       this.persistent && this.ended ? 1 - this.lifeTime / this.endFade : 1;
     const alpha = Math.max(0, Math.min(1, baseAlpha * fadeAlpha));
-    const pulse = 1 + 0.2 * Math.sin(t * Math.PI * 2);
 
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.lineWidth = 1;
     ctx.strokeStyle = `rgba(255,0,0,${alpha})`;
-
-    // size follows the pulsing radius so crosshair scales with it
-    const size = this.radius * pulse;
+    this.offset += this.rotationSpeed * (frameTime / 1000);
 
     ctx.beginPath();
-    ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+    ctx.lineWidth = 1;
+    ctx.lineDashOffset = this.offset;
+    ctx.setLineDash([3, 3]);
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // crosshair (fixed size, does not scale with pulse)
     ctx.beginPath();
-    ctx.moveTo(this.x - this.radius * 1.2, this.y);
-    ctx.lineTo(this.x + this.radius * 1.2, this.y);
-    ctx.moveTo(this.x, this.y - this.radius * 1.2);
-    ctx.lineTo(this.x, this.y + this.radius * 1.2);
+    ctx.strokeStyle = `rgba(255,0,0,${alpha})`;
+    ctx.lineWidth = 2;
+    ctx.lineDashOffset = -this.offset / 2;
+    ctx.setLineDash([19, 3]);
+    ctx.arc(this.x, this.y, 7, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.restore();

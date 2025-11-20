@@ -7,13 +7,6 @@
   overflow-x: auto;
 }
 
-.chat-column {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 120px;
-}
-
 .column-title {
   font-weight: bold;
   margin-bottom: 4px;

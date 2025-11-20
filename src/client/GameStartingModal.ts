@@ -51,6 +51,13 @@ export class GameStartingModal extends LitElement {
     }
 
     .modal p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+
+    .modal .loading {
+      font-size: 16px;
+      margin-top: 20px;
       margin-bottom: 20px;
       background-color: rgba(0, 0, 0, 0.3);
       padding: 10px;
@@ -84,13 +91,42 @@ export class GameStartingModal extends LitElement {
     .modal button:active {
       transform: translateY(1px);
     }
+
+    .copyright {
+      font-size: 32px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      opacity: 1;
+    }
+
+    .modal a {
+      display: block;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      font-size: 20px;
+      color: #4a9eff;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .modal a:hover {
+      color: #6bb0ff;
+      text-decoration: underline;
+    }
   `;
 
   render() {
     return html`
       <div class="modal ${this.isVisible ? "visible" : ""}">
-        <h2>${translateText("game_starting_modal.title")}</h2>
-        <p>${translateText("game_starting_modal.desc")}</p>
+        <div class="copyright">© OpenFront</div>
+        <a
+          href="https://github.com/openfrontio/OpenFrontIO/blob/main/CREDITS.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          >${translateText("game_starting_modal.credits")}</a
+        >
+        <p>${translateText("game_starting_modal.code_license")}</p>
+        <p class="loading">${translateText("game_starting_modal.title")}</p>
       </div>
     `;
   }

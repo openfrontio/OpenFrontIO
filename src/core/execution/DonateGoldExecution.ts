@@ -1,15 +1,19 @@
 import { Execution, Game, Gold, Player, PlayerID } from "../game/Game";
+import { toInt } from "../Util";
 
 export class DonateGoldExecution implements Execution {
   private recipient: Player;
 
   private active = true;
+  private gold: Gold;
 
   constructor(
     private sender: Player,
     private recipientID: PlayerID,
-    private gold: Gold | null,
-  ) {}
+    goldNum: number | null,
+  ) {
+    this.gold = toInt(goldNum ?? 0);
+  }
 
   init(mg: Game, ticks: number): void {
     if (!mg.hasPlayer(this.recipientID)) {

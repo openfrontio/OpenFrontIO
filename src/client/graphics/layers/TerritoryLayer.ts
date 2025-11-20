@@ -2,7 +2,13 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import { Cell, PlayerType, UnitType } from "../../../core/game/Game";
+import {
+  Cell,
+  ColoredTeams,
+  PlayerType,
+  Team,
+  UnitType,
+} from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
@@ -12,8 +18,8 @@ import {
   AlternateViewEvent,
   DragEvent,
   MouseOverEvent,
-  RefreshGraphicsEvent,
 } from "../../InputHandler";
+import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -75,11 +81,10 @@ export class TerritoryLayer implements Layer {
   }
 
   tick() {
-    const prev = this.cachedTerritoryPatternsEnabled;
-    this.cachedTerritoryPatternsEnabled = this.userSettings.territoryPatterns();
-    if (prev !== undefined && prev !== this.cachedTerritoryPatternsEnabled) {
-      this.eventBus.emit(new RefreshGraphicsEvent());
+    if (this.game.inSpawnPhase()) {
+      this.spawnHighlight();
     }
+
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
@@ -151,10 +156,9 @@ export class TerritoryLayer implements Layer {
       }
       this.lastFocusedPlayer = focusedPlayer;
     }
+  }
 
-    if (!this.game.inSpawnPhase()) {
-      return;
-    }
+  private spawnHighlight() {
     if (this.game.ticks() % 5 === 0) {
       return;
     }
@@ -165,11 +169,19 @@ export class TerritoryLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+
+    this.drawFocusedPlayerHighlight();
+
     const humans = this.game
       .playerViews()
       .filter((p) => p.type() === PlayerType.Human);
 
+    const focusedPlayer = this.game.focusedPlayer();
+    const teamColors = Object.values(ColoredTeams);
     for (const human of humans) {
+      if (human === focusedPlayer) {
+        continue;
+      }
       const center = human.nameLocation();
       if (!center) {
         continue;
@@ -180,13 +192,24 @@ export class TerritoryLayer implements Layer {
       }
       let color = this.theme.spawnHighlightColor();
       const myPlayer = this.game.myPlayer();
-      if (
-        myPlayer !== null &&
-        myPlayer !== human &&
-        myPlayer.isFriendly(human)
-      ) {
-        color = this.theme.selfColor();
+      if (myPlayer !== null && myPlayer !== human && myPlayer.team() === null) {
+        // In FFA games (when team === null), use default yellow spawn highlight color
+        color = this.theme.spawnHighlightColor();
+      } else if (myPlayer !== null && myPlayer !== human) {
+        // In Team games, the spawn highlight color becomes that player's team color
+        // Optionally, this could be broken down to teammate or enemy and simplified to green and red, respectively
+        const team = human.team();
+        if (team !== null && teamColors.includes(team)) {
+          color = this.theme.teamColor(team);
+        } else {
+          if (myPlayer.isFriendly(human)) {
+            color = this.theme.spawnHighlightTeamColor();
+          } else {
+            color = this.theme.spawnHighlightColor();
+          }
+        }
       }
+
       for (const tile of this.game.bfs(
         centerTile,
         euclDistFN(centerTile, 9, true),
@@ -196,37 +219,45 @@ export class TerritoryLayer implements Layer {
         }
       }
     }
-    // Breathing border animation
-    this.borderAnimTime += 1;
-    const minPadding = 3;
-    const maxPadding = 8;
-    // Range: [minPadding..maxPadding]
-    const breathingPadding =
-      minPadding +
-      (maxPadding - minPadding) *
-        (0.5 + 0.5 * Math.sin(this.borderAnimTime * 0.3));
+  }
 
-    if (focusedPlayer) {
-      // Clear previous animated border
-      if (this.highlightContext) {
-        this.highlightContext.clearRect(
-          0,
-          0,
-          this.game.width(),
-          this.game.height(),
-        );
-      }
+  private drawFocusedPlayerHighlight() {
+    const focusedPlayer = this.game.focusedPlayer();
 
-      const center = focusedPlayer.nameLocation();
-      if (center) {
-        this.drawBreathingRing(
-          center.x,
-          center.y,
-          breathingPadding,
-          this.theme.spawnHighlightColor(),
-        );
-      }
+    if (!focusedPlayer) {
+      return;
     }
+    const center = focusedPlayer.nameLocation();
+    if (!center) {
+      return;
+    }
+    // Breathing border animation
+    this.borderAnimTime += 0.5;
+    const minRad = 8;
+    const maxRad = 24;
+    // Range: [minPadding..maxPadding]
+    const radius =
+      minRad + (maxRad - minRad) * (0.5 + 0.5 * Math.sin(this.borderAnimTime));
+
+    const baseColor = this.theme.spawnHighlightSelfColor(); //white
+    let teamColor: Colord | null = null;
+
+    const team: Team | null = focusedPlayer.team();
+    if (team !== null && Object.values(ColoredTeams).includes(team)) {
+      teamColor = this.theme.teamColor(team).alpha(0.5);
+    } else {
+      teamColor = baseColor;
+    }
+
+    this.drawBreathingRing(
+      center.x,
+      center.y,
+      minRad,
+      maxRad,
+      radius,
+      baseColor, // Always draw white static semi-transparent ring
+      teamColor, // Pass the breathing ring color. White for FFA, Duos, Trios, Quads. Transparent team color for TEAM games.
+    );
   }
 
   init() {
@@ -369,7 +400,9 @@ export class TerritoryLayer implements Layer {
       now > this.lastRefresh + this.refreshRate
     ) {
       this.lastRefresh = now;
+      const renderTerritoryStart = FrameProfiler.start();
       this.renderTerritory();
+      FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
 
       const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
       const vx0 = Math.max(0, topLeft.x);
@@ -381,6 +414,7 @@ export class TerritoryLayer implements Layer {
       const h = vy1 - vy0 + 1;
 
       if (w > 0 && h > 0) {
+        const putImageStart = FrameProfiler.start();
         this.context.putImageData(
           this.alternativeView ? this.alternativeImageData : this.imageData,
           0,
@@ -390,9 +424,11 @@ export class TerritoryLayer implements Layer {
           w,
           h,
         );
+        FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
       }
     }
 
+    const drawCanvasStart = FrameProfiler.start();
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -400,13 +436,19 @@ export class TerritoryLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
     if (this.game.inSpawnPhase()) {
+      const highlightDrawStart = FrameProfiler.start();
       context.drawImage(
         this.highlightCanvas,
         -this.game.width() / 2,
         -this.game.height() / 2,
         this.game.width(),
         this.game.height(),
+      );
+      FrameProfiler.end(
+        "TerritoryLayer:drawHighlightCanvas",
+        highlightDrawStart,
       );
     }
   }
@@ -453,64 +495,37 @@ export class TerritoryLayer implements Layer {
       return;
     }
     const owner = this.game.owner(tile) as PlayerView;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const isHighlighted =
       this.highlightedTerritory &&
       this.highlightedTerritory.id() === owner.id();
     const myPlayer = this.game.myPlayer();
 
     if (this.game.isBorder(tile)) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const playerIsFocused = owner && this.game.focusedPlayer() === owner;
       if (myPlayer) {
         const alternativeColor = this.alternateViewColor(owner);
         this.paintTile(this.alternativeImageData, tile, alternativeColor, 255);
       }
-      if (
-        this.game.hasUnitNearby(
-          tile,
-          this.game.config().defensePostRange(),
-          UnitType.DefensePost,
-          owner.id(),
-        )
-      ) {
-        const borderColors = this.theme.defendedBorderColors(owner);
-        const x = this.game.x(tile);
-        const y = this.game.y(tile);
-        const lightTile =
-          (x % 2 === 0 && y % 2 === 0) || (y % 2 === 1 && x % 2 === 1);
-        const borderColor = lightTile ? borderColors.light : borderColors.dark;
-        this.paintTile(this.imageData, tile, borderColor, 255);
-      } else {
-        const useBorderColor = playerIsFocused
-          ? this.theme.focusedBorderColor()
-          : this.theme.borderColor(owner);
-        this.paintTile(this.imageData, tile, useBorderColor, 255);
-      }
-    } else {
-      // Interior tiles
-      const pattern = owner.cosmetics.pattern;
-      const patternsEnabled = this.cachedTerritoryPatternsEnabled ?? false;
+      const isDefended = this.game.hasUnitNearby(
+        tile,
+        this.game.config().defensePostRange(),
+        UnitType.DefensePost,
+        owner.id(),
+      );
 
+      this.paintTile(
+        this.imageData,
+        tile,
+        owner.borderColor(tile, isDefended),
+        255,
+      );
+    } else {
       // Alternative view only shows borders.
       this.clearAlternativeTile(tile);
 
-      if (pattern === undefined || patternsEnabled === false) {
-        this.paintTile(
-          this.imageData,
-          tile,
-          this.theme.territoryColor(owner),
-          150,
-        );
-      } else {
-        const x = this.game.x(tile);
-        const y = this.game.y(tile);
-        const baseColor = this.theme.territoryColor(owner);
-
-        const decoder = owner.patternDecoder();
-        const color = decoder?.isSet(x, y)
-          ? baseColor.darken(0.125)
-          : baseColor;
-        this.paintTile(this.imageData, tile, color, 150);
-      }
+      this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
     }
   }
 
@@ -582,18 +597,53 @@ export class TerritoryLayer implements Layer {
     const y = this.game.y(tile);
     this.highlightContext.clearRect(x, y, 1, 1);
   }
+
   private drawBreathingRing(
     cx: number,
     cy: number,
+    minRad: number,
+    maxRad: number,
     radius: number,
-    color: Colord,
+    transparentColor: Colord,
+    breathingColor: Colord,
   ) {
     const ctx = this.highlightContext;
     if (!ctx) return;
+
+    // Draw a semi-transparent ring around the starting location
     ctx.beginPath();
+    // Transparency matches the highlight color provided
+    const transparent = transparentColor.alpha(0);
+    const radGrad = ctx.createRadialGradient(cx, cy, minRad, cx, cy, maxRad);
+
+    // Pixels with radius < minRad are transparent
+    radGrad.addColorStop(0, transparent.toRgbString());
+    // The ring then starts with solid highlight color
+    radGrad.addColorStop(0.01, transparentColor.toRgbString());
+    radGrad.addColorStop(0.1, transparentColor.toRgbString());
+    // The outer edge of the ring is transparent
+    radGrad.addColorStop(1, transparent.toRgbString());
+
+    // Draw an arc at the max radius and fill with the created radial gradient
+    ctx.arc(cx, cy, maxRad, 0, Math.PI * 2);
+    ctx.fillStyle = radGrad;
+    ctx.closePath();
+    ctx.fill();
+
+    const breatheInner = breathingColor.alpha(0);
+    // Draw a solid ring around the starting location with outer radius = the breathing radius
+    ctx.beginPath();
+    const radGrad2 = ctx.createRadialGradient(cx, cy, minRad, cx, cy, radius);
+    // Pixels with radius < minRad are transparent
+    radGrad2.addColorStop(0, breatheInner.toRgbString());
+    // The ring then starts with solid highlight color
+    radGrad2.addColorStop(0.01, breathingColor.toRgbString());
+    // The ring is solid throughout
+    radGrad2.addColorStop(1, breathingColor.toRgbString());
+
+    // Draw an arc at the current breathing radius and fill with the created "gradient"
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = color.toRgbString();
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    ctx.fillStyle = radGrad2;
+    ctx.fill();
   }
 }

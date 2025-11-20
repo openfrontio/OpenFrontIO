@@ -50,7 +50,8 @@ class SAMTargetingSystem {
 
   private isInRange(tile: TileRef) {
     const samTile = this.sam.tile();
-    const rangeSquared = this.mg.config().defaultSamRange() ** 2;
+    const range = this.mg.config().samRange(this.sam.level());
+    const rangeSquared = range * range;
     return this.mg.euclideanDistSquared(samTile, tile) <= rangeSquared;
   }
 
@@ -81,7 +82,7 @@ class SAMTargetingSystem {
 
   public getSingleTarget(ticks: number): Target | null {
     // Look beyond the SAM range so it can preshot nukes
-    const detectionRange = this.mg.config().defaultSamRange() * 2;
+    const detectionRange = this.mg.config().maxSamRange() * 2;
     const nukes = this.mg.nearbyUnits(
       this.sam.tile(),
       detectionRange,

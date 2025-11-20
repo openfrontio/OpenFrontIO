@@ -1,7 +1,7 @@
 import WebSocket from "ws";
 import { TokenPayload } from "../core/ApiSchemas";
 import { Tick } from "../core/game/Game";
-import { ClientID, Winner } from "../core/Schemas";
+import { ClientID, PlayerCosmetics, Winner } from "../core/Schemas";
 
 export class Client {
   public lastPing: number = Date.now();
@@ -19,7 +19,6 @@ export class Client {
     public readonly ip: string,
     public readonly username: string,
     public readonly ws: WebSocket,
-    public readonly flag: string | undefined,
-    public readonly pattern: string | undefined,
+    public readonly cosmetics: PlayerCosmetics | undefined,
   ) {}
 }

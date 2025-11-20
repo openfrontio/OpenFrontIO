@@ -8,6 +8,7 @@ import { Layer } from "./Layer";
 
 interface TeamEntry {
   teamName: string;
+  isMyTeam: boolean;
   totalScoreStr: string;
   totalGold: string;
   totalTroops: string;
@@ -28,6 +29,7 @@ export class TeamStats extends LitElement implements Layer {
   teams: TeamEntry[] = [];
   private _shownOnInit = false;
   private showUnits = false;
+  private _myTeam: Team | null = null;
 
   createRenderRoot() {
     return this; // use light DOM for Tailwind
@@ -53,6 +55,11 @@ export class TeamStats extends LitElement implements Layer {
   private updateTeamStats() {
     const players = this.game.playerViews();
     const grouped: Record<Team, PlayerView[]> = {};
+
+    if (this._myTeam === null) {
+      const myPlayer = this.game.myPlayer();
+      this._myTeam = myPlayer?.team() ?? null;
+    }
 
     for (const player of players) {
       const team = player.team();
@@ -83,10 +90,13 @@ export class TeamStats extends LitElement implements Layer {
           }
         }
 
-        const totalScorePercent = totalScoreSort / this.game.numLandTiles();
+        const numTilesWithoutFallout =
+          this.game.numLandTiles() - this.game.numTilesWithFallout();
+        const totalScorePercent = totalScoreSort / numTilesWithoutFallout;
 
         return {
           teamName: teamStr,
+          isMyTeam: teamStr === this._myTeam,
           totalScoreStr: formatPercentage(totalScorePercent),
           totalScoreSort,
           totalGold: renderNumber(totalGold),
@@ -129,27 +139,41 @@ export class TeamStats extends LitElement implements Layer {
             </div>
             ${this.showUnits
               ? html`
-                  <div class="py-1.5 text-center border-b border-slate-500">
+                  <div
+                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                  >
                     ${translateText("leaderboard.launchers")}
                   </div>
-                  <div class="py-1.5 text-center border-b border-slate-500">
+                  <div
+                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                  >
                     ${translateText("leaderboard.sams")}
                   </div>
-                  <div class="py-1.5 text-center border-b border-slate-500">
+                  <div
+                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                  >
                     ${translateText("leaderboard.warships")}
                   </div>
-                  <div class="py-1.5 text-center border-b border-slate-500">
+                  <div
+                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                  >
                     ${translateText("leaderboard.cities")}
                   </div>
                 `
               : html`
-                  <div class="py-1.5 text-center border-b border-slate-500">
+                  <div
+                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                  >
                     ${translateText("leaderboard.owned")}
                   </div>
-                  <div class="py-1.5 text-center border-b border-slate-500">
+                  <div
+                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                  >
                     ${translateText("leaderboard.gold")}
                   </div>
-                  <div class="py-1.5 text-center border-b border-slate-500">
+                  <div
+                    class="py-1.5 md:py-2.5 text-center border-b border-slate-500"
+                  >
                     ${translateText("leaderboard.troops")}
                   </div>
                 `}
@@ -160,7 +184,9 @@ export class TeamStats extends LitElement implements Layer {
             this.showUnits
               ? html`
                   <div
-                    class="contents hover:bg-slate-600/60 text-center cursor-pointer"
+                    class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
+                      ? "font-bold"
+                      : ""}"
                   >
                     <div class="py-1.5 border-b border-slate-500">
                       ${team.teamName}
@@ -181,7 +207,9 @@ export class TeamStats extends LitElement implements Layer {
                 `
               : html`
                   <div
-                    class="contents hover:bg-slate-600/60 text-center cursor-pointer"
+                    class="contents hover:bg-slate-600/60 text-center cursor-pointer ${team.isMyTeam
+                      ? "font-bold"
+                      : ""}"
                   >
                     <div class="py-1.5 border-b border-slate-500">
                       ${team.teamName}
@@ -219,5 +247,6 @@ export class TeamStats extends LitElement implements Layer {
 function formatPercentage(value: number): string {
   const perc = value * 100;
   if (Number.isNaN(perc)) return "0%";
+  if (perc === 100) return "100%";
   return perc.toPrecision(2) + "%";
 }

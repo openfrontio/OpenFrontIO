@@ -20,7 +20,6 @@ on:
         type: choice
         options:
           - masters
-          - nbg1
           - staging
           - falk1
       target_subdomain:
@@ -93,7 +92,6 @@ jobs:
       - name: 🔑 Create SSH private key
         env:
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
-          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
           SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -102,7 +100,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
           test -n "$SERVER_HOST_MASTERS" && ssh-keyscan -H "$SERVER_HOST_MASTERS" >> ~/.ssh/known_hosts
-          test -n "$SERVER_HOST_NBG1" && ssh-keyscan -H "$SERVER_HOST_NBG1" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_FALK1" && ssh-keyscan -H "$SERVER_HOST_FALK1" >> ~/.ssh/known_hosts
           test -n "$SERVER_HOST_STAGING" && ssh-keyscan -H "$SERVER_HOST_STAGING" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_rsa
@@ -125,7 +122,6 @@ jobs:
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_KEY }}
           API_KEY: ${{ secrets.API_KEY }}
           SERVER_HOST_MASTERS: ${{ secrets.SERVER_HOST_MASTERS }}
-          SERVER_HOST_NBG1: ${{ secrets.SERVER_HOST_NBG1 }}
           SERVER_HOST_FALK1: ${{ secrets.SERVER_HOST_FALK1 }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SSH_KEY: ~/.ssh/id_rsa

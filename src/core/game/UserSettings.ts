@@ -1,3 +1,6 @@
+import { Cosmetics } from "../CosmeticSchemas";
+import { PlayerPattern } from "../Schemas";
+
 const PATTERN_KEY = "territoryPattern";
 
 export class UserSettings {
@@ -14,6 +17,20 @@ export class UserSettings {
 
   set(key: string, value: boolean) {
     localStorage.setItem(key, value ? "true" : "false");
+  }
+
+  getFloat(key: string, defaultValue: number): number {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+
+    const floatValue = parseFloat(value);
+    if (isNaN(floatValue)) return defaultValue;
+
+    return floatValue;
+  }
+
+  setFloat(key: string, value: number) {
+    localStorage.setItem(key, value.toString());
   }
 
   emojis() {
@@ -112,12 +129,36 @@ export class UserSettings {
   }
 
   // For development only. Used for testing patterns, set in the console manually.
-  getDevOnlyPattern(): string | undefined {
-    return localStorage.getItem("dev-pattern") ?? undefined;
+  getDevOnlyPattern(): PlayerPattern | undefined {
+    const data = localStorage.getItem("dev-pattern") ?? undefined;
+    if (data === undefined) return undefined;
+    return {
+      name: "dev-pattern",
+      patternData: data,
+      colorPalette: {
+        name: "dev-color-palette",
+        primaryColor: localStorage.getItem("dev-primary") ?? "#ffffff",
+        secondaryColor: localStorage.getItem("dev-secondary") ?? "#000000",
+      },
+    } satisfies PlayerPattern;
   }
 
-  getSelectedPatternName(): string | undefined {
-    return localStorage.getItem(PATTERN_KEY) ?? undefined;
+  getSelectedPatternName(cosmetics: Cosmetics | null): PlayerPattern | null {
+    if (cosmetics === null) return null;
+    let data = localStorage.getItem(PATTERN_KEY) ?? null;
+    if (data === null) return null;
+    const patternPrefix = "pattern:";
+    if (data.startsWith(patternPrefix)) {
+      data = data.slice(patternPrefix.length);
+    }
+    const [patternName, colorPalette] = data.split(":");
+    const pattern = cosmetics.patterns[patternName];
+    if (pattern === undefined) return null;
+    return {
+      name: patternName,
+      patternData: pattern.pattern,
+      colorPalette: cosmetics.colorPalettes?.[colorPalette],
+    } satisfies PlayerPattern;
   }
 
   setSelectedPatternName(patternName: string | undefined): void {
@@ -126,5 +167,35 @@ export class UserSettings {
     } else {
       localStorage.setItem(PATTERN_KEY, patternName);
     }
+  }
+
+  getSelectedColor(): string | undefined {
+    const data = localStorage.getItem("settings.territoryColor") ?? undefined;
+    if (data === undefined) return undefined;
+    return data;
+  }
+
+  setSelectedColor(color: string | undefined): void {
+    if (color === undefined) {
+      localStorage.removeItem("settings.territoryColor");
+    } else {
+      localStorage.setItem("settings.territoryColor", color);
+    }
+  }
+
+  backgroundMusicVolume(): number {
+    return this.getFloat("settings.backgroundMusicVolume", 0);
+  }
+
+  setBackgroundMusicVolume(volume: number): void {
+    this.setFloat("settings.backgroundMusicVolume", volume);
+  }
+
+  soundEffectsVolume(): number {
+    return this.getFloat("settings.soundEffectsVolume", 1);
+  }
+
+  setSoundEffectsVolume(volume: number): void {
+    this.setFloat("settings.soundEffectsVolume", volume);
   }
 }

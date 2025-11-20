@@ -2,11 +2,11 @@ import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
-import { ServerConfig } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
+import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
@@ -14,16 +14,20 @@ import { FlagInput } from "./FlagInput";
 import { FlagInputModal } from "./FlagInputModal";
 import { GameStartingModal } from "./GameStartingModal";
 import "./GoogleAdElement";
+import { GutterAds } from "./GutterAds";
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
+import "./Matchmaking";
+import { MatchmakingModal } from "./Matchmaking";
 import { NewsModal } from "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import { SendKickPlayerIntentEvent } from "./Transport";
@@ -33,21 +37,29 @@ import { UsernameInput } from "./UsernameInput";
 import {
   generateCryptoRandomUUID,
   incrementGamesPlayed,
-  translateText,
+  isInIframe,
 } from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn } from "./jwt";
+import { getUserMe, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 declare global {
   interface Window {
+    enableAds: boolean;
     PageOS: {
       session: {
         newPageView: () => void;
       };
+    };
+    fusetag: {
+      registerZone: (id: string) => void;
+      destroyZone: (id: string) => void;
+      pageInit: (options?: any) => void;
+      que: Array<() => void>;
+      destroySticky: () => void;
     };
     ramp: {
       que: Array<() => void>;
@@ -91,6 +103,9 @@ class Client {
   private userSettings: UserSettings = new UserSettings();
   private patternsModal: TerritoryPatternsModal;
   private tokenLoginModal: TokenLoginModal;
+  private matchmakingModal: MatchmakingModal;
+
+  private gutterAds: GutterAds;
 
   constructor() {}
 
@@ -104,10 +119,9 @@ class Client {
     gameVersion.innerText = version;
 
     const newsModal = document.querySelector("news-modal") as NewsModal;
-    if (!newsModal) {
+    if (!newsModal || !(newsModal instanceof NewsModal)) {
       console.warn("News modal element not found");
     }
-    newsModal instanceof NewsModal;
     const newsButton = document.querySelector("news-button") as NewsButton;
     if (!newsButton) {
       console.warn("News button element not found");
@@ -159,6 +173,11 @@ class Client {
       }
     });
 
+    const gutterAds = document.querySelector("gutter-ads");
+    if (!(gutterAds instanceof GutterAds))
+      throw new Error("Missing gutter-ads");
+    this.gutterAds = gutterAds;
+
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
@@ -166,7 +185,9 @@ class Client {
     const spModal = document.querySelector(
       "single-player-modal",
     ) as SinglePlayerModal;
-    spModal instanceof SinglePlayerModal;
+    if (!spModal || !(spModal instanceof SinglePlayerModal)) {
+      console.warn("Singleplayer modal element not found");
+    }
 
     const singlePlayer = document.getElementById("single-player");
     if (singlePlayer === null) throw new Error("Missing single-player");
@@ -176,14 +197,10 @@ class Client {
       }
     });
 
-    // const ctModal = document.querySelector("chat-modal") as ChatModal;
-    // ctModal instanceof ChatModal;
-    // document.getElementById("chat-button").addEventListener("click", () => {
-    //   ctModal.open();
-    // });
-
     const hlpModal = document.querySelector("help-modal") as HelpModal;
-    hlpModal instanceof HelpModal;
+    if (!hlpModal || !(hlpModal instanceof HelpModal)) {
+      console.warn("Help modal element not found");
+    }
     const helpButton = document.getElementById("help-button");
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
@@ -193,7 +210,10 @@ class Client {
     const flagInputModal = document.querySelector(
       "flag-input-modal",
     ) as FlagInputModal;
-    flagInputModal instanceof FlagInputModal;
+    if (!flagInputModal || !(flagInputModal instanceof FlagInputModal)) {
+      console.warn("Flag input modal element not found");
+    }
+
     const flgInput = document.getElementById("flag-input_");
     if (flgInput === null) throw new Error("Missing flag-input_");
     flgInput.addEventListener("click", () => {
@@ -203,10 +223,25 @@ class Client {
     this.patternsModal = document.querySelector(
       "territory-patterns-modal",
     ) as TerritoryPatternsModal;
+    if (
+      !this.patternsModal ||
+      !(this.patternsModal instanceof TerritoryPatternsModal)
+    ) {
+      console.warn("Territory patterns modal element not found");
+    }
     const patternButton = document.getElementById(
       "territory-patterns-input-preview-button",
     );
-    this.patternsModal instanceof TerritoryPatternsModal;
+    if (isInIframe() && patternButton) {
+      patternButton.style.display = "none";
+    }
+
+    if (
+      !this.patternsModal ||
+      !(this.patternsModal instanceof TerritoryPatternsModal)
+    ) {
+      console.warn("Territory patterns modal element not found");
+    }
     if (patternButton === null)
       throw new Error("territory-patterns-input-preview-button");
     this.patternsModal.previewButton = patternButton;
@@ -218,7 +253,22 @@ class Client {
     this.tokenLoginModal = document.querySelector(
       "token-login",
     ) as TokenLoginModal;
-    this.tokenLoginModal instanceof TokenLoginModal;
+    if (
+      !this.tokenLoginModal ||
+      !(this.tokenLoginModal instanceof TokenLoginModal)
+    ) {
+      console.warn("Token login modal element not found");
+    }
+
+    this.matchmakingModal = document.querySelector(
+      "matchmaking-modal",
+    ) as MatchmakingModal;
+    if (
+      !this.matchmakingModal ||
+      !(this.matchmakingModal instanceof MatchmakingModal)
+    ) {
+      console.warn("Matchmaking modal element not found");
+    }
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       document.dispatchEvent(
@@ -229,91 +279,12 @@ class Client {
         }),
       );
 
-      const config = await getServerConfigFromClient();
-      if (!hasAllowedFlare(userMeResponse, config)) {
-        if (userMeResponse === false) {
-          // Login is required
-          document.body.innerHTML = `
-            <div style="
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              height: 100vh;
-              margin: 0;
-              font-family: sans-serif;
-              background-size: cover;
-              background-position: center;
-            ">
-              <div style="
-                background-color: rgba(0, 0, 0, 0.7);
-                color: white;
-                padding: 2em;
-                margin: 5em;
-                border-radius: 12px;
-                text-align: center;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-              ">
-                <p style="margin-bottom: 1em;">${translateText("auth.login_required")}</p>
-                <p style="margin-bottom: 1.5em;">${translateText("auth.redirecting")}</p>
-                <div style="width: 100%; height: 8px; background-color: #444; border-radius: 4px; overflow: hidden;">
-                  <div style="
-                    height: 100%;
-                    width: 0%;
-                    background-color: #4caf50;
-                    animation: fillBar 5s linear forwards;
-                  "></div>
-                </div>
-              </div>
-            </div>
-            <div class="bg-image"></div>
-            <style>
-              @keyframes fillBar {
-                from { width: 0%; }
-                to { width: 100%; }
-              }
-            </style>
-          `;
-          setTimeout(discordLogin, 5000);
-        } else {
-          // Unauthorized
-          document.body.innerHTML = `
-            <div style="
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              height: 100vh;
-              margin: 0;
-              font-family: sans-serif;
-              background-size: cover;
-              background-position: center;
-            ">
-              <div style="
-                background-color: rgba(0, 0, 0, 0.7);
-                color: white;
-                padding: 2em;
-                margin: 5em;
-                border-radius: 12px;
-                text-align: center;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-              ">
-                <p style="margin-bottom: 1em;">${translateText("auth.not_authorized")}</p>
-                <p>${translateText("auth.contact_admin")}</p>
-              </div>
-            </div>
-            <div class="bg-image"></div>
-          `;
-        }
-        return;
-      } else if (userMeResponse === false) {
-        // Not logged in
-        this.patternsModal.onUserMe(null);
-      } else {
+      if (userMeResponse !== false) {
         // Authorized
         console.log(
           `Your player ID is ${userMeResponse.player.publicId}\n` +
             "Sharing this ID will allow others to view your game history and stats.",
         );
-        this.patternsModal.onUserMe(userMeResponse);
       }
     };
 
@@ -329,7 +300,9 @@ class Client {
     const settingsModal = document.querySelector(
       "user-setting",
     ) as UserSettingModal;
-    settingsModal instanceof UserSettingModal;
+    if (!settingsModal || !(settingsModal instanceof UserSettingModal)) {
+      console.warn("User settings modal element not found");
+    }
     document
       .getElementById("settings-button")
       ?.addEventListener("click", () => {
@@ -339,7 +312,9 @@ class Client {
     const hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
-    hostModal instanceof HostPrivateLobbyModal;
+    if (!hostModal || !(hostModal instanceof HostPrivateLobbyModal)) {
+      console.warn("Host private lobby modal element not found");
+    }
     const hostLobbyButton = document.getElementById("host-lobby-button");
     if (hostLobbyButton === null) throw new Error("Missing host-lobby-button");
     hostLobbyButton.addEventListener("click", () => {
@@ -352,7 +327,9 @@ class Client {
     this.joinModal = document.querySelector(
       "join-private-lobby-modal",
     ) as JoinPrivateLobbyModal;
-    this.joinModal instanceof JoinPrivateLobbyModal;
+    if (!this.joinModal || !(this.joinModal instanceof JoinPrivateLobbyModal)) {
+      console.warn("Join private lobby modal element not found");
+    }
     const joinPrivateLobbyButton = document.getElementById(
       "join-private-lobby-button",
     );
@@ -404,6 +381,8 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
+
+    this.initializeFuseTag();
   }
 
   private handleHash() {
@@ -503,16 +482,24 @@ class Client {
     }
     const config = await getServerConfigFromClient();
 
+    const pattern = this.userSettings.getSelectedPatternName(
+      await fetchCosmetics(),
+    );
+
     this.gameStop = joinLobby(
       this.eventBus,
       {
         gameID: lobby.gameID,
         serverConfig: config,
-        patternName: this.userSettings.getSelectedPatternName(),
-        flag:
-          this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
-            ? ""
-            : this.flagInput.getCurrentFlag(),
+        cosmetics: {
+          color: this.userSettings.getSelectedColor() ?? undefined,
+          patternName: pattern?.name ?? undefined,
+          patternColorPaletteName: pattern?.colorPalette?.name ?? undefined,
+          flag:
+            this.flagInput === null || this.flagInput.getCurrentFlag() === "xx"
+              ? ""
+              : this.flagInput.getCurrentFlag(),
+        },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,
@@ -538,7 +525,9 @@ class Client {
           "news-modal",
           "flag-input-modal",
           "account-button",
+          "stats-button",
           "token-login",
+          "matchmaking-modal",
         ].forEach((tag) => {
           const modal = document.querySelector(tag) as HTMLElement & {
             close?: () => void;
@@ -546,7 +535,7 @@ class Client {
           };
           if (modal?.close) {
             modal.close();
-          } else if ("isModalOpen" in modal) {
+          } else if (modal && "isModalOpen" in modal) {
             modal.isModalOpen = false;
           }
         });
@@ -559,19 +548,15 @@ class Client {
         const startingModal = document.querySelector(
           "game-starting-modal",
         ) as GameStartingModal;
-        startingModal instanceof GameStartingModal;
-        startingModal.show();
+        if (startingModal && startingModal instanceof GameStartingModal) {
+          startingModal.show();
+        }
+        this.gutterAds.hide();
       },
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
         incrementGamesPlayed();
-
-        try {
-          window.PageOS.session.newPageView();
-        } catch (e) {
-          console.error("Error calling newPageView", e);
-        }
 
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
@@ -593,6 +578,7 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
+    this.gutterAds.hide();
     this.publicLobby.leaveLobby();
   }
 
@@ -604,6 +590,28 @@ class Client {
       this.eventBus.emit(new SendKickPlayerIntentEvent(target));
     }
   }
+
+  private initializeFuseTag() {
+    const tryInitFuseTag = (): boolean => {
+      if (window.fusetag && typeof window.fusetag.pageInit === "function") {
+        console.log("initializing fuse tag");
+        window.fusetag.que.push(() => {
+          window.fusetag.pageInit({
+            blockingFuseIds: ["lhs_sticky_vrec", "rhs_sticky_vrec"],
+          });
+        });
+        return true;
+      } else {
+        return false;
+      }
+    };
+
+    const interval = setInterval(() => {
+      if (tryInitFuseTag()) {
+        clearInterval(interval);
+      }
+    }, 100);
+  }
 }
 
 // Initialize the client when the DOM is loaded
@@ -612,7 +620,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // WARNING: DO NOT EXPOSE THIS ID
-function getPlayToken(): string {
+export function getPlayToken(): string {
   const result = isLoggedIn();
   if (result !== false) return result.token;
   return getPersistentIDFromCookie();
@@ -649,16 +657,4 @@ function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
-}
-
-function hasAllowedFlare(
-  userMeResponse: UserMeResponse | false,
-  config: ServerConfig,
-) {
-  const allowed = config.allowedFlares();
-  if (allowed === undefined) return true;
-  if (userMeResponse === false) return false;
-  const flares = userMeResponse.player.flares;
-  if (flares === undefined) return false;
-  return allowed.length === 0 || allowed.some((f) => flares.includes(f));
 }

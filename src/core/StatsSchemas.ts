@@ -99,6 +99,8 @@ export const PlayerStatsSchema = z
   .object({
     attacks: AtLeastOneNumberSchema.optional(),
     betrayals: BigIntStringSchema.optional(),
+    killedAt: BigIntStringSchema.optional(),
+    conquests: BigIntStringSchema.optional(),
     boats: z.partialRecord(BoatUnitSchema, AtLeastOneNumberSchema).optional(),
     bombs: z.partialRecord(BombUnitSchema, AtLeastOneNumberSchema).optional(),
     gold: AtLeastOneNumberSchema.optional(),

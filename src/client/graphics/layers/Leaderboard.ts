@@ -14,6 +14,7 @@ interface Entry {
   gold: string;
   troops: string;
   isMyPlayer: boolean;
+  isOnSameTeam: boolean;
   player: PlayerView;
 }
 
@@ -99,13 +100,13 @@ export class Leaderboard extends LitElement implements Layer {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
-    const playersToShow = this.showTopFive ? sorted.slice(0, 5) : sorted;
+    const alivePlayers = sorted.filter((player) => player.isAlive());
+    const playersToShow = this.showTopFive
+      ? alivePlayers.slice(0, 5)
+      : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      let troops = player.troops() / 10;
-      if (!player.isAlive()) {
-        troops = 0;
-      }
+      const troops = player.troops() / 10;
       return {
         name: player.displayName(),
         position: index + 1,
@@ -115,6 +116,9 @@ export class Leaderboard extends LitElement implements Layer {
         gold: renderNumber(player.gold()),
         troops: renderNumber(troops),
         isMyPlayer: player === myPlayer,
+        isOnSameTeam:
+          myPlayer !== null &&
+          (player === myPlayer || player.isOnSameTeam(myPlayer)),
         player: player,
       };
     });
@@ -131,22 +135,22 @@ export class Leaderboard extends LitElement implements Layer {
         }
       }
 
-      let myPlayerTroops = myPlayer.troops() / 10;
-      if (!myPlayer.isAlive()) {
-        myPlayerTroops = 0;
+      if (myPlayer.isAlive()) {
+        const myPlayerTroops = myPlayer.troops() / 10;
+        this.players.pop();
+        this.players.push({
+          name: myPlayer.displayName(),
+          position: place,
+          score: formatPercentage(
+            myPlayer.numTilesOwned() / this.game.numLandTiles(),
+          ),
+          gold: renderNumber(myPlayer.gold()),
+          troops: renderNumber(myPlayerTroops),
+          isMyPlayer: true,
+          isOnSameTeam: true,
+          player: myPlayer,
+        });
       }
-      this.players.pop();
-      this.players.push({
-        name: myPlayer.displayName(),
-        position: place,
-        score: formatPercentage(
-          myPlayer.numTilesOwned() / this.game.numLandTiles(),
-        ),
-        gold: renderNumber(myPlayer.gold()),
-        troops: renderNumber(myPlayerTroops),
-        isMyPlayer: true,
-        player: myPlayer,
-      });
     }
 
     this.requestUpdate();
@@ -226,7 +230,7 @@ export class Leaderboard extends LitElement implements Layer {
             (p) => p.player.id(),
             (player) => html`
               <div
-                class="contents hover:bg-slate-600/60 ${player.isMyPlayer
+                class="contents hover:bg-slate-600/60 ${player.isOnSameTeam
                   ? "font-bold"
                   : ""} cursor-pointer"
                 @click=${() => this.handleRowClickPlayer(player.player)}

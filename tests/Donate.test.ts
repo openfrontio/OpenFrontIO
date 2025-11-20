@@ -120,7 +120,7 @@ describe("Donate gold to an ally", () => {
     donor.addGold(6000n);
     const donorGoldBefore = donor.gold();
     const recipientGoldBefore = recipient.gold();
-    game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000n));
+    game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000));
 
     for (let i = 0; i < 5; i++) {
       game.executeNextTick();
@@ -242,7 +242,7 @@ describe("Donate Gold to a non ally", () => {
     const donorGoldBefore = donor.gold();
     const recipientGoldBefore = donor.gold();
 
-    game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000n));
+    game.addExecution(new DonateGoldExecution(donor, recipientInfo.id, 5000));
     game.executeNextTick();
 
     // Gold should not be donated since they are not allies

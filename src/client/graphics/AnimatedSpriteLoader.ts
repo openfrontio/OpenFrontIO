@@ -1,4 +1,5 @@
 import miniBigSmoke from "../../../resources/sprites/bigsmoke.png";
+import buildingExplosion from "../../../resources/sprites/buildingExplosion.png";
 import conquestSword from "../../../resources/sprites/conquestSword.png";
 import dust from "../../../resources/sprites/dust.png";
 import miniExplosion from "../../../resources/sprites/miniExplosion.png";
@@ -88,6 +89,15 @@ const ANIMATED_SPRITE_CONFIG: Partial<Record<FxType, AnimatedSpriteConfig>> = {
     looping: false,
     originX: 9,
     originY: 9,
+  },
+  [FxType.BuildingExplosion]: {
+    url: buildingExplosion,
+    frameWidth: 17,
+    frameCount: 10,
+    frameDuration: 70,
+    looping: false,
+    originX: 8,
+    originY: 8,
   },
   [FxType.SinkingShip]: {
     url: sinkingShip,
@@ -188,8 +198,8 @@ export class AnimatedSpriteLoader {
     const baseImage = this.animatedSpriteImageMap.get(fxType);
     const config = ANIMATED_SPRITE_CONFIG[fxType];
     if (!baseImage || !config) return null;
-    const territoryColor = theme.territoryColor(owner);
-    const borderColor = theme.borderColor(owner);
+    const territoryColor = owner.territoryColor();
+    const borderColor = owner.borderColor();
     const spawnHighlightColor = theme.spawnHighlightColor();
     const key = `${fxType}-${owner.id()}`;
     let coloredCanvas: HTMLCanvasElement;

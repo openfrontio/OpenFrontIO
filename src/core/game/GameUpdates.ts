@@ -19,6 +19,7 @@ export interface GameUpdateViewData {
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
   playerNameViewData: Record<string, NameViewData>;
+  tickExecutionDuration?: number;
 }
 
 export interface ErrorUpdate {
@@ -123,6 +124,7 @@ export interface UnitUpdate {
   reachedTarget: boolean;
   retreating: boolean;
   targetable: boolean;
+  markedForDeletion: number | false;
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
@@ -160,6 +162,7 @@ export interface PlayerUpdate {
   allies: number[];
   embargoes: Set<PlayerID>;
   isTraitor: boolean;
+  traitorRemainingTicks?: number;
   targets: number[];
   outgoingEmojis: EmojiMessage[];
   outgoingAttacks: AttackUpdate[];
@@ -167,7 +170,8 @@ export interface PlayerUpdate {
   outgoingAllianceRequests: PlayerID[];
   alliances: AllianceView[];
   hasSpawned: boolean;
-  betrayals?: bigint;
+  betrayals: number;
+  lastDeleteUnitTick: Tick;
 }
 
 export interface AllianceView {
@@ -175,6 +179,7 @@ export interface AllianceView {
   other: PlayerID;
   createdAt: Tick;
   expiresAt: Tick;
+  hasExtensionRequest: boolean;
 }
 
 export interface AllianceRequestUpdate {

@@ -36,7 +36,11 @@ describe("InputHandler AutoUpgrade", () => {
 
     eventBus = new EventBus();
 
-    inputHandler = new InputHandler(mockCanvas, eventBus);
+    inputHandler = new InputHandler(
+      { attackRatio: 20, ghostStructure: null },
+      mockCanvas,
+      eventBus,
+    );
   });
 
   describe("Middle Mouse Button Handling", () => {
@@ -395,6 +399,60 @@ describe("InputHandler AutoUpgrade", () => {
       inputHandler["onPointerDown"](pointerEvent);
 
       expect(mockListener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Keybinds JSON parsing", () => {
+    beforeEach(() => {
+      localStorage.removeItem("settings.keybinds");
+    });
+
+    test("parses nested object values and flattens them to strings", () => {
+      const nested = {
+        moveUp: { key: "moveUp", value: "KeyZ" },
+      };
+      localStorage.setItem("settings.keybinds", JSON.stringify(nested));
+
+      inputHandler.initialize();
+
+      expect((inputHandler as any).keybinds.moveUp).toBe("KeyZ");
+    });
+
+    test("accepts legacy string values", () => {
+      localStorage.setItem(
+        "settings.keybinds",
+        JSON.stringify({ moveUp: "KeyX" }),
+      );
+
+      inputHandler.initialize();
+
+      expect((inputHandler as any).keybinds.moveUp).toBe("KeyX");
+    });
+
+    test("ignores non-string and 'Null' values and preserves defaults", () => {
+      const mixed = {
+        moveUp: { key: "moveUp", value: null },
+        moveLeft: "Null",
+      };
+      localStorage.setItem("settings.keybinds", JSON.stringify(mixed));
+
+      inputHandler.initialize();
+
+      // defaults from InputHandler should remain
+      expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
+      expect((inputHandler as any).keybinds.moveLeft).toBe("KeyA");
+    });
+
+    test("handles invalid JSON gracefully and warns", () => {
+      const spy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      localStorage.setItem("settings.keybinds", "not a json");
+
+      inputHandler.initialize();
+
+      expect(spy).toHaveBeenCalled();
+      // default remains when parsing fails
+      expect((inputHandler as any).keybinds.moveUp).toBe("KeyW");
+      spy.mockRestore();
     });
   });
 });
