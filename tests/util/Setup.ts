@@ -25,6 +25,7 @@ export async function setup(
   _gameConfig: Partial<GameConfig> = {},
   humans: PlayerInfo[] = [],
   currentDir: string = __dirname,
+  ConfigClass: typeof TestConfig = TestConfig,
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};
@@ -70,7 +71,7 @@ export async function setup(
     randomSpawn: false,
     ..._gameConfig,
   };
-  const config = new TestConfig(
+  const config = new ConfigClass(
     serverConfig,
     gameConfig,
     new UserSettings(),

@@ -101,6 +101,7 @@ export enum GameMapType {
   Montreal = "Montreal",
   Achiran = "Achiran",
   BaikalNukeWars = "Baikal (Nuke Wars)",
+  FourIslands = "Four Islands",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -143,6 +144,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.DeglaciatedAntarctica,
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
+    GameMapType.FourIslands,
   ],
 };
 
@@ -601,7 +603,7 @@ export interface Player {
   decayRelations(): void;
   isOnSameTeam(other: Player): boolean;
   // Either allied or on same team.
-  isFriendly(other: Player): boolean;
+  isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
   team(): Team | null;
   clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
