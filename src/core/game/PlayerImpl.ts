@@ -171,6 +171,10 @@ export class PlayerImpl implements Player {
             other: a.other(this).id(),
             createdAt: a.createdAt(),
             expiresAt: a.expiresAt(),
+            hasExtensionRequest:
+              a.expiresAt() <=
+              this.mg.ticks() +
+                this.mg.config().allianceExtensionPromptOffset(),
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
@@ -1221,35 +1225,5 @@ export class PlayerImpl implements Player {
 
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
     return bestShoreDeploymentSource(this.mg, this, targetTile);
-  }
-
-  // It's a probability list, so if an element appears twice it's because it's
-  // twice more likely to be picked later.
-  tradingPorts(port: Unit): Unit[] {
-    const ports = this.mg
-      .players()
-      .filter((p) => p !== port.owner() && p.canTrade(port.owner()))
-      .flatMap((p) => p.units(UnitType.Port))
-      .sort((p1, p2) => {
-        return (
-          this.mg.manhattanDist(port.tile(), p1.tile()) -
-          this.mg.manhattanDist(port.tile(), p2.tile())
-        );
-      });
-
-    const weightedPorts: Unit[] = [];
-
-    for (const [i, otherPort] of ports.entries()) {
-      const expanded = new Array(otherPort.level()).fill(otherPort);
-      weightedPorts.push(...expanded);
-      if (i < this.mg.config().proximityBonusPortsNb(ports.length)) {
-        weightedPorts.push(...expanded);
-      }
-      if (port.owner().isFriendly(otherPort.owner())) {
-        weightedPorts.push(...expanded);
-      }
-    }
-
-    return weightedPorts;
   }
 }
