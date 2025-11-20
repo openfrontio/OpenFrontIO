@@ -7,13 +7,26 @@ import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
+const encodeTileKey = (x: number, y: number): string => `${x},${y}`;
+
+type CachedSam = {
+  id: number;
+  owner: number;
+  x: number;
+  y: number;
+  radius: number;
+};
+
 /**
- * Layer responsible for rendering SAM launcher defense radiuses
+ * Layer responsible for rendering SAM launcher defense radiuses for the local player.
+ * Uses an offscreen canvas and cached metadata to minimize per-frame work.
  */
 export class SAMRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
-  private readonly samLaunchers: Map<number, number> = new Map(); // Track SAM launcher IDs -> ownerSmallID
+  private readonly samLaunchers: Map<number, CachedSam> = new Map();
+  private readonly samStacksByTile: Map<string, CachedSam[]> = new Map();
+  private cachedSamCircles: CachedSam[] = [];
   private needsRedraw = true;
   // track whether the stroke should be shown due to hover or due to an active build ghost
   private hoveredShow: boolean = false;
@@ -22,6 +35,8 @@ export class SAMRadiusLayer implements Layer {
   private dashOffset = 0;
   private rotationSpeed = 14; // px per second
   private lastTickTime = Date.now();
+  private myPlayerSmallId: number | undefined;
+  private samCachesDirty = true;
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
@@ -29,6 +44,13 @@ export class SAMRadiusLayer implements Layer {
     this.updateStrokeVisibility();
   }
 
+  /**
+   * Creates a SAM radius layer tied to the provided game view and UI state.
+   * @param game reactive game view reference
+   * @param eventBus global event bus for UI events
+   * @param transformHandler helper for camera transformations
+   * @param uiState shared UI state controlling toggle visibility
+   */
   constructor(
     private readonly game: GameView,
     private readonly eventBus: EventBus,
@@ -45,6 +67,7 @@ export class SAMRadiusLayer implements Layer {
     this.canvas.height = this.game.height();
   }
 
+  /** Initializes event listeners and builds the initial SAM caches. */
   init() {
     // Listen for game updates to detect SAM launcher changes
     // Also listen for UI toggle structure events so we can show borders when
@@ -53,6 +76,8 @@ export class SAMRadiusLayer implements Layer {
     this.eventBus.on(ToggleStructureEvent, (e) =>
       this.handleToggleStructure(e),
     );
+    this.syncMyPlayerSmallId();
+    this.ensureSamCaches();
     this.redraw();
   }
 
@@ -68,42 +93,39 @@ export class SAMRadiusLayer implements Layer {
     return true;
   }
 
+  /**
+   * Runs every frame to keep cached SAM data aligned with the game state and animate
+   * dashed stroke offsets when coverage is visible.
+   */
   tick() {
     // Check for updates to SAM launchers
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates?.[GameUpdateType.Unit];
 
-    if (unitUpdates) {
-      let hasChanges = false;
+    this.syncMyPlayerSmallId();
 
+    if (unitUpdates) {
       for (const update of unitUpdates) {
         const unit = this.game.unit(update.id);
+        const cached = this.samLaunchers.get(update.id);
+
         if (unit && unit.type() === UnitType.SAMLauncher) {
-          const wasTracked = this.samLaunchers.has(update.id);
-          const shouldTrack = unit.isActive();
-          const owner = unit.owner().smallID();
-
-          if (wasTracked && !shouldTrack) {
-            // SAM was destroyed
-            this.samLaunchers.delete(update.id);
-            hasChanges = true;
-          } else if (!wasTracked && shouldTrack) {
-            // New SAM was built
-            this.samLaunchers.set(update.id, owner);
-            hasChanges = true;
-          } else if (wasTracked && shouldTrack) {
-            // SAM still exists; check if owner changed
-            const prevOwner = this.samLaunchers.get(update.id);
-            if (prevOwner !== owner) {
-              this.samLaunchers.set(update.id, owner);
-              hasChanges = true;
-            }
+          const ownerSmallId = unit.owner().smallID();
+          if (ownerSmallId === this.myPlayerSmallId) {
+            this.samCachesDirty = true;
+            this.needsRedraw = true;
+            break;
           }
+          if (cached) {
+            this.samCachesDirty = true;
+            this.needsRedraw = true;
+            break;
+          }
+        } else if (!unit && cached) {
+          this.samCachesDirty = true;
+          this.needsRedraw = true;
+          break;
         }
-      }
-
-      if (hasChanges) {
-        this.needsRedraw = true;
       }
     }
 
@@ -142,38 +164,97 @@ export class SAMRadiusLayer implements Layer {
     );
   }
 
+  /** Redraws the offscreen canvas using the latest cached SAM circles. */
   redraw() {
     // Clear the canvas
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Get all active SAM launchers
+    const mySmallId = this.syncMyPlayerSmallId();
+    if (mySmallId === undefined) {
+      return;
+    }
+
+    this.ensureSamCaches();
+
+    this.drawCirclesUnion(
+      this.cachedSamCircles.map(({ id: _id, radius: r, ...rest }) => ({
+        ...rest,
+        r,
+      })),
+    );
+  }
+
+  /** Rebuilds cached SAM metadata when the dirty flag is set. */
+  private ensureSamCaches() {
+    if (!this.samCachesDirty) {
+      return;
+    }
+    this.rebuildSamCaches();
+    this.samCachesDirty = false;
+  }
+
+  /** Recomputes per-tile SAM stacks and flattened circles for the current player. */
+  private rebuildSamCaches() {
+    this.samStacksByTile.clear();
+    this.cachedSamCircles = [];
+    this.samLaunchers.clear();
+
+    const mySmallId = this.myPlayerSmallId;
+    if (mySmallId === undefined) {
+      return;
+    }
+
+    const config = this.game.config();
+
     const samLaunchers = this.game
       .units(UnitType.SAMLauncher)
-      .filter((unit) => unit.isActive());
+      .filter(
+        (unit) => unit.isActive() && unit.owner().smallID() === mySmallId,
+      );
 
-    // Update our tracking set
-    this.samLaunchers.clear();
-    samLaunchers.forEach((sam) =>
-      this.samLaunchers.set(sam.id(), sam.owner().smallID()),
-    );
-
-    // Draw union of SAM radiuses. Collect circle data then draw union outer arcs only
-    const circles = samLaunchers.map((sam) => {
+    for (const sam of samLaunchers) {
       const tile = sam.tile();
-      return {
-        x: this.game.x(tile),
-        y: this.game.y(tile),
-        r: this.game.config().samRange(sam.level()),
-        owner: sam.owner().smallID(),
+      const x = this.game.x(tile);
+      const y = this.game.y(tile);
+      const cached: CachedSam = {
+        id: sam.id(),
+        owner: mySmallId,
+        x,
+        y,
+        radius: config.samRange(sam.level()),
       };
-    });
 
-    this.drawCirclesUnion(circles);
+      this.cachedSamCircles.push(cached);
+      this.samLaunchers.set(sam.id(), cached);
+
+      const key = encodeTileKey(x, y);
+      const stack = this.samStacksByTile.get(key);
+      if (stack) {
+        stack.push(cached);
+      } else {
+        this.samStacksByTile.set(key, [cached]);
+      }
+    }
+  }
+
+  /** Keeps cached SAM data aligned with the current player's small ID. */
+  private syncMyPlayerSmallId(): number | undefined {
+    const current = this.game.myPlayer()?.smallID();
+    if (current !== this.myPlayerSmallId) {
+      this.myPlayerSmallId = current;
+      this.samCachesDirty = true;
+      if (current === undefined) {
+        this.samStacksByTile.clear();
+        this.cachedSamCircles = [];
+        this.samLaunchers.clear();
+      }
+    }
+    return this.myPlayerSmallId;
   }
 
   /**
-   * Draw union of multiple circles: fill the union, then stroke only the outer arcs
-   * so overlapping circles appear as one combined shape.
+   * Draws the union of cached SAM circles, optionally outlining exposed outer arcs.
+   * @param circles flattened list of circle descriptors
    */
   private drawCirclesUnion(
     circles: Array<{ x: number; y: number; r: number; owner: number }>,

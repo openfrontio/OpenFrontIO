@@ -510,11 +510,12 @@ export class DefaultConfig implements Config {
         };
       case UnitType.SAMLauncher:
         return {
-          cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(3_000_000, (numUnits + 1) * 1_500_000),
-            UnitType.SAMLauncher,
-          ),
+          cost: (player: Player) => {
+            if (player.type() === PlayerType.Human && this.infiniteGold()) {
+              return 0n;
+            }
+            return this.samBuildCost(player);
+          },
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
@@ -923,12 +924,38 @@ export class DefaultConfig implements Config {
   }
 
   samRange(level: number): number {
-    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
-    return this.maxSamRange() - 480 / (level + 5);
+    const clampedLevel = Math.max(1, Math.min(level, this.samMaxLevel())) - 1;
+    const hydrogenRange = this.nukeMagnitudes(UnitType.HydrogenBomb).outer;
+    const ranges = [this.defaultSamRange(), 85, hydrogenRange];
+    return ranges[Math.min(clampedLevel, ranges.length - 1)];
   }
 
   maxSamRange(): number {
-    return 150;
+    return this.samRange(this.samMaxLevel());
+  }
+
+  samBuildCost(player: Player): Gold {
+    const hasSam = player.unitsOwned(UnitType.SAMLauncher) > 0;
+    const cost = hasSam ? 3_000_000 : 1_500_000;
+    return BigInt(cost);
+  }
+
+  samUpgradeCost(player: Player, currentLevel: number): Gold {
+    if (player.type() === PlayerType.Human && this.infiniteGold()) {
+      return 0n;
+    }
+    switch (currentLevel) {
+      case 1:
+        return 3_000_000n;
+      case 2:
+        return 6_000_000n;
+      default:
+        return 0n;
+    }
+  }
+
+  samMaxLevel(): number {
+    return 3;
   }
 
   defaultSamMissileSpeed(): number {

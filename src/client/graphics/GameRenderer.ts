@@ -50,7 +50,10 @@ export function createRenderer(
   const transformHandler = new TransformHandler(game, eventBus, canvas);
   const userSettings = new UserSettings();
 
-  const uiState = { attackRatio: 20, ghostStructure: null } as UIState;
+  const uiState: UIState = {
+    attackRatio: 70,
+    ghostStructure: null,
+  };
 
   //hide when the game renders
   const startingModal = document.querySelector(

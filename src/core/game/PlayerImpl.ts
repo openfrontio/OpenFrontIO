@@ -902,38 +902,70 @@ export class PlayerImpl implements Player {
     if (unit.isMarkedForDeletion()) {
       return false;
     }
-    if (!this.mg.config().unitInfo(unit.type()).upgradable) {
+    const config = this.mg.config();
+    if (!config.unitInfo(unit.type()).upgradable) {
       return false;
     }
-    if (this.mg.config().isUnitDisabled(unit.type())) {
-      return false;
-    }
-    if (this._gold < this.mg.config().unitInfo(unit.type()).cost(this)) {
+    if (config.isUnitDisabled(unit.type())) {
       return false;
     }
     if (unit.owner() !== this) {
       return false;
     }
+
+    const cost = this.nextUpgradeCost(unit);
+    if (cost === null) {
+      return false;
+    }
+
+    if (this._gold < cost) {
+      return false;
+    }
+
     return true;
   }
 
   upgradeUnit(unit: Unit) {
-    const cost = this.mg.unitInfo(unit.type()).cost(this);
+    const cost = this.nextUpgradeCost(unit);
+    if (cost === null) {
+      return;
+    }
     this.removeGold(cost);
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
   }
 
+  private nextUpgradeCost(unit: Unit): Gold | null {
+    if (unit.type() === UnitType.SAMLauncher) {
+      const config = this.mg.config();
+      if (unit.level() >= config.samMaxLevel()) {
+        return null;
+      }
+      return config.samUpgradeCost(this, unit.level());
+    }
+    return this.mg.unitInfo(unit.type()).cost(this);
+  }
+
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
+    const config = this.mg.config();
     return Object.values(UnitType).map((u) => {
       let canUpgrade: number | false = false;
+      let upgradeLevel: number | null = null;
       if (!this.mg.inSpawnPhase()) {
         const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
         if (existingUnit !== false) {
           canUpgrade = existingUnit.id();
+          upgradeLevel = existingUnit.level();
         }
       }
+
+      const info = config.unitInfo(u);
+      let cost: Gold = info.cost(this);
+      if (u === UnitType.SAMLauncher && upgradeLevel !== null) {
+        cost = config.samUpgradeCost(this, upgradeLevel);
+      }
+
       return {
         type: u,
         canBuild:
@@ -941,7 +973,7 @@ export class PlayerImpl implements Player {
             ? false
             : this.canBuild(u, tile, validTiles),
         canUpgrade: canUpgrade,
-        cost: this.mg.config().unitInfo(u).cost(this),
+        cost: cost,
       } as BuildableUnit;
     });
   }
