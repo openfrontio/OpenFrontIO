@@ -9,6 +9,8 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { AlternateViewEvent } from "../../InputHandler";
 import { createCanvas, renderNumber, renderTroops } from "../../Utils";
 import {
+  computeAllianceClipPath,
+  createAllianceProgressIcon,
   getFirstPlacePlayer,
   getPlayerIcons,
   PlayerIconId,
@@ -49,6 +51,8 @@ export class NameLayer implements Layer {
     private transformHandler: TransformHandler,
     private eventBus: EventBus,
   ) {
+    this.shieldIconImage = new Image();
+    this.shieldIconImage.src = shieldIcon;
     this.shieldIconImage = new Image();
     this.shieldIconImage.src = shieldIcon;
   }
@@ -399,6 +403,69 @@ export class NameLayer implements Layer {
         emojiDiv.textContent = icon.text;
         emojiDiv.style.fontSize = `${iconSize}px`;
       } else if (icon.kind === "image" && icon.src) {
+        // Special handling for alliance icon with progress indicator
+        if (icon.id === "alliance") {
+          let allianceWrapper = render.icons.get(icon.id) as
+            | HTMLDivElement
+            | undefined;
+
+          const myPlayer = this.game.myPlayer();
+          const allianceView = myPlayer
+            ?.alliances()
+            .find((a) => a.other === render.player.id());
+
+          let fraction = 0;
+          let hasExtensionRequest = false;
+          if (allianceView) {
+            const remaining = Math.max(
+              0,
+              allianceView.expiresAt - this.game.ticks(),
+            );
+            const duration = Math.max(1, this.game.config().allianceDuration());
+            fraction = Math.max(0, Math.min(1, remaining / duration));
+            hasExtensionRequest = allianceView.hasExtensionRequest;
+          }
+
+          if (!allianceWrapper) {
+            allianceWrapper = createAllianceProgressIcon(
+              iconSize,
+              fraction,
+              hasExtensionRequest,
+              this.userSettings.darkMode(),
+            );
+            iconsDiv.appendChild(allianceWrapper);
+            render.icons.set(icon.id, allianceWrapper);
+          } else {
+            // Update existing alliance icon
+            allianceWrapper.style.width = `${iconSize}px`;
+            allianceWrapper.style.height = `${iconSize}px`;
+
+            const overlay = allianceWrapper.querySelector(
+              ".alliance-progress-overlay",
+            ) as HTMLDivElement | null;
+            if (overlay) {
+              overlay.style.clipPath = computeAllianceClipPath(fraction);
+            }
+
+            const questionMark = allianceWrapper.querySelector(
+              ".alliance-question-mark",
+            ) as HTMLImageElement | null;
+            if (questionMark) {
+              questionMark.style.display = hasExtensionRequest
+                ? "block"
+                : "none";
+            }
+
+            // Update inner image sizes
+            const imgs = allianceWrapper.getElementsByTagName("img");
+            for (const img of imgs) {
+              img.style.width = `${iconSize}px`;
+              img.style.height = `${iconSize}px`;
+            }
+          }
+          continue; // Skip regular image handling
+        }
+
         let imgElement = render.icons.get(icon.id) as
           | HTMLImageElement
           | undefined;

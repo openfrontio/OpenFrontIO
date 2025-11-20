@@ -102,7 +102,6 @@ export class PlayerImpl implements Player {
   public _outgoingLandAttacks: Attack[] = [];
 
   private _hasSpawned = false;
-  private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
 
   constructor(
@@ -172,6 +171,10 @@ export class PlayerImpl implements Player {
             other: a.other(this).id(),
             createdAt: a.createdAt(),
             expiresAt: a.expiresAt(),
+            hasExtensionRequest:
+              a.expiresAt() <=
+              this.mg.ticks() +
+                this.mg.config().allianceExtensionPromptOffset(),
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
@@ -346,14 +349,6 @@ export class PlayerImpl implements Player {
 
   setHasSpawned(hasSpawned: boolean): void {
     this._hasSpawned = hasSpawned;
-  }
-
-  setSpawnTile(spawnTile: TileRef): void {
-    this._spawnTile = spawnTile;
-  }
-
-  spawnTile(): TileRef | undefined {
-    return this._spawnTile;
   }
 
   incomingAllianceRequests(): AllianceRequest[] {
