@@ -36,6 +36,9 @@ export class AllianceExtensionExecution implements Execution {
       return;
     }
 
+    // Check if this is a new request (before adding it)
+    const wasOnlyOneAgreed = alliance.onlyOneAgreedToExtend();
+
     // Mark this player's intent to extend
     alliance.addExtensionRequest(this.from);
 
@@ -52,6 +55,16 @@ export class AllianceExtensionExecution implements Execution {
       mg.displayMessage(
         "events_display.alliance_renewed",
         MessageType.ALLIANCE_ACCEPTED,
+        this.toID,
+        undefined,
+        { name: this.from.displayName() },
+      );
+    } else if (alliance.onlyOneAgreedToExtend() && !wasOnlyOneAgreed) {
+      // Send message to the other player that someone wants to renew
+      // Only send if this is a new request (transition from "none" to "one")
+      mg.displayMessage(
+        "events_display.wants_to_renew_alliance",
+        MessageType.RENEW_ALLIANCE,
         this.toID,
         undefined,
         { name: this.from.displayName() },

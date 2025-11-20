@@ -28,6 +28,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
+import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
@@ -221,6 +222,33 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     return renderDuration(remainingSeconds);
   }
 
+  private renderPlayerNameIcons(player: PlayerView) {
+    const firstPlace = getFirstPlacePlayer(this.game);
+    const icons = getPlayerIcons({
+      game: this.game,
+      player,
+      // Because we already show the alliance icon next to the alliance expiration timer, we don't need to show it a second time in this render
+      includeAllianceIcon: false,
+      firstPlace,
+    });
+
+    if (icons.length === 0) {
+      return html``;
+    }
+
+    return html`<span class="flex items-center gap-1 ml-1 shrink-0">
+      ${icons.map((icon) =>
+        icon.kind === "emoji" && icon.text
+          ? html`<span class="text-sm shrink-0" translate="no"
+              >${icon.text}</span
+            >`
+          : icon.kind === "image" && icon.src
+            ? html`<img src=${icon.src} alt="" class="w-4 h-4 shrink-0" />`
+            : html``,
+      )}
+    </span>`;
+  }
+
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
@@ -306,7 +334,8 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   src=${"/flags/" + player.cosmetics.flag! + ".svg"}
                 />`
             : html``}
-          ${player.name()}
+          <span>${player.name()}</span>
+          ${this.renderPlayerNameIcons(player)}
         </button>
 
         <!-- Collapsible section -->

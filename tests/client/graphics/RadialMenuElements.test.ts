@@ -299,16 +299,18 @@ describe("RadialMenuElements", () => {
       expect(rootMenuElement.disabled(mockParams)).toBe(false);
     });
 
-    it("should show build menu on own territory", () => {
+    it("should show build and delete menu on own territory", () => {
       const subMenu = rootMenuElement.subMenu!(mockParams);
       const buildMenu = subMenu.find((item) => item.id === Slot.Build);
       const attackMenu = subMenu.find((item) => item.id === Slot.Attack);
+      const deleteMenu = subMenu.find((item) => item.id === Slot.Delete);
 
       expect(buildMenu).toBeDefined();
       expect(attackMenu).toBeUndefined();
+      expect(deleteMenu).toBeDefined();
     });
 
-    it("should show attack menu on enemy territory", () => {
+    it("should show attack and boat menu on enemy territory", () => {
       const enemyPlayer = {
         id: () => 2,
         isPlayer: jest.fn(() => true),
@@ -318,18 +320,18 @@ describe("RadialMenuElements", () => {
       const subMenu = rootMenuElement.subMenu!(mockParams);
       const buildMenu = subMenu.find((item) => item.id === Slot.Build);
       const attackMenu = subMenu.find((item) => item.id === Slot.Attack);
+      const boatMenu = subMenu.find((item) => item.id === Slot.Boat);
 
       expect(attackMenu).toBeDefined();
       expect(buildMenu).toBeUndefined();
+      expect(boatMenu).toBeDefined();
     });
 
-    it("should include info and boat menus in both cases", () => {
+    it("should include info menu in both cases", () => {
       const subMenu = rootMenuElement.subMenu!(mockParams);
       const infoMenu = subMenu.find((item) => item.id === Slot.Info);
-      const boatMenu = subMenu.find((item) => item.id === Slot.Boat);
 
       expect(infoMenu).toBeDefined();
-      expect(boatMenu).toBeDefined();
     });
 
     it("should handle ally menu correctly", () => {

@@ -19,6 +19,7 @@ export interface GameUpdateViewData {
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
   playerNameViewData: Record<string, NameViewData>;
+  tickExecutionDuration?: number;
 }
 
 export interface ErrorUpdate {
@@ -178,6 +179,7 @@ export interface AllianceView {
   other: PlayerID;
   createdAt: Tick;
   expiresAt: Tick;
+  hasExtensionRequest: boolean;
 }
 
 export interface AllianceRequestUpdate {

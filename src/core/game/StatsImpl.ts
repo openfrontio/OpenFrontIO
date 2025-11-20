@@ -287,4 +287,6 @@ export class StatsImpl implements Stats {
   playerKilled(player: Player, tick: number): void {
     this._addPlayerKilled(player, tick);
   }
+
+  lobbyFillTime(fillTimeMs: number): void {}
 }

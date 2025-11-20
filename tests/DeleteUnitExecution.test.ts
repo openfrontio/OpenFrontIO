@@ -53,6 +53,8 @@ describe("DeleteUnitExecution Security Tests", () => {
       game.executeNextTick();
     }
 
+    executeTicks(game, game.config().deleteUnitCooldown() + 1);
+
     player = game.player(player1Info.id);
     enemyPlayer = game.player(player2Info.id);
 
@@ -67,6 +69,9 @@ describe("DeleteUnitExecution Security Tests", () => {
     if (!tileOwner.isPlayer() || tileOwner.id() !== player.id()) {
       throw new Error("Unit is not on player's territory");
     }
+
+    game.config().deleteUnitCooldown = () => 10;
+    game.config().deletionMarkDuration = () => 10;
   });
 
   describe("Security Validations", () => {

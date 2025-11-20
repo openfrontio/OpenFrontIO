@@ -19,6 +19,7 @@ import {
   DragEvent,
   MouseOverEvent,
 } from "../../InputHandler";
+import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -399,7 +400,9 @@ export class TerritoryLayer implements Layer {
       now > this.lastRefresh + this.refreshRate
     ) {
       this.lastRefresh = now;
+      const renderTerritoryStart = FrameProfiler.start();
       this.renderTerritory();
+      FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
 
       const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
       const vx0 = Math.max(0, topLeft.x);
@@ -411,6 +414,7 @@ export class TerritoryLayer implements Layer {
       const h = vy1 - vy0 + 1;
 
       if (w > 0 && h > 0) {
+        const putImageStart = FrameProfiler.start();
         this.context.putImageData(
           this.alternativeView ? this.alternativeImageData : this.imageData,
           0,
@@ -420,9 +424,11 @@ export class TerritoryLayer implements Layer {
           w,
           h,
         );
+        FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
       }
     }
 
+    const drawCanvasStart = FrameProfiler.start();
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
@@ -430,13 +436,19 @@ export class TerritoryLayer implements Layer {
       this.game.width(),
       this.game.height(),
     );
+    FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
     if (this.game.inSpawnPhase()) {
+      const highlightDrawStart = FrameProfiler.start();
       context.drawImage(
         this.highlightCanvas,
         -this.game.width() / 2,
         -this.game.height() / 2,
         this.game.width(),
         this.game.height(),
+      );
+      FrameProfiler.end(
+        "TerritoryLayer:drawHighlightCanvas",
+        highlightDrawStart,
       );
     }
   }

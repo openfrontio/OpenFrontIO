@@ -1,7 +1,7 @@
 import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "../src/core/execution/alliance/AllianceRequestReplyExecution";
-import { Game, Player, PlayerType } from "../src/core/game/Game";
+import { Game, MessageType, Player, PlayerType } from "../src/core/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
@@ -118,5 +118,51 @@ describe("AllianceExtensionExecution", () => {
 
     expect(expirationAfter).toBeGreaterThan(expirationBefore);
     expect(allianceSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test("Sends message to other player when one player requests renewal", () => {
+    jest.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    jest.spyOn(player2, "isAlive").mockReturnValue(true);
+    jest.spyOn(player1, "isAlive").mockReturnValue(true);
+
+    // Create alliance between player1 and player2
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick();
+    game.executeNextTick();
+
+    game.addExecution(
+      new AllianceRequestReplyExecution(player1.id(), player2, true),
+    );
+    game.executeNextTick();
+    game.executeNextTick();
+
+    expect(player1.allianceWith(player2)).toBeTruthy();
+    expect(player2.allianceWith(player1)).toBeTruthy();
+
+    // Spy on displayMessage to verify it's called
+    const displayMessageSpy = jest.spyOn(game, "displayMessage");
+
+    // Player1 requests renewal
+    game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
+    game.executeNextTick();
+
+    // Verify message was sent to player2
+    expect(displayMessageSpy).toHaveBeenCalledWith(
+      "events_display.wants_to_renew_alliance",
+      MessageType.RENEW_ALLIANCE,
+      player2.id(),
+      undefined,
+      { name: player1.displayName() },
+    );
+    expect(displayMessageSpy).toHaveBeenCalledTimes(1);
+
+    // Request again - should not send duplicate message
+    game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
+    game.executeNextTick();
+
+    // Should still be called only once (no duplicate)
+    expect(displayMessageSpy).toHaveBeenCalledTimes(1);
+
+    displayMessageSpy.mockRestore();
   });
 });

@@ -28,6 +28,7 @@ export class TerritoryPatternsModal extends LitElement {
   @state() private selectedColor: string | null = null;
 
   @state() private activeTab: "patterns" | "colors" = "patterns";
+  @state() private showOnlyOwned: boolean = false;
 
   private cosmetics: Cosmetics | null = null;
 
@@ -112,6 +113,9 @@ export class TerritoryPatternsModal extends LitElement {
         if (rel === "blocked") {
           continue;
         }
+        if (this.showOnlyOwned && rel !== "owned") {
+          continue;
+        }
         buttons.push(html`
           <pattern-button
             .pattern=${pattern}
@@ -128,19 +132,34 @@ export class TerritoryPatternsModal extends LitElement {
     }
 
     return html`
-      <div
-        class="flex flex-wrap gap-4 p-2"
-        style="justify-content: center; align-items: flex-start;"
-      >
-        ${this.affiliateCode === null
-          ? html`
-              <pattern-button
-                .pattern=${null}
-                .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
-              ></pattern-button>
-            `
-          : html``}
-        ${buttons}
+      <div class="flex flex-col gap-2">
+        <div class="flex justify-center">
+          <button
+            class="px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg ${this
+              .showOnlyOwned
+              ? "bg-blue-500 text-white hover:bg-blue-600"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"}"
+            @click=${() => {
+              this.showOnlyOwned = !this.showOnlyOwned;
+            }}
+          >
+            ${translateText("territory_patterns.show_only_owned")}
+          </button>
+        </div>
+        <div
+          class="flex flex-wrap gap-4 p-2"
+          style="justify-content: center; align-items: flex-start;"
+        >
+          ${this.affiliateCode === null
+            ? html`
+                <pattern-button
+                  .pattern=${null}
+                  .onSelect=${(p: Pattern | null) => this.selectPattern(null)}
+                ></pattern-button>
+              `
+            : html``}
+          ${buttons}
+        </div>
       </div>
     `;
   }

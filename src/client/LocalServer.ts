@@ -84,6 +84,7 @@ export class LocalServer {
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
       turns: [],
+      lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
     } satisfies ServerStartGameMessage);
   }
 
@@ -235,7 +236,7 @@ export class LocalServer {
   }
 }
 
-async function compress(data: string): Promise<Uint8Array> {
+async function compress(data: string): Promise<ArrayBuffer> {
   const stream = new CompressionStream("gzip");
   const writer = stream.writable.getWriter();
   const reader = stream.readable.getReader();
@@ -264,5 +265,5 @@ async function compress(data: string): Promise<Uint8Array> {
     offset += chunk.length;
   }
 
-  return compressedData;
+  return compressedData.buffer;
 }
