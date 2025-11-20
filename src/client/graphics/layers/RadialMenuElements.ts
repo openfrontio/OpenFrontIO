@@ -638,38 +638,8 @@ export const centerButtonElement: CenterButtonElement = {
 
 // Helper function to check if we should show Donate Troops
 function shouldShowDonateTroops(params: MenuElementParams): boolean {
-  // First check if donations are enabled in game config
-  const donateTroopsEnabled = Boolean(
-    params.game.config().donateTroops ?? false,
-  );
-
-  if (!donateTroopsEnabled) return false;
-
-  // Only allow donating troops to teammates or allies
-  if (!params.selected) return false;
-
-  const isTeammate = params.myPlayer.isOnSameTeam(params.selected);
-  const isAlly = params.myPlayer.isAlliedWith(params.selected);
-
-  if (!isTeammate && !isAlly) return false;
-
   // Check if player can donate troops
-  if (!params.playerActions?.interaction?.canDonateTroops) return false;
-
-  // Check game mode and user setting
-  const gameMode = params.game.config().gameConfig().gameMode;
-
-  // In FFA games, only show if the user setting is enabled
-  if (gameMode === GameMode.FFA) {
-    const quickDonateButtonsInFFA = params.game
-      .config()
-      .userSettings()
-      .quickDonateButtonsInFFA();
-    if (!quickDonateButtonsInFFA) return false;
-  }
-
-  // In Team games, always show (when donations are enabled)
-  return true;
+  return !!params.playerActions?.interaction?.canDonateTroops;
 }
 
 export const rootMenuElement: MenuElement = {
