@@ -1,0 +1,143 @@
+{
+  "name": "Caribbean",
+  "nations": [
+    {
+      "coordinates": [450, 450],
+      "name": "Florida",
+      "strength": 2,
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [340, 160],
+      "name": "Georgia",
+      "strength": 1,
+      "flag": "Georgia_US"
+    },
+    {
+      "coordinates": [666, 30],
+      "name": "North Carolina",
+      "strength": 1,
+      "flag": "North_Carolina"
+    },
+    {
+      "coordinates": [555, 135],
+      "name": "South Carolina",
+      "strength": 1,
+      "flag": "South_Carolina"
+    },
+    {
+      "coordinates": [200, 250],
+      "name": "Alabama",
+      "strength": 1,
+      "flag": "Alabama"
+    },
+    {
+      "coordinates": [50, 200],
+      "name": "Mississippi",
+      "strength": 3,
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [50, 900],
+      "name": "Mexico",
+      "strength": 2,
+      "flag": "mx"
+    },
+    {
+      "coordinates": [20, 1150],
+      "name": "Guatemala",
+      "strength": 1,
+      "flag": "gt"
+    },
+    {
+      "coordinates": [90, 1030],
+      "name": "Belize",
+      "strength": 1,
+      "flag": "bz"
+    },
+    {
+      "coordinates": [110, 1215],
+      "name": "El Salvador",
+      "strength": 1,
+      "flag": "sv"
+    },
+    {
+      "coordinates": [20, 1150],
+      "name": "Honduras",
+      "strength": 1,
+      "flag": "hn"
+    },
+  {
+    "coordinates": [333, 1200],
+    "name": "Nicaragua",
+    "strength": 1,
+    "flag": "ni"
+  },
+  {
+    "coordinates": [340, 1400],
+    "name": "Costa Rica",
+    "strength": 1,
+    "flag": "cr"
+  },
+  {
+    "coordinates": [530, 1450],
+    "name": "Panama",
+    "strength": 1,
+    "flag": "pa"
+  },
+  {
+    "coordinates": [750, 1550],
+    "name": "Colombia",
+    "strength": 1,
+    "flag": "co"
+  },
+  {
+    "coordinates": [1050, 1350],
+    "name": "Venezuela",
+    "strength": 1,
+    "flag": "ve"
+  },
+  {
+    "coordinates": [1145, 1600],
+    "name": "Amazonas",
+    "strength": 1,
+    "flag": "Amazonas"
+  },
+  {
+    "coordinates": [1600, 1600],
+    "name": "Guyana",
+    "strength": 1,
+    "flag": "gy"
+  },
+  {
+    "coordinates": [640, 625],
+    "name": "Bahamas",
+    "strength": 1,
+    "flag": "bs"
+  },
+  {
+    "coordinates": [700, 825],
+    "name": "Cuba",
+    "strength": 1,
+    "flag": "cu"
+  },
+  {
+    "coordinates": [950, 900],
+    "name": "Haiti",
+    "strength": 1,
+    "flag": "ht"
+  },
+  {
+    "coordinates": [1050, 925],
+    "name": "Dominican Republic",
+    "strength": 1,
+    "flag": "do"
+  },
+  {
+    "coordinates": [1240, 960],
+    "name": "Puerto Rico",
+    "strength": 1,
+    "flag": "pr"
+  }
+  ]
+}
