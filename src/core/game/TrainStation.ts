@@ -139,7 +139,6 @@ export class TrainStation {
   private railroads: Set<Railroad> = new Set();
   // Quick lookup from neighboring station to connecting railroad
   private railroadByNeighbor: Map<TrainStation, Railroad> = new Map();
-
   // Batman routing properties - now using IDs for memory efficiency
   private routingTable: Map<number, RoutingEntry> = new Map();
   private sequenceNumber: number = 0;
