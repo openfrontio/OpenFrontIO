@@ -78,6 +78,13 @@ export class GameImpl implements Game {
   private updates: GameUpdates = createGameUpdatesMap();
   private unitGrid: UnitGrid;
 
+  // Train statistics tracking
+  private arrivalsSinceLastPrint = 0;
+  private completedStepsSinceLastPrint = 0;
+  private activeTrainSteps = 0; // total steps taken by currently active trains (updated each tick)
+  private lastStatsPrint = 0; // last time we printed stats
+  private hopLimitRemovalsSinceLastPrint = 0;
+
   private playerTeams: Team[];
   private botTeam: Team = ColoredTeams.Bot;
   private _railNetwork: RailNetwork = createRailNetwork(this);
@@ -347,12 +354,21 @@ export class GameImpl implements Game {
 
   executeNextTick(): GameUpdates {
     this.updates = createGameUpdatesMap();
+
+    // Reset active train steps counter for this tick
+    this.activeTrainSteps = 0;
+
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
         e.isActive()
       ) {
         e.tick(this._ticks);
+
+        // Track steps for active trains
+        if (e.constructor.name === "TrainExecution") {
+          this.activeTrainSteps += (e as any).journeyHopCount ?? 0;
+        }
       }
     });
     const inited: Execution[] = [];
@@ -381,6 +397,13 @@ export class GameImpl implements Game {
         hash: this.hash(),
       });
     }
+
+    // Print train statistics every 60 ticks (~60 seconds)
+    if (this._ticks - this.lastStatsPrint >= 60) {
+      this.printTrainStats();
+      this.lastStatsPrint = this._ticks;
+    }
+
     this._ticks++;
     return this.updates;
   }
@@ -438,6 +461,53 @@ export class GameImpl implements Game {
     this.unInitExecs = this.unInitExecs.filter(
       (execution) => execution !== exec,
     );
+  }
+
+  // Train statistics tracking methods
+  recordTrainArrival(steps: number) {
+    this.arrivalsSinceLastPrint++;
+    this.completedStepsSinceLastPrint += steps;
+  }
+
+  recordTrainRemovedDueToHopLimit(_steps: number) {
+    this.hopLimitRemovalsSinceLastPrint++;
+  }
+
+  getActiveTrainCount(): number {
+    return this.executions().filter(
+      (exec) => exec.constructor.name === "TrainExecution" && exec.isActive(),
+    ).length;
+  }
+
+  getAverageCompletedTrainSteps(): number {
+    if (this.arrivalsSinceLastPrint === 0) return 0;
+    return this.completedStepsSinceLastPrint / this.arrivalsSinceLastPrint;
+  }
+
+  getAverageActiveTrainSteps(): number {
+    const activeTrains = this.getActiveTrainCount();
+    if (activeTrains === 0) return 0;
+
+    // Return average steps for currently active trains
+    return this.activeTrainSteps / activeTrains;
+  }
+
+  printTrainStats() {
+    const arrivalsLastInterval = this.arrivalsSinceLastPrint;
+    const activeTrains = this.getActiveTrainCount();
+    const avgCompletedSteps =
+      Math.round(this.getAverageCompletedTrainSteps() * 100) / 100;
+    const avgActiveSteps =
+      Math.round(this.getAverageActiveTrainSteps() * 100) / 100;
+    const hopLimitRemovals = this.hopLimitRemovalsSinceLastPrint;
+
+    console.log(
+      `🚂 Trains: ${arrivalsLastInterval} arrived (${avgCompletedSteps} avg steps), ${activeTrains} active (${avgActiveSteps} avg steps), ${hopLimitRemovals} removed (hop limit)`,
+    );
+
+    this.arrivalsSinceLastPrint = 0;
+    this.completedStepsSinceLastPrint = 0;
+    this.hopLimitRemovalsSinceLastPrint = 0;
   }
 
   playerView(id: PlayerID): Player {
