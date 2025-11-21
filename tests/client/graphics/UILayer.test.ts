@@ -30,6 +30,31 @@ describe("UILayer", () => {
     };
     eventBus = { on: jest.fn() };
     transformHandler = {};
+
+    // Mock the HTMLCanvasElement.prototype.getContext method
+    jest
+      .spyOn(HTMLCanvasElement.prototype, "getContext")
+      .mockReturnValue({
+        clearRect: jest.fn(),
+        fillRect: jest.fn(),
+        beginPath: jest.fn(),
+        arc: jest.fn(),
+        fill: jest.fn(),
+        stroke: jest.fn(),
+        measureText: jest.fn(() => ({ width: 10 })),
+        fillText: jest.fn(),
+        save: jest.fn(),
+        restore: jest.fn(),
+        translate: jest.fn(),
+        rotate: jest.fn(),
+        drawImage: jest.fn(),
+        setTransform: jest.fn(),
+        globalAlpha: 1,
+        fillStyle: "",
+        strokeStyle: "",
+        lineWidth: 1,
+        font: "",
+      } as unknown as CanvasRenderingContext2D);
   });
 
   it("should initialize and redraw canvas", () => {

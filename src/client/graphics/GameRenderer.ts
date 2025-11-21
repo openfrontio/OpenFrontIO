@@ -24,6 +24,7 @@ import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
+import { PingTrajectoryPreviewLayer } from "./layers/PingTrajectoryPreviewLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
@@ -204,13 +205,13 @@ export function createRenderer(
   headsUpMessage.game = game;
 
   const structureLayer = new StructureLayer(game, eventBus, transformHandler);
-  const samRadiusLayer = new SAMRadiusLayer(
-    game,
-    eventBus,
-    transformHandler,
-    uiState,
-  );
-
+      const samRadiusLayer = new SAMRadiusLayer(
+        game,
+        eventBus,
+        transformHandler,
+        uiState,
+      );
+      const pingTrajectoryPreviewLayer = new PingTrajectoryPreviewLayer(game, eventBus, transformHandler);
   const performanceOverlay = document.querySelector(
     "performance-overlay",
   ) as PerformanceOverlay;
@@ -243,9 +244,10 @@ export function createRenderer(
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
+    new FxLayer(game, eventBus),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
+    pingTrajectoryPreviewLayer,
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
@@ -292,6 +294,7 @@ export function createRenderer(
 
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
+  private inputHandler: InputHandler;
 
   constructor(
     private game: GameView,
@@ -305,9 +308,11 @@ export class GameRenderer {
     const context = canvas.getContext("2d");
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
+    this.inputHandler = new InputHandler(uiState, canvas, eventBus, transformHandler);
   }
 
   initialize() {
+    this.inputHandler.initialize();
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
 
