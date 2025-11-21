@@ -38,15 +38,12 @@ export class Railroad {
     return this.tiles.length;
   }
 
-  /**
-   * Dynamic fare based on railroad length and current busyness.
-   * Longer railroads cost more, but overcrowded edges become less profitable.
-   * Uses integer math to keep amounts precise.
-   */
   getFare(): bigint {
-    const baseFare = BigInt(this.getLength() * 100); // Base fare proportional to length
-    const busynessFactor = Math.max(1, 10 - this.trainCount); // 10,9,...,1 (capped)
-    return (baseFare * BigInt(busynessFactor)) / 10n;
+    const lengthFare = BigInt(this.getLength() * 100); // Base fare proportional to length
+    // Busy railroads should be more expensive: each train adds a congestion premium
+    const congestionFactor = BigInt(1 + this.trainCount); // 1,2,3,...
+    const congestionFare = (lengthFare * congestionFactor) / 10n;
+    return lengthFare + congestionFare;
   }
 }
 
