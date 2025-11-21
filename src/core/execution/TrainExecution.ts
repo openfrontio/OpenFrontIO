@@ -1,7 +1,6 @@
 import {
   Execution,
   Game,
-  MessageType,
   Player,
   TrainType,
   Unit,
@@ -112,15 +111,12 @@ export class TrainExecution implements Execution {
     const rail = railroad.getRailroad();
     rail.incrementTrainCount();
     const fare = rail.getFare();
-    this.player.addGold(-fare, railroad.getStart().tile());
-    if (this.mg) {
-      this.mg.displayMessage(
-        "Paid railroad fare",
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
-        this.player.id(),
-        -fare,
-      );
-    }
+    const tiles = railroad.getTiles();
+    const midTile =
+      tiles.length > 0
+        ? tiles[Math.floor(tiles.length / 2)]
+        : railroad.getStart().tile();
+    this.player.addGold(-fare, midTile);
   }
 
   private leaveRailroad() {
