@@ -109,7 +109,8 @@ export class TrainExecution implements Execution {
 
   private enterRailroad(railroad: OrientedRailroad) {
     const rail = railroad.getRailroad();
-    rail.incrementTrainCount();
+    const ticks = this.mg ? this.mg.ticks() : 0;
+    rail.incrementTrainCount(ticks);
     const fare = rail.getFare();
     const tiles = railroad.getTiles();
     const midTile =
@@ -124,7 +125,12 @@ export class TrainExecution implements Execution {
       return;
     }
     const rail = this.currentRailroad.getRailroad();
-    rail.decrementTrainCount();
+    const ticks = this.mg ? this.mg.ticks() : 0;
+    rail.decrementTrainCount(ticks);
+    // Update client-side coloring when fare changes significantly
+    if (this.mg !== null) {
+      rail.updateFare(this.mg);
+    }
   }
 
   init(mg: Game, ticks: number): void {

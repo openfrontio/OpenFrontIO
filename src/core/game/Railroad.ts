@@ -1,10 +1,18 @@
-import { Game } from "./Game";
+import { Game, Tick } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { TrainStation } from "./TrainStation";
 
+const CONGESTION_EMA_ALPHA = 0.2;
+
 export class Railroad {
   private trainCount: number = 0;
+  private congestionEma: number = 0;
+  private lastCongestionTick: Tick | null = null;
+  // Geometry of this railroad once construction is computed
+  private railTiles: RailTile[] | null = null;
+  // Last fare used for client-side coloring
+  private lastFare: bigint | null = null;
 
   constructor(
     public from: TrainStation,
@@ -26,12 +34,39 @@ export class Railroad {
     this.to.removeRailroad(this);
   }
 
-  incrementTrainCount(): void {
+  incrementTrainCount(currentTick: Tick): void {
     this.trainCount++;
+    this.updateCongestionEma(currentTick);
   }
 
-  decrementTrainCount(): void {
+  decrementTrainCount(currentTick: Tick): void {
     this.trainCount = Math.max(0, this.trainCount - 1);
+    this.updateCongestionEma(currentTick);
+  }
+
+  private updateCongestionEma(currentTick: Tick): void {
+    if (this.lastCongestionTick === null) {
+      this.lastCongestionTick = currentTick;
+      this.congestionEma = this.trainCount;
+      return;
+    }
+
+    const deltaTicks = currentTick - this.lastCongestionTick;
+    this.lastCongestionTick = currentTick;
+
+    if (deltaTicks <= 0) {
+      // Fallback to single-step EMA if ticks didn't advance
+      const alpha = CONGESTION_EMA_ALPHA;
+      this.congestionEma =
+        alpha * this.trainCount + (1 - alpha) * this.congestionEma;
+      return;
+    }
+
+    const base = 1 - CONGESTION_EMA_ALPHA;
+    const decay = Math.pow(base, deltaTicks);
+    const alpha = 1 - decay;
+
+    this.congestionEma = alpha * this.trainCount + decay * this.congestionEma;
   }
 
   getLength(): number {
@@ -39,10 +74,13 @@ export class Railroad {
   }
 
   getFare(): bigint {
-    const lengthFare = BigInt(this.getLength() * 100); // Base fare proportional to length
+    const baseLengthFare = 10;
+    const baseCongestionFare = BigInt(1000);
+    const lengthFare = BigInt(this.getLength() * baseLengthFare); // Base fare proportional to length
     // Busy railroads should be more expensive: each train adds a congestion premium
-    const congestionFactor = BigInt(1 + this.trainCount); // 1,2,3,...
-    const congestionFare = (lengthFare * congestionFactor) / 10n;
+    const effectiveCongestion = Math.max(0, Math.round(this.congestionEma));
+    const congestionFactor = BigInt(1 + effectiveCongestion); // 1,2,3,...
+    const congestionFare = baseCongestionFare * congestionFactor;
     return lengthFare + congestionFare;
   }
 }
