@@ -1,12 +1,12 @@
 import { EventBus } from "../../../core/EventBus";
-import { GameView } from "../../../core/game/GameView";
 import { TileRef } from "../../../core/game/GameMap";
+import { GameView } from "../../../core/game/GameView";
+import { PingType } from "../../../core/game/Ping";
+import { MouseMoveEvent, PingSelectedEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
-import { MouseMoveEvent, PingSelectedEvent } from "../../InputHandler";
-import { PingType } from "../../../core/game/Ping";
 
-export class PingTargetPreviewLayer implements Layer {
+export class PingTrajectoryPreviewLayer implements Layer {
   private mousePos = { x: 0, y: 0 };
   private pingTargetTile: TileRef | null = null;
   private currentPingType: PingType | null = null;
@@ -114,7 +114,13 @@ export class PingTargetPreviewLayer implements Layer {
     context.save();
     context.fillStyle = pingColor;
     context.beginPath();
-    context.arc(x, y, PingTrajectoryPreviewLayer.PING_PREVIEW_RADIUS, 0, 2 * Math.PI);
+    context.arc(
+      x,
+      y,
+      PingTargetPreviewLayer.PING_PREVIEW_RADIUS,
+      0,
+      2 * Math.PI,
+    );
     context.fill();
     context.restore();
   }

@@ -2,7 +2,7 @@ import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
-import { InputHandler, RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
@@ -24,8 +24,8 @@ import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
-import { PingTargetPreviewLayer } from "./layers/PingTargetPreviewLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
+import { PingTargetPreviewLayer } from "./layers/PingTargetPreviewLayer";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -313,10 +313,12 @@ export class GameRenderer {
     this.context = context;
   }
 
-private redrawEventCleanup?: () => void;
+  private redrawEventCleanup?: () => void;
 
   initialize() {
-    this.redrawEventCleanup = this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
+    this.redrawEventCleanup = this.eventBus.on(RedrawGraphicsEvent, () =>
+      this.redraw(),
+    );
     this.layers.forEach((l) => l.init?.());
 
     document.body.appendChild(this.canvas);
@@ -335,7 +337,7 @@ private redrawEventCleanup?: () => void;
       rafId = requestAnimationFrame(() => this.renderGame());
     });
   }
-  
+
   destroy() {
     this.redrawEventCleanup?.();
     this.layers.forEach((l) => l.destroy?.());

@@ -1,4 +1,5 @@
 import { Theme } from "../../../core/configuration/Config";
+import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
@@ -7,6 +8,7 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
+import { PingPlacedEvent } from "../../../core/game/Ping";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
@@ -14,13 +16,11 @@ import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
+import { PingFx } from "../fx/PingFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
 import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
-import { EventBus } from "../../../core/EventBus";
-import { PingPlacedEvent } from "../../../core/game/Ping";
-import { PingFx } from "../fx/PingFx";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -36,7 +36,10 @@ export class FxLayer implements Layer {
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
   private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
 
-  constructor(private game: GameView, private eventBus: EventBus) {
+  constructor(
+    private game: GameView,
+    private eventBus: EventBus,
+  ) {
     this.theme = this.game.config().theme();
   }
 
@@ -358,13 +361,12 @@ export class FxLayer implements Layer {
       console.error("Failed to load FX sprites:", err);
     }
 
-    this.pingEventCleanup?.();
+    if (this.pingEventCleanup) {
+      this.pingEventCleanup();
+      this.pingEventCleanup = undefined;
+    }
     this.pingEventCleanup = this.eventBus.on(PingPlacedEvent, (event) => {
-      const pingFx = new PingFx(
-        this.game,
-        event.type,
-        event.tile,
-      );
+      const pingFx = new PingFx(this.game, event.type, event.tile);
       this.allFx.push(pingFx);
     });
   }
