@@ -96,7 +96,6 @@ export enum GameMapType {
   StraitOfGibraltar = "Strait of Gibraltar",
   Italia = "Italia",
   Japan = "Japan",
-  Yenisei = "Yenisei",
   Pluto = "Pluto",
   Montreal = "Montreal",
   Achiran = "Achiran",
@@ -133,7 +132,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
     GameMapType.Japan,
-    GameMapType.Yenisei,
     GameMapType.Montreal,
   ],
   fantasy: [

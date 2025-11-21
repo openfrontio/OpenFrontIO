@@ -33,7 +33,6 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   StraitOfGibraltar: "Strait of Gibraltar",
   Italia: "Italia",
   Japan: "Japan",
-  Yenisei: "Yenisei",
   Pluto: "Pluto",
   Montreal: "Montreal",
   Achiran: "Achiran",
