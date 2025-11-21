@@ -118,6 +118,10 @@ export class TrainExecution implements Execution {
         ? tiles[Math.floor(tiles.length / 2)]
         : railroad.getStart().tile();
     this.player.addGold(-fare, midTile);
+    // Update client-side coloring when fare changes significantly
+    if (this.mg !== null) {
+      rail.updateFare(this.mg);
+    }
   }
 
   private leaveRailroad() {

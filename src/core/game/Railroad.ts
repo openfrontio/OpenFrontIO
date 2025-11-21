@@ -83,6 +83,42 @@ export class Railroad {
     const congestionFare = baseCongestionFare * congestionFactor;
     return lengthFare + congestionFare;
   }
+
+  setRailTiles(tiles: RailTile[]) {
+    this.railTiles = tiles;
+  }
+
+  /**
+   * Emit a fare update to clients if the fare has changed significantly.
+   * Currently uses a 10% relative-change threshold.
+   */
+  updateFare(game: Game) {
+    if (!this.railTiles || this.railTiles.length === 0) return;
+    const newFare = this.getFare();
+    if (this.lastFare !== null) {
+      const prev = this.lastFare;
+      const diff = newFare > prev ? newFare - prev : prev - newFare;
+      const threshold = prev / 10n; // 10%
+      if (threshold > 0n && diff < threshold) {
+        this.lastFare = newFare;
+        return;
+      }
+    }
+    this.lastFare = newFare;
+
+    const numericFare = Number(newFare);
+    const railTilesWithFare: RailTile[] = this.railTiles.map((t) => ({
+      ...t,
+      fare: numericFare,
+    }));
+
+    game.addUpdate({
+      type: GameUpdateType.RailroadEvent,
+      isActive: true,
+      isFareUpdate: true,
+      railTiles: railTilesWithFare,
+    });
+  }
 }
 
 export function getOrientedRailroad(

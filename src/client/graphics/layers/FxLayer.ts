@@ -230,6 +230,10 @@ export class FxLayer implements Layer {
   }
 
   onRailroadEvent(railroad: RailroadUpdate) {
+    // Skip FX for fare-only color updates
+    if (railroad.isFareUpdate) {
+      return;
+    }
     const railTiles = railroad.railTiles;
     for (const rail of railTiles) {
       // No need for pseudorandom, this is fx

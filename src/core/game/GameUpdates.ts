@@ -90,12 +90,22 @@ export enum RailType {
 export interface RailTile {
   tile: TileRef;
   railType: RailType;
+  /**
+   * Optional current fare for this railroad segment, used for client-side coloring.
+   * Represented as a number for convenience (server BigInt is converted).
+   */
+  fare?: number;
 }
 
 export interface RailroadUpdate {
   type: GameUpdateType.RailroadEvent;
   isActive: boolean;
   railTiles: RailTile[];
+  /**
+   * When true, this update only signals a fare / color change for existing
+   * rail segments and should not be treated as a construction / deletion event.
+   */
+  isFareUpdate?: boolean;
 }
 
 export interface ConquestUpdate {

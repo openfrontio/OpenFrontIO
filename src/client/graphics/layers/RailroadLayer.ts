@@ -27,6 +27,9 @@ export class RailroadLayer implements Layer {
   private existingRailroads = new Map<TileRef, RailRef>();
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
+  // Track global fare range for coloring
+  private minFare: number = Infinity;
+  private maxFare: number = 0;
 
   constructor(
     private game: GameView,
@@ -116,6 +119,24 @@ export class RailroadLayer implements Layer {
   }
 
   private handleRailroadRendering(railUpdate: RailroadUpdate) {
+    // Fare-only updates: recolor existing segments without touching counts
+    if (railUpdate.isActive && railUpdate.isFareUpdate) {
+      for (const railRoad of railUpdate.railTiles) {
+        const ref = this.existingRailroads.get(railRoad.tile);
+        if (!ref) continue;
+
+        if (railRoad.fare !== undefined) {
+          this.minFare = Math.min(this.minFare, railRoad.fare);
+          this.maxFare = Math.max(this.maxFare, railRoad.fare);
+        }
+        // Update the stored tile's fare and repaint
+        ref.tile.fare = railRoad.fare;
+        this.paintRail(ref.tile);
+      }
+      return;
+    }
+
+    // Construction / deletion events
     for (const railRoad of railUpdate.railTiles) {
       if (railUpdate.isActive) {
         this.paintRailroad(railRoad);
@@ -126,6 +147,11 @@ export class RailroadLayer implements Layer {
   }
 
   private paintRailroad(railRoad: RailTile) {
+    if (railRoad.fare !== undefined) {
+      this.minFare = Math.min(this.minFare, railRoad.fare);
+      this.maxFare = Math.max(this.maxFare, railRoad.fare);
+    }
+
     const currentOwner = this.game.owner(railRoad.tile)?.id() ?? null;
     const railTile = this.existingRailroads.get(railRoad.tile);
 
@@ -182,9 +208,26 @@ export class RailroadLayer implements Layer {
     }
     const owner = this.game.owner(tile);
     const recipient = owner.isPlayer() ? owner : null;
-    const color = recipient
+    let color = recipient
       ? recipient.borderColor()
       : colord("rgba(255,255,255,1)");
+
+    const fare = railRoad.fare;
+    if (
+      fare !== undefined &&
+      Number.isFinite(this.minFare) &&
+      this.maxFare > this.minFare
+    ) {
+      const t = (fare - this.minFare) / (this.maxFare - this.minFare);
+      const clampedT = Math.max(0, Math.min(1, t));
+      const baseRgb = color.toRgb();
+      const redTarget = 255;
+      const r = Math.round(baseRgb.r + (redTarget - baseRgb.r) * clampedT);
+      const g = Math.round(baseRgb.g * (1 - clampedT));
+      const b = Math.round(baseRgb.b * (1 - clampedT));
+      color = colord({ r, g, b });
+    }
+
     this.context.fillStyle = color.toRgbString();
     this.paintRailRects(this.context, x, y, railType);
   }

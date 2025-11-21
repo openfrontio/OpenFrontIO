@@ -21,6 +21,7 @@ export class RailroadExecution implements Execution {
   init(mg: Game, ticks: number): void {
     this.mg = mg;
     const tiles = this.railRoad.tiles;
+    const fare = Number(this.railRoad.getFare());
     // Inverse direction computation for the first tile
     this.railTiles.push({
       tile: tiles[0],
@@ -28,6 +29,7 @@ export class RailroadExecution implements Execution {
         tiles.length > 0
           ? this.computeExtremityDirection(tiles[0], tiles[1])
           : RailType.VERTICAL,
+      fare,
     });
     for (let i = 1; i < tiles.length - 1; i++) {
       const direction = this.computeDirection(
@@ -35,7 +37,7 @@ export class RailroadExecution implements Execution {
         tiles[i],
         tiles[i + 1],
       );
-      this.railTiles.push({ tile: tiles[i], railType: direction });
+      this.railTiles.push({ tile: tiles[i], railType: direction, fare });
     }
     this.railTiles.push({
       tile: tiles[tiles.length - 1],
@@ -46,7 +48,10 @@ export class RailroadExecution implements Execution {
               tiles[tiles.length - 2],
             )
           : RailType.VERTICAL,
+      fare,
     });
+    // Cache full geometry on the railroad so it can later emit fare-only updates
+    this.railRoad.setRailTiles(this.railTiles);
   }
 
   private computeExtremityDirection(tile: TileRef, next: TileRef): RailType {
