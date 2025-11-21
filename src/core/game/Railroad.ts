@@ -20,8 +20,8 @@ export class Railroad {
       isActive: false,
       railTiles,
     });
-    this.from.getRailroads().delete(this);
-    this.to.getRailroads().delete(this);
+    this.from.removeRailroad(this);
+    this.to.removeRailroad(this);
   }
 }
 
