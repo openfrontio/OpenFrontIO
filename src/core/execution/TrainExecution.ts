@@ -1,6 +1,7 @@
 import {
   Execution,
   Game,
+  MessageType,
   Player,
   TrainType,
   Unit,
@@ -105,6 +106,29 @@ export class TrainExecution implements Execution {
     return {
       routeInformation,
     };
+  }
+
+  private enterRailroad(railroad: OrientedRailroad) {
+    const rail = railroad.getRailroad();
+    rail.incrementTrainCount();
+    const fare = rail.getFare();
+    this.player.addGold(-fare, railroad.getStart().tile());
+    if (this.mg) {
+      this.mg.displayMessage(
+        "Paid railroad fare",
+        MessageType.RECEIVED_GOLD_FROM_TRADE,
+        this.player.id(),
+        -fare,
+      );
+    }
+  }
+
+  private leaveRailroad() {
+    if (!this.currentRailroad) {
+      return;
+    }
+    const rail = this.currentRailroad.getRailroad();
+    rail.decrementTrainCount();
   }
 
   init(mg: Game, ticks: number): void {
@@ -215,6 +239,8 @@ export class TrainExecution implements Execution {
 
   private deleteTrain() {
     this.active = false;
+    this.leaveRailroad();
+
     if (this.train?.isActive()) {
       this.train.delete(false);
     }
@@ -337,8 +363,11 @@ export class TrainExecution implements Execution {
       // This should happen after arrival processing but before departure
       this.journeyHopCount++;
 
+      // Move to the next station and railroad, updating fare/usage tracking
       this.currentStation = nextHop;
+      this.leaveRailroad();
       this.currentRailroad = railroad;
+      this.enterRailroad(railroad);
       this.currentTile = 0;
     }
 
