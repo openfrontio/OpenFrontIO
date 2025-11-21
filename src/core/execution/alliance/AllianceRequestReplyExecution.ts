@@ -19,12 +19,7 @@ export class AllianceRequestReplyExecution implements Execution {
       return;
     }
     this.requestor = mg.player(this.requestorID);
-  }
 
-  tick(ticks: number): void {
-    if (this.requestor === null) {
-      throw new Error("Not initialized");
-    }
     if (this.requestor.isFriendly(this.recipient)) {
       console.warn("already allied");
     } else {
@@ -45,6 +40,8 @@ export class AllianceRequestReplyExecution implements Execution {
     }
     this.active = false;
   }
+
+  tick(ticks: number): void {}
 
   isActive(): boolean {
     return this.active;
