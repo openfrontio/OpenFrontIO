@@ -126,10 +126,11 @@ export class FxLayer implements Layer {
     const gold = bonus.gold;
     const troops = bonus.troops;
 
-    if (gold > 0) {
-      const shortened = renderNumber(gold, 0);
-      this.addTextFx(`+ ${shortened}`, x, y);
-      y += 10; // increase y so the next popup starts bellow
+    if (gold !== 0) {
+      const shortened = renderNumber(Math.abs(gold), 0);
+      const sign = gold > 0 ? "+" : "-";
+      this.addTextFx(`${sign} ${shortened}`, x, y);
+      y += 10; // increase y so the next popup starts below
     }
 
     if (troops > 0) {
