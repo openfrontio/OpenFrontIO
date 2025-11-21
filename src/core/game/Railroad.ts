@@ -20,8 +20,8 @@ export class Railroad {
       isActive: false,
       railTiles,
     });
-    this.from.getRailroads().delete(this);
-    this.to.getRailroads().delete(this);
+    this.from.removeRailroad(this);
+    this.to.removeRailroad(this);
   }
 }
 
@@ -29,14 +29,11 @@ export function getOrientedRailroad(
   from: TrainStation,
   to: TrainStation,
 ): OrientedRailroad | null {
-  for (const railroad of from.getRailroads()) {
-    if (railroad.from === to) {
-      return new OrientedRailroad(railroad, false);
-    } else if (railroad.to === to) {
-      return new OrientedRailroad(railroad, true);
-    }
-  }
-  return null;
+  const railroad = from.getRailroadTo(to);
+  if (!railroad) return null;
+  // If tiles are stored from -> to, we go forward when railroad.to === to
+  const forward = railroad.to === to;
+  return new OrientedRailroad(railroad, forward);
 }
 
 /**
