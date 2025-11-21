@@ -14,6 +14,10 @@ describe("ProgressBar", () => {
     ctx = canvas.getContext("2d")!;
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("should initialize and draw the background", () => {
     const spyClearRect = jest.spyOn(ctx, "clearRect");
     const spyFillRect = jest.spyOn(ctx, "fillRect");

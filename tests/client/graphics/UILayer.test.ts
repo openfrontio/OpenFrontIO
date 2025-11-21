@@ -32,6 +32,10 @@ describe("UILayer", () => {
     transformHandler = {};
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+  
   it("should initialize and redraw canvas", () => {
     const ui = new UILayer(game, eventBus, transformHandler);
     ui.redraw();

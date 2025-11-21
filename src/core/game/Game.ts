@@ -1,6 +1,5 @@
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
-import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -53,7 +52,6 @@ export type Team = string;
 export const Duos = "Duos" as const;
 export const Trios = "Trios" as const;
 export const Quads = "Quads" as const;
-export const HumansVsNations = "Humans Vs Nations" as const;
 
 export const ColoredTeams: Record<string, Team> = {
   Red: "Red",
@@ -64,8 +62,6 @@ export const ColoredTeams: Record<string, Team> = {
   Orange: "Orange",
   Green: "Green",
   Bot: "Bot",
-  Humans: "Humans",
-  Nations: "Nations",
 } as const;
 
 export enum GameMapType {
@@ -100,8 +96,6 @@ export enum GameMapType {
   Pluto = "Pluto",
   Montreal = "Montreal",
   Achiran = "Achiran",
-  BaikalNukeWars = "Baikal (Nuke Wars)",
-  FourIslands = "Four Islands",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -143,8 +137,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Mars,
     GameMapType.DeglaciatedAntarctica,
     GameMapType.Achiran,
-    GameMapType.BaikalNukeWars,
-    GameMapType.FourIslands,
   ],
 };
 
@@ -274,9 +266,7 @@ export interface UnitParamsMap {
 
   [UnitType.City]: Record<string, never>;
 
-  [UnitType.MIRV]: {
-    targetTile?: number;
-  };
+  [UnitType.MIRV]: Record<string, never>;
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
@@ -417,7 +407,13 @@ export class PlayerInfo {
     public readonly id: PlayerID,
     public readonly nation?: Nation | null,
   ) {
-    this.clan = getClanTag(name);
+    // Compute clan from name
+    if (!name.includes("[") || !name.includes("]")) {
+      this.clan = null;
+    } else {
+      const clanMatch = name.match(/\[([a-zA-Z0-9]{2,5})\]/);
+      this.clan = clanMatch ? clanMatch[1].toUpperCase() : null;
+    }
   }
 }
 
@@ -453,7 +449,6 @@ export interface Unit {
   toUpdate(): UnitUpdate;
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
-  wasDestroyedByEnemy(): boolean;
 
   // Train
   trainType(): TrainType | undefined;
@@ -597,7 +592,7 @@ export interface Player {
   decayRelations(): void;
   isOnSameTeam(other: Player): boolean;
   // Either allied or on same team.
-  isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
+  isFriendly(other: Player): boolean;
   team(): Team | null;
   clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
@@ -610,7 +605,6 @@ export interface Player {
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
-  betrayals(): number;
 
   // Targeting
   canTarget(other: Player): boolean;
@@ -659,6 +653,7 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
+  tradingPorts(port: Unit): Unit[];
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }

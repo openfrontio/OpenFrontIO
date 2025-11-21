@@ -88,7 +88,6 @@ export interface Config {
   infiniteTroops(): boolean;
   donateTroops(): boolean;
   instantBuild(): boolean;
-  isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
@@ -137,7 +136,6 @@ export interface Config {
   deleteUnitCooldown(): Tick;
   defaultDonationAmount(sender: Player): number;
   unitInfo(type: UnitType): UnitInfo;
-  tradeShipShortRangeDebuff(): number;
   tradeShipGold(dist: number, numPorts: number): Gold;
   tradeShipSpawnRate(
     numTradeShips: number,
@@ -153,7 +151,7 @@ export interface Config {
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
-  defensePostDefenseBonus(): number;
+  defensePostDefenseBonus(level: number): number;
   defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
@@ -172,8 +170,6 @@ export interface Config {
   defaultNukeTargetableRange(): number;
   defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
-  samRange(level: number): number;
-  maxSamRange(): number;
   nukeDeathFactor(
     nukeType: NukeType,
     humans: number,
@@ -189,8 +185,6 @@ export interface Theme {
   teamColor(team: Team): Colord;
   // Don't call directly, use PlayerView
   territoryColor(playerInfo: PlayerView): Colord;
-  // Don't call directly, use PlayerView
-  structureColors(territoryColor: Colord): { light: Colord; dark: Colord };
   // Don't call directly, use PlayerView
   borderColor(territoryColor: Colord): Colord;
   // Don't call directly, use PlayerView

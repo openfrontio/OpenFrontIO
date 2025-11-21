@@ -2,7 +2,7 @@ import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
-import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import { InputHandler, RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
@@ -24,6 +24,7 @@ import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
+import { PingTargetPreviewLayer } from "./layers/PingTargetPreviewLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
@@ -210,7 +211,11 @@ export function createRenderer(
     transformHandler,
     uiState,
   );
-
+  const pingTargetPreviewLayer = new PingTargetPreviewLayer(
+    game,
+    eventBus,
+    transformHandler,
+  );
   const performanceOverlay = document.querySelector(
     "performance-overlay",
   ) as PerformanceOverlay;
@@ -243,9 +248,10 @@ export function createRenderer(
     structureLayer,
     samRadiusLayer,
     new UnitLayer(game, eventBus, transformHandler),
-    new FxLayer(game),
+    new FxLayer(game, eventBus),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
+    pingTargetPreviewLayer,
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
@@ -307,8 +313,10 @@ export class GameRenderer {
     this.context = context;
   }
 
+private redrawEventCleanup?: () => void;
+
   initialize() {
-    this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
+    this.redrawEventCleanup = this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
 
     document.body.appendChild(this.canvas);
@@ -326,6 +334,11 @@ export class GameRenderer {
       this.redraw();
       rafId = requestAnimationFrame(() => this.renderGame());
     });
+  }
+  
+  destroy() {
+    this.redrawEventCleanup?.();
+    this.layers.forEach((l) => l.destroy?.());
   }
 
   resizeCanvas() {
