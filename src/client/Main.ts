@@ -1,4 +1,3 @@
-import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
@@ -106,14 +105,6 @@ class Client {
   constructor() {}
 
   initialize(): void {
-    const gameVersion = document.getElementById(
-      "game-version",
-    ) as HTMLDivElement;
-    if (!gameVersion) {
-      console.warn("Game version element not found");
-    }
-    gameVersion.innerText = version;
-
     const newsModal = document.querySelector("news-modal") as NewsModal;
     if (!newsModal || !(newsModal instanceof NewsModal)) {
       console.warn("News modal element not found");
