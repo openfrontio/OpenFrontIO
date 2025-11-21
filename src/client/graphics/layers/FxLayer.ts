@@ -18,11 +18,6 @@ import { SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
 import { TextFx } from "../fx/TextFx";
 import { UnitExplosionFx } from "../fx/UnitExplosionFx";
-import { PingPlacedEvent, PingType } from "../../../core/game/Ping";
-import { PingFx } from "../fx/PingFx";
-import { EventBus } from "../../../core/EventBus";
-import { PingPlacedEvent, PingType } from "../../../core/game/Ping";
-import { PingFx } from "../fx/PingFx";
 import { Layer } from "./Layer";
 export class FxLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -38,7 +33,7 @@ export class FxLayer implements Layer {
   private boatTargetFxByUnitId: Map<number, TargetFx> = new Map();
   private nukeTargetFxByUnitId: Map<number, NukeAreaFx> = new Map();
 
-  constructor(private game: GameView, private eventBus: EventBus) {
+  constructor(private game: GameView) {
     this.theme = this.game.config().theme();
   }
 
@@ -358,16 +353,6 @@ export class FxLayer implements Layer {
     } catch (err) {
       console.error("Failed to load FX sprites:", err);
     }
-
-    this.eventBus.on(PingPlacedEvent, (event) => {
-      const pingFx = new PingFx(
-        this.game,
-        this.animatedSpriteLoader,
-        event.type,
-        event.tile,
-      );
-      this.allFx.push(pingFx);
-    });
   }
 
   redraw(): void {

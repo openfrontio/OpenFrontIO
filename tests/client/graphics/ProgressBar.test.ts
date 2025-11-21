@@ -11,39 +11,17 @@ describe("ProgressBar", () => {
     canvas = document.createElement("canvas");
     canvas.width = 100;
     canvas.height = 20;
-    ctx = {
-      clearRect: jest.fn(),
-      fillRect: jest.fn(),
-      beginPath: jest.fn(),
-      arc: jest.fn(),
-      fill: jest.fn(),
-      stroke: jest.fn(),
-      measureText: jest.fn(() => ({ width: 10 })),
-      fillText: jest.fn(),
-      save: jest.fn(),
-      restore: jest.fn(),
-      translate: jest.fn(),
-      rotate: jest.fn(),
-      drawImage: jest.fn(),
-      setTransform: jest.fn(),
-      globalAlpha: 1,
-      fillStyle: "",
-      strokeStyle: "",
-      lineWidth: 1,
-      font: "",
-    } as unknown as CanvasRenderingContext2D;
-    jest
-      .spyOn(HTMLCanvasElement.prototype, "getContext")
-      .mockReturnValue(ctx);
+    ctx = canvas.getContext("2d")!;
   });
 
   it("should initialize and draw the background", () => {
     const spyClearRect = jest.spyOn(ctx, "clearRect");
     const spyFillRect = jest.spyOn(ctx, "fillRect");
+    const spyFillStyle = jest.spyOn(ctx, "fillStyle", "set");
     const bar = new ProgressBar(["#ff0000", "#00ff00"], ctx, 2, 2, 80, 10, 0.5);
     expect(spyClearRect).toHaveBeenCalledWith(0, 0, 82, 12);
     expect(spyFillRect).toHaveBeenCalledWith(1, 1, 80, 10);
-    expect(ctx.fillStyle).toBe("#00ff00");
+    expect(spyFillStyle).toHaveBeenCalledWith("#00ff00");
     expect(bar.getX()).toBe(2);
     expect(bar.getY()).toBe(2);
   });
