@@ -1,7 +1,11 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import ofmWintersLogo from "../../../../resources/images/OfmWintersLogo.png";
-import { isInIframe, translateText } from "../../../client/Utils";
+import {
+  getGamesPlayed,
+  isInIframe,
+  translateText,
+} from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -105,6 +109,9 @@ export class WinModal extends LitElement implements Layer {
       return this.steamWishlist();
     }
 
+    if (!this.isWin && getGamesPlayed() < 3) {
+      return this.renderYoutubeTutorial();
+    }
     if (this.rand < 0.25) {
       return this.steamWishlist();
     } else if (this.rand < 0.5) {
@@ -114,6 +121,28 @@ export class WinModal extends LitElement implements Layer {
     } else {
       return this.renderPatternButton();
     }
+  }
+
+  renderYoutubeTutorial() {
+    return html`
+      <div class="text-center mb-6 bg-black/30 p-2.5 rounded">
+        <h3 class="text-xl font-semibold text-white mb-3">
+          ${translateText("win_modal.youtube_tutorial")}
+        </h3>
+        <div class="relative w-full" style="padding-bottom: 56.25%;">
+          <iframe
+            class="absolute top-0 left-0 w-full h-full rounded"
+            src="${this.isVisible
+              ? "https://www.youtube.com/embed/EN2oOog3pSs"
+              : ""}"
+            title="YouTube video player"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </div>
+    `;
   }
 
   renderPatternButton() {
