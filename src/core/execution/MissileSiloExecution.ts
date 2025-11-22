@@ -1,4 +1,4 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Player, Unit, UnitType, isUnit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 
 export class MissileSiloExecution implements Execution {
@@ -6,10 +6,17 @@ export class MissileSiloExecution implements Execution {
   private mg: Game;
   private silo: Unit | null = null;
 
+  constructor(playerOrUnit: Unit);
+  constructor(playerOrUnit: Player, tile: TileRef);
+
   constructor(
-    private player: Player,
-    private tile: TileRef,
-  ) {}
+    private playerOrUnit: Player | Unit,
+    private tile?: TileRef,
+  ) {
+    if (!isUnit(playerOrUnit) && tile === undefined) {
+      throw new Error("tile is required when playerOrUnit is a Player");
+    }
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -17,19 +24,34 @@ export class MissileSiloExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.silo === null) {
-      const spawn = this.player.canBuild(UnitType.MissileSilo, this.tile);
-      if (spawn === false) {
-        console.warn(
-          `player ${this.player} cannot build missile silo at ${this.tile}`,
+      if (isUnit(this.playerOrUnit)) {
+        this.silo = this.playerOrUnit;
+      } else {
+        const spawn = this.playerOrUnit.canBuild(
+          UnitType.MissileSilo,
+          this.tile!,
         );
-        this.active = false;
-        return;
-      }
-      this.silo = this.player.buildUnit(UnitType.MissileSilo, spawn, {});
+        if (spawn === false) {
+          console.warn(
+            `player ${this.playerOrUnit} cannot build missile silo at ${this.tile}`,
+          );
+          this.active = false;
+          return;
+        }
+        this.silo = this.playerOrUnit.buildUnit(
+          UnitType.MissileSilo,
+          spawn,
+          {},
+        );
 
-      if (this.player !== this.silo.owner()) {
-        this.player = this.silo.owner();
+        if (this.playerOrUnit !== this.silo.owner()) {
+          this.playerOrUnit = this.silo.owner();
+        }
       }
+    }
+
+    if (this.silo.isUnderConstruction()) {
+      return;
     }
 
     // frontTime is the time the earliest missile fired.

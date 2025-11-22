@@ -121,8 +121,8 @@ describe("UILayer", () => {
     ui.redraw();
     const unit = {
       id: () => 2,
-      type: () => "Construction",
-      constructionType: () => "City",
+      type: () => "City",
+      isUnderConstruction: () => true,
       owner: () => ({ id: () => 1 }),
       tile: () => ({}),
       isActive: () => true,
@@ -141,17 +141,20 @@ describe("UILayer", () => {
     ui.redraw();
     const unit = {
       id: () => 2,
-      type: () => "Construction",
-      constructionType: () => "City",
+      type: () => "City",
+      isUnderConstruction: () => true,
       owner: () => ({ id: () => 1 }),
       tile: () => ({}),
       isActive: () => true,
       createdAt: () => 1,
+      markedForDeletion: () => false,
     } as unknown as UnitView;
     ui.onUnitEvent(unit);
     expect(ui["allProgressBars"].has(2)).toBe(true);
 
     game.ticks = () => 6; // simulate enough ticks for completion
+    // simulate construction finished
+    (unit as any).isUnderConstruction = () => false;
     ui.tick();
     expect(ui["allProgressBars"].has(2)).toBe(false);
   });
