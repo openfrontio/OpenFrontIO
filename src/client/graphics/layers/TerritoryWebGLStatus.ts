@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { UserSettings } from "../../../core/game/UserSettings";
 import {
   TerritoryWebGLStatusEvent,
+  TogglePerformanceOverlayEvent,
   ToggleTerritoryWebGLDebugBordersEvent,
   ToggleTerritoryWebGLEvent,
 } from "../../InputHandler";
@@ -31,6 +32,9 @@ export class TerritoryWebGLStatus extends LitElement implements Layer {
 
   @state()
   private debugBorders = false;
+
+  @state()
+  private isVisible = false;
 
   static styles = css`
     :host {
@@ -119,6 +123,7 @@ export class TerritoryWebGLStatus extends LitElement implements Layer {
 
   init() {
     this.enabled = this.userSettings?.territoryWebGL() ?? true;
+    this.isVisible = this.userSettings?.performanceOverlay() ?? false;
     if (this.eventBus) {
       this.eventBus.on(TerritoryWebGLStatusEvent, (event) => {
         this.enabled = event.enabled;
@@ -126,6 +131,9 @@ export class TerritoryWebGLStatus extends LitElement implements Layer {
         this.supported = event.supported;
         this.lastMessage = event.message ?? null;
         this.requestUpdate();
+      });
+      this.eventBus.on(TogglePerformanceOverlayEvent, () => {
+        this.isVisible = this.userSettings?.performanceOverlay() ?? false;
       });
     }
   }
@@ -168,6 +176,10 @@ export class TerritoryWebGLStatus extends LitElement implements Layer {
   }
 
   render() {
+    if (!this.isVisible) {
+      return html``;
+    }
+
     return html`
       <div class="panel">
         <div class="status-line">
