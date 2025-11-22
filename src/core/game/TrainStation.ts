@@ -264,7 +264,11 @@ export class TrainStationMapAdapter implements GraphAdapter<TrainStation> {
   }
 
   cost(node: TrainStation): number {
-    return 1;
+    // Favor higher-demand stations slightly by reducing their traversal cost.
+    const demand = node.getPassengerDemandScore(); // ~0..level
+    const baseCost = 1;
+    const alpha = 0.25; // tuning knob
+    return baseCost / (1 + alpha * demand);
   }
 
   position(node: TrainStation): { x: number; y: number } {
