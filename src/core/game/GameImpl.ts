@@ -606,6 +606,8 @@ export class GameImpl implements Game {
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
     });
+    // Notify rail network so it can invalidate cached territory ownership
+    this._railNetwork.onTileOwnerChanged(tile);
   }
 
   relinquish(tile: TileRef) {
@@ -627,6 +629,8 @@ export class GameImpl implements Game {
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
     });
+    // Notify rail network so it can invalidate cached territory ownership
+    this._railNetwork.onTileOwnerChanged(tile);
   }
 
   private updateBorders(tile: TileRef) {

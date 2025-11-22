@@ -117,7 +117,30 @@ export class TrainExecution implements Execution {
       tiles.length > 0
         ? tiles[Math.floor(tiles.length / 2)]
         : railroad.getStart().tile();
-    this.player.addGold(-fare, midTile);
+    let netFare = fare;
+
+    // Optimization: if the train owner is also the sole territory owner along this railroad,
+    // they would immediately get back the full 20% share. In that case, just charge the net
+    // 80% fare and skip the distribution step.
+    let shouldDistributeShare = true;
+    if (
+      this.mg &&
+      fare > 0n &&
+      rail.isSoleTerritoryOwner(this.mg, this.player)
+    ) {
+      const profitShare = fare / 5n; // 20%
+      netFare = fare - profitShare;
+      shouldDistributeShare = false;
+    }
+
+    // Charge fare (possibly reduced by owner share optimization) to the train owner
+    this.player.addGold(-netFare, midTile);
+
+    // Share 20% of the fare with territory owners along the railroad,
+    // proportional to the number of tiles they own under this track.
+    if (shouldDistributeShare && this.mg && fare > 0n) {
+      rail.distributeFareShare(this.mg, fare);
+    }
     // Update client-side coloring when fare changes significantly
     if (this.mg !== null) {
       rail.updateFare(this.mg);

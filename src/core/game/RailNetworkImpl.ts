@@ -89,12 +89,37 @@ export function createRailNetwork(game: Game): RailNetwork {
 
 export class RailNetworkImpl implements RailNetwork {
   private maxConnectionDistance: number = 4;
+  // Index which railroads cross which tiles so we can quickly invalidate
+  // cached territory ownership on conquests.
+  private railsByTile: Map<TileRef, Set<Railroad>> = new Map();
 
   constructor(
     private game: Game,
     private stationManager: StationManager,
     private pathService: RailPathFinderService,
   ) {}
+
+  private registerRailroad(railRoad: Railroad) {
+    for (const tile of railRoad.tiles) {
+      let set = this.railsByTile.get(tile);
+      if (!set) {
+        set = new Set<Railroad>();
+        this.railsByTile.set(tile, set);
+      }
+      set.add(railRoad);
+    }
+  }
+
+  private unregisterRailroad(railRoad: Railroad) {
+    for (const tile of railRoad.tiles) {
+      const set = this.railsByTile.get(tile);
+      if (!set) continue;
+      set.delete(railRoad);
+      if (set.size === 0) {
+        this.railsByTile.delete(tile);
+      }
+    }
+  }
 
   connectStation(station: TrainStation) {
     this.stationManager.addStation(station);
@@ -122,6 +147,15 @@ export class RailNetworkImpl implements RailNetwork {
       }
     }
     station.unit.setTrainStation(false);
+  }
+
+  onTileOwnerChanged(tile: TileRef): void {
+    const rails = this.railsByTile.get(tile);
+    if (!rails) return;
+
+    for (const rail of rails) {
+      rail.markTerritoryDirty();
+    }
   }
 
   /**
@@ -180,6 +214,7 @@ export class RailNetworkImpl implements RailNetwork {
 
   private disconnectFromNetwork(station: TrainStation) {
     for (const rail of station.getRailroads()) {
+      this.unregisterRailroad(rail);
       rail.delete(this.game);
     }
     station.clearRailroads();
@@ -200,6 +235,7 @@ export class RailNetworkImpl implements RailNetwork {
     const path = this.pathService.findTilePath(from.tile(), to.tile());
     if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
       const railRoad = new Railroad(from, to, path);
+      this.registerRailroad(railRoad);
       this.game.addExecution(new RailroadExecution(railRoad));
       from.addRailroad(railRoad);
       to.addRailroad(railRoad);

@@ -1,4 +1,4 @@
-import { Game, Tick } from "./Game";
+import { Game, Player, Tick } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { TrainStation } from "./TrainStation";
@@ -13,6 +13,12 @@ export class Railroad {
   private railTiles: RailTile[] | null = null;
   // Last fare used for client-side coloring
   private lastFare: bigint | null = null;
+  // Cached territory ownership along this railroad: which players own how many tiles.
+  private territoryOwners: Map<
+    Player,
+    { count: number; sampleTile: TileRef }
+  > | null = null;
+  private territoryDirty: boolean = true;
 
   constructor(
     public from: TrainStation,
@@ -42,6 +48,93 @@ export class Railroad {
   decrementTrainCount(currentTick: Tick): void {
     this.trainCount = Math.max(0, this.trainCount - 1);
     this.updateCongestionEma(currentTick);
+  }
+
+  /**
+   * Mark cached territory ownership as dirty; should be called when any tile owner
+   * along this railroad changes.
+   */
+  markTerritoryDirty(): void {
+    this.territoryDirty = true;
+  }
+
+  /**
+   * Lazily (re)compute which players own tiles under this railroad.
+   */
+  private ensureTerritoryOwners(
+    game: Game,
+  ): Map<Player, { count: number; sampleTile: TileRef }> {
+    if (!this.territoryDirty && this.territoryOwners) {
+      return this.territoryOwners;
+    }
+
+    const owners = new Map<Player, { count: number; sampleTile: TileRef }>();
+
+    for (const tile of this.tiles) {
+      const ownerOrNull = game.owner(tile);
+      if (ownerOrNull && ownerOrNull.isPlayer()) {
+        const owner = ownerOrNull as Player;
+        const existing = owners.get(owner);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          owners.set(owner, { count: 1, sampleTile: tile });
+        }
+      }
+    }
+
+    this.territoryOwners = owners;
+    this.territoryDirty = false;
+    return owners;
+  }
+
+  /**
+   * Distribute a 20% share of the given fare to territory owners along this railroad,
+   * proportional to the number of tiles they own under the track.
+   */
+  distributeFareShare(game: Game, fare: bigint): void {
+    if (fare <= 0n) return;
+
+    const profitShare = fare / 5n; // 20%
+    if (profitShare <= 0n) return;
+
+    const owners = this.ensureTerritoryOwners(game);
+    if (owners.size === 0) return;
+
+    let totalTiles = 0;
+    owners.forEach((entry) => {
+      totalTiles += entry.count;
+    });
+    if (totalTiles <= 0) return;
+
+    const totalTilesBig = BigInt(totalTiles);
+    let distributed = 0n;
+
+    const entries = Array.from(owners.entries());
+    entries.forEach(([owner, { count, sampleTile }], index) => {
+      let share: bigint;
+      if (index === entries.length - 1) {
+        // Last owner gets the remaining share to avoid rounding loss.
+        share = profitShare - distributed;
+      } else {
+        share = (profitShare * BigInt(count)) / totalTilesBig;
+        distributed += share;
+      }
+      if (share > 0n) {
+        owner.addGold(share, sampleTile);
+      }
+    });
+  }
+
+  /**
+   * Return true if there is exactly one territory owner along this railroad
+   * and that owner is the given player.
+   */
+  isSoleTerritoryOwner(game: Game, player: Player): boolean {
+    const owners = this.ensureTerritoryOwners(game);
+    if (owners.size !== 1) return false;
+    const [onlyOwner] = owners.keys();
+    return onlyOwner === player;
   }
 
   private updateCongestionEma(currentTick: Tick): void {
