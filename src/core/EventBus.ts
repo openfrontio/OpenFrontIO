@@ -10,6 +10,7 @@ export class EventBus {
 
   emit<T extends GameEvent>(event: T): void {
     const eventConstructor = event.constructor as EventConstructor<T>;
+    console.log("EventBus.emit - eventConstructor:", eventConstructor);
     const callbacks = this.listeners.get(eventConstructor);
     if (callbacks) {
       for (const callback of callbacks) {
@@ -22,6 +23,7 @@ export class EventBus {
     eventType: EventConstructor<T>,
     callback: (event: T) => void,
   ): () => void {
+    console.log("EventBus.on - eventType:", eventType);
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, []);
     }
