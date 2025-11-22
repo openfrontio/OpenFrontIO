@@ -183,6 +183,70 @@ export class UserSettings {
     }
   }
 
+  getSelectedStructurePort(): string | undefined {
+    return localStorage.getItem("structurePort") ?? undefined;
+  }
+
+  getSelectedStructureCity(): string | undefined {
+    return localStorage.getItem("structureCity") ?? undefined;
+  }
+
+  getSelectedStructureFactory(): string | undefined {
+    return localStorage.getItem("structureFactory") ?? undefined;
+  }
+
+  getSelectedStructureMissilesilo(): string | undefined {
+    return localStorage.getItem("structureMissilesilo") ?? undefined;
+  }
+
+  getSelectedStructureDefensepost(): string | undefined {
+    return localStorage.getItem("structureDefensepost") ?? undefined;
+  }
+
+  getSelectedStructureSamlauncher(): string | undefined {
+    return localStorage.getItem("structureSamlauncher") ?? undefined;
+  }
+
+  getSelectedSpriteTransportship(): string | undefined {
+    return localStorage.getItem("spriteTransportship") ?? undefined;
+  }
+
+  getSelectedSpriteWarship(): string | undefined {
+    return localStorage.getItem("spriteWarship") ?? undefined;
+  }
+
+  getSelectedSpriteSammissile(): string | undefined {
+    return localStorage.getItem("spriteSammissile") ?? undefined;
+  }
+
+  getSelectedSpriteAtombomb(): string | undefined {
+    return localStorage.getItem("spriteAtombomb") ?? undefined;
+  }
+
+  getSelectedSpriteHydrogenbomb(): string | undefined {
+    return localStorage.getItem("spriteHydrogenbomb") ?? undefined;
+  }
+
+  getSelectedSpriteTradeship(): string | undefined {
+    return localStorage.getItem("spriteTradeship") ?? undefined;
+  }
+
+  getSelectedSpriteMirv(): string | undefined {
+    return localStorage.getItem("spriteMirv") ?? undefined;
+  }
+
+  getSelectedSpriteEngine(): string | undefined {
+    return localStorage.getItem("spriteEngine") ?? undefined;
+  }
+
+  getSelectedSpriteCarriage(): string | undefined {
+    return localStorage.getItem("spriteCarriage") ?? undefined;
+  }
+
+  getSelectedSpriteLoadedcarriage(): string | undefined {
+    return localStorage.getItem("spriteLoadedcarriage") ?? undefined;
+  }
+
   backgroundMusicVolume(): number {
     return this.getFloat("settings.backgroundMusicVolume", 0);
   }

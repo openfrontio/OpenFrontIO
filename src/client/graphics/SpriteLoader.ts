@@ -12,6 +12,7 @@ import warshipSprite from "../../../resources/sprites/warship.png";
 import { Theme } from "../../core/configuration/Config";
 import { TrainType, UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
+import { PlayerPack } from "../../core/Schemas";
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
 const TrainTypeSprite = {
@@ -22,35 +23,54 @@ const TrainTypeSprite = {
 
 type TrainTypeSprite = (typeof TrainTypeSprite)[keyof typeof TrainTypeSprite];
 
-const SPRITE_CONFIG: Partial<Record<UnitType | TrainTypeSprite, string>> = {
-  [UnitType.TransportShip]: transportShipSprite,
-  [UnitType.Warship]: warshipSprite,
-  [UnitType.SAMMissile]: samMissileSprite,
-  [UnitType.AtomBomb]: atomBombSprite,
-  [UnitType.HydrogenBomb]: hydrogenBombSprite,
-  [UnitType.TradeShip]: tradeShipSprite,
-  [UnitType.MIRV]: mirvSprite,
-  [TrainTypeSprite.Engine]: trainEngineSprite,
-  [TrainTypeSprite.Carriage]: trainCarriageSprite,
-  [TrainTypeSprite.LoadedCarriage]: trainLoadedCarriageSprite,
+const SPRITE_CONFIG: Partial<
+  Record<UnitType | TrainTypeSprite, { key: string; url: string }>
+> = {
+  [UnitType.TransportShip]: {
+    key: "spriteTransportship",
+    url: transportShipSprite,
+  },
+  [UnitType.Warship]: { key: "spriteWarship", url: warshipSprite },
+  [UnitType.SAMMissile]: { key: "spriteSammissile", url: samMissileSprite },
+  [UnitType.AtomBomb]: { key: "spriteAtombomb", url: atomBombSprite },
+  [UnitType.HydrogenBomb]: {
+    key: "spriteHydrogenbomb",
+    url: hydrogenBombSprite,
+  },
+  [UnitType.TradeShip]: { key: "spriteTradeship", url: tradeShipSprite },
+  [UnitType.MIRV]: { key: "spriteMirv", url: mirvSprite },
+  [TrainTypeSprite.Engine]: { key: "spriteEngine", url: trainEngineSprite },
+  [TrainTypeSprite.Carriage]: {
+    key: "spriteCarriage",
+    url: trainCarriageSprite,
+  },
+  [TrainTypeSprite.LoadedCarriage]: {
+    key: "spriteLoadedcarriage",
+    url: trainLoadedCarriageSprite,
+  },
 };
 
 const spriteMap: Map<UnitType | TrainTypeSprite, ImageBitmap> = new Map();
 
 // preload all images
-export const loadAllSprites = async (): Promise<void> => {
+export const loadAllSprites = async (pack: PlayerPack): Promise<void> => {
   const entries = Object.entries(SPRITE_CONFIG);
   const totalSprites = entries.length;
   let loadedCount = 0;
 
   await Promise.all(
-    entries.map(async ([unitType, url]) => {
+    entries.map(async ([unitType, value]) => {
       const typedUnitType = unitType as UnitType | TrainTypeSprite;
 
-      if (!url || url === "") {
-        console.warn(`No sprite URL for ${typedUnitType}, skipping...`);
+      const key = value?.key;
+      const fallbackUrl = value?.url;
+
+      if (!fallbackUrl) {
+        console.warn(`No sprite url for ${typedUnitType}, skipping...`);
         return;
       }
+
+      const url = pack?.[key] ?? fallbackUrl;
 
       try {
         const img = new Image();
