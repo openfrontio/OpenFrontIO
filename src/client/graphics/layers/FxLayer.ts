@@ -361,10 +361,6 @@ export class FxLayer implements Layer {
     } catch (err) {
       console.error("Failed to load FX sprites:", err);
     }
-  }
-
-        if (this.pingEventCleanup) {
-      this.pingEventCleanup();
     if (this.pingEventCleanup) {
       this.pingEventCleanup();
       this.pingEventCleanup = undefined;
@@ -374,7 +370,6 @@ export class FxLayer implements Layer {
       this.allFx.push(pingFx);
     });
   }
-    this.pingEventCleanup?.();
 
   redraw(): void {
     this.canvas = document.createElement("canvas");
