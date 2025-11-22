@@ -3,7 +3,7 @@ import { TileRef } from "./GameMap";
 import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { TrainStation } from "./TrainStation";
 
-const CONGESTION_EMA_ALPHA = 0.02;
+const CONGESTION_EMA_ALPHA = 0.05;
 
 export class Railroad {
   private trainCount: number = 0;
@@ -75,7 +75,7 @@ export class Railroad {
 
   getFare(): bigint {
     const baseLengthFare = 10;
-    const baseCongestionFare = BigInt(1000);
+    const baseCongestionFare = BigInt(5000);
     const lengthFare = BigInt(this.getLength() * baseLengthFare); // Base fare proportional to length
     // Busy railroads should be more expensive: each train adds a congestion premium
     const effectiveCongestion = Math.max(0, Math.round(this.congestionEma));
