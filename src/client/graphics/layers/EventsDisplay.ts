@@ -744,9 +744,6 @@ export class EventsDisplay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    // Check if attacker is still alive and a valid target
-    if (!attacker.isAlive()) return;
-
     // Check if player is now allied with attacker
     if (myPlayer.isAlliedWith(attacker)) return;
 
