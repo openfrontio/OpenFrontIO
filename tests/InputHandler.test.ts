@@ -24,10 +24,13 @@ class MockPointerEvent {
 
 global.PointerEvent = MockPointerEvent as any;
 
+import { TransformHandler } from "../src/client/graphics/TransformHandler";
+
 describe("InputHandler AutoUpgrade", () => {
   let inputHandler: InputHandler;
   let eventBus: EventBus;
   let mockCanvas: HTMLCanvasElement;
+  let mockTransformHandler: TransformHandler;
 
   beforeEach(() => {
     mockCanvas = document.createElement("canvas");
@@ -36,10 +39,16 @@ describe("InputHandler AutoUpgrade", () => {
 
     eventBus = new EventBus();
 
+    mockTransformHandler = {
+      boundingRect: () => mockCanvas.getBoundingClientRect(),
+      screenToWorldCoordinates: (x: number, y: number) => ({ x, y }),
+    } as unknown as TransformHandler;
+
     inputHandler = new InputHandler(
-      { attackRatio: 20, ghostStructure: null },
+      { attackRatio: 20, ghostStructure: null, currentPingType: null },
       mockCanvas,
       eventBus,
+      mockTransformHandler,
     );
   });
 
