@@ -144,7 +144,12 @@ export interface Config {
     numPlayerPorts: number,
     numPlayerTradeShips: number,
   ): number;
+  // Maximum gold a full train can earn at a level-1 station, per relation.
+  // Actual payout scales with station level and current passenger demand.
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold;
+  // Number of ticks it takes for an empty station to fully refill its
+  // passenger / demand pool (0 -> 100%).
+  trainGoldRefillTime(): Tick;
   trainSpawnRate(numPlayerFactories: number): number;
   trainStationMinRange(): number;
   trainStationMaxRange(): number;
