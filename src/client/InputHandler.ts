@@ -2,7 +2,9 @@ import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
 import { UserSettings } from "../core/game/UserSettings";
+import { PingType } from "../core/game/Ping";
 import { UIState } from "./graphics/UIState";
+import { TransformHandler } from "./graphics/TransformHandler";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -124,11 +126,21 @@ export class AutoUpgradeEvent implements GameEvent {
     public readonly y: number,
   ) {}
 }
+export class PingSelectedEvent implements GameEvent {
+  constructor(public readonly pingType: PingType | null) {}
+}
 
 export class TickMetricsEvent implements GameEvent {
   constructor(
     public readonly tickExecutionDuration?: number,
     public readonly tickDelay?: number,
+  ) {}
+}
+export class PingPlacedEvent implements GameEvent {
+  constructor(
+    public readonly pingType: PingType,
+    public readonly x: number,
+    public readonly y: number,
   ) {}
 }
 
@@ -160,6 +172,7 @@ export class InputHandler {
     public uiState: UIState,
     private canvas: HTMLCanvasElement,
     private eventBus: EventBus,
+    private transformHandler: TransformHandler,
   ) {}
 
   initialize() {
@@ -481,6 +494,33 @@ export class InputHandler {
       Math.abs(event.x - this.lastPointerDownX) +
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
+      if (this.uiState.currentPingType !== null) {
+        const rect = this.transformHandler.boundingRect();
+        if (!rect) {
+          this.uiState.currentPingType = null;
+          this.eventBus.emit(new PingSelectedEvent(null));
+          return;
+        }
+        {
+          const localX = event.clientX - rect.left;
+          const localY = event.clientY - rect.top;
+          const worldCoords = this.transformHandler.screenToWorldCoordinates(
+            localX,
+            localY,
+          );
+          this.eventBus.emit(
+            new PingPlacedEvent(
+              this.uiState.currentPingType,
+              worldCoords.x,
+              worldCoords.y,
+            ),
+          );
+        }
+        this.uiState.currentPingType = null;
+        this.eventBus.emit(new PingSelectedEvent(null)); // Clear ping preview
+        return;
+      }
+      
       if (event.pointerType === "touch") {
         this.eventBus.emit(new TouchEvent(event.x, event.y));
         event.preventDefault();

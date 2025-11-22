@@ -24,6 +24,7 @@ import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
+import { createPingMenu } from "./PingMenu";
 
 export interface MenuElementParams {
   myPlayer: PlayerView;
@@ -583,6 +584,7 @@ export const rootMenuElement: MenuElement = {
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
+            createPingMenu(params.eventBus),
       ...(isOwnTerritory
         ? [deleteUnitElement, ally, buildMenuElement]
         : [boatMenuElement, ally, attackMenuElement]),
