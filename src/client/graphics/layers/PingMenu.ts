@@ -1,17 +1,13 @@
-import {
-  MenuElement,
-  MenuElementParams,
-  COLORS,
-} from "./RadialMenuElements";
-import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import retreatIcon from "../../../../resources/images/BackIconWhite.svg";
-import defendIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import pingIcon from "../../../../resources/images/PingIcon.svg";
 import watchOutIcon from "../../../../resources/images/QuestionMarkIcon.svg";
+import defendIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { PingType } from "../../../core/game/Ping";
 import { PingSelectedEvent } from "../../InputHandler";
+import { COLORS, MenuElement, MenuElementParams } from "./RadialMenuElements";
 
-export const PING_ICON = swordIcon;
+export const PING_ICON = pingIcon;
 
 export const PING_COLORS = {
   [PingType.Attack]: "#ff0000",
@@ -34,9 +30,10 @@ function createPingElement(
     color: PING_COLORS[pingType],
     disabled: () => false,
     action: (params?: MenuElementParams) => {
-      if (!params) return;
       eventBus.emit(new PingSelectedEvent(pingType));
-      params.closeMenu();
+      if (params) {
+        params.closeMenu();
+      }
     },
   };
 }

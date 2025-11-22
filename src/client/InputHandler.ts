@@ -1,10 +1,10 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
 import { UnitView } from "../core/game/GameView";
-import { UserSettings } from "../core/game/UserSettings";
 import { PingType } from "../core/game/Ping";
-import { UIState } from "./graphics/UIState";
+import { UserSettings } from "../core/game/UserSettings";
 import { TransformHandler } from "./graphics/TransformHandler";
+import { UIState } from "./graphics/UIState";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class MouseUpEvent implements GameEvent {
@@ -501,26 +501,24 @@ export class InputHandler {
           this.eventBus.emit(new PingSelectedEvent(null));
           return;
         }
-        {
-          const localX = event.clientX - rect.left;
-          const localY = event.clientY - rect.top;
-          const worldCoords = this.transformHandler.screenToWorldCoordinates(
-            localX,
-            localY,
-          );
-          this.eventBus.emit(
-            new PingPlacedEvent(
-              this.uiState.currentPingType,
-              worldCoords.x,
-              worldCoords.y,
-            ),
-          );
-        }
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        const worldCoords = this.transformHandler.screenToWorldCoordinates(
+          localX,
+          localY,
+        );
+        this.eventBus.emit(
+          new PingPlacedEvent(
+            this.uiState.currentPingType,
+            worldCoords.x,
+            worldCoords.y,
+          ),
+        );
         this.uiState.currentPingType = null;
-        this.eventBus.emit(new PingSelectedEvent(null)); // Clear ping preview
+        this.eventBus.emit(new PingSelectedEvent(null));
         return;
       }
-      
+
       if (event.pointerType === "touch") {
         this.eventBus.emit(new TouchEvent(event.x, event.y));
         event.preventDefault();

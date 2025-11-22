@@ -353,6 +353,12 @@ export class FxLayer implements Layer {
   }
 
   private pingEventCleanup?: () => void;
+  dispose() {
+    if (this.pingEventCleanup) {
+      this.pingEventCleanup();
+      this.pingEventCleanup = undefined;
+    }
+  }
   async init() {
     this.redraw();
     try {

@@ -298,6 +298,10 @@ export function createRenderer(
 
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
+  private rafId?: number;
+  private resizeListener?: () => void;
+  private contextLostListener?: () => void;
+  private contextRestoredListener?: () => void;
 
   constructor(
     private game: GameView,
@@ -316,33 +320,59 @@ export class GameRenderer {
   private redrawEventCleanup?: () => void;
 
   initialize() {
-        this.redrawEventCleanup = this.eventBus.on(RedrawGraphicsEvent, () =>
+    this.redrawEventCleanup = this.eventBus.on(RedrawGraphicsEvent, () =>
       this.redraw(),
     );
     this.layers.forEach((l) => l.init?.());
 
     document.body.appendChild(this.canvas);
-    window.addEventListener("resize", () => this.resizeCanvas());
+    this.resizeListener = () => this.resizeCanvas();
+    window.addEventListener("resize", this.resizeListener);
     this.resizeCanvas();
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
 
-    let rafId = requestAnimationFrame(() => this.renderGame());
-    this.canvas.addEventListener("contextlost", () => {
-      cancelAnimationFrame(rafId);
-    });
-    this.canvas.addEventListener("contextrestored", () => {
+    this.contextLostListener = () => {
+      if (this.rafId !== undefined) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = undefined;
+      }
+    };
+    this.canvas.addEventListener("contextlost", this.contextLostListener);
+
+    this.contextRestoredListener = () => {
       this.redraw();
-      rafId = requestAnimationFrame(() => this.renderGame());
-    });
+      this.rafId = requestAnimationFrame(() => this.renderGame());
+    };
+    this.canvas.addEventListener(
+      "contextrestored",
+      this.contextRestoredListener,
+    );
+
+    this.rafId = requestAnimationFrame(() => this.renderGame());
   }
-  
+
   destroy() {
     this.redrawEventCleanup?.();
+    if (this.rafId !== undefined) {
+      cancelAnimationFrame(this.rafId);
+    }
+    if (this.resizeListener) {
+      window.removeEventListener("resize", this.resizeListener);
+    }
+    if (this.contextLostListener) {
+      this.canvas.removeEventListener("contextlost", this.contextLostListener);
+    }
+    if (this.contextRestoredListener) {
+      this.canvas.removeEventListener(
+        "contextrestored",
+        this.contextRestoredListener,
+      );
+    }
     this.layers.forEach((l) => l.destroy?.());
   }
-  
+
   resizeCanvas() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;

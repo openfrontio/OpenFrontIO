@@ -1,17 +1,8 @@
 import { TileRef } from "./GameMap";
 
-export enum PingType {
-  Attack,
-  Retreat,
-  Defend,
-  WatchOut,
-}
+export type PingType = "attack" | "retreat" | "defend" | "watchOut";
 
-export class Ping {
-  constructor(
-    public type: PingType,
-    public tile: TileRef,
-  ) {}
-}
-
-export class PingPlacedEvent extends Ping {}
+export type Ping = {
+  type: PingType;
+  tile: TileRef;
+};

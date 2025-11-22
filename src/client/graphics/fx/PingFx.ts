@@ -1,8 +1,7 @@
+import { TileRef } from "../../../core/game/GameMap";
 import { GameView } from "../../../core/game/GameView";
 import { PingType } from "../../../core/game/Ping";
-import { TileRef } from "../../../core/game/GameMap";
 import { Fx } from "./Fx";
-
 
 export class PingFx implements Fx {
   private readonly durationMs: number = 3000; // Ping visible for 3 seconds
@@ -11,8 +10,6 @@ export class PingFx implements Fx {
   private get icon(): HTMLImageElement | null {
     return PingFx.iconCache.get(this.pingType) ?? null;
   }
-
-
 
   constructor(
     private game: GameView,
@@ -57,9 +54,10 @@ export class PingFx implements Fx {
         return null;
     }
   }
-private static iconCache = new Map<PingType, HTMLImageElement | null>();
+  private static iconCache = new Map<PingType, HTMLImageElement | null>();
   private static preloadIcon(pingType: PingType, iconPath: string): void {
     if (!PingFx.iconCache.has(pingType)) {
+      PingFx.iconCache.set(pingType, null); // Reserve spot immediately
       const img = new Image();
       img.onload = () => {
         PingFx.iconCache.set(pingType, img);

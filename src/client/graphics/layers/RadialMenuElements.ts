@@ -572,6 +572,8 @@ export const rootMenuElement: MenuElement = {
   icon: infoIcon,
   color: COLORS.info,
   subMenu: (params: MenuElementParams) => {
+    if (params === undefined) return [];
+
     let ally = allyRequestElement;
     if (params.selected?.isAlliedWith(params.myPlayer)) {
       ally = allyBreakElement;
@@ -584,7 +586,7 @@ export const rootMenuElement: MenuElement = {
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
-            createPingMenu(params.eventBus),
+      createPingMenu(params.eventBus),
       ...(isOwnTerritory
         ? [deleteUnitElement, ally, buildMenuElement]
         : [boatMenuElement, ally, attackMenuElement]),
