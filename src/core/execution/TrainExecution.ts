@@ -356,6 +356,17 @@ export class TrainExecution implements Execution {
         return { kind: "hopLimit" };
       }
 
+      // If the rail network has become disconnected such that the current station's
+      // cluster no longer contains the destination, invalidate this train immediately.
+      const currentCluster = this.currentStation!.getCluster();
+      if (!currentCluster || !currentCluster.has(this.destination)) {
+        this.active = false;
+        if (this.mg) {
+          this.mg.recordTrainRemovedDueToHopLimit(this.journeyHopCount);
+        }
+        return { kind: "hopLimit" };
+      }
+
       // Use local greedy routing to choose next station
       const nextHop = this.currentStation!.chooseNextStation(
         this.destination,
