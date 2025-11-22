@@ -367,10 +367,6 @@ export class FxLayer implements Layer {
     } catch (err) {
       console.error("Failed to load FX sprites:", err);
     }
-    if (this.pingEventCleanup) {
-      this.pingEventCleanup();
-      this.pingEventCleanup = undefined;
-    }
     this.pingEventCleanup = this.eventBus.on(
       PingPlacedEvent,
       (event: PingPlacedEvent) => {
