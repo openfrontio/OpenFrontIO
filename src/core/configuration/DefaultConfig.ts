@@ -371,7 +371,7 @@ export class DefaultConfig implements Config {
   }
   trainGoldRefillTime(): Tick {
     // Baseline: full refill in x ticks
-    return 600;
+    return 300;
   }
 
   trainStationMinRange(): number {

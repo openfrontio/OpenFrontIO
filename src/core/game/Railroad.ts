@@ -167,14 +167,15 @@ export class Railroad {
   }
 
   getFare(): bigint {
-    const baseLengthFare = 10;
-    const baseCongestionFare = BigInt(2000);
-    const lengthFare = BigInt(this.getLength() * baseLengthFare); // Base fare proportional to length
+    const baseLengthBonus = 10;
+    const baseCongestionFare = BigInt(1000);
+    const lengthFare = BigInt(this.getLength() * baseLengthBonus); // Base fare proportional to length
     // Busy railroads should be more expensive: each train adds a congestion premium
     const effectiveCongestion = Math.max(0, Math.round(this.congestionEma));
     const congestionFactor = BigInt(1 + effectiveCongestion); // 1,2,3,...
     const congestionFare = baseCongestionFare * congestionFactor;
-    return lengthFare + congestionFare;
+    const net = congestionFare > lengthFare ? congestionFare - lengthFare : 0n;
+    return net;
   }
 
   setRailTiles(tiles: RailTile[]) {
