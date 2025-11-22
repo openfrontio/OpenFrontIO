@@ -817,8 +817,9 @@ export class DefaultConfig implements Config {
       return 10_000;
     }
     if (playerInfo.playerType === PlayerType.FakeHuman) {
-      const strength =
-        this.useNationStrengthForStartManpower() ? playerInfo.nationStrength ?? 1 : 1;
+      const strength = this.useNationStrengthForStartManpower()
+        ? (playerInfo.nationStrength ?? 1)
+        : 1;
 
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
