@@ -1,7 +1,7 @@
 import { TrainExecution } from "../execution/TrainExecution";
 import { GraphAdapter } from "../pathfinding/SerialAStar";
 import { PseudoRandom } from "../PseudoRandom";
-import { Game, Player, Unit, UnitType } from "./Game";
+import { Game, Gold, Player, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { Railroad } from "./Railroad";
@@ -58,11 +58,12 @@ export interface EdgeMetrics {
 }
 
 /**
- * Station traffic and congestion data
+ * Station traffic data (train counts, legacy heat field kept for stats only).
+ * Routing decisions now use passenger demand instead of heat.
  */
 export interface StationTraffic {
   trainCount: number; // Current number of trains at station
-  heat: number; // Congestion heat (unbounded, decays over time)
+  heat: number; // Legacy congestion heat (no longer used for routing)
   lastHeatUpdate: number;
 }
 
@@ -85,12 +86,21 @@ class CityStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+    const relation = rel(trainOwner, stationOwner);
+    const perLevelMax = mg.config().trainGold(relation);
+    const level = station.unit.level();
+    const maxGoldForThisTrain = perLevelMax * BigInt(level);
+
+    const payout = station.consumePassengerPool(maxGoldForThisTrain);
+    if (payout === 0n) {
+      return;
+    }
+
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
-      stationOwner.addGold(goldBonus, station.tile());
+      stationOwner.addGold(payout, station.tile());
     }
-    trainOwner.addGold(goldBonus, station.tile());
+    trainOwner.addGold(payout, station.tile());
   }
 }
 
@@ -103,12 +113,21 @@ class PortStopHandler implements TrainStopHandler {
   ): void {
     const stationOwner = station.unit.owner();
     const trainOwner = trainExecution.owner();
-    const goldBonus = mg.config().trainGold(rel(trainOwner, stationOwner));
+    const relation = rel(trainOwner, stationOwner);
+    const perLevelMax = mg.config().trainGold(relation);
+    const level = station.unit.level();
+    const maxGoldForThisTrain = perLevelMax * BigInt(level);
 
-    trainOwner.addGold(goldBonus, station.tile());
+    const payout = station.consumePassengerPool(maxGoldForThisTrain);
+    if (payout === 0n) {
+      return;
+    }
+
+    // Train owner always gets the payout
+    trainOwner.addGold(payout, station.tile());
     // Share revenue with the station owner if it's not the current player
     if (trainOwner !== stationOwner) {
-      stationOwner.addGold(goldBonus, station.tile());
+      stationOwner.addGold(payout, station.tile());
     }
   }
 }
@@ -169,7 +188,7 @@ export class TrainStation {
   private readonly profitSensitivity: number = 0.3; // How much profit-per-distance boosts scores
 
   private readonly distanceSensitivity: number = 0.2; // How much distance increases duration penalties
-  private readonly stationHeatSensitivity: number = 0.4; // How much station heat reduces scores
+  private readonly stationDemandSensitivity: number = 0.1; // How strongly passenger demand boosts scores
   private readonly heatDecayInterval: number = 60; // How often heat decays (ticks)
   private readonly heatDecayFactor: number = 1 - 0.1; // How much heat decays per time (0.95 = 5% decay)
   private readonly recencyDecayFactor: number = 1 - 0.2; // How much recency penalties decay per time (0.8 = 20% decay)
@@ -179,6 +198,11 @@ export class TrainStation {
 
   // Pre-computed decay factors for performance (avoid Math.pow in hot path)
   private readonly recencyDecayPowers: number[];
+
+  // 0–1 scalar representing how "full" the station is with paying passengers.
+  private passengerFullness: number = 1;
+  // Last tick at which we updated passengerFullness.
+  private lastPassengerUpdateTick: number;
 
   constructor(
     private mg: Game,
@@ -216,6 +240,10 @@ export class TrainStation {
       this.recencyDecayPowers[i] =
         this.recencyDecayPowers[i - 1] * this.recencyDecayFactor;
     }
+
+    // Initialize passenger demand tracking
+    this.passengerFullness = 1;
+    this.lastPassengerUpdateTick = mg.ticks();
   }
 
   tradeAvailable(otherPlayer: Player): boolean {
@@ -561,7 +589,7 @@ export class TrainStation {
     edge: EdgeMetrics,
     stationsAgo: number, // -1 = never visited, 1 = immediate previous, 2 = 2 ago, etc.
     actualProfit: number,
-    neighborTrafficHeat: number, // Heat factor of the neighbor station
+    neighborDemandScore: number, // Demand score of the neighbor station
   ): number {
     // Base score: profit per time unit, boosted by profit-per-distance
     const profitPerDistance = actualProfit / edge.distance;
@@ -582,8 +610,8 @@ export class TrainStation {
       score *= recencyPenalty;
     }
 
-    // Apply station heat avoidance
-    score *= 1 - this.stationHeatSensitivity * neighborTrafficHeat;
+    // Apply station demand preference (higher demand => higher score)
+    score *= 1 + this.stationDemandSensitivity * neighborDemandScore;
 
     // Ensure unvisited stations get a minimum exploration score
     // This prevents zero-profit unvisited stations(factories) from being ignored
@@ -700,12 +728,12 @@ export class TrainStation {
 
       const actualProfit = this.calculateActualProfit(trainOwner, neighbor);
       const stationsAgo = this.getStationsAgo(neighbor, recentStations);
-      const neighborTrafficHeat = neighbor.getTraffic().heat;
+      const neighborDemandScore = neighbor.getPassengerDemandScore();
       const score = this.calculateEdgeScore(
         edge,
         stationsAgo,
         actualProfit,
-        neighborTrafficHeat,
+        neighborDemandScore,
       );
 
       validNeighbors.push({ station: neighbor, score });
@@ -796,6 +824,63 @@ export class TrainStation {
       this.traffic.heat *= this.heatDecayFactor;
       this.traffic.lastHeatUpdate = currentTime;
     }
+  }
+
+  /**
+   * Lazily regenerate the passenger pool based on elapsed ticks.
+   */
+  private updatePassengerPool() {
+    const now = this.mg.ticks();
+    const dt = now - this.lastPassengerUpdateTick;
+    if (dt <= 0) {
+      return;
+    }
+
+    this.lastPassengerUpdateTick = now;
+
+    const refillTime = this.mg.config().trainGoldRefillTime();
+    if (refillTime <= 0) {
+      this.passengerFullness = 1;
+      return;
+    }
+
+    this.passengerFullness = Math.min(
+      1,
+      this.passengerFullness + dt / refillTime,
+    );
+  }
+
+  /**
+   * Public view for UI / analytics: how strong is demand right now?
+   */
+  getPassengerDemandScore(): number {
+    this.updatePassengerPool();
+    return this.passengerFullness * this.unit.level();
+  }
+
+  /**
+   * Convert current passenger pool into an actual gold payout, then
+   * deplete the pool proportionally.
+   */
+  consumePassengerPool(maxGoldForThisTrain: Gold): Gold {
+    this.updatePassengerPool();
+
+    const maxGoldNum = Number(maxGoldForThisTrain);
+    if (maxGoldNum <= 0) {
+      return 0n;
+    }
+
+    const payoutNum = Math.floor(maxGoldNum * this.passengerFullness);
+    const payout = BigInt(payoutNum);
+
+    if (payoutNum > 0) {
+      this.passengerFullness -= payoutNum / maxGoldNum;
+      if (this.passengerFullness < 0) {
+        this.passengerFullness = 0;
+      }
+    }
+
+    return payout;
   }
 
   onTrainStop(trainExecution: TrainExecution) {
@@ -898,7 +983,11 @@ export class TrainStationMapAdapter implements GraphAdapter<TrainStation> {
   }
 
   cost(node: TrainStation): number {
-    return 1;
+    // Favor higher-demand stations slightly by reducing their traversal cost.
+    const demand = node.getPassengerDemandScore(); // ~0..level
+    const baseCost = 1;
+    const alpha = 0.25; // tuning knob
+    return baseCost / (1 + alpha * demand);
   }
 
   position(node: TrainStation): { x: number; y: number } {

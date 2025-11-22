@@ -16,8 +16,8 @@ describe("TrainStation", () => {
     game = {
       ticks: jest.fn().mockReturnValue(123),
       config: jest.fn().mockReturnValue({
-        trainGold: (isFriendly: boolean) =>
-          isFriendly ? BigInt(1000) : BigInt(500),
+        trainGold: () => 1000n,
+        trainGoldRefillTime: () => 60,
       }),
       addUpdate: jest.fn(),
       addExecution: jest.fn(),
@@ -30,6 +30,8 @@ describe("TrainStation", () => {
       id: 1,
       canTrade: jest.fn().mockReturnValue(true),
       isFriendly: jest.fn().mockReturnValue(false),
+      isOnSameTeam: jest.fn().mockReturnValue(false),
+      isAlliedWith: jest.fn().mockReturnValue(false),
     } as any;
 
     unit = {
