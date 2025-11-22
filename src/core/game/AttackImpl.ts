@@ -8,6 +8,7 @@ export class AttackImpl implements Attack {
   private _borderSize = 0;
   public _retreating = false;
   public _retreated = false;
+  private _unitID: number | undefined;
 
   constructor(
     private _id: string,
@@ -17,7 +18,10 @@ export class AttackImpl implements Attack {
     private _sourceTile: TileRef | null,
     private _border: Set<number>,
     private _mg: GameImpl,
-  ) {}
+    unitID?: number,
+  ) {
+    this._unitID = unitID;
+  }
 
   sourceTile(): TileRef | null {
     return this._sourceTile;
@@ -42,6 +46,10 @@ export class AttackImpl implements Attack {
 
   id() {
     return this._id;
+  }
+
+  unitID(): number | undefined {
+    return this._unitID;
   }
 
   delete() {

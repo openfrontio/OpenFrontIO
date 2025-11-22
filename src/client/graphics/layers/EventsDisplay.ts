@@ -68,6 +68,8 @@ interface GameEvent {
   focusID?: number;
   unitView?: UnitView;
   shouldDelete?: (game: GameView) => boolean;
+  // Track when a boat started retreating (for NAVAL_INVASION_INBOUND messages)
+  retreatStartedAt?: Tick;
 }
 
 @customElement("events-display")
@@ -129,6 +131,80 @@ export class EventsDisplay extends LitElement implements Layer {
         ${content}
       </button>
     `;
+  }
+
+  /**
+   * Calculate time remaining in seconds for a boat to reach its target.
+   * Boats move 1 tile per tick (10 ticks per second).
+   */
+  private getBoatTimeRemaining(boat: UnitView): number | null {
+    const targetTile = boat.targetTile();
+    if (!targetTile || boat.reachedTarget() || !boat.isActive()) {
+      return null;
+    }
+    const tilesRemaining = boat.pathRemaining();
+    if (tilesRemaining === undefined || tilesRemaining === 0) {
+      // Fallback to manhattan distance if pathRemaining is not available
+      const distance = this.game.manhattanDist(boat.tile(), targetTile);
+      return Math.ceil(distance / 10);
+    }
+    return Math.ceil(tilesRemaining / 10);
+  }
+
+  /**
+   * Find the boat unit associated with an attack.
+   * Uses unit ID if available, otherwise falls back to matching by owner, target territory, and troop count.
+   */
+  private findBoatForAttack(
+    attackerID: number,
+    targetID: number,
+    troops: number,
+    unitID?: number,
+  ): UnitView | null {
+    const attacker = this.game.playerBySmallID(attackerID) as PlayerView;
+    if (!attacker) return null;
+
+    // If unit ID is provided, try to find the boat directly by ID
+    if (unitID !== undefined) {
+      const boat = this.game.unit(unitID);
+      if (
+        boat &&
+        boat.type() === UnitType.TransportShip &&
+        boat.owner() === attacker &&
+        boat.isActive()
+      ) {
+        return boat;
+      }
+    }
+
+    // Fallback to matching by owner, target territory, and troop count
+    const target = this.game.playerBySmallID(targetID) as PlayerView;
+    if (!target) return null;
+
+    const boats = attacker
+      .units(UnitType.TransportShip)
+      .filter((u) => u.isActive());
+
+    let fallbackBoat: UnitView | null = null;
+
+    for (const boat of boats) {
+      const targetTile = boat.targetTile();
+      if (!targetTile) continue;
+
+      const targetOwnerSmallID = this.game.ownerID(targetTile);
+      if (targetOwnerSmallID === target.smallID()) {
+        // Track first boat heading to target as fallback
+        fallbackBoat ??= boat;
+
+        // Prefer exact troop match, return immediately if found
+        if (troops === 0 || Math.abs(boat.troops() - troops) < 10) {
+          return boat;
+        }
+      }
+    }
+
+    // Return fallback boat if no preferred match found
+    return fallbackBoat;
   }
 
   private renderToggleButton(src: string, category: MessageCategory) {
@@ -213,6 +289,30 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     let remainingEvents = this.events.filter((event) => {
+      // Check if boat retreating message should be deleted after 5 seconds
+      if (event.type === MessageType.NAVAL_INVASION_INBOUND && event.unitView) {
+        const currentUnitView = this.game.unit(event.unitView.id());
+        // First check if unit should be deleted normally (destroyed, landed, etc.)
+        if (event.shouldDelete?.(this.game)) {
+          if (event.onDelete) {
+            event.onDelete();
+          }
+          return false;
+        }
+        // If boat is retreating, track when it started and delete after 5 seconds
+        if (currentUnitView && currentUnitView.retreating()) {
+          // If boat is retreating, track when it started
+          event.retreatStartedAt ??= this.game.ticks();
+          // Delete message 5 seconds (50 ticks) after retreat started
+          if (this.game.ticks() - event.retreatStartedAt >= 50) {
+            if (event.onDelete) {
+              event.onDelete();
+            }
+            return false;
+          }
+        }
+      }
+
       const shouldKeep =
         this.game.ticks() - event.createdAt < (event.duration ?? 600) &&
         !event.shouldDelete?.(this.game);
@@ -698,19 +798,58 @@ export class EventsDisplay extends LitElement implements Layer {
 
     const unitView = this.game.unit(event.unitID);
 
+    // Format the message for NAVAL_INVASION_INBOUND to display formatted troop count
+    let description = event.message;
+    if (event.messageType === MessageType.NAVAL_INVASION_INBOUND && unitView) {
+      const formattedTroops = renderNumber(
+        Math.round(unitView.troops()) / 10,
+        0,
+      );
+      // Parse the message to extract player name (format: "Boat: <number> <name>")
+      const match = event.message.match(/Boat: \d+ (.+)/);
+      const playerName = match ? match[1] : "";
+      description = `${translateText("events_display.boat")}: ${formattedTroops}${playerName ? ` ${playerName}` : ""}`;
+    }
+
     this.addEvent({
-      description: event.message,
+      description: description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,
       createdAt: this.game.ticks(),
       unitView: unitView,
+      shouldDelete: (game) => {
+        // Delete the message if the unit doesn't exist or is no longer active
+        // (destroyed, canceled, or landed)
+        if (!unitView) {
+          return true;
+        }
+        const currentUnitView = game.unit(event.unitID);
+        if (!currentUnitView || !currentUnitView.isActive()) {
+          return true;
+        }
+        return false;
+      },
     });
   }
 
   private getEventDescription(
     event: GameEvent,
   ): string | DirectiveResult<typeof UnsafeHTMLDirective> {
+    // Add "(retreating)" for boat attacks when the boat is retreating
+    if (event.type === MessageType.NAVAL_INVASION_INBOUND && event.unitView) {
+      // Get the current unit view to check retreating state dynamically
+      const currentUnitView = this.game.unit(event.unitView.id());
+      if (currentUnitView && currentUnitView.retreating()) {
+        const baseDescription = event.description;
+        const retreatingText = ` (${translateText("events_display.retreating")})`;
+        if (event.unsafeDescription) {
+          return unsafeHTML(onlyImages(baseDescription + retreatingText));
+        }
+        return baseDescription + retreatingText;
+      }
+    }
+
     return event.unsafeDescription
       ? unsafeHTML(onlyImages(event.description))
       : event.description;
@@ -740,11 +879,11 @@ export class EventsDisplay extends LitElement implements Layer {
     return html`
       ${this.incomingAttacks.length > 0
         ? html`
-            ${this.incomingAttacks.map(
-              (attack) => html`
+            ${this.incomingAttacks.map((attack) => {
+              return html`
                 ${this.renderButton({
                   content: html`
-                    ${renderTroops(attack.troops)}
+                    ${renderNumber(Math.round(attack.troops) / 10, 0)}
                     ${(
                       this.game.playerBySmallID(attack.attackerID) as PlayerView
                     )?.name()}
@@ -756,8 +895,8 @@ export class EventsDisplay extends LitElement implements Layer {
                   className: "text-left text-red-400",
                   translate: false,
                 })}
-              `,
-            )}
+              `;
+            })}
           `
         : ""}
     `;
@@ -768,12 +907,27 @@ export class EventsDisplay extends LitElement implements Layer {
       ${this.outgoingAttacks.length > 0
         ? html`
             <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingAttacks.map(
-                (attack) => html`
+              ${this.outgoingAttacks.map((attack) => {
+                const myPlayer = this.game.myPlayer();
+                const boat = myPlayer
+                  ? this.findBoatForAttack(
+                      myPlayer.smallID(),
+                      attack.targetID,
+                      attack.troops,
+                      attack.unitID,
+                    )
+                  : null;
+                const timeRemaining =
+                  boat && !attack.retreating
+                    ? this.getBoatTimeRemaining(boat)
+                    : null;
+
+                return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
                       content: html`
-                        ${renderTroops(attack.troops)}
+                        ${renderTroops(Math.round(attack.troops))}
+                        ${timeRemaining !== null ? ` ${timeRemaining}s` : ""}
                         ${(
                           this.game.playerBySmallID(
                             attack.targetID,
@@ -797,8 +951,8 @@ export class EventsDisplay extends LitElement implements Layer {
                           )}...)</span
                         >`}
                   </div>
-                `,
-              )}
+                `;
+              })}
             </div>
           `
         : ""}
@@ -846,12 +1000,17 @@ export class EventsDisplay extends LitElement implements Layer {
       ${this.outgoingBoats.length > 0
         ? html`
             <div class="flex flex-wrap gap-y-1 gap-x-2">
-              ${this.outgoingBoats.map(
-                (boat) => html`
+              ${this.outgoingBoats.map((boat) => {
+                const timeRemaining = !boat.retreating()
+                  ? this.getBoatTimeRemaining(boat)
+                  : null;
+
+                return html`
                   <div class="inline-flex items-center gap-1">
                     ${this.renderButton({
                       content: html`${translateText("events_display.boat")}:
-                      ${renderTroops(boat.troops())}`,
+                      ${renderTroops(boat.troops())}
+                      ${timeRemaining !== null ? ` ${timeRemaining}s` : ""}`,
                       onClick: () => this.emitGoToUnitEvent(boat),
                       className: "text-left text-blue-400",
                       translate: false,
@@ -869,8 +1028,8 @@ export class EventsDisplay extends LitElement implements Layer {
                           )}...)</span
                         >`}
                   </div>
-                `,
-              )}
+                `;
+              })}
             </div>
           `
         : ""}

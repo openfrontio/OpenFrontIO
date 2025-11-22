@@ -207,4 +207,18 @@ export class PathFinder {
     }
     return false;
   }
+
+  /**
+   * Returns the number of tiles remaining in the path.
+   * Returns 0 if path is not computed, completed, or not found.
+   */
+  tileRemaining(): number {
+    if (this.path === null || !this.computeFinished) {
+      return 0;
+    }
+    if (this.path_idx >= this.path.length) {
+      return 0;
+    }
+    return this.path.length - this.path_idx;
+  }
 }
