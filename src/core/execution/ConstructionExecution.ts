@@ -31,6 +31,7 @@ export class ConstructionExecution implements Execution {
     private player: Player,
     private constructionType: UnitType,
     private tile: TileRef,
+    private rocketDirectionUp?: boolean,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -104,7 +105,15 @@ export class ConstructionExecution implements Execution {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
         this.mg.addExecution(
-          new NukeExecution(this.constructionType, player, this.tile),
+          new NukeExecution(
+            this.constructionType,
+            player,
+            this.tile,
+            null,
+            -1,
+            0,
+            this.rocketDirectionUp,
+          ),
         );
         break;
       case UnitType.MIRV:
