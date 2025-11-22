@@ -516,6 +516,12 @@ export class InputHandler {
           x: worldCoords.x,
           y: worldCoords.y,
         });
+        console.log(
+          "Emitting PingPlacedEvent with type:",
+          this.uiState.currentPingType,
+          "at world coordinates:",
+          worldCoords,
+        );
         this.eventBus.emit(
           new PingPlacedEvent(
             this.uiState.currentPingType,

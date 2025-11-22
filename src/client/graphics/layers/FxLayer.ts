@@ -370,7 +370,7 @@ export class FxLayer implements Layer {
     this.pingEventCleanup = this.eventBus.on(
       PingPlacedEvent,
       (event: PingPlacedEvent) => {
-        console.log("received PingPlacedEvent", event);
+        console.log("received PingPlacedEvent in FxLayer", event);
         const pingFx = new PingFx(this.game, event.type, event.tile);
         this.allFx.push(pingFx);
       },
