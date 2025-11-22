@@ -75,7 +75,7 @@ export class Railroad {
 
   getFare(): bigint {
     const baseLengthFare = 10;
-    const baseCongestionFare = BigInt(5000);
+    const baseCongestionFare = BigInt(2000);
     const lengthFare = BigInt(this.getLength() * baseLengthFare); // Base fare proportional to length
     // Busy railroads should be more expensive: each train adds a congestion premium
     const effectiveCongestion = Math.max(0, Math.round(this.congestionEma));

@@ -177,8 +177,11 @@ export class TrainStation {
   private readonly stationDemandSensitivity: number = 0.1; // How strongly passenger demand boosts scores
   private readonly heatDecayInterval: number = 60; // How often heat decays (ticks)
   private readonly heatDecayFactor: number = 1 - 0.1; // How much heat decays per time (0.95 = 5% decay)
-  private readonly recencyDecayFactor: number = 1 - 0.2; // How much recency penalties decay per time (0.8 = 20% decay)
-  private readonly maxRecencyPenalty: number = 1; // Maximum penalty for immediate revisits
+  // Softer, faster-decaying recency penalties now that profit-based routing discourages loops:
+  // - Immediate revisit gets at most ~40% penalty
+  // - Penalty shrinks quickly for older visits
+  private readonly recencyDecayFactor: number = 1 - 0.1; // 0.9
+  private readonly maxRecencyPenalty: number = 0.4; // 40% max penalty for immediate revisits
 
   private readonly randomChoiceProbability: number = 0.1; // Probability of making random choice instead of best (0.1 = 10%)
 
@@ -527,15 +530,46 @@ export class TrainStation {
   }
 
   /**
-   * Calculate edge score for local greedy routing with graduated recency penalties
+   * Roughly estimate the gold this train owner can expect from visiting a station,
+   * using the same config values as the real payout (but without mutating state).
+   *
+   * Real payout at a stop is:
+   *   perLevelMax(rel) * level * passengerFullness  (capped by the pool)
+   *
+   * We approximate that as:
+   *   expectedProfit ≈ perLevelMax(rel) * (level * passengerFullness)
+   *                  = perLevelMax(rel) * demandScore
+   */
+  private estimateExpectedProfitForStation(
+    trainOwner: Player,
+    station: TrainStation,
+  ): number {
+    const stationOwner = station.unit.owner();
+    const relationship = rel(trainOwner, stationOwner);
+    const perLevelMax = this.mg.config().trainGold(relationship); // Gold (BigInt)
+
+    const demandScore = station.getPassengerDemandScore(); // ≈ level * fullness (0..level)
+
+    // Convert to number for scoring; we only care about relative ordering.
+    const basePerLevel = Number(perLevelMax);
+    if (!Number.isFinite(basePerLevel) || basePerLevel <= 0) {
+      return 0;
+    }
+
+    return basePerLevel * demandScore;
+  }
+
+  /**
+   * Calculate edge score for local greedy routing with graduated recency penalties.
+   * Uses an approximate "expected gold per tick" signal:
+   *
+   *   score ≈ expectedProfit(trainOwner, neighbor) / (fare + travelTimeCost)
    */
   private calculateEdgeScore(
     neighbor: TrainStation,
     stationsAgo: number, // -1 = never visited, 1 = immediate previous, 2 = 2 ago, etc.
+    trainOwner: Player,
   ): number {
-    // Heuristic:
-    // - Estimate expected profit as (demand - normalized fare)
-    // - Divide by estimated travel time (tiles / train speed) to get profit per tick
     const railroad = this.getRailroadTo(neighbor);
     if (!railroad) {
       return -Infinity;
@@ -547,18 +581,30 @@ export class TrainStation {
     }
 
     const lengthTiles = railroad.getLength();
-    const travelTime =
+    const travelTimeTicks =
       lengthTiles > 0 ? lengthTiles / this.approxTrainSpeedTilesPerTick : 1;
 
-    // Pull current demand from the neighbor station.
-    const neighborDemandScore = neighbor.getPassengerDemandScore();
+    // Translate time into an approximate gold-cost so that long detours
+    // are less attractive even when fare is low.
+    const timeCostPerTick = 500; // tuning knob: "opportunity cost" of a tick
+    const travelTimeCost = timeCostPerTick * travelTimeTicks;
 
-    // Normalize fare into the same rough magnitude as demand.
-    const normalizedFare = fare / this.fareNormalizationFactor;
-    const expectedValue = neighborDemandScore - normalizedFare;
+    const expectedProfit = this.estimateExpectedProfitForStation(
+      trainOwner,
+      neighbor,
+    );
 
-    // Base score: expected profit per unit of travel time.
-    let score = expectedValue / Math.max(1, travelTime);
+    if (expectedProfit <= 0) {
+      return -Infinity;
+    }
+
+    const effectiveCost = fare + travelTimeCost;
+    if (effectiveCost <= 0) {
+      return expectedProfit;
+    }
+
+    // Base score: approximate gold per unit of (fare + time cost).
+    let score = expectedProfit / effectiveCost;
 
     // Apply graduated recency penalty based on stations ago
     if (stationsAgo > 0) {
@@ -572,11 +618,8 @@ export class TrainStation {
       score *= recencyPenalty;
     }
 
-    // Apply station demand preference (higher demand => higher score)
-    score *= 1 + this.stationDemandSensitivity * neighborDemandScore;
-
     // Ensure unvisited stations get a minimum exploration score
-    // This prevents zero-profit unvisited stations(factories) from being ignored
+    // This prevents unknown stations from being ignored forever
     if (stationsAgo < 0 && score <= 0) {
       score = 0.2; // Small positive score to encourage exploration
     }
@@ -686,7 +729,7 @@ export class TrainStation {
 
     for (const neighbor of neighbors) {
       const stationsAgo = this.getStationsAgo(neighbor, recentStations);
-      const score = this.calculateEdgeScore(neighbor, stationsAgo);
+      const score = this.calculateEdgeScore(neighbor, stationsAgo, trainOwner);
 
       validNeighbors.push({ station: neighbor, score });
     }
