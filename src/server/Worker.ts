@@ -7,12 +7,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { ID } from "../core/BaseSchemas";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessageSchema,
   GameID,
-  ID,
   PartialGameRecordSchema,
   ServerErrorMessage,
 } from "../core/Schemas";
