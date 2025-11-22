@@ -48,16 +48,6 @@ export interface RoutingEntryFull {
 }
 
 /**
- * Edge metrics for local greedy routing
- */
-export interface EdgeMetrics {
-  toStation: TrainStation;
-  baseDuration: number; // Base travel time/cost to this station
-  distance: number; // Physical distance (affects duration)
-  lastUpdated: number; // When metrics were last updated
-}
-
-/**
  * Station traffic data (train counts, legacy heat field kept for stats only).
  * Routing decisions now use passenger demand instead of heat.
  */
@@ -183,11 +173,7 @@ export class TrainStation {
   private readonly routesToCheckPerTick = 3; // Check only 3 routes per tick
 
   // Local greedy routing properties
-  private edgeMetrics: Map<TrainStation, EdgeMetrics> = new Map();
   private traffic: StationTraffic;
-  private readonly profitSensitivity: number = 0.3; // How much profit-per-distance boosts scores
-
-  private readonly distanceSensitivity: number = 0.2; // How much distance increases duration penalties
   private readonly stationDemandSensitivity: number = 0.1; // How strongly passenger demand boosts scores
   private readonly heatDecayInterval: number = 60; // How often heat decays (ticks)
   private readonly heatDecayFactor: number = 1 - 0.1; // How much heat decays per time (0.95 = 5% decay)
@@ -195,6 +181,12 @@ export class TrainStation {
   private readonly maxRecencyPenalty: number = 1; // Maximum penalty for immediate revisits
 
   private readonly randomChoiceProbability: number = 0.1; // Probability of making random choice instead of best (0.1 = 10%)
+
+  // Approximate train speed used for routing heuristics (tiles per tick).
+  // Keep this in sync with TrainExecution.speed.
+  private readonly approxTrainSpeedTilesPerTick: number = 2;
+  // Normalize fare (which is in gold units) into roughly the same scale as demand scores.
+  private readonly fareNormalizationFactor: number = 1000;
 
   // Pre-computed decay factors for performance (avoid Math.pow in hot path)
   private readonly recencyDecayPowers: number[];
@@ -264,11 +256,6 @@ export class TrainStation {
     const neighbor = railRoad.from === this ? railRoad.to : railRoad.from;
     if (neighbor) {
       this.railroadByNeighbor.set(neighbor, railRoad);
-
-      // Initialize edge metrics for new connection if not present
-      if (!this.edgeMetrics.has(neighbor)) {
-        this.initializeEdgeMetrics(neighbor);
-      }
     }
   }
 
@@ -277,7 +264,6 @@ export class TrainStation {
     const neighbor = railRoad.from === this ? railRoad.to : railRoad.from;
     if (neighbor) {
       this.railroadByNeighbor.delete(neighbor);
-      this.edgeMetrics.delete(neighbor);
     }
     this.routesChanged = true; // Network topology changed
   }
@@ -523,48 +509,6 @@ export class TrainStation {
   // ===== LOCAL GREEDY ROUTING METHODS =====
 
   /**
-   * Initialize edge metrics for a neighboring station
-   */
-  private initializeEdgeMetrics(neighborStation: TrainStation): void {
-    const distance = this.calculateDistance(neighborStation);
-    const baseDuration = Math.max(1, Math.floor(distance / 2)); // Rough duration estimate
-
-    this.edgeMetrics.set(neighborStation, {
-      toStation: neighborStation,
-      baseDuration,
-      distance,
-      lastUpdated: this.mg.ticks(),
-    });
-  }
-
-  /**
-   * Calculate physical distance to another station
-   */
-  private calculateDistance(other: TrainStation): number {
-    const dx = Math.abs(this.mg.x(this.tile()) - this.mg.x(other.tile()));
-    const dy = Math.abs(this.mg.y(this.tile()) - this.mg.y(other.tile()));
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  /**
-   * Calculate actual profit for a train owner traveling to another station
-   * Uses the game's actual trainGold configuration based on relationship
-   */
-  private calculateActualProfit(
-    trainOwner: Player,
-    other: TrainStation,
-  ): number {
-    const stationOwner = other.unit.owner();
-    const relationship = rel(trainOwner, stationOwner);
-
-    // Use actual game values from config
-    const goldValue = this.mg.config().trainGold(relationship);
-
-    // Convert BigInt to number for scoring calculations
-    return Number(goldValue);
-  }
-
-  /**
    * Update traffic when a train arrives
    */
   onTrainArrival(trainExecution: TrainExecution): void {
@@ -586,17 +530,35 @@ export class TrainStation {
    * Calculate edge score for local greedy routing with graduated recency penalties
    */
   private calculateEdgeScore(
-    edge: EdgeMetrics,
+    neighbor: TrainStation,
     stationsAgo: number, // -1 = never visited, 1 = immediate previous, 2 = 2 ago, etc.
-    actualProfit: number,
-    neighborDemandScore: number, // Demand score of the neighbor station
   ): number {
-    // Base score: profit per time unit, boosted by profit-per-distance
-    const profitPerDistance = actualProfit / edge.distance;
-    let score =
-      (actualProfit /
-        (edge.baseDuration * (1 + this.distanceSensitivity * edge.distance))) *
-      (1 + this.profitSensitivity * profitPerDistance);
+    // Heuristic:
+    // - Estimate expected profit as (demand - normalized fare)
+    // - Divide by estimated travel time (tiles / train speed) to get profit per tick
+    const railroad = this.getRailroadTo(neighbor);
+    if (!railroad) {
+      return -Infinity;
+    }
+
+    const fare = Number(railroad.getFare());
+    if (!Number.isFinite(fare) || fare <= 0) {
+      return -Infinity;
+    }
+
+    const lengthTiles = railroad.getLength();
+    const travelTime =
+      lengthTiles > 0 ? lengthTiles / this.approxTrainSpeedTilesPerTick : 1;
+
+    // Pull current demand from the neighbor station.
+    const neighborDemandScore = neighbor.getPassengerDemandScore();
+
+    // Normalize fare into the same rough magnitude as demand.
+    const normalizedFare = fare / this.fareNormalizationFactor;
+    const expectedValue = neighborDemandScore - normalizedFare;
+
+    // Base score: expected profit per unit of travel time.
+    let score = expectedValue / Math.max(1, travelTime);
 
     // Apply graduated recency penalty based on stations ago
     if (stationsAgo > 0) {
@@ -723,18 +685,8 @@ export class TrainStation {
     const validNeighbors: Array<{ station: TrainStation; score: number }> = [];
 
     for (const neighbor of neighbors) {
-      const edge = this.edgeMetrics.get(neighbor);
-      if (!edge) continue;
-
-      const actualProfit = this.calculateActualProfit(trainOwner, neighbor);
       const stationsAgo = this.getStationsAgo(neighbor, recentStations);
-      const neighborDemandScore = neighbor.getPassengerDemandScore();
-      const score = this.calculateEdgeScore(
-        edge,
-        stationsAgo,
-        actualProfit,
-        neighborDemandScore,
-      );
+      const score = this.calculateEdgeScore(neighbor, stationsAgo);
 
       validNeighbors.push({ station: neighbor, score });
     }
@@ -775,9 +727,6 @@ export class TrainStation {
       }
     }
 
-    // Remove edge metrics for this station
-    this.edgeMetrics.clear(); // Remove all edges from this station
-
     // Remove from changed routes
     this.changedRoutes.delete(this);
 
@@ -799,9 +748,6 @@ export class TrainStation {
         this.changedRoutes.add(this); // Mark for rebroadcast if broadcasts enabled
       }
     }
-
-    // Remove edge metrics to/from the removed station
-    this.edgeMetrics.delete(removedStation);
   }
 
   /**
