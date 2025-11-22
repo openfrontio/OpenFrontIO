@@ -186,7 +186,12 @@ async function createClientGame(
     lobbyConfig,
     eventBus,
     gameRenderer,
-    new InputHandler(gameRenderer.uiState, canvas, eventBus),
+    new InputHandler(
+      gameRenderer.uiState,
+      canvas,
+      eventBus,
+      gameRenderer.transformHandler,
+    ),
     transport,
     worker,
     gameView,

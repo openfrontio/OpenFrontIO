@@ -21,12 +21,13 @@ export class EventBus {
   on<T extends GameEvent>(
     eventType: EventConstructor<T>,
     callback: (event: T) => void,
-  ): void {
+  ): () => void {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, []);
     }
-    const callbacks = this.listeners.get(eventType)!;
-    callbacks.push(callback as (event: GameEvent) => void);
+    this.listeners.get(eventType)!.push(callback as (event: GameEvent) => void);
+
+    return () => this.off(eventType, callback);
   }
 
   off<T extends GameEvent>(

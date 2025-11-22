@@ -371,10 +371,13 @@ export class FxLayer implements Layer {
       this.pingEventCleanup();
       this.pingEventCleanup = undefined;
     }
-    this.pingEventCleanup = this.eventBus.on(PingPlacedEvent, (event) => {
-      const pingFx = new PingFx(this.game, event.type, event.tile);
-      this.allFx.push(pingFx);
-    });
+    this.pingEventCleanup = this.eventBus.on(
+      PingPlacedEvent,
+      (event: PingPlacedEvent) => {
+        const pingFx = new PingFx(this.game, event.type, event.tile);
+        this.allFx.push(pingFx);
+      },
+    );
   }
 
   redraw(): void {

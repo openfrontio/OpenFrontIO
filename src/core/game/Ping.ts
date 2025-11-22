@@ -6,3 +6,10 @@ export type Ping = {
   type: PingType;
   tile: TileRef;
 };
+
+export class PingPlacedEvent {
+  constructor(
+    public readonly type: PingType,
+    public readonly tile: TileRef,
+  ) {}
+}

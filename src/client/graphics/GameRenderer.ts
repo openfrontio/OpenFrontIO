@@ -25,7 +25,7 @@ import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
-import { PingTargetPreviewLayer } from "./layers/PingTargetPreviewLayer";
+import { PingTrajectoryPreviewLayer } from "./layers/PingTrajectoryPreviewLayer";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
@@ -211,7 +211,7 @@ export function createRenderer(
     transformHandler,
     uiState,
   );
-  const pingTargetPreviewLayer = new PingTargetPreviewLayer(
+  const pingTrajectoryPreviewLayer = new PingTrajectoryPreviewLayer(
     game,
     eventBus,
     transformHandler,
@@ -251,7 +251,7 @@ export function createRenderer(
     new FxLayer(game, eventBus),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
-    pingTargetPreviewLayer,
+    pingTrajectoryPreviewLayer,
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),
     eventsDisplay,
