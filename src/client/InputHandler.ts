@@ -248,6 +248,10 @@ export class InputHandler {
     });
     this.pointers.clear();
 
+    this.eventBus.on(PingSelectedEvent, (event) => {
+      this.uiState.currentPingType = event.pingType;
+    });
+
     this.moveInterval = setInterval(() => {
       let deltaX = 0;
       let deltaY = 0;
