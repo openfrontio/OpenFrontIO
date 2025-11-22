@@ -84,13 +84,13 @@ export class PingTrajectoryPreviewLayer implements Layer {
 
   private getPingColor(): string {
     switch (this.currentPingType) {
-      case PingType.Attack:
+      case "attack":
         return "rgba(255, 0, 0, 0.7)"; // Red
-      case PingType.Retreat:
+      case "retreat":
         return "rgba(0, 255, 0, 0.7)"; // Green
-      case PingType.Defend:
+      case "defend":
         return "rgba(0, 0, 255, 0.7)"; // Blue
-      case PingType.WatchOut:
+      case "watchOut":
         return "rgba(255, 255, 0, 0.7)"; // Yellow
       default:
         return "rgba(128, 128, 128, 0.7)"; // Gray fallback
@@ -105,11 +105,8 @@ export class PingTrajectoryPreviewLayer implements Layer {
 
     const pingColor = this.getPingColor();
 
-    const offsetX = -this.game.width() / 2;
-    const offsetY = -this.game.height() / 2;
-
-    const x = this.game.x(this.pingTargetTile) + offsetX;
-    const y = this.game.y(this.pingTargetTile) + offsetY;
+    const x = this.game.x(this.pingTargetTile);
+    const y = this.game.y(this.pingTargetTile);
 
     context.save();
     context.fillStyle = pingColor;

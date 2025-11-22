@@ -27,13 +27,13 @@ export class PingFx implements Fx {
 
   private getPingColor(pingType: PingType): string {
     switch (pingType) {
-      case PingType.Attack:
+      case "attack":
         return "rgba(255, 0, 0, 0.7)"; // Red
-      case PingType.Retreat:
+      case "retreat":
         return "rgba(0, 255, 0, 0.7)"; // Green
-      case PingType.Defend:
+      case "defend":
         return "rgba(0, 0, 255, 0.7)"; // Blue
-      case PingType.WatchOut:
+      case "watchOut":
         return "rgba(255, 255, 0, 0.7)"; // Yellow
       default:
         return "rgba(128, 128, 128, 0.7)"; // Default to gray
@@ -42,13 +42,13 @@ export class PingFx implements Fx {
 
   private getIconPath(pingType: PingType): string | null {
     switch (pingType) {
-      case PingType.Attack:
+      case "attack":
         return "/resources/images/SwordIconWhite.svg";
-      case PingType.Retreat:
+      case "retreat":
         return "/resources/images/BackIconWhite.svg";
-      case PingType.Defend:
+      case "defend":
         return "/resources/images/ShieldIconWhite.svg";
-      case PingType.WatchOut:
+      case "watchOut":
         return "/resources/images/ExclamationMarkIcon.svg";
       default:
         return null;
@@ -70,7 +70,10 @@ export class PingFx implements Fx {
     }
   }
 
-  renderTick(duration: number, context: CanvasRenderingContext2D): boolean {
+  private static readonly PING_RADIUS = 15;
+  private static readonly ICON_SIZE = 20;
+
+  renderTick(_duration: number, context: CanvasRenderingContext2D): boolean {
     const elapsed = performance.now() - this.startTime;
     if (elapsed > this.durationMs) {
       return false; // Fx is finished
@@ -89,18 +92,17 @@ export class PingFx implements Fx {
     // Draw colored circle
     context.fillStyle = this.pingColor;
     context.beginPath();
-    context.arc(x + offsetX, y + offsetY, 15, 0, 2 * Math.PI);
+    context.arc(x + offsetX, y + offsetY, PingFx.PING_RADIUS, 0, 2 * Math.PI);
     context.fill();
 
     // Draw icon
     if (this.icon && this.icon.complete) {
-      const iconSize = 20;
       context.drawImage(
         this.icon,
-        x + offsetX - iconSize / 2,
-        y + offsetY - iconSize / 2,
-        iconSize,
-        iconSize,
+        x + offsetX - PingFx.ICON_SIZE / 2,
+        y + offsetY - PingFx.ICON_SIZE / 2,
+        PingFx.ICON_SIZE,
+        PingFx.ICON_SIZE,
       );
     }
 

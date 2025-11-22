@@ -2,6 +2,7 @@ import retreatIcon from "../../../../resources/images/BackIconWhite.svg";
 import pingIcon from "../../../../resources/images/PingIcon.svg";
 import watchOutIcon from "../../../../resources/images/QuestionMarkIcon.svg";
 import defendIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
 import { PingType } from "../../../core/game/Ping";
 import { PingSelectedEvent } from "../../InputHandler";
@@ -9,11 +10,11 @@ import { COLORS, MenuElement, MenuElementParams } from "./RadialMenuElements";
 
 export const PING_ICON = pingIcon;
 
-export const PING_COLORS = {
-  [PingType.Attack]: "#ff0000",
-  [PingType.Retreat]: "#ffa600",
-  [PingType.Defend]: "#0000ff",
-  [PingType.WatchOut]: "#ffff00",
+export const PING_COLORS: Record<PingType, string> = {
+  attack: "#ff0000",
+  retreat: "#ffa600",
+  defend: "#0000ff",
+  watchOut: "#ffff00",
 };
 
 function createPingElement(
@@ -31,7 +32,7 @@ function createPingElement(
     disabled: () => false,
     action: (params?: MenuElementParams) => {
       eventBus.emit(new PingSelectedEvent(pingType));
-      if (params) {
+      if (params && params.closeMenu) {
         params.closeMenu();
       }
     },
@@ -43,28 +44,28 @@ export function createPingMenu(eventBus: EventBus): MenuElement {
     "ping_attack",
     "Attack",
     swordIcon,
-    PingType.Attack,
+    "attack",
     eventBus,
   );
   const pingRetreatElement = createPingElement(
     "ping_retreat",
     "Retreat",
     retreatIcon,
-    PingType.Retreat,
+    "retreat",
     eventBus,
   );
   const pingDefendElement = createPingElement(
     "ping_defend",
     "Defend",
     defendIcon,
-    PingType.Defend,
+    "defend",
     eventBus,
   );
   const pingWatchOutElement = createPingElement(
     "ping_watch_out",
     "Watch out",
     watchOutIcon,
-    PingType.WatchOut,
+    "watchOut",
     eventBus,
   );
 
