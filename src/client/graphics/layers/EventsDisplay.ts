@@ -744,15 +744,6 @@ export class EventsDisplay extends LitElement implements Layer {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    // Check if player is now allied with attacker
-    if (myPlayer.isAlliedWith(attacker)) return;
-
-    // Check if player has enough troops
-    if (myPlayer.troops() < attack.troops) {
-      // Could add user feedback here about insufficient troops
-      return;
-    }
-
     // Launch counterattack with the same number of troops as the incoming attack
     this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), attack.troops));
   }
