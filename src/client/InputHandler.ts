@@ -507,6 +507,11 @@ export class InputHandler {
           localX,
           localY,
         );
+        console.log("emitting PingPlacedEvent", {
+          type: this.uiState.currentPingType,
+          x: worldCoords.x,
+          y: worldCoords.y,
+        });
         this.eventBus.emit(
           new PingPlacedEvent(
             this.uiState.currentPingType,
