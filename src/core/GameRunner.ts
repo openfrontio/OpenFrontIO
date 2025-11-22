@@ -64,8 +64,7 @@ export async function createGameRunner(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID(), n.strength),
           ),
       );
 
