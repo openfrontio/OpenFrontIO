@@ -35,8 +35,8 @@ export class TrainExecution implements Execution {
 
   // Local greedy routing properties
   private recentStations: TrainStation[] = []; // Recently visited stations (for loop prevention)
-  private maxHops: number = 50; // Maximum hops before giving up
-  private recentMemorySize: number = 50; // How many recent stations to remember
+  private maxHops: number = 25; // Maximum hops before giving up
+  private recentMemorySize: number = 25; // How many recent stations to remember
 
   constructor(
     private railNetwork: RailNetwork,
