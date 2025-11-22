@@ -3,7 +3,7 @@ import { TileRef } from "./GameMap";
 import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
 import { TrainStation } from "./TrainStation";
 
-const CONGESTION_EMA_ALPHA = 0.2;
+const CONGESTION_EMA_ALPHA = 0.02;
 
 export class Railroad {
   private trainCount: number = 0;
