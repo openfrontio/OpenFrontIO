@@ -411,6 +411,7 @@ export class FxLayer implements Layer {
 
   renderAllFx(context: CanvasRenderingContext2D, delta: number) {
     if (this.allFx.length > 0) {
+      console.log("allFx array:", this.allFx);
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.renderContextFx(delta);
     }
