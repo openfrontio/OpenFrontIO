@@ -156,7 +156,7 @@ export class TrainStation {
   private routesChanged: boolean = false;
   private changedRoutes: Set<TrainStation> = new Set();
 
-  private readonly maxHops: number = 20;
+  private readonly maxRoutingEntrieDistance: number = 10;
   private readonly routeStaleThreshold: number = 500; // ticks
   private readonly trainSearchRadius = 1; // Search up to x hops away for optimal routes through neighbors
   // Disabling broadcasts turns routing into local-only mode!
@@ -334,7 +334,7 @@ export class TrainStation {
     const destTile = destination.tile();
     const route = this.routingTable.get(destTile);
 
-    if (route && route.hopCount <= this.maxHops) {
+    if (route && route.hopCount <= this.maxRoutingEntrieDistance) {
       const timeSinceUpdate = this.mg.ticks() - route.lastUpdate;
       if (timeSinceUpdate <= this.routeStaleThreshold) {
         return StationLookup.getStation(route.nextHopId);
@@ -412,7 +412,7 @@ export class TrainStation {
       const newHopCount = route.hopCount + 1;
 
       // Skip if hop count would be too high
-      if (newHopCount > this.maxHops) continue;
+      if (newHopCount > this.maxRoutingEntrieDistance) continue;
 
       const existingRoute = this.routingTable.get(destId);
 
