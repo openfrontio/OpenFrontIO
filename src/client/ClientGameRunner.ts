@@ -216,10 +216,17 @@ export class ClientGameRunner {
   private catchUpMode: boolean = false;
   private readonly CATCH_UP_ENTER_BACKLOG = 120; // turns behind to enter catch-up
   private readonly CATCH_UP_EXIT_BACKLOG = 20; // turns behind to exit catch-up
-  private readonly CATCH_UP_HEARTBEATS_PER_FRAME = 5;
+  private readonly CATCH_UP_HEARTBEATS_PER_FRAME = 5; //upper bound on heartbeats per frame when in catch-up mode
 
   private pendingUpdates: GameUpdateViewData[] = [];
   private isProcessingUpdates = false;
+
+  // Adaptive rendering during catch-up: render at most once every N frames.
+  private renderEveryN: number = 1;
+  private renderSkipCounter: number = 0;
+  private lastFrameTime: number = 0;
+  private readonly MAX_RENDER_EVERY_N = 60;
+  private lastBeatsPerFrame: number = 1;
 
   constructor(
     private lobby: LobbyConfig,
@@ -313,13 +320,36 @@ export class ClientGameRunner {
     const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {
+        const now = performance.now();
+        let frameDuration = 0;
+        if (this.lastFrameTime !== 0) {
+          frameDuration = now - this.lastFrameTime;
+        }
+        this.lastFrameTime = now;
+
         const beatsPerFrame = this.catchUpMode
           ? this.CATCH_UP_HEARTBEATS_PER_FRAME
           : 1;
+        this.lastBeatsPerFrame = beatsPerFrame;
         for (let i = 0; i < beatsPerFrame; i++) {
           worker.sendHeartbeat();
         }
-        this.processPendingUpdates();
+
+        // Decide whether to render (and thus process pending updates) this frame.
+        let shouldRender = true;
+        if (this.catchUpMode && this.renderEveryN > 1) {
+          if (this.renderSkipCounter < this.renderEveryN - 1) {
+            shouldRender = false;
+            this.renderSkipCounter++;
+          } else {
+            this.renderSkipCounter = 0;
+          }
+        }
+
+        if (shouldRender) {
+          this.processPendingUpdates();
+        }
+        this.adaptRenderFrequency(frameDuration);
         requestAnimationFrame(keepWorkerAlive);
       }
     };
@@ -510,10 +540,42 @@ export class ClientGameRunner {
           this.currentTickDelay,
           this.backlogTurns,
           this.catchUpMode,
+          this.renderEveryN,
+          this.lastBeatsPerFrame,
         ),
       );
+
       // Reset tick delay for next measurement
       this.currentTickDelay = undefined;
+    }
+  }
+
+  private adaptRenderFrequency(frameDuration: number) {
+    if (!this.catchUpMode) {
+      // Back to normal rendering.
+      this.renderEveryN = 1;
+      this.renderSkipCounter = 0;
+      return;
+    }
+
+    const HIGH_BACKLOG = 200;
+    const LOW_BACKLOG = 50;
+    const HIGH_FRAME_MS = 25;
+    const LOW_FRAME_MS = 18;
+
+    if (this.backlogTurns > HIGH_BACKLOG && frameDuration > HIGH_FRAME_MS) {
+      // We are far behind and frames are heavy → render less often.
+      if (this.renderEveryN < this.MAX_RENDER_EVERY_N) {
+        this.renderEveryN++;
+      }
+    } else if (
+      this.backlogTurns < LOW_BACKLOG ||
+      (frameDuration > 0 && frameDuration < LOW_FRAME_MS)
+    ) {
+      // Either mostly caught up or frames are cheap again → move back toward normal.
+      if (this.renderEveryN > 1) {
+        this.renderEveryN--;
+      }
     }
   }
 
