@@ -12,7 +12,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameUpdates, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -218,6 +218,9 @@ export class ClientGameRunner {
   private readonly CATCH_UP_EXIT_BACKLOG = 20; // turns behind to exit catch-up
   private readonly CATCH_UP_HEARTBEATS_PER_FRAME = 5;
 
+  private pendingUpdates: GameUpdateViewData[] = [];
+  private isProcessingUpdates = false;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -302,57 +305,9 @@ export class ClientGameRunner {
         this.stop();
         return;
       }
-      this.transport.turnComplete();
-      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
-        this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
-      });
-      this.gameView.update(gu);
-      this.renderer.tick();
-
-      // Update tick / backlog metrics
-      if (!("errMsg" in gu)) {
-        this.lastProcessedTick = gu.tick;
-        this.backlogTurns = Math.max(
-          0,
-          this.serverTurnHighWater - this.lastProcessedTick,
-        );
-
-        const wasCatchUp = this.catchUpMode;
-        if (
-          !this.catchUpMode &&
-          this.backlogTurns >= this.CATCH_UP_ENTER_BACKLOG
-        ) {
-          this.catchUpMode = true;
-        } else if (
-          this.catchUpMode &&
-          this.backlogTurns <= this.CATCH_UP_EXIT_BACKLOG
-        ) {
-          this.catchUpMode = false;
-        }
-        if (wasCatchUp !== this.catchUpMode) {
-          console.log(
-            `Catch-up mode ${this.catchUpMode ? "enabled" : "disabled"} (backlog: ${
-              this.backlogTurns
-            } turns)`,
-          );
-        }
-      }
-
-      // Emit tick metrics event for performance overlay
-      this.eventBus.emit(
-        new TickMetricsEvent(
-          gu.tickExecutionDuration,
-          this.currentTickDelay,
-          this.backlogTurns,
-          this.catchUpMode,
-        ),
-      );
-
-      // Reset tick delay for next measurement
-      this.currentTickDelay = undefined;
-
-      if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
+      this.pendingUpdates.push(gu);
+      if (!this.catchUpMode) {
+        this.processPendingUpdates();
       }
     });
     const worker = this.worker;
@@ -364,6 +319,7 @@ export class ClientGameRunner {
         for (let i = 0; i < beatsPerFrame; i++) {
           worker.sendHeartbeat();
         }
+        this.processPendingUpdates();
         requestAnimationFrame(keepWorkerAlive);
       }
     };
@@ -500,6 +456,129 @@ export class ClientGameRunner {
     if (this.goToPlayerTimeout) {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
+    }
+  }
+
+  private processPendingUpdates() {
+    if (this.isProcessingUpdates) {
+      return;
+    }
+    if (this.pendingUpdates.length === 0) {
+      return;
+    }
+
+    this.isProcessingUpdates = true;
+    const batch = this.pendingUpdates.splice(0);
+
+    let processedCount = 0;
+    let lastTickDuration: number | undefined;
+    let lastTick: number | undefined;
+
+    try {
+      for (const gu of batch) {
+        processedCount++;
+
+        this.transport.turnComplete();
+        gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
+          this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
+        });
+        this.updateBacklogMetrics(gu.tick);
+
+        if (gu.updates[GameUpdateType.Win].length > 0) {
+          this.saveGame(gu.updates[GameUpdateType.Win][0]);
+        }
+
+        if (gu.tickExecutionDuration !== undefined) {
+          lastTickDuration = gu.tickExecutionDuration;
+        }
+        lastTick = gu.tick;
+      }
+    } finally {
+      this.isProcessingUpdates = false;
+    }
+
+    if (processedCount > 0 && lastTick !== undefined) {
+      const combinedGu = this.mergeGameUpdates(batch);
+      if (combinedGu) {
+        this.gameView.update(combinedGu);
+      }
+
+      this.renderer.tick();
+      this.eventBus.emit(
+        new TickMetricsEvent(
+          lastTickDuration,
+          this.currentTickDelay,
+          this.backlogTurns,
+          this.catchUpMode,
+        ),
+      );
+      // Reset tick delay for next measurement
+      this.currentTickDelay = undefined;
+    }
+  }
+
+  private mergeGameUpdates(
+    batch: GameUpdateViewData[],
+  ): GameUpdateViewData | null {
+    if (batch.length === 0) {
+      return null;
+    }
+
+    const last = batch[batch.length - 1];
+    const combinedUpdates: GameUpdates = {} as GameUpdates;
+
+    // Initialize combinedUpdates with empty arrays for each existing key
+    for (const key in last.updates) {
+      const type = Number(key) as GameUpdateType;
+      combinedUpdates[type] = [];
+    }
+
+    const combinedPackedTileUpdates: bigint[] = [];
+
+    for (const gu of batch) {
+      for (const key in gu.updates) {
+        const type = Number(key) as GameUpdateType;
+        // We don't care about the specific update subtype here; just treat it
+        // as an array we can concatenate.
+        const updatesForType = gu.updates[type] as unknown as any[];
+        (combinedUpdates[type] as unknown as any[]).push(...updatesForType);
+      }
+      gu.packedTileUpdates.forEach((tu) => {
+        combinedPackedTileUpdates.push(tu);
+      });
+    }
+
+    return {
+      tick: last.tick,
+      updates: combinedUpdates,
+      packedTileUpdates: new BigUint64Array(combinedPackedTileUpdates),
+      playerNameViewData: last.playerNameViewData,
+      tickExecutionDuration: last.tickExecutionDuration,
+    };
+  }
+
+  private updateBacklogMetrics(processedTick: number) {
+    this.lastProcessedTick = processedTick;
+    this.backlogTurns = Math.max(
+      0,
+      this.serverTurnHighWater - this.lastProcessedTick,
+    );
+
+    const wasCatchUp = this.catchUpMode;
+    if (!this.catchUpMode && this.backlogTurns >= this.CATCH_UP_ENTER_BACKLOG) {
+      this.catchUpMode = true;
+    } else if (
+      this.catchUpMode &&
+      this.backlogTurns <= this.CATCH_UP_EXIT_BACKLOG
+    ) {
+      this.catchUpMode = false;
+    }
+    if (wasCatchUp !== this.catchUpMode) {
+      console.log(
+        `Catch-up mode ${this.catchUpMode ? "enabled" : "disabled"} (backlog: ${
+          this.backlogTurns
+        } turns)`,
+      );
     }
   }
 
