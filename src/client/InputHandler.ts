@@ -18,6 +18,12 @@ export class MouseOverEvent implements GameEvent {
     public readonly y: number,
   ) {}
 }
+export class TouchEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
 
 /**
  * Event emitted when a unit is selected or deselected
@@ -476,7 +482,7 @@ export class InputHandler {
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
       if (event.pointerType === "touch") {
-        this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
+        this.eventBus.emit(new TouchEvent(event.x, event.y));
         event.preventDefault();
         return;
       }

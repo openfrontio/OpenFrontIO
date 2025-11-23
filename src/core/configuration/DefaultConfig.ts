@@ -60,6 +60,7 @@ const numPlayersConfig = {
   [GameMapType.Europe]: [100, 70, 50],
   [GameMapType.EuropeClassic]: [50, 30, 30],
   [GameMapType.FalklandIslands]: [50, 30, 20],
+  [GameMapType.FourIslands]: [20, 15, 10],
   [GameMapType.FaroeIslands]: [20, 15, 10],
   [GameMapType.GatewayToTheAtlantic]: [100, 70, 50],
   [GameMapType.GiantWorldMap]: [100, 70, 50],
@@ -77,7 +78,6 @@ const numPlayersConfig = {
   [GameMapType.SouthAmerica]: [70, 50, 40],
   [GameMapType.StraitOfGibraltar]: [100, 70, 50],
   [GameMapType.World]: [50, 30, 20],
-  [GameMapType.Yenisei]: [150, 100, 70],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -173,9 +173,8 @@ export abstract class DefaultServerConfig implements ServerConfig {
   turnIntervalMs(): number {
     return 100;
   }
-
   gameCreationRate(): number {
-    return 30 * 1000;
+    return 60 * 1000;
   }
 
   lobbyMaxPlayers(
