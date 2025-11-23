@@ -21,7 +21,7 @@
   },
   "main": {
     "title": "OpenFront (ALPHA)",
-    "join_discord": "Join the Discord!",
+    "join_discord": "Discord",
     "login_discord": "Login with Discord",
     "checking_login": "Checking login...",
     "logged_in": "Logged in!",
@@ -30,8 +30,6 @@
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
     "instructions": "Instructions",
-    "how_to_play": "How to Play",
-    "advertise": "Advertise",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
