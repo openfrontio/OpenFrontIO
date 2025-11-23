@@ -91,6 +91,10 @@ export class FakeHumanExecution implements Execution {
     if (this.random.chance(10)) {
       // this.isTraitor = true
     }
+
+    this.player =
+      this.mg.player(this.nation.playerInfo.id) ??
+      this.mg.addPlayer(this.nation.playerInfo);
   }
 
   private updateRelationsFromEmbargos() {
@@ -153,24 +157,19 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
+    if (this.player === null) {
+      return;
+    }
+
     if (this.mg.inSpawnPhase()) {
       const rl = this.randomSpawnLand();
       if (rl === null) {
         console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
       }
-      this.mg.addPlayer(this.nation.playerInfo).setSpawnTile(rl);
+      this.player.setSpawnTile(rl);
       this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
       return;
-    }
-
-    if (this.player === null) {
-      this.player =
-        this.mg.players().find((p) => p.id() === this.nation.playerInfo.id) ??
-        null;
-      if (this.player === null) {
-        return;
-      }
     }
 
     if (!this.player.isAlive()) {
