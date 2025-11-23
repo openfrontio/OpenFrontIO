@@ -229,7 +229,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
       this.setVisible(this.userSettings.performanceOverlay());
     });
     this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
-      this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
+      this.updateTickMetrics(
+        event.tickExecutionDuration,
+        event.tickDelay,
+        event.backlogTurns,
+        event.inCatchUpMode,
+      );
     });
   }
 
@@ -418,7 +423,18 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.layerBreakdown = breakdown;
   }
 
-  updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
+  @state()
+  private backlogTurns: number = 0;
+
+  @state()
+  private inCatchUpMode: boolean = false;
+
+  updateTickMetrics(
+    tickExecutionDuration?: number,
+    tickDelay?: number,
+    backlogTurns?: number,
+    inCatchUpMode?: boolean,
+  ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
     // Update tick execution duration stats
@@ -453,6 +469,13 @@ export class PerformanceOverlay extends LitElement implements Layer {
         this.tickDelayAvg = Math.round(avg * 100) / 100;
         this.tickDelayMax = Math.round(Math.max(...this.tickDelayTimes));
       }
+    }
+
+    if (backlogTurns !== undefined) {
+      this.backlogTurns = backlogTurns;
+    }
+    if (inCatchUpMode !== undefined) {
+      this.inCatchUpMode = inCatchUpMode;
     }
 
     this.requestUpdate();
@@ -599,6 +622,11 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ${translateText("performance_overlay.tick_delay")}
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
+        </div>
+        <div class="performance-line">
+          Backlog turns:
+          <span>${this.backlogTurns}</span>
+          ${this.inCatchUpMode ? html`<span> (catch-up)</span>` : html``}
         </div>
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">

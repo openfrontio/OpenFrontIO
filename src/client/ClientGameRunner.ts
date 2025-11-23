@@ -208,6 +208,16 @@ export class ClientGameRunner {
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
 
+  // Track how far behind the client simulation is compared to the server.
+  private serverTurnHighWater: number = 0;
+  private lastProcessedTick: number = 0;
+  private backlogTurns: number = 0;
+
+  private catchUpMode: boolean = false;
+  private readonly CATCH_UP_ENTER_BACKLOG = 120; // turns behind to enter catch-up
+  private readonly CATCH_UP_EXIT_BACKLOG = 20; // turns behind to exit catch-up
+  private readonly CATCH_UP_HEARTBEATS_PER_FRAME = 5;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -299,9 +309,43 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.renderer.tick();
 
+      // Update tick / backlog metrics
+      if (!("errMsg" in gu)) {
+        this.lastProcessedTick = gu.tick;
+        this.backlogTurns = Math.max(
+          0,
+          this.serverTurnHighWater - this.lastProcessedTick,
+        );
+
+        const wasCatchUp = this.catchUpMode;
+        if (
+          !this.catchUpMode &&
+          this.backlogTurns >= this.CATCH_UP_ENTER_BACKLOG
+        ) {
+          this.catchUpMode = true;
+        } else if (
+          this.catchUpMode &&
+          this.backlogTurns <= this.CATCH_UP_EXIT_BACKLOG
+        ) {
+          this.catchUpMode = false;
+        }
+        if (wasCatchUp !== this.catchUpMode) {
+          console.log(
+            `Catch-up mode ${this.catchUpMode ? "enabled" : "disabled"} (backlog: ${
+              this.backlogTurns
+            } turns)`,
+          );
+        }
+      }
+
       // Emit tick metrics event for performance overlay
       this.eventBus.emit(
-        new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
+        new TickMetricsEvent(
+          gu.tickExecutionDuration,
+          this.currentTickDelay,
+          this.backlogTurns,
+          this.catchUpMode,
+        ),
       );
 
       // Reset tick delay for next measurement
@@ -314,7 +358,12 @@ export class ClientGameRunner {
     const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {
-        worker.sendHeartbeat();
+        const beatsPerFrame = this.catchUpMode
+          ? this.CATCH_UP_HEARTBEATS_PER_FRAME
+          : 1;
+        for (let i = 0; i < beatsPerFrame; i++) {
+          worker.sendHeartbeat();
+        }
         requestAnimationFrame(keepWorkerAlive);
       }
     };
@@ -363,6 +412,10 @@ export class ClientGameRunner {
         }
 
         for (const turn of message.turns) {
+          this.serverTurnHighWater = Math.max(
+            this.serverTurnHighWater,
+            turn.turnNumber,
+          );
           if (turn.turnNumber < this.turnsSeen) {
             continue;
           }
@@ -414,6 +467,11 @@ export class ClientGameRunner {
           this.currentTickDelay = now - this.lastTickReceiveTime;
         }
         this.lastTickReceiveTime = now;
+
+        this.serverTurnHighWater = Math.max(
+          this.serverTurnHighWater,
+          message.turn.turnNumber,
+        );
 
         if (this.turnsSeen !== message.turn.turnNumber) {
           console.error(
