@@ -1,4 +1,5 @@
 import allianceIcon from "../../../resources/images/AllianceIcon.svg";
+import allianceIconFaded from "../../../resources/images/AllianceIconFaded.svg";
 import allianceRequestBlackIcon from "../../../resources/images/AllianceRequestBlackIcon.svg";
 import allianceRequestWhiteIcon from "../../../resources/images/AllianceRequestWhiteIcon.svg";
 import crownIcon from "../../../resources/images/CrownIcon.svg";
@@ -7,6 +8,7 @@ import embargoBlackIcon from "../../../resources/images/EmbargoBlackIcon.svg";
 import embargoWhiteIcon from "../../../resources/images/EmbargoWhiteIcon.svg";
 import nukeRedIcon from "../../../resources/images/NukeIconRed.svg";
 import nukeWhiteIcon from "../../../resources/images/NukeIconWhite.svg";
+import questionMarkIcon from "../../../resources/images/QuestionMarkIcon.svg";
 import targetIcon from "../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../resources/images/TraitorIcon.svg";
 import { AllPlayers, nukeTypes } from "../../core/game/Game";
@@ -151,4 +153,70 @@ export function getPlayerIcons(
   }
 
   return icons;
+}
+
+export function createAllianceProgressIcon(
+  size: number,
+  fraction: number,
+  hasExtensionRequest: boolean,
+  darkMode: boolean,
+): HTMLDivElement {
+  // Wrapper
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("data-icon", "alliance");
+  wrapper.setAttribute("dark-mode", darkMode.toString());
+  wrapper.style.position = "relative";
+  wrapper.style.width = `${size}px`;
+  wrapper.style.height = `${size}px`;
+  wrapper.style.display = "inline-block";
+
+  // Base faded icon (full)
+  const base = document.createElement("img");
+  base.src = allianceIconFaded;
+  base.style.width = `${size}px`;
+  base.style.height = `${size}px`;
+  base.style.display = "block";
+  base.setAttribute("dark-mode", darkMode.toString());
+  wrapper.appendChild(base);
+
+  // Overlay container for green portion, clipped from the top via clip-path
+  const overlay = document.createElement("div");
+  overlay.className = "alliance-progress-overlay";
+  overlay.style.position = "absolute";
+  overlay.style.left = "0";
+  overlay.style.top = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+  overlay.style.clipPath = computeAllianceClipPath(fraction);
+
+  const colored = document.createElement("img");
+  colored.src = allianceIcon; // green icon
+  colored.style.width = `${size}px`;
+  colored.style.height = `${size}px`;
+  colored.style.display = "block";
+  colored.setAttribute("dark-mode", darkMode.toString());
+  overlay.appendChild(colored);
+
+  wrapper.appendChild(overlay);
+
+  // Question mark overlay (shown when there's a pending extension request)
+  const questionMark = document.createElement("img");
+  questionMark.className = "alliance-question-mark";
+  questionMark.src = questionMarkIcon;
+  questionMark.style.position = "absolute";
+  questionMark.style.left = "0";
+  questionMark.style.top = "0";
+  questionMark.style.width = `${size}px`;
+  questionMark.style.height = `${size}px`;
+  questionMark.style.display = hasExtensionRequest ? "block" : "none";
+  questionMark.style.pointerEvents = "none";
+  questionMark.setAttribute("dark-mode", darkMode.toString());
+  wrapper.appendChild(questionMark);
+
+  return wrapper;
+}
+
+export function computeAllianceClipPath(fraction: number): string {
+  const topCut = 20 + (1 - fraction) * 80 * 0.78; // min 20%, max 82.40%
+  return `inset(${topCut.toFixed(2)}% -2px 0 -2px)`;
 }
