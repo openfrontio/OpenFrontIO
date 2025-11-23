@@ -234,7 +234,6 @@ export class ClientGameRunner {
   private catchUpMode: boolean = false;
   private readonly CATCH_UP_ENTER_BACKLOG = 120; // turns behind to enter catch-up
   private readonly CATCH_UP_EXIT_BACKLOG = 20; // turns behind to exit catch-up
-  private readonly CATCH_UP_HEARTBEATS_PER_FRAME = 5; //upper bound on heartbeats per frame when in catch-up mode
 
   private pendingUpdates: GameUpdateViewData[] = [];
   private isProcessingUpdates = false;
@@ -243,8 +242,7 @@ export class ClientGameRunner {
   private renderEveryN: number = 1;
   private renderSkipCounter: number = 0;
   private lastFrameTime: number = 0;
-  private readonly MAX_RENDER_EVERY_N = 60;
-  private lastBeatsPerFrame: number = 1;
+  private readonly MAX_RENDER_EVERY_N = 5;
 
   constructor(
     private lobby: LobbyConfig,
@@ -335,7 +333,6 @@ export class ClientGameRunner {
         this.processPendingUpdates();
       }
     });
-    const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {
         const now = performance.now();
@@ -344,14 +341,6 @@ export class ClientGameRunner {
           frameDuration = now - this.lastFrameTime;
         }
         this.lastFrameTime = now;
-
-        const beatsPerFrame = this.catchUpMode
-          ? this.CATCH_UP_HEARTBEATS_PER_FRAME
-          : 1;
-        this.lastBeatsPerFrame = beatsPerFrame;
-        for (let i = 0; i < beatsPerFrame; i++) {
-          worker.sendHeartbeat();
-        }
 
         // Decide whether to render (and thus process pending updates) this frame.
         let shouldRender = true;
@@ -557,7 +546,6 @@ export class ClientGameRunner {
           this.backlogTurns,
           this.catchUpMode,
           this.renderEveryN,
-          this.lastBeatsPerFrame,
         ),
       );
 
