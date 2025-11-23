@@ -133,6 +133,8 @@ export class TickMetricsEvent implements GameEvent {
     public readonly backlogTurns?: number,
     // Whether the client is currently in catch-up mode
     public readonly inCatchUpMode?: boolean,
+    public readonly renderEveryN?: number,
+    public readonly beatsPerFrame?: number,
   ) {}
 }
 

@@ -234,6 +234,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
         event.tickDelay,
         event.backlogTurns,
         event.inCatchUpMode,
+        event.renderEveryN,
+        event.beatsPerFrame,
       );
     });
   }
@@ -429,11 +431,19 @@ export class PerformanceOverlay extends LitElement implements Layer {
   @state()
   private inCatchUpMode: boolean = false;
 
+  @state()
+  private renderEveryN: number = 1;
+
+  @state()
+  private beatsPerFrame: number = 1;
+
   updateTickMetrics(
     tickExecutionDuration?: number,
     tickDelay?: number,
     backlogTurns?: number,
     inCatchUpMode?: boolean,
+    renderEveryN?: number,
+    beatsPerFrame?: number,
   ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
@@ -476,6 +486,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
     }
     if (inCatchUpMode !== undefined) {
       this.inCatchUpMode = inCatchUpMode;
+    }
+    if (renderEveryN !== undefined) {
+      this.renderEveryN = renderEveryN;
+    }
+    if (beatsPerFrame !== undefined) {
+      this.beatsPerFrame = beatsPerFrame;
     }
 
     this.requestUpdate();
@@ -628,6 +644,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
           <span>${this.backlogTurns}</span>
           ${this.inCatchUpMode ? html`<span> (catch-up)</span>` : html``}
         </div>
+        ${this.inCatchUpMode
+          ? html`<div class="performance-line">
+              Render every <span>${this.renderEveryN}</span> frame(s),
+              heartbeats per frame: <span>${this.beatsPerFrame}</span>
+            </div>`
+          : html``}
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">
               <div class="performance-line">
