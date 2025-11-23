@@ -435,7 +435,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
   private renderEveryN: number = 1;
 
   @state()
-  private beatsPerFrame: number = 1;
+  private beatsPerFrame: number | null = null;
 
   updateTickMetrics(
     tickExecutionDuration?: number,
@@ -491,7 +491,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
       this.renderEveryN = renderEveryN;
     }
     if (beatsPerFrame !== undefined) {
-      this.beatsPerFrame = beatsPerFrame;
+      this.beatsPerFrame = beatsPerFrame ?? null;
     }
 
     this.requestUpdate();
@@ -647,7 +647,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
         ${this.inCatchUpMode
           ? html`<div class="performance-line">
               Render every <span>${this.renderEveryN}</span> frame(s),
-              heartbeats per frame: <span>${this.beatsPerFrame}</span>
+              heartbeats per frame:
+              <span>${this.beatsPerFrame ?? "auto"}</span>
             </div>`
           : html``}
         ${this.layerBreakdown.length

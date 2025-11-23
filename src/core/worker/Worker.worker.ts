@@ -16,6 +16,7 @@ import {
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
+let isProcessingTurns = false;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -32,13 +33,33 @@ function sendMessage(message: WorkerMessage) {
   ctx.postMessage(message);
 }
 
+async function processPendingTurns() {
+  if (isProcessingTurns) {
+    return;
+  }
+  if (!gameRunner) {
+    return;
+  }
+
+  const gr = await gameRunner;
+  if (!gr || !gr.hasPendingTurns()) {
+    return;
+  }
+
+  isProcessingTurns = true;
+  try {
+    while (gr.hasPendingTurns()) {
+      gr.executeNextTick();
+    }
+  } finally {
+    isProcessingTurns = false;
+  }
+}
+
 ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   const message = e.data;
 
   switch (message.type) {
-    case "heartbeat":
-      (await gameRunner)?.executeNextTick();
-      break;
     case "init":
       try {
         gameRunner = createGameRunner(
@@ -51,6 +72,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
             type: "initialized",
             id: message.id,
           } as InitializedMessage);
+          processPendingTurns();
           return gr;
         });
       } catch (error) {
@@ -67,6 +89,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       try {
         const gr = await gameRunner;
         await gr.addTurn(message.turn);
+        processPendingTurns();
       } catch (error) {
         console.error("Failed to process turn:", error);
         throw error;
