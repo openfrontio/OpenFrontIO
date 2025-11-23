@@ -268,4 +268,8 @@ export class GameRunner {
     }
     return player.bestTransportShipSpawn(targetTile);
   }
+
+  public hasPendingTurns(): boolean {
+    return this.currTurn < this.turns.length;
+  }
 }
