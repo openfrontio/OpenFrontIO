@@ -1,5 +1,6 @@
 import { Config } from "../configuration/Config";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import { getClanTag } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
   GameUpdate,
@@ -402,6 +403,8 @@ export interface MutableAlliance extends Alliance {
 }
 
 export class PlayerInfo {
+  public readonly clan: string | null;
+
   constructor(
     public readonly name: string,
     public readonly playerType: PlayerType,
@@ -410,8 +413,10 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly nationStrength?: number,
-    public readonly clan?: string | null,
-  ) {}
+    clan?: string | null,
+  ) {
+    this.clan = clan !== undefined ? clan : getClanTag(name);
+  }
 }
 
 export function isUnit(unit: unknown): unit is Unit {

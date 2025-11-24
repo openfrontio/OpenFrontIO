@@ -64,7 +64,7 @@ export async function createGameRunner(
       PlayerType.Human,
       p.clientID,
       random.nextID(),
-      null,
+      undefined,
       clanTag,
     );
   });
@@ -81,6 +81,7 @@ export async function createGameRunner(
               null,
               random.nextID(),
               n.strength,
+              null,
             ),
           ),
       );
