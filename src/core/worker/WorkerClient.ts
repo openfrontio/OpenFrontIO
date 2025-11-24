@@ -100,12 +100,6 @@ export class WorkerClient {
     });
   }
 
-  sendHeartbeat() {
-    this.worker.postMessage({
-      type: "heartbeat",
-    });
-  }
-
   playerProfile(playerID: number): Promise<PlayerProfile> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
