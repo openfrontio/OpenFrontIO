@@ -229,7 +229,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
       this.setVisible(this.userSettings.performanceOverlay());
     });
     this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
-      this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
+      this.updateTickMetrics(
+        event.tickExecutionDuration,
+        event.tickDelay,
+        event.backlogTurns,
+        event.renderEveryN,
+      );
     });
   }
 
@@ -418,7 +423,18 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.layerBreakdown = breakdown;
   }
 
-  updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
+  @state()
+  private renderEveryN: number = 1;
+
+  @state()
+  private backlogTurns: number = 0;
+
+  updateTickMetrics(
+    tickExecutionDuration?: number,
+    tickDelay?: number,
+    backlogTurns?: number,
+    renderEveryN?: number,
+  ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
     // Update tick execution duration stats
@@ -453,6 +469,13 @@ export class PerformanceOverlay extends LitElement implements Layer {
         this.tickDelayAvg = Math.round(avg * 100) / 100;
         this.tickDelayMax = Math.round(Math.max(...this.tickDelayTimes));
       }
+    }
+
+    if (backlogTurns !== undefined) {
+      this.backlogTurns = backlogTurns;
+    }
+    if (renderEveryN !== undefined) {
+      this.renderEveryN = renderEveryN;
     }
 
     this.requestUpdate();
@@ -600,6 +623,15 @@ export class PerformanceOverlay extends LitElement implements Layer {
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
         </div>
+        <div class="performance-line">
+          Backlog turns:
+          <span>${this.backlogTurns}</span>
+        </div>
+        ${this.renderEveryN > 1
+          ? html`<div class="performance-line">
+              Render every <span>${this.renderEveryN}</span> frame(s)
+            </div>`
+          : html``}
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">
               <div class="performance-line">

@@ -12,7 +12,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameUpdates, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -208,6 +208,21 @@ export class ClientGameRunner {
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
 
+  // Track how far behind the client simulation is compared to the server.
+  private serverTurnHighWater: number = 0;
+  private lastProcessedTick: number = 0;
+  private backlogTurns: number = 0;
+  private backlogGrowing: boolean = false;
+
+  private pendingUpdates: GameUpdateViewData[] = [];
+  private isProcessingUpdates = false;
+
+  // Adaptive rendering when frames are heavy: render at most once every N frames.
+  private renderEveryN: number = 1;
+  private renderSkipCounter: number = 0;
+  private lastFrameTime: number = 0;
+  private readonly MAX_RENDER_EVERY_N = 5;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -292,29 +307,36 @@ export class ClientGameRunner {
         this.stop();
         return;
       }
-      this.transport.turnComplete();
-      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
-        this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
-      });
-      this.gameView.update(gu);
-      this.renderer.tick();
-
-      // Emit tick metrics event for performance overlay
-      this.eventBus.emit(
-        new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
-      );
-
-      // Reset tick delay for next measurement
-      this.currentTickDelay = undefined;
-
-      if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
+      this.pendingUpdates.push(gu);
+      if (this.renderEveryN === 1) {
+        this.processPendingUpdates();
       }
     });
-    const worker = this.worker;
     const keepWorkerAlive = () => {
       if (this.isActive) {
-        worker.sendHeartbeat();
+        const now = performance.now();
+        let frameDuration = 0;
+        if (this.lastFrameTime !== 0) {
+          frameDuration = now - this.lastFrameTime;
+        }
+        this.lastFrameTime = now;
+
+        // Decide whether to render (and thus process pending updates) this frame.
+        let shouldRender = true;
+        if (
+          this.renderEveryN > 1 &&
+          this.renderSkipCounter < this.renderEveryN - 1
+        ) {
+          shouldRender = false;
+          this.renderSkipCounter++;
+        } else if (this.renderEveryN > 1) {
+          this.renderSkipCounter = 0;
+        }
+
+        if (shouldRender) {
+          this.processPendingUpdates();
+        }
+        this.adaptRenderFrequency(frameDuration);
         requestAnimationFrame(keepWorkerAlive);
       }
     };
@@ -363,6 +385,10 @@ export class ClientGameRunner {
         }
 
         for (const turn of message.turns) {
+          this.serverTurnHighWater = Math.max(
+            this.serverTurnHighWater,
+            turn.turnNumber,
+          );
           if (turn.turnNumber < this.turnsSeen) {
             continue;
           }
@@ -415,6 +441,11 @@ export class ClientGameRunner {
         }
         this.lastTickReceiveTime = now;
 
+        this.serverTurnHighWater = Math.max(
+          this.serverTurnHighWater,
+          message.turn.turnNumber,
+        );
+
         if (this.turnsSeen !== message.turn.turnNumber) {
           console.error(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
@@ -443,6 +474,142 @@ export class ClientGameRunner {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
     }
+  }
+
+  private processPendingUpdates() {
+    if (this.isProcessingUpdates) {
+      return;
+    }
+    if (this.pendingUpdates.length === 0) {
+      return;
+    }
+
+    this.isProcessingUpdates = true;
+    const batch = this.pendingUpdates.splice(0);
+
+    let processedCount = 0;
+    let lastTickDuration: number | undefined;
+    let lastTick: number | undefined;
+
+    try {
+      for (const gu of batch) {
+        processedCount++;
+
+        this.transport.turnComplete();
+        gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
+          this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
+        });
+        this.updateBacklogMetrics(gu.tick);
+
+        if (gu.updates[GameUpdateType.Win].length > 0) {
+          this.saveGame(gu.updates[GameUpdateType.Win][0]);
+        }
+
+        if (gu.tickExecutionDuration !== undefined) {
+          lastTickDuration = gu.tickExecutionDuration;
+        }
+        lastTick = gu.tick;
+      }
+    } finally {
+      this.isProcessingUpdates = false;
+    }
+
+    if (processedCount > 0 && lastTick !== undefined) {
+      const combinedGu = this.mergeGameUpdates(batch);
+      if (combinedGu) {
+        this.gameView.update(combinedGu);
+      }
+
+      this.renderer.tick();
+      this.eventBus.emit(
+        new TickMetricsEvent(
+          lastTickDuration,
+          this.currentTickDelay,
+          this.backlogTurns,
+          this.renderEveryN,
+        ),
+      );
+
+      // Reset tick delay for next measurement
+      this.currentTickDelay = undefined;
+    }
+  }
+
+  private adaptRenderFrequency(frameDuration: number) {
+    // Frameskip only matters while we have a backlog; otherwise stay at 1.
+    if (this.backlogTurns === 0) {
+      this.renderEveryN = 1;
+      this.renderSkipCounter = 0;
+      return;
+    }
+
+    const HIGH_FRAME_MS = 25;
+    const LOW_FRAME_MS = 18;
+
+    // Only throttle rendering if backlog is still growing; otherwise drift back toward 1.
+    if (this.backlogGrowing && frameDuration > HIGH_FRAME_MS) {
+      if (this.renderEveryN < this.MAX_RENDER_EVERY_N) {
+        this.renderEveryN++;
+      }
+    } else if (
+      !this.backlogGrowing &&
+      frameDuration > 0 &&
+      frameDuration < LOW_FRAME_MS
+    ) {
+      if (this.renderEveryN > 1) {
+        this.renderEveryN--;
+      }
+    }
+  }
+
+  private mergeGameUpdates(
+    batch: GameUpdateViewData[],
+  ): GameUpdateViewData | null {
+    if (batch.length === 0) {
+      return null;
+    }
+
+    const last = batch[batch.length - 1];
+    const combinedUpdates: GameUpdates = {} as GameUpdates;
+
+    // Initialize combinedUpdates with empty arrays for each existing key
+    for (const key in last.updates) {
+      const type = Number(key) as GameUpdateType;
+      combinedUpdates[type] = [];
+    }
+
+    const combinedPackedTileUpdates: bigint[] = [];
+
+    for (const gu of batch) {
+      for (const key in gu.updates) {
+        const type = Number(key) as GameUpdateType;
+        // We don't care about the specific update subtype here; just treat it
+        // as an array we can concatenate.
+        const updatesForType = gu.updates[type] as unknown as any[];
+        (combinedUpdates[type] as unknown as any[]).push(...updatesForType);
+      }
+      gu.packedTileUpdates.forEach((tu) => {
+        combinedPackedTileUpdates.push(tu);
+      });
+    }
+
+    return {
+      tick: last.tick,
+      updates: combinedUpdates,
+      packedTileUpdates: new BigUint64Array(combinedPackedTileUpdates),
+      playerNameViewData: last.playerNameViewData,
+      tickExecutionDuration: last.tickExecutionDuration,
+    };
+  }
+
+  private updateBacklogMetrics(processedTick: number) {
+    this.lastProcessedTick = processedTick;
+    const previousBacklog = this.backlogTurns;
+    this.backlogTurns = Math.max(
+      0,
+      this.serverTurnHighWater - this.lastProcessedTick,
+    );
+    this.backlogGrowing = this.backlogTurns > previousBacklog;
   }
 
   private inputEvent(event: MouseUpEvent) {
