@@ -79,7 +79,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
 
     // Initialize fakehuman with FakeHumanExecution to enable retaliation logic
-    const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
+    const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
 
     // Try different game IDs to account for hesitation odds
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
@@ -247,7 +247,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
 
     // Initialize fakehuman with FakeHumanExecution to enable victory denial logic
-    const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
+    const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
 
     // Try different game IDs to account for hesitation odds
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
@@ -400,7 +400,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
 
     // Initialize fakehuman with FakeHumanExecution to enable steamroll stop logic
-    const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
+    const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
 
     // Try different game IDs to account for hesitation odds
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
@@ -551,7 +551,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
 
     // Initialize fakehuman with FakeHumanExecution to enable steamroll stop logic
-    const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
+    const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
 
     // Try different game IDs to account for hesitation odds
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);
@@ -685,7 +685,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
 
     // Initialize fakehuman with FakeHumanExecution to enable team victory denial logic
-    const fakehumanNation = new Nation(new Cell(50, 50), 1, fakehuman.info());
+    const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
 
     // Try different game IDs to account for hesitation odds
     const gameIds = Array.from({ length: 20 }, (_, i) => `game_${i}`);

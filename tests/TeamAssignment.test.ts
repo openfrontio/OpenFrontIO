@@ -11,7 +11,6 @@ describe("assignTeams", () => {
       PlayerType.Human,
       null, // clientID (null for testing)
       id,
-      null, // nation (null for testing)
     );
   };
 
