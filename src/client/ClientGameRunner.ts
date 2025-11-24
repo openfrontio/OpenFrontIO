@@ -493,23 +493,25 @@ export class ClientGameRunner {
   }
 
   private processPendingUpdates() {
-    if (this.isProcessingUpdates) {
-      return;
-    }
-    if (this.pendingUpdates.length === 0) {
+    if (this.isProcessingUpdates || this.pendingUpdates.length === 0) {
       return;
     }
 
     this.isProcessingUpdates = true;
-    const batch = this.pendingUpdates.splice(0);
+    const processSlice = () => {
+      const SLICE_BUDGET_MS = 8; // keep UI responsive while catching up
+      const MAX_PER_SLICE = 100;
+      const sliceStart = performance.now();
+      const batch: GameUpdateViewData[] = [];
 
-    let processedCount = 0;
-    let lastTickDuration: number | undefined;
-    let lastTick: number | undefined;
+      let processedCount = 0;
+      let lastTickDuration: number | undefined;
+      let lastTick: number | undefined;
 
-    try {
-      for (const gu of batch) {
+      while (this.pendingUpdates.length > 0) {
+        const gu = this.pendingUpdates.shift() as GameUpdateViewData;
         processedCount++;
+        batch.push(gu);
 
         this.transport.turnComplete();
         gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
@@ -525,30 +527,41 @@ export class ClientGameRunner {
           lastTickDuration = gu.tickExecutionDuration;
         }
         lastTick = gu.tick;
-      }
-    } finally {
-      this.isProcessingUpdates = false;
-    }
 
-    if (processedCount > 0 && lastTick !== undefined) {
-      const combinedGu = this.mergeGameUpdates(batch);
-      if (combinedGu) {
-        this.gameView.update(combinedGu);
+        const elapsed = performance.now() - sliceStart;
+        if (processedCount >= MAX_PER_SLICE || elapsed >= SLICE_BUDGET_MS) {
+          break;
+        }
       }
 
-      this.renderer.tick();
-      this.eventBus.emit(
-        new TickMetricsEvent(
-          lastTickDuration,
-          this.currentTickDelay,
-          this.backlogTurns,
-          this.renderEveryN,
-        ),
-      );
+      if (processedCount > 0 && lastTick !== undefined) {
+        const combinedGu = this.mergeGameUpdates(batch);
+        if (combinedGu) {
+          this.gameView.update(combinedGu);
+        }
 
-      // Reset tick delay for next measurement
-      this.currentTickDelay = undefined;
-    }
+        this.renderer.tick();
+        this.eventBus.emit(
+          new TickMetricsEvent(
+            lastTickDuration,
+            this.currentTickDelay,
+            this.backlogTurns,
+            this.renderEveryN,
+          ),
+        );
+
+        // Reset tick delay for next measurement
+        this.currentTickDelay = undefined;
+      }
+
+      if (this.pendingUpdates.length > 0) {
+        requestAnimationFrame(processSlice);
+      } else {
+        this.isProcessingUpdates = false;
+      }
+    };
+
+    requestAnimationFrame(processSlice);
   }
 
   private adaptRenderFrequency(frameDuration: number) {
