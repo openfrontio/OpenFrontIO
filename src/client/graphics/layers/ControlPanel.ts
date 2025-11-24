@@ -190,13 +190,22 @@ export class ControlPanel extends LitElement implements Layer {
         </div>
 
         <div class="relative mb-0 sm:mb-4">
-          <label class="block text-white mb-1" translate="no"
-            >${translateText("control_panel.attack_ratio")}:
-            ${(this.attackRatio * 100).toFixed(0)}%
-            (${renderTroops(
-              (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-            )})</label
-          >
+          <label class="block text-white mb-1">
+            ${translateText("control_panel.attack_ratio")}:
+            <span
+              class="inline-flex items-center gap-1"
+              dir="ltr"
+              style="unicode-bidi: isolate;"
+              translate="no"
+            >
+              <span>${(this.attackRatio * 100).toFixed(0)}%</span>
+              <span>
+                (${renderTroops(
+                  (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+                )})
+              </span>
+            </span>
+          </label>
           <div class="relative h-8">
             <!-- Background track -->
             <div
