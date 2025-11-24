@@ -483,8 +483,24 @@ export class ClientGameRunner {
 
     this.isProcessingUpdates = true;
     const processSlice = () => {
-      const SLICE_BUDGET_MS = 8; // keep UI responsive while catching up
+      const BASE_SLICE_BUDGET_MS = 8; // keep UI responsive while catching up
+      const MAX_SLICE_BUDGET_MS = 1000; // allow longer slices when backlog is large
+      const BACKLOG_FREE_TURNS = 10; // scaling starts at this many turns
+      const BACKLOG_MAX_TURNS = 1000; // MAX_SLICE_BUDGET_MS is reached at this many turns
       const MAX_PER_SLICE = 100;
+
+      const backlogOverhead = Math.max(
+        0,
+        this.backlogTurns - BACKLOG_FREE_TURNS,
+      );
+      const backlogScale = Math.min(
+        1,
+        backlogOverhead / (BACKLOG_MAX_TURNS - BACKLOG_FREE_TURNS),
+      );
+      const sliceBudgetMs =
+        BASE_SLICE_BUDGET_MS +
+        backlogScale * (MAX_SLICE_BUDGET_MS - BASE_SLICE_BUDGET_MS);
+
       const sliceStart = performance.now();
       const batch: GameUpdateViewData[] = [];
 
@@ -513,7 +529,7 @@ export class ClientGameRunner {
         lastTick = gu.tick;
 
         const elapsed = performance.now() - sliceStart;
-        if (processedCount >= MAX_PER_SLICE || elapsed >= SLICE_BUDGET_MS) {
+        if (processedCount >= MAX_PER_SLICE || elapsed >= sliceBudgetMs) {
           break;
         }
       }
