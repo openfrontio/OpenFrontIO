@@ -92,9 +92,11 @@ export class FakeHumanExecution implements Execution {
       // this.isTraitor = true
     }
 
-    this.player =
-      this.mg.player(this.nation.playerInfo.id) ??
-      this.mg.addPlayer(this.nation.playerInfo);
+    if (!this.mg.hasPlayer(this.nation.playerInfo.id)) {
+      this.player = this.mg.addPlayer(this.nation.playerInfo);
+    } else {
+      this.player = this.mg.player(this.nation.playerInfo.id);
+    }
   }
 
   private updateRelationsFromEmbargos() {
