@@ -56,13 +56,11 @@ export async function createGameRunner(
     // - GameServer and LocalServer can perform getClanTag on the overwritten name since they don't have access to PlayerInfo
     let nameWithoutProfanity = fixProfaneUsername(sanitized);
     if (clanTag !== null && sanitized !== nameWithoutProfanity) {
-      nameWithoutProfanity = `[${clanTag}] ${nameWithoutProfanity}`
+      nameWithoutProfanity = `[${clanTag}] ${nameWithoutProfanity}`;
     }
-    
+
     const finalName =
-      p.clientID === clientID
-        ? sanitized 
-        : nameWithoutProfanity;
+      p.clientID === clientID ? sanitized : nameWithoutProfanity;
 
     return new PlayerInfo(
       finalName,
