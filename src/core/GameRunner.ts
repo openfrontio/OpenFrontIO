@@ -48,19 +48,19 @@ export async function createGameRunner(
 
   const humans = gameStart.players.map((p) => {
     const sanitized = sanitize(p.username);
+    let finalName = sanitized;
     // Prevent desync for clan team assignment: extract clan tag before overwriting profane username
     const clanTag = getClanTag(sanitized);
 
-    // Put clan tag back after overwriting profane username, so
-    // - Clan still shown to others for clarity
-    // - GameServer and LocalServer can perform getClanTag on the overwritten name since they don't have access to PlayerInfo
-    let nameWithoutProfanity = fixProfaneUsername(sanitized);
-    if (clanTag !== null && sanitized !== nameWithoutProfanity) {
-      nameWithoutProfanity = `[${clanTag}] ${nameWithoutProfanity}`;
+    if (p.clientID !== clientID) {
+      // Put clan tag back after overwriting profane username, so
+      // - Clan still shown to others for clarity
+      // - GameServer and LocalServer can perform getClanTag on the overwritten name since they don't have access to PlayerInfo
+      const nameWithoutProfanity = fixProfaneUsername(sanitized);
+      if (clanTag !== null && sanitized !== nameWithoutProfanity) {
+        finalName = `[${clanTag}] ${nameWithoutProfanity}`;
+      }
     }
-
-    const finalName =
-      p.clientID === clientID ? sanitized : nameWithoutProfanity;
 
     return new PlayerInfo(
       finalName,
