@@ -373,7 +373,7 @@ function createMenuElements(
 ): MenuElement[] {
   const unitTypes: Set<UnitType> = getAllEnabledUnits(
     params.selected === params.myPlayer,
-    params.game.config(),
+    params.game.config,
   );
 
   return flattenedBuildTable
@@ -660,11 +660,11 @@ export const rootMenuElement: MenuElement = {
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
     // Check game config to see which donation types are enabled
-    const donateGoldEnabled = Boolean(params.game.config().donateGold ?? false);
+    const donateGoldEnabled = Boolean(params.game.config.donateGold ?? false);
 
     // Check if we should show Donate Gold instead of Build button
     // Only allow donating gold to teammates or allies
-    const gameMode = params.game.config().gameConfig().gameMode;
+    const gameMode = params.game.config.gameConfig().gameMode;
 
     // Helper function to check if quick donate buttons should show
     const shouldShowQuickDonateButtons = () => {
@@ -673,8 +673,7 @@ export const rootMenuElement: MenuElement = {
 
       // In FFA games, check user setting
       if (gameMode === GameMode.FFA) {
-        const quickDonateButtonsInFFA = params.game
-          .config()
+        const quickDonateButtonsInFFA = params.game.config
           .userSettings()
           .quickDonateButtonsInFFA();
         return quickDonateButtonsInFFA;
