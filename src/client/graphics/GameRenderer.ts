@@ -25,6 +25,7 @@ import { MultiTabModal } from "./layers/MultiTabModal";
 import { NameLayer } from "./layers/NameLayer";
 import { NukeTrajectoryPreviewLayer } from "./layers/NukeTrajectoryPreviewLayer";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
+import { PingMarkerLayer } from "./layers/PingMarkerLayer";
 
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
@@ -247,6 +248,7 @@ export function createRenderer(
     new FxLayer(game, eventBus),
     new UILayer(game, eventBus, transformHandler),
     new NukeTrajectoryPreviewLayer(game, eventBus, transformHandler),
+    new PingMarkerLayer(game, eventBus, transformHandler),
 
     new StructureIconsLayer(game, eventBus, uiState, transformHandler),
     new NameLayer(game, transformHandler, eventBus),

@@ -154,6 +154,7 @@ export class InputHandler {
   private pointers: Map<number, PointerEvent> = new Map();
 
   private lastPinchDistance: number = 0;
+  private lastContextMenuWorldCoords: { x: number; y: number } | null = null;
 
   private pointerDown: boolean = false;
 
@@ -249,7 +250,19 @@ export class InputHandler {
     this.pointers.clear();
 
     this.eventBus.on(PingSelectedEvent, (event) => {
-      this.uiState.currentPingType = event.pingType;
+      if (event.pingType && this.lastContextMenuWorldCoords) {
+        this.eventBus.emit(
+          new PingPlacedEvent(
+            event.pingType,
+            this.lastContextMenuWorldCoords.x,
+            this.lastContextMenuWorldCoords.y,
+          ),
+        );
+        this.lastContextMenuWorldCoords = null;
+        this.uiState.currentPingType = null;
+      } else {
+        this.uiState.currentPingType = event.pingType;
+      }
     });
 
     this.moveInterval = setInterval(() => {
@@ -499,36 +512,6 @@ export class InputHandler {
       Math.abs(event.y - this.lastPointerDownY);
     if (dist < 10) {
       if (this.uiState.currentPingType !== null) {
-        const rect = this.transformHandler.boundingRect();
-        if (!rect) {
-          this.uiState.currentPingType = null;
-          this.eventBus.emit(new PingSelectedEvent(null));
-          return;
-        }
-        const localX = event.clientX - rect.left;
-        const localY = event.clientY - rect.top;
-        const worldCoords = this.transformHandler.screenToWorldCoordinates(
-          localX,
-          localY,
-        );
-        console.log("emitting PingPlacedEvent", {
-          type: this.uiState.currentPingType,
-          x: worldCoords.x,
-          y: worldCoords.y,
-        });
-        console.log(
-          "Emitting PingPlacedEvent with type:",
-          this.uiState.currentPingType,
-          "at world coordinates:",
-          worldCoords,
-        );
-        this.eventBus.emit(
-          new PingPlacedEvent(
-            this.uiState.currentPingType,
-            worldCoords.x,
-            worldCoords.y,
-          ),
-        );
         this.uiState.currentPingType = null;
         this.eventBus.emit(new PingSelectedEvent(null));
         return;
@@ -611,6 +594,15 @@ export class InputHandler {
       this.setGhostStructure(null);
       return;
     }
+
+    const rect = this.transformHandler.boundingRect();
+    if (rect) {
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      this.lastContextMenuWorldCoords =
+        this.transformHandler.screenToWorldCoordinates(localX, localY);
+    }
+
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 

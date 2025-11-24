@@ -8,7 +8,6 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { PingPlacedEvent } from "../../../core/game/Ping";
 import SoundManager, { SoundEffect } from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
@@ -16,7 +15,6 @@ import { conquestFxFactory } from "../fx/ConquestFx";
 import { Fx, FxType } from "../fx/Fx";
 import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
-import { PingFx } from "../fx/PingFx";
 import { SpriteFx } from "../fx/SpriteFx";
 import { TargetFx } from "../fx/TargetFx";
 import { TextFx } from "../fx/TextFx";
@@ -353,7 +351,7 @@ export class FxLayer implements Layer {
   }
 
   private pingEventCleanup?: () => void;
-  dispose() {
+  destroy() {
     if (this.pingEventCleanup) {
       this.pingEventCleanup();
       this.pingEventCleanup = undefined;
@@ -367,14 +365,6 @@ export class FxLayer implements Layer {
     } catch (err) {
       console.error("Failed to load FX sprites:", err);
     }
-    this.pingEventCleanup = this.eventBus.on(
-      PingPlacedEvent,
-      (event: PingPlacedEvent) => {
-        console.log("received PingPlacedEvent in FxLayer", event);
-        const pingFx = new PingFx(this.game, event.type, event.tile);
-        this.allFx.push(pingFx);
-      },
-    );
   }
 
   redraw(): void {
@@ -407,7 +397,6 @@ export class FxLayer implements Layer {
 
   renderAllFx(context: CanvasRenderingContext2D, delta: number) {
     if (this.allFx.length > 0) {
-      console.log("allFx array:", this.allFx);
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.renderContextFx(delta);
     }

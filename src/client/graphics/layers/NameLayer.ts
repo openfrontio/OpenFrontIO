@@ -77,8 +77,8 @@ export class NameLayer implements Layer {
 
     this.container = document.createElement("div");
     this.container.style.position = "fixed";
-    this.container.style.left = "50%";
-    this.container.style.top = "50%";
+    this.container.style.left = "0px";
+    this.container.style.top = "0px";
     this.container.style.pointerEvents = "none";
     this.container.style.zIndex = "2";
     document.body.appendChild(this.container);
@@ -161,21 +161,10 @@ export class NameLayer implements Layer {
   }
 
   public renderLayer(mainContex: CanvasRenderingContext2D) {
-    const screenPosOld = this.transformHandler.worldToScreenCoordinates(
-      new Cell(0, 0),
-    );
-    const screenPos = new Cell(
-      screenPosOld.x - window.innerWidth / 2,
-      screenPosOld.y - window.innerHeight / 2,
-    );
-    this.container.style.transform = `translate(${screenPos.x}px, ${screenPos.y}px) scale(${this.transformHandler.scale})`;
-
     const now = Date.now();
-    if (now > this.lastChecked + this.renderCheckRate) {
-      this.lastChecked = now;
-      for (const render of this.renders) {
-        this.renderPlayerInfo(render);
-      }
+    this.lastChecked = now;
+    for (const render of this.renders) {
+      this.renderPlayerInfo(render);
     }
 
     mainContex.drawImage(
@@ -190,10 +179,13 @@ export class NameLayer implements Layer {
   private createPlayerElement(player: PlayerView): HTMLDivElement {
     const element = document.createElement("div");
     element.style.position = "absolute";
+    element.style.left = "0"; // Will be set in renderPlayerInfo
+    element.style.top = "0"; // Will be set in renderPlayerInfo
     element.style.display = "flex";
     element.style.flexDirection = "column";
     element.style.alignItems = "center";
     element.style.gap = "0px";
+    element.style.transform = "translate(-50%, -50%)"; // Always centered on its (left,top)
 
     const iconsDiv = document.createElement("div");
     iconsDiv.classList.add("player-icons");
@@ -294,7 +286,6 @@ export class NameLayer implements Layer {
       return;
     }
 
-    const oldLocation = render.location;
     render.location = new Cell(
       render.player.nameLocation().x,
       render.player.nameLocation().y,
@@ -302,7 +293,10 @@ export class NameLayer implements Layer {
 
     // Calculate base size and scale
     const baseSize = Math.max(1, Math.floor(render.player.nameLocation().size));
-    render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
+    render.fontSize = Math.max(
+      4,
+      Math.floor(baseSize * 0.8 * this.transformHandler.scale),
+    ); // Scale font size directly
     render.fontColor = this.theme.textColor(render.player);
 
     // Update element visibility (handles Ctrl key, size, and screen position)
@@ -313,12 +307,9 @@ export class NameLayer implements Layer {
       return;
     }
 
-    // Throttle updates
+    // Throttling removed for smoother updates
     const now = Date.now();
-    if (now - render.lastRenderCalc <= this.renderRefreshRate) {
-      return;
-    }
-    render.lastRenderCalc = now + this.rand.nextInt(0, 100);
+    render.lastRenderCalc = now;
 
     // Update text sizes
     const nameDiv = render.element.querySelector(
@@ -515,9 +506,14 @@ export class NameLayer implements Layer {
     }
 
     // Position element with scale
-    if (render.location && render.location !== oldLocation) {
-      const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
+    if (render.location) {
+      // Check if render.location is valid
+      const screenCoords = this.transformHandler.worldToScreenCoordinates(
+        render.location,
+      );
+      render.element.style.left = `${screenCoords.x}px`;
+      render.element.style.top = `${screenCoords.y}px`;
+      // The translate(-50%, -50%) is already set in createPlayerElement for centering
     }
   }
 
