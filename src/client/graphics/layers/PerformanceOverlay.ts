@@ -233,9 +233,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
         event.tickExecutionDuration,
         event.tickDelay,
         event.backlogTurns,
-        event.inCatchUpMode,
         event.renderEveryN,
-        event.beatsPerFrame,
       );
     });
   }
@@ -426,24 +424,16 @@ export class PerformanceOverlay extends LitElement implements Layer {
   }
 
   @state()
-  private backlogTurns: number = 0;
-
-  @state()
-  private inCatchUpMode: boolean = false;
-
-  @state()
   private renderEveryN: number = 1;
 
   @state()
-  private beatsPerFrame: number | null = null;
+  private backlogTurns: number = 0;
 
   updateTickMetrics(
     tickExecutionDuration?: number,
     tickDelay?: number,
     backlogTurns?: number,
-    inCatchUpMode?: boolean,
     renderEveryN?: number,
-    beatsPerFrame?: number,
   ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
@@ -484,14 +474,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
     if (backlogTurns !== undefined) {
       this.backlogTurns = backlogTurns;
     }
-    if (inCatchUpMode !== undefined) {
-      this.inCatchUpMode = inCatchUpMode;
-    }
     if (renderEveryN !== undefined) {
       this.renderEveryN = renderEveryN;
-    }
-    if (beatsPerFrame !== undefined) {
-      this.beatsPerFrame = beatsPerFrame ?? null;
     }
 
     this.requestUpdate();
@@ -642,13 +626,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
         <div class="performance-line">
           Backlog turns:
           <span>${this.backlogTurns}</span>
-          ${this.inCatchUpMode ? html`<span> (catch-up)</span>` : html``}
         </div>
-        ${this.inCatchUpMode
+        ${this.renderEveryN > 1
           ? html`<div class="performance-line">
-              Render every <span>${this.renderEveryN}</span> frame(s),
-              heartbeats per frame:
-              <span>${this.beatsPerFrame ?? "auto"}</span>
+              Render every <span>${this.renderEveryN}</span> frame(s)
             </div>`
           : html``}
         ${this.layerBreakdown.length

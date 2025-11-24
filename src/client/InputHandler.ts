@@ -131,10 +131,7 @@ export class TickMetricsEvent implements GameEvent {
     public readonly tickDelay?: number,
     // Number of turns the client is behind the server (if known)
     public readonly backlogTurns?: number,
-    // Whether the client is currently in catch-up mode
-    public readonly inCatchUpMode?: boolean,
     public readonly renderEveryN?: number,
-    public readonly beatsPerFrame?: number,
   ) {}
 }
 
