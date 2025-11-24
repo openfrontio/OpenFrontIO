@@ -304,7 +304,6 @@ export enum Relation {
 export class Nation {
   constructor(
     public readonly spawnCell: Cell,
-    public readonly strength: number,
     public readonly playerInfo: PlayerInfo,
   ) {}
 }
@@ -410,7 +409,7 @@ export class PlayerInfo {
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
-    public readonly nation?: Nation | null,
+    public readonly nationStrength?: number,
     public readonly clan?: string | null,
   ) {}
 }
