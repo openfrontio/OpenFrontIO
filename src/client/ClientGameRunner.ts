@@ -212,15 +212,12 @@ export class ClientGameRunner {
   private serverTurnHighWater: number = 0;
   private lastProcessedTick: number = 0;
   private backlogTurns: number = 0;
-
-  private catchUpMode: boolean = false;
-  private readonly CATCH_UP_ENTER_BACKLOG = 120; // turns behind to enter catch-up
-  private readonly CATCH_UP_EXIT_BACKLOG = 20; // turns behind to exit catch-up
+  private backlogGrowing: boolean = false;
 
   private pendingUpdates: GameUpdateViewData[] = [];
   private isProcessingUpdates = false;
 
-  // Adaptive rendering during catch-up: render at most once every N frames.
+  // Adaptive rendering when frames are heavy: render at most once every N frames.
   private renderEveryN: number = 1;
   private renderSkipCounter: number = 0;
   private lastFrameTime: number = 0;
@@ -311,7 +308,7 @@ export class ClientGameRunner {
         return;
       }
       this.pendingUpdates.push(gu);
-      if (!this.catchUpMode) {
+      if (this.renderEveryN === 1) {
         this.processPendingUpdates();
       }
     });
@@ -326,13 +323,14 @@ export class ClientGameRunner {
 
         // Decide whether to render (and thus process pending updates) this frame.
         let shouldRender = true;
-        if (this.catchUpMode && this.renderEveryN > 1) {
-          if (this.renderSkipCounter < this.renderEveryN - 1) {
-            shouldRender = false;
-            this.renderSkipCounter++;
-          } else {
-            this.renderSkipCounter = 0;
-          }
+        if (
+          this.renderEveryN > 1 &&
+          this.renderSkipCounter < this.renderEveryN - 1
+        ) {
+          shouldRender = false;
+          this.renderSkipCounter++;
+        } else if (this.renderEveryN > 1) {
+          this.renderSkipCounter = 0;
         }
 
         if (shouldRender) {
@@ -528,7 +526,6 @@ export class ClientGameRunner {
           lastTickDuration,
           this.currentTickDelay,
           this.backlogTurns,
-          this.catchUpMode,
           this.renderEveryN,
         ),
       );
@@ -539,28 +536,26 @@ export class ClientGameRunner {
   }
 
   private adaptRenderFrequency(frameDuration: number) {
-    if (!this.catchUpMode) {
-      // Back to normal rendering.
+    // Frameskip only matters while we have a backlog; otherwise stay at 1.
+    if (this.backlogTurns === 0) {
       this.renderEveryN = 1;
       this.renderSkipCounter = 0;
       return;
     }
 
-    const HIGH_BACKLOG = 200;
-    const LOW_BACKLOG = 50;
     const HIGH_FRAME_MS = 25;
     const LOW_FRAME_MS = 18;
 
-    if (this.backlogTurns > HIGH_BACKLOG && frameDuration > HIGH_FRAME_MS) {
-      // We are far behind and frames are heavy → render less often.
+    // Only throttle rendering if backlog is still growing; otherwise drift back toward 1.
+    if (this.backlogGrowing && frameDuration > HIGH_FRAME_MS) {
       if (this.renderEveryN < this.MAX_RENDER_EVERY_N) {
         this.renderEveryN++;
       }
     } else if (
-      this.backlogTurns < LOW_BACKLOG ||
-      (frameDuration > 0 && frameDuration < LOW_FRAME_MS)
+      !this.backlogGrowing &&
+      frameDuration > 0 &&
+      frameDuration < LOW_FRAME_MS
     ) {
-      // Either mostly caught up or frames are cheap again → move back toward normal.
       if (this.renderEveryN > 1) {
         this.renderEveryN--;
       }
@@ -609,27 +604,12 @@ export class ClientGameRunner {
 
   private updateBacklogMetrics(processedTick: number) {
     this.lastProcessedTick = processedTick;
+    const previousBacklog = this.backlogTurns;
     this.backlogTurns = Math.max(
       0,
       this.serverTurnHighWater - this.lastProcessedTick,
     );
-
-    const wasCatchUp = this.catchUpMode;
-    if (!this.catchUpMode && this.backlogTurns >= this.CATCH_UP_ENTER_BACKLOG) {
-      this.catchUpMode = true;
-    } else if (
-      this.catchUpMode &&
-      this.backlogTurns <= this.CATCH_UP_EXIT_BACKLOG
-    ) {
-      this.catchUpMode = false;
-    }
-    if (wasCatchUp !== this.catchUpMode) {
-      console.log(
-        `Catch-up mode ${this.catchUpMode ? "enabled" : "disabled"} (backlog: ${
-          this.backlogTurns
-        } turns)`,
-      );
-    }
+    this.backlogGrowing = this.backlogTurns > previousBacklog;
   }
 
   private inputEvent(event: MouseUpEvent) {
