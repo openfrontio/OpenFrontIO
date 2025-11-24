@@ -215,6 +215,7 @@ export class ClientGameRunner {
   private backlogGrowing: boolean = false;
 
   private pendingUpdates: GameUpdateViewData[] = [];
+  private pendingStart = 0;
   private isProcessingUpdates = false;
 
   // Adaptive rendering when frames are heavy: render at most once every N frames.
@@ -477,12 +478,13 @@ export class ClientGameRunner {
   }
 
   private processPendingUpdates() {
-    if (this.isProcessingUpdates || this.pendingUpdates.length === 0) {
+    const pendingCount = this.pendingUpdates.length - this.pendingStart;
+    if (this.isProcessingUpdates || pendingCount <= 0) {
       return;
     }
 
     this.isProcessingUpdates = true;
-    const processSlice = () => {
+    const processFrame = () => {
       const BASE_SLICE_BUDGET_MS = 8; // keep UI responsive while catching up
       const MAX_SLICE_BUDGET_MS = 2000; // allow longer slices when backlog is large
       const BACKLOG_FREE_TURNS = 10; // scaling starts at this many turns
@@ -501,15 +503,16 @@ export class ClientGameRunner {
         BASE_SLICE_BUDGET_MS +
         backlogScale * (MAX_SLICE_BUDGET_MS - BASE_SLICE_BUDGET_MS);
 
-      const sliceStart = performance.now();
+      const frameStart = performance.now();
       const batch: GameUpdateViewData[] = [];
-
-      let processedCount = 0;
       let lastTickDuration: number | undefined;
       let lastTick: number | undefined;
 
-      while (this.pendingUpdates.length > 0) {
-        const gu = this.pendingUpdates.shift() as GameUpdateViewData;
+      let processedCount = 0;
+
+      // Consume updates until we hit the time budget or per-slice cap.
+      while (this.pendingStart < this.pendingUpdates.length) {
+        const gu = this.pendingUpdates[this.pendingStart++];
         processedCount++;
         batch.push(gu);
 
@@ -528,13 +531,23 @@ export class ClientGameRunner {
         }
         lastTick = gu.tick;
 
-        const elapsed = performance.now() - sliceStart;
+        const elapsed = performance.now() - frameStart;
         if (processedCount >= MAX_PER_SLICE || elapsed >= sliceBudgetMs) {
           break;
         }
       }
 
-      if (processedCount > 0 && lastTick !== undefined) {
+      // Compact the queue if we've advanced far into it.
+      if (
+        this.pendingStart > 0 &&
+        (this.pendingStart > 1024 ||
+          this.pendingStart >= this.pendingUpdates.length / 2)
+      ) {
+        this.pendingUpdates = this.pendingUpdates.slice(this.pendingStart);
+        this.pendingStart = 0;
+      }
+
+      if (batch.length > 0 && lastTick !== undefined) {
         const combinedGu = this.mergeGameUpdates(batch);
         if (combinedGu) {
           this.gameView.update(combinedGu);
@@ -554,14 +567,14 @@ export class ClientGameRunner {
         this.currentTickDelay = undefined;
       }
 
-      if (this.pendingUpdates.length > 0) {
-        requestAnimationFrame(processSlice);
+      if (this.pendingStart < this.pendingUpdates.length) {
+        requestAnimationFrame(processFrame);
       } else {
         this.isProcessingUpdates = false;
       }
     };
 
-    requestAnimationFrame(processSlice);
+    requestAnimationFrame(processFrame);
   }
 
   private adaptRenderFrequency(frameDuration: number) {
