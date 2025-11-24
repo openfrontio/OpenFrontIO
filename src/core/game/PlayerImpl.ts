@@ -101,7 +101,6 @@ export class PlayerImpl implements Player {
   public _outgoingAttacks: Attack[] = [];
   public _outgoingLandAttacks: Attack[] = [];
 
-  private _hasSpawned = false;
   private _spawnTile: TileRef | undefined;
   private _isDisconnected = false;
 
@@ -345,11 +344,7 @@ export class PlayerImpl implements Player {
   }
 
   hasSpawned(): boolean {
-    return this._hasSpawned;
-  }
-
-  setHasSpawned(hasSpawned: boolean): void {
-    this._hasSpawned = hasSpawned;
+    return this._spawnTile !== undefined;
   }
 
   setSpawnTile(spawnTile: TileRef): void {

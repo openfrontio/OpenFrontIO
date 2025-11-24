@@ -52,8 +52,6 @@ export class SpawnExecution implements Execution {
     if (player.spawnTile() === undefined) {
       player.setSpawnTile(this.tile);
     }
-
-    player.setHasSpawned(true);
   }
 
   isActive(): boolean {
