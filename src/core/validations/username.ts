@@ -47,10 +47,6 @@ export function isProfaneUsername(username: string): boolean {
 
 /**
  * Sanitizes and fixes profane usernames while preserving clan tags.
- *
- * @param username - The original username from UserNameInput
- * @returns The username with profanity replaced, but clan tag preserved
- *
  * Examples:
  * - "[CLAN]BadWord" -> "[CLAN] BeNicer"
  * - "BadWord" -> "NeedHugs"
@@ -67,11 +63,12 @@ export function sanitizeNameWithClanTag(
   }
   // Extract clan tag before potentially overwriting profanity
   const clanTag = getClanTag(sanitizedUsername);
+  const beforeProfanityFix = sanitizedUsername;
   sanitizedUsername = fixProfaneUsername(sanitizedUsername);
 
   // If name was overwritten and had a clan tag, restore it
   // Prevents desync after clan team assignment because local player's own name isn't overwritten
-  if (clanTag !== null && username !== sanitizedUsername) {
+  if (clanTag !== null && beforeProfanityFix !== sanitizedUsername) {
     sanitizedUsername = `[${clanTag}] ${sanitizedUsername}`;
   }
 
