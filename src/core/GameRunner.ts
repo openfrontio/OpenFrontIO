@@ -37,6 +37,7 @@ export async function createGameRunner(
   clientID: ClientID,
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+  tileUpdateSink?: (update: bigint) => void,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
   const gameMap = await loadGameMap(
@@ -85,6 +86,7 @@ export async function createGameRunner(
     game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
+    tileUpdateSink,
   );
   gr.init();
   return gr;
@@ -101,6 +103,7 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    private tileUpdateSink?: (update: bigint) => void,
   ) {}
 
   init() {
@@ -175,13 +178,24 @@ export class GameRunner {
       });
     }
 
-    // Many tiles are updated to pack it into an array
-    const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
+    // Many tiles are updated; either publish them via a shared sink or pack
+    // them into the view data.
+    let packedTileUpdates: BigUint64Array;
+    const tileUpdates = updates[GameUpdateType.Tile];
+    if (this.tileUpdateSink !== undefined) {
+      for (const u of tileUpdates) {
+        this.tileUpdateSink(u.update);
+      }
+      packedTileUpdates = new BigUint64Array();
+    } else {
+      const raw = tileUpdates.map((u) => u.update);
+      packedTileUpdates = new BigUint64Array(raw);
+    }
     updates[GameUpdateType.Tile] = [];
 
     this.callBack({
       tick: this.game.ticks(),
-      packedTileUpdates: new BigUint64Array(packedTileUpdates),
+      packedTileUpdates,
       updates: updates,
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,

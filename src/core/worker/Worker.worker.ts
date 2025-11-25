@@ -3,6 +3,11 @@ import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
+  createSharedTileRingViews,
+  pushTileUpdate,
+  SharedTileRingViews,
+} from "./SharedTileRing";
+import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
   MainThreadMessage,
@@ -17,6 +22,7 @@ const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 let isProcessingTurns = false;
+let sharedTileRing: SharedTileRingViews | null = null;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -62,11 +68,23 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   switch (message.type) {
     case "init":
       try {
+        if (message.sharedTileRingHeader && message.sharedTileRingData) {
+          sharedTileRing = createSharedTileRingViews({
+            header: message.sharedTileRingHeader,
+            data: message.sharedTileRingData,
+          });
+        } else {
+          sharedTileRing = null;
+        }
+
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
           mapLoader,
           gameUpdate,
+          sharedTileRing
+            ? (update: bigint) => pushTileUpdate(sharedTileRing!, update)
+            : undefined,
         ).then((gr) => {
           sendMessage({
             type: "initialized",
