@@ -28,6 +28,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
   AutoUpgradeEvent,
+  BacklogStatusEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
   InputHandler,
@@ -527,33 +528,35 @@ export class ClientGameRunner {
         this.pendingStart = 0;
       }
 
-      if (batch.length > 0 && lastTick !== undefined) {
+      // Only update view and render when ALL processing is complete
+      if (
+        this.pendingStart >= this.pendingUpdates.length &&
+        batch.length > 0 &&
+        lastTick !== undefined
+      ) {
         const combinedGu = this.mergeGameUpdates(batch);
         if (combinedGu) {
           this.gameView.update(combinedGu);
         }
 
-        // Only emit metrics when ALL processing is complete
-        if (this.pendingStart >= this.pendingUpdates.length) {
-          const ticksPerRender =
-            this.lastRenderedTick === 0
-              ? lastTick
-              : lastTick - this.lastRenderedTick;
-          this.lastRenderedTick = lastTick;
+        const ticksPerRender =
+          this.lastRenderedTick === 0
+            ? lastTick
+            : lastTick - this.lastRenderedTick;
+        this.lastRenderedTick = lastTick;
 
-          this.renderer.tick();
-          this.eventBus.emit(
-            new TickMetricsEvent(
-              lastTickDuration,
-              this.currentTickDelay,
-              this.backlogTurns,
-              ticksPerRender,
-            ),
-          );
+        this.renderer.tick();
+        this.eventBus.emit(
+          new TickMetricsEvent(
+            lastTickDuration,
+            this.currentTickDelay,
+            this.backlogTurns,
+            ticksPerRender,
+          ),
+        );
 
-          // Reset tick delay for next measurement
-          this.currentTickDelay = undefined;
-        }
+        // Reset tick delay for next measurement
+        this.currentTickDelay = undefined;
       }
 
       if (this.pendingStart < this.pendingUpdates.length) {
@@ -614,6 +617,9 @@ export class ClientGameRunner {
       this.serverTurnHighWater - this.lastProcessedTick,
     );
     this.backlogGrowing = this.backlogTurns > previousBacklog;
+    this.eventBus.emit(
+      new BacklogStatusEvent(this.backlogTurns, this.backlogGrowing),
+    );
   }
 
   private inputEvent(event: MouseUpEvent) {

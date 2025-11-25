@@ -2,7 +2,10 @@ import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
-import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import {
+  BacklogStatusEvent,
+  RefreshGraphicsEvent as RedrawGraphicsEvent,
+} from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
@@ -292,6 +295,9 @@ export function createRenderer(
 
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
+  private backlogTurns: number = 0;
+  private backlogGrowing: boolean = false;
+  private lastRenderTime: number = 0;
 
   constructor(
     private game: GameView,
@@ -309,6 +315,10 @@ export class GameRenderer {
 
   initialize() {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
+    this.eventBus.on(BacklogStatusEvent, (event: BacklogStatusEvent) => {
+      this.backlogTurns = event.backlogTurns;
+      this.backlogGrowing = event.backlogGrowing;
+    });
     this.layers.forEach((l) => l.init?.());
 
     // only append the canvas if it's not already in the document to avoid reparenting side-effects
@@ -348,6 +358,28 @@ export class GameRenderer {
   }
 
   renderGame() {
+    const now = performance.now();
+
+    if (this.backlogTurns > 0) {
+      const BASE_FPS = 60;
+      const MIN_FPS = 20;
+      const BACKLOG_MAX_TURNS = 50;
+
+      const scale = Math.min(1, this.backlogTurns / BACKLOG_MAX_TURNS);
+      const targetFps = BASE_FPS - scale * (BASE_FPS - MIN_FPS);
+      const minFrameInterval = 1000 / targetFps;
+
+      if (this.lastRenderTime !== 0) {
+        const sinceLast = now - this.lastRenderTime;
+        if (sinceLast < minFrameInterval) {
+          requestAnimationFrame(() => this.renderGame());
+          return;
+        }
+      }
+    }
+
+    this.lastRenderTime = now;
+
     FrameProfiler.clear();
     const start = performance.now();
     // Set background
