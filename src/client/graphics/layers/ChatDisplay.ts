@@ -10,6 +10,7 @@ import {
 } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
+import { GoToPositionEvent } from "../../InputHandler";
 import { Layer } from "./Layer";
 
 interface ChatEvent {
@@ -17,6 +18,8 @@ interface ChatEvent {
   unsafeDescription?: boolean;
   createdAt: number;
   highlight?: boolean;
+  x?: number; // New optional field
+  y?: number; // New optional field
 }
 
 @customElement("chat-display")
@@ -68,6 +71,8 @@ export class ChatDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       highlight: true,
       unsafeDescription: true,
+      x: event.x, // Transfer coordinates
+      y: event.y, // Transfer coordinates
     });
   }
 
@@ -119,6 +124,7 @@ export class ChatDisplay extends LitElement implements Layer {
       : chat.description;
   }
 
+  // ...
   render() {
     if (!this.active) {
       return html``;
@@ -170,7 +176,19 @@ export class ChatDisplay extends LitElement implements Layer {
                 (chat) => html`
                   <tr class="border-b border-opacity-0">
                     <td class="lg:p-3 p-1 text-left">
-                      ${this.getChatContent(chat)}
+                      ${chat.x !== undefined && chat.y !== undefined
+                        ? html`
+                            <div
+                              class="cursor-pointer text-blue-400 hover:underline"
+                              @click=${() =>
+                                this.eventBus.emit(
+                                  new GoToPositionEvent(chat.x!, chat.y!),
+                                )}
+                            >
+                              ${this.getChatContent(chat)}
+                            </div>
+                          `
+                        : this.getChatContent(chat)}
                     </td>
                   </tr>
                 `,

@@ -233,6 +233,8 @@ export interface DisplayMessageUpdate {
   goldAmount?: bigint;
   playerID: number | null;
   params?: Record<string, string | number>;
+  x?: number; // New optional field
+  y?: number; // New optional field
 }
 
 export type DisplayChatMessageUpdate = {

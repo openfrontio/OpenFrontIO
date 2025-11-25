@@ -40,12 +40,12 @@ import { Layer } from "./Layer";
 
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { onlyImages } from "../../../core/Util";
-import { renderNumber, renderTroops } from "../../Utils";
 import {
   GoToPlayerEvent,
   GoToPositionEvent,
   GoToUnitEvent,
-} from "./Leaderboard";
+} from "../../InputHandler";
+import { renderNumber, renderTroops } from "../../Utils";
 
 import { getMessageTypeClasses, translateText } from "../../Utils";
 

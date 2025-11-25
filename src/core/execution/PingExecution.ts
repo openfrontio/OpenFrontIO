@@ -18,7 +18,15 @@ export class PingExecution implements Execution {
     for (const recipient of recipients) {
       // Create chat message
       const message = `${this.sender.name()} pinged ${this.pingType}`;
-      game.displayMessage(message, MessageType.CHAT, recipient.id());
+      game.displayMessage(
+        message,
+        MessageType.CHAT,
+        recipient.id(),
+        undefined,
+        undefined,
+        this.x,
+        this.y,
+      );
 
       // Create visual ping update
       game.addUpdate({

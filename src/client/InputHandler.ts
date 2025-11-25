@@ -1,6 +1,6 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { UnitType } from "../core/game/Game";
-import { UnitView } from "../core/game/GameView";
+import { PlayerView, UnitView } from "../core/game/GameView";
 import { PingType } from "../core/game/Ping";
 import { UserSettings } from "../core/game/UserSettings";
 import { TransformHandler } from "./graphics/TransformHandler";
@@ -142,6 +142,21 @@ export class PingPlacedEvent implements GameEvent {
     public readonly x: number,
     public readonly y: number,
   ) {}
+}
+
+export class GoToPositionEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class GoToPlayerEvent implements GameEvent {
+  constructor(public player: PlayerView) {}
+}
+
+export class GoToUnitEvent implements GameEvent {
+  constructor(public unit: UnitView) {}
 }
 
 export class InputHandler {

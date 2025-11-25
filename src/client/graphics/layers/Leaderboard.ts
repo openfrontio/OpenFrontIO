@@ -2,8 +2,9 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../../client/Utils";
-import { EventBus, GameEvent } from "../../../core/EventBus";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { EventBus } from "../../../core/EventBus";
+import { GameView, PlayerView } from "../../../core/game/GameView";
+import { GoToPlayerEvent } from "../../InputHandler";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
 
@@ -16,21 +17,6 @@ interface Entry {
   isMyPlayer: boolean;
   isOnSameTeam: boolean;
   player: PlayerView;
-}
-
-export class GoToPlayerEvent implements GameEvent {
-  constructor(public player: PlayerView) {}
-}
-
-export class GoToPositionEvent implements GameEvent {
-  constructor(
-    public x: number,
-    public y: number,
-  ) {}
-}
-
-export class GoToUnitEvent implements GameEvent {
-  constructor(public unit: UnitView) {}
 }
 
 @customElement("leader-board")
