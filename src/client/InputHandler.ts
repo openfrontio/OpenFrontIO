@@ -131,8 +131,12 @@ export class TickMetricsEvent implements GameEvent {
     public readonly tickDelay?: number,
     // Number of turns the client is behind the server (if known)
     public readonly backlogTurns?: number,
-    // Number of ticks applied since last render
+    // Number of simulation ticks applied since last render
     public readonly ticksPerRender?: number,
+    // Approximate worker simulation ticks per second
+    public readonly workerTicksPerSecond?: number,
+    // Approximate render tick() calls per second
+    public readonly renderTicksPerSecond?: number,
   ) {}
 }
 

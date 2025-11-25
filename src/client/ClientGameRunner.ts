@@ -215,6 +215,9 @@ export class ClientGameRunner {
   private backlogTurns: number = 0;
   private backlogGrowing: boolean = false;
   private lastRenderedTick: number = 0;
+  private workerTicksSinceSample: number = 0;
+  private renderTicksSinceSample: number = 0;
+  private metricsSampleStart: number = 0;
 
   private pendingUpdates: GameUpdateViewData[] = [];
   private pendingStart = 0;
@@ -479,6 +482,7 @@ export class ClientGameRunner {
       while (this.pendingStart < this.pendingUpdates.length) {
         const gu = this.pendingUpdates[this.pendingStart++];
         processedCount++;
+        this.workerTicksSinceSample++;
         batch.push(gu);
 
         this.transport.turnComplete();
@@ -529,6 +533,24 @@ export class ClientGameRunner {
             : lastTick - this.lastRenderedTick;
         this.lastRenderedTick = lastTick;
 
+        this.renderTicksSinceSample++;
+
+        let workerTicksPerSecond: number | undefined;
+        let renderTicksPerSecond: number | undefined;
+        const now = performance.now();
+        if (this.metricsSampleStart === 0) {
+          this.metricsSampleStart = now;
+        } else {
+          const elapsedSeconds = (now - this.metricsSampleStart) / 1000;
+          if (elapsedSeconds > 0) {
+            workerTicksPerSecond = this.workerTicksSinceSample / elapsedSeconds;
+            renderTicksPerSecond = this.renderTicksSinceSample / elapsedSeconds;
+          }
+          this.metricsSampleStart = now;
+          this.workerTicksSinceSample = 0;
+          this.renderTicksSinceSample = 0;
+        }
+
         this.renderer.tick();
         this.eventBus.emit(
           new TickMetricsEvent(
@@ -536,6 +558,8 @@ export class ClientGameRunner {
             this.currentTickDelay,
             this.backlogTurns,
             ticksPerRender,
+            workerTicksPerSecond,
+            renderTicksPerSecond,
           ),
         );
 
