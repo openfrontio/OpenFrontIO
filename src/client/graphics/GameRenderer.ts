@@ -358,7 +358,7 @@ export class GameRenderer {
 
     if (this.backlogTurns > 0) {
       const BASE_FPS = 60;
-      const MIN_FPS = 20;
+      const MIN_FPS = 1;
       const BACKLOG_MAX_TURNS = 50;
 
       const scale = Math.min(1, this.backlogTurns / BACKLOG_MAX_TURNS);
