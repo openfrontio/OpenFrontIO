@@ -413,9 +413,8 @@ export class PlayerInfo {
     // TODO: make player id the small id
     public readonly id: PlayerID,
     public readonly nationStrength?: number,
-    clan?: string | null,
   ) {
-    this.clan = clan !== undefined ? clan : getClanTag(name);
+    this.clan = getClanTag(name);
   }
 }
 

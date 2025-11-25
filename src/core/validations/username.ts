@@ -8,7 +8,7 @@ import {
   skipNonAlphabeticTransformer,
 } from "obscenity";
 import { translateText } from "../../client/Utils";
-import { simpleHash } from "../Util";
+import { getClanTag, sanitize, simpleHash } from "../Util";
 
 const matcher = new RegExpMatcher({
   ...englishDataset.build(),
@@ -43,6 +43,38 @@ export function fixProfaneUsername(username: string): string {
 
 export function isProfaneUsername(username: string): boolean {
   return matcher.hasMatch(username);
+}
+
+/**
+ * Sanitizes and fixes profane usernames while preserving clan tags.
+ *
+ * @param username - The original username from UserNameInput
+ * @returns The username with profanity replaced, but clan tag preserved
+ *
+ * Examples:
+ * - "[CLAN]BadWord" -> "[CLAN] BeNicer"
+ * - "BadWord" -> "NeedHugs"
+ * - "[CLAN]GoodName" -> "[CLAN]GoodName"
+ */
+export function sanitizeNameWithClanTag(
+  username: string,
+  onlySanitize: boolean = false,
+): string {
+  if (onlySanitize) {
+    // No overwriting profanity for the local player's own name
+    return sanitize(username);
+  }
+  // Extract clan tag before potentially overwriting profanity
+  const clanTag = getClanTag(username);
+  let cleanName = fixProfaneUsername(username);
+
+  // If name was overwritten and had a clan tag, restore it
+  // Prevents desync after clan team assignment because local player's own name isn't overwritten
+  if (clanTag !== null && username !== cleanName) {
+    cleanName = `[${clanTag}] ${cleanName}`;
+  }
+
+  return cleanName;
 }
 
 export function validateUsername(username: string): {

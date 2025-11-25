@@ -29,8 +29,8 @@ import {
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
-import { getClanTag, sanitize, simpleHash } from "./Util";
-import { fixProfaneUsername } from "./validations/username";
+import { simpleHash } from "./Util";
+import { sanitizeNameWithClanTag } from "./validations/username";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
@@ -47,28 +47,11 @@ export async function createGameRunner(
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map((p) => {
-    const sanitized = sanitize(p.username);
-    let finalName = sanitized;
-    // Prevent desync for clan team assignment: extract clan tag before overwriting profane username
-    const clanTag = getClanTag(sanitized);
-
-    if (p.clientID !== clientID) {
-      // Put clan tag back after overwriting profane username, so
-      // - Clan still shown to others for clarity
-      // - GameServer and LocalServer can perform getClanTag on the overwritten name since they don't have access to PlayerInfo
-      const nameWithoutProfanity = fixProfaneUsername(sanitized);
-      if (clanTag !== null && sanitized !== nameWithoutProfanity) {
-        finalName = `[${clanTag}] ${nameWithoutProfanity}`;
-      }
-    }
-
     return new PlayerInfo(
-      finalName,
+      sanitizeNameWithClanTag(p.username, p.clientID === clientID),
       PlayerType.Human,
       p.clientID,
       random.nextID(),
-      undefined,
-      clanTag,
     );
   });
 
@@ -84,7 +67,6 @@ export async function createGameRunner(
               null,
               random.nextID(),
               n.strength,
-              null,
             ),
           ),
       );
