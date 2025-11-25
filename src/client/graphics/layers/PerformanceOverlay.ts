@@ -234,6 +234,8 @@ export class PerformanceOverlay extends LitElement implements Layer {
         event.tickDelay,
         event.backlogTurns,
         event.ticksPerRender,
+        event.workerTicksPerSecond,
+        event.renderTicksPerSecond,
       );
     });
   }
@@ -429,11 +431,19 @@ export class PerformanceOverlay extends LitElement implements Layer {
   @state()
   private ticksPerRender: number = 0;
 
+  @state()
+  private workerTicksPerSecond: number = 0;
+
+  @state()
+  private renderTicksPerSecond: number = 0;
+
   updateTickMetrics(
     tickExecutionDuration?: number,
     tickDelay?: number,
     backlogTurns?: number,
     ticksPerRender?: number,
+    workerTicksPerSecond?: number,
+    renderTicksPerSecond?: number,
   ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
@@ -477,6 +487,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     if (ticksPerRender !== undefined) {
       this.ticksPerRender = ticksPerRender;
+    }
+
+    if (workerTicksPerSecond !== undefined) {
+      this.workerTicksPerSecond = workerTicksPerSecond;
+    }
+
+    if (renderTicksPerSecond !== undefined) {
+      this.renderTicksPerSecond = renderTicksPerSecond;
     }
 
     this.requestUpdate();
@@ -623,6 +641,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ${translateText("performance_overlay.tick_delay")}
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
+        </div>
+        <div class="performance-line">
+          Worker ticks/s:
+          <span>${this.workerTicksPerSecond.toFixed(1)}</span>
+        </div>
+        <div class="performance-line">
+          Render ticks/s:
+          <span>${this.renderTicksPerSecond.toFixed(1)}</span>
         </div>
         <div class="performance-line">
           Ticks per render:
