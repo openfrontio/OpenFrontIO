@@ -46,7 +46,7 @@ class Ping {
     this.sprite = new PIXI.Sprite(texture);
     this.sprite.anchor.set(0.5);
 
-    const aspectRatio = texture.width / texture.height;
+    const aspectRatio = texture.height > 0 ? texture.width / texture.height : 1;
     this.sprite.height = 24;
     this.sprite.width = 24 * aspectRatio;
 
@@ -100,27 +100,26 @@ class Ping {
     for (let i = 0; i < glowSteps; i++) {
       const glowRadius = maxRad + i * 8; // Circles outside the main ring
       const glowAlpha = 0.1 * dramaticPulse * (1 - i / glowSteps); // Fades out with distance
-      this.circle.beginFill(staticColor.toRgb(), glowAlpha);
-      this.circle.drawCircle(0, 0, glowRadius);
-      this.circle.endFill();
+      this.circle.circle(0, 0, glowRadius).fill({
+        color: staticColor.toRgb(),
+        alpha: glowAlpha,
+      });
     }
 
     // --- Main Rings (as before) ---
     // Outer static ring
-    this.circle.stroke({
+    this.circle.circle(0, 0, maxRad).stroke({
       width: 3,
       color: staticColor.toRgb(),
       alpha: 0.5 * dramaticPulse,
     });
-    this.circle.circle(0, 0, maxRad);
 
     // Inner pulsing ring
-    this.circle.stroke({
+    this.circle.circle(0, 0, currentRadius).stroke({
       width: 6,
       color: pulseColor.toRgb(),
       alpha: overallFadeAlpha * dramaticPulse,
     });
-    this.circle.circle(0, 0, currentRadius);
   }
 
   destroy() {
@@ -172,6 +171,10 @@ export class PingMarkerLayer implements Layer {
 
   destroy() {
     this.eventBus.off(PingPlacedEvent, this.handlePingPlaced);
+    for (const ping of this.pings) {
+      ping.destroy();
+    }
+    this.pings = [];
     window.removeEventListener("resize", this.resizeCanvas);
     this.renderer?.destroy();
     this.stage.destroy(true);

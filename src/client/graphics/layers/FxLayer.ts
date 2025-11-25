@@ -350,12 +350,19 @@ export class FxLayer implements Layer {
     this.allFx.push(shockwave);
   }
 
-  private pingEventCleanup?: () => void;
   destroy() {
-    if (this.pingEventCleanup) {
-      this.pingEventCleanup();
-      this.pingEventCleanup = undefined;
+    // End all active effects
+    for (const fx of this.boatTargetFxByUnitId.values()) {
+      (fx as any).end?.();
     }
+    for (const fx of this.nukeTargetFxByUnitId.values()) {
+      fx.end();
+    }
+
+    // Clear collections
+    this.allFx = [];
+    this.boatTargetFxByUnitId.clear();
+    this.nukeTargetFxByUnitId.clear();
   }
   async init() {
     this.redraw();

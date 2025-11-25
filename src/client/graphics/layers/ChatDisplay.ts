@@ -103,6 +103,8 @@ export class ChatDisplay extends LitElement implements Layer {
               description: msg.message,
               unsafeDescription: true,
               createdAt: this.game.ticks(),
+              x: msg.x, // Transfer coordinates
+              y: msg.y, // Transfer coordinates
             },
           ];
         }
@@ -124,7 +126,6 @@ export class ChatDisplay extends LitElement implements Layer {
       : chat.description;
   }
 
-  // ...
   render() {
     if (!this.active) {
       return html``;
@@ -178,15 +179,16 @@ export class ChatDisplay extends LitElement implements Layer {
                     <td class="lg:p-3 p-1 text-left">
                       ${chat.x !== undefined && chat.y !== undefined
                         ? html`
-                            <div
-                              class="cursor-pointer text-blue-400 hover:underline"
+                            <button
+                              type="button"
+                              class="cursor-pointer text-blue-400 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent border-0 p-0 text-left"
                               @click=${() =>
                                 this.eventBus.emit(
                                   new GoToPositionEvent(chat.x!, chat.y!),
                                 )}
                             >
                               ${this.getChatContent(chat)}
-                            </div>
+                            </button>
                           `
                         : this.getChatContent(chat)}
                     </td>

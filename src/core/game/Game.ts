@@ -413,7 +413,6 @@ export class PlayerInfo {
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
-    public readonly nation?: Nation | null,
   ) {
     this.clan = getClanTag(name);
   }

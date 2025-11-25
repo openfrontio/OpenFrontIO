@@ -5,6 +5,7 @@ import {
   Gold,
   MessageType,
   NameViewData,
+  PingType,
   PlayerID,
   PlayerType,
   Team,
@@ -266,10 +267,6 @@ export interface UnitIncomingUpdate {
   messageType: MessageType;
   playerID: number;
 }
-
-import { PingType } from "./Ping";
-//...
-//...
 export interface EmbargoUpdate {
   type: GameUpdateType.EmbargoEvent;
   event: "start" | "stop";

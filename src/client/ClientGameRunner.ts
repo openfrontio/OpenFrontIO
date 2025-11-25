@@ -225,12 +225,10 @@ export class ClientGameRunner {
     private gameView: GameView,
   ) {
     this.lastMessageTime = Date.now();
-
-    this.eventBus.on(GoToPositionEvent, (e) => this.onGoToPosition(e));
-  }
-
-  private onGoToPosition(event: GoToPositionEvent) {
-    this.eventBus.emit(new GoToPositionEvent(event.x, event.y));
+    // If forwarding is needed, emit a different event or handle directly
+    this.eventBus.on(GoToPositionEvent, (e) => {
+      // Handle position navigation here instead of re-emitting
+    });
   }
 
   private saveGame(update: WinUpdate) {

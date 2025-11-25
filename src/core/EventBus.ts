@@ -5,8 +5,11 @@ export interface EventConstructor<T extends GameEvent = GameEvent> {
 }
 
 export class EventBus {
-  private listeners: Map<EventConstructor, Array<(event: GameEvent) => void>> =
-    new Map();
+  private listeners: Map<
+    EventConstructor,
+    Array<{ id: number; callback: (event: GameEvent) => void }>
+  > = new Map();
+  private nextId = 0;
 
   emit<T extends GameEvent>(event: T): void {
     const eventConstructor = event.constructor as EventConstructor<T>;
@@ -14,7 +17,7 @@ export class EventBus {
     const callbacks = this.listeners.get(eventConstructor);
     if (callbacks) {
       for (const callback of callbacks) {
-        callback(event);
+        callback.callback(event);
       }
     }
   }
@@ -26,9 +29,20 @@ export class EventBus {
     if (!this.listeners.has(eventType)) {
       this.listeners.set(eventType, []);
     }
-    this.listeners.get(eventType)!.push(callback as (event: GameEvent) => void);
+    const id = this.nextId++;
+    this.listeners
+      .get(eventType)!
+      .push({ id, callback: callback as (event: GameEvent) => void });
 
-    return () => this.off(eventType, callback);
+    return () => {
+      const callbacks = this.listeners.get(eventType);
+      if (callbacks) {
+        const index = callbacks.findIndex((item) => item.id === id);
+        if (index > -1) {
+          callbacks.splice(index, 1);
+        }
+      }
+    };
   }
 
   off<T extends GameEvent>(
@@ -37,7 +51,7 @@ export class EventBus {
   ): void {
     const callbacks = this.listeners.get(eventType);
     if (callbacks) {
-      const index = callbacks.indexOf(callback as (event: GameEvent) => void);
+      const index = callbacks.findIndex((item) => item.callback === callback);
       if (index > -1) {
         callbacks.splice(index, 1);
       }

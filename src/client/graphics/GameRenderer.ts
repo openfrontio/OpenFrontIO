@@ -428,7 +428,7 @@ export class GameRenderer {
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
 
-    requestAnimationFrame(() => this.renderGame());
+    this.rafId = requestAnimationFrame(() => this.renderGame());
     const duration = performance.now() - start;
 
     const layerDurations = FrameProfiler.consume();
