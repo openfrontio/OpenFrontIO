@@ -35,6 +35,8 @@ export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
   clientID: ClientID;
+  sharedTileRingHeader?: SharedArrayBuffer;
+  sharedTileRingData?: SharedArrayBuffer;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
