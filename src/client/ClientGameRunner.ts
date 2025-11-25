@@ -28,6 +28,7 @@ import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
   AutoUpgradeEvent,
+  BacklogStatusEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
   InputHandler,
@@ -600,6 +601,9 @@ export class ClientGameRunner {
       this.serverTurnHighWater - this.lastProcessedTick,
     );
     this.backlogGrowing = this.backlogTurns > previousBacklog;
+    this.eventBus.emit(
+      new BacklogStatusEvent(this.backlogTurns, this.backlogGrowing),
+    );
   }
 
   private inputEvent(event: MouseUpEvent) {

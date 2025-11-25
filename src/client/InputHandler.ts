@@ -136,6 +136,13 @@ export class TickMetricsEvent implements GameEvent {
   ) {}
 }
 
+export class BacklogStatusEvent implements GameEvent {
+  constructor(
+    public readonly backlogTurns: number,
+    public readonly backlogGrowing: boolean,
+  ) {}
+}
+
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
