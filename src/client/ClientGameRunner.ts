@@ -199,6 +199,11 @@ async function createClientGame(
     typeof SharedArrayBuffer !== "undefined" &&
     typeof Atomics !== "undefined" &&
     isIsolated;
+  const sharedStateBuffer =
+    canUseSharedBuffers && gameMap.sharedStateBuffer
+      ? gameMap.sharedStateBuffer
+      : undefined;
+  const usesSharedTileState = !!sharedStateBuffer;
 
   if (canUseSharedBuffers) {
     // Capacity is number of tile updates that can be queued.
@@ -212,6 +217,7 @@ async function createClientGame(
     lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
     sharedTileRingBuffers,
+    sharedStateBuffer,
   );
   await worker.initialize();
   const gameView = new GameView(
@@ -221,6 +227,7 @@ async function createClientGame(
     lobbyConfig.clientID,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    usesSharedTileState,
   );
 
   const canvas = createCanvas();

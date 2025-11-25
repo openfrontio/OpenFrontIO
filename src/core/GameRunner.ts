@@ -38,12 +38,14 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
   tileUpdateSink?: (update: bigint) => void,
+  sharedStateBuffer?: SharedArrayBuffer,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
     mapLoader,
+    sharedStateBuffer,
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 

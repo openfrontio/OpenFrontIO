@@ -479,6 +479,7 @@ export class GameView implements GameMap {
   private _cosmetics: Map<string, PlayerCosmetics> = new Map();
 
   private _map: GameMap;
+  private readonly usesSharedTileState: boolean;
 
   constructor(
     public worker: WorkerClient,
@@ -487,8 +488,10 @@ export class GameView implements GameMap {
     private _myClientID: ClientID,
     private _gameID: GameID,
     private humans: Player[],
+    usesSharedTileState: boolean = false,
   ) {
     this._map = this._mapData.gameMap;
+    this.usesSharedTileState = usesSharedTileState;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
@@ -517,9 +520,16 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
-    this.lastUpdate.packedTileUpdates.forEach((tu) => {
-      this.updatedTiles.push(this.updateTile(tu));
-    });
+    if (this.usesSharedTileState) {
+      this.lastUpdate.packedTileUpdates.forEach((tu) => {
+        const tileRef = Number(tu >> 16n);
+        this.updatedTiles.push(tileRef);
+      });
+    } else {
+      this.lastUpdate.packedTileUpdates.forEach((tu) => {
+        this.updatedTiles.push(this.updateTile(tu));
+      });
+    }
 
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
