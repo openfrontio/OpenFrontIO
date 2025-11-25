@@ -1,5 +1,4 @@
-import { Execution, Game, Player, Unit, UnitType, isUnit } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
@@ -7,20 +6,12 @@ import { TrainStationExecution } from "./TrainStationExecution";
 export class PortExecution implements Execution {
   private active = true;
   private mg: Game;
-  private port: Unit | null = null;
+  private port: Unit;
   private random: PseudoRandom;
   private checkOffset: number;
 
-  constructor(playerOrUnit: Unit);
-  constructor(playerOrUnit: Player, tile: TileRef);
-
-  constructor(
-    private playerOrUnit: Player | Unit,
-    private tile?: TileRef,
-  ) {
-    if (!isUnit(playerOrUnit) && tile === undefined) {
-      throw new Error("tile is required when playerOrUnit is a Player");
-    }
+  constructor(port: Unit) {
+    this.port = port;
   }
 
   init(mg: Game, ticks: number): void {
@@ -32,22 +23,6 @@ export class PortExecution implements Execution {
   tick(ticks: number): void {
     if (this.mg === null || this.random === null || this.checkOffset === null) {
       throw new Error("Not initialized");
-    }
-    if (this.port === null) {
-      if (isUnit(this.playerOrUnit)) {
-        this.port = this.playerOrUnit;
-      } else {
-        const tile = this.tile!;
-        const spawn = this.playerOrUnit.canBuild(UnitType.Port, tile);
-        if (spawn === false) {
-          console.warn(
-            `player ${this.playerOrUnit.id()} cannot build port at ${this.tile}`,
-          );
-          this.active = false;
-          return;
-        }
-        this.port = this.playerOrUnit.buildUnit(UnitType.Port, spawn, {});
-      }
     }
 
     if (!this.port.isActive()) {
@@ -110,15 +85,13 @@ export class PortExecution implements Execution {
   }
 
   createStation(): void {
-    if (this.port !== null) {
-      const nearbyFactory = this.mg.hasUnitNearby(
-        this.port.tile()!,
-        this.mg.config().trainStationMaxRange(),
-        UnitType.Factory,
-      );
-      if (nearbyFactory) {
-        this.mg.addExecution(new TrainStationExecution(this.port));
-      }
+    const nearbyFactory = this.mg.hasUnitNearby(
+      this.port.tile()!,
+      this.mg.config().trainStationMaxRange(),
+      UnitType.Factory,
+    );
+    if (nearbyFactory) {
+      this.mg.addExecution(new TrainStationExecution(this.port));
     }
   }
 

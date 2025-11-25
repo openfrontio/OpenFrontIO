@@ -103,10 +103,7 @@ export class UILayer implements Layer {
   }
 
   onUnitEvent(unit: UnitView) {
-    const underConst =
-      (
-        unit as unknown as { isUnderConstruction?: () => boolean }
-      ).isUnderConstruction?.() ?? false;
+    const underConst = unit.isUnderConstruction();
     if (underConst) {
       this.createLoadingBar(unit);
       return;
@@ -317,10 +314,7 @@ export class UILayer implements Layer {
     if (!unit.isActive()) {
       return 1;
     }
-    const underConst =
-      (
-        unit as unknown as { isUnderConstruction?: () => boolean }
-      ).isUnderConstruction?.() ?? false;
+    const underConst = unit.isUnderConstruction();
     if (underConst) {
       const constDuration = this.game.unitInfo(
         unit.type(),

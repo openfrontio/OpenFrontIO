@@ -1,10 +1,8 @@
-import { Execution, Game, Player, Unit, UnitType, isUnit } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { Execution, Game, Unit } from "../game/Game";
 import { ShellExecution } from "./ShellExecution";
 
 export class DefensePostExecution implements Execution {
   private mg: Game;
-  private post: Unit | null = null;
   private active: boolean = true;
 
   private target: Unit | null = null;
@@ -12,24 +10,13 @@ export class DefensePostExecution implements Execution {
 
   private alreadySentShell = new Set<Unit>();
 
-  constructor(playerOrUnit: Unit);
-  constructor(playerOrUnit: Player, tile: TileRef);
-
-  constructor(
-    private playerOrUnit: Player | Unit,
-    private tile?: TileRef,
-  ) {
-    if (!isUnit(playerOrUnit) && tile === undefined) {
-      throw new Error("tile is required when playerOrUnit is a Player");
-    }
-  }
+  constructor(private post: Unit) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
   }
 
   private shoot() {
-    if (this.post === null) return;
     if (this.target === null) return;
     const shellAttackRate = this.mg.config().defensePostShellAttackRate();
     if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
@@ -52,26 +39,6 @@ export class DefensePostExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    if (this.post === null) {
-      if (isUnit(this.playerOrUnit)) {
-        this.post = this.playerOrUnit;
-      } else {
-        const spawnTile = this.playerOrUnit.canBuild(
-          UnitType.DefensePost,
-          this.tile!,
-        );
-        if (spawnTile === false) {
-          console.warn("cannot build Defense Post");
-          this.active = false;
-          return;
-        }
-        this.post = this.playerOrUnit.buildUnit(
-          UnitType.DefensePost,
-          spawnTile,
-          {},
-        );
-      }
-    }
     if (!this.post.isActive()) {
       this.active = false;
       return;
@@ -80,12 +47,6 @@ export class DefensePostExecution implements Execution {
     // Do nothing while the structure is under construction
     if (this.post.isUnderConstruction()) {
       return;
-    }
-
-    if (!isUnit(this.playerOrUnit)) {
-      if (this.playerOrUnit !== this.post.owner()) {
-        this.playerOrUnit = this.post.owner();
-      }
     }
 
     if (this.target !== null && !this.target.isActive()) {
