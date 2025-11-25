@@ -96,11 +96,11 @@ export enum GameMapType {
   StraitOfGibraltar = "Strait of Gibraltar",
   Italia = "Italia",
   Japan = "Japan",
-  Yenisei = "Yenisei",
   Pluto = "Pluto",
   Montreal = "Montreal",
   Achiran = "Achiran",
   BaikalNukeWars = "Baikal (Nuke Wars)",
+  FourIslands = "Four Islands",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -133,7 +133,6 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
     GameMapType.Japan,
-    GameMapType.Yenisei,
     GameMapType.Montreal,
   ],
   fantasy: [
@@ -143,6 +142,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.DeglaciatedAntarctica,
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
+    GameMapType.FourIslands,
   ],
 };
 
@@ -301,7 +301,6 @@ export enum Relation {
 export class Nation {
   constructor(
     public readonly spawnCell: Cell,
-    public readonly strength: number,
     public readonly playerInfo: PlayerInfo,
   ) {}
 }
@@ -409,7 +408,7 @@ export class PlayerInfo {
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
-    public readonly nation?: Nation | null,
+    public readonly nationStrength?: number,
   ) {
     this.clan = getClanTag(name);
   }
@@ -447,6 +446,7 @@ export interface Unit {
   toUpdate(): UnitUpdate;
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
+  wasDestroyedByEnemy(): boolean;
 
   // Train
   trainType(): TrainType | undefined;

@@ -64,8 +64,13 @@ export async function createGameRunner(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+            new PlayerInfo(
+              n.name,
+              PlayerType.FakeHuman,
+              null,
+              random.nextID(),
+              n.strength,
+            ),
           ),
       );
 
@@ -100,6 +105,9 @@ export class GameRunner {
   ) {}
 
   init() {
+    if (this.game.config().isRandomSpawn()) {
+      this.game.addExecution(...this.execManager.spawnPlayers());
+    }
     if (this.game.config().bots() > 0) {
       this.game.addExecution(
         ...this.execManager.spawnBots(this.game.config().numBots()),

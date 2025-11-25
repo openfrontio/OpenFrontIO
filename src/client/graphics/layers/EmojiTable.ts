@@ -4,7 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { AllPlayers } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TerraNulliusImpl } from "../../../core/game/TerraNulliusImpl";
-import { Emoji, emojiTable, flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { CloseViewEvent, ShowEmojiMenuEvent } from "../../InputHandler";
 import { SendEmojiIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
@@ -57,6 +57,15 @@ export class EmojiTable extends LitElement {
 
   private onEmojiClicked: (emoji: string) => void = () => {};
 
+  private handleBackdropClick = (e: MouseEvent) => {
+    const panelContent = this.querySelector(
+      'div[class*="bg-zinc-900"]',
+    ) as HTMLElement;
+    if (panelContent && !panelContent.contains(e.target as Node)) {
+      this.hideTable();
+    }
+  };
+
   render() {
     if (!this.isVisible) {
       return null;
@@ -64,43 +73,41 @@ export class EmojiTable extends LitElement {
 
     return html`
       <div
-        class="bg-slate-800 max-w-[95vw] max-h-[95vh] pt-[15px] pb-[15px] fixed flex flex-col -translate-x-1/2 -translate-y-1/2 
-                items-center rounded-[10px] z-[9999] top-[50%] left-[50%] justify-center"
-        @contextmenu=${(e: MouseEvent) => e.preventDefault()}
-        @wheel=${(e: WheelEvent) => e.stopPropagation()}
+        class="fixed inset-0 bg-black/15 backdrop-brightness-110 flex items-start sm:items-center justify-center z-[10002] pt-4 sm:pt-0"
+        @click=${this.handleBackdropClick}
       >
-        <!-- Close button -->
-        <button
-          class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
-                  bg-red-500 hover:bg-red-900 text-white rounded-full
-                  text-sm font-bold transition-colors"
-          @click=${this.hideTable}
-        >
-          ✕
-        </button>
-        <div
-          class="flex flex-col overflow-y-auto"
-          style="scrollbar-gutter: stable both-edges;"
-        >
-          ${emojiTable.map(
-            (row) => html`
-              <div class="w-full justify-center flex">
-                ${row.map(
-                  (emoji) => html`
-                    <button
-                      class="flex transition-transform duration-300 ease justify-center items-center cursor-pointer
-                              border border-solid border-slate-500 rounded-[12px] bg-slate-700 hover:bg-slate-600 active:bg-slate-500 
-                              md:m-[8px] md:text-[60px] md:w-[80px] md:h-[80px] hover:scale-[1.1] active:scale-[0.95]
-                              sm:w-[60px] sm:h-[60px] sm:text-[32px] sm:m-[5px] text-[28px] w-[50px] h-[50px] m-[3px]"
-                      @click=${() => this.onEmojiClicked(emoji)}
-                    >
-                      ${emoji}
-                    </button>
-                  `,
-                )}
-              </div>
-            `,
-          )}
+        <div class="relative">
+          <!-- Close button -->
+          <button
+            class="absolute -top-3 -right-3 w-7 h-7 flex items-center justify-center
+                    bg-zinc-700 hover:bg-red-500 text-white rounded-full shadow transition-colors z-[10004]"
+            @click=${this.hideTable}
+          >
+            ✕
+          </button>
+
+          <div
+            class="bg-zinc-900/95 p-2 sm:p-3 rounded-[10px] z-[10003] shadow-2xl shadow-black/50 ring-1 ring-white/5 
+                   w-[calc(100vw-32px)] sm:w-[400px] max-h-[calc(100vh-60px)] overflow-y-auto"
+            @contextmenu=${(e: MouseEvent) => e.preventDefault()}
+            @wheel=${(e: WheelEvent) => e.stopPropagation()}
+            @click=${(e: MouseEvent) => e.stopPropagation()}
+          >
+            <div class="grid grid-cols-5 gap-1 sm:gap-2">
+              ${flattenedEmojiTable.map(
+                (emoji) => html`
+                  <button
+                    class="flex items-center justify-center cursor-pointer aspect-square
+                           border border-solid border-zinc-600 rounded-lg bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600
+                           text-3xl sm:text-4xl transition-transform duration-300 hover:scale-110 active:scale-95"
+                    @click=${() => this.onEmojiClicked(emoji)}
+                  >
+                    ${emoji}
+                  </button>
+                `,
+              )}
+            </div>
+          </div>
         </div>
       </div>
     `;

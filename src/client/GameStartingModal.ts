@@ -93,7 +93,7 @@ export class GameStartingModal extends LitElement {
     }
 
     .copyright {
-      font-size: 32px;
+      font-size: 20px;
       margin-top: 20px;
       margin-bottom: 10px;
       opacity: 1;
@@ -118,7 +118,7 @@ export class GameStartingModal extends LitElement {
   render() {
     return html`
       <div class="modal ${this.isVisible ? "visible" : ""}">
-        <div class="copyright">© OpenFront</div>
+        <div class="copyright">© OpenFront and Contributors</div>
         <a
           href="https://github.com/openfrontio/OpenFrontIO/blob/main/CREDITS.md"
           target="_blank"
