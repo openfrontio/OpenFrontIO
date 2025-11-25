@@ -233,7 +233,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
         event.tickExecutionDuration,
         event.tickDelay,
         event.backlogTurns,
-        event.renderEveryN,
       );
     });
   }
@@ -424,16 +423,12 @@ export class PerformanceOverlay extends LitElement implements Layer {
   }
 
   @state()
-  private renderEveryN: number = 1;
-
-  @state()
   private backlogTurns: number = 0;
 
   updateTickMetrics(
     tickExecutionDuration?: number,
     tickDelay?: number,
     backlogTurns?: number,
-    renderEveryN?: number,
   ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
@@ -473,9 +468,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     if (backlogTurns !== undefined) {
       this.backlogTurns = backlogTurns;
-    }
-    if (renderEveryN !== undefined) {
-      this.renderEveryN = renderEveryN;
     }
 
     this.requestUpdate();
@@ -627,11 +619,6 @@ export class PerformanceOverlay extends LitElement implements Layer {
           Backlog turns:
           <span>${this.backlogTurns}</span>
         </div>
-        ${this.renderEveryN > 1
-          ? html`<div class="performance-line">
-              Render every <span>${this.renderEveryN}</span> frame(s)
-            </div>`
-          : html``}
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">
               <div class="performance-line">
