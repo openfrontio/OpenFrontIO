@@ -85,6 +85,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           sharedTileRing
             ? (update: bigint) => pushTileUpdate(sharedTileRing!, update)
             : undefined,
+          message.sharedStateBuffer,
         ).then((gr) => {
           sendMessage({
             type: "initialized",
