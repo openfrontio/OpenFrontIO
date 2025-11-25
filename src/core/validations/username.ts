@@ -58,23 +58,24 @@ export function isProfaneUsername(username: string): boolean {
  */
 export function sanitizeNameWithClanTag(
   username: string,
-  onlySanitize: boolean = false,
+  noProfanityFix: boolean = false,
 ): string {
-  if (onlySanitize) {
+  let sanitizedUsername = sanitize(username);
+  if (noProfanityFix) {
     // No overwriting profanity for the local player's own name
-    return sanitize(username);
+    return sanitizedUsername;
   }
   // Extract clan tag before potentially overwriting profanity
-  const clanTag = getClanTag(username);
-  let cleanName = fixProfaneUsername(username);
+  const clanTag = getClanTag(sanitizedUsername);
+  sanitizedUsername = fixProfaneUsername(sanitizedUsername);
 
   // If name was overwritten and had a clan tag, restore it
   // Prevents desync after clan team assignment because local player's own name isn't overwritten
-  if (clanTag !== null && username !== cleanName) {
-    cleanName = `[${clanTag}] ${cleanName}`;
+  if (clanTag !== null && username !== sanitizedUsername) {
+    sanitizedUsername = `[${clanTag}] ${sanitizedUsername}`;
   }
 
-  return cleanName;
+  return sanitizedUsername;
 }
 
 export function validateUsername(username: string): {
