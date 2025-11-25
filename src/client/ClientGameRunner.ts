@@ -231,6 +231,7 @@ export class ClientGameRunner {
   private lastProcessedTick: number = 0;
   private backlogTurns: number = 0;
   private backlogGrowing: boolean = false;
+  private lastRenderedTick: number = 0;
 
   private pendingUpdates: GameUpdateViewData[] = [];
   private pendingStart = 0;
@@ -534,12 +535,19 @@ export class ClientGameRunner {
 
         // Only emit metrics when ALL processing is complete
         if (this.pendingStart >= this.pendingUpdates.length) {
+          const ticksPerRender =
+            this.lastRenderedTick === 0
+              ? lastTick
+              : lastTick - this.lastRenderedTick;
+          this.lastRenderedTick = lastTick;
+
           this.renderer.tick();
           this.eventBus.emit(
             new TickMetricsEvent(
               lastTickDuration,
               this.currentTickDelay,
               this.backlogTurns,
+              ticksPerRender,
             ),
           );
 
