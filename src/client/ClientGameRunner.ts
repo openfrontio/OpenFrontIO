@@ -450,9 +450,9 @@ export class ClientGameRunner {
     this.isProcessingUpdates = true;
     const processFrame = () => {
       const BASE_SLICE_BUDGET_MS = 8; // keep UI responsive while catching up
-      const MAX_SLICE_BUDGET_MS = 2000; // allow longer slices when backlog is large
-      const BACKLOG_FREE_TURNS = 10; // scaling starts at this many turns
-      const BACKLOG_MAX_TURNS = 500; // MAX_SLICE_BUDGET_MS is reached at this many turns
+      const MAX_SLICE_BUDGET_MS = 10000; // allow longer slices when backlog is large
+      const BACKLOG_FREE_TURNS = 5; // scaling starts at this many turns
+      const BACKLOG_MAX_TURNS = 50; // MAX_SLICE_BUDGET_MS is reached at this many turns
       const MAX_TICKS_PER_SLICE = 1000;
 
       const backlogOverhead = Math.max(
