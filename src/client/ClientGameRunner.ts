@@ -25,6 +25,13 @@ import {
 import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
+import {
+  createSharedTileRingBuffers,
+  createSharedTileRingViews,
+  drainTileUpdates,
+  SharedTileRingBuffers,
+  SharedTileRingViews,
+} from "../core/worker/SharedTileRing";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
   AutoUpgradeEvent,
@@ -162,9 +169,30 @@ async function createClientGame(
       mapLoader,
     );
   }
+
+  let sharedTileRingBuffers: SharedTileRingBuffers | undefined;
+  let sharedTileRingViews: SharedTileRingViews | null = null;
+  const isIsolated =
+    typeof (globalThis as any).crossOriginIsolated === "boolean"
+      ? (globalThis as any).crossOriginIsolated === true
+      : false;
+  const canUseSharedBuffers =
+    typeof SharedArrayBuffer !== "undefined" &&
+    typeof Atomics !== "undefined" &&
+    isIsolated;
+
+  if (canUseSharedBuffers) {
+    // Capacity is number of tile updates that can be queued.
+    // This is a compromise between memory usage and backlog tolerance.
+    const TILE_RING_CAPACITY = 262144;
+    sharedTileRingBuffers = createSharedTileRingBuffers(TILE_RING_CAPACITY);
+    sharedTileRingViews = createSharedTileRingViews(sharedTileRingBuffers);
+  }
+
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
+    sharedTileRingBuffers,
   );
   await worker.initialize();
   const gameView = new GameView(
@@ -191,6 +219,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    sharedTileRingViews,
   );
 }
 
@@ -222,6 +251,7 @@ export class ClientGameRunner {
   private pendingUpdates: GameUpdateViewData[] = [];
   private pendingStart = 0;
   private isProcessingUpdates = false;
+  private tileRingViews: SharedTileRingViews | null;
 
   constructor(
     private lobby: LobbyConfig,
@@ -231,8 +261,10 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    tileRingViews: SharedTileRingViews | null,
   ) {
     this.lastMessageTime = Date.now();
+    this.tileRingViews = tileRingViews;
   }
 
   private saveGame(update: WinUpdate) {
@@ -603,9 +635,21 @@ export class ClientGameRunner {
         const updatesForType = gu.updates[type] as unknown as any[];
         (combinedUpdates[type] as unknown as any[]).push(...updatesForType);
       }
-      gu.packedTileUpdates.forEach((tu) => {
-        combinedPackedTileUpdates.push(tu);
-      });
+    }
+
+    if (this.tileRingViews) {
+      const MAX_TILE_UPDATES_PER_RENDER = 100000;
+      drainTileUpdates(
+        this.tileRingViews,
+        MAX_TILE_UPDATES_PER_RENDER,
+        combinedPackedTileUpdates,
+      );
+    } else {
+      for (const gu of batch) {
+        gu.packedTileUpdates.forEach((tu) => {
+          combinedPackedTileUpdates.push(tu);
+        });
+      }
     }
 
     return {
