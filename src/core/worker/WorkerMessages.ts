@@ -37,6 +37,7 @@ export interface InitMessage extends BaseWorkerMessage {
   clientID: ClientID;
   sharedTileRingHeader?: SharedArrayBuffer;
   sharedTileRingData?: SharedArrayBuffer;
+  sharedStateBuffer?: SharedArrayBuffer;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
