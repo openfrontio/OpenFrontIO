@@ -20,6 +20,7 @@ import { FakeHumanExecution } from "./FakeHumanExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NoOpExecution } from "./NoOpExecution";
+import { PingExecution } from "./PingExecution";
 import { QuickChatExecution } from "./QuickChatExecution";
 import { RetreatExecution } from "./RetreatExecution";
 import { SpawnExecution } from "./SpawnExecution";
@@ -109,7 +110,6 @@ export class Executor {
       case "allianceExtension": {
         return new AllianceExtensionExecution(player, intent.recipient);
       }
-
       case "upgrade_structure":
         return new UpgradeStructureExecution(player, intent.unitId);
       case "delete_unit":
@@ -123,6 +123,8 @@ export class Executor {
         );
       case "mark_disconnected":
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
+      case "ping":
+        return new PingExecution(player, intent.pingType, intent.x, intent.y);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

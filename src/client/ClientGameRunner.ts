@@ -33,6 +33,7 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  PingPlacedEvent,
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
@@ -300,6 +301,11 @@ export class ClientGameRunner {
       this.transport.turnComplete();
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
+      });
+      gu.updates[GameUpdateType.PingPlaced].forEach((ppu) => {
+        if (this.gameView.myPlayer()?.smallID() === ppu.playerID) {
+          this.eventBus.emit(new PingPlacedEvent(ppu.pingType, ppu.x, ppu.y));
+        }
       });
       this.gameView.update(gu);
       this.renderer.tick();

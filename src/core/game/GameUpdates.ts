@@ -47,6 +47,7 @@ export enum GameUpdateType {
   RailroadEvent,
   ConquestEvent,
   EmbargoEvent,
+  PingPlaced,
 }
 
 export type GameUpdate =
@@ -68,7 +69,8 @@ export type GameUpdate =
   | BonusEventUpdate
   | RailroadUpdate
   | ConquestUpdate
-  | EmbargoUpdate;
+  | EmbargoUpdate
+  | PingPlacedUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -263,9 +265,21 @@ export interface UnitIncomingUpdate {
   playerID: number;
 }
 
+import { PingType } from "./Ping";
+//...
+//...
 export interface EmbargoUpdate {
   type: GameUpdateType.EmbargoEvent;
   event: "start" | "stop";
   playerID: number;
   embargoedID: number;
+}
+
+export interface PingPlacedUpdate {
+  type: GameUpdateType.PingPlaced;
+  playerID: number;
+  senderID: number;
+  pingType: PingType;
+  x: number;
+  y: number;
 }

@@ -15,7 +15,7 @@ import defendIconUrl from "../../../../resources/images/ShieldIconWhite.svg";
 import attackIconUrl from "../../../../resources/images/SwordIconWhite.svg";
 
 // Configuration for pings
-const PING_DURATION_MS = 3000; // 3 seconds
+const PING_DURATION_MS = 6000; // 6 seconds
 const PING_COLORS: Record<PingType, Colord> = {
   attack: colord("#ff0000"),
   retreat: colord("#ffa600"),
@@ -23,7 +23,7 @@ const PING_COLORS: Record<PingType, Colord> = {
   watchOut: colord("#ffff00"),
 };
 const PING_RING_MIN_RADIUS = 8;
-const PING_RING_MAX_RADIUS = 32;
+const PING_RING_MAX_RADIUS = 48;
 
 // The core class for a single ping marker, handles its own animation and rendering
 class Ping {
@@ -60,22 +60,22 @@ class Ping {
       return false;
     }
 
-    const progress = elapsedTime / PING_DURATION_MS;
+    const progress = elapsedTime / PING_DURATION_MS; // Overall fade progress
+    const overallFadeAlpha = 1 - progress; // Overall fade alpha for sprite
 
-    this.sprite.alpha = 1 - progress; // Fade out
-
-    // Breathing ring animation
-    const ringRadius =
+    const pulseProgress = 0.5 + 0.5 * Math.sin(elapsedTime / 200); // Sinusoidal pulse for size and opacity
+    const currentRadius =
       PING_RING_MIN_RADIUS +
-      (PING_RING_MAX_RADIUS - PING_RING_MIN_RADIUS) *
-        (0.5 + 0.5 * Math.sin(elapsedTime / 200));
+      (PING_RING_MAX_RADIUS - PING_RING_MIN_RADIUS) * pulseProgress;
 
     this.drawBreathingRing(
       PING_RING_MIN_RADIUS,
       PING_RING_MAX_RADIUS,
-      ringRadius,
+      currentRadius,
       this.color.alpha(0.4), // Static outer ring
       this.color.alpha(0.8), // Pulsing inner ring
+      pulseProgress, // Pass pulseProgress
+      overallFadeAlpha, // Pass overallFadeAlpha
     );
 
     return true;
@@ -88,21 +88,37 @@ class Ping {
     currentRadius: number,
     staticColor: Colord,
     pulseColor: Colord,
+    pulseProgress: number, // New parameter for opacity pulse
+    overallFadeAlpha: number, // New parameter for overall fade
   ) {
     this.circle.clear();
 
-    const progress = (currentRadius - minRad) / (maxRad - minRad);
-    const alpha = 1 - progress;
+    const dramaticPulse = pulseProgress * pulseProgress;
 
+    // --- Glow Simulation ---
+    const glowSteps = 3;
+    for (let i = 0; i < glowSteps; i++) {
+      const glowRadius = maxRad + i * 8; // Circles outside the main ring
+      const glowAlpha = 0.1 * dramaticPulse * (1 - i / glowSteps); // Fades out with distance
+      this.circle.beginFill(staticColor.toRgb(), glowAlpha);
+      this.circle.drawCircle(0, 0, glowRadius);
+      this.circle.endFill();
+    }
+
+    // --- Main Rings (as before) ---
     // Outer static ring
-    this.circle.stroke({ width: 2, color: staticColor.toRgb(), alpha: 0.4 });
+    this.circle.stroke({
+      width: 3,
+      color: staticColor.toRgb(),
+      alpha: 0.5 * dramaticPulse,
+    });
     this.circle.circle(0, 0, maxRad);
 
     // Inner pulsing ring
     this.circle.stroke({
-      width: 4,
+      width: 6,
       color: pulseColor.toRgb(),
-      alpha: alpha * 0.8,
+      alpha: overallFadeAlpha * dramaticPulse,
     });
     this.circle.circle(0, 0, currentRadius);
   }
