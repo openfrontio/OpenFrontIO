@@ -236,12 +236,6 @@ export class ClientGameRunner {
   private pendingStart = 0;
   private isProcessingUpdates = false;
 
-  // Adaptive rendering when frames are heavy: render at most once every N frames.
-  private renderEveryN: number = 1;
-  private renderSkipCounter: number = 0;
-  private lastFrameTime: number = 0;
-  private readonly MAX_RENDER_EVERY_N = 5;
-
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -327,39 +321,8 @@ export class ClientGameRunner {
         return;
       }
       this.pendingUpdates.push(gu);
-      if (this.renderEveryN === 1) {
-        this.processPendingUpdates();
-      }
+      this.processPendingUpdates();
     });
-    const keepWorkerAlive = () => {
-      if (this.isActive) {
-        const now = performance.now();
-        let frameDuration = 0;
-        if (this.lastFrameTime !== 0) {
-          frameDuration = now - this.lastFrameTime;
-        }
-        this.lastFrameTime = now;
-
-        // Decide whether to render (and thus process pending updates) this frame.
-        let shouldRender = true;
-        if (
-          this.renderEveryN > 1 &&
-          this.renderSkipCounter < this.renderEveryN - 1
-        ) {
-          shouldRender = false;
-          this.renderSkipCounter++;
-        } else if (this.renderEveryN > 1) {
-          this.renderSkipCounter = 0;
-        }
-
-        if (shouldRender) {
-          this.processPendingUpdates();
-        }
-        this.adaptRenderFrequency(frameDuration);
-        requestAnimationFrame(keepWorkerAlive);
-      }
-    };
-    requestAnimationFrame(keepWorkerAlive);
 
     const onconnect = () => {
       console.log("Connected to game server!");
@@ -504,8 +467,8 @@ export class ClientGameRunner {
       const BASE_SLICE_BUDGET_MS = 8; // keep UI responsive while catching up
       const MAX_SLICE_BUDGET_MS = 1000; // allow longer slices when backlog is large
       const BACKLOG_FREE_TURNS = 10; // scaling starts at this many turns
-      const BACKLOG_MAX_TURNS = 1000; // MAX_SLICE_BUDGET_MS is reached at this many turns
-      const MAX_PER_SLICE = 100;
+      const BACKLOG_MAX_TURNS = 500; // MAX_SLICE_BUDGET_MS is reached at this many turns
+      const MAX_TICKS_PER_SLICE = 1000;
 
       const backlogOverhead = Math.max(
         0,
@@ -548,7 +511,7 @@ export class ClientGameRunner {
         lastTick = gu.tick;
 
         const elapsed = performance.now() - frameStart;
-        if (processedCount >= MAX_PER_SLICE || elapsed >= sliceBudgetMs) {
+        if (processedCount >= MAX_TICKS_PER_SLICE || elapsed >= sliceBudgetMs) {
           break;
         }
       }
@@ -569,18 +532,20 @@ export class ClientGameRunner {
           this.gameView.update(combinedGu);
         }
 
-        this.renderer.tick();
-        this.eventBus.emit(
-          new TickMetricsEvent(
-            lastTickDuration,
-            this.currentTickDelay,
-            this.backlogTurns,
-            this.renderEveryN,
-          ),
-        );
+        // Only emit metrics when ALL processing is complete
+        if (this.pendingStart >= this.pendingUpdates.length) {
+          this.renderer.tick();
+          this.eventBus.emit(
+            new TickMetricsEvent(
+              lastTickDuration,
+              this.currentTickDelay,
+              this.backlogTurns,
+            ),
+          );
 
-        // Reset tick delay for next measurement
-        this.currentTickDelay = undefined;
+          // Reset tick delay for next measurement
+          this.currentTickDelay = undefined;
+        }
       }
 
       if (this.pendingStart < this.pendingUpdates.length) {
@@ -591,33 +556,6 @@ export class ClientGameRunner {
     };
 
     requestAnimationFrame(processFrame);
-  }
-
-  private adaptRenderFrequency(frameDuration: number) {
-    // Frameskip only matters while we have a backlog; otherwise stay at 1.
-    if (this.backlogTurns === 0) {
-      this.renderEveryN = 1;
-      this.renderSkipCounter = 0;
-      return;
-    }
-
-    const HIGH_FRAME_MS = 25;
-    const LOW_FRAME_MS = 18;
-
-    // Only throttle rendering if backlog is still growing; otherwise drift back toward 1.
-    if (this.backlogGrowing && frameDuration > HIGH_FRAME_MS) {
-      if (this.renderEveryN < this.MAX_RENDER_EVERY_N) {
-        this.renderEveryN++;
-      }
-    } else if (
-      !this.backlogGrowing &&
-      frameDuration > 0 &&
-      frameDuration < LOW_FRAME_MS
-    ) {
-      if (this.renderEveryN > 1) {
-        this.renderEveryN--;
-      }
-    }
   }
 
   private mergeGameUpdates(

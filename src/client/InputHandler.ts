@@ -131,7 +131,6 @@ export class TickMetricsEvent implements GameEvent {
     public readonly tickDelay?: number,
     // Number of turns the client is behind the server (if known)
     public readonly backlogTurns?: number,
-    public readonly renderEveryN?: number,
   ) {}
 }
 
