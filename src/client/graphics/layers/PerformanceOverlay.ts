@@ -233,6 +233,7 @@ export class PerformanceOverlay extends LitElement implements Layer {
         event.tickExecutionDuration,
         event.tickDelay,
         event.backlogTurns,
+        event.ticksPerRender,
       );
     });
   }
@@ -425,10 +426,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
   @state()
   private backlogTurns: number = 0;
 
+  @state()
+  private ticksPerRender: number = 0;
+
   updateTickMetrics(
     tickExecutionDuration?: number,
     tickDelay?: number,
     backlogTurns?: number,
+    ticksPerRender?: number,
   ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
@@ -468,6 +473,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     if (backlogTurns !== undefined) {
       this.backlogTurns = backlogTurns;
+    }
+
+    if (ticksPerRender !== undefined) {
+      this.ticksPerRender = ticksPerRender;
     }
 
     this.requestUpdate();
@@ -614,6 +623,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ${translateText("performance_overlay.tick_delay")}
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
+        </div>
+        <div class="performance-line">
+          Ticks per render:
+          <span>${this.ticksPerRender}</span>
         </div>
         <div class="performance-line">
           Backlog turns:
