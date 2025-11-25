@@ -3,6 +3,11 @@ import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
+  createSharedTileRingViews,
+  pushTileUpdate,
+  SharedTileRingViews,
+} from "./SharedTileRing";
+import {
   AttackAveragePositionResultMessage,
   InitializedMessage,
   MainThreadMessage,
@@ -16,6 +21,8 @@ import {
 const ctx: Worker = self as any;
 let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
+let isProcessingTurns = false;
+let sharedTileRing: SharedTileRingViews | null = null;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -32,25 +39,58 @@ function sendMessage(message: WorkerMessage) {
   ctx.postMessage(message);
 }
 
+async function processPendingTurns() {
+  if (isProcessingTurns) {
+    return;
+  }
+  if (!gameRunner) {
+    return;
+  }
+
+  const gr = await gameRunner;
+  if (!gr || !gr.hasPendingTurns()) {
+    return;
+  }
+
+  isProcessingTurns = true;
+  try {
+    while (gr.hasPendingTurns()) {
+      gr.executeNextTick();
+    }
+  } finally {
+    isProcessingTurns = false;
+  }
+}
+
 ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   const message = e.data;
 
   switch (message.type) {
-    case "heartbeat":
-      (await gameRunner)?.executeNextTick();
-      break;
     case "init":
       try {
+        if (message.sharedTileRingHeader && message.sharedTileRingData) {
+          sharedTileRing = createSharedTileRingViews({
+            header: message.sharedTileRingHeader,
+            data: message.sharedTileRingData,
+          });
+        } else {
+          sharedTileRing = null;
+        }
+
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
           mapLoader,
           gameUpdate,
+          sharedTileRing
+            ? (update: bigint) => pushTileUpdate(sharedTileRing!, update)
+            : undefined,
         ).then((gr) => {
           sendMessage({
             type: "initialized",
             id: message.id,
           } as InitializedMessage);
+          processPendingTurns();
           return gr;
         });
       } catch (error) {
@@ -67,6 +107,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       try {
         const gr = await gameRunner;
         await gr.addTurn(message.turn);
+        processPendingTurns();
       } catch (error) {
         console.error("Failed to process turn:", error);
         throw error;

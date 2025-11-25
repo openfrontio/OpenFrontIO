@@ -229,7 +229,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
       this.setVisible(this.userSettings.performanceOverlay());
     });
     this.eventBus.on(TickMetricsEvent, (event: TickMetricsEvent) => {
-      this.updateTickMetrics(event.tickExecutionDuration, event.tickDelay);
+      this.updateTickMetrics(
+        event.tickExecutionDuration,
+        event.tickDelay,
+        event.backlogTurns,
+        event.ticksPerRender,
+        event.workerTicksPerSecond,
+        event.renderTicksPerSecond,
+      );
     });
   }
 
@@ -418,7 +425,26 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.layerBreakdown = breakdown;
   }
 
-  updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
+  @state()
+  private backlogTurns: number = 0;
+
+  @state()
+  private ticksPerRender: number = 0;
+
+  @state()
+  private workerTicksPerSecond: number = 0;
+
+  @state()
+  private renderTicksPerSecond: number = 0;
+
+  updateTickMetrics(
+    tickExecutionDuration?: number,
+    tickDelay?: number,
+    backlogTurns?: number,
+    ticksPerRender?: number,
+    workerTicksPerSecond?: number,
+    renderTicksPerSecond?: number,
+  ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
     // Update tick execution duration stats
@@ -453,6 +479,22 @@ export class PerformanceOverlay extends LitElement implements Layer {
         this.tickDelayAvg = Math.round(avg * 100) / 100;
         this.tickDelayMax = Math.round(Math.max(...this.tickDelayTimes));
       }
+    }
+
+    if (backlogTurns !== undefined) {
+      this.backlogTurns = backlogTurns;
+    }
+
+    if (ticksPerRender !== undefined) {
+      this.ticksPerRender = ticksPerRender;
+    }
+
+    if (workerTicksPerSecond !== undefined) {
+      this.workerTicksPerSecond = workerTicksPerSecond;
+    }
+
+    if (renderTicksPerSecond !== undefined) {
+      this.renderTicksPerSecond = renderTicksPerSecond;
     }
 
     this.requestUpdate();
@@ -599,6 +641,22 @@ export class PerformanceOverlay extends LitElement implements Layer {
           ${translateText("performance_overlay.tick_delay")}
           <span>${this.tickDelayAvg.toFixed(2)}ms</span>
           (max: <span>${this.tickDelayMax}ms</span>)
+        </div>
+        <div class="performance-line">
+          Worker ticks/s:
+          <span>${this.workerTicksPerSecond.toFixed(1)}</span>
+        </div>
+        <div class="performance-line">
+          Render ticks/s:
+          <span>${this.renderTicksPerSecond.toFixed(1)}</span>
+        </div>
+        <div class="performance-line">
+          Ticks per render:
+          <span>${this.ticksPerRender}</span>
+        </div>
+        <div class="performance-line">
+          Backlog turns:
+          <span>${this.backlogTurns}</span>
         </div>
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">

@@ -12,7 +12,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameUpdates, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -25,9 +25,17 @@ import {
 import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
+import {
+  createSharedTileRingBuffers,
+  createSharedTileRingViews,
+  drainTileUpdates,
+  SharedTileRingBuffers,
+  SharedTileRingViews,
+} from "../core/worker/SharedTileRing";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
   AutoUpgradeEvent,
+  BacklogStatusEvent,
   DoBoatAttackEvent,
   DoGroundAttackEvent,
   InputHandler,
@@ -161,9 +169,30 @@ async function createClientGame(
       mapLoader,
     );
   }
+
+  let sharedTileRingBuffers: SharedTileRingBuffers | undefined;
+  let sharedTileRingViews: SharedTileRingViews | null = null;
+  const isIsolated =
+    typeof (globalThis as any).crossOriginIsolated === "boolean"
+      ? (globalThis as any).crossOriginIsolated === true
+      : false;
+  const canUseSharedBuffers =
+    typeof SharedArrayBuffer !== "undefined" &&
+    typeof Atomics !== "undefined" &&
+    isIsolated;
+
+  if (canUseSharedBuffers) {
+    // Capacity is number of tile updates that can be queued.
+    // This is a compromise between memory usage and backlog tolerance.
+    const TILE_RING_CAPACITY = 262144;
+    sharedTileRingBuffers = createSharedTileRingBuffers(TILE_RING_CAPACITY);
+    sharedTileRingViews = createSharedTileRingViews(sharedTileRingBuffers);
+  }
+
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
+    sharedTileRingBuffers,
   );
   await worker.initialize();
   const gameView = new GameView(
@@ -190,6 +219,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    sharedTileRingViews,
   );
 }
 
@@ -208,6 +238,21 @@ export class ClientGameRunner {
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
 
+  // Track how far behind the client simulation is compared to the server.
+  private serverTurnHighWater: number = 0;
+  private lastProcessedTick: number = 0;
+  private backlogTurns: number = 0;
+  private backlogGrowing: boolean = false;
+  private lastRenderedTick: number = 0;
+  private workerTicksSinceSample: number = 0;
+  private renderTicksSinceSample: number = 0;
+  private metricsSampleStart: number = 0;
+
+  private pendingUpdates: GameUpdateViewData[] = [];
+  private pendingStart = 0;
+  private isProcessingUpdates = false;
+  private tileRingViews: SharedTileRingViews | null;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -216,8 +261,10 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    tileRingViews: SharedTileRingViews | null,
   ) {
     this.lastMessageTime = Date.now();
+    this.tileRingViews = tileRingViews;
   }
 
   private saveGame(update: WinUpdate) {
@@ -292,33 +339,9 @@ export class ClientGameRunner {
         this.stop();
         return;
       }
-      this.transport.turnComplete();
-      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
-        this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
-      });
-      this.gameView.update(gu);
-      this.renderer.tick();
-
-      // Emit tick metrics event for performance overlay
-      this.eventBus.emit(
-        new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
-      );
-
-      // Reset tick delay for next measurement
-      this.currentTickDelay = undefined;
-
-      if (gu.updates[GameUpdateType.Win].length > 0) {
-        this.saveGame(gu.updates[GameUpdateType.Win][0]);
-      }
+      this.pendingUpdates.push(gu);
+      this.processPendingUpdates();
     });
-    const worker = this.worker;
-    const keepWorkerAlive = () => {
-      if (this.isActive) {
-        worker.sendHeartbeat();
-        requestAnimationFrame(keepWorkerAlive);
-      }
-    };
-    requestAnimationFrame(keepWorkerAlive);
 
     const onconnect = () => {
       console.log("Connected to game server!");
@@ -363,6 +386,10 @@ export class ClientGameRunner {
         }
 
         for (const turn of message.turns) {
+          this.serverTurnHighWater = Math.max(
+            this.serverTurnHighWater,
+            turn.turnNumber,
+          );
           if (turn.turnNumber < this.turnsSeen) {
             continue;
           }
@@ -415,6 +442,11 @@ export class ClientGameRunner {
         }
         this.lastTickReceiveTime = now;
 
+        this.serverTurnHighWater = Math.max(
+          this.serverTurnHighWater,
+          message.turn.turnNumber,
+        );
+
         if (this.turnsSeen !== message.turn.turnNumber) {
           console.error(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
@@ -443,6 +475,203 @@ export class ClientGameRunner {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
     }
+  }
+
+  private processPendingUpdates() {
+    const pendingCount = this.pendingUpdates.length - this.pendingStart;
+    if (this.isProcessingUpdates || pendingCount <= 0) {
+      return;
+    }
+
+    this.isProcessingUpdates = true;
+    const processFrame = () => {
+      const BASE_SLICE_BUDGET_MS = 8; // keep UI responsive while catching up
+      const MAX_SLICE_BUDGET_MS = 1000; // allow longer slices when backlog is large
+      const BACKLOG_FREE_TURNS = 10; // scaling starts at this many turns
+      const BACKLOG_MAX_TURNS = 500; // MAX_SLICE_BUDGET_MS is reached at this many turns
+      const MAX_TICKS_PER_SLICE = 1000;
+
+      const backlogOverhead = Math.max(
+        0,
+        this.backlogTurns - BACKLOG_FREE_TURNS,
+      );
+      const backlogScale = Math.min(
+        1,
+        backlogOverhead / (BACKLOG_MAX_TURNS - BACKLOG_FREE_TURNS),
+      );
+      const sliceBudgetMs =
+        BASE_SLICE_BUDGET_MS +
+        backlogScale * (MAX_SLICE_BUDGET_MS - BASE_SLICE_BUDGET_MS);
+
+      const frameStart = performance.now();
+      const batch: GameUpdateViewData[] = [];
+      let lastTickDuration: number | undefined;
+      let lastTick: number | undefined;
+
+      let processedCount = 0;
+
+      // Consume updates until we hit the time budget or per-slice cap.
+      while (this.pendingStart < this.pendingUpdates.length) {
+        const gu = this.pendingUpdates[this.pendingStart++];
+        processedCount++;
+        this.workerTicksSinceSample++;
+        batch.push(gu);
+
+        this.transport.turnComplete();
+        gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
+          this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
+        });
+        this.updateBacklogMetrics(gu.tick);
+
+        if (gu.updates[GameUpdateType.Win].length > 0) {
+          this.saveGame(gu.updates[GameUpdateType.Win][0]);
+        }
+
+        if (gu.tickExecutionDuration !== undefined) {
+          lastTickDuration = gu.tickExecutionDuration;
+        }
+        lastTick = gu.tick;
+
+        const elapsed = performance.now() - frameStart;
+        if (processedCount >= MAX_TICKS_PER_SLICE || elapsed >= sliceBudgetMs) {
+          break;
+        }
+      }
+
+      // Compact the queue if we've advanced far into it.
+      if (
+        this.pendingStart > 0 &&
+        (this.pendingStart > 1024 ||
+          this.pendingStart >= this.pendingUpdates.length / 2)
+      ) {
+        this.pendingUpdates = this.pendingUpdates.slice(this.pendingStart);
+        this.pendingStart = 0;
+      }
+
+      // Only update view and render when ALL processing is complete
+      if (
+        this.pendingStart >= this.pendingUpdates.length &&
+        batch.length > 0 &&
+        lastTick !== undefined
+      ) {
+        const combinedGu = this.mergeGameUpdates(batch);
+        if (combinedGu) {
+          this.gameView.update(combinedGu);
+        }
+
+        const ticksPerRender =
+          this.lastRenderedTick === 0
+            ? lastTick
+            : lastTick - this.lastRenderedTick;
+        this.lastRenderedTick = lastTick;
+
+        this.renderTicksSinceSample++;
+
+        let workerTicksPerSecond: number | undefined;
+        let renderTicksPerSecond: number | undefined;
+        const now = performance.now();
+        if (this.metricsSampleStart === 0) {
+          this.metricsSampleStart = now;
+        } else {
+          const elapsedSeconds = (now - this.metricsSampleStart) / 1000;
+          if (elapsedSeconds > 0) {
+            workerTicksPerSecond = this.workerTicksSinceSample / elapsedSeconds;
+            renderTicksPerSecond = this.renderTicksSinceSample / elapsedSeconds;
+          }
+          this.metricsSampleStart = now;
+          this.workerTicksSinceSample = 0;
+          this.renderTicksSinceSample = 0;
+        }
+
+        this.renderer.tick();
+        this.eventBus.emit(
+          new TickMetricsEvent(
+            lastTickDuration,
+            this.currentTickDelay,
+            this.backlogTurns,
+            ticksPerRender,
+            workerTicksPerSecond,
+            renderTicksPerSecond,
+          ),
+        );
+
+        // Reset tick delay for next measurement
+        this.currentTickDelay = undefined;
+      }
+
+      if (this.pendingStart < this.pendingUpdates.length) {
+        requestAnimationFrame(processFrame);
+      } else {
+        this.isProcessingUpdates = false;
+      }
+    };
+
+    requestAnimationFrame(processFrame);
+  }
+
+  private mergeGameUpdates(
+    batch: GameUpdateViewData[],
+  ): GameUpdateViewData | null {
+    if (batch.length === 0) {
+      return null;
+    }
+
+    const last = batch[batch.length - 1];
+    const combinedUpdates: GameUpdates = {} as GameUpdates;
+
+    // Initialize combinedUpdates with empty arrays for each existing key
+    for (const key in last.updates) {
+      const type = Number(key) as GameUpdateType;
+      combinedUpdates[type] = [];
+    }
+
+    const combinedPackedTileUpdates: bigint[] = [];
+
+    for (const gu of batch) {
+      for (const key in gu.updates) {
+        const type = Number(key) as GameUpdateType;
+        // We don't care about the specific update subtype here; just treat it
+        // as an array we can concatenate.
+        const updatesForType = gu.updates[type] as unknown as any[];
+        (combinedUpdates[type] as unknown as any[]).push(...updatesForType);
+      }
+    }
+
+    if (this.tileRingViews) {
+      const MAX_TILE_UPDATES_PER_RENDER = 100000;
+      drainTileUpdates(
+        this.tileRingViews,
+        MAX_TILE_UPDATES_PER_RENDER,
+        combinedPackedTileUpdates,
+      );
+    } else {
+      for (const gu of batch) {
+        gu.packedTileUpdates.forEach((tu) => {
+          combinedPackedTileUpdates.push(tu);
+        });
+      }
+    }
+
+    return {
+      tick: last.tick,
+      updates: combinedUpdates,
+      packedTileUpdates: new BigUint64Array(combinedPackedTileUpdates),
+      playerNameViewData: last.playerNameViewData,
+      tickExecutionDuration: last.tickExecutionDuration,
+    };
+  }
+
+  private updateBacklogMetrics(processedTick: number) {
+    this.lastProcessedTick = processedTick;
+    const previousBacklog = this.backlogTurns;
+    this.backlogTurns = Math.max(
+      0,
+      this.serverTurnHighWater - this.lastProcessedTick,
+    );
+    this.backlogGrowing = this.backlogTurns > previousBacklog;
+    this.eventBus.emit(
+      new BacklogStatusEvent(this.backlogTurns, this.backlogGrowing),
+    );
   }
 
   private inputEvent(event: MouseUpEvent) {

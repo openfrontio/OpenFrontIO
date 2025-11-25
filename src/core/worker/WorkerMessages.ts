@@ -9,7 +9,6 @@ import { GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
-  | "heartbeat"
   | "init"
   | "initialized"
   | "turn"
@@ -31,15 +30,13 @@ interface BaseWorkerMessage {
   id?: string;
 }
 
-export interface HeartbeatMessage extends BaseWorkerMessage {
-  type: "heartbeat";
-}
-
 // Messages from main thread to worker
 export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
   clientID: ClientID;
+  sharedTileRingHeader?: SharedArrayBuffer;
+  sharedTileRingData?: SharedArrayBuffer;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
@@ -114,7 +111,6 @@ export interface TransportShipSpawnResultMessage extends BaseWorkerMessage {
 
 // Union types for type safety
 export type MainThreadMessage =
-  | HeartbeatMessage
   | InitMessage
   | TurnMessage
   | PlayerActionsMessage
