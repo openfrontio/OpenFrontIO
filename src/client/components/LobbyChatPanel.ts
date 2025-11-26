@@ -105,7 +105,11 @@ export class LobbyChatPanel extends LitElement {
             @input=${(e: Event) =>
               (this.inputText = (e.target as HTMLInputElement).value)}
             @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter") this.sendMessage();
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+                this.sendMessage();
+              }
             }}
             placeholder=${translateText("lobby_chat.placeholder")}
           />
