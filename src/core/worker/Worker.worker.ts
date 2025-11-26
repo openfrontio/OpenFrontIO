@@ -82,13 +82,6 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           dirtyFlags = null;
         }
 
-        console.log("[Worker.worker] init", {
-          hasSharedStateBuffer: !!message.sharedStateBuffer,
-          hasRingHeader: !!message.sharedTileRingHeader,
-          hasRingData: !!message.sharedTileRingData,
-          hasDirtyBuffer: !!message.sharedDirtyBuffer,
-        });
-
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
