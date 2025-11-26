@@ -21,7 +21,7 @@
   },
   "main": {
     "title": "OpenFront (ALPHA)",
-    "join_discord": "Join the Discord!",
+    "join_discord": "Discord",
     "login_discord": "Login with Discord",
     "checking_login": "Checking login...",
     "logged_in": "Logged in!",
@@ -30,8 +30,6 @@
     "join_lobby": "Join Lobby",
     "single_player": "Single Player",
     "instructions": "Instructions",
-    "how_to_play": "How to Play",
-    "advertise": "Advertise",
     "wiki": "Wiki",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
@@ -164,6 +162,18 @@
     "logged_in_with_discord": "Logged in with Discord",
     "recovery_email_sent": "Recovery email sent to {email}"
   },
+  "stats_modal": {
+    "title": "Stats",
+    "clan_stats": "Clan Stats",
+    "loading": "Loading...",
+    "error": "Error loading clan stats",
+    "no_stats": "No clan stats available",
+    "clan": "Clan",
+    "games": "Games",
+    "win_score": "Win Score",
+    "loss_score": "Loss Score",
+    "win_loss_ratio": "Win/Loss"
+  },
   "map": {
     "map": "Map",
     "world": "World",
@@ -198,7 +208,8 @@
     "pluto": "Pluto",
     "montreal": "Montreal",
     "achiran": "Achiran",
-    "baikalnukewars": "Baikal (Nuke Wars)"
+    "baikalnukewars": "Baikal (Nuke Wars)",
+    "fourislands": "Four Islands"
   },
   "map_categories": {
     "continental": "Continental",
@@ -257,7 +268,7 @@
     "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
-    "compact_map": "Mini Map",
+    "compact_map": "Compact Map",
     "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
@@ -265,7 +276,11 @@
     "waiting": "Waiting for players...",
     "random_spawn": "Random spawn",
     "start": "Start Game",
-    "host_badge": "Host"
+    "host_badge": "Host",
+    "assigned_teams": "Assigned Teams",
+    "empty_teams": "Empty Teams",
+    "empty_team": "Empty",
+    "remove_player": "Remove {{username}}"
   },
   "team_colors": {
     "red": "Red",
@@ -560,6 +575,7 @@
   },
   "events_display": {
     "retreating": "retreating",
+    "retaliate": "Retaliate",
     "boat": "Boat",
     "alliance_request_status": "{name} {status} your alliance request",
     "alliance_accepted": "accepted",
@@ -670,6 +686,19 @@
       "description": "Automatic spawn selection failed. You can't play this game."
     },
     "desync_notice": "You are desynced from other players. What you see might differ from other players."
+  },
+  "performance_overlay": {
+    "reset": "Reset",
+    "copy_json_title": "Copy current performance metrics as JSON",
+    "copy_clipboard": "Copy JSON",
+    "copied": "Copied!",
+    "failed_copy": "Failed to copy",
+    "fps": "FPS:",
+    "avg_60s": "Avg (60s):",
+    "frame": "Frame:",
+    "tick_exec": "Tick Exec:",
+    "tick_delay": "Tick Delay:",
+    "layers_header": "Layers (avg / max, sorted by total time):"
   },
   "heads_up_message": {
     "choose_spawn": "Choose a starting location",
