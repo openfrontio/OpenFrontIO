@@ -40,6 +40,8 @@ describe("NukeExecution", () => {
 
     player = game.player("player_id");
     otherPlayer = game.player("other_id");
+
+    player.conquer(game.ref(1, 1));
   });
 
   test("nuke should destroy buildings and redraw out of range buildings", async () => {
@@ -76,6 +78,7 @@ describe("NukeExecution", () => {
   });
 
   test("nuke should only be targetable near src and dst", async () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
     const nukeExec = new NukeExecution(
       UnitType.AtomBomb,
       player,
