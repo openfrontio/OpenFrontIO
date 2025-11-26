@@ -319,6 +319,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
     this.layerStats.clear();
     this.layerBreakdown = [];
 
+    // reset tile metrics
+    this.tileUpdatesPerRender = 0;
+    this.tileUpdatesPeak = 0;
+    this.ringBufferUtilization = 0;
+    this.ringBufferOverflows = 0;
+    this.ringDrainTime = 0;
+    this.totalTilesUpdated = 0;
+
     this.requestUpdate();
   };
 
@@ -437,6 +445,24 @@ export class PerformanceOverlay extends LitElement implements Layer {
   @state()
   private renderTicksPerSecond: number = 0;
 
+  @state()
+  private tileUpdatesPerRender: number = 0;
+
+  @state()
+  private tileUpdatesPeak: number = 0;
+
+  @state()
+  private ringBufferUtilization: number = 0;
+
+  @state()
+  private ringBufferOverflows: number = 0;
+
+  @state()
+  private ringDrainTime: number = 0;
+
+  @state()
+  private totalTilesUpdated: number = 0;
+
   updateTickMetrics(
     tickExecutionDuration?: number,
     tickDelay?: number,
@@ -444,6 +470,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
     ticksPerRender?: number,
     workerTicksPerSecond?: number,
     renderTicksPerSecond?: number,
+    tileUpdatesCount?: number,
+    ringBufferUtilization?: number,
+    ringBufferOverflows?: number,
+    ringDrainTime?: number,
   ) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
 
@@ -497,6 +527,26 @@ export class PerformanceOverlay extends LitElement implements Layer {
       this.renderTicksPerSecond = renderTicksPerSecond;
     }
 
+    if (tileUpdatesCount !== undefined) {
+      this.tileUpdatesPerRender = tileUpdatesCount;
+      this.tileUpdatesPeak = Math.max(this.tileUpdatesPeak, tileUpdatesCount);
+      this.totalTilesUpdated += tileUpdatesCount;
+    }
+
+    if (ringBufferUtilization !== undefined) {
+      this.ringBufferUtilization =
+        Math.round(ringBufferUtilization * 100) / 100;
+    }
+
+    if (ringBufferOverflows !== undefined) {
+      // Accumulate overflows (overflows is a flag, so add 1 if set)
+      this.ringBufferOverflows += ringBufferOverflows;
+    }
+
+    if (ringDrainTime !== undefined) {
+      this.ringDrainTime = Math.round(ringDrainTime * 100) / 100;
+    }
+
     this.requestUpdate();
   }
 
@@ -526,6 +576,14 @@ export class PerformanceOverlay extends LitElement implements Layer {
         delayMaxMs: this.tickDelayMax,
         executionSamples: [...this.tickExecutionTimes],
         delaySamples: [...this.tickDelayTimes],
+      },
+      tiles: {
+        updatesPerRender: this.tileUpdatesPerRender,
+        peakUpdates: this.tileUpdatesPeak,
+        ringBufferUtilization: this.ringBufferUtilization,
+        ringBufferOverflows: this.ringBufferOverflows,
+        ringDrainTimeMs: this.ringDrainTime,
+        totalTilesUpdated: this.totalTilesUpdated,
       },
       layers: this.layerBreakdown.map((layer) => ({ ...layer })),
     };
@@ -657,6 +715,21 @@ export class PerformanceOverlay extends LitElement implements Layer {
         <div class="performance-line">
           Backlog turns:
           <span>${this.backlogTurns}</span>
+        </div>
+        <div class="performance-line">
+          Tile updates/render:
+          <span>${this.tileUpdatesPerRender}</span>
+          (peak: <span>${this.tileUpdatesPeak}</span>)
+        </div>
+        <div class="performance-line">
+          Ring buffer:
+          <span>${this.ringBufferUtilization}%</span>
+          (${this.totalTilesUpdated} total, ${this.ringBufferOverflows}
+          overflows)
+        </div>
+        <div class="performance-line">
+          Ring drain time:
+          <span>${this.ringDrainTime.toFixed(2)}ms</span>
         </div>
         ${this.layerBreakdown.length
           ? html`<div class="layers-section">
