@@ -37,7 +37,7 @@ export async function createGameRunner(
   clientID: ClientID,
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
-  tileUpdateSink?: (update: bigint) => void,
+  tileUpdateSink?: (tile: TileRef) => void,
   sharedStateBuffer?: SharedArrayBuffer,
 ): Promise<GameRunner> {
   const config = await getConfig(gameStart.config, null);
@@ -105,7 +105,7 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
-    private tileUpdateSink?: (update: bigint) => void,
+    private tileUpdateSink?: (tile: TileRef) => void,
   ) {}
 
   init() {
@@ -186,7 +186,8 @@ export class GameRunner {
     const tileUpdates = updates[GameUpdateType.Tile];
     if (this.tileUpdateSink !== undefined) {
       for (const u of tileUpdates) {
-        this.tileUpdateSink(u.update);
+        const tileRef = Number(u.update >> 16n) as TileRef;
+        this.tileUpdateSink(tileRef);
       }
       packedTileUpdates = new BigUint64Array();
     } else {

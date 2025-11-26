@@ -662,11 +662,15 @@ export class ClientGameRunner {
 
     if (this.tileRingViews) {
       const MAX_TILE_UPDATES_PER_RENDER = 100000;
+      const tileRefs: TileRef[] = [];
       drainTileUpdates(
         this.tileRingViews,
         MAX_TILE_UPDATES_PER_RENDER,
-        combinedPackedTileUpdates,
+        tileRefs,
       );
+      for (const ref of tileRefs) {
+        combinedPackedTileUpdates.push(BigInt(ref));
+      }
     } else {
       for (const gu of batch) {
         gu.packedTileUpdates.forEach((tu) => {
