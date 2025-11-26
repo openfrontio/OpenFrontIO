@@ -542,9 +542,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
         Math.round(ringBufferUtilization * 100) / 100;
     }
 
-    if (ringBufferOverflows !== undefined) {
-      // Accumulate overflows (overflows is a flag, so add 1 if set)
-      this.ringBufferOverflows += ringBufferOverflows;
+    if (ringBufferOverflows !== undefined && ringBufferOverflows !== 0) {
+      // Remember that an overflow has occurred at least once this run.
+      this.ringBufferOverflows = 1;
     }
 
     if (ringDrainTime !== undefined) {
