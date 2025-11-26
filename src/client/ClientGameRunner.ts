@@ -31,6 +31,7 @@ import {
   drainTileUpdates,
   SharedTileRingBuffers,
   SharedTileRingViews,
+  TILE_RING_HEADER_OVERFLOW,
 } from "../core/worker/SharedTileRing";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import {
@@ -577,7 +578,8 @@ export class ClientGameRunner {
         batch.length > 0 &&
         lastTick !== undefined
       ) {
-        const combinedGu = this.mergeGameUpdates(batch);
+        const { gameUpdate: combinedGu, tileMetrics } =
+          this.mergeGameUpdates(batch);
         if (combinedGu) {
           this.gameView.update(combinedGu);
         }
@@ -615,6 +617,10 @@ export class ClientGameRunner {
             ticksPerRender,
             workerTicksPerSecond,
             renderTicksPerSecond,
+            tileMetrics.count,
+            tileMetrics.utilization,
+            tileMetrics.overflow,
+            tileMetrics.drainTime,
           ),
         );
 
@@ -632,9 +638,15 @@ export class ClientGameRunner {
     requestAnimationFrame(processFrame);
   }
 
-  private mergeGameUpdates(
-    batch: GameUpdateViewData[],
-  ): GameUpdateViewData | null {
+  private mergeGameUpdates(batch: GameUpdateViewData[]): {
+    gameUpdate: GameUpdateViewData | null;
+    tileMetrics: {
+      count: number;
+      utilization: number;
+      overflow: number;
+      drainTime: number;
+    };
+  } {
     if (batch.length === 0) {
       return null;
     }
@@ -660,31 +672,60 @@ export class ClientGameRunner {
       }
     }
 
+    let tileMetrics = {
+      count: 0,
+      utilization: 0,
+      overflow: 0,
+      drainTime: 0,
+    };
+
     if (this.tileRingViews) {
       const MAX_TILE_UPDATES_PER_RENDER = 100000;
       const tileRefs: TileRef[] = [];
+      const drainStart = performance.now();
       drainTileUpdates(
         this.tileRingViews,
         MAX_TILE_UPDATES_PER_RENDER,
         tileRefs,
       );
+      const drainTime = performance.now() - drainStart;
+
+      // Calculate ring buffer utilization and overflow
+      const TILE_RING_CAPACITY = 262144;
+      const utilization = (tileRefs.length / TILE_RING_CAPACITY) * 100;
+      const overflow = Atomics.load(
+        this.tileRingViews.header,
+        TILE_RING_HEADER_OVERFLOW,
+      );
+
+      tileMetrics = {
+        count: tileRefs.length,
+        utilization,
+        overflow,
+        drainTime,
+      };
+
       for (const ref of tileRefs) {
         combinedPackedTileUpdates.push(BigInt(ref));
       }
     } else {
+      // Non-SAB mode: count tile updates from batch
+      let totalTileUpdates = 0;
       for (const gu of batch) {
-        gu.packedTileUpdates.forEach((tu) => {
-          combinedPackedTileUpdates.push(tu);
-        });
+        totalTileUpdates += gu.packedTileUpdates.length;
       }
+      tileMetrics.count = totalTileUpdates;
     }
 
     return {
-      tick: last.tick,
-      updates: combinedUpdates,
-      packedTileUpdates: new BigUint64Array(combinedPackedTileUpdates),
-      playerNameViewData: last.playerNameViewData,
-      tickExecutionDuration: last.tickExecutionDuration,
+      gameUpdate: {
+        tick: last.tick,
+        updates: combinedUpdates,
+        packedTileUpdates: new BigUint64Array(combinedPackedTileUpdates),
+        playerNameViewData: last.playerNameViewData,
+        tickExecutionDuration: last.tickExecutionDuration,
+      },
+      tileMetrics,
     };
   }
 
