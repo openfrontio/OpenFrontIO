@@ -1,39 +1,25 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class CityExecution implements Execution {
   private mg: Game;
-  private city: Unit | null = null;
   private active: boolean = true;
+  private stationCreated = false;
 
-  constructor(
-    private player: Player,
-    private tile: TileRef,
-  ) {}
+  constructor(private city: Unit) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
   }
 
   tick(ticks: number): void {
-    if (this.city === null) {
-      const spawnTile = this.player.canBuild(UnitType.City, this.tile);
-      if (spawnTile === false) {
-        console.warn("cannot build city");
-        this.active = false;
-        return;
-      }
-      this.city = this.player.buildUnit(UnitType.City, spawnTile, {});
+    if (!this.stationCreated) {
       this.createStation();
+      this.stationCreated = true;
     }
     if (!this.city.isActive()) {
       this.active = false;
       return;
-    }
-
-    if (this.player !== this.city.owner()) {
-      this.player = this.city.owner();
     }
   }
 
@@ -45,16 +31,14 @@ export class CityExecution implements Execution {
     return false;
   }
 
-  createStation(): void {
-    if (this.city !== null) {
-      const nearbyFactory = this.mg.hasUnitNearby(
-        this.city.tile()!,
-        this.mg.config().trainStationMaxRange(),
-        UnitType.Factory,
-      );
-      if (nearbyFactory) {
-        this.mg.addExecution(new TrainStationExecution(this.city));
-      }
+  private createStation(): void {
+    const nearbyFactory = this.mg.hasUnitNearby(
+      this.city.tile()!,
+      this.mg.config().trainStationMaxRange(),
+      UnitType.Factory,
+    );
+    if (nearbyFactory) {
+      this.mg.addExecution(new TrainStationExecution(this.city));
     }
   }
 }

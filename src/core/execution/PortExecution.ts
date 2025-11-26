@@ -1,5 +1,4 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
+import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
@@ -7,14 +6,13 @@ import { TrainStationExecution } from "./TrainStationExecution";
 export class PortExecution implements Execution {
   private active = true;
   private mg: Game;
-  private port: Unit | null = null;
+  private port: Unit;
   private random: PseudoRandom;
   private checkOffset: number;
 
-  constructor(
-    private player: Player,
-    private tile: TileRef,
-  ) {}
+  constructor(port: Unit) {
+    this.port = port;
+  }
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -26,27 +24,18 @@ export class PortExecution implements Execution {
     if (this.mg === null || this.random === null || this.checkOffset === null) {
       throw new Error("Not initialized");
     }
-    if (this.port === null) {
-      const tile = this.tile;
-      const spawn = this.player.canBuild(UnitType.Port, tile);
-      if (spawn === false) {
-        console.warn(
-          `player ${this.player.id()} cannot build port at ${this.tile}`,
-        );
-        this.active = false;
-        return;
-      }
-      this.port = this.player.buildUnit(UnitType.Port, spawn, {});
-      this.createStation();
-    }
 
     if (!this.port.isActive()) {
       this.active = false;
       return;
     }
 
-    if (this.player.id() !== this.port.owner().id()) {
-      this.player = this.port.owner();
+    if (this.port.isUnderConstruction()) {
+      return;
+    }
+
+    if (!this.port.hasTrainStation()) {
+      this.createStation();
     }
 
     // Only check every 10 ticks for performance.
@@ -65,7 +54,9 @@ export class PortExecution implements Execution {
     }
 
     const port = this.random.randElement(ports);
-    this.mg.addExecution(new TradeShipExecution(this.player, this.port, port));
+    this.mg.addExecution(
+      new TradeShipExecution(this.port.owner(), this.port, port),
+    );
   }
 
   isActive(): boolean {
@@ -78,8 +69,10 @@ export class PortExecution implements Execution {
 
   shouldSpawnTradeShip(): boolean {
     const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
-    const numPlayerPorts = this.player.unitCount(UnitType.Port);
-    const numPlayerTradeShips = this.player.unitCount(UnitType.TradeShip);
+    const numPlayerPorts = this.port!.owner().unitCount(UnitType.Port);
+    const numPlayerTradeShips = this.port!.owner().unitCount(
+      UnitType.TradeShip,
+    );
     const spawnRate = this.mg
       .config()
       .tradeShipSpawnRate(numTradeShips, numPlayerPorts, numPlayerTradeShips);
@@ -92,15 +85,13 @@ export class PortExecution implements Execution {
   }
 
   createStation(): void {
-    if (this.port !== null) {
-      const nearbyFactory = this.mg.hasUnitNearby(
-        this.port.tile()!,
-        this.mg.config().trainStationMaxRange(),
-        UnitType.Factory,
-      );
-      if (nearbyFactory) {
-        this.mg.addExecution(new TrainStationExecution(this.port));
-      }
+    const nearbyFactory = this.mg.hasUnitNearby(
+      this.port.tile()!,
+      this.mg.config().trainStationMaxRange(),
+      UnitType.Factory,
+    );
+    if (nearbyFactory) {
+      this.mg.addExecution(new TrainStationExecution(this.port));
     }
   }
 

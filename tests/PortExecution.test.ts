@@ -41,7 +41,12 @@ describe("PortExecution", () => {
     game.config().tradeShipShortRangeDebuff = () => 0;
 
     player.conquer(game.ref(7, 10));
-    const execution = new PortExecution(player, game.ref(7, 10));
+    const spawn = player.canBuild(UnitType.Port, game.ref(7, 10));
+    if (spawn === false) {
+      throw new Error("Unable to build port for test");
+    }
+    const port = player.buildUnit(UnitType.Port, spawn, {});
+    const execution = new PortExecution(port);
     execution.init(game, 0);
     execution.tick(0);
 
@@ -60,7 +65,12 @@ describe("PortExecution", () => {
     game.config().tradeShipShortRangeDebuff = () => 0;
 
     player.conquer(game.ref(7, 10));
-    const execution = new PortExecution(player, game.ref(7, 10));
+    const spawn = player.canBuild(UnitType.Port, game.ref(7, 10));
+    if (spawn === false) {
+      throw new Error("Unable to build port for test");
+    }
+    const port = player.buildUnit(UnitType.Port, spawn, {});
+    const execution = new PortExecution(port);
     execution.init(game, 0);
     execution.tick(0);
 
@@ -78,7 +88,12 @@ describe("PortExecution", () => {
     game.config().tradeShipShortRangeDebuff = () => 100;
 
     player.conquer(game.ref(7, 10));
-    const execution = new PortExecution(player, game.ref(7, 10));
+    const spawn = player.canBuild(UnitType.Port, game.ref(7, 10));
+    if (spawn === false) {
+      throw new Error("Unable to build port for test");
+    }
+    const port = player.buildUnit(UnitType.Port, spawn, {});
+    const execution = new PortExecution(port);
     execution.init(game, 0);
     execution.tick(0);
 
