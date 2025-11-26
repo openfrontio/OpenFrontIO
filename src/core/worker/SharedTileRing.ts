@@ -1,3 +1,5 @@
+import { TileRef } from "../game/GameMap";
+
 export interface SharedTileRingBuffers {
   header: SharedArrayBuffer;
   data: SharedArrayBuffer;
@@ -5,7 +7,7 @@ export interface SharedTileRingBuffers {
 
 export interface SharedTileRingViews {
   header: Int32Array;
-  buffer: BigUint64Array;
+  buffer: Uint32Array;
   capacity: number;
 }
 
@@ -18,9 +20,7 @@ export function createSharedTileRingBuffers(
   capacity: number,
 ): SharedTileRingBuffers {
   const header = new SharedArrayBuffer(3 * Int32Array.BYTES_PER_ELEMENT);
-  const data = new SharedArrayBuffer(
-    capacity * BigUint64Array.BYTES_PER_ELEMENT,
-  );
+  const data = new SharedArrayBuffer(capacity * Uint32Array.BYTES_PER_ELEMENT);
   return { header, data };
 }
 
@@ -28,7 +28,7 @@ export function createSharedTileRingViews(
   buffers: SharedTileRingBuffers,
 ): SharedTileRingViews {
   const header = new Int32Array(buffers.header);
-  const buffer = new BigUint64Array(buffers.data);
+  const buffer = new Uint32Array(buffers.data);
   return {
     header,
     buffer,
@@ -38,7 +38,7 @@ export function createSharedTileRingViews(
 
 export function pushTileUpdate(
   views: SharedTileRingViews,
-  value: bigint,
+  value: TileRef,
 ): void {
   const { header, buffer, capacity } = views;
 
@@ -60,7 +60,7 @@ export function pushTileUpdate(
 export function drainTileUpdates(
   views: SharedTileRingViews,
   maxItems: number,
-  out: bigint[],
+  out: TileRef[],
 ): void {
   const { header, buffer, capacity } = views;
 

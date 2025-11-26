@@ -515,7 +515,7 @@ export class GameView implements GameMap {
     this.updatedTiles = [];
     if (this.usesSharedTileState) {
       this.lastUpdate.packedTileUpdates.forEach((tu) => {
-        const tileRef = Number(tu >> 16n);
+        const tileRef = Number(tu);
         this.updatedTiles.push(tileRef);
       });
     } else {

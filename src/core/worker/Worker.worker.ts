@@ -1,6 +1,7 @@
 import version from "../../../resources/version.txt";
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
+import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
   createSharedTileRingViews,
@@ -83,7 +84,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           mapLoader,
           gameUpdate,
           sharedTileRing
-            ? (update: bigint) => pushTileUpdate(sharedTileRing!, update)
+            ? (tile: TileRef) => pushTileUpdate(sharedTileRing!, tile)
             : undefined,
           message.sharedStateBuffer,
         ).then((gr) => {
