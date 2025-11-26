@@ -8,7 +8,7 @@ import {
   skipNonAlphabeticTransformer,
 } from "obscenity";
 import { translateText } from "../../client/Utils";
-import { getClanTag, simpleHash } from "../Util";
+import { getClanTag, sanitize, simpleHash } from "../Util";
 
 const matcher = new RegExpMatcher({
   ...englishDataset.build(),
@@ -52,7 +52,8 @@ export function isProfaneUsername(username: string): boolean {
  * - "BadWord" -> "NeedHugs"
  * - "[CLAN]GoodName" -> "[CLAN]GoodName"
  */
-export function censorNameWithClanTag(sanitizedUsername: string): string {
+export function censorNameWithClanTag(username: string): string {
+  let sanitizedUsername = sanitize(username);
   // Extract clan tag before potentially overwriting profanity
   const clanTag = getClanTag(sanitizedUsername);
   const beforeProfanityFix = sanitizedUsername;
