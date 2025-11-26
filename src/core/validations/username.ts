@@ -8,7 +8,7 @@ import {
   skipNonAlphabeticTransformer,
 } from "obscenity";
 import { translateText } from "../../client/Utils";
-import { getClanTag, sanitize, simpleHash } from "../Util";
+import { getClanTagOriginalCase, sanitize, simpleHash } from "../Util";
 
 const matcher = new RegExpMatcher({
   ...englishDataset.build(),
@@ -46,26 +46,52 @@ export function isProfaneUsername(username: string): boolean {
 }
 
 /**
- * Censors profane usernames while preserving clan tags.
+ * Sanitizes and censors profane usernames and clan tags.
+ * Profane username is overwritten, profane clan tag is removed.
+ *
+ * Preserves non-profane clan tag:
+ * prevents desync after clan team assignment because local player's own clan tag and name aren't overwritten
+ *
+ * Removing bad clan tags won't hurt existing clans nor cause desyncs:
+ * - full name including clan tag was overwritten in the past, if any part of name was bad
+ * - only each seperate local player name with a profane clan tag will remain, no clan team assignment
+ *
  * Examples:
- * - "[CLAN]BadWord" -> "[CLAN] BeNicer"
- * - "BadWord" -> "NeedHugs"
+ * - "GoodName" -> "GoodName"
+ * - "Good$Name" -> "GoodName"
+ * - "BadName" -> "Censored"
  * - "[CLAN]GoodName" -> "[CLAN]GoodName"
+ * - "[CLaN]BadName" -> "[CLaN] Censored"
+ * - "[BAD]GoodName" -> "GoodName"
+ * - "[BAD]BadName" -> "Censored"
  */
 export function censorNameWithClanTag(username: string): string {
-  let sanitizedUsername = sanitize(username);
-  // Extract clan tag before potentially overwriting profanity
-  const clanTag = getClanTag(sanitizedUsername);
-  const beforeProfanityFix = sanitizedUsername;
-  sanitizedUsername = fixProfaneUsername(sanitizedUsername);
+  const sanitizedUsername = sanitize(username);
 
-  // If name was overwritten and had a clan tag, restore it
-  // Prevents desync after clan team assignment because local player's own name isn't overwritten
-  if (clanTag !== null && beforeProfanityFix !== sanitizedUsername) {
-    sanitizedUsername = `[${clanTag}] ${sanitizedUsername}`;
+  // Don't use getClanTag because that returns upperCase and if original isn't, str replace `[{$clanTag}]` won't match
+  const clanTag = getClanTagOriginalCase(sanitizedUsername);
+
+  const nameWithoutClan = clanTag
+    ? sanitizedUsername.replace(`[${clanTag}]`, "").trim()
+    : sanitizedUsername;
+
+  const clanTagIsProfane = clanTag ? isProfaneUsername(clanTag) : false;
+  const usernameIsProfane = isProfaneUsername(nameWithoutClan);
+
+  const censoredNameWithoutClan = usernameIsProfane
+    ? fixProfaneUsername(nameWithoutClan)
+    : nameWithoutClan;
+
+  // Restore clan tag if it existed and is not profane
+  if (clanTag && !clanTagIsProfane) {
+    if (usernameIsProfane) {
+      return `[${clanTag}] ${censoredNameWithoutClan}`;
+    }
+    return sanitizedUsername;
   }
 
-  return sanitizedUsername;
+  // Don't restore profane or nonexistent clan tag
+  return censoredNameWithoutClan;
 }
 
 export function validateUsername(username: string): {
