@@ -1,5 +1,4 @@
 {
-  "height": 2500,
   "map": {
     "height": 2500,
     "num_land_tiles": 488183,
@@ -89,6 +88,5 @@
       "name": "Kyoto",
       "strength": 3
     }
-  ],
-  "width": 2500
+  ]
 }
