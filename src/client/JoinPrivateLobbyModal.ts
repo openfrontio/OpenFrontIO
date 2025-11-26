@@ -96,7 +96,9 @@ export class JoinPrivateLobbyModal extends LitElement {
                 ${this.chatEnabled
                   ? html`
                       <div class="options-section" style="margin-top: 12px;">
-                        <div class="option-title">Lobby Chat</div>
+                        <div class="option-title">
+                          ${translateText("lobby_chat.title")}
+                        </div>
                         <lobby-chat-panel></lobby-chat-panel>
                       </div>
                     `

@@ -429,7 +429,7 @@ export class HostLobbyModal extends LitElement {
                     .checked=${this.chatEnabled}
                   />
                   <div class="option-card-title">
-                    Enable Lobby Chat
+                    ${translateText("lobby_chat.enable")}
                   </div>
                 </label>
 
@@ -592,7 +592,9 @@ export class HostLobbyModal extends LitElement {
             this.chatEnabled
               ? html`
                   <div class="mt-4">
-                    <div class="option-title">Lobby Chat</div>
+                    <div class="option-title">
+                      ${translateText("lobby_chat.title")}
+                    </div>
                     <lobby-chat-panel></lobby-chat-panel>
                   </div>
                 `

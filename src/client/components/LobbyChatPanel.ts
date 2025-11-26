@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../../client/Utils";
 import { EventBus } from "../../core/EventBus";
 import { SendLobbyChatEvent } from "../Transport";
 
@@ -93,9 +94,11 @@ export class LobbyChatPanel extends LitElement {
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter") this.sendMessage();
             }}
-            placeholder="Type a message"
+            placeholder=${translateText("lobby_chat.placeholder")}
           />
-          <button class="send" @click=${() => this.sendMessage()}>Send</button>
+          <button class="send" @click=${() => this.sendMessage()}>
+            ${translateText("lobby_chat.send")}
+          </button>
         </div>
       </div>
     `;
