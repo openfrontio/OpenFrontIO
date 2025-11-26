@@ -35,12 +35,15 @@ export class DonateTroopsExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.troops === null) throw new Error("not initialized");
+
+    const minTroops = this.getMinTroopsForRelationUpdate();
+
     if (
       this.sender.canDonateTroops(this.recipient) &&
       this.sender.donateTroops(this.recipient, this.troops)
     ) {
       // Prevent players from just buying a good relation by sending 1% troops. Instead, a minimum is needed, and it's random.
-      if (this.troops >= this.getMinTroopsForRelationUpdate()) {
+      if (this.troops >= minTroops) {
         this.recipient.updateRelation(this.sender, 50);
       }
     } else {
