@@ -236,6 +236,10 @@ export class PerformanceOverlay extends LitElement implements Layer {
         event.ticksPerRender,
         event.workerTicksPerSecond,
         event.renderTicksPerSecond,
+        event.tileUpdatesCount,
+        event.ringBufferUtilization,
+        event.ringBufferOverflows,
+        event.ringDrainTime,
       );
     });
   }
