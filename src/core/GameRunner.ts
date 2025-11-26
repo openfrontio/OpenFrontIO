@@ -186,13 +186,14 @@ export class GameRunner {
     let packedTileUpdates: BigUint64Array;
     const tileUpdates = updates[GameUpdateType.Tile];
     if (this.tileUpdateSink !== undefined) {
-      const seenTiles = new Set<TileRef>();
+      if (tileUpdates.length > 0) {
+        console.log("[GameRunner] tile updates for tick", this.game.ticks(), {
+          count: tileUpdates.length,
+        });
+      }
       for (const u of tileUpdates) {
         const tileRef = Number(u.update >> 16n) as TileRef;
-        if (!seenTiles.has(tileRef)) {
-          seenTiles.add(tileRef);
-          this.tileUpdateSink(tileRef);
-        }
+        this.tileUpdateSink(tileRef);
       }
       packedTileUpdates = new BigUint64Array();
     } else {
