@@ -156,7 +156,7 @@
         160,
         1390
       ],
-      "flag": "ca",
+      "flag": "ca_nb",
       "name": "New Brunswick",
       "strength": 3
     },
@@ -165,7 +165,7 @@
         480,
         1240
       ],
-      "flag": "ca",
+      "flag": "ca_nb",
       "name": "Acadia",
       "strength": 2
     },
@@ -174,7 +174,7 @@
         250,
         1644
       ],
-      "flag": "ca",
+      "flag": "ca_nb",
       "name": "Fredericton",
       "strength": 1
     },
@@ -183,7 +183,7 @@
         580,
         1574
       ],
-      "flag": "ca",
+      "flag": "ca_nb",
       "name": "Moncton",
       "strength": 1
     },
@@ -201,7 +201,7 @@
         794,
         1528
       ],
-      "flag": "ca",
+      "flag": "ca_pe",
       "name": "Prince Edward Island",
       "strength": 3
     },
@@ -210,7 +210,7 @@
         1000,
         1770
       ],
-      "flag": "ca",
+      "flag": "ca_ns",
       "name": "Nova Scotia",
       "strength": 3
     },
@@ -219,7 +219,7 @@
         1300,
         1640
       ],
-      "flag": "ca",
+      "flag": "ca_ns",
       "name": "Cape Breton Island",
       "strength": 2
     },
@@ -228,7 +228,7 @@
         520,
         1880
       ],
-      "flag": "ca",
+      "flag": "ca_ns",
       "name": "Annapolis",
       "strength": 1
     },
@@ -237,7 +237,7 @@
         740,
         1926
       ],
-      "flag": "ca",
+      "flag": "ca_ns",
       "name": "Halifax",
       "strength": 1
     },
@@ -246,7 +246,7 @@
         400,
         2082
       ],
-      "flag": "ca",
+      "flag": "ca_ns",
       "name": "Yarmouth",
       "strength": 1
     }

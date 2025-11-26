@@ -95,25 +95,25 @@
       "coordinates": [160, 1390],
       "name": "New Brunswick",
       "strength": 3,
-      "flag": "ca"
+      "flag": "ca_nb"
     },
     {
       "coordinates": [480, 1240],
       "name": "Acadia",
       "strength": 2,
-      "flag": "ca"
+      "flag": "ca_nb"
     },
     {
       "coordinates": [250, 1644],
       "name": "Fredericton",
       "strength": 1,
-      "flag": "ca"
+      "flag": "ca_nb"
     },
     {
       "coordinates": [580, 1574],
       "name": "Moncton",
       "strength": 1,
-      "flag": "ca"
+      "flag": "ca_nb"
     },
     {
       "coordinates": [84, 1800],
@@ -125,37 +125,37 @@
       "coordinates": [794, 1528],
       "name": "Prince Edward Island",
       "strength": 3,
-      "flag": "ca"
+      "flag": "ca_pe"
     },
     {
       "coordinates": [1000, 1770],
       "name": "Nova Scotia",
       "strength": 3,
-      "flag": "ca"
+      "flag": "ca_ns"
     },
     {
       "coordinates": [1300, 1640],
       "name": "Cape Breton Island",
       "strength": 2,
-      "flag": "ca"
+      "flag": "ca_ns"
     },
     {
       "coordinates": [520, 1880],
       "name": "Annapolis",
       "strength": 1,
-      "flag": "ca"
+      "flag": "ca_ns"
     },
     {
       "coordinates": [740, 1926],
       "name": "Halifax",
       "strength": 1,
-      "flag": "ca"
+      "flag": "ca_ns"
     },
     {
       "coordinates": [400, 2082],
       "name": "Yarmouth",
       "strength": 1,
-      "flag": "ca"
+      "flag": "ca_ns"
     }
   ]
 }
