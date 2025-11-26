@@ -172,6 +172,11 @@ export class SendKickPlayerIntentEvent implements GameEvent {
   constructor(public readonly target: string) {}
 }
 
+// New event: send a basic lobby chat message
+export class SendLobbyChatEvent implements GameEvent {
+  constructor(public readonly text: string) {}
+}
+
 export class Transport {
   private socket: WebSocket | null = null;
 
@@ -256,6 +261,7 @@ export class Transport {
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
     );
+    this.eventBus.on(SendLobbyChatEvent, (e) => this.onSendLobbyChat(e));
   }
 
   private startPing() {
@@ -635,6 +641,16 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       target: event.target,
     });
+  }
+
+  private onSendLobbyChat(event: SendLobbyChatEvent) {
+    // Send a simple websocket message for lobby chat
+    const msg = {
+      type: "lobby_chat",
+      text: event.text,
+      clientID: this.lobbyConfig.clientID,
+    } as const;
+    this.sendMsg(msg as any);
   }
 
   private sendIntent(intent: Intent) {

@@ -5,6 +5,7 @@ import { GameInfo, GameRecordSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { JoinLobbyEvent } from "./Main";
+import "./components/LobbyChatPanel";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getApiBase } from "./jwt";
@@ -18,6 +19,8 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private message: string = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
+  // Whether the host enabled lobby chat (private lobbies only)
+  @state() private chatEnabled: boolean = false;
 
   private playersInterval: NodeJS.Timeout | null = null;
 
@@ -73,20 +76,32 @@ export class JoinPrivateLobbyModal extends LitElement {
         </div>
         <div class="options-layout">
           ${this.hasJoined && this.players.length > 0
-            ? html` <div class="options-section">
-                <div class="option-title">
-                  ${this.players.length}
-                  ${this.players.length === 1
-                    ? translateText("private_lobby.player")
-                    : translateText("private_lobby.players")}
+            ? html`
+                <div class="options-section">
+                  <div class="option-title">
+                    ${this.players.length}
+                    ${this.players.length === 1
+                      ? translateText("private_lobby.player")
+                      : translateText("private_lobby.players")}
+                  </div>
+
+                  <div class="players-list">
+                    ${this.players.map(
+                      (player) =>
+                        html`<span class="player-tag">${player}</span>`,
+                    )}
+                  </div>
                 </div>
 
-                <div class="players-list">
-                  ${this.players.map(
-                    (player) => html`<span class="player-tag">${player}</span>`,
-                  )}
-                </div>
-              </div>`
+                ${this.chatEnabled
+                  ? html`
+                      <div class="options-section" style="margin-top: 12px;">
+                        <div class="option-title">Lobby Chat</div>
+                        <lobby-chat-panel></lobby-chat-panel>
+                      </div>
+                    `
+                  : ""}
+              `
             : ""}
         </div>
         <div class="flex justify-center">
@@ -315,6 +330,8 @@ export class JoinPrivateLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
+        // Reflect server-configured chat toggle for joiners
+        this.chatEnabled = Boolean(data.gameConfig?.chatEnabled);
       })
       .catch((error) => {
         console.error("Error polling players:", error);
