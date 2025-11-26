@@ -3,11 +3,13 @@ import { TileRef } from "../game/GameMap";
 export interface SharedTileRingBuffers {
   header: SharedArrayBuffer;
   data: SharedArrayBuffer;
+  dirty: SharedArrayBuffer;
 }
 
 export interface SharedTileRingViews {
   header: Int32Array;
   buffer: Uint32Array;
+  dirtyFlags: Uint8Array;
   capacity: number;
 }
 
@@ -18,10 +20,12 @@ export const TILE_RING_HEADER_OVERFLOW = 2;
 
 export function createSharedTileRingBuffers(
   capacity: number,
+  numTiles: number,
 ): SharedTileRingBuffers {
   const header = new SharedArrayBuffer(3 * Int32Array.BYTES_PER_ELEMENT);
   const data = new SharedArrayBuffer(capacity * Uint32Array.BYTES_PER_ELEMENT);
-  return { header, data };
+  const dirty = new SharedArrayBuffer(numTiles * Uint8Array.BYTES_PER_ELEMENT);
+  return { header, data, dirty };
 }
 
 export function createSharedTileRingViews(
@@ -29,9 +33,11 @@ export function createSharedTileRingViews(
 ): SharedTileRingViews {
   const header = new Int32Array(buffers.header);
   const buffer = new Uint32Array(buffers.data);
+  const dirtyFlags = new Uint8Array(buffers.dirty);
   return {
     header,
     buffer,
+    dirtyFlags,
     capacity: buffer.length,
   };
 }
