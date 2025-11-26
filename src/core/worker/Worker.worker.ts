@@ -24,6 +24,7 @@ let gameRunner: Promise<GameRunner> | null = null;
 const mapLoader = new FetchGameMapLoader(`/maps`, version);
 let isProcessingTurns = false;
 let sharedTileRing: SharedTileRingViews | null = null;
+let dirtyFlags: Uint8Array | null = null;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -73,25 +74,28 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           sharedTileRing = createSharedTileRingViews({
             header: message.sharedTileRingHeader,
             data: message.sharedTileRingData,
+            dirty: message.sharedDirtyBuffer!,
           });
+          dirtyFlags = sharedTileRing.dirtyFlags;
         } else {
           sharedTileRing = null;
+          dirtyFlags = null;
         }
-
-        console.log("[Worker.worker] init", {
-          hasSharedStateBuffer: !!message.sharedStateBuffer,
-          hasRingHeader: !!message.sharedTileRingHeader,
-          hasRingData: !!message.sharedTileRingData,
-        });
 
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
           mapLoader,
           gameUpdate,
-          sharedTileRing
-            ? (tile: TileRef) => pushTileUpdate(sharedTileRing!, tile)
-            : undefined,
+          sharedTileRing && dirtyFlags
+            ? (tile: TileRef) => {
+                if (Atomics.compareExchange(dirtyFlags!, tile, 0, 1) === 0) {
+                  pushTileUpdate(sharedTileRing!, tile);
+                }
+              }
+            : sharedTileRing
+              ? (tile: TileRef) => pushTileUpdate(sharedTileRing!, tile)
+              : undefined,
           message.sharedStateBuffer,
         ).then((gr) => {
           sendMessage({
