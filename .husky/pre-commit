@@ -1,8 +1,6 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+# Husky v10 compatible pre-commit (removed deprecated husky.sh sourcing)
+# Ensure PATH includes typical Node locations if needed (optional on most setups)
+export PATH="$PATH"
 
-# Add PATH setup to ensure npx is found
-export PATH="/usr/local/bin:$HOME/.npm-global/bin:$HOME/.nvm/versions/node/$(node -v)/bin:$PATH"
-
-# Then run lint-staged if tests pass
+# Run lint-staged tasks
 npx lint-staged

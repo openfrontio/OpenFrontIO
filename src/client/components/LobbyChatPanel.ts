@@ -67,7 +67,9 @@ export class LobbyChatPanel extends LitElement {
         this.bus = globalBus;
       }
     }
-    this.bus?.emit(new SendLobbyChatEvent(text));
+    // Enforce 300-char limit matching server SafeString.max(300)
+    const capped = text.slice(0, 300);
+    this.bus?.emit(new SendLobbyChatEvent(capped));
     this.inputText = "";
   }
 
@@ -88,6 +90,7 @@ export class LobbyChatPanel extends LitElement {
           <input
             class="input"
             type="text"
+            maxlength="300"
             .value=${this.inputText}
             @input=${(e: Event) =>
               (this.inputText = (e.target as HTMLInputElement).value)}
