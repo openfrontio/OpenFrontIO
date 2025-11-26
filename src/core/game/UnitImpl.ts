@@ -26,6 +26,8 @@ export class UnitImpl implements Unit {
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
+  private _sourceUnit: Unit | undefined; // Only for trade ships
+  private _distanceTraveled: number = 0; // Only for trade ships
   private _constructionType: UnitType | undefined;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
@@ -60,6 +62,10 @@ export class UnitImpl implements Unit {
       "lastSetSafeFromPirates" in params
         ? (params.lastSetSafeFromPirates ?? 0)
         : 0;
+    this._sourceUnit =
+      "sourceUnit" in params ? (params.sourceUnit ?? undefined) : undefined;
+    this._distanceTraveled =
+      "distanceTraveled" in params ? (params.distanceTraveled ?? 0) : 0;
     this._patrolTile =
       "patrolTile" in params ? (params.patrolTile ?? undefined) : undefined;
     this._targetUnit =
@@ -134,6 +140,9 @@ export class UnitImpl implements Unit {
       health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
       targetUnitId: this._targetUnit?.id() ?? undefined,
+      sourceUnitId: this._sourceUnit?.id() ?? undefined,
+      distanceTraveled:
+        this._type === UnitType.TradeShip ? this._distanceTraveled : undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
       level: this.level(),
@@ -410,6 +419,21 @@ export class UnitImpl implements Unit {
       this.mg.ticks() - this._lastSetSafeFromPirates <
       this.mg.config().safeFromPiratesCooldownMax()
     );
+  }
+
+  sourceUnit(): Unit | undefined {
+    return this._sourceUnit;
+  }
+
+  distanceTraveled(): number {
+    return this._distanceTraveled;
+  }
+
+  setDistanceTraveled(distance: number): void {
+    if (this._distanceTraveled !== distance) {
+      this._distanceTraveled = distance;
+      this.mg.addUpdate(this.toUpdate());
+    }
   }
 
   level(): number {

@@ -253,7 +253,9 @@ export interface UnitParamsMap {
 
   [UnitType.TradeShip]: {
     targetUnit: Unit;
+    sourceUnit: Unit;
     lastSetSafeFromPirates?: number;
+    distanceTraveled?: number;
   };
 
   [UnitType.Train]: {
@@ -494,6 +496,9 @@ export interface Unit {
   // Trade Ships
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
+  sourceUnit(): Unit | undefined; // Only for trade ships
+  distanceTraveled(): number; // Only for trade ships
+  setDistanceTraveled(distance: number): void; // Only for trade ships
 
   // Construction
   constructionType(): UnitType | null;
