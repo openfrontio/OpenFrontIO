@@ -7,6 +7,7 @@ export type TerrainMapData = {
   gameMap: GameMap;
   miniGameMap: GameMap;
   sharedStateBuffer?: SharedArrayBuffer;
+  sharedDirtyBuffer?: SharedArrayBuffer;
 };
 
 const loadedMaps = new Map<GameMapType, TerrainMapData>();
@@ -104,6 +105,7 @@ export async function loadTerrainMap(
       stateBuffer instanceof SharedArrayBuffer
         ? stateBuffer
         : undefined,
+    sharedDirtyBuffer: undefined, // populated by consumer when needed
   };
   // Always cache the result, but only use cache when appropriate
   loadedMaps.set(map, result);

@@ -25,6 +25,7 @@ export class WorkerClient {
     private clientID: ClientID,
     private sharedTileRingBuffers?: SharedTileRingBuffers,
     private sharedStateBuffer?: SharedArrayBuffer,
+    private sharedDirtyBuffer?: SharedArrayBuffer,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
     this.messageHandlers = new Map();
@@ -76,6 +77,7 @@ export class WorkerClient {
         sharedTileRingHeader: this.sharedTileRingBuffers?.header,
         sharedTileRingData: this.sharedTileRingBuffers?.data,
         sharedStateBuffer: this.sharedStateBuffer,
+        sharedDirtyBuffer: this.sharedDirtyBuffer,
       });
 
       // Add timeout for initialization

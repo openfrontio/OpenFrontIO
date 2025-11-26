@@ -173,6 +173,8 @@ async function createClientGame(
 
   let sharedTileRingBuffers: SharedTileRingBuffers | undefined;
   let sharedTileRingViews: SharedTileRingViews | null = null;
+  let sharedDirtyBuffer: SharedArrayBuffer | undefined;
+  let sharedDirtyFlags: Uint8Array | null = null;
   const isIsolated =
     typeof (globalThis as any).crossOriginIsolated === "boolean"
       ? (globalThis as any).crossOriginIsolated === true
@@ -191,8 +193,14 @@ async function createClientGame(
     // Capacity is number of tile updates that can be queued.
     // This is a compromise between memory usage and backlog tolerance.
     const TILE_RING_CAPACITY = 262144;
-    sharedTileRingBuffers = createSharedTileRingBuffers(TILE_RING_CAPACITY);
+    const numTiles = gameMap.gameMap.width() * gameMap.gameMap.height();
+    sharedTileRingBuffers = createSharedTileRingBuffers(
+      TILE_RING_CAPACITY,
+      numTiles,
+    );
     sharedTileRingViews = createSharedTileRingViews(sharedTileRingBuffers);
+    sharedDirtyBuffer = sharedTileRingBuffers.dirty;
+    sharedDirtyFlags = sharedTileRingViews.dirtyFlags;
   }
 
   const worker = new WorkerClient(
@@ -200,6 +208,7 @@ async function createClientGame(
     lobbyConfig.clientID,
     sharedTileRingBuffers,
     sharedStateBuffer,
+    sharedDirtyBuffer,
   );
   await worker.initialize();
   const gameView = new GameView(
@@ -228,6 +237,7 @@ async function createClientGame(
     worker,
     gameView,
     sharedTileRingViews,
+    sharedDirtyFlags,
   );
 }
 
@@ -260,6 +270,7 @@ export class ClientGameRunner {
   private pendingStart = 0;
   private isProcessingUpdates = false;
   private tileRingViews: SharedTileRingViews | null;
+  private dirtyFlags: Uint8Array | null;
 
   constructor(
     private lobby: LobbyConfig,
@@ -270,9 +281,11 @@ export class ClientGameRunner {
     private worker: WorkerClient,
     private gameView: GameView,
     tileRingViews: SharedTileRingViews | null,
+    dirtyFlags: Uint8Array | null,
   ) {
     this.lastMessageTime = Date.now();
     this.tileRingViews = tileRingViews;
+    this.dirtyFlags = dirtyFlags;
   }
 
   private saveGame(update: WinUpdate) {
@@ -682,22 +695,31 @@ export class ClientGameRunner {
       );
       const drainTime = performance.now() - drainStart;
 
+      // Deduplicate tile refs for this render slice
+      const uniqueTiles = new Set<TileRef>();
+      for (const ref of tileRefs) {
+        uniqueTiles.add(ref);
+      }
+
       // Calculate ring buffer utilization and overflow
       const TILE_RING_CAPACITY = 262144;
-      const utilization = (tileRefs.length / TILE_RING_CAPACITY) * 100;
+      const utilization = (uniqueTiles.size / TILE_RING_CAPACITY) * 100;
       const overflow = Atomics.load(
         this.tileRingViews.header,
         TILE_RING_HEADER_OVERFLOW,
       );
 
       tileMetrics = {
-        count: tileRefs.length,
+        count: uniqueTiles.size,
         utilization,
         overflow,
         drainTime,
       };
 
-      for (const ref of tileRefs) {
+      for (const ref of uniqueTiles) {
+        if (this.dirtyFlags) {
+          Atomics.store(this.dirtyFlags, ref, 0);
+        }
         combinedPackedTileUpdates.push(BigInt(ref));
       }
     } else {
