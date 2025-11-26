@@ -1079,7 +1079,13 @@ export class PlayerImpl implements Player {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 
-    const nearbyUnits = this.mg.nearbyUnits(tile, searchRadius * 2, types, undefined, true);
+    const nearbyUnits = this.mg.nearbyUnits(
+      tile,
+      searchRadius * 2,
+      types,
+      undefined,
+      true,
+    );
     const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
       return (
         this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
