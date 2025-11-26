@@ -39,7 +39,16 @@ export async function loadTerrainMap(
   sharedStateBuffer?: SharedArrayBuffer,
 ): Promise<TerrainMapData> {
   const useCache = sharedStateBuffer === undefined;
-  if (useCache) {
+  const canUseSharedBuffers =
+    typeof SharedArrayBuffer !== "undefined" &&
+    typeof Atomics !== "undefined" &&
+    typeof (globalThis as any).crossOriginIsolated === "boolean" &&
+    (globalThis as any).crossOriginIsolated === true;
+
+  // Don't use cache if we can create SharedArrayBuffer but none was provided
+  const shouldUseCache = useCache && !canUseSharedBuffers;
+
+  if (shouldUseCache) {
     const cached = loadedMaps.get(map);
     if (cached !== undefined) return cached;
   }
@@ -96,9 +105,8 @@ export async function loadTerrainMap(
         ? stateBuffer
         : undefined,
   };
-  if (useCache) {
-    loadedMaps.set(map, result);
-  }
+  // Always cache the result, but only use cache when appropriate
+  loadedMaps.set(map, result);
   return result;
 }
 
