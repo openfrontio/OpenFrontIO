@@ -187,6 +187,13 @@ async function createClientGame(
       : undefined;
   const usesSharedTileState = !!sharedStateBuffer;
 
+  console.log("[ClientGameRunner] SAB flags", {
+    isIsolated,
+    canUseSharedBuffers,
+    hasSharedStateFromMap: !!gameMap.sharedStateBuffer,
+    usesSharedTileState,
+  });
+
   if (canUseSharedBuffers) {
     // Capacity is number of tile updates that can be queued.
     // This is a compromise between memory usage and backlog tolerance.
@@ -696,6 +703,13 @@ export class ClientGameRunner {
         overflow,
         drainTime,
       };
+
+      console.log("[ClientGameRunner] mergeGameUpdates SAB", {
+        tileCount: tileRefs.length,
+        utilization,
+        overflow,
+        drainTime,
+      });
 
       for (const ref of tileRefs) {
         combinedPackedTileUpdates.push(BigInt(ref));

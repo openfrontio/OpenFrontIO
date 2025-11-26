@@ -78,6 +78,12 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           sharedTileRing = null;
         }
 
+        console.log("[Worker.worker] init", {
+          hasSharedStateBuffer: !!message.sharedStateBuffer,
+          hasRingHeader: !!message.sharedTileRingHeader,
+          hasRingData: !!message.sharedTileRingData,
+        });
+
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,

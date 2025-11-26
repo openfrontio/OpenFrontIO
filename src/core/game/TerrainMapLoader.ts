@@ -69,6 +69,14 @@ export async function loadTerrainMap(
         )
       : undefined);
 
+  console.log("[TerrainMapLoader] loadTerrainMap", {
+    map,
+    mapSize,
+    canUseSharedBuffers,
+    hasSharedStateArg: !!sharedStateBuffer,
+    createdStateBuffer: !!stateBuffer,
+  });
+
   const gameMap =
     mapSize === GameMapSize.Normal
       ? await genTerrainFromBin(

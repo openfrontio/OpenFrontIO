@@ -496,6 +496,12 @@ export class GameView implements GameMap {
         flag: nation.flag,
       } satisfies PlayerCosmetics);
     }
+
+    console.log("[GameView] constructed", {
+      usesSharedTileState: this.usesSharedTileState,
+      width: this._map.width(),
+      height: this._map.height(),
+    });
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {

@@ -531,6 +531,13 @@ export class PerformanceOverlay extends LitElement implements Layer {
       this.tileUpdatesPerRender = tileUpdatesCount;
       this.tileUpdatesPeak = Math.max(this.tileUpdatesPeak, tileUpdatesCount);
       this.totalTilesUpdated += tileUpdatesCount;
+
+      console.log("[PerformanceOverlay] tile metrics", {
+        tileUpdatesCount,
+        ringBufferUtilization,
+        ringBufferOverflows,
+        ringDrainTime,
+      });
     }
 
     if (ringBufferUtilization !== undefined) {
