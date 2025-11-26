@@ -137,6 +137,11 @@ export class TickMetricsEvent implements GameEvent {
     public readonly workerTicksPerSecond?: number,
     // Approximate render tick() calls per second
     public readonly renderTicksPerSecond?: number,
+    // Tile update metrics
+    public readonly tileUpdatesCount?: number,
+    public readonly ringBufferUtilization?: number,
+    public readonly ringBufferOverflows?: number,
+    public readonly ringDrainTime?: number,
   ) {}
 }
 
