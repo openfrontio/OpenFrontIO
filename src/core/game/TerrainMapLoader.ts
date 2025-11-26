@@ -107,8 +107,10 @@ export async function loadTerrainMap(
         : undefined,
     sharedDirtyBuffer: undefined, // populated by consumer when needed
   };
-  // Always cache the result, but only use cache when appropriate
-  loadedMaps.set(map, result);
+  // Only cache the result when caching is actually used (non-SAB path)
+  if (shouldUseCache) {
+    loadedMaps.set(map, result);
+  }
   return result;
 }
 
