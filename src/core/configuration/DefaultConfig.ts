@@ -546,11 +546,6 @@ export class DefaultConfig implements Config {
           experimental: true,
           upgradable: true,
         };
-      case UnitType.Construction:
-        return {
-          cost: () => 0n,
-          territoryBound: true,
-        };
       case UnitType.Train:
         return {
           cost: () => 0n,
