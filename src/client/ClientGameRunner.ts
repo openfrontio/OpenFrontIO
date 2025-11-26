@@ -648,7 +648,15 @@ export class ClientGameRunner {
     };
   } {
     if (batch.length === 0) {
-      return null;
+      return {
+        gameUpdate: null,
+        tileMetrics: {
+          count: 0,
+          utilization: 0,
+          overflow: 0,
+          drainTime: 0,
+        },
+      };
     }
 
     const last = batch[batch.length - 1];
