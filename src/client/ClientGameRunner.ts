@@ -197,10 +197,9 @@ async function createClientGame(
   });
 
   if (canUseSharedBuffers) {
-    // Capacity is number of tile updates that can be queued.
-    // This is a compromise between memory usage and backlog tolerance.
-    const TILE_RING_CAPACITY = 262144;
     const numTiles = gameMap.gameMap.width() * gameMap.gameMap.height();
+    // Ring capacity scales with world size: at most one entry per tile.
+    const TILE_RING_CAPACITY = numTiles;
     sharedTileRingBuffers = createSharedTileRingBuffers(
       TILE_RING_CAPACITY,
       numTiles,
@@ -708,8 +707,8 @@ export class ClientGameRunner {
         uniqueTiles.add(ref);
       }
 
-      // Calculate ring buffer utilization and overflow
-      const TILE_RING_CAPACITY = 262144;
+      // Calculate ring buffer utilization and overflow using dynamic capacity
+      const TILE_RING_CAPACITY = this.tileRingViews.capacity;
       const utilization = (uniqueTiles.size / TILE_RING_CAPACITY) * 100;
       const overflow = Atomics.load(
         this.tileRingViews.header,
