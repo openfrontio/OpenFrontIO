@@ -58,11 +58,7 @@ export async function loadTerrainMap(
 
   const stateBuffer =
     sharedStateBuffer ??
-    (typeof SharedArrayBuffer !== "undefined" &&
-    typeof Atomics !== "undefined" &&
-    // crossOriginIsolated is only defined in browser contexts
-    typeof (globalThis as any).crossOriginIsolated === "boolean" &&
-    (globalThis as any).crossOriginIsolated === true
+    (canUseSharedBuffers
       ? new SharedArrayBuffer(
           manifest.map.width *
             manifest.map.height *
