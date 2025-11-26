@@ -886,7 +886,7 @@ export class PlayerImpl implements Player {
   public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
-      .nearbyUnits(targetTile, range, type)
+      .nearbyUnits(targetTile, range, type, undefined, true)
       .sort((a, b) => a.distSquared - b.distSquared);
     if (existing.length === 0) {
       return false;
@@ -900,6 +900,9 @@ export class PlayerImpl implements Player {
 
   public canUpgradeUnit(unit: Unit): boolean {
     if (unit.isMarkedForDeletion()) {
+      return false;
+    }
+    if (unit.isUnderConstruction()) {
       return false;
     }
     if (!this.mg.config().unitInfo(unit.type()).upgradable) {
@@ -1076,7 +1079,7 @@ export class PlayerImpl implements Player {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 
-    const nearbyUnits = this.mg.nearbyUnits(tile, searchRadius * 2, types);
+    const nearbyUnits = this.mg.nearbyUnits(tile, searchRadius * 2, types, undefined, true);
     const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
       return (
         this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
