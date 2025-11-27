@@ -56,36 +56,36 @@ export class DonateTroopsExecution implements Execution {
 
   getMinTroopsForRelationUpdate(): number {
     const { difficulty } = this.mg.config().gameConfig();
+    const recipientMaxTroops = this.mg.config().maxTroops(this.recipient);
 
-    // ~7.7k - ~9.1k troops (for 100k troops)
-    if (difficulty === Difficulty.Easy)
-      return this.random.nextInt(
-        this.sender.troops() / 13,
-        this.sender.troops() / 11,
-      );
-
-    // ~9.1k - ~11.1k troops (for 100k troops)
-    if (difficulty === Difficulty.Medium)
-      return this.random.nextInt(
-        this.sender.troops() / 11,
-        this.sender.troops() / 9,
-      );
-
-    // ~11.1k - ~14.3k troops (for 100k troops)
-    if (difficulty === Difficulty.Hard)
-      return this.random.nextInt(
-        this.sender.troops() / 9,
-        this.sender.troops() / 7,
-      );
-
-    // ~14.3k - ~20k troops (for 100k troops)
-    if (difficulty === Difficulty.Impossible)
-      return this.random.nextInt(
-        this.sender.troops() / 7,
-        this.sender.troops() / 5,
-      );
-
-    return 0;
+    switch (difficulty) {
+      // ~7.7k - ~9.1k troops (for 100k troops)
+      case Difficulty.Easy:
+        return this.random.nextInt(
+          recipientMaxTroops / 13,
+          recipientMaxTroops / 11,
+        );
+      // ~9.1k - ~11.1k troops (for 100k troops)
+      case Difficulty.Medium:
+        return this.random.nextInt(
+          recipientMaxTroops / 11,
+          recipientMaxTroops / 9,
+        );
+      // ~11.1k - ~14.3k troops (for 100k troops)
+      case Difficulty.Hard:
+        return this.random.nextInt(
+          recipientMaxTroops / 9,
+          recipientMaxTroops / 7,
+        );
+      // ~14.3k - ~20k troops (for 100k troops)
+      case Difficulty.Impossible:
+        return this.random.nextInt(
+          recipientMaxTroops / 7,
+          recipientMaxTroops / 5,
+        );
+      default:
+        return 0;
+    }
   }
 
   isActive(): boolean {

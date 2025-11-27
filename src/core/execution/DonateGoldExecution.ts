@@ -47,10 +47,9 @@ export class DonateGoldExecution implements Execution {
       this.sender.canDonateGold(this.recipient) &&
       this.sender.donateGold(this.recipient, this.gold)
     ) {
-      // Prevent players from just buying a good relation by sending 1% gold. Instead, a minimum is needed, and it's random.
-      if (this.gold >= BigInt(this.getMinGoldForRelationUpdate())) {
-        this.recipient.updateRelation(this.sender, 50);
-      }
+      // Give relation points based on how much gold was donated
+      const relationUpdate = this.calculateRelationUpdate(Number(this.gold));
+      this.recipient.updateRelation(this.sender, relationUpdate);
     } else {
       console.warn(
         `cannot send gold from ${this.sender.name()} to ${this.recipient.name()}`,
@@ -59,16 +58,31 @@ export class DonateGoldExecution implements Execution {
     this.active = false;
   }
 
-  getMinGoldForRelationUpdate(): number {
+  getGoldChunkSize(): number {
     const { difficulty } = this.mg.config().gameConfig();
-    if (difficulty === Difficulty.Easy) return this.random.nextInt(0, 25_000);
-    if (difficulty === Difficulty.Medium)
-      return this.random.nextInt(25_000, 50_000);
-    if (difficulty === Difficulty.Hard)
-      return this.random.nextInt(50_000, 125_000);
-    if (difficulty === Difficulty.Impossible)
-      return this.random.nextInt(125_000, 250_000);
-    return 0;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return this.random.nextInt(1, 2_500);
+      case Difficulty.Medium:
+        return this.random.nextInt(2_500, 5_000);
+      case Difficulty.Hard:
+        return this.random.nextInt(5_000, 12_500);
+      case Difficulty.Impossible:
+        return this.random.nextInt(12_500, 25_000);
+      default:
+        return 2_500;
+    }
+  }
+
+  calculateRelationUpdate(goldSent: number): number {
+    const chunkSize = this.getGoldChunkSize();
+    // Calculate how many complete chunks were donated
+    const chunks = Math.floor(goldSent / chunkSize);
+    // Each chunk gives 5 relation points
+    const relationUpdate = chunks * 5;
+    // Cap at 100 relation points
+    if (relationUpdate > 100) return 100;
+    return relationUpdate;
   }
 
   isActive(): boolean {
