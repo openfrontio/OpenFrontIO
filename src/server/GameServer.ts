@@ -116,6 +116,12 @@ export class GameServer {
     if (gameConfig.randomSpawn !== undefined) {
       this.gameConfig.randomSpawn = gameConfig.randomSpawn;
     }
+    if (gameConfig.chatEnabled !== undefined) {
+      // Enforce: public lobbies cannot enable chat
+      this.gameConfig.chatEnabled = this.isPublic()
+        ? false
+        : gameConfig.chatEnabled;
+    }
     if (gameConfig.gameMode !== undefined) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
@@ -288,6 +294,23 @@ export class GameServer {
                 break;
               }
             }
+            break;
+          }
+          case "lobby_chat": {
+            // Validate lobby chat usage: must be in lobby phase and chat enabled
+            if (this.phase() !== GamePhase.Lobby) {
+              return;
+            }
+            if (!this.gameConfig.chatEnabled || this.isPublic()) {
+              return;
+            }
+            // Broadcast to all clients in the same lobby
+            const payload = JSON.stringify({
+              type: "lobby_chat",
+              sender: client.clientID,
+              text: (JSON.parse(message) as any).text,
+            });
+            this.activeClients.forEach((c) => c.ws.send(payload));
             break;
           }
           case "ping": {

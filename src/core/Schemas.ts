@@ -89,14 +89,16 @@ export type ClientMessage =
   | ClientIntentMessage
   | ClientJoinMessage
   | ClientLogMessage
-  | ClientHashMessage;
+  | ClientHashMessage
+  | ClientLobbyChatMessage;
 export type ServerMessage =
   | ServerTurnMessage
   | ServerStartGameMessage
   | ServerPingMessage
   | ServerDesyncMessage
   | ServerPrestartMessage
-  | ServerErrorMessage;
+  | ServerErrorMessage
+  | ServerLobbyChatMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -112,6 +114,8 @@ export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
 export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
+export type ClientLobbyChatMessage = z.infer<typeof ClientLobbyChatSchema>;
+export type ServerLobbyChatMessage = z.infer<typeof ServerLobbyChatSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
@@ -163,6 +167,8 @@ export const GameConfigSchema = z.object({
   gameMode: z.enum(GameMode),
   gameMapSize: z.enum(GameMapSize),
   disableNPCs: z.boolean(),
+  // New: Enable in-lobby chat for private games
+  chatEnabled: z.boolean().default(false),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
@@ -483,6 +489,12 @@ export const ServerErrorSchema = z.object({
   message: z.string().optional(),
 });
 
+export const ServerLobbyChatSchema = z.object({
+  type: z.literal("lobby_chat"),
+  sender: ID,
+  text: SafeString.max(300),
+});
+
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -490,6 +502,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
   ServerPingMessageSchema,
   ServerDesyncSchema,
   ServerErrorSchema,
+  ServerLobbyChatSchema,
 ]);
 
 //
@@ -506,6 +519,12 @@ export const ClientHashSchema = z.object({
   type: z.literal("hash"),
   hash: z.number(),
   turnNumber: z.number(),
+});
+
+export const ClientLobbyChatSchema = z.object({
+  type: z.literal("lobby_chat"),
+  clientID: ID,
+  text: SafeString.max(300),
 });
 
 export const ClientLogMessageSchema = z.object({
@@ -542,6 +561,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientJoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
+  ClientLobbyChatSchema,
 ]);
 
 //
