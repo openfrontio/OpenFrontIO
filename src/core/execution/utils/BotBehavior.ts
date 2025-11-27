@@ -156,8 +156,10 @@ export class BotBehavior {
   }
 
   private checkIncomingAttacks() {
-    // Switch enemies if we're under attack
-    const incomingAttacks = this.player.incomingAttacks();
+    // Switch enemies if we're under attack. But ignore bot attacks, they are harmless.
+    const incomingAttacks = this.player
+      .incomingAttacks()
+      .filter((attack) => attack.attacker().type() !== PlayerType.Bot);
     let largestAttack = 0;
     let largestAttacker: Player | undefined;
     for (const attack of incomingAttacks) {
@@ -202,7 +204,7 @@ export class BotBehavior {
     }
   }
 
-  selectEnemy(borderingEnemies: Player[]): Player | null {
+  selectEnemy(borderingEnemies: Player[]): Player | TerraNullius | null {
     if (this.enemy === null) {
       // Save up troops until we reach the reserve ratio
       if (!this.hasReserveRatioTroops()) return null;
@@ -210,34 +212,38 @@ export class BotBehavior {
       // Maybe save up troops until we reach the trigger ratio
       if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return null;
 
-      // Prefer neighboring bots
-      const bots = this.player
-        .neighbors()
-        .filter(
-          (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
-        );
-      if (bots.length > 0) {
-        const density = (p: Player) => p.troops() / p.numTilesOwned();
-        let lowestDensityBot: Player | undefined;
-        let lowestDensity = Infinity;
+      // Retaliate against incoming attacks
+      this.checkIncomingAttacks();
 
-        for (const bot of bots) {
-          const currentDensity = density(bot);
-          if (currentDensity < lowestDensity) {
-            lowestDensity = currentDensity;
-            lowestDensityBot = bot;
+      // Select a neighboring bot
+      if (this.enemy === null) {
+        const bots = this.player
+          .neighbors()
+          .filter(
+            (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
+          );
+        if (bots.length > 0) {
+          const density = (p: Player) => p.troops() / p.numTilesOwned();
+          let lowestDensityBot: Player | undefined;
+          let lowestDensity = Infinity;
+
+          for (const bot of bots) {
+            const currentDensity = density(bot);
+            if (currentDensity < lowestDensity) {
+              lowestDensity = currentDensity;
+              lowestDensityBot = bot;
+            }
           }
-        }
 
-        if (lowestDensityBot !== undefined) {
-          this.setNewEnemy(lowestDensityBot);
+          if (lowestDensityBot !== undefined) {
+            this.setNewEnemy(lowestDensityBot);
+          }
         }
       }
 
-      // Retaliate against incoming attacks
-      if (this.enemy === null) {
-        // Only after clearing bots
-        this.checkIncomingAttacks();
+      // Select nuked territory
+      if (this.enemy === null && this.hasBorderingNukedTerritory()) {
+        return this.game.terraNullius();
       }
 
       // Select the most hated player
@@ -373,6 +379,17 @@ export class BotBehavior {
       this.clearEnemy();
     }
     return this.enemy;
+  }
+
+  hasBorderingNukedTerritory(): boolean {
+    return Array.from(this.player.borderTiles())
+      .flatMap((t) => this.game.neighbors(t))
+      .some(
+        (t) =>
+          this.game.isLand(t) &&
+          !this.game.hasOwner(t) &&
+          this.game.hasFallout(t),
+      );
   }
 
   forceSendAttack(target: Player | TerraNullius) {

@@ -230,7 +230,11 @@ export class FakeHumanExecution implements Execution {
         return;
       }
 
-      if (borderPlayers.some((o) => !o.isPlayer())) {
+      // Check for TerraNullius but exclude nuked territory
+      const hasTerraNullius = enemyborder.some(
+        (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
+      );
+      if (hasTerraNullius) {
         this.behavior.sendAttack(this.mg.terraNullius());
         return;
       }
@@ -250,13 +254,24 @@ export class FakeHumanExecution implements Execution {
     this.behavior.assistAllies();
 
     const enemy = this.behavior.selectEnemy(borderingEnemies);
-    if (!enemy) return;
-    this.maybeSendEmoji(enemy);
-    this.maybeSendNuke(enemy);
-    if (this.player.sharesBorderWith(enemy)) {
-      this.behavior.sendAttack(enemy);
+    if (!enemy) {
+      return;
+    }
+
+    // Handle TerraNullius (In this case: nuked territory)
+    if (!enemy.isPlayer()) {
+      this.behavior.sendAttack(this.mg.terraNullius());
+      return;
+    }
+
+    // Handle Player enemies
+    const enemyPlayer = enemy as Player;
+    this.maybeSendEmoji(enemyPlayer);
+    this.maybeSendNuke(enemyPlayer);
+    if (this.player.sharesBorderWith(enemyPlayer)) {
+      this.behavior.sendAttack(enemyPlayer);
     } else {
-      this.maybeSendBoatAttack(enemy);
+      this.maybeSendBoatAttack(enemyPlayer);
     }
   }
 
