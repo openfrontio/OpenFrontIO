@@ -84,7 +84,7 @@ export class DonateTroopsExecution implements Execution {
           recipientMaxTroops / 5,
         );
       default:
-        return 0;
+        return recipientMaxTroops / 11;
     }
   }
 

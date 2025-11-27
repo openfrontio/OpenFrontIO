@@ -48,8 +48,10 @@ export class DonateGoldExecution implements Execution {
       this.sender.donateGold(this.recipient, this.gold)
     ) {
       // Give relation points based on how much gold was donated
-      const relationUpdate = this.calculateRelationUpdate(Number(this.gold));
-      this.recipient.updateRelation(this.sender, relationUpdate);
+      const relationUpdate = this.calculateRelationUpdate(this.gold);
+      if (relationUpdate > 0) {
+        this.recipient.updateRelation(this.sender, relationUpdate);
+      }
     } else {
       console.warn(
         `cannot send gold from ${this.sender.name()} to ${this.recipient.name()}`,
@@ -58,26 +60,27 @@ export class DonateGoldExecution implements Execution {
     this.active = false;
   }
 
-  getGoldChunkSize(): number {
+  getGoldChunkSize(): Gold {
     const { difficulty } = this.mg.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
-        return this.random.nextInt(1, 2_500);
+        return BigInt(this.random.nextInt(1, 2_500));
       case Difficulty.Medium:
-        return this.random.nextInt(2_500, 5_000);
+        return BigInt(this.random.nextInt(2_500, 5_000));
       case Difficulty.Hard:
-        return this.random.nextInt(5_000, 12_500);
+        return BigInt(this.random.nextInt(5_000, 12_500));
       case Difficulty.Impossible:
-        return this.random.nextInt(12_500, 25_000);
+        return BigInt(this.random.nextInt(12_500, 25_000));
       default:
-        return 2_500;
+        return 2_500n;
     }
   }
 
-  calculateRelationUpdate(goldSent: number): number {
+  calculateRelationUpdate(goldSent: Gold): number {
     const chunkSize = this.getGoldChunkSize();
     // Calculate how many complete chunks were donated
-    const chunks = Math.floor(goldSent / chunkSize);
+    // BigInt division automatically truncates (integer division)
+    const chunks = Number(goldSent / chunkSize);
     // Each chunk gives 5 relation points
     const relationUpdate = chunks * 5;
     // Cap at 100 relation points
