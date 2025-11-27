@@ -1,25 +1,25 @@
 {
   "map": {
-    "height": 2248,
-    "num_land_tiles": 2472281,
-    "width": 2700
+    "height": 1348,
+    "num_land_tiles": 873960,
+    "width": 1620
   },
   "map16x": {
-    "height": 562,
-    "num_land_tiles": 147244,
-    "width": 675
+    "height": 337,
+    "num_land_tiles": 50860,
+    "width": 405
   },
   "map4x": {
-    "height": 1124,
-    "num_land_tiles": 607689,
-    "width": 1350
+    "height": 674,
+    "num_land_tiles": 213046,
+    "width": 810
   },
   "name": "Gulf of St. Lawrence",
   "nations": [
     {
       "coordinates": [
-        144,
-        622
+        88,
+        364
       ],
       "flag": "Quebec",
       "name": "Quebec",
@@ -27,8 +27,8 @@
     },
     {
       "coordinates": [
-        1320,
-        308
+        777,
+        170
       ],
       "flag": "Quebec",
       "name": "Nitassinan",
@@ -36,8 +36,8 @@
     },
     {
       "coordinates": [
-        870,
-        732
+        570,
+        460
       ],
       "flag": "Quebec",
       "name": "Anticosti Island",
@@ -45,8 +45,8 @@
     },
     {
       "coordinates": [
-        462,
-        936
+        300,
+        568
       ],
       "flag": "Quebec",
       "name": "Gaspesia",
@@ -54,8 +54,8 @@
     },
     {
       "coordinates": [
-        120,
-        80
+        256,
+        60
       ],
       "flag": "Quebec",
       "name": "Manicouagan",
@@ -63,8 +63,8 @@
     },
     {
       "coordinates": [
-        760,
-        404
+        522,
+        266
       ],
       "flag": "Quebec",
       "name": "Mingan",
@@ -72,8 +72,8 @@
     },
     {
       "coordinates": [
-        2000,
-        1060
+        1220,
+        632
       ],
       "flag": "Newfoundland",
       "name": "Newfoundland",
@@ -81,8 +81,8 @@
     },
     {
       "coordinates": [
-        1838,
-        56
+        1166,
+        38
       ],
       "flag": "Newfoundland",
       "name": "Labrador",
@@ -90,8 +90,8 @@
     },
     {
       "coordinates": [
-        1979,
-        320
+        1180,
+        199
       ],
       "flag": "Newfoundland",
       "name": "Northern Peninsula",
@@ -99,8 +99,8 @@
     },
     {
       "coordinates": [
-        2574,
-        1240
+        1544,
+        740
       ],
       "flag": "Newfoundland",
       "name": "St Johns",
@@ -108,8 +108,8 @@
     },
     {
       "coordinates": [
-        2440,
-        1030
+        1456,
+        620
       ],
       "flag": "Newfoundland",
       "name": "Bonavista",
@@ -117,8 +117,8 @@
     },
     {
       "coordinates": [
-        1720,
-        880
+        1030,
+        528
       ],
       "flag": "Newfoundland",
       "name": "Corner Brook",
@@ -126,8 +126,8 @@
     },
     {
       "coordinates": [
-        2102,
-        860
+        1254,
+        511
       ],
       "flag": "Newfoundland",
       "name": "Grand Falls",
@@ -135,8 +135,8 @@
     },
     {
       "coordinates": [
-        1732,
-        660
+        1040,
+        400
       ],
       "flag": "Newfoundland",
       "name": "Gros Morne",
@@ -144,8 +144,8 @@
     },
     {
       "coordinates": [
-        1524,
-        1192
+        912,
+        720
       ],
       "flag": "Newfoundland",
       "name": "Port aux Basques",
@@ -153,8 +153,8 @@
     },
     {
       "coordinates": [
-        160,
-        1390
+        82,
+        912
       ],
       "flag": "ca_nb",
       "name": "New Brunswick",
@@ -162,8 +162,8 @@
     },
     {
       "coordinates": [
-        480,
-        1240
+        288,
+        742
       ],
       "flag": "ca_nb",
       "name": "Acadia",
@@ -171,8 +171,8 @@
     },
     {
       "coordinates": [
-        250,
-        1644
+        184,
+        1000
       ],
       "flag": "ca_nb",
       "name": "Fredericton",
@@ -180,8 +180,8 @@
     },
     {
       "coordinates": [
-        580,
-        1574
+        338,
+        938
       ],
       "flag": "ca_nb",
       "name": "Moncton",
@@ -189,8 +189,8 @@
     },
     {
       "coordinates": [
-        84,
-        1800
+        44,
+        1110
       ],
       "flag": "Maine",
       "name": "Maine",
@@ -198,8 +198,8 @@
     },
     {
       "coordinates": [
-        794,
-        1528
+        475,
+        915
       ],
       "flag": "ca_pe",
       "name": "Prince Edward Island",
@@ -207,8 +207,8 @@
     },
     {
       "coordinates": [
-        1000,
-        1770
+        588,
+        1054
       ],
       "flag": "ca_ns",
       "name": "Nova Scotia",
@@ -216,8 +216,8 @@
     },
     {
       "coordinates": [
-        1300,
-        1640
+        725,
+        920
       ],
       "flag": "ca_ns",
       "name": "Cape Breton Island",
@@ -225,8 +225,8 @@
     },
     {
       "coordinates": [
-        520,
-        1880
+        310,
+        1130
       ],
       "flag": "ca_ns",
       "name": "Annapolis",
@@ -234,8 +234,8 @@
     },
     {
       "coordinates": [
-        740,
-        1926
+        445,
+        1160
       ],
       "flag": "ca_ns",
       "name": "Halifax",
@@ -243,8 +243,8 @@
     },
     {
       "coordinates": [
-        400,
-        2082
+        235,
+        1255
       ],
       "flag": "ca_ns",
       "name": "Yarmouth",

@@ -2,157 +2,157 @@
   "name": "Gulf of St. Lawrence",
   "nations": [
     {
-      "coordinates": [144, 622],
+      "coordinates": [88, 364],
       "name": "Quebec",
       "strength": 3,
       "flag": "Quebec"
     },
     {
-      "coordinates": [1320, 308],
+      "coordinates": [777, 170],
       "name": "Nitassinan",
       "strength": 3,
       "flag": "Quebec"
     },
     {
-      "coordinates": [870, 732],
+      "coordinates": [570, 460],
       "name": "Anticosti Island",
       "strength": 2,
       "flag": "Quebec"
     },
     {
-      "coordinates": [462, 936],
+      "coordinates": [300, 568],
       "name": "Gaspesia",
       "strength": 2,
       "flag": "Quebec"
     },
     {
-      "coordinates": [120, 80],
+      "coordinates": [256, 60],
       "name": "Manicouagan",
       "strength": 3,
       "flag": "Quebec"
     },
     {
-      "coordinates": [760, 404],
+      "coordinates": [522, 266],
       "name": "Mingan",
       "strength": 1,
       "flag": "Quebec"
     },
     {
-      "coordinates": [2000, 1060],
+      "coordinates": [1220, 632],
       "name": "Newfoundland",
       "strength": 3,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [1838, 56],
+      "coordinates": [1166, 38],
       "name": "Labrador",
       "strength": 2,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [1979, 320],
+      "coordinates": [1180, 199],
       "name": "Northern Peninsula",
       "strength": 2,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [2574, 1240],
+      "coordinates": [1544, 740],
       "name": "St Johns",
       "strength": 2,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [2440, 1030],
+      "coordinates": [1456, 620],
       "name": "Bonavista",
       "strength": 1,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [1720, 880],
+      "coordinates": [1030, 528],
       "name": "Corner Brook",
       "strength": 1,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [2102, 860],
+      "coordinates": [1254, 511],
       "name": "Grand Falls",
       "strength": 1,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [1732, 660],
+      "coordinates": [1040, 400],
       "name": "Gros Morne",
       "strength": 1,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [1524, 1192],
+      "coordinates": [912, 720],
       "name": "Port aux Basques",
       "strength": 1,
       "flag": "Newfoundland"
     },
     {
-      "coordinates": [160, 1390],
+      "coordinates": [82, 912],
       "name": "New Brunswick",
       "strength": 3,
       "flag": "ca_nb"
     },
     {
-      "coordinates": [480, 1240],
+      "coordinates": [288, 742],
       "name": "Acadia",
       "strength": 2,
       "flag": "ca_nb"
     },
     {
-      "coordinates": [250, 1644],
+      "coordinates": [184, 1000],
       "name": "Fredericton",
       "strength": 1,
       "flag": "ca_nb"
     },
     {
-      "coordinates": [580, 1574],
+      "coordinates": [338, 938],
       "name": "Moncton",
       "strength": 1,
       "flag": "ca_nb"
     },
     {
-      "coordinates": [84, 1800],
+      "coordinates": [44, 1110],
       "name": "Maine",
       "strength": 2,
       "flag": "Maine"
     },
     {
-      "coordinates": [794, 1528],
+      "coordinates": [475, 915],
       "name": "Prince Edward Island",
       "strength": 3,
       "flag": "ca_pe"
     },
     {
-      "coordinates": [1000, 1770],
+      "coordinates": [588, 1054],
       "name": "Nova Scotia",
       "strength": 3,
       "flag": "ca_ns"
     },
     {
-      "coordinates": [1300, 1640],
+      "coordinates": [725, 920],
       "name": "Cape Breton Island",
       "strength": 2,
       "flag": "ca_ns"
     },
     {
-      "coordinates": [520, 1880],
+      "coordinates": [310, 1130],
       "name": "Annapolis",
       "strength": 1,
       "flag": "ca_ns"
     },
     {
-      "coordinates": [740, 1926],
+      "coordinates": [445, 1160],
       "name": "Halifax",
       "strength": 1,
       "flag": "ca_ns"
     },
     {
-      "coordinates": [400, 2082],
+      "coordinates": [235, 1255],
       "name": "Yarmouth",
       "strength": 1,
       "flag": "ca_ns"
