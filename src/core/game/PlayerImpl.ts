@@ -113,7 +113,7 @@ export class PlayerImpl implements Player {
   ) {
     this._name = sanitizeUsername(playerInfo.name);
     this._troops = toInt(startTroops);
-    this._gold = 0n;
+    this._gold = this.mg.config().startingGold(playerInfo);
     this._displayName = this._name;
     this._pseudo_random = new PseudoRandom(simpleHash(this.playerInfo.id));
   }
@@ -998,6 +998,13 @@ export class PlayerImpl implements Player {
   }
 
   nukeSpawn(tile: TileRef): TileRef | false {
+    if (
+      this.mg.config().numSpawnPhaseTurns() +
+        this.mg.config().spawnImmunityDuration() >
+      this.mg.ticks()
+    ) {
+      return false;
+    }
     const owner = this.mg.owner(tile);
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner)) {
@@ -1189,8 +1196,10 @@ export class PlayerImpl implements Player {
   }
 
   public canAttack(tile: TileRef): boolean {
+    const owner = this.mg.owner(tile);
     if (
-      this.mg.hasOwner(tile) &&
+      owner.isPlayer() &&
+      owner.type() === PlayerType.Human &&
       this.mg.config().numSpawnPhaseTurns() +
         this.mg.config().spawnImmunityDuration() >
         this.mg.ticks()
@@ -1198,12 +1207,11 @@ export class PlayerImpl implements Player {
       return false;
     }
 
-    if (this.mg.owner(tile) === this) {
+    if (owner === this) {
       return false;
     }
-    const other = this.mg.owner(tile);
-    if (other.isPlayer()) {
-      if (this.isFriendly(other)) {
+    if (owner.isPlayer()) {
+      if (this.isFriendly(owner)) {
         return false;
       }
     }
@@ -1212,7 +1220,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (this.mg.hasOwner(tile)) {
-      return this.sharesBorderWith(other);
+      return this.sharesBorderWith(owner);
     } else {
       for (const t of this.mg.bfs(
         tile,

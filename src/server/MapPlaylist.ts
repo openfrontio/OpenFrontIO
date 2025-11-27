@@ -92,6 +92,8 @@ export class MapPlaylist {
       difficulty: Difficulty.Medium,
       infiniteGold: false,
       infiniteTroops: false,
+      startingGold: 0,
+      goldMultiplier: 1,
       maxTimerValue: undefined,
       instantBuild: false,
       randomSpawn: false,
@@ -99,6 +101,7 @@ export class MapPlaylist {
       gameMode: mode,
       playerTeams,
       bots: 400,
+      spawnImmunityDuration: 5 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
