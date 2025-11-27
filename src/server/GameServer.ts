@@ -32,6 +32,7 @@ export enum GamePhase {
 
 export class GameServer {
   private sentDesyncMessageClients = new Set<ClientID>();
+  private _hostPersistentID: string | null = null;
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -127,6 +128,17 @@ export class GameServer {
     if (gameConfig.playerTeams !== undefined) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
+  }
+
+  public setHostPersistentID(id: string): void {
+    if (this.getHostPersistentID()) {
+      throw new Error("hostPersistentID is already set");
+    }
+    this._hostPersistentID = id;
+  }
+
+  public getHostPersistentID(): string | null {
+    return this._hostPersistentID ?? null;
   }
 
   public addClient(client: Client, lastTurn: number) {
