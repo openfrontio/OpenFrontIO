@@ -79,7 +79,6 @@ export class DonateGoldExecution implements Execution {
   calculateRelationUpdate(goldSent: Gold): number {
     const chunkSize = this.getGoldChunkSize();
     // Calculate how many complete chunks were donated
-    // BigInt division automatically truncates (integer division)
     const chunks = Number(goldSent / chunkSize);
     // Each chunk gives 5 relation points
     const relationUpdate = chunks * 5;
