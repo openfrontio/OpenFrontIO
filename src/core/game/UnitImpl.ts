@@ -74,6 +74,7 @@ export class UnitImpl implements Unit {
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
+      case UnitType.Factory:
       case UnitType.City:
         this.mg.stats().unitBuild(_owner, this._type);
     }
@@ -192,6 +193,7 @@ export class UnitImpl implements Unit {
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
+      case UnitType.Factory:
       case UnitType.City:
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
