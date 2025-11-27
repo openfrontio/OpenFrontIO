@@ -265,13 +265,12 @@ export class FakeHumanExecution implements Execution {
     }
 
     // Handle Player enemies
-    const enemyPlayer = enemy as Player;
-    this.maybeSendEmoji(enemyPlayer);
-    this.maybeSendNuke(enemyPlayer);
-    if (this.player.sharesBorderWith(enemyPlayer)) {
-      this.behavior.sendAttack(enemyPlayer);
+    this.maybeSendEmoji(enemy);
+    this.maybeSendNuke(enemy);
+    if (this.player.sharesBorderWith(enemy)) {
+      this.behavior.sendAttack(enemy);
     } else {
-      this.maybeSendBoatAttack(enemyPlayer);
+      this.maybeSendBoatAttack(enemy);
     }
   }
 
