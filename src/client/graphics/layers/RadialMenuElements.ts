@@ -1,5 +1,10 @@
 import { Config } from "../../../core/configuration/Config";
-import { AllPlayers, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  GameMode,
+  PlayerActions,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
@@ -40,6 +45,14 @@ export interface MenuElementParams {
   closeMenu: () => void;
 }
 
+export interface SplitButtonAction {
+  icon: string;
+  action: (params: MenuElementParams) => void;
+  disabled?: (params: MenuElementParams) => boolean;
+  tooltipItems?: TooltipItem[];
+  tooltipKeys?: TooltipKey[];
+}
+
 export interface MenuElement {
   id: string;
   name: string;
@@ -55,6 +68,10 @@ export interface MenuElement {
   disabled: (params: MenuElementParams) => boolean;
   action?: (params: MenuElementParams) => void; // For leaf items that perform actions
   subMenu?: (params: MenuElementParams) => MenuElement[]; // For non-leaf items that open submenus
+  splitButton?: {
+    left: SplitButtonAction;
+    right: SplitButtonAction;
+  }; // For split buttons with two actions
 }
 
 export interface TooltipKey {
@@ -66,6 +83,8 @@ export interface TooltipKey {
 export interface CenterButtonElement {
   disabled: (params: MenuElementParams) => boolean;
   action: (params: MenuElementParams) => void;
+  icon?: (params: MenuElementParams) => string | null; // Returns icon path or null to use default
+  color?: (params: MenuElementParams) => string | null; // Returns color or null to use default
 }
 
 export const COLORS = {
@@ -209,13 +228,12 @@ const allyBreakElement: MenuElement = {
   },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const allyDonateGoldElement: MenuElement = {
   id: "ally_donate_gold",
   name: "donate gold",
   disabled: (params: MenuElementParams) =>
     !params.playerActions?.interaction?.canDonateGold,
-  color: COLORS.ally,
+  color: COLORS.tooltip.cost, // Yellow/gold color
   icon: donateGoldIcon,
   action: (params: MenuElementParams) => {
     params.playerActionHandler.handleDonateGold(params.selected!);
@@ -355,7 +373,7 @@ function createMenuElements(
 ): MenuElement[] {
   const unitTypes: Set<UnitType> = getAllEnabledUnits(
     params.selected === params.myPlayer,
-    params.game.config(),
+    params.game.config,
   );
 
   return flattenedBuildTable
@@ -549,20 +567,80 @@ export const centerButtonElement: CenterButtonElement = {
       }
       return false;
     }
+
+    // Check if we should show Donate Troops instead of Attack
+    const shouldDonateTroops = shouldShowDonateTroops(params);
+
+    if (shouldDonateTroops) {
+      // Donate Troops button is disabled if can't donate troops
+      return !params.playerActions?.interaction?.canDonateTroops;
+    }
+
+    // Default Attack button behavior
     return !params.playerActions.canAttack;
   },
   action: (params: MenuElementParams) => {
     if (params.game.inSpawnPhase()) {
       params.playerActionHandler.handleSpawn(params.tile);
-    } else {
-      params.playerActionHandler.handleAttack(
-        params.myPlayer,
-        params.selected?.id() ?? null,
-      );
+      params.closeMenu();
+      return;
     }
+
+    // Check if we should donate troops instead of attacking
+    const shouldDonateTroops = shouldShowDonateTroops(params);
+
+    if (shouldDonateTroops) {
+      params.playerActionHandler.handleDonateTroops(params.selected!);
+      params.closeMenu();
+      return;
+    }
+
+    // Default Attack behavior
+    params.playerActionHandler.handleAttack(
+      params.myPlayer,
+      params.selected?.id() ?? null,
+    );
     params.closeMenu();
   },
+  icon: (params: MenuElementParams): string | null => {
+    // During spawn phase, use default sword icon
+    if (params.game.inSpawnPhase()) {
+      return null; // Use default icon
+    }
+
+    // Check if we should show Donate Troops icon instead
+    const shouldDonateTroops = shouldShowDonateTroops(params);
+
+    if (shouldDonateTroops) {
+      return donateTroopIcon;
+    }
+
+    // Default Attack icon
+    return null; // Use default sword icon
+  },
+  color: (params: MenuElementParams): string | null => {
+    // During spawn phase, use default color
+    if (params.game.inSpawnPhase()) {
+      return null; // Use default color
+    }
+
+    // Check if we should show Donate Troops (green color)
+    const shouldDonateTroops = shouldShowDonateTroops(params);
+
+    if (shouldDonateTroops) {
+      return COLORS.ally; // Green color for Donate Troops
+    }
+
+    // Default Attack color (red)
+    return null; // Use default color
+  },
 };
+
+// Helper function to check if we should show Donate Troops
+function shouldShowDonateTroops(params: MenuElementParams): boolean {
+  // Check if player can donate troops
+  return !!params.playerActions?.interaction?.canDonateTroops;
+}
 
 export const rootMenuElement: MenuElement = {
   id: "root",
@@ -581,11 +659,62 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
+    // Check game config to see which donation types are enabled
+    const donateGoldEnabled = Boolean(params.game.config.donateGold ?? false);
+
+    // Check if we should show Donate Gold instead of Build button
+    // Only allow donating gold to teammates or allies
+    const gameMode = params.game.config.gameConfig().gameMode;
+
+    // Helper function to check if quick donate buttons should show
+    const shouldShowQuickDonateButtons = () => {
+      // First check if donations are enabled in game config
+      if (!donateGoldEnabled) return false;
+
+      // In FFA games, check user setting
+      if (gameMode === GameMode.FFA) {
+        const quickDonateButtonsInFFA = params.game.config
+          .userSettings()
+          .quickDonateButtonsInFFA();
+        return quickDonateButtonsInFFA;
+      }
+
+      // In Team games, always show (when donations are enabled)
+      return true;
+    };
+
+    const shouldShowDonateGold =
+      isOwnTerritory &&
+      params.selected &&
+      shouldShowQuickDonateButtons() &&
+      params.playerActions?.interaction?.canDonateGold &&
+      (params.myPlayer.isOnSameTeam(params.selected) ||
+        params.myPlayer.isAlliedWith(params.selected));
+
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
       ...(isOwnTerritory
-        ? [deleteUnitElement, ally, buildMenuElement]
+        ? [
+            deleteUnitElement,
+            ally,
+            // Show Donate Gold instead of Build when appropriate
+            shouldShowDonateGold ? allyDonateGoldElement : buildMenuElement,
+          ]
         : [boatMenuElement, ally, attackMenuElement]),
+      // Add donation buttons based on config and availability
+      // Only add Donate Gold here if we're NOT replacing Build button
+      // Only allow donating gold to teammates or allies
+      ...(params.selected &&
+      shouldShowQuickDonateButtons() &&
+      params.playerActions?.interaction?.canDonateGold &&
+      !shouldShowDonateGold &&
+      (params.myPlayer.isOnSameTeam(params.selected) ||
+        params.myPlayer.isAlliedWith(params.selected))
+        ? [allyDonateGoldElement]
+        : []),
+      // Donate Troops is now handled by center button, so we don't add it here
+      // unless we want to keep it as a separate menu item too
+      // For now, removing it since it's replaced by center button
     ];
 
     return menuItems.filter((item): item is MenuElement => item !== null);
