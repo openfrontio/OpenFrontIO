@@ -15,6 +15,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   // Trajectory preview state
   private mousePos = { x: 0, y: 0 };
   private trajectoryPoints: TileRef[] = [];
+  private targetableSwitchPointIndex: [number, number] = [-1, -1];
   private lastTrajectoryUpdate: number = 0;
   private lastTargetTile: TileRef | null = null;
   private currentGhostStructure: UnitType | null = null;
@@ -210,6 +211,35 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     );
 
     this.trajectoryPoints = pathFinder.allTiles();
+
+    // Calculate points when bomb targetability switches
+    const targetRangeSquared =
+      this.game.config().defaultNukeTargetableRange() ** 2;
+
+    this.targetableSwitchPointIndex = [-1, -1];
+    for (let i = 0; i < this.trajectoryPoints.length; i++) {
+      const tile = this.trajectoryPoints[i];
+      if (this.targetableSwitchPointIndex[0] === -1) {
+        if (
+          this.game.euclideanDistSquared(tile, this.cachedSpawnTile) >
+          targetRangeSquared
+        ) {
+          if (
+            this.game.euclideanDistSquared(tile, targetTile) <
+            targetRangeSquared
+          ) {
+            break;
+          } else {
+            this.targetableSwitchPointIndex[0] = i;
+          }
+        }
+      } else if (
+        this.game.euclideanDistSquared(tile, targetTile) < targetRangeSquared
+      ) {
+        this.targetableSwitchPointIndex[1] = i;
+        break;
+      }
+    }
   }
 
   /**
@@ -231,14 +261,21 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     }
 
     const territoryColor = player.territoryColor();
-    const lineColor = territoryColor.alpha(0.7).toRgbString();
+    const untargetableLineColor = territoryColor
+      .alpha(0.8)
+      .saturate(0.8)
+      .toRgbString();
+    const targetableLineColor = territoryColor
+      .alpha(0.8)
+      .saturate(0.5)
+      .toRgbString();
 
     // Calculate offset to center coordinates (same as canvas drawing)
     const offsetX = -this.game.width() / 2;
     const offsetY = -this.game.height() / 2;
 
     context.save();
-    context.strokeStyle = lineColor;
+    context.strokeStyle = targetableLineColor;
     context.lineWidth = 1.5;
     context.setLineDash([8, 4]);
     context.beginPath();
@@ -253,6 +290,29 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         context.moveTo(x, y);
       } else {
         context.lineTo(x, y);
+      }
+      if (i === this.targetableSwitchPointIndex[0]) {
+        context.stroke();
+
+        context.beginPath();
+        context.setLineDash([]);
+        context.arc(x, y, 4, 0, 2 * Math.PI, false);
+        context.stroke();
+
+        context.beginPath();
+        context.strokeStyle = untargetableLineColor;
+        context.setLineDash([2, 6]);
+      } else if (i === this.targetableSwitchPointIndex[1]) {
+        context.stroke();
+
+        context.beginPath();
+        context.strokeStyle = targetableLineColor;
+        context.setLineDash([]);
+        context.arc(x, y, 4, 0, 2 * Math.PI, false);
+        context.stroke();
+
+        context.beginPath();
+        context.setLineDash([8, 4]);
       }
     }
 
