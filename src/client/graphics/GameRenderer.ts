@@ -376,7 +376,7 @@ export class GameRenderer {
 
     if (this.backlogTurns > 0) {
       const BASE_FPS = 60;
-      const MIN_FPS = 10;
+      const MIN_FPS = 30;
       const BACKLOG_MAX_TURNS = 50;
 
       const scale = Math.min(1, this.backlogTurns / BACKLOG_MAX_TURNS);
@@ -430,8 +430,11 @@ export class GameRenderer {
 
       const layerStart = FrameProfiler.start();
       layer.renderLayer?.(this.context);
-      const name = layer.constructor?.name ?? "UnknownLayer";
-      FrameProfiler.end(name, layerStart);
+      const profileName =
+        (layer as any).profileName?.() ??
+        layer.constructor?.name ??
+        "UnknownLayer";
+      FrameProfiler.end(profileName, layerStart);
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();

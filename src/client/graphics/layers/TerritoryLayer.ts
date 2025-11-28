@@ -33,6 +33,10 @@ import {
 import { TerritoryWebGLRenderer } from "./TerritoryWebGLRenderer";
 
 export class TerritoryLayer implements Layer {
+  profileName(): string {
+    return "TerritoryLayer:renderLayer";
+  }
+
   private userSettings: UserSettings;
   private borderAnimTime = 0;
 
@@ -92,6 +96,7 @@ export class TerritoryLayer implements Layer {
   }
 
   tick() {
+    const tickProfile = FrameProfiler.start();
     if (this.game.inSpawnPhase()) {
       this.spawnHighlight();
     }
@@ -188,6 +193,7 @@ export class TerritoryLayer implements Layer {
     if (currentMyPlayer !== this.lastMyPlayerSmallId) {
       this.redraw();
     }
+    FrameProfiler.end("TerritoryLayer:tick", tickProfile);
   }
 
   private spawnHighlight() {
@@ -537,10 +543,17 @@ export class TerritoryLayer implements Layer {
       return;
     }
     let numToRender = Math.floor(this.tileToRenderQueue.size() / 10);
-    if (numToRender === 0 || this.game.inSpawnPhase()) {
+    if (
+      numToRender === 0 ||
+      this.game.inSpawnPhase() ||
+      this.territoryRenderer.isWebGL()
+    ) {
       numToRender = this.tileToRenderQueue.size();
     }
 
+    const useNeighborPaint = !(this.territoryRenderer?.isWebGL() ?? false);
+    const neighborsToPaint: TileRef[] = [];
+    const mainSpan = FrameProfiler.start();
     while (numToRender > 0) {
       numToRender--;
 
@@ -551,9 +564,24 @@ export class TerritoryLayer implements Layer {
 
       const tile = entry.tile;
       this.paintTerritory(tile);
-      for (const neighbor of this.game.neighbors(tile)) {
+
+      if (useNeighborPaint) {
+        for (const neighbor of this.game.neighbors(tile)) {
+          neighborsToPaint.push(neighbor);
+        }
+      }
+    }
+    FrameProfiler.end("TerritoryLayer:renderTerritory.mainPaint", mainSpan);
+
+    if (useNeighborPaint && neighborsToPaint.length > 0) {
+      const neighborSpan = FrameProfiler.start();
+      for (const neighbor of neighborsToPaint) {
         this.paintTerritory(neighbor, true); //this is a misuse of the _Border parameter, making it a maybe stale border
       }
+      FrameProfiler.end(
+        "TerritoryLayer:renderTerritory.neighborPaint",
+        neighborSpan,
+      );
     }
   }
 
