@@ -28,8 +28,8 @@ import "./components/Difficulties";
 import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -63,6 +63,9 @@ export class HostLobbyModal extends LitElement {
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
+  private mapLoader = terrainMapFileLoader;
+  private nationCount: number = 0;
+  private randomSelectedMap: GameMapType | null = null;
 
   connectedCallback() {
     super.connectedCallback();
@@ -553,6 +556,13 @@ export class HostLobbyModal extends LitElement {
                 ? translateText("host_modal.player")
                 : translateText("host_modal.players")
             }
+            <span style="margin: 0 8px;">•</span>
+            ${this.nationCount}
+            ${
+              this.nationCount === 1
+                ? translateText("host_modal.nation_player")
+                : translateText("host_modal.nation_players")
+            }
           </div>
 
           <lobby-team-view
@@ -560,6 +570,7 @@ export class HostLobbyModal extends LitElement {
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
+            .nationCount=${this.disableNPCs ? 0 : this.nationCount}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
         </div>
@@ -613,6 +624,7 @@ export class HostLobbyModal extends LitElement {
       });
     this.modalEl?.open();
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
+    this.loadNationCount();
   }
 
   public close() {
@@ -631,12 +643,15 @@ export class HostLobbyModal extends LitElement {
 
   private async handleRandomMapToggle() {
     this.useRandomMap = true;
+    this.selectedMap = this.getRandomMap();
+    await this.loadNationCount();
     this.putGameConfig();
   }
 
   private async handleMapSelection(value: GameMapType) {
     this.selectedMap = value;
     this.useRandomMap = false;
+    await this.loadNationCount();
     this.putGameConfig();
   }
 
@@ -794,9 +809,9 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async startGame() {
-    if (this.useRandomMap) {
-      this.selectedMap = this.getRandomMap();
-    }
+    // if (this.useRandomMap) {
+    //   this.selectedMap = this.getRandomMap();
+    // }
 
     await this.putGameConfig();
     console.log(
@@ -856,6 +871,17 @@ export class HostLobbyModal extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  private async loadNationCount() {
+    try {
+      const mapData = this.mapLoader.getMapData(this.selectedMap);
+      const manifest = await mapData.manifest();
+      this.nationCount = manifest.nations.length;
+    } catch (error) {
+      console.warn("Failed to load nation count", error);
+      this.nationCount = 0;
+    }
   }
 }
 
