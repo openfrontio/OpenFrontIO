@@ -221,10 +221,10 @@ export class FakeHumanExecution implements Execution {
       .sort((a, b) => a.troops() - b.troops());
 
     // Attack TerraNullius but not nuked territory
-    const hasTerraNullius = border.some(
+    const hasNonNukedTerraNullius = border.some(
       (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
     );
-    if (hasTerraNullius) {
+    if (hasNonNukedTerraNullius) {
       this.behavior.sendAttack(this.mg.terraNullius());
       return;
     }
