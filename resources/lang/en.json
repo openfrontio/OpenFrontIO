@@ -273,6 +273,8 @@
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
+    "nation_players": "Nations",
+    "nation_player": "Nation",
     "waiting": "Waiting for players...",
     "random_spawn": "Random spawn",
     "start": "Start Game",
@@ -280,7 +282,7 @@
     "assigned_teams": "Assigned Teams",
     "empty_teams": "Empty Teams",
     "empty_team": "Empty",
-    "remove_player": "Remove {{username}}"
+    "remove_player": "Remove {username}"
   },
   "team_colors": {
     "red": "Red",
