@@ -207,35 +207,35 @@ export class FakeHumanExecution implements Execution {
       throw new Error("not initialized");
     }
 
-    const enemyborder = Array.from(this.player.borderTiles())
+    const border = Array.from(this.player.borderTiles())
       .flatMap((t) => this.mg.neighbors(t))
       .filter(
         (t) =>
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
-    const borderPlayers = enemyborder.map((t) =>
+    const borderPlayers = border.map((t) =>
       this.mg.playerBySmallID(this.mg.ownerID(t)),
     );
     const borderingEnemies = borderPlayers
-      .filter((o) => o.isPlayer())
+      .filter((o): o is Player => o.isPlayer() && !this.player!.isFriendly(o))
       .sort((a, b) => a.troops() - b.troops());
 
-    if (enemyborder.length === 0) {
+    // Attack TerraNullius but not nuked territory
+    const hasTerraNullius = border.some(
+      (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
+    );
+    if (hasTerraNullius) {
+      this.behavior.sendAttack(this.mg.terraNullius());
+      return;
+    }
+
+    if (borderingEnemies.length === 0) {
       if (this.random.chance(5)) {
-        this.sendBoatRandomly(borderingEnemies);
+        this.sendBoatRandomly();
       }
     } else {
       if (this.random.chance(10)) {
         this.sendBoatRandomly(borderingEnemies);
-        return;
-      }
-
-      // Check for TerraNullius but exclude nuked territory
-      const hasTerraNullius = enemyborder.some(
-        (t) => !this.mg.hasOwner(t) && !this.mg.hasFallout(t),
-      );
-      if (hasTerraNullius) {
-        this.behavior.sendAttack(this.mg.terraNullius());
         return;
       }
 
@@ -611,7 +611,7 @@ export class FakeHumanExecution implements Execution {
     return this.mg.unitInfo(type).cost(this.player);
   }
 
-  sendBoatRandomly(borderingEnemies: Player[]) {
+  sendBoatRandomly(borderingEnemies: Player[] = []) {
     if (this.player === null) throw new Error("not initialized");
     const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
       this.mg.isOceanShore(t),

@@ -212,7 +212,7 @@ export class BotBehavior {
       // Maybe save up troops until we reach the trigger ratio
       if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return null;
 
-      // Retaliate against incoming attacks
+      // Retaliate against incoming attacks (Most important!)
       this.checkIncomingAttacks();
 
       // Select a neighboring bot
