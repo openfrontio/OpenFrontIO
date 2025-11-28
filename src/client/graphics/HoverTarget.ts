@@ -2,39 +2,27 @@ import { UnitType } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
 import { GameView, PlayerView, UnitView } from "../../core/game/GameView";
 
+export interface HoverTargetResolution {
+  player: PlayerView | null;
+  unit: UnitView | null;
+}
+
 const HOVER_UNIT_TYPES: UnitType[] = [
   UnitType.Warship,
   UnitType.TradeShip,
   UnitType.TransportShip,
 ];
+
 const HOVER_DISTANCE_PX = 5;
 
-function euclideanDistWorld(
-  coord: { x: number; y: number },
-  tileRef: TileRef,
+function distSquared(
   game: GameView,
+  tile: TileRef,
+  coord: { x: number; y: number },
 ): number {
-  const x = game.x(tileRef);
-  const y = game.y(tileRef);
-  const dx = coord.x - x;
-  const dy = coord.y - y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function distSortUnitWorld(
-  coord: { x: number; y: number },
-  game: GameView,
-): (a: UnitView, b: UnitView) => number {
-  return (a, b) => {
-    const distA = euclideanDistWorld(coord, a.tile(), game);
-    const distB = euclideanDistWorld(coord, b.tile(), game);
-    return distA - distB;
-  };
-}
-
-export interface HoverTargetResolution {
-  player: PlayerView | null;
-  unit: UnitView | null;
+  const dx = game.x(tile) - coord.x;
+  const dy = game.y(tile) - coord.y;
+  return dx * dx + dy * dy;
 }
 
 export function resolveHoverTarget(
@@ -45,9 +33,8 @@ export function resolveHoverTarget(
     return { player: null, unit: null };
   }
   const tile = game.ref(worldCoord.x, worldCoord.y);
-
   const owner = game.owner(tile);
-  if (owner && owner.isPlayer()) {
+  if ((owner as any).isPlayer?.()) {
     return { player: owner as PlayerView, unit: null };
   }
 
@@ -58,9 +45,15 @@ export function resolveHoverTarget(
   const units = game
     .units(...HOVER_UNIT_TYPES)
     .filter(
-      (u) => euclideanDistWorld(worldCoord, u.tile(), game) < HOVER_DISTANCE_PX,
+      (u) =>
+        distSquared(game, u.tile(), worldCoord) <
+        HOVER_DISTANCE_PX * HOVER_DISTANCE_PX,
     )
-    .sort(distSortUnitWorld(worldCoord, game));
+    .sort(
+      (a, b) =>
+        distSquared(game, a.tile(), worldCoord) -
+        distSquared(game, b.tile(), worldCoord),
+    );
 
   if (units.length > 0) {
     return { player: units[0].owner(), unit: units[0] };

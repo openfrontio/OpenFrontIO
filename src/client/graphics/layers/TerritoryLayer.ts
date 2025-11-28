@@ -23,7 +23,7 @@ import {
   ToggleTerritoryWebGLEvent,
 } from "../../InputHandler";
 import { FrameProfiler } from "../FrameProfiler";
-import { resolveHoverTarget } from "../HoverTargetResolver";
+import { resolveHoverTarget } from "../HoverTarget";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 import { TerritoryWebGLRenderer } from "./TerritoryWebGLRenderer";
@@ -335,10 +335,6 @@ export class TerritoryLayer implements Layer {
       this.lastMousePosition.x,
       this.lastMousePosition.y,
     );
-    if (!this.game.isValidCoord(cell.x, cell.y)) {
-      return;
-    }
-
     const previousTerritory = this.highlightedTerritory;
     const territory = resolveHoverTarget(this.game, cell).player;
 
