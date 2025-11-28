@@ -251,7 +251,7 @@
     "not_string": "Username must be a string.",
     "too_short": "Username must be at least {min} characters long.",
     "too_long": "Username must not exceed {max} characters.",
-    "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, and [square brackets]."
+    "invalid_chars": "Username can only contain letters (including Unicode), numbers, spaces, underscores, emojis, and [square brackets]."
   },
   "host_modal": {
     "title": "Private Lobby",
