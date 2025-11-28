@@ -53,6 +53,16 @@ export class TerritoryWebGLRenderer {
     hoverPulseStrength: WebGLUniformLocation | null;
     hoverPulseSpeed: WebGLUniformLocation | null;
     time: WebGLUniformLocation | null;
+    // Border color uniforms for shader-computed borders
+    borderNeutral: WebGLUniformLocation | null;
+    borderFriendly: WebGLUniformLocation | null;
+    borderEmbargo: WebGLUniformLocation | null;
+    borderDefendedNeutralLight: WebGLUniformLocation | null;
+    borderDefendedNeutralDark: WebGLUniformLocation | null;
+    borderDefendedFriendlyLight: WebGLUniformLocation | null;
+    borderDefendedFriendlyDark: WebGLUniformLocation | null;
+    borderDefendedEmbargoLight: WebGLUniformLocation | null;
+    borderDefendedEmbargoDark: WebGLUniformLocation | null;
   };
 
   private readonly state: Uint16Array;
@@ -117,6 +127,15 @@ export class TerritoryWebGLRenderer {
         hoverPulseStrength: null,
         hoverPulseSpeed: null,
         time: null,
+        borderNeutral: null,
+        borderFriendly: null,
+        borderEmbargo: null,
+        borderDefendedNeutralLight: null,
+        borderDefendedNeutralDark: null,
+        borderDefendedFriendlyLight: null,
+        borderDefendedFriendlyDark: null,
+        borderDefendedEmbargoLight: null,
+        borderDefendedEmbargoDark: null,
       };
       return;
     }
@@ -149,6 +168,15 @@ export class TerritoryWebGLRenderer {
         hoverPulseStrength: null,
         hoverPulseSpeed: null,
         time: null,
+        borderNeutral: null,
+        borderFriendly: null,
+        borderEmbargo: null,
+        borderDefendedNeutralLight: null,
+        borderDefendedNeutralDark: null,
+        borderDefendedFriendlyLight: null,
+        borderDefendedFriendlyDark: null,
+        borderDefendedEmbargoLight: null,
+        borderDefendedEmbargoDark: null,
       };
       return;
     }
@@ -181,6 +209,33 @@ export class TerritoryWebGLRenderer {
       ),
       hoverPulseSpeed: gl.getUniformLocation(this.program, "u_hoverPulseSpeed"),
       time: gl.getUniformLocation(this.program, "u_time"),
+      borderNeutral: gl.getUniformLocation(this.program, "u_borderNeutral"),
+      borderFriendly: gl.getUniformLocation(this.program, "u_borderFriendly"),
+      borderEmbargo: gl.getUniformLocation(this.program, "u_borderEmbargo"),
+      borderDefendedNeutralLight: gl.getUniformLocation(
+        this.program,
+        "u_borderDefendedNeutralLight",
+      ),
+      borderDefendedNeutralDark: gl.getUniformLocation(
+        this.program,
+        "u_borderDefendedNeutralDark",
+      ),
+      borderDefendedFriendlyLight: gl.getUniformLocation(
+        this.program,
+        "u_borderDefendedFriendlyLight",
+      ),
+      borderDefendedFriendlyDark: gl.getUniformLocation(
+        this.program,
+        "u_borderDefendedFriendlyDark",
+      ),
+      borderDefendedEmbargoLight: gl.getUniformLocation(
+        this.program,
+        "u_borderDefendedEmbargoLight",
+      ),
+      borderDefendedEmbargoDark: gl.getUniformLocation(
+        this.program,
+        "u_borderDefendedEmbargoDark",
+      ),
     };
 
     // Vertex data: two triangles covering the full map (pixel-perfect).
@@ -665,16 +720,24 @@ export class TerritoryWebGLRenderer {
     const maxId = players.reduce((max, p) => Math.max(max, p.smallID()), 0) + 1;
     this.paletteWidth = Math.max(maxId, 1);
 
-    const paletteData = new Uint8Array(this.paletteWidth * 4);
+    const paletteData = new Uint8Array(this.paletteWidth * 8); // 8 bytes per player: territory RGBA + border RGBA
     const relationData = new Uint8Array(this.paletteWidth);
 
     for (const p of players) {
       const id = p.smallID();
-      const rgba = p.territoryColor().rgba;
-      paletteData[id * 4] = rgba.r;
-      paletteData[id * 4 + 1] = rgba.g;
-      paletteData[id * 4 + 2] = rgba.b;
-      paletteData[id * 4 + 3] = Math.round((rgba.a ?? 1) * 255);
+      // Territory color (first 4 bytes)
+      const territoryRgba = p.territoryColor().rgba;
+      paletteData[id * 8] = territoryRgba.r;
+      paletteData[id * 8 + 1] = territoryRgba.g;
+      paletteData[id * 8 + 2] = territoryRgba.b;
+      paletteData[id * 8 + 3] = Math.round((territoryRgba.a ?? 1) * 255);
+
+      // Base border color (next 4 bytes)
+      const borderRgba = p.borderColor().rgba; // Get base border color without relation/defended
+      paletteData[id * 8 + 4] = borderRgba.r;
+      paletteData[id * 8 + 5] = borderRgba.g;
+      paletteData[id * 8 + 6] = borderRgba.b;
+      paletteData[id * 8 + 7] = Math.round((borderRgba.a ?? 1) * 255);
 
       relationData[id] = this.resolveRelationCode(p, myPlayer);
     }
@@ -690,7 +753,7 @@ export class TerritoryWebGLRenderer {
       gl.TEXTURE_2D,
       0,
       gl.RGBA8,
-      this.paletteWidth,
+      this.paletteWidth * 2, // 2 pixels per player (territory + border)
       1,
       0,
       gl.RGBA,
@@ -765,6 +828,15 @@ export class TerritoryWebGLRenderer {
       uniform vec4 u_altNeutral;
       uniform vec4 u_altEnemy;
       uniform float u_alpha;
+      uniform vec4 u_borderNeutral;
+      uniform vec4 u_borderFriendly;
+      uniform vec4 u_borderEmbargo;
+      uniform vec4 u_borderDefendedNeutralLight;
+      uniform vec4 u_borderDefendedNeutralDark;
+      uniform vec4 u_borderDefendedFriendlyLight;
+      uniform vec4 u_borderDefendedFriendlyDark;
+      uniform vec4 u_borderDefendedEmbargoLight;
+      uniform vec4 u_borderDefendedEmbargoDark;
       uniform bool u_alternativeView;
       uniform float u_hoveredPlayerId;
       uniform vec3 u_hoverHighlightColor;
@@ -792,6 +864,8 @@ export class TerritoryWebGLRenderer {
         uint state = texelFetch(u_state, texCoord, 0).r;
         uint owner = state & 0xFFFu;
         bool hasFallout = (state & 0x2000u) != 0u; // bit 13
+        bool isDefended = (state & 0x1000u) != 0u; // bit 12
+        uint relation = (state & 0xC000u) >> 14u; // bits 14-15
 
         if (owner == 0u) {
           if (hasFallout) {
@@ -836,17 +910,40 @@ export class TerritoryWebGLRenderer {
           return;
         }
 
-        vec4 base = texelFetch(u_palette, ivec2(int(owner), 0), 0);
-        vec4 borderColor = texelFetch(u_borderColor, texCoord, 0);
+        vec4 base = texelFetch(u_palette, ivec2(int(owner) * 2, 0), 0); // territory color
+        vec4 baseBorder = texelFetch(u_palette, ivec2(int(owner) * 2 + 1, 0), 0); // base border color
         vec3 color = base.rgb;
         float a = u_alpha;
 
-        if (isBorder && borderColor.a > 0.0) {
-          color = borderColor.rgb;
-          a = borderColor.a;
-        }
-        if (isBorder && borderColor.a <= 0.0) {
-          a = 1.0;
+        if (isBorder) {
+          // Start with base border color and apply relation tint
+          vec3 borderColor = baseBorder.rgb;
+
+          // Apply relation-based tinting (same logic as PlayerView.borderColor)
+          const float BORDER_TINT_RATIO = 0.35;
+          const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0); // green
+          const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);   // red
+
+          if (relation == 1u) { // friendly
+            borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
+                          FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+          } else if (relation == 2u) { // embargo
+            borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
+                          EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+          }
+          // relation == 0u (neutral) uses base border color as-is
+
+          // Apply defended checkerboard pattern
+          if (isDefended) {
+            bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
+            // Simple checkerboard: alternate between lighter and darker versions
+            const float LIGHT_FACTOR = 1.2;
+            const float DARK_FACTOR = 0.8;
+            borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
+          }
+
+          color = borderColor;
+          a = baseBorder.a; // Already in 0-1 range from RGBA8 texture
         }
 
         if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
