@@ -58,14 +58,13 @@ export class HostLobbyModal extends LitElement {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
+  @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
   private mapLoader = terrainMapFileLoader;
-  private nationCount: number = 0;
-  private randomSelectedMap: GameMapType | null = null;
 
   connectedCallback() {
     super.connectedCallback();
