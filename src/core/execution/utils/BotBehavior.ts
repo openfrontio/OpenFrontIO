@@ -27,7 +27,7 @@ const EMOJI_TARGET_ALLY = (["🕊️", "👎"] as const).map(emojiId);
 export const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
 
 export class BotBehavior {
-  private enemy: Player | null = null;
+  private enemy: Player | TerraNullius | null = null;
   private enemyUpdated: Tick | undefined;
 
   constructor(
@@ -76,14 +76,17 @@ export class BotBehavior {
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
-  private setNewEnemy(newEnemy: Player | null, force = false) {
+  private setNewEnemy(newEnemy: Player | TerraNullius | null, force = false) {
     if (newEnemy !== null && !force && !this.shouldAttack(newEnemy)) return;
     this.enemy = newEnemy;
     this.enemyUpdated = this.game.ticks();
   }
 
-  private shouldAttack(other: Player): boolean {
+  private shouldAttack(other: Player | TerraNullius): boolean {
     if (this.player === null) throw new Error("not initialized");
+    if (!other.isPlayer()) {
+      return true;
+    }
     if (this.player.isOnSameTeam(other)) {
       return false;
     }
@@ -156,8 +159,10 @@ export class BotBehavior {
   }
 
   private checkIncomingAttacks() {
-    // Switch enemies if we're under attack
-    const incomingAttacks = this.player.incomingAttacks();
+    // Switch enemies if we're under attack. But ignore bot attacks, they are harmless.
+    const incomingAttacks = this.player
+      .incomingAttacks()
+      .filter((attack) => attack.attacker().type() !== PlayerType.Bot);
     let largestAttack = 0;
     let largestAttacker: Player | undefined;
     for (const attack of incomingAttacks) {
@@ -202,7 +207,7 @@ export class BotBehavior {
     }
   }
 
-  selectEnemy(borderingEnemies: Player[]): Player | null {
+  selectEnemy(borderingEnemies: Player[]): Player | TerraNullius | null {
     if (this.enemy === null) {
       // Save up troops until we reach the reserve ratio
       if (!this.hasReserveRatioTroops()) return null;
@@ -210,34 +215,38 @@ export class BotBehavior {
       // Maybe save up troops until we reach the trigger ratio
       if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return null;
 
-      // Prefer neighboring bots
-      const bots = this.player
-        .neighbors()
-        .filter(
-          (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
-        );
-      if (bots.length > 0) {
-        const density = (p: Player) => p.troops() / p.numTilesOwned();
-        let lowestDensityBot: Player | undefined;
-        let lowestDensity = Infinity;
+      // Retaliate against incoming attacks (Most important!)
+      this.checkIncomingAttacks();
 
-        for (const bot of bots) {
-          const currentDensity = density(bot);
-          if (currentDensity < lowestDensity) {
-            lowestDensity = currentDensity;
-            lowestDensityBot = bot;
+      // Select a neighboring bot
+      if (this.enemy === null) {
+        const bots = this.player
+          .neighbors()
+          .filter(
+            (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
+          );
+        if (bots.length > 0) {
+          const density = (p: Player) => p.troops() / p.numTilesOwned();
+          let lowestDensityBot: Player | undefined;
+          let lowestDensity = Infinity;
+
+          for (const bot of bots) {
+            const currentDensity = density(bot);
+            if (currentDensity < lowestDensity) {
+              lowestDensity = currentDensity;
+              lowestDensityBot = bot;
+            }
           }
-        }
 
-        if (lowestDensityBot !== undefined) {
-          this.setNewEnemy(lowestDensityBot);
+          if (lowestDensityBot !== undefined) {
+            this.setNewEnemy(lowestDensityBot);
+          }
         }
       }
 
-      // Retaliate against incoming attacks
-      if (this.enemy === null) {
-        // Only after clearing bots
-        this.checkIncomingAttacks();
+      // Select nuked territory
+      if (this.enemy === null && this.hasBorderingNukedTerritory()) {
+        this.setNewEnemy(this.game.terraNullius());
       }
 
       // Select the most hated player
@@ -368,11 +377,26 @@ export class BotBehavior {
     return this.enemySanityCheck();
   }
 
-  private enemySanityCheck(): Player | null {
-    if (this.enemy && this.player.isFriendly(this.enemy)) {
+  private enemySanityCheck(): Player | TerraNullius | null {
+    if (
+      this.enemy &&
+      this.enemy.isPlayer() &&
+      this.player.isFriendly(this.enemy)
+    ) {
       this.clearEnemy();
     }
     return this.enemy;
+  }
+
+  hasBorderingNukedTerritory(): boolean {
+    return Array.from(this.player.borderTiles())
+      .flatMap((t) => this.game.neighbors(t))
+      .some(
+        (t) =>
+          this.game.isLand(t) &&
+          !this.game.hasOwner(t) &&
+          this.game.hasFallout(t),
+      );
   }
 
   forceSendAttack(target: Player | TerraNullius) {
