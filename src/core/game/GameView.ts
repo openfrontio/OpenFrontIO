@@ -586,6 +586,7 @@ export class GameView implements GameMap {
 
   private _map: GameMap;
   private readonly usesSharedTileState: boolean;
+  private readonly terraNullius = new TerraNulliusImpl();
 
   constructor(
     public worker: WorkerClient,
@@ -741,11 +742,11 @@ export class GameView implements GameMap {
 
   playerBySmallID(id: number): PlayerView | TerraNullius {
     if (id === 0) {
-      return new TerraNulliusImpl();
+      return this.terraNullius;
     }
     const playerId = this.smallIDToID.get(id);
     if (playerId === undefined) {
-      throw new Error(`small id ${id} not found`);
+      return this.terraNullius;
     }
     return this.player(playerId);
   }

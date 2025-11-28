@@ -169,7 +169,11 @@ export class TerritoryLayer implements Layer {
 
     const focusedPlayer = this.game.focusedPlayer();
     if (focusedPlayer !== this.lastFocusedPlayer) {
-      if (!this.territoryRenderer) {
+      if (this.territoryRenderer) {
+        // Force a full repaint so the GPU textures match the new focus context
+        // (e.g., when jumping to another location during spawn).
+        this.redraw();
+      } else {
         if (this.lastFocusedPlayer) {
           this.paintPlayerBorder(this.lastFocusedPlayer);
         }
@@ -294,6 +298,7 @@ export class TerritoryLayer implements Layer {
     this.eventBus.on(AlternateViewEvent, (e) => {
       this.alternativeView = e.alternateView;
       this.territoryRenderer?.setAlternativeView(this.alternativeView);
+      this.territoryRenderer?.markAllDirty();
       this.territoryRenderer?.setHoverHighlightOptions(
         this.hoverHighlightOptions(),
       );
@@ -385,11 +390,15 @@ export class TerritoryLayer implements Layer {
     );
     this.initImageData();
 
-    this.context.putImageData(
-      this.alternativeView ? this.alternativeImageData : this.imageData,
-      0,
-      0,
-    );
+    if (!this.territoryRenderer) {
+      this.context.putImageData(
+        this.alternativeView ? this.alternativeImageData : this.imageData,
+        0,
+        0,
+      );
+    } else {
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
 
     this.configureRenderers();
 
@@ -515,6 +524,7 @@ export class TerritoryLayer implements Layer {
 
   renderLayer(context: CanvasRenderingContext2D) {
     const now = Date.now();
+    // When WebGL is available, rely entirely on the GPU renderer (even in alt view).
     const gpuTerritoryActive = this.territoryRenderer !== null;
     const skipTerritoryCanvas = gpuTerritoryActive;
 
@@ -540,7 +550,7 @@ export class TerritoryLayer implements Layer {
       // territory buffer (alternativeImageData) is effectively transparent and
       // all visible work is done by the WebGL layer. Skip putImageData in that
       // case to avoid unnecessary CPU work each frame.
-      const shouldBlitTerritories = !skipTerritoryCanvas && !gpuTerritoryActive;
+      const shouldBlitTerritories = !gpuTerritoryActive && !skipTerritoryCanvas;
 
       if (w > 0 && h > 0 && shouldBlitTerritories) {
         const putImageStart = FrameProfiler.start();
@@ -630,7 +640,13 @@ export class TerritoryLayer implements Layer {
     const cpuStart = FrameProfiler.start();
     const useGpuTerritory = this.territoryRenderer !== null;
     const hasOwner = this.game.hasOwner(tile);
-    const owner = hasOwner ? (this.game.owner(tile) as PlayerView) : null;
+    const rawOwner = hasOwner ? this.game.owner(tile) : null;
+    const owner =
+      rawOwner &&
+      typeof (rawOwner as any).isPlayer === "function" &&
+      (rawOwner as any).isPlayer()
+        ? (rawOwner as PlayerView)
+        : null;
     const isBorderTile = this.game.isBorder(tile);
     const hasFallout = this.game.hasFallout(tile);
     let isDefended = false;
@@ -645,6 +661,17 @@ export class TerritoryLayer implements Layer {
 
     if (useGpuTerritory) {
       this.territoryRenderer?.markTile(tile);
+      if (!owner || !isBorderTile) {
+        this.territoryRenderer?.clearBorderColor(tile);
+      } else {
+        const borderCol = owner.borderColor(tile, isDefended).rgba;
+        this.territoryRenderer?.setBorderColor(tile, {
+          r: borderCol.r,
+          g: borderCol.g,
+          b: borderCol.b,
+          a: Math.round((borderCol.a ?? 1) * 255),
+        });
+      }
     } else {
       if (!owner) {
         if (hasFallout) {

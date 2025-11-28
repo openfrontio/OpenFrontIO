@@ -33,11 +33,13 @@ export class TerritoryWebGLRenderer {
   private readonly stateTexture: WebGLTexture | null;
   private readonly paletteTexture: WebGLTexture | null;
   private readonly relationTexture: WebGLTexture | null;
+  private readonly borderColorTexture: WebGLTexture | null;
   private readonly uniforms: {
     resolution: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
+    borderColor: WebGLUniformLocation | null;
     fallout: WebGLUniformLocation | null;
     altSelf: WebGLUniformLocation | null;
     altAlly: WebGLUniformLocation | null;
@@ -55,7 +57,9 @@ export class TerritoryWebGLRenderer {
 
   private readonly state: Uint16Array;
   private readonly dirtyRows: Map<number, DirtySpan> = new Map();
+  private readonly borderDirtyRows: Map<number, DirtySpan> = new Map();
   private needsFullUpload = true;
+  private borderNeedsFullUpload = true;
   private alternativeView = false;
   private paletteWidth = 0;
   private hoverHighlightStrength = 0.7;
@@ -64,6 +68,7 @@ export class TerritoryWebGLRenderer {
   private hoverPulseSpeed = Math.PI * 2;
   private hoveredPlayerId = -1;
   private animationStartTime = Date.now();
+  private borderColorData: Uint8Array;
 
   private constructor(
     private readonly game: GameView,
@@ -75,6 +80,9 @@ export class TerritoryWebGLRenderer {
     this.canvas.height = game.height();
 
     this.state = new Uint16Array(sharedState);
+    this.borderColorData = new Uint8Array(
+      this.canvas.width * this.canvas.height * 4,
+    );
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -89,11 +97,13 @@ export class TerritoryWebGLRenderer {
       this.stateTexture = null;
       this.paletteTexture = null;
       this.relationTexture = null;
+      this.borderColorTexture = null;
       this.uniforms = {
         resolution: null,
         state: null,
         palette: null,
         relations: null,
+        borderColor: null,
         fallout: null,
         altSelf: null,
         altAlly: null,
@@ -119,11 +129,13 @@ export class TerritoryWebGLRenderer {
       this.stateTexture = null;
       this.paletteTexture = null;
       this.relationTexture = null;
+      this.borderColorTexture = null;
       this.uniforms = {
         resolution: null,
         state: null,
         palette: null,
         relations: null,
+        borderColor: null,
         fallout: null,
         altSelf: null,
         altAlly: null,
@@ -146,6 +158,7 @@ export class TerritoryWebGLRenderer {
       state: gl.getUniformLocation(this.program, "u_state"),
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
+      borderColor: gl.getUniformLocation(this.program, "u_borderColor"),
       fallout: gl.getUniformLocation(this.program, "u_fallout"),
       altSelf: gl.getUniformLocation(this.program, "u_altSelf"),
       altAlly: gl.getUniformLocation(this.program, "u_altAlly"),
@@ -220,12 +233,33 @@ export class TerritoryWebGLRenderer {
       this.state,
     );
 
+    this.borderColorTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.borderColorTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA8,
+      this.canvas.width,
+      this.canvas.height,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      this.borderColorData,
+    );
+
     this.uploadPalette();
 
     gl.useProgram(this.program);
     gl.uniform1i(this.uniforms.state, 0);
     gl.uniform1i(this.uniforms.palette, 1);
     gl.uniform1i(this.uniforms.relations, 2);
+    gl.uniform1i(this.uniforms.borderColor, 3);
 
     if (this.uniforms.resolution) {
       gl.uniform2f(
@@ -352,6 +386,27 @@ export class TerritoryWebGLRenderer {
     this.alternativeView = enabled;
   }
 
+  setBorderColor(
+    tile: TileRef,
+    rgba: { r: number; g: number; b: number; a: number },
+  ) {
+    const offset = tile * 4;
+    this.borderColorData[offset] = rgba.r;
+    this.borderColorData[offset + 1] = rgba.g;
+    this.borderColorData[offset + 2] = rgba.b;
+    this.borderColorData[offset + 3] = rgba.a;
+    this.markBorderDirty(tile);
+  }
+
+  clearBorderColor(tile: TileRef) {
+    const offset = tile * 4;
+    this.borderColorData[offset] = 0;
+    this.borderColorData[offset + 1] = 0;
+    this.borderColorData[offset + 2] = 0;
+    this.borderColorData[offset + 3] = 0;
+    this.markBorderDirty(tile);
+  }
+
   setHoveredPlayerId(playerSmallId: number | null) {
     const encoded = playerSmallId ?? -1;
     this.hoveredPlayerId = encoded;
@@ -391,9 +446,26 @@ export class TerritoryWebGLRenderer {
     }
   }
 
+  private markBorderDirty(tile: TileRef) {
+    if (this.borderNeedsFullUpload) {
+      return;
+    }
+    const x = tile % this.canvas.width;
+    const y = Math.floor(tile / this.canvas.width);
+    const span = this.borderDirtyRows.get(y);
+    if (span === undefined) {
+      this.borderDirtyRows.set(y, { minX: x, maxX: x });
+    } else {
+      span.minX = Math.min(span.minX, x);
+      span.maxX = Math.max(span.maxX, x);
+    }
+  }
+
   markAllDirty() {
     this.needsFullUpload = true;
     this.dirtyRows.clear();
+    this.borderNeedsFullUpload = true;
+    this.borderDirtyRows.clear();
   }
 
   refreshPalette() {
@@ -411,6 +483,7 @@ export class TerritoryWebGLRenderer {
 
     const uploadSpan = FrameProfiler.start();
     this.uploadStateTexture();
+    this.uploadBorderTexture();
     FrameProfiler.end("TerritoryWebGLRenderer:uploadState", uploadSpan);
 
     const renderSpan = FrameProfiler.start();
@@ -444,6 +517,8 @@ export class TerritoryWebGLRenderer {
       gl.uniform1f(this.uniforms.time, currentTime);
     }
 
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);
     FrameProfiler.end("TerritoryWebGLRenderer:draw", renderSpan);
@@ -493,6 +568,55 @@ export class TerritoryWebGLRenderer {
       );
     }
     this.dirtyRows.clear();
+  }
+
+  private uploadBorderTexture() {
+    if (!this.gl || !this.borderColorTexture) return;
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.borderColorTexture);
+
+    if (this.borderNeedsFullUpload) {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA8,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        this.borderColorData,
+      );
+      this.borderNeedsFullUpload = false;
+      this.borderDirtyRows.clear();
+      return;
+    }
+
+    if (this.borderDirtyRows.size === 0) {
+      return;
+    }
+
+    for (const [y, span] of this.borderDirtyRows) {
+      const width = span.maxX - span.minX + 1;
+      const offset = (y * this.canvas.width + span.minX) * 4;
+      const rowSlice = this.borderColorData.subarray(
+        offset,
+        offset + width * 4,
+      );
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        span.minX,
+        y,
+        width,
+        1,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        rowSlice,
+      );
+    }
+    this.borderDirtyRows.clear();
   }
 
   private uploadPalette() {
@@ -596,6 +720,7 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_state;
       uniform sampler2D u_palette;
       uniform usampler2D u_relations;
+      uniform sampler2D u_borderColor;
       uniform vec2 u_resolution;
       uniform vec4 u_fallout;
       uniform vec4 u_altSelf;
@@ -675,8 +800,17 @@ export class TerritoryWebGLRenderer {
         }
 
         vec4 base = texelFetch(u_palette, ivec2(int(owner), 0), 0);
-        float a = isBorder ? 1.0 : u_alpha;
+        vec4 borderColor = texelFetch(u_borderColor, texCoord, 0);
         vec3 color = base.rgb;
+        float a = u_alpha;
+
+        if (isBorder && borderColor.a > 0.0) {
+          color = borderColor.rgb;
+          a = borderColor.a;
+        }
+        if (isBorder && borderColor.a <= 0.0) {
+          a = 1.0;
+        }
 
         if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
           float pulse = u_hoverPulseStrength > 0.0
