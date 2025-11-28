@@ -3,7 +3,6 @@ import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
 import {
-  Cell,
   ColoredTeams,
   PlayerType,
   Team,
@@ -26,14 +25,15 @@ import { FrameProfiler } from "../FrameProfiler";
 import { resolveHoverTarget } from "../HoverTarget";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
+import {
+  CanvasTerritoryRenderer,
+  TerritoryRendererStrategy,
+  WebglTerritoryRenderer,
+} from "./TerritoryRenderers";
 import { TerritoryWebGLRenderer } from "./TerritoryWebGLRenderer";
 
 export class TerritoryLayer implements Layer {
   private userSettings: UserSettings;
-  private canvas: HTMLCanvasElement;
-  private context: CanvasRenderingContext2D;
-  private imageData: ImageData;
-  private alternativeImageData: ImageData;
   private borderAnimTime = 0;
 
   private cachedTerritoryPatternsEnabled: boolean | undefined;
@@ -52,7 +52,7 @@ export class TerritoryLayer implements Layer {
   private highlightContext: CanvasRenderingContext2D;
 
   private highlightedTerritory: PlayerView | null = null;
-  private territoryRenderer: TerritoryWebGLRenderer | null = null;
+  private territoryRenderer: TerritoryRendererStrategy | null = null;
 
   private alternativeView = false;
   private lastDragTime = 0;
@@ -345,8 +345,8 @@ export class TerritoryLayer implements Layer {
     }
 
     if (previousTerritory?.id() !== this.highlightedTerritory?.id()) {
-      if (this.territoryRenderer) {
-        this.territoryRenderer.setHoveredPlayerId(
+      if (this.territoryRenderer?.isWebGL()) {
+        this.territoryRenderer.setHover(
           this.highlightedTerritory?.smallID() ?? null,
         );
       } else {
@@ -365,38 +365,8 @@ export class TerritoryLayer implements Layer {
   redraw() {
     console.log("redrew territory layer");
     this.lastMyPlayerSmallId = this.game.myPlayer()?.smallID() ?? null;
-    this.canvas = document.createElement("canvas");
-    const context = this.canvas.getContext("2d");
-    if (context === null) throw new Error("2d context not supported");
-    this.context = context;
-    this.canvas.width = this.game.width();
-    this.canvas.height = this.game.height();
-
-    this.imageData = this.context.getImageData(
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height,
-    );
-    this.alternativeImageData = this.context.getImageData(
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height,
-    );
-    this.initImageData();
-
-    if (!this.territoryRenderer) {
-      this.context.putImageData(
-        this.alternativeView ? this.alternativeImageData : this.imageData,
-        0,
-        0,
-      );
-    } else {
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-
     this.configureRenderers();
+    this.territoryRenderer?.redraw();
 
     // Add a second canvas for highlights
     this.highlightCanvas = document.createElement("canvas");
@@ -417,6 +387,14 @@ export class TerritoryLayer implements Layer {
     this.territoryRenderer = null;
 
     if (!this.useWebGL) {
+      this.territoryRenderer = new CanvasTerritoryRenderer(
+        this.game,
+        this.theme,
+      );
+      this.territoryRenderer.setAlternativeView(this.alternativeView);
+      this.territoryRenderer.setHoverHighlightOptions(
+        this.hoverHighlightOptions(),
+      );
       this.webglSupported = true;
       this.emitWebGLStatus(
         false,
@@ -431,32 +409,29 @@ export class TerritoryLayer implements Layer {
       this.game,
       this.theme,
     );
-    this.territoryRenderer = renderer;
-    if (this.territoryRenderer) {
-      this.territoryRenderer.setAlternativeView(this.alternativeView);
-      this.territoryRenderer.markAllDirty();
-      this.territoryRenderer.refreshPalette();
-      this.territoryRenderer.setHoverHighlightOptions(
-        this.hoverHighlightOptions(),
-      );
-      this.territoryRenderer.setHoveredPlayerId(
-        this.highlightedTerritory?.smallID() ?? null,
-      );
+    if (renderer) {
+      const strategy = new WebglTerritoryRenderer(renderer, this.game);
+      strategy.setAlternativeView(this.alternativeView);
+      strategy.markAllDirty();
+      strategy.refreshPalette();
+      strategy.setHoverHighlightOptions(this.hoverHighlightOptions());
+      strategy.setHover(this.highlightedTerritory?.smallID() ?? null);
+      this.territoryRenderer = strategy;
+      this.webglSupported = true;
+      this.emitWebGLStatus(true, true, true, undefined);
+      return;
     }
 
-    const supported = this.territoryRenderer !== null;
-    const active = this.territoryRenderer !== null;
     const fallbackReason =
       reason ??
       "WebGL not available. Using canvas fallback for borders and fill.";
-
-    this.webglSupported = supported;
-    this.emitWebGLStatus(
-      true,
-      active,
-      supported,
-      active ? undefined : fallbackReason,
+    this.territoryRenderer = new CanvasTerritoryRenderer(this.game, this.theme);
+    this.territoryRenderer.setAlternativeView(this.alternativeView);
+    this.territoryRenderer.setHoverHighlightOptions(
+      this.hoverHighlightOptions(),
     );
+    this.webglSupported = false;
+    this.emitWebGLStatus(true, false, false, fallbackReason);
   }
 
   /**
@@ -508,90 +483,37 @@ export class TerritoryLayer implements Layer {
     );
   }
 
-  initImageData() {
-    this.game.forEachTile((tile) => {
-      const cell = new Cell(this.game.x(tile), this.game.y(tile));
-      const index = cell.y * this.game.width() + cell.x;
-      const offset = index * 4;
-      this.imageData.data[offset + 3] = 0;
-      this.alternativeImageData.data[offset + 3] = 0;
-    });
-  }
-
   renderLayer(context: CanvasRenderingContext2D) {
     const now = Date.now();
-    // When WebGL is available, rely entirely on the GPU renderer (even in alt view).
-    const gpuTerritoryActive = this.territoryRenderer !== null;
-    const skipTerritoryCanvas = gpuTerritoryActive;
-
-    if (
+    const canRefresh =
       now > this.lastDragTime + this.nodrawDragDuration &&
-      now > this.lastRefresh + this.refreshRate
-    ) {
+      now > this.lastRefresh + this.refreshRate;
+    if (canRefresh) {
       this.lastRefresh = now;
       const renderTerritoryStart = FrameProfiler.start();
       this.renderTerritory();
       FrameProfiler.end("TerritoryLayer:renderTerritory", renderTerritoryStart);
-
-      const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
-      const vx0 = Math.max(0, topLeft.x);
-      const vy0 = Math.max(0, topLeft.y);
-      const vx1 = Math.min(this.game.width() - 1, bottomRight.x);
-      const vy1 = Math.min(this.game.height() - 1, bottomRight.y);
-
-      const w = vx1 - vx0 + 1;
-      const h = vy1 - vy0 + 1;
-
-      // When WebGL borders are active and we're in alternative view, the 2D
-      // territory buffer (alternativeImageData) is effectively transparent and
-      // all visible work is done by the WebGL layer. Skip putImageData in that
-      // case to avoid unnecessary CPU work each frame.
-      const shouldBlitTerritories = !gpuTerritoryActive && !skipTerritoryCanvas;
-
-      if (w > 0 && h > 0 && shouldBlitTerritories) {
-        const putImageStart = FrameProfiler.start();
-        this.context.putImageData(
-          this.alternativeView ? this.alternativeImageData : this.imageData,
-          0,
-          0,
-          vx0,
-          vy0,
-          w,
-          h,
-        );
-        FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
-      }
     }
 
-    if (gpuTerritoryActive) {
-      const webglRenderStart = FrameProfiler.start();
-      this.territoryRenderer?.render();
-      FrameProfiler.end(
-        "TerritoryLayer:territoryWebGL.render",
-        webglRenderStart,
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const vx0 = Math.max(0, topLeft.x);
+    const vy0 = Math.max(0, topLeft.y);
+    const vx1 = Math.min(this.game.width() - 1, bottomRight.x);
+    const vy1 = Math.min(this.game.height() - 1, bottomRight.y);
+
+    const w = vx1 - vx0 + 1;
+    const h = vy1 - vy0 + 1;
+    if (this.territoryRenderer) {
+      this.territoryRenderer.render(
+        context,
+        {
+          x: vx0,
+          y: vy0,
+          width: w,
+          height: h,
+        },
+        canRefresh,
       );
-      const drawCanvasStart = FrameProfiler.start();
-      context.drawImage(
-        this.territoryRenderer!.canvas,
-        -this.game.width() / 2,
-        -this.game.height() / 2,
-        this.game.width(),
-        this.game.height(),
-      );
-      FrameProfiler.end(
-        "TerritoryLayer:territoryWebGL.drawImage",
-        drawCanvasStart,
-      );
-    } else if (!skipTerritoryCanvas) {
-      const drawCanvasStart = FrameProfiler.start();
-      context.drawImage(
-        this.canvas,
-        -this.game.width() / 2,
-        -this.game.height() / 2,
-        this.game.width(),
-        this.game.height(),
-      );
-      FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
     }
 
     if (this.game.inSpawnPhase()) {
@@ -611,6 +533,9 @@ export class TerritoryLayer implements Layer {
   }
 
   renderTerritory() {
+    if (!this.territoryRenderer) {
+      return;
+    }
     let numToRender = Math.floor(this.tileToRenderQueue.size() / 10);
     if (numToRender === 0 || this.game.inSpawnPhase()) {
       numToRender = this.tileToRenderQueue.size();
@@ -633,123 +558,11 @@ export class TerritoryLayer implements Layer {
   }
 
   paintTerritory(tile: TileRef, _maybeStaleBorder: boolean = false) {
-    const cpuStart = FrameProfiler.start();
-    const useGpuTerritory = this.territoryRenderer !== null;
-    const hasOwner = this.game.hasOwner(tile);
-    const rawOwner = hasOwner ? this.game.owner(tile) : null;
-    const owner =
-      rawOwner &&
-      typeof (rawOwner as any).isPlayer === "function" &&
-      (rawOwner as any).isPlayer()
-        ? (rawOwner as PlayerView)
-        : null;
-    const isBorderTile = this.game.isBorder(tile);
-    const hasFallout = this.game.hasFallout(tile);
-    let isDefended = false;
-    if (owner && isBorderTile) {
-      isDefended = this.game.hasUnitNearby(
-        tile,
-        this.game.config().defensePostRange(),
-        UnitType.DefensePost,
-        owner.id(),
-      );
-    }
-
-    if (useGpuTerritory) {
-      this.territoryRenderer?.markTile(tile);
-      if (!owner || !isBorderTile) {
-        this.territoryRenderer?.clearBorderColor(tile);
-      } else {
-        const borderCol = owner.borderColor(tile, isDefended).rgba;
-        this.territoryRenderer?.setBorderColor(tile, {
-          r: borderCol.r,
-          g: borderCol.g,
-          b: borderCol.b,
-          a: Math.round((borderCol.a ?? 1) * 255),
-        });
-      }
-    } else {
-      if (!owner) {
-        if (hasFallout) {
-          this.paintTile(this.imageData, tile, this.theme.falloutColor(), 150);
-          this.paintTile(
-            this.alternativeImageData,
-            tile,
-            this.theme.falloutColor(),
-            150,
-          );
-        } else {
-          this.clearTile(tile);
-        }
-      } else {
-        const myPlayer = this.game.myPlayer();
-
-        if (isBorderTile) {
-          if (myPlayer) {
-            const alternativeColor = this.alternateViewColor(owner);
-            this.paintTile(
-              this.alternativeImageData,
-              tile,
-              alternativeColor,
-              255,
-            );
-          }
-          this.paintTile(
-            this.imageData,
-            tile,
-            owner.borderColor(tile, isDefended),
-            255,
-          );
-        } else {
-          // Alternative view only shows borders.
-          this.clearAlternativeTile(tile);
-
-          this.paintTile(this.imageData, tile, owner.territoryColor(tile), 150);
-        }
-      }
-    }
-    FrameProfiler.end("TerritoryLayer:paintTerritory.cpu", cpuStart);
-  }
-
-  alternateViewColor(other: PlayerView): Colord {
-    const myPlayer = this.game.myPlayer();
-    if (!myPlayer) {
-      return this.theme.neutralColor();
-    }
-    if (other.smallID() === myPlayer.smallID()) {
-      return this.theme.selfColor();
-    }
-    if (other.isFriendly(myPlayer)) {
-      return this.theme.allyColor();
-    }
-    if (!other.hasEmbargo(myPlayer)) {
-      return this.theme.neutralColor();
-    }
-    return this.theme.enemyColor();
-  }
-
-  paintAlternateViewTile(tile: TileRef, other: PlayerView) {
-    const color = this.alternateViewColor(other);
-    this.paintTile(this.alternativeImageData, tile, color, 255);
-  }
-
-  paintTile(imageData: ImageData, tile: TileRef, color: Colord, alpha: number) {
-    const offset = tile * 4;
-    imageData.data[offset] = color.rgba.r;
-    imageData.data[offset + 1] = color.rgba.g;
-    imageData.data[offset + 2] = color.rgba.b;
-    imageData.data[offset + 3] = alpha;
+    this.territoryRenderer?.paintTile(tile);
   }
 
   clearTile(tile: TileRef) {
-    const offset = tile * 4;
-    this.imageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
-    this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
-  }
-
-  clearAlternativeTile(tile: TileRef) {
-    const offset = tile * 4;
-    this.alternativeImageData.data[offset + 3] = 0; // Set alpha to 0 (fully transparent)
+    this.territoryRenderer?.clearTile(tile);
   }
 
   enqueueTile(tile: TileRef) {
