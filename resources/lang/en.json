@@ -804,5 +804,9 @@
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
+  },
+  "join_modal": {
+    "title": "Joining game...",
+    "please_wait": "Please wait while we authenticate you"
   }
 }
