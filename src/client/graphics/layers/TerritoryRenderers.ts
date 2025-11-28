@@ -110,7 +110,7 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
       } else {
         this.clearTile(tile);
       }
-      FrameProfiler.end("TerritoryLayer:paintTerritory.cpu", cpuStart);
+      FrameProfiler.end("CanvasTerritoryRenderer:paintTile", cpuStart);
       return;
     }
 
@@ -142,7 +142,7 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
         150,
       );
     }
-    FrameProfiler.end("TerritoryLayer:paintTerritory.cpu", cpuStart);
+    FrameProfiler.end("CanvasTerritoryRenderer:paintTile", cpuStart);
   }
 
   render(
@@ -165,7 +165,7 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
         width,
         height,
       );
-      FrameProfiler.end("TerritoryLayer:putImageData", putImageStart);
+      FrameProfiler.end("CanvasTerritoryRenderer:putImageData", putImageStart);
     }
 
     const drawCanvasStart = FrameProfiler.start();
@@ -176,7 +176,7 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
       this.game.width(),
       this.game.height(),
     );
-    FrameProfiler.end("TerritoryLayer:drawCanvas", drawCanvasStart);
+    FrameProfiler.end("CanvasTerritoryRenderer:drawCanvas", drawCanvasStart);
   }
 
   setAlternativeView(enabled: boolean): void {
@@ -304,7 +304,7 @@ export class WebglTerritoryRenderer implements TerritoryRendererStrategy {
   ): void {
     const webglRenderStart = FrameProfiler.start();
     this.renderer.render();
-    FrameProfiler.end("TerritoryLayer:territoryWebGL.render", webglRenderStart);
+    FrameProfiler.end("WebglTerritoryRenderer:render", webglRenderStart);
 
     const drawCanvasStart = FrameProfiler.start();
     context.drawImage(
@@ -314,10 +314,7 @@ export class WebglTerritoryRenderer implements TerritoryRendererStrategy {
       this.game.width(),
       this.game.height(),
     );
-    FrameProfiler.end(
-      "TerritoryLayer:territoryWebGL.drawImage",
-      drawCanvasStart,
-    );
+    FrameProfiler.end("WebglTerritoryRenderer:drawImage", drawCanvasStart);
   }
 
   setAlternativeView(enabled: boolean): void {

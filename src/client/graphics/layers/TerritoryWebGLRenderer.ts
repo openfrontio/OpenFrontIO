@@ -481,10 +481,13 @@ export class TerritoryWebGLRenderer {
     }
     const gl = this.gl;
 
-    const uploadSpan = FrameProfiler.start();
+    const uploadStateSpan = FrameProfiler.start();
     this.uploadStateTexture();
+    FrameProfiler.end("TerritoryWebGLRenderer:uploadState", uploadStateSpan);
+
+    const uploadBorderSpan = FrameProfiler.start();
     this.uploadBorderTexture();
-    FrameProfiler.end("TerritoryWebGLRenderer:uploadState", uploadSpan);
+    FrameProfiler.end("TerritoryWebGLRenderer:uploadBorder", uploadBorderSpan);
 
     const renderSpan = FrameProfiler.start();
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -524,11 +527,15 @@ export class TerritoryWebGLRenderer {
     FrameProfiler.end("TerritoryWebGLRenderer:draw", renderSpan);
   }
 
-  private uploadStateTexture() {
-    if (!this.gl || !this.stateTexture) return;
+  private uploadStateTexture(): { rows: number; bytes: number } {
+    if (!this.gl || !this.stateTexture) return { rows: 0, bytes: 0 };
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
+
+    const bytesPerPixel = Uint16Array.BYTES_PER_ELEMENT;
+    let rowsUploaded = 0;
+    let bytesUploaded = 0;
 
     if (this.needsFullUpload) {
       gl.texImage2D(
@@ -544,11 +551,13 @@ export class TerritoryWebGLRenderer {
       );
       this.needsFullUpload = false;
       this.dirtyRows.clear();
-      return;
+      rowsUploaded = this.canvas.height;
+      bytesUploaded = this.canvas.width * this.canvas.height * bytesPerPixel;
+      return { rows: rowsUploaded, bytes: bytesUploaded };
     }
 
     if (this.dirtyRows.size === 0) {
-      return;
+      return { rows: 0, bytes: 0 };
     }
 
     for (const [y, span] of this.dirtyRows) {
@@ -566,15 +575,22 @@ export class TerritoryWebGLRenderer {
         gl.UNSIGNED_SHORT,
         rowSlice,
       );
+      rowsUploaded++;
+      bytesUploaded += width * bytesPerPixel;
     }
     this.dirtyRows.clear();
+    return { rows: rowsUploaded, bytes: bytesUploaded };
   }
 
-  private uploadBorderTexture() {
-    if (!this.gl || !this.borderColorTexture) return;
+  private uploadBorderTexture(): { rows: number; bytes: number } {
+    if (!this.gl || !this.borderColorTexture) return { rows: 0, bytes: 0 };
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this.borderColorTexture);
+
+    const bytesPerPixel = Uint8Array.BYTES_PER_ELEMENT * 4; // RGBA8
+    let rowsUploaded = 0;
+    let bytesUploaded = 0;
 
     if (this.borderNeedsFullUpload) {
       gl.texImage2D(
@@ -590,11 +606,13 @@ export class TerritoryWebGLRenderer {
       );
       this.borderNeedsFullUpload = false;
       this.borderDirtyRows.clear();
-      return;
+      rowsUploaded = this.canvas.height;
+      bytesUploaded = this.canvas.width * this.canvas.height * bytesPerPixel;
+      return { rows: rowsUploaded, bytes: bytesUploaded };
     }
 
     if (this.borderDirtyRows.size === 0) {
-      return;
+      return { rows: 0, bytes: 0 };
     }
 
     for (const [y, span] of this.borderDirtyRows) {
@@ -615,8 +633,27 @@ export class TerritoryWebGLRenderer {
         gl.UNSIGNED_BYTE,
         rowSlice,
       );
+      rowsUploaded++;
+      bytesUploaded += width * bytesPerPixel;
     }
     this.borderDirtyRows.clear();
+    return { rows: rowsUploaded, bytes: bytesUploaded };
+  }
+
+  private labelUpload(
+    base: string,
+    metrics: { rows: number; bytes: number },
+  ): string {
+    if (metrics.rows === 0 || metrics.bytes === 0) {
+      return `${base} (skip)`;
+    }
+    const rowBucket =
+      metrics.rows >= this.canvas.height
+        ? "full"
+        : `${Math.ceil(metrics.rows / 50) * 50}`;
+    const kb = Math.max(1, Math.round(metrics.bytes / 1024));
+    const kbBucket = kb > 1024 ? `${Math.round(kb / 1024)}MB` : `${kb}KB`;
+    return `${base} rows:${rowBucket} bytes:${kbBucket}`;
   }
 
   private uploadPalette() {
