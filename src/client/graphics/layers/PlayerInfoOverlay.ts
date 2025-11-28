@@ -26,7 +26,7 @@ import {
   renderTroops,
   translateText,
 } from "../../Utils";
-import { resolveHoverTarget } from "../HoverTargetResolver";
+import { resolveHoverTarget } from "../HoverTarget";
 import { getFirstPlacePlayer, getPlayerIcons } from "../PlayerIcons";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
@@ -94,7 +94,7 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       return;
     }
 
-    const target = resolveHoverTarget(this.game, worldCoord);
+    const target = this.resolveHoverTarget(worldCoord);
     if (target.player) {
       this.player = target.player;
       this.player.profile().then((p) => {
@@ -152,6 +152,13 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
       default:
         return translateText("relation.default");
     }
+  }
+
+  private resolveHoverTarget(worldCoord: { x: number; y: number }): {
+    player: PlayerView | null;
+    unit: UnitView | null;
+  } {
+    return resolveHoverTarget(this.game, worldCoord);
   }
 
   private displayUnitCount(
