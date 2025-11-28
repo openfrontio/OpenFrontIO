@@ -144,13 +144,13 @@ export class TerritoryWebGLStatus extends LitElement implements Layer {
 
   private statusText(): string {
     if (!this.enabled) {
-      return "WebGL borders hidden";
+      return "WebGL hidden";
     }
     if (!this.supported) {
       return "WebGL unsupported (fallback)";
     }
     if (this.active) {
-      return "WebGL borders active";
+      return "WebGL active";
     }
     return "WebGL enabled (fallback)";
   }
