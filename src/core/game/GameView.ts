@@ -121,8 +121,8 @@ export class UnitView {
   health(): number {
     return this.data.health ?? 0;
   }
-  constructionType(): UnitType | undefined {
-    return this.data.constructionType;
+  isUnderConstruction(): boolean {
+    return this.data.underConstruction === true;
   }
   targetUnitId(): number | undefined {
     return this.data.targetUnitId;
