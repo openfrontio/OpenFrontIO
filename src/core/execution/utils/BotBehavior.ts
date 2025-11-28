@@ -27,7 +27,7 @@ const EMOJI_TARGET_ALLY = (["🕊️", "👎"] as const).map(emojiId);
 export const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
 
 export class BotBehavior {
-  private enemy: Player | null = null;
+  private enemy: Player | TerraNullius | null = null;
   private enemyUpdated: Tick | undefined;
 
   constructor(
@@ -76,14 +76,17 @@ export class BotBehavior {
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
-  private setNewEnemy(newEnemy: Player | null, force = false) {
+  private setNewEnemy(newEnemy: Player | TerraNullius | null, force = false) {
     if (newEnemy !== null && !force && !this.shouldAttack(newEnemy)) return;
     this.enemy = newEnemy;
     this.enemyUpdated = this.game.ticks();
   }
 
-  private shouldAttack(other: Player): boolean {
+  private shouldAttack(other: Player | TerraNullius): boolean {
     if (this.player === null) throw new Error("not initialized");
+    if (!other.isPlayer()) {
+      return true;
+    }
     if (this.player.isOnSameTeam(other)) {
       return false;
     }
@@ -243,7 +246,7 @@ export class BotBehavior {
 
       // Select nuked territory
       if (this.enemy === null && this.hasBorderingNukedTerritory()) {
-        return this.game.terraNullius();
+        this.setNewEnemy(this.game.terraNullius());
       }
 
       // Select the most hated player
@@ -374,8 +377,12 @@ export class BotBehavior {
     return this.enemySanityCheck();
   }
 
-  private enemySanityCheck(): Player | null {
-    if (this.enemy && this.player.isFriendly(this.enemy)) {
+  private enemySanityCheck(): Player | TerraNullius | null {
+    if (
+      this.enemy &&
+      this.enemy.isPlayer() &&
+      this.player.isFriendly(this.enemy)
+    ) {
       this.clearEnemy();
     }
     return this.enemy;
