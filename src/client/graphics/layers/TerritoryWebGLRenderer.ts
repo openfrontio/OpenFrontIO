@@ -20,8 +20,7 @@ export interface HoverHighlightOptions {
 /**
  * WebGL2 territory renderer that reads the shared tile state buffer
  * (SharedArrayBuffer) and shades tiles via a small palette texture.
- * Borders are still drawn by the dedicated border renderer; this class
- * only fills territory / fallout tiles.
+ * Handles both territory/fallout fills and border rendering in a unified shader.
  */
 export class TerritoryWebGLRenderer {
   public readonly canvas: HTMLCanvasElement;
