@@ -103,16 +103,12 @@ export class UILayer implements Layer {
   }
 
   onUnitEvent(unit: UnitView) {
+    const underConst = unit.isUnderConstruction();
+    if (underConst) {
+      this.createLoadingBar(unit);
+      return;
+    }
     switch (unit.type()) {
-      case UnitType.Construction: {
-        const constructionType = unit.constructionType();
-        if (constructionType === undefined) {
-          // Skip units without construction type
-          return;
-        }
-        this.createLoadingBar(unit);
-        break;
-      }
       case UnitType.Warship: {
         this.drawHealthBar(unit);
         break;
@@ -318,22 +314,20 @@ export class UILayer implements Layer {
     if (!unit.isActive()) {
       return 1;
     }
-    switch (unit.type()) {
-      case UnitType.Construction: {
-        const constructionType = unit.constructionType();
-        if (constructionType === undefined) {
-          return 1;
-        }
-        const constDuration =
-          this.game.unitInfo(constructionType).constructionDuration;
-        if (constDuration === undefined) {
-          throw new Error("unit does not have constructionTime");
-        }
-        return (
-          (this.game.ticks() - unit.createdAt()) /
-          (constDuration === 0 ? 1 : constDuration)
-        );
+    const underConst = unit.isUnderConstruction();
+    if (underConst) {
+      const constDuration = this.game.unitInfo(
+        unit.type(),
+      ).constructionDuration;
+      if (constDuration === undefined) {
+        throw new Error("unit does not have constructionTime");
       }
+      return (
+        (this.game.ticks() - unit.createdAt()) /
+        (constDuration === 0 ? 1 : constDuration)
+      );
+    }
+    switch (unit.type()) {
       case UnitType.MissileSilo:
       case UnitType.SAMLauncher:
         return !unit.markedForDeletion()
