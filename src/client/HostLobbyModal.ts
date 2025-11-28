@@ -809,10 +809,6 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async startGame() {
-    // if (this.useRandomMap) {
-    //   this.selectedMap = this.getRandomMap();
-    // }
-
     await this.putGameConfig();
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
