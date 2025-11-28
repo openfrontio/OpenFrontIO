@@ -852,6 +852,22 @@ export class GameImpl implements Game {
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);
   }
+
+  isDefended(ref: TileRef): boolean {
+    return this._map.isDefended(ref);
+  }
+
+  setDefended(ref: TileRef, value: boolean): void {
+    return this._map.setDefended(ref, value);
+  }
+
+  getRelation(ref: TileRef): number {
+    return this._map.getRelation(ref);
+  }
+
+  setRelation(ref: TileRef, relation: number): void {
+    return this._map.setRelation(ref, relation);
+  }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }

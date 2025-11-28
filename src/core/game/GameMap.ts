@@ -27,6 +27,10 @@ export interface GameMap {
   setOwnerID(ref: TileRef, playerId: number): void;
   hasFallout(ref: TileRef): boolean;
   setFallout(ref: TileRef, value: boolean): void;
+  isDefended(ref: TileRef): boolean;
+  setDefended(ref: TileRef, value: boolean): void;
+  getRelation(ref: TileRef): number;
+  setRelation(ref: TileRef, relation: number): void;
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
@@ -72,14 +76,20 @@ export class GameMapImpl implements GameMap {
   // State bits (Uint16Array)
   private static readonly PLAYER_ID_MASK = 0xfff;
   private static readonly FALLOUT_BIT = 13;
-  private static readonly DEFENSE_BONUS_BIT = 14;
-  // Bit 15 still reserved
+  private static readonly DEFENDED_BIT = 12;
+  private static readonly RELATION_MASK = 0xc000; // bits 14-15
+  private static readonly RELATION_SHIFT = 14;
+  // Relation values (stored in bits 14-15)
+  private static readonly RELATION_NEUTRAL = 0;
+  private static readonly RELATION_FRIENDLY = 1;
+  private static readonly RELATION_EMBARGO = 2;
 
   constructor(
     width: number,
     height: number,
     terrainData: Uint8Array,
     private numLandTiles_: number,
+    stateBuffer?: ArrayBufferLike,
   ) {
     if (terrainData.length !== width * height) {
       throw new Error(
@@ -89,7 +99,17 @@ export class GameMapImpl implements GameMap {
     this.width_ = width;
     this.height_ = height;
     this.terrain = terrainData;
-    this.state = new Uint16Array(width * height);
+    if (stateBuffer !== undefined) {
+      const state = new Uint16Array(stateBuffer);
+      if (state.length !== width * height) {
+        throw new Error(
+          `State buffer length ${state.length} doesn't match dimensions ${width}x${height}`,
+        );
+      }
+      this.state = state;
+    } else {
+      this.state = new Uint16Array(width * height);
+    }
     // Precompute the LUTs
     let ref = 0;
     this.refToX = new Array(width * height);
@@ -206,6 +226,33 @@ export class GameMapImpl implements GameMap {
     }
   }
 
+  isDefended(ref: TileRef): boolean {
+    return Boolean(this.state[ref] & (1 << GameMapImpl.DEFENDED_BIT));
+  }
+
+  setDefended(ref: TileRef, value: boolean): void {
+    if (value) {
+      this.state[ref] |= 1 << GameMapImpl.DEFENDED_BIT;
+    } else {
+      this.state[ref] &= ~(1 << GameMapImpl.DEFENDED_BIT);
+    }
+  }
+
+  getRelation(ref: TileRef): number {
+    return (
+      (this.state[ref] & GameMapImpl.RELATION_MASK) >>
+      GameMapImpl.RELATION_SHIFT
+    );
+  }
+
+  setRelation(ref: TileRef, relation: number): void {
+    // Clear existing relation bits
+    this.state[ref] &= ~GameMapImpl.RELATION_MASK;
+    // Set new relation bits
+    this.state[ref] |=
+      (relation << GameMapImpl.RELATION_SHIFT) & GameMapImpl.RELATION_MASK;
+  }
+
   isOnEdgeOfMap(ref: TileRef): boolean {
     const x = this.x(ref);
     const y = this.y(ref);
@@ -218,18 +265,6 @@ export class GameMapImpl implements GameMap {
     return this.neighbors(ref).some(
       (tr) => this.ownerID(tr) !== this.ownerID(ref),
     );
-  }
-
-  hasDefenseBonus(ref: TileRef): boolean {
-    return Boolean(this.state[ref] & (1 << GameMapImpl.DEFENSE_BONUS_BIT));
-  }
-
-  setDefenseBonus(ref: TileRef, value: boolean): void {
-    if (value) {
-      this.state[ref] |= 1 << GameMapImpl.DEFENSE_BONUS_BIT;
-    } else {
-      this.state[ref] &= ~(1 << GameMapImpl.DEFENSE_BONUS_BIT);
-    }
   }
 
   // Helper methods
