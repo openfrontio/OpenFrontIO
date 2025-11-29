@@ -1,7 +1,7 @@
 import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import type { GameView } from "../../../core/game/GameView";
+import type { GameView, PlayerView } from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
@@ -164,7 +164,7 @@ export class SAMRadiusLayer implements Layer {
         x: this.game.x(tile),
         y: this.game.y(tile),
         r: this.game.config().samRange(sam.level()),
-        owner: sam.owner().smallID(),
+        owner: sam.owner(),
       };
     });
 
@@ -176,13 +176,15 @@ export class SAMRadiusLayer implements Layer {
    * so overlapping circles appear as one combined shape.
    */
   private drawCirclesUnion(
-    circles: Array<{ x: number; y: number; r: number; owner: number }>,
+    circles: Array<{ x: number; y: number; r: number; owner: PlayerView }>,
   ) {
     const ctx = this.context;
     if (circles.length === 0) return;
 
     // styles
-    const strokeStyleOuter = "rgba(0, 0, 0, 1)";
+    const strokeStyleOuterSelf = "rgba(255, 255, 255, 1)";
+    const strokeStyleOuterUnfriendly = "rgba(0, 0, 0, 1)";
+    const strokeStyleOuterFriendly = "rgba(155, 155, 155, 1)";
 
     // 1) Fill union simply by drawing all full circle paths and filling once
     ctx.save();
@@ -202,7 +204,6 @@ export class SAMRadiusLayer implements Layer {
     ctx.lineWidth = 2;
     ctx.setLineDash([12, 6]);
     ctx.lineDashOffset = this.dashOffset;
-    ctx.strokeStyle = strokeStyleOuter;
 
     const TWO_PI = Math.PI * 2;
 
@@ -253,12 +254,21 @@ export class SAMRadiusLayer implements Layer {
       const covered: Array<[number, number]> = [];
       let fullyCovered = false;
 
+      if (this.game.isMyPlayer(a.owner)) {
+        ctx.strokeStyle = strokeStyleOuterSelf;
+      } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
+        ctx.strokeStyle = strokeStyleOuterFriendly;
+      } else {
+        ctx.strokeStyle = strokeStyleOuterUnfriendly;
+      }
+
       for (let j = 0; j < circles.length; j++) {
         if (i === j) continue;
         // Only consider coverage from circles owned by the same player.
         // This shows separate boundaries for different players' SAM coverage,
         // making contested areas visually distinct.
-        if (a.owner !== circles[j].owner) continue;
+        if (a.owner.smallID() !== circles[j].owner.smallID()) continue;
+
         const b = circles[j];
         const dx = b.x - a.x;
         const dy = b.y - a.y;
