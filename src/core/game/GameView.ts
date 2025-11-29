@@ -226,7 +226,7 @@ export class PlayerView {
     if (this.team() === null) {
       this._territoryColor = colord(
         this.cosmetics.color?.color ??
-          this.cosmetics.pattern?.colorPalette?.primaryColor ??
+          pattern?.colorPalette?.primaryColor ??
           defaultTerritoryColor.toHex(),
       );
     } else {
