@@ -1,6 +1,5 @@
 import { Config } from "../configuration/Config";
 import { Execution, Game, Player, UnitType } from "../game/Game";
-import { GameImpl } from "../game/GameImpl";
 import { GameMap, TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
@@ -11,8 +10,11 @@ export class PlayerExecution implements Execution {
   private lastCalc = 0;
   private mg: Game;
   private active = true;
+  private _visitedBuffer: Uint8Array;
 
-  constructor(private player: Player) {}
+  constructor(private player: Player) {
+    this._visitedBuffer = new Uint8Array(0); // Initialize empty buffer
+  }
 
   activeDuringSpawnPhase(): boolean {
     return false;
@@ -259,31 +261,45 @@ export class PlayerExecution implements Execution {
   }
 
   private calculateClusters(): Set<TileRef>[] {
-    const seen = new Set<TileRef>();
-    const border = this.player.borderTiles();
+    const borderTiles = this.player.borderTiles();
+    if (borderTiles.size === 0) return [];
+
+    // Ensure buffer is large enough
+    const mapSize = this.mg.width() * this.mg.height();
+    if (!this._visitedBuffer || this._visitedBuffer.length < mapSize) {
+      this._visitedBuffer = new Uint8Array(mapSize);
+    } else {
+      // Fast clear (much faster than creating a new Set)
+      this._visitedBuffer.fill(0);
+    }
+
     const clusters: Set<TileRef>[] = [];
-    for (const tile of border) {
-      if (seen.has(tile)) {
-        continue;
-      }
+    const stack: TileRef[] = []; // Reusable stack
 
-      const cluster = new Set<TileRef>();
-      const queue: TileRef[] = [tile];
-      seen.add(tile);
-      while (queue.length > 0) {
-        const curr = queue.shift();
-        if (curr === undefined) throw new Error("curr is undefined");
-        cluster.add(curr);
+    for (const startTile of borderTiles) {
+      // FAST: Array access instead of Set.has()
+      if (this._visitedBuffer[startTile] === 1) continue;
 
-        const neighbors = (this.mg as GameImpl).neighborsWithDiag(curr);
-        for (const neighbor of neighbors) {
-          if (border.has(neighbor) && !seen.has(neighbor)) {
-            queue.push(neighbor);
-            seen.add(neighbor);
+      const currentCluster = new Set<TileRef>();
+      stack.push(startTile);
+      this._visitedBuffer[startTile] = 1;
+
+      while (stack.length > 0) {
+        const tile = stack.pop()!;
+        currentCluster.add(tile);
+
+        //Use callback to avoid creating a 'neighbors' Array
+        this.mg.forEachNeighborWithDiag(tile, (neighbor) => {
+          if (
+            borderTiles.has(neighbor) &&
+            this._visitedBuffer[neighbor] === 0
+          ) {
+            stack.push(neighbor);
+            this._visitedBuffer[neighbor] = 1;
           }
-        }
+        });
       }
-      clusters.push(cluster);
+      clusters.push(currentCluster);
     }
     return clusters;
   }
