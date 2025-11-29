@@ -517,6 +517,30 @@ export class GameImpl implements Game {
     return ns;
   }
 
+  // Zero-allocation neighbor iteration for performance-critical code
+  forEachNeighborWithDiag(
+    tile: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void {
+    const x = this.x(tile);
+    const y = this.y(tile);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue; // Skip the center tile
+        const newX = x + dx;
+        const newY = y + dy;
+        if (
+          newX >= 0 &&
+          newX < this._width &&
+          newY >= 0 &&
+          newY < this._height
+        ) {
+          callback(this._map.ref(newX, newY));
+        }
+      }
+    }
+  }
+
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
