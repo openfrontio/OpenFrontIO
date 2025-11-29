@@ -181,10 +181,14 @@ export class SAMRadiusLayer implements Layer {
     const ctx = this.context;
     if (circles.length === 0) return;
 
-    // styles
-    const strokeStyleOuterSelf = "rgba(255, 255, 255, 1)";
-    const strokeStyleOuterUnfriendly = "rgba(0, 0, 0, 1)";
-    const strokeStyleOuterFriendly = "rgba(155, 155, 155, 1)";
+    // Line Parameters
+    const outlineColor = "rgba(0, 0, 0, 1)";
+    const lineColorSelf = "rgba(0, 255, 0, 1)";
+    const lineColorEnemy = "rgba(255, 0, 0, 1)";
+    const lineColorFriend = "rgba(255, 255, 0, 1)";
+    const extraOutlineWidth = 1; // adds onto below
+    const lineWidth = 2;
+    const lineDash = [12, 6];
 
     // 1) Fill union simply by drawing all full circle paths and filling once
     ctx.save();
@@ -201,9 +205,6 @@ export class SAMRadiusLayer implements Layer {
     if (!this.showStroke) return;
 
     ctx.save();
-    ctx.lineWidth = 2;
-    ctx.setLineDash([12, 6]);
-    ctx.lineDashOffset = this.dashOffset;
 
     const TWO_PI = Math.PI * 2;
 
@@ -253,14 +254,6 @@ export class SAMRadiusLayer implements Layer {
       // collect intervals on circle a that are covered by other circles
       const covered: Array<[number, number]> = [];
       let fullyCovered = false;
-
-      if (this.game.isMyPlayer(a.owner)) {
-        ctx.strokeStyle = strokeStyleOuterSelf;
-      } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
-        ctx.strokeStyle = strokeStyleOuterFriendly;
-      } else {
-        ctx.strokeStyle = strokeStyleOuterUnfriendly;
-      }
 
       for (let j = 0; j < circles.length; j++) {
         if (i === j) continue;
@@ -328,6 +321,27 @@ export class SAMRadiusLayer implements Layer {
         if (e - s < 1e-3) continue;
         ctx.beginPath();
         ctx.arc(a.x, a.y, a.r, s, e);
+
+        // Outline
+        ctx.strokeStyle = outlineColor;
+        ctx.lineWidth = lineWidth + extraOutlineWidth;
+        ctx.setLineDash([
+          lineDash[0] + extraOutlineWidth,
+          Math.max(lineDash[1] - extraOutlineWidth, 0),
+        ]);
+        ctx.lineDashOffset = this.dashOffset + extraOutlineWidth / 2;
+        ctx.stroke();
+        // Inline
+        if (this.game.isMyPlayer(a.owner)) {
+          ctx.strokeStyle = lineColorSelf;
+        } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
+          ctx.strokeStyle = lineColorFriend;
+        } else {
+          ctx.strokeStyle = lineColorEnemy;
+        }
+        ctx.lineWidth = lineWidth;
+        ctx.setLineDash(lineDash);
+        ctx.lineDashOffset = this.dashOffset;
         ctx.stroke();
       }
     }

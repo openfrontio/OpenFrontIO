@@ -54,7 +54,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   }
 
   tick() {
-    this.updateSAMs();
+    //this.updateSAMs();
     this.updateTrajectoryPreview();
   }
 
@@ -250,12 +250,14 @@ export class NukeTrajectoryPreviewLayer implements Layer {
 
     this.trajectoryPoints = pathFinder.allTiles();
 
-    // TODO: I believe the following are expensive calculations in rendering
-    // But trajectory is already calculated here and needed for prediction
+    // NOTE: This is a lot to do in the rendering method, naive
+    // But trajectory is already calculated here and needed for prediction.
+    // From testing, does not seem to have much effect, so I keep it this way.
 
     // Calculate points when bomb targetability switches
-    const targetRangeSquared =
-      this.game.config().defaultNukeTargetableRange() ** 2;
+    const targetRangeSquared = this.game.config().defaultNukeInvulnerability()
+      ? this.game.config().defaultNukeTargetableRange() ** 2
+      : Number.MAX_VALUE;
 
     // Find two switch points where bomb transitions:
     // [0]: leaves spawn range, enters untargetable zone
@@ -287,15 +289,15 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     }
     // Find the point where SAM can intercept
     this.targetedIndex = this.trajectoryPoints.length;
-    // Get all active SAM launchers
+    // Get all active unfriendly SAM launchers
     const samLaunchers = this.game
       .units(UnitType.SAMLauncher)
-      .filter((unit) => unit.isActive());
-    // Update our tracking set
-    this.samLaunchers.clear();
-    samLaunchers.forEach((sam) =>
-      this.samLaunchers.set(sam.id(), sam.owner().smallID()),
-    );
+      .filter(
+        (unit) =>
+          unit.isActive() &&
+          !this.game.isMyPlayer(unit.owner()) &&
+          !this.game.myPlayer()?.isFriendly(unit.owner()),
+      );
     // Check trajectory
     for (let i = 0; i < this.trajectoryPoints.length; i++) {
       const tile = this.trajectoryPoints[i];
@@ -307,10 +309,10 @@ export class NukeTrajectoryPreviewLayer implements Layer {
           break;
         }
       }
+      if (this.targetedIndex !== this.trajectoryPoints.length) break;
       // Jump over untargetable segment
       if (i === this.untargetableSegmentBounds[0])
         i = this.untargetableSegmentBounds[1] - 1;
-      if (this.targetedIndex !== this.trajectoryPoints.length) break;
     }
   }
 
@@ -332,40 +334,54 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       return;
     }
 
-    const territoryColor = player.territoryColor();
     // Set of line colors, targeted is after SAM intercept is detected.
-    const targettedLocationColor = "rgba(255, 0, 0, 1)";
-    const untargetableAndUntargetedLineColor = territoryColor
-      .alpha(0.8)
-      .saturate(0.8)
-      .toRgbString();
-    const targetableAndUntargetedLineColor = territoryColor
-      .alpha(0.8)
-      .saturate(0.5)
-      .toRgbString();
-    const untargetableAndTargetedLineColor = territoryColor
-      .alpha(0.7)
-      .desaturate(0.4)
-      .toRgbString();
-    const targetableAndTargetedLineColor = territoryColor
-      .alpha(0.7)
-      .desaturate(0.4)
-      .toRgbString();
+    const untargetedOutlineColor = "rgba(140, 140, 140, 1)";
+    const targetedOutlineColor = "rgba(150, 90, 90, 1)";
+    const targetedLocationColor = "rgba(255, 0, 0, 1)";
+    const untargetableAndUntargetedLineColor = "rgba(255, 255, 255, 1)";
+    const targetableAndUntargetedLineColor = "rgba(255, 255, 255, 1)";
+    const untargetableAndTargetedLineColor = "rgba(255, 80, 80, 1)";
+    const targetableAndTargetedLineColor = "rgba(255, 80, 80, 1)";
+
+    // Set of line widths
+    const outlineExtraWidth = 1.5; // adds onto below
+    const lineWidth = 1.25;
 
     // Set of line dashes
+    // Outline dashes calculated automatically
     const untargetableAndUntargetedLineDash = [2, 6];
     const targetableAndUntargetedLineDash = [8, 4];
     const untargetableAndTargetedLineDash = [2, 6];
     const targetableAndTargetedLineDash = [8, 4];
+
+    const outlineDash = (dash: number[], extra: number) => {
+      return [dash[0] + extra, Math.max(dash[1] - extra, 0)];
+    };
+
+    // Tracks the change of color and dash length throughout
+    let currentOutlineColor = untargetedOutlineColor;
+    let currentLineColor = targetableAndUntargetedLineColor;
+    let currentLineDash = targetableAndUntargetedLineDash;
+
+    // Take in set of "current" parameters and draw both outline and line.
+    const outlineAndStroke = () => {
+      context.lineWidth = lineWidth + outlineExtraWidth;
+      context.setLineDash(outlineDash(currentLineDash, outlineExtraWidth));
+      context.lineDashOffset = outlineExtraWidth / 2;
+      context.strokeStyle = currentOutlineColor;
+      context.stroke();
+      context.lineWidth = lineWidth;
+      context.setLineDash(currentLineDash);
+      context.lineDashOffset = 0;
+      context.strokeStyle = currentLineColor;
+      context.stroke();
+    };
 
     // Calculate offset to center coordinates (same as canvas drawing)
     const offsetX = -this.game.width() / 2;
     const offsetY = -this.game.height() / 2;
 
     context.save();
-    context.lineWidth = 1.5;
-    context.strokeStyle = targetableAndUntargetedLineColor;
-    context.setLineDash(targetableAndUntargetedLineDash);
     context.beginPath();
 
     // Draw line connecting trajectory points
@@ -380,66 +396,65 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         context.lineTo(x, y);
       }
       if (i === this.untargetableSegmentBounds[0]) {
-        context.stroke();
+        outlineAndStroke();
         // Draw Circle
         context.beginPath();
-        context.strokeStyle = targetableAndUntargetedLineColor;
-        context.setLineDash([]);
         context.arc(x, y, 4, 0, 2 * Math.PI, false);
-        context.stroke();
+        currentLineColor = targetableAndUntargetedLineColor;
+        currentLineDash = [1, 0];
+        outlineAndStroke();
         // Start New Line
         context.beginPath();
         if (i >= this.targetedIndex) {
-          context.strokeStyle = untargetableAndTargetedLineColor;
-          context.setLineDash(untargetableAndTargetedLineDash);
+          currentOutlineColor = targetedOutlineColor;
+          currentLineColor = untargetableAndTargetedLineColor;
+          currentLineDash = untargetableAndTargetedLineDash;
         } else {
-          context.strokeStyle = untargetableAndUntargetedLineColor;
-          context.setLineDash(untargetableAndUntargetedLineDash);
+          currentOutlineColor = untargetedOutlineColor;
+          currentLineColor = untargetableAndUntargetedLineColor;
+          currentLineDash = untargetableAndUntargetedLineDash;
         }
       } else if (i === this.untargetableSegmentBounds[1]) {
-        context.stroke();
+        outlineAndStroke();
         // Draw Circle
         context.beginPath();
-        context.strokeStyle = targetableAndUntargetedLineColor;
-        context.setLineDash([]);
         context.arc(x, y, 4, 0, 2 * Math.PI, false);
-        context.stroke();
+        currentLineColor = targetableAndUntargetedLineColor;
+        currentLineDash = [1, 0];
+        outlineAndStroke();
         // Start New Line
         context.beginPath();
         if (i >= this.targetedIndex) {
-          context.strokeStyle = targetableAndTargetedLineColor;
-          context.setLineDash(targetableAndTargetedLineDash);
+          currentOutlineColor = targetedOutlineColor;
+          currentLineColor = targetableAndTargetedLineColor;
+          currentLineDash = targetableAndTargetedLineDash;
         } else {
-          context.strokeStyle = targetableAndUntargetedLineColor;
-          context.setLineDash(targetableAndUntargetedLineDash);
+          currentOutlineColor = untargetedOutlineColor;
+          currentLineColor = targetableAndUntargetedLineColor;
+          currentLineDash = targetableAndUntargetedLineDash;
         }
-      } else if (i === this.targetedIndex) {
-        context.stroke();
+      }
+      if (i === this.targetedIndex) {
+        outlineAndStroke();
         // Draw X
         context.beginPath();
-        context.strokeStyle = targettedLocationColor;
-        context.setLineDash([]);
-        context.moveTo(x - 3, y - 3);
-        context.lineTo(x + 3, y + 3);
-        context.moveTo(x - 3, y + 3);
-        context.lineTo(x + 3, y - 3);
-        context.stroke();
+        context.moveTo(x - 4, y - 4);
+        context.lineTo(x + 4, y + 4);
+        context.moveTo(x - 4, y + 4);
+        context.lineTo(x + 4, y - 4);
+        currentOutlineColor = targetedOutlineColor;
+        currentLineColor = targetedLocationColor;
+        currentLineDash = [1, 0];
+        outlineAndStroke();
         // Start New Line
         context.beginPath();
-        if (
-          i >= this.untargetableSegmentBounds[0] &&
-          i <= this.untargetableSegmentBounds[1]
-        ) {
-          context.strokeStyle = untargetableAndTargetedLineColor;
-          context.setLineDash(untargetableAndTargetedLineDash);
-        } else {
-          context.strokeStyle = untargetableAndTargetedLineColor;
-          context.setLineDash(untargetableAndTargetedLineDash);
-        }
+        // Always in the targetable zone by definition.
+        currentLineColor = targetableAndTargetedLineColor;
+        currentLineDash = targetableAndTargetedLineDash;
       }
     }
 
-    context.stroke();
+    outlineAndStroke();
     context.restore();
   }
 }
