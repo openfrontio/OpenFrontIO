@@ -8,7 +8,7 @@ import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 /**
- * Layer responsible for rendering SAM launcher defense radiuses
+ * Layer responsible for rendering SAM launcher defense radii
  */
 export class SAMRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
@@ -157,7 +157,7 @@ export class SAMRadiusLayer implements Layer {
       this.samLaunchers.set(sam.id(), sam.owner().smallID()),
     );
 
-    // Draw union of SAM radiuses. Collect circle data then draw union outer arcs only
+    // Draw union of SAM radii. Collect circle data then draw union outer arcs only
     const circles = samLaunchers.map((sam) => {
       const tile = sam.tile();
       return {

@@ -1,6 +1,7 @@
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
 import { GhostStructureChangedEvent, MouseMoveEvent } from "../../InputHandler";
@@ -16,10 +17,12 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   private mousePos = { x: 0, y: 0 };
   private trajectoryPoints: TileRef[] = [];
   private untargetableSegmentBounds: [number, number] = [-1, -1];
+  private targetedIndex = -1;
   private lastTrajectoryUpdate: number = 0;
   private lastTargetTile: TileRef | null = null;
   private currentGhostStructure: UnitType | null = null;
   private cachedSpawnTile: TileRef | null = null; // Cache spawn tile to avoid expensive player.actions() calls
+  private readonly samLaunchers: Map<number, number> = new Map(); // Track SAM launcher IDs -> ownerSmallID
 
   constructor(
     private game: GameView,
@@ -51,6 +54,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   }
 
   tick() {
+    this.updateSAMs();
     this.updateTrajectoryPreview();
   }
 
@@ -58,6 +62,40 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     // Update trajectory path each frame for smooth responsiveness
     this.updateTrajectoryPath();
     this.drawTrajectoryPreview(context);
+  }
+
+  /**
+   * Update the list of SAMS for intercept prediction
+   */
+  private updateSAMs() {
+    // Check for updates to SAM launchers
+    const updates = this.game.updatesSinceLastTick();
+    const unitUpdates = updates?.[GameUpdateType.Unit];
+
+    if (unitUpdates) {
+      for (const update of unitUpdates) {
+        const unit = this.game.unit(update.id);
+        if (unit && unit.type() === UnitType.SAMLauncher) {
+          const wasTracked = this.samLaunchers.has(update.id);
+          const shouldTrack = unit.isActive();
+          const owner = unit.owner().smallID();
+
+          if (wasTracked && !shouldTrack) {
+            // SAM was destroyed
+            this.samLaunchers.delete(update.id);
+          } else if (!wasTracked && shouldTrack) {
+            // New SAM was built
+            this.samLaunchers.set(update.id, owner);
+          } else if (wasTracked && shouldTrack) {
+            // SAM still exists; check if owner changed
+            const prevOwner = this.samLaunchers.get(update.id);
+            if (prevOwner !== owner) {
+              this.samLaunchers.set(update.id, owner);
+            }
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -212,14 +250,17 @@ export class NukeTrajectoryPreviewLayer implements Layer {
 
     this.trajectoryPoints = pathFinder.allTiles();
 
+    // TODO: I believe the following are expensive calculations in rendering
+    // But trajectory is already calculated here and needed for prediction
+
     // Calculate points when bomb targetability switches
     const targetRangeSquared =
       this.game.config().defaultNukeTargetableRange() ** 2;
 
-    this.untargetableSegmentBounds = [-1, -1];
     // Find two switch points where bomb transitions:
     // [0]: leaves spawn range, enters untargetable zone
     // [1]: enters target range, becomes targetable again
+    this.untargetableSegmentBounds = [-1, -1];
     for (let i = 0; i < this.trajectoryPoints.length; i++) {
       const tile = this.trajectoryPoints[i];
       if (this.untargetableSegmentBounds[0] === -1) {
@@ -244,6 +285,33 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         break;
       }
     }
+    // Find the point where SAM can intercept
+    this.targetedIndex = this.trajectoryPoints.length;
+    // Get all active SAM launchers
+    const samLaunchers = this.game
+      .units(UnitType.SAMLauncher)
+      .filter((unit) => unit.isActive());
+    // Update our tracking set
+    this.samLaunchers.clear();
+    samLaunchers.forEach((sam) =>
+      this.samLaunchers.set(sam.id(), sam.owner().smallID()),
+    );
+    // Check trajectory
+    for (let i = 0; i < this.trajectoryPoints.length; i++) {
+      const tile = this.trajectoryPoints[i];
+      for (const sam of samLaunchers) {
+        const samTile = sam.tile();
+        const r = this.game.config().samRange(sam.level());
+        if (this.game.euclideanDistSquared(tile, samTile) <= r ** 2) {
+          this.targetedIndex = i;
+          break;
+        }
+      }
+      // Jump over untargetable segment
+      if (i === this.untargetableSegmentBounds[0])
+        i = this.untargetableSegmentBounds[1] - 1;
+      if (this.targetedIndex !== this.trajectoryPoints.length) break;
+    }
   }
 
   /**
@@ -265,23 +333,39 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     }
 
     const territoryColor = player.territoryColor();
-    const untargetableLineColor = territoryColor
+    // Set of line colors, targeted is after SAM intercept is detected.
+    const targettedLocationColor = "rgba(255, 0, 0, 1)";
+    const untargetableAndUntargetedLineColor = territoryColor
       .alpha(0.8)
       .saturate(0.8)
       .toRgbString();
-    const targetableLineColor = territoryColor
+    const targetableAndUntargetedLineColor = territoryColor
       .alpha(0.8)
       .saturate(0.5)
       .toRgbString();
+    const untargetableAndTargetedLineColor = territoryColor
+      .alpha(0.7)
+      .desaturate(0.4)
+      .toRgbString();
+    const targetableAndTargetedLineColor = territoryColor
+      .alpha(0.7)
+      .desaturate(0.4)
+      .toRgbString();
+
+    // Set of line dashes
+    const untargetableAndUntargetedLineDash = [2, 6];
+    const targetableAndUntargetedLineDash = [8, 4];
+    const untargetableAndTargetedLineDash = [2, 6];
+    const targetableAndTargetedLineDash = [8, 4];
 
     // Calculate offset to center coordinates (same as canvas drawing)
     const offsetX = -this.game.width() / 2;
     const offsetY = -this.game.height() / 2;
 
     context.save();
-    context.strokeStyle = targetableLineColor;
     context.lineWidth = 1.5;
-    context.setLineDash([8, 4]);
+    context.strokeStyle = targetableAndUntargetedLineColor;
+    context.setLineDash(targetableAndUntargetedLineDash);
     context.beginPath();
 
     // Draw line connecting trajectory points
@@ -297,26 +381,61 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       }
       if (i === this.untargetableSegmentBounds[0]) {
         context.stroke();
-
+        // Draw Circle
         context.beginPath();
+        context.strokeStyle = targetableAndUntargetedLineColor;
         context.setLineDash([]);
         context.arc(x, y, 4, 0, 2 * Math.PI, false);
         context.stroke();
-
+        // Start New Line
         context.beginPath();
-        context.strokeStyle = untargetableLineColor;
-        context.setLineDash([2, 6]);
+        if (i >= this.targetedIndex) {
+          context.strokeStyle = untargetableAndTargetedLineColor;
+          context.setLineDash(untargetableAndTargetedLineDash);
+        } else {
+          context.strokeStyle = untargetableAndUntargetedLineColor;
+          context.setLineDash(untargetableAndUntargetedLineDash);
+        }
       } else if (i === this.untargetableSegmentBounds[1]) {
         context.stroke();
-
+        // Draw Circle
         context.beginPath();
-        context.strokeStyle = targetableLineColor;
+        context.strokeStyle = targetableAndUntargetedLineColor;
         context.setLineDash([]);
         context.arc(x, y, 4, 0, 2 * Math.PI, false);
         context.stroke();
-
+        // Start New Line
         context.beginPath();
-        context.setLineDash([8, 4]);
+        if (i >= this.targetedIndex) {
+          context.strokeStyle = targetableAndTargetedLineColor;
+          context.setLineDash(targetableAndTargetedLineDash);
+        } else {
+          context.strokeStyle = targetableAndUntargetedLineColor;
+          context.setLineDash(targetableAndUntargetedLineDash);
+        }
+      } else if (i === this.targetedIndex) {
+        context.stroke();
+        // Draw X
+        context.beginPath();
+        context.strokeStyle = targettedLocationColor;
+        context.setLineDash([]);
+        context.moveTo(x - 3, y - 3);
+        context.lineTo(x + 3, y + 3);
+        context.moveTo(x - 3, y + 3);
+        context.lineTo(x + 3, y - 3);
+        context.stroke();
+        // Start New Line
+        context.beginPath();
+        if (
+          i >= this.untargetableSegmentBounds[0] &&
+          i <= this.untargetableSegmentBounds[1]
+        ) {
+          context.strokeStyle = untargetableAndTargetedLineColor;
+          context.setLineDash(untargetableAndTargetedLineDash);
+        } else {
+          context.strokeStyle = untargetableAndTargetedLineColor;
+          context.setLineDash(untargetableAndTargetedLineDash);
+        }
       }
     }
 
