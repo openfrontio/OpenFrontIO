@@ -11,7 +11,12 @@ import portIcon from "../../../../resources/images/PortIcon.svg";
 import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
 import defensePostIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
-import { Gold, PlayerActions, UnitType } from "../../../core/game/Game";
+import {
+  Gold,
+  PlayerActions,
+  TransportShipFilter,
+  UnitType,
+} from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import {
   GhostStructureChangedEvent,
@@ -100,7 +105,7 @@ export class UnitDisplay extends LitElement implements Layer {
 
   tick() {
     const player = this.game?.myPlayer();
-    player?.actions().then((actions) => {
+    player?.actions(undefined, TransportShipFilter.Exclude).then((actions) => {
       this.playerActions = actions;
     });
     if (!player) return;
