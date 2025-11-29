@@ -1,0 +1,130 @@
+{
+  "name": "New York City",
+  "mapInfoState": {
+    "width": 1500,
+    "height": 1900,
+    "originalWidth": 1500,
+    "originalHeight": 1900,
+    "cropData": {
+      "isCropped": false,
+      "cropX": 0,
+      "cropY": 0,
+      "cropWidth": 0,
+      "cropHeight": 0,
+      "originalWidth": 0,
+      "originalHeight": 0
+    },
+    "colorMappings": []
+  },
+  "nations": [
+    {
+      "coordinates": [127, 1323],
+      "name": "Unami Tribe",
+      "strength": 2
+    },
+    {
+      "coordinates": [116, 765],
+      "name": "Unalachtigo",
+      "strength": 2
+    },
+    {
+      "coordinates": [163, 135],
+      "name": "Munsee Tribe",
+      "strength": 2
+    },
+    {
+      "coordinates": [661, 531],
+      "name": "Mannahatta Village",
+      "strength": 2
+    },
+    {
+      "coordinates": [558, 760],
+      "name": "New Netherland Colony",
+      "strength": 3,
+      "flag": "nl"
+    },
+    {
+      "coordinates": [756, 833],
+      "name": "New York Colony",
+      "strength": 3,
+      "flag": "gb-eng"
+    },
+    {
+      "coordinates": [240, 1818],
+      "name": "New Jersey Colony",
+      "strength": 3,
+      "flag": "gb-eng"
+    },
+    {
+      "coordinates": [1065, 1085],
+      "name": "Long Island Territory",
+      "strength": 2,
+      "flag": "gb-eng"
+    },
+    {
+      "coordinates": [1454, 989],
+      "name": "Montaukett Nation",
+      "strength": 1
+    },
+    {
+      "coordinates": [1367, 762],
+      "name": "Unkechaug Nation",
+      "strength": 1
+    },
+    {
+      "coordinates": [1109, 824],
+      "name": "Shinnecock Nation",
+      "strength": 1
+    },
+    {
+      "coordinates": [969, 269],
+      "name": "Weckquaesgeek",
+      "strength": 2
+    },
+    {
+      "coordinates": [746, 1172],
+      "name": "Siwanoy",
+      "strength": 2
+    },
+    {
+      "coordinates": [927, 86],
+      "name": "Colen Donck",
+      "strength": 3,
+      "flag": "nl"
+    },
+    {
+      "coordinates": [849, 1043],
+      "name": "Canarsie",
+      "strength": 2
+    },
+    {
+      "coordinates": [991, 1247],
+      "name": "Rockaway",
+      "strength": 2
+    },
+    {
+      "coordinates": [929, 642],
+      "name": "Maspeth",
+      "strength": 1,
+      "flag": "gb-eng"
+    },
+    {
+      "coordinates": [647, 1018],
+      "name": "Breukelen",
+      "strength": 3,
+      "flag": "nl"
+    },
+    {
+      "coordinates": [1150, 532],
+      "name": "Vlissingen",
+      "strength": 2,
+      "flag": "nl"
+    },
+    {
+      "coordinates": [629, 690],
+      "name": "Gravesend",
+      "strength": 1,
+      "flag": "gb-eng"
+    }
+  ]
+}
