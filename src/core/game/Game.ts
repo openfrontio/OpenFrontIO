@@ -670,6 +670,13 @@ export interface Game extends GameMap {
   map(): GameMap;
   miniMap(): GameMap;
   forEachTile(fn: (tile: TileRef) => void): void;
+  // Zero-allocation neighbor iteration for performance-critical cluster calculation
+  // Alternative to neighborsWithDiag() that returns arrays
+  // Avoids creating intermediate arrays and uses a callback for better performance
+  forEachNeighborWithDiag(
+    tile: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void;
 
   // Player Management
   player(id: PlayerID): Player;
