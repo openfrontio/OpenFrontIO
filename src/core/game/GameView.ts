@@ -212,7 +212,7 @@ export class PlayerView {
       .theme()
       .borderColor(defaultTerritoryColor);
 
-    const pattern = this.cosmetics.pattern;
+    const pattern = userSettings.territoryPatterns() ? this.cosmetics.pattern : undefined;
     if (pattern) {
       pattern.colorPalette ??= {
         name: "",
@@ -253,9 +253,9 @@ export class PlayerView {
       .defendedBorderColors(this._borderColor);
 
     this.decoder =
-      this.cosmetics.pattern === undefined
+      pattern === undefined
         ? undefined
-        : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
+        : new PatternDecoder(pattern, base64url.decode);
   }
 
   territoryColor(tile?: TileRef): Colord {
