@@ -35,6 +35,7 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Japan: "Japan",
   Pluto: "Pluto",
   Montreal: "Montreal",
+  NewYorkCity: "New York City",
   Achiran: "Achiran",
   BaikalNukeWars: "Baikal (Nuke Wars)",
   FourIslands: "Four Islands",

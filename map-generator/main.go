@@ -38,6 +38,7 @@ var maps = []struct {
 	{Name: "mars"},
 	{Name: "mena"},
 	{Name: "montreal"},
+	{Name: "newyorkcity"},
 	{Name: "northamerica"},
 	{Name: "oceania"},
 	{Name: "pangaea"},
