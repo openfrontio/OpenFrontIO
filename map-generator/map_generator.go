@@ -108,8 +108,11 @@ func GenerateMap(args GeneratorArgs) (MapResult, error) {
 	processWater(terrain, args.RemoveSmall)
 
 	terrain4x := createMiniMap(terrain)
+    processWater(terrain4x, false)
+	
 	terrain16x := createMiniMap(terrain4x)
-
+	processWater(terrain16x, false)
+	
 	thumb := createMapThumbnail(terrain4x, 0.5)
 	webp, err := convertToWebP(ThumbData{
 		Data:   thumb.Pix,

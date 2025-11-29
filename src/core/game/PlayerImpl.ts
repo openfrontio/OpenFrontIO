@@ -172,6 +172,10 @@ export class PlayerImpl implements Player {
             other: a.other(this).id(),
             createdAt: a.createdAt(),
             expiresAt: a.expiresAt(),
+            hasExtensionRequest:
+              a.expiresAt() <=
+              this.mg.ticks() +
+                this.mg.config().allianceExtensionPromptOffset(),
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
@@ -229,8 +233,8 @@ export class PlayerImpl implements Player {
     const built = this.numUnitsConstructed[type] ?? 0;
     let constructing = 0;
     for (const unit of this._units) {
-      if (unit.type() !== UnitType.Construction) continue;
-      if (unit.constructionType() !== type) continue;
+      if (unit.type() !== type) continue;
+      if (!unit.isUnderConstruction()) continue;
       constructing++;
     }
     const total = constructing + built;
@@ -253,12 +257,12 @@ export class PlayerImpl implements Player {
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
-        total += unit.level();
-        continue;
+        if (unit.isUnderConstruction()) {
+          total++;
+        } else {
+          total += unit.level();
+        }
       }
-      if (unit.type() !== UnitType.Construction) continue;
-      if (unit.constructionType() !== type) continue;
-      total++;
     }
     return total;
   }
@@ -891,7 +895,7 @@ export class PlayerImpl implements Player {
 
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
-      .nearbyUnits(targetTile, range, type)
+      .nearbyUnits(targetTile, range, type, undefined, true)
       .sort((a, b) => a.distSquared - b.distSquared);
     if (existing.length === 0) {
       return false;
@@ -909,6 +913,9 @@ export class PlayerImpl implements Player {
     skipUnitTypeCheck: boolean = false,
   ): boolean {
     if (unit.isMarkedForDeletion()) {
+      return false;
+    }
+    if (unit.isUnderConstruction()) {
       return false;
     }
     if (unit.owner() !== this) {
@@ -1041,7 +1048,6 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
-      case UnitType.Construction:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
@@ -1055,10 +1061,10 @@ export class PlayerImpl implements Player {
         return false;
       }
     }
-    // only get missilesilos that are not on cooldown
+    // only get missilesilos that are not on cooldown and not under construction
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
-        return !silo.isInCooldown();
+        return !silo.isInCooldown() && !silo.isUnderConstruction();
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length === 0) {
@@ -1130,7 +1136,13 @@ export class PlayerImpl implements Player {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 
-    const nearbyUnits = this.mg.nearbyUnits(tile, searchRadius * 2, types);
+    const nearbyUnits = this.mg.nearbyUnits(
+      tile,
+      searchRadius * 2,
+      types,
+      undefined,
+      true,
+    );
     const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
       return (
         this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
@@ -1278,35 +1290,5 @@ export class PlayerImpl implements Player {
 
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
     return bestShoreDeploymentSource(this.mg, this, targetTile);
-  }
-
-  // It's a probability list, so if an element appears twice it's because it's
-  // twice more likely to be picked later.
-  tradingPorts(port: Unit): Unit[] {
-    const ports = this.mg
-      .players()
-      .filter((p) => p !== port.owner() && p.canTrade(port.owner()))
-      .flatMap((p) => p.units(UnitType.Port))
-      .sort((p1, p2) => {
-        return (
-          this.mg.manhattanDist(port.tile(), p1.tile()) -
-          this.mg.manhattanDist(port.tile(), p2.tile())
-        );
-      });
-
-    const weightedPorts: Unit[] = [];
-
-    for (const [i, otherPort] of ports.entries()) {
-      const expanded = new Array(otherPort.level()).fill(otherPort);
-      weightedPorts.push(...expanded);
-      if (i < this.mg.config().proximityBonusPortsNb(ports.length)) {
-        weightedPorts.push(...expanded);
-      }
-      if (port.owner().isFriendly(otherPort.owner())) {
-        weightedPorts.push(...expanded);
-      }
-    }
-
-    return weightedPorts;
   }
 }

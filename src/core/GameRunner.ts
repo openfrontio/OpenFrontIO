@@ -31,7 +31,7 @@ import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { sanitize, simpleHash } from "./Util";
-import { fixProfaneUsername } from "./validations/username";
+import { censorNameWithClanTag } from "./validations/username";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
@@ -47,17 +47,16 @@ export async function createGameRunner(
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
-  const humans = gameStart.players.map(
-    (p) =>
-      new PlayerInfo(
-        p.clientID === clientID
-          ? sanitize(p.username)
-          : fixProfaneUsername(sanitize(p.username)),
-        PlayerType.Human,
-        p.clientID,
-        random.nextID(),
-      ),
-  );
+  const humans = gameStart.players.map((p) => {
+    return new PlayerInfo(
+      p.clientID === clientID
+        ? sanitize(p.username)
+        : censorNameWithClanTag(p.username),
+      PlayerType.Human,
+      p.clientID,
+      random.nextID(),
+    );
+  });
 
   const nations = gameStart.config.disableNPCs
     ? []
@@ -65,8 +64,13 @@ export async function createGameRunner(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+            new PlayerInfo(
+              n.name,
+              PlayerType.FakeHuman,
+              null,
+              random.nextID(),
+              n.strength,
+            ),
           ),
       );
 
@@ -101,6 +105,9 @@ export class GameRunner {
   ) {}
 
   init() {
+    if (this.game.config().isRandomSpawn()) {
+      this.game.addExecution(...this.execManager.spawnPlayers());
+    }
     if (this.game.config().bots() > 0) {
       this.game.addExecution(
         ...this.execManager.spawnBots(this.game.config().numBots()),
@@ -131,9 +138,13 @@ export class GameRunner {
     this.currTurn++;
 
     let updates: GameUpdates;
+    let tickExecutionDuration: number = 0;
 
     try {
+      const startTime = performance.now();
       updates = this.game.executeNextTick();
+      const endTime = performance.now();
+      tickExecutionDuration = endTime - startTime;
     } catch (error: unknown) {
       if (error instanceof Error) {
         console.error("Game tick error:", error.message);
@@ -174,6 +185,7 @@ export class GameRunner {
       packedTileUpdates: new BigUint64Array(packedTileUpdates),
       updates: updates,
       playerNameViewData: this.playerViewData,
+      tickExecutionDuration: tickExecutionDuration,
     });
     this.isExecuting = false;
   }

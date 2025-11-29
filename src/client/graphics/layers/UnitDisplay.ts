@@ -18,7 +18,10 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
-import { ToggleStructureEvent } from "../../InputHandler";
+import {
+  GhostStructureChangedEvent,
+  ToggleStructureEvent,
+} from "../../InputHandler";
 import { renderNumber, translateText } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
@@ -272,8 +275,10 @@ export class UnitDisplay extends LitElement implements Layer {
           @click=${() => {
             if (selected) {
               this.uiState.ghostStructure = null;
+              this.eventBus?.emit(new GhostStructureChangedEvent(null));
             } else if (this.canBuild(unitType)) {
               this.uiState.ghostStructure = unitType;
+              this.eventBus?.emit(new GhostStructureChangedEvent(unitType));
             }
             this.requestUpdate();
           }}

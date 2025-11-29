@@ -89,22 +89,6 @@ describe("PlayerImpl", () => {
     expect(cityToUpgrade).toBe(false);
   });
 
-  test("Destination ports chances scale with level", () => {
-    game.config().proximityBonusPortsNb = () => 0;
-
-    player.conquer(game.ref(10, 10));
-    const playerPort = player.buildUnit(UnitType.Port, game.ref(10, 10), {});
-
-    other.conquer(game.ref(0, 0));
-    const otherPort = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
-    otherPort.increaseLevel();
-    otherPort.increaseLevel();
-
-    const ports = player.tradingPorts(playerPort);
-
-    expect(ports.length).toBe(3);
-  });
-
   test("Can't send alliance requests when dead", () => {
     // conquer other
     const otherTiles = other.tiles();

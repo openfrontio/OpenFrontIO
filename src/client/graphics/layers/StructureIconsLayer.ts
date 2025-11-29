@@ -17,6 +17,7 @@ import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
+  GhostStructureChangedEvent,
   MouseMoveEvent,
   MouseUpEvent,
   ToggleStructureEvent as ToggleStructuresEvent,
@@ -59,6 +60,7 @@ export class StructureIconsLayer implements Layer {
   private ghostUnit: {
     container: PIXI.Container;
     range: PIXI.Container | null;
+    rangeLevel?: number;
     buildableUnit: BuildableUnit;
   } | null = null;
   private pixicanvas: HTMLCanvasElement;
@@ -278,6 +280,9 @@ export class StructureIconsLayer implements Layer {
 
         this.ghostUnit.buildableUnit = unit;
 
+        const targetLevel = this.resolveGhostRangeLevel(unit);
+        this.updateGhostRange(targetLevel);
+
         if (unit.canUpgrade) {
           this.potentialUpgrade = this.renders.find(
             (r) =>
@@ -370,12 +375,11 @@ export class StructureIconsLayer implements Layer {
         { x: localX, y: localY },
         type,
       ),
-      range: this.factory.createRange(type, this.ghostStage, {
-        x: localX,
-        y: localY,
-      }),
+      range: null,
       buildableUnit: { type, canBuild: false, canUpgrade: false, cost: 0n },
     };
+    const baseLevel = this.resolveGhostRangeLevel(this.ghostUnit.buildableUnit);
+    this.updateGhostRange(baseLevel);
   }
 
   private clearGhostStructure() {
@@ -394,6 +398,50 @@ export class StructureIconsLayer implements Layer {
   private removeGhostStructure() {
     this.clearGhostStructure();
     this.uiState.ghostStructure = null;
+    this.eventBus.emit(new GhostStructureChangedEvent(null));
+  }
+
+  private resolveGhostRangeLevel(
+    buildableUnit: BuildableUnit,
+  ): number | undefined {
+    if (buildableUnit.type !== UnitType.SAMLauncher) {
+      return undefined;
+    }
+    if (buildableUnit.canUpgrade !== false) {
+      const existing = this.game.unit(buildableUnit.canUpgrade);
+      if (existing) {
+        return existing.level() + 1;
+      } else {
+        console.error("Failed to find existing SAMLauncher for upgrade");
+      }
+    }
+
+    return 1;
+  }
+
+  private updateGhostRange(level?: number) {
+    if (!this.ghostUnit) {
+      return;
+    }
+
+    if (this.ghostUnit.range && this.ghostUnit.rangeLevel === level) {
+      return;
+    }
+
+    this.ghostUnit.range?.destroy();
+    this.ghostUnit.range = null;
+    this.ghostUnit.rangeLevel = level;
+
+    const position = this.ghostUnit.container.position;
+    const range = this.factory.createRange(
+      this.ghostUnit.buildableUnit.type,
+      this.ghostStage,
+      { x: position.x, y: position.y },
+      level,
+    );
+    if (range) {
+      this.ghostUnit.range = range;
+    }
   }
 
   private toggleStructures(toggleStructureType: UnitType[] | null): void {
@@ -422,10 +470,7 @@ export class StructureIconsLayer implements Layer {
         this.checkForOwnershipChange(render, unitView);
         this.checkForLevelChange(render, unitView);
       }
-    } else if (
-      this.structures.has(unitView.type()) ||
-      unitView.type() === UnitType.Construction
-    ) {
+    } else if (this.structures.has(unitView.type())) {
       this.addNewStructure(unitView);
     }
   }
@@ -438,10 +483,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private modifyVisibility(render: StructureRenderInfo) {
-    const structureType =
-      render.unit.type() === UnitType.Construction
-        ? render.unit.constructionType()!
-        : render.unit.type();
+    const structureType = render.unit.type();
     const structureInfos = this.structures.get(structureType);
 
     let focusStructure = false;
@@ -482,10 +524,7 @@ export class StructureIconsLayer implements Layer {
     render: StructureRenderInfo,
     unit: UnitView,
   ) {
-    if (
-      render.underConstruction &&
-      render.unit.type() !== UnitType.Construction
-    ) {
+    if (render.underConstruction && !unit.isUnderConstruction()) {
       render.underConstruction = false;
       render.iconContainer?.destroy();
       render.dotContainer?.destroy();
@@ -533,10 +572,7 @@ export class StructureIconsLayer implements Layer {
         : screenPos.y,
     );
 
-    const type =
-      render.unit.type() === UnitType.Construction
-        ? render.unit.constructionType()
-        : render.unit.type();
+    const type = render.unit.type();
     const margin =
       type !== undefined && STRUCTURE_SHAPES[type] !== undefined
         ? ICON_SIZE[STRUCTURE_SHAPES[type]]
@@ -590,7 +626,7 @@ export class StructureIconsLayer implements Layer {
       this.createLevelSprite(unitView),
       this.createDotSprite(unitView),
       unitView.level(),
-      unitView.type() === UnitType.Construction,
+      unitView.isUnderConstruction(),
     );
     this.renders.push(render);
     this.computeNewLocation(render);

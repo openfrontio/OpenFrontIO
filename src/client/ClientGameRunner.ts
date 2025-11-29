@@ -37,6 +37,7 @@ import {
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
+  TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentID } from "./Main";
@@ -51,6 +52,7 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
+import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
 
 export interface LobbyConfig {
@@ -205,6 +207,10 @@ export class ClientGameRunner {
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private goToPlayerTimeout: NodeJS.Timeout | null = null;
+
+  private lastTickReceiveTime: number = 0;
+  private currentTickDelay: number | undefined = undefined;
 
   constructor(
     private lobby: LobbyConfig,
@@ -243,6 +249,7 @@ export class ClientGameRunner {
       startTime(),
       Date.now(),
       update.winner,
+      this.lobby.gameStartInfo.lobbyCreatedAt,
     );
     endGame(record);
   }
@@ -296,6 +303,14 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.renderer.tick();
 
+      // Emit tick metrics event for performance overlay
+      this.eventBus.emit(
+        new TickMetricsEvent(gu.tickExecutionDuration, this.currentTickDelay),
+      );
+
+      // Reset tick delay for next measurement
+      this.currentTickDelay = undefined;
+
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
@@ -318,6 +333,39 @@ export class ClientGameRunner {
       if (message.type === "start") {
         this.hasJoined = true;
         console.log("starting game!");
+
+        if (this.gameView.config().isRandomSpawn()) {
+          const goToPlayer = () => {
+            const myPlayer = this.gameView.myPlayer();
+
+            if (this.gameView.inSpawnPhase() && !myPlayer?.hasSpawned()) {
+              this.goToPlayerTimeout = setTimeout(goToPlayer, 1000);
+              return;
+            }
+
+            if (!myPlayer) {
+              return;
+            }
+
+            if (!this.gameView.inSpawnPhase() && !myPlayer.hasSpawned()) {
+              showErrorModal(
+                "spawn_failed",
+                translateText("error_modal.spawn_failed.description"),
+                this.lobby.gameID,
+                this.lobby.clientID,
+                true,
+                false,
+                translateText("error_modal.spawn_failed.title"),
+              );
+              return;
+            }
+
+            this.eventBus.emit(new GoToPlayerEvent(myPlayer));
+          };
+
+          goToPlayer();
+        }
+
         for (const turn of message.turns) {
           if (turn.turnNumber < this.turnsSeen) {
             continue;
@@ -363,6 +411,14 @@ export class ClientGameRunner {
           this.transport.joinGame(0);
           return;
         }
+        // Track when we receive the turn to calculate delay
+        const now = Date.now();
+        if (this.lastTickReceiveTime > 0) {
+          // Calculate delay between receiving turn messages
+          this.currentTickDelay = now - this.lastTickReceiveTime;
+        }
+        this.lastTickReceiveTime = now;
+
         if (this.turnsSeen !== message.turn.turnNumber) {
           console.error(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
@@ -387,6 +443,10 @@ export class ClientGameRunner {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
     }
+    if (this.goToPlayerTimeout) {
+      clearTimeout(this.goToPlayerTimeout);
+      this.goToPlayerTimeout = null;
+    }
   }
 
   private inputEvent(event: MouseUpEvent) {
@@ -405,7 +465,8 @@ export class ClientGameRunner {
     if (
       this.gameView.isLand(tile) &&
       !this.gameView.hasOwner(tile) &&
-      this.gameView.inSpawnPhase()
+      this.gameView.inSpawnPhase() &&
+      !this.gameView.config().isRandomSpawn()
     ) {
       this.eventBus.emit(new SendSpawnIntentEvent(tile));
       return;

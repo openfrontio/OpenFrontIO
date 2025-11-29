@@ -60,6 +60,7 @@ const numPlayersConfig = {
   [GameMapType.Europe]: [100, 70, 50],
   [GameMapType.EuropeClassic]: [50, 30, 30],
   [GameMapType.FalklandIslands]: [50, 30, 20],
+  [GameMapType.FourIslands]: [20, 15, 10],
   [GameMapType.FaroeIslands]: [20, 15, 10],
   [GameMapType.GatewayToTheAtlantic]: [100, 70, 50],
   [GameMapType.GiantWorldMap]: [100, 70, 50],
@@ -77,7 +78,6 @@ const numPlayersConfig = {
   [GameMapType.SouthAmerica]: [70, 50, 40],
   [GameMapType.StraitOfGibraltar]: [100, 70, 50],
   [GameMapType.World]: [50, 30, 20],
-  [GameMapType.Yenisei]: [150, 100, 70],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -337,6 +337,9 @@ export class DefaultConfig implements Config {
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
   }
+  isRandomSpawn(): boolean {
+    return this._gameConfig.randomSpawn;
+  }
   infiniteGold(): boolean {
     return this._gameConfig.infiniteGold;
   }
@@ -378,9 +381,10 @@ export class DefaultConfig implements Config {
   }
 
   tradeShipGold(dist: number, numPorts: number): Gold {
-    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under 200
+    // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
+    const debuff = this.tradeShipShortRangeDebuff();
     const baseGold =
-      100_000 / (1 + Math.exp(-0.03 * (dist - 200))) + 100 * dist;
+      100_000 / (1 + Math.exp(-0.03 * (dist - debuff))) + 100 * dist;
     const numPortBonus = numPorts - 1;
     // Hyperbolic decay, midpoint at 5 ports, 3x bonus max.
     const bonus = 1 + 2 * (numPortBonus / (numPortBonus + 5));
@@ -541,11 +545,6 @@ export class DefaultConfig implements Config {
           experimental: true,
           upgradable: true,
         };
-      case UnitType.Construction:
-        return {
-          cost: () => 0n,
-          territoryBound: true,
-        };
       case UnitType.Train:
         return {
           cost: () => 0n,
@@ -584,10 +583,11 @@ export class DefaultConfig implements Config {
     return 10 * 10;
   }
   deletionMarkDuration(): Tick {
-    return 15 * 10;
+    return 30 * 10;
   }
+
   deleteUnitCooldown(): Tick {
-    return 15 * 10;
+    return 30 * 10;
   }
   emojiMessageDuration(): Tick {
     return 5 * 10;
@@ -784,6 +784,10 @@ export class DefaultConfig implements Config {
     return 20;
   }
 
+  tradeShipShortRangeDebuff(): number {
+    return 300;
+  }
+
   proximityBonusPortsNb(totalPorts: number) {
     return within(totalPorts / 3, 4, totalPorts);
   }
@@ -796,20 +800,31 @@ export class DefaultConfig implements Config {
     }
   }
 
+  useNationStrengthForStartManpower(): boolean {
+    // Currently disabled: FakeHumans became harder to play against due to AI improvements
+    // nation strength multiplier was unintentionally disabled during those AI improvements (playerInfo.nation was undefined),
+    // Re-enabling this without rebalancing FakeHuman difficulty elsewhere may make them overpowered
+    return false;
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
     if (playerInfo.playerType === PlayerType.FakeHuman) {
+      const strength = this.useNationStrengthForStartManpower()
+        ? (playerInfo.nationStrength ?? 1)
+        : 1;
+
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 2_500 * (playerInfo?.nation?.strength ?? 1);
+          return 2_500 * strength;
         case Difficulty.Medium:
-          return 5_000 * (playerInfo?.nation?.strength ?? 1);
+          return 5_000 * strength;
         case Difficulty.Hard:
-          return 20_000 * (playerInfo?.nation?.strength ?? 1);
+          return 20_000 * strength;
         case Difficulty.Impossible:
-          return 50_000 * (playerInfo?.nation?.strength ?? 1);
+          return 50_000 * strength;
       }
     }
     return this.infiniteTroops() ? 1_000_000 : 25_000;
@@ -911,6 +926,15 @@ export class DefaultConfig implements Config {
 
   defaultSamRange(): number {
     return 70;
+  }
+
+  samRange(level: number): number {
+    // rational growth function (level 1 = 70, level 5 just above hydro range, asymptotically approaches 150)
+    return this.maxSamRange() - 480 / (level + 5);
+  }
+
+  maxSamRange(): number {
+    return 150;
   }
 
   defaultSamMissileSpeed(): number {
