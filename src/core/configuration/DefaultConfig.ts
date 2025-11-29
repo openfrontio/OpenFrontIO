@@ -635,6 +635,36 @@ export class DefaultConfig implements Config {
       : this.pastelTheme;
   }
 
+largeAttackerSpeedThresholdDebuff(attacker: Player, totalLandTiles: number): number {
+  const territoryPercentage = (attacker.numTilesOwned() / totalLandTiles) * 100;
+  
+  const thresholds: Array<{ max: number; value: number }> = [
+    { max: 10, value: 1.0 },
+    { max: 15, value: 0.50 },
+    { max: 20, value: 0.38 },
+    { max: 25, value: 0.28 },
+    { max: 30, value: 0.20 },
+    { max: 35, value: 0.14 },
+    { max: 40, value: 0.10 },
+    { max: 45, value: 0.07 },
+    { max: 50, value: 0.05 },
+    { max: 55, value: 0.04 },
+    { max: 60, value: 0.03 },
+    { max: 65, value: 0.02 },
+    { max: 70, value: 0.015 },
+    { max: 75, value: 0.01 },
+    { max: 80, value: 0.007 },
+  ];
+  //
+  for (const threshold of thresholds) {
+    if (territoryPercentage < threshold.max) {
+      return threshold.value;
+    }
+  }
+  
+  return 0.005;
+}
+
   attackLogic(
     gm: Game,
     attackTroops: number,
@@ -716,14 +746,10 @@ export class DefaultConfig implements Config {
       const largeDefenderSpeedDebuff = 0.7 + 0.3 * defenseSig;
       const largeDefenderAttackDebuff = 0.7 + 0.3 * defenseSig;
 
-      let largeAttackBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackBonus = Math.sqrt(100_000 / attacker.numTilesOwned()) ** 0.7;
-      }
-      let largeAttackerSpeedBonus = 1;
-      if (attacker.numTilesOwned() > 100_000) {
-        largeAttackerSpeedBonus = (100_000 / attacker.numTilesOwned()) ** 0.6;
-      }
+      const thresholdDebuff = this.largeAttackerSpeedThresholdDebuff(
+         attacker,
+         gm.numLandTiles()
+       );
 
       return {
         attackerTroopLoss:
@@ -731,14 +757,13 @@ export class DefaultConfig implements Config {
           mag *
           0.8 *
           largeDefenderAttackDebuff *
-          largeAttackBonus *
           (defender.isTraitor() ? this.traitorDefenseDebuff() : 1),
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
           speed *
           largeDefenderSpeedDebuff *
-          largeAttackerSpeedBonus *
+          thresholdDebuff *
           (defender.isTraitor() ? this.traitorSpeedDebuff() : 1),
       };
     } else {
