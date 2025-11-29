@@ -15,7 +15,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   // Trajectory preview state
   private mousePos = { x: 0, y: 0 };
   private trajectoryPoints: TileRef[] = [];
-  private targetableSwitchPointIndex: [number, number] = [-1, -1];
+  private untargetableSegmentBounds: [number, number] = [-1, -1];
   private lastTrajectoryUpdate: number = 0;
   private lastTargetTile: TileRef | null = null;
   private currentGhostStructure: UnitType | null = null;
@@ -216,10 +216,13 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     const targetRangeSquared =
       this.game.config().defaultNukeTargetableRange() ** 2;
 
-    this.targetableSwitchPointIndex = [-1, -1];
+    this.untargetableSegmentBounds = [-1, -1];
+    // Find two switch points where bomb transitions:
+    // [0]: leaves spawn range, enters untargetable zone
+    // [1]: enters target range, becomes targetable again
     for (let i = 0; i < this.trajectoryPoints.length; i++) {
       const tile = this.trajectoryPoints[i];
-      if (this.targetableSwitchPointIndex[0] === -1) {
+      if (this.untargetableSegmentBounds[0] === -1) {
         if (
           this.game.euclideanDistSquared(tile, this.cachedSpawnTile) >
           targetRangeSquared
@@ -228,15 +231,16 @@ export class NukeTrajectoryPreviewLayer implements Layer {
             this.game.euclideanDistSquared(tile, targetTile) <
             targetRangeSquared
           ) {
+            // overlapping spawn & target range
             break;
           } else {
-            this.targetableSwitchPointIndex[0] = i;
+            this.untargetableSegmentBounds[0] = i;
           }
         }
       } else if (
         this.game.euclideanDistSquared(tile, targetTile) < targetRangeSquared
       ) {
-        this.targetableSwitchPointIndex[1] = i;
+        this.untargetableSegmentBounds[1] = i;
         break;
       }
     }
@@ -291,7 +295,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       } else {
         context.lineTo(x, y);
       }
-      if (i === this.targetableSwitchPointIndex[0]) {
+      if (i === this.untargetableSegmentBounds[0]) {
         context.stroke();
 
         context.beginPath();
@@ -302,7 +306,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         context.beginPath();
         context.strokeStyle = untargetableLineColor;
         context.setLineDash([2, 6]);
-      } else if (i === this.targetableSwitchPointIndex[1]) {
+      } else if (i === this.untargetableSegmentBounds[1]) {
         context.stroke();
 
         context.beginPath();
