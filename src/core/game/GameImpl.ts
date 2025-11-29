@@ -768,8 +768,15 @@ export class GameImpl implements Game {
     searchRange: number,
     type: UnitType,
     playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
   ) {
-    return this.unitGrid.hasUnitNearby(tile, searchRange, type, playerId);
+    return this.unitGrid.hasUnitNearby(
+      tile,
+      searchRange,
+      type,
+      playerId,
+      includeUnderConstruction,
+    );
   }
 
   nearbyUnits(
@@ -777,12 +784,14 @@ export class GameImpl implements Game {
     searchRange: number,
     types: UnitType | UnitType[],
     predicate?: UnitPredicate,
+    includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }> {
     return this.unitGrid.nearbyUnits(
       tile,
       searchRange,
       types,
       predicate,
+      includeUnderConstruction,
     ) as Array<{
       unit: Unit;
       distSquared: number;
@@ -895,6 +904,20 @@ export class GameImpl implements Game {
     return this._railNetwork;
   }
   conquerPlayer(conqueror: Player, conquered: Player) {
+    if (conquered.isDisconnected() && conqueror.isOnSameTeam(conquered)) {
+      const ships = conquered
+        .units()
+        .filter(
+          (u) =>
+            u.type() === UnitType.Warship ||
+            u.type() === UnitType.TransportShip,
+        );
+
+      for (const ship of ships) {
+        conqueror.captureUnit(ship);
+      }
+    }
+
     const gold = conquered.gold();
     this.displayMessage(
       `Conquered ${conquered.displayName()} received ${renderNumber(

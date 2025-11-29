@@ -90,3 +90,24 @@ export const PlayerProfileSchema = z.object({
   stats: PlayerStatsTreeSchema,
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
+
+export const ClanLeaderboardEntrySchema = z.object({
+  clanTag: z.string(),
+  games: z.number(),
+  wins: z.number(),
+  losses: z.number(),
+  playerSessions: z.number(),
+  weightedWins: z.number(),
+  weightedLosses: z.number(),
+  weightedWLRatio: z.number(),
+});
+export type ClanLeaderboardEntry = z.infer<typeof ClanLeaderboardEntrySchema>;
+
+export const ClanLeaderboardResponseSchema = z.object({
+  start: z.iso.datetime(),
+  end: z.iso.datetime(),
+  clans: ClanLeaderboardEntrySchema.array(),
+});
+export type ClanLeaderboardResponse = z.infer<
+  typeof ClanLeaderboardResponseSchema
+>;

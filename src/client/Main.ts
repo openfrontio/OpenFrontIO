@@ -25,10 +25,11 @@ import { LangSelector } from "./LangSelector";
 import { LanguageModal } from "./LanguageModal";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
-import { NewsModal } from "./NewsModal";
+import "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
 import { TokenLoginModal } from "./TokenLoginModal";
 import { SendKickPlayerIntentEvent } from "./Transport";
@@ -40,8 +41,6 @@ import {
   incrementGamesPlayed,
   isInIframe,
 } from "./Utils";
-import "./components/NewsButton";
-import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getUserMe, isLoggedIn } from "./jwt";
@@ -118,20 +117,6 @@ class Client {
       console.warn("Game version element not found");
     }
     gameVersion.innerText = version;
-
-    const newsModal = document.querySelector("news-modal") as NewsModal;
-    if (!newsModal || !(newsModal instanceof NewsModal)) {
-      console.warn("News modal element not found");
-    }
-    const newsButton = document.querySelector("news-button") as NewsButton;
-    if (!newsButton) {
-      console.warn("News button element not found");
-    } else {
-      console.log("News button element found");
-    }
-
-    // Comment out to show news button.
-    // newsButton.hidden = true;
 
     const langSelector = document.querySelector(
       "lang-selector",
@@ -526,6 +511,7 @@ class Client {
           "news-modal",
           "flag-input-modal",
           "account-button",
+          "stats-button",
           "token-login",
           "matchmaking-modal",
         ].forEach((tag) => {
