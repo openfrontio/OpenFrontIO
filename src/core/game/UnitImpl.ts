@@ -140,6 +140,7 @@ export class UnitImpl implements Unit {
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
+      patrolTile: this._patrolTile,
     };
   }
 

@@ -7,6 +7,7 @@ import { GameView, UnitView } from "../../../core/game/GameView";
 import { BezenhamLine } from "../../../core/utilities/Line";
 import {
   AlternateViewEvent,
+  CloseViewEvent,
   ContextMenuEvent,
   MouseUpEvent,
   TouchEvent,
@@ -77,6 +78,7 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(TouchEvent, (e) => this.onTouch(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
+    this.eventBus.on(CloseViewEvent, () => this.onCloseView());
     this.redraw();
 
     loadAllSprites();
@@ -186,6 +188,15 @@ export class UnitLayer implements Layer {
       this.selectedUnit = event.unit;
     } else if (this.selectedUnit === event.unit) {
       this.selectedUnit = null;
+    }
+  }
+
+  /**
+   * Handle close view event (ESC key) - deselect warship
+   */
+  private onCloseView() {
+    if (this.selectedUnit) {
+      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
     }
   }
 
