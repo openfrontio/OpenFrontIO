@@ -235,7 +235,15 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async checkArchivedGame(
     lobbyId: string,
   ): Promise<"success" | "not_found" | "version_mismatch" | "error"> {
-    const archivePromise = fetch(`${getApiBase()}/game/${lobbyId}`, {
+    // In dev/staging mode, try live API directly to avoid CORS issues with JWT issuer
+    const { hostname } = new URL(window.location.href);
+    const isDevMode =
+      hostname === "localhost" || hostname.includes("openfront.dev");
+    const archiveUrl = isDevMode
+      ? `https://api.openfront.io/public/game/${lobbyId}`
+      : `${getApiBase()}/game/${lobbyId}`;
+
+    const archivePromise = fetch(archiveUrl, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
