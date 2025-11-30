@@ -604,6 +604,10 @@ export class GameView implements GameMap {
     return this._myPlayer;
   }
 
+  isMyPlayer(player: PlayerView): boolean {
+    return this.myPlayer()?.smallID() === player.smallID();
+  }
+
   player(id: PlayerID): PlayerView {
     const player = this._players.get(id);
     if (player === undefined) {
