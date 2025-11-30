@@ -107,7 +107,7 @@ export class WarshipRadiusLayer implements Layer {
     if (e.unit?.type() === UnitType.Warship && e.isSelected) {
       this.selectedWarship = e.unit;
       this.selectedShow = true;
-    } else if (!e.isSelected || e.unit?.type() !== UnitType.Warship) {
+    } else if (!e.isSelected && this.selectedWarship === e.unit) {
       this.selectedWarship = null;
       this.selectedShow = false;
     }
