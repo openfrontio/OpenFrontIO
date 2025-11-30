@@ -134,6 +134,7 @@ export interface UnitUpdate {
   hasTrainStation: boolean;
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
+  patrolTile?: TileRef; // Only for warships - center of patrol area
 }
 
 export interface AttackUpdate {
