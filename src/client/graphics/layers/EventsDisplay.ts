@@ -974,7 +974,7 @@ export class EventsDisplay extends LitElement implements Layer {
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
-            <div class="relative w-fit lg:bottom-2.5 lg:right-2.5 z-50">
+            <div class="relative w-fit lg:bottom-0 lg:right-0 z-50">
               ${this.renderButton({
                 content: html`
                   Events
@@ -987,19 +987,17 @@ export class EventsDisplay extends LitElement implements Layer {
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-tl-md bg-gray-800/70 backdrop-blur",
               })}
             </div>
           `
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
+              class="relative w-full sm:bottom-0 sm:right-0 z-50 sm:w-96 backdrop-blur"
             >
               <!-- Button Bar -->
-              <div
-                class="w-full p-2 lg:p-3 rounded-t-none md:rounded-t-md bg-gray-800/70"
-              >
+              <div class="w-full p-2 lg:p-3 bg-gray-800/70 rounded-tl-md">
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
                     ${this.renderToggleButton(
@@ -1042,7 +1040,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="rounded-b-none md:rounded-b-md bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
+                class="bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
               >
                 <div>
                   <table
