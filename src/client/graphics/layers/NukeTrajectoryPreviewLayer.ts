@@ -91,52 +91,48 @@ export class NukeTrajectoryPreviewLayer implements Layer {
             !this.game.myPlayer()?.isFriendly(unit.owner())
           ) {
             this.enemySAMLaunchers.set(update.id, unit);
+          } else if (this.enemySAMLaunchers.has(update.id)) {
+            this.enemySAMLaunchers.delete(update.id);
           }
         }
       }
-      if (allianceResponse) {
-        for (const update of allianceResponse) {
-          if (update.accepted) {
-            // check for good SAMs
-            this.enemySAMLaunchers.forEach((sam, sam_id) => {
-              if (this.game.myPlayer()?.isFriendly(sam.owner())) {
-                this.enemySAMLaunchers.delete(sam_id);
-              }
-            });
-            break;
-          }
+    }
+    if (allianceResponse) {
+      for (const update of allianceResponse) {
+        if (update.accepted) {
+          // check for good SAMs
+          this.enemySAMLaunchers.forEach((sam, sam_id) => {
+            if (this.game.myPlayer()?.isFriendly(sam.owner())) {
+              this.enemySAMLaunchers.delete(sam_id);
+            }
+          });
+          break;
         }
       }
-      const checkPlayers: number[] = [];
-      if (allianceBroke) {
-        for (const update of allianceBroke) {
-          if (this.game.myPlayer()?.smallID() === update.traitorID) {
-            checkPlayers.push(update.betrayedID);
-            break;
-          }
-          if (this.game.myPlayer()?.smallID() === update.betrayedID) {
-            checkPlayers.push(update.traitorID);
-            break;
-          }
+    }
+    const checkPlayers: number[] = [];
+    if (allianceBroke) {
+      for (const update of allianceBroke) {
+        if (this.game.myPlayer()?.smallID() === update.traitorID) {
+          checkPlayers.push(update.betrayedID);
+        } else if (this.game.myPlayer()?.smallID() === update.betrayedID) {
+          checkPlayers.push(update.traitorID);
         }
       }
-      if (allianceExpired) {
-        for (const update of allianceExpired) {
-          if (this.game.myPlayer()?.smallID() === update.player1ID) {
-            checkPlayers.push(update.player2ID);
-            break;
-          }
-          if (this.game.myPlayer()?.smallID() === update.player2ID) {
-            checkPlayers.push(update.player1ID);
-            break;
-          }
+    }
+    if (allianceExpired) {
+      for (const update of allianceExpired) {
+        if (this.game.myPlayer()?.smallID() === update.player1ID) {
+          checkPlayers.push(update.player2ID);
+        } else if (this.game.myPlayer()?.smallID() === update.player2ID) {
+          checkPlayers.push(update.player1ID);
         }
       }
-      for (const playerID of checkPlayers) {
-        const player = this.game.playerBySmallID(playerID) as PlayerView;
-        for (const sam of player.units(UnitType.SAMLauncher)) {
-          this.enemySAMLaunchers.set(sam.id(), sam);
-        }
+    }
+    for (const playerID of checkPlayers) {
+      const player = this.game.playerBySmallID(playerID) as PlayerView;
+      for (const sam of player.units(UnitType.SAMLauncher)) {
+        this.enemySAMLaunchers.set(sam.id(), sam);
       }
     }
   }
