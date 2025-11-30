@@ -7,10 +7,10 @@ import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 /**
- * Layer responsible for rendering warship patrol radius indicators.
+ * Layer responsible for rendering warship patrol area indicators.
  * Shows:
- * - Current patrol area (solid line circle) - centered on warship's patrolTile
- * - Preview area (dashed line circle) - follows cursor for placement preview
+ * - Current patrol area (solid line square) - centered on warship's patrolTile
+ * - Preview patrol area (dashed line square) - follows cursor for placement preview
  */
 export class WarshipRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
@@ -22,12 +22,12 @@ export class WarshipRadiusLayer implements Layer {
   private selectedShow = false; // Warship is selected
   private ghostShow = false; // In warship spawn mode
 
-  // Animation for dashed preview circles
+  // Animation for dashed preview squares
   private dashOffset = 0;
-  private rotationSpeed = 14; // px per second (matches SAMRadiusLayer)
+  private animationSpeed = 14; // px per second (matches SAMRadiusLayer)
   private lastTickTime = Date.now();
 
-  // Cursor tracking for preview circles
+  // Cursor tracking for preview squares
   private mouseWorldPos: { x: number; y: number } | null = null;
 
   constructor(
@@ -74,7 +74,7 @@ export class WarshipRadiusLayer implements Layer {
       this.needsRedraw = true;
     }
 
-    // Animate dash offset only when preview circle is visible
+    // Animate dash offset only when preview square is visible
     const now = Date.now();
     const dt = now - this.lastTickTime;
     this.lastTickTime = now;
@@ -82,7 +82,7 @@ export class WarshipRadiusLayer implements Layer {
     const previewVisible =
       (this.selectedShow || this.ghostShow) && this.mouseWorldPos;
     if (previewVisible) {
-      this.dashOffset += (this.rotationSpeed * dt) / 1000;
+      this.dashOffset += (this.animationSpeed * dt) / 1000;
       if (this.dashOffset > 1e6) this.dashOffset = this.dashOffset % 1000000;
       this.needsRedraw = true;
     }
@@ -150,29 +150,31 @@ export class WarshipRadiusLayer implements Layer {
   }
 
   /**
-   * Draw current patrol area with solid line
+   * Draw current patrol area with solid line square
    */
   private drawCurrentPatrol(centerX: number, centerY: number) {
     const ctx = this.context;
-    const patrolRadius = this.game.config().warshipPatrolRange();
+    const patrolRange = this.game.config().warshipPatrolRange();
+    const halfSize = patrolRange / 2;
 
     ctx.save();
     ctx.lineWidth = 2;
     ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
 
     ctx.beginPath();
-    ctx.arc(centerX, centerY, patrolRadius, 0, Math.PI * 2);
+    ctx.rect(centerX - halfSize, centerY - halfSize, patrolRange, patrolRange);
     ctx.stroke();
 
     ctx.restore();
   }
 
   /**
-   * Draw preview patrol area with dashed line (animated)
+   * Draw preview patrol area with dashed line square (animated)
    */
   private drawPreviewPatrol(centerX: number, centerY: number) {
     const ctx = this.context;
-    const patrolRadius = this.game.config().warshipPatrolRange();
+    const patrolRange = this.game.config().warshipPatrolRange();
+    const halfSize = patrolRange / 2;
 
     ctx.save();
     ctx.lineWidth = 2;
@@ -181,7 +183,7 @@ export class WarshipRadiusLayer implements Layer {
     ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
 
     ctx.beginPath();
-    ctx.arc(centerX, centerY, patrolRadius, 0, Math.PI * 2);
+    ctx.rect(centerX - halfSize, centerY - halfSize, patrolRange, patrolRange);
     ctx.stroke();
 
     ctx.restore();
