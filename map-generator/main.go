@@ -31,6 +31,7 @@ var maps = []struct {
 	{Name: "fourislands"},
 	{Name: "gatewaytotheatlantic"},
 	{Name: "giantworldmap"},
+	{Name: "gulfofstlawrence"},
 	{Name: "halkidiki"},
 	{Name: "iceland"},
 	{Name: "italia"},
