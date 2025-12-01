@@ -36,36 +36,19 @@ export class LobbyTeamView extends LitElement {
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
   private teamsList: Team[] = [];
-  private gameModeCache: GameMode = this.gameMode;
-  private clientsCache: ClientInfo[] = this.clients;
-  private teamCountCache: TeamCountConfig = this.teamCount;
-  private nationCountCache: number = this.nationCount;
 
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
+    // clients is 'changed' every 1s from pollPlayers, chose to not compare for actual change
     if (
       changedProperties.has("gameMode") ||
       changedProperties.has("clients") ||
       changedProperties.has("teamCount") ||
       changedProperties.has("nationCount")
     ) {
-      if (
-        // clients is 'changed' every 1s from pollPlayers in HostLobbyModal
-        // this could happen for other properties in the future too, so check for difference
-        this.gameMode !== this.gameModeCache ||
-        this.clientsChanged(this.clients, this.clientsCache) ||
-        this.teamCount !== this.teamCountCache ||
-        this.nationCount !== this.nationCountCache
-      ) {
-        this.teamsList = this.getTeamList();
-        this.computeTeamPreview(this.teamsList);
-        this.showTeamColors = this.teamsList.length <= 7;
-      }
-
-      this.gameModeCache = this.gameMode;
-      this.clientsCache = [...this.clients];
-      this.teamCountCache = this.teamCount;
-      this.nationCountCache = this.nationCount;
+      this.teamsList = this.getTeamList();
+      this.computeTeamPreview(this.teamsList);
+      this.showTeamColors = this.teamsList.length <= 7;
     }
   }
 
@@ -323,15 +306,5 @@ export class LobbyTeamView extends LitElement {
       team: t,
       players: buckets.get(t) ?? [],
     }));
-  }
-
-  private clientsChanged(
-    newClients: ClientInfo[],
-    cachedClients: ClientInfo[],
-  ): boolean {
-    if (newClients.length !== cachedClients.length) return true;
-    return newClients.some(
-      (client, i) => client.clientID !== cachedClients[i].clientID,
-    );
   }
 }
