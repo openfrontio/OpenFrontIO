@@ -245,7 +245,7 @@ export class BotBehavior {
       }
 
       // Select nuked territory
-      if (this.enemy === null && this.hasBorderingNukedTerritory()) {
+      if (this.enemy === null && this.isBorderingNukedTerritory()) {
         this.setNewEnemy(this.game.terraNullius());
       }
 
@@ -388,7 +388,7 @@ export class BotBehavior {
     return this.enemy;
   }
 
-  hasBorderingNukedTerritory(): boolean {
+  isBorderingNukedTerritory(): boolean {
     return Array.from(this.player.borderTiles())
       .flatMap((t) => this.game.neighbors(t))
       .some(
