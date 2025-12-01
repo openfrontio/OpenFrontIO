@@ -95,6 +95,7 @@ export interface Config {
 
   useNationStrengthForStartManpower(): boolean;
   startManpower(playerInfo: PlayerInfo): number;
+  startingGold(playerInfo: PlayerInfo): Gold;
   troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;
   attackTilesPerTick(
