@@ -18,6 +18,7 @@ export class JoinPrivateLobbyModal extends LitElement {
   @state() private message: string = "";
   @state() private hasJoined = false;
   @state() private players: string[] = [];
+  @state() private spectatorCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
 
@@ -86,16 +87,33 @@ export class JoinPrivateLobbyModal extends LitElement {
                     (player) => html`<span class="player-tag">${player}</span>`,
                   )}
                 </div>
+                ${this.spectatorCount > 0
+                  ? html`
+                      <div class="mt-3 text-sm text-gray-400 text-center">
+                        ${translateText("host_modal.spectators_count", {
+                          count: this.spectatorCount,
+                        })}
+                      </div>
+                    `
+                  : null}
               </div>`
             : ""}
         </div>
-        <div class="flex justify-center">
+        <div class="flex justify-center gap-3">
           ${!this.hasJoined
-            ? html` <o-button
-                title=${translateText("private_lobby.join_lobby")}
-                block
-                @click=${this.joinLobby}
-              ></o-button>`
+            ? html`
+                <o-button
+                  title=${translateText("private_lobby.join_lobby")}
+                  block
+                  @click=${this.joinLobby}
+                ></o-button>
+                <o-button
+                  title=${translateText("private_lobby.join_as_spectator")}
+                  block
+                  variant="secondary"
+                  @click=${this.joinAsSpectator}
+                ></o-button>
+              `
             : ""}
         </div>
       </o-modal>
@@ -170,16 +188,31 @@ export class JoinPrivateLobbyModal extends LitElement {
   }
 
   private async joinLobby(): Promise<void> {
+    await this.joinLobbyInternal(false);
+  }
+
+  private async joinAsSpectator(): Promise<void> {
+    await this.joinLobbyInternal(true);
+  }
+
+  private async joinLobbyInternal(isSpectator: boolean): Promise<void> {
     const lobbyId = this.lobbyIdInput.value;
-    console.log(`Joining lobby with ID: ${lobbyId}`);
+    console.log(
+      `Joining lobby with ID: ${lobbyId} as ${isSpectator ? "spectator" : "player"}`,
+    );
     this.message = `${translateText("private_lobby.checking")}`;
 
     try {
       // First, check if the game exists in active lobbies
-      const gameExists = await this.checkActiveLobby(lobbyId);
+      const gameExists = await this.checkActiveLobby(lobbyId, isSpectator);
       if (gameExists) return;
 
-      // If not active, check archived games
+      // If not active, check archived games (spectators cannot join archived games)
+      if (isSpectator) {
+        this.message = `${translateText("private_lobby.not_found")}`;
+        return;
+      }
+
       switch (await this.checkArchivedGame(lobbyId)) {
         case "success":
           return;
@@ -199,7 +232,10 @@ export class JoinPrivateLobbyModal extends LitElement {
     }
   }
 
-  private async checkActiveLobby(lobbyId: string): Promise<boolean> {
+  private async checkActiveLobby(
+    lobbyId: string,
+    isSpectator: boolean = false,
+  ): Promise<boolean> {
     const config = await getServerConfigFromClient();
     const url = `/${config.workerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
@@ -211,7 +247,9 @@ export class JoinPrivateLobbyModal extends LitElement {
     const gameInfo = await response.json();
 
     if (gameInfo.exists) {
-      this.message = translateText("private_lobby.joined_waiting");
+      this.message = isSpectator
+        ? translateText("private_lobby.joined_as_spectator")
+        : translateText("private_lobby.joined_waiting");
       this.hasJoined = true;
 
       this.dispatchEvent(
@@ -219,6 +257,7 @@ export class JoinPrivateLobbyModal extends LitElement {
           detail: {
             gameID: lobbyId,
             clientID: generateID(),
+            isSpectator: isSpectator,
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
@@ -315,6 +354,7 @@ export class JoinPrivateLobbyModal extends LitElement {
       .then((response) => response.json())
       .then((data: GameInfo) => {
         this.players = data.clients?.map((p) => p.username) ?? [];
+        this.spectatorCount = data.spectators?.length ?? 0;
       })
       .catch((error) => {
         console.error("Error polling players:", error);

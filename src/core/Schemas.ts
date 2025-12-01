@@ -125,6 +125,7 @@ export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 export interface GameInfo {
   gameID: GameID;
   clients?: ClientInfo[];
+  spectators?: ClientInfo[];
   numClients?: number;
   msUntilStart?: number;
   gameConfig?: GameConfig;
@@ -132,6 +133,7 @@ export interface GameInfo {
 export interface ClientInfo {
   clientID: ClientID;
   username: string;
+  isSpectator?: boolean;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
@@ -533,6 +535,7 @@ export const ClientJoinMessageSchema = z.object({
   username: UsernameSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
+  isSpectator: z.boolean().optional(),
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [

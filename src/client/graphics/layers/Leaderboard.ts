@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../../client/Utils";
+import { getServerConfigFromClient } from "../../../core/configuration/ConfigLoader";
 import { EventBus, GameEvent } from "../../../core/EventBus";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
@@ -49,6 +50,9 @@ export class Leaderboard extends LitElement implements Layer {
   @state()
   private _sortOrder: "asc" | "desc" = "desc";
 
+  @state()
+  private spectatorCount: number = 0;
+
   createRenderRoot() {
     return this; // use light DOM for Tailwind support
   }
@@ -60,6 +64,28 @@ export class Leaderboard extends LitElement implements Layer {
     if (!this.visible) return;
     if (this.game.ticks() % 10 === 0) {
       this.updateLeaderboard();
+    }
+    // Update spectator count every 5 seconds (300 ticks)
+    if (this.game.ticks() % 300 === 0) {
+      this.updateSpectatorCount();
+    }
+  }
+
+  private async updateSpectatorCount() {
+    if (this.game === null) return;
+    try {
+      const gameID = this.game.gameID();
+      const config = await getServerConfigFromClient();
+      const response = await fetch(
+        `/${config.workerPath(gameID)}/api/game/${gameID}`,
+      );
+      if (response.ok) {
+        const data = await response.json();
+        this.spectatorCount = data.spectators?.length ?? 0;
+      }
+    } catch (error) {
+      // Silently fail - spectator count is not critical
+      console.debug("Failed to fetch spectator count:", error);
     }
   }
 
@@ -172,6 +198,18 @@ export class Leaderboard extends LitElement implements Layer {
       return html``;
     }
     return html`
+      ${this.spectatorCount > 0
+        ? html`
+            <div
+              class="mb-1 px-2 py-1 bg-gray-800/70 text-white text-xs md:text-sm text-center border-b border-slate-500"
+            >
+              👁️ ${this.spectatorCount}
+              ${this.spectatorCount === 1
+                ? translateText("leaderboard.spectator")
+                : translateText("leaderboard.spectators")}
+            </div>
+          `
+        : null}
       <div
         class="max-h-[35vh] overflow-y-auto text-white text-xs md:text-xs lg:text-sm md:max-h-[50vh]  ${this
           .visible

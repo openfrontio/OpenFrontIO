@@ -40,6 +40,7 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
+  public spectators: Client[] = [];
   private allClients: Map<ClientID, Client> = new Map();
   private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
@@ -137,6 +138,32 @@ export class GameServer {
       });
       return;
     }
+
+    // Handle spectators separately
+    if (client.isSpectator) {
+      this.log.info("spectator joining game", {
+        clientID: client.clientID,
+        persistentID: client.persistentID,
+        clientIP: ipAnonymize(client.ip),
+      });
+
+      // Remove stale spectator if this is a reconnect
+      const existing = this.spectators.find(
+        (c) => c.clientID === client.clientID,
+      );
+      if (existing !== undefined) {
+        this.spectators = this.spectators.filter((c) => c !== existing);
+      }
+
+      this.spectators.push(client);
+      client.lastPing = Date.now();
+      this.allClients.set(client.clientID, client);
+
+      // Set up spectator message handlers (receive only, no intents)
+      this.setupSpectatorHandlers(client, lastTurn);
+      return;
+    }
+
     // Log when lobby creator joins private game
     if (client.clientID === this.lobbyCreatorID) {
       this.log.info("Lobby creator joined", {
@@ -340,6 +367,71 @@ export class GameServer {
     }
   }
 
+  private setupSpectatorHandlers(client: Client, lastTurn: number) {
+    client.ws.removeAllListeners("message");
+    client.ws.on("message", async (message: string) => {
+      try {
+        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
+        if (!parsed.success) {
+          this.log.warn("Spectator sent invalid message", {
+            clientID: client.clientID,
+          });
+          return;
+        }
+        const clientMsg = parsed.data;
+
+        // Spectators can only ping, not send intents or other commands
+        switch (clientMsg.type) {
+          case "ping": {
+            this.lastPingUpdate = Date.now();
+            client.lastPing = Date.now();
+            break;
+          }
+          case "intent": {
+            this.log.warn("Spectator attempted to send intent, ignoring", {
+              clientID: client.clientID,
+              intentType: clientMsg.intent.type,
+            });
+            break;
+          }
+          default: {
+            this.log.warn("Spectator sent non-ping message, ignoring", {
+              clientID: client.clientID,
+              messageType: (clientMsg as any).type,
+            });
+            break;
+          }
+        }
+      } catch (error) {
+        this.log.warn("Error handling spectator message", {
+          clientID: client.clientID,
+          error: String(error),
+        });
+      }
+    });
+
+    client.ws.on("close", () => {
+      this.log.info("spectator disconnected", {
+        clientID: client.clientID,
+        persistentID: client.persistentID,
+      });
+      this.spectators = this.spectators.filter(
+        (c) => c.clientID !== client.clientID,
+      );
+    });
+
+    client.ws.on("error", (error: Error) => {
+      if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
+        client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+      }
+    });
+
+    // Send start message to spectator if game already started
+    if (this._hasStarted) {
+      this.sendStartGameMsg(client.ws, lastTurn);
+    }
+  }
+
   public numClients(): number {
     return this.activeClients.length;
   }
@@ -383,6 +475,13 @@ export class GameServer {
       });
       c.ws.send(msg);
     });
+    // Also send to spectators
+    this.spectators.forEach((c) => {
+      this.log.info("sending prestart message to spectator", {
+        clientID: c.clientID,
+      });
+      c.ws.send(msg);
+    });
   }
 
   public start() {
@@ -420,6 +519,13 @@ export class GameServer {
       this.log.info("sending start message", {
         clientID: c.clientID,
         persistentID: c.persistentID,
+      });
+      this.sendStartGameMsg(c.ws, 0);
+    });
+    // Also send to spectators
+    this.spectators.forEach((c) => {
+      this.log.info("sending start message to spectator", {
+        clientID: c.clientID,
       });
       this.sendStartGameMsg(c.ws, 0);
     });
@@ -465,6 +571,10 @@ export class GameServer {
       turn: pastTurn,
     } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
+      c.ws.send(msg);
+    });
+    // Also send to spectators
+    this.spectators.forEach((c) => {
       c.ws.send(msg);
     });
   }
@@ -591,6 +701,11 @@ export class GameServer {
       clients: this.activeClients.map((c) => ({
         username: c.username,
         clientID: c.clientID,
+      })),
+      spectators: this.spectators.map((c) => ({
+        username: c.username,
+        clientID: c.clientID,
+        isSpectator: true,
       })),
       gameConfig: this.gameConfig,
       msUntilStart: this.isPublic()

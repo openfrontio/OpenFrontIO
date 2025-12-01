@@ -54,6 +54,7 @@ export class HostLobbyModal extends LitElement {
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private clients: ClientInfo[] = [];
+  @state() private spectators: ClientInfo[] = [];
   @state() private useRandomMap: boolean = false;
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
@@ -562,6 +563,18 @@ export class HostLobbyModal extends LitElement {
             .teamCount=${this.teamCount}
             .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
           ></lobby-team-view>
+          
+          ${
+            this.spectators.length > 0
+              ? html`
+                  <div class="mt-3 text-sm text-gray-400 text-center">
+                    ${translateText("host_modal.spectators_count", {
+                      count: this.spectators.length,
+                    })}
+                  </div>
+                `
+              : null
+          }
         </div>
 
         <div class="start-game-button-container">
@@ -844,6 +857,7 @@ export class HostLobbyModal extends LitElement {
         console.log(`got game info response: ${JSON.stringify(data)}`);
 
         this.clients = data.clients ?? [];
+        this.spectators = data.spectators ?? [];
       });
   }
 

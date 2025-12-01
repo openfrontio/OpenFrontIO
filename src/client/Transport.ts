@@ -385,6 +385,7 @@ export class Transport {
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
+      isSpectator: this.lobbyConfig.isSpectator,
     } satisfies ClientJoinMessage);
   }
 

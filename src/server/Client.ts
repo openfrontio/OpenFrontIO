@@ -20,5 +20,6 @@ export class Client {
     public readonly username: string,
     public readonly ws: WebSocket,
     public readonly cosmetics: PlayerCosmetics | undefined,
+    public readonly isSpectator: boolean = false,
   ) {}
 }

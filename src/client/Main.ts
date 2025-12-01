@@ -82,6 +82,7 @@ export interface JoinLobbyEvent {
   clientID: string;
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
+  isSpectator?: boolean;
   // GameConfig only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
@@ -487,6 +488,7 @@ class Client {
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,
+        isSpectator: lobby.isSpectator,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
       },
