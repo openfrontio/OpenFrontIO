@@ -69,6 +69,7 @@ const numPlayersConfig = {
   [GameMapType.Iceland]: [50, 40, 30],
   [GameMapType.Italia]: [50, 30, 20],
   [GameMapType.Japan]: [20, 15, 10],
+  [GameMapType.Lisbon]: [50, 40, 30],
   [GameMapType.Mars]: [70, 40, 30],
   [GameMapType.Mena]: [70, 50, 40],
   [GameMapType.Montreal]: [60, 40, 30],
