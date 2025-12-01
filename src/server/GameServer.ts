@@ -145,6 +145,13 @@ export class GameServer {
       this.log.warn(`cannot add client, game full`, {
         clientID: client.clientID,
       });
+
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "Lobby full",
+        } satisfies ServerErrorMessage),
+      );
       return;
     }
 
