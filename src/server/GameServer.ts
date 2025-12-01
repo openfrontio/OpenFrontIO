@@ -373,10 +373,21 @@ export class GameServer {
       try {
         const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
         if (!parsed.success) {
-          this.log.warn("Spectator sent invalid message", {
+          const error = z.prettifyError(parsed.error);
+          this.log.error("Spectator sent invalid message, closing connection", {
             clientID: client.clientID,
+            persistentID: client.persistentID,
+            validationErrors: error,
           });
-          return;
+          if (client.ws.readyState === WebSocket.OPEN) {
+            // 1002: protocol error / policy violation is acceptable for invalid payload
+            client.ws.close(1002, "invalid spectator message schema");
+          }
+          // Remove spectator immediately (same as close handler)
+          this.spectators = this.spectators.filter(
+            (c) => c.clientID !== client.clientID,
+          );
+          return; // stop further processing
         }
         const clientMsg = parsed.data;
 
@@ -403,10 +414,17 @@ export class GameServer {
           }
         }
       } catch (error) {
-        this.log.warn("Error handling spectator message", {
+        this.log.error("Unhandled exception processing spectator message", {
           clientID: client.clientID,
-          error: String(error),
+          persistentID: client.persistentID,
+          error: String(error).substring(0, 250),
         });
+        if (client.ws.readyState === WebSocket.OPEN) {
+          client.ws.close(1002, "spectator message handler exception");
+        }
+        this.spectators = this.spectators.filter(
+          (c) => c.clientID !== client.clientID,
+        );
       }
     });
 
