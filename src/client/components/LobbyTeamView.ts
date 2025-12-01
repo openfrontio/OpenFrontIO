@@ -35,7 +35,6 @@ export class LobbyTeamView extends LitElement {
 
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
-  private teamsList: Team[] = [];
 
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
@@ -46,9 +45,9 @@ export class LobbyTeamView extends LitElement {
       changedProperties.has("teamCount") ||
       changedProperties.has("nationCount")
     ) {
-      this.teamsList = this.getTeamList();
-      this.computeTeamPreview(this.teamsList);
-      this.showTeamColors = this.teamsList.length <= 7;
+      const teamsList = this.getTeamList();
+      this.computeTeamPreview(teamsList);
+      this.showTeamColors = teamsList.length <= 7;
     }
   }
 
@@ -249,13 +248,12 @@ export class LobbyTeamView extends LitElement {
     }
   }
 
-  private computeTeamPreview(teamsList: Team[] = []) {
+  private computeTeamPreview(teams: Team[] = []) {
     if (this.gameMode !== GameMode.Team) {
       this.teamPreview = [];
       this.teamMaxSize = 0;
       return;
     }
-    const teams = teamsList;
 
     // HumansVsNations: show all clients under Humans initially
     if (this.teamCount === HumansVsNations) {
