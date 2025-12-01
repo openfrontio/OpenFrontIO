@@ -3,6 +3,14 @@ import { Execution, Game, Player, UnitType } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
+interface ClusterTraversalState {
+  visited: Uint32Array;
+  gen: number;
+}
+
+// Per-game traversal state used by calculateClusters() to avoid per-player buffers.
+const traversalStates = new WeakMap<Game, ClusterTraversalState>();
+
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
 
@@ -10,11 +18,8 @@ export class PlayerExecution implements Execution {
   private lastCalc = 0;
   private mg: Game;
   private active = true;
-  private _visitedBuffer: Uint8Array;
 
-  constructor(private player: Player) {
-    this._visitedBuffer = new Uint8Array(0); // Initialize empty buffer
-  }
+  constructor(private player: Player) {}
 
   activeDuringSpawnPhase(): boolean {
     return false;
@@ -264,38 +269,47 @@ export class PlayerExecution implements Execution {
     const borderTiles = this.player.borderTiles();
     if (borderTiles.size === 0) return [];
 
-    // Ensure buffer is large enough
-    const mapSize = this.mg.width() * this.mg.height();
-    if (!this._visitedBuffer || this._visitedBuffer.length < mapSize) {
-      this._visitedBuffer = new Uint8Array(mapSize);
-    } else {
-      // Fast clear (much faster than creating a new Set)
-      this._visitedBuffer.fill(0);
+    const totalTiles = this.mg.width() * this.mg.height();
+
+    // Retrieve or initialize traversal state for this specific Game instance.
+    let state = traversalStates.get(this.mg);
+    if (!state || state.visited.length < totalTiles) {
+      state = {
+        visited: new Uint32Array(totalTiles),
+        gen: 0,
+      };
+      traversalStates.set(this.mg, state);
     }
 
+    // Generational clear: bump generation instead of filling the array.
+    state.gen++;
+    if (state.gen === 0xffffffff) {
+      // Extremely rare wrap-around; reset the buffer.
+      state.visited.fill(0);
+      state.gen = 1;
+    }
+
+    const currentGen = state.gen;
+    const visited = state.visited;
+
     const clusters: Set<TileRef>[] = [];
-    const stack: TileRef[] = []; // Reusable stack
+    const stack: TileRef[] = [];
 
     for (const startTile of borderTiles) {
-      // FAST: Array access instead of Set.has()
-      if (this._visitedBuffer[startTile] === 1) continue;
+      if (visited[startTile] === currentGen) continue;
 
       const currentCluster = new Set<TileRef>();
       stack.push(startTile);
-      this._visitedBuffer[startTile] = 1;
+      visited[startTile] = currentGen;
 
       while (stack.length > 0) {
         const tile = stack.pop()!;
         currentCluster.add(tile);
 
-        //Use callback to avoid creating a 'neighbors' Array
         this.mg.forEachNeighborWithDiag(tile, (neighbor) => {
-          if (
-            borderTiles.has(neighbor) &&
-            this._visitedBuffer[neighbor] === 0
-          ) {
+          if (borderTiles.has(neighbor) && visited[neighbor] !== currentGen) {
             stack.push(neighbor);
-            this._visitedBuffer[neighbor] = 1;
+            visited[neighbor] = currentGen;
           }
         });
       }
