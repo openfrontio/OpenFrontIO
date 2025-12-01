@@ -97,40 +97,35 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         }
       }
     }
-    if (allianceResponse) {
-      for (const update of allianceResponse) {
-        if (update.accepted) {
-          // check for good SAMs
-          this.enemySAMLaunchers.forEach((sam, sam_id) => {
-            if (this.game.myPlayer()?.isFriendly(sam.owner())) {
-              this.enemySAMLaunchers.delete(sam_id);
-            }
-          });
-          break;
-        }
+    for (const update of allianceResponse ?? []) {
+      if (update.accepted) {
+        // check for good SAMs
+        this.enemySAMLaunchers.forEach((sam, sam_id) => {
+          if (this.game.myPlayer()?.isFriendly(sam.owner())) {
+            this.enemySAMLaunchers.delete(sam_id);
+          }
+        });
+        break;
       }
     }
     const checkPlayers: number[] = [];
-    if (allianceBroke) {
-      for (const update of allianceBroke) {
-        if (this.game.myPlayer()?.smallID() === update.traitorID) {
-          checkPlayers.push(update.betrayedID);
-        } else if (this.game.myPlayer()?.smallID() === update.betrayedID) {
-          checkPlayers.push(update.traitorID);
-        }
+    for (const update of allianceBroke ?? []) {
+      if (this.game.myPlayer()?.smallID() === update.traitorID) {
+        checkPlayers.push(update.betrayedID);
+      } else if (this.game.myPlayer()?.smallID() === update.betrayedID) {
+        checkPlayers.push(update.traitorID);
       }
     }
-    if (allianceExpired) {
-      for (const update of allianceExpired) {
-        if (this.game.myPlayer()?.smallID() === update.player1ID) {
-          checkPlayers.push(update.player2ID);
-        } else if (this.game.myPlayer()?.smallID() === update.player2ID) {
-          checkPlayers.push(update.player1ID);
-        }
+    for (const update of allianceExpired ?? []) {
+      if (this.game.myPlayer()?.smallID() === update.player1ID) {
+        checkPlayers.push(update.player2ID);
+      } else if (this.game.myPlayer()?.smallID() === update.player2ID) {
+        checkPlayers.push(update.player1ID);
       }
     }
     for (const playerID of checkPlayers) {
       const player = this.game.playerBySmallID(playerID) as PlayerView;
+      if (!player) continue;
       for (const sam of player.units(UnitType.SAMLauncher)) {
         this.enemySAMLaunchers.set(sam.id(), sam);
       }
