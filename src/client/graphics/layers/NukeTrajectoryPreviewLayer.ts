@@ -87,7 +87,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         } else if (unit.isActive()) {
           // New SAM was built or owner swap, check if friendly.
           if (
-            !this.game.isMyPlayer(unit.owner()) &&
+            !unit.owner().isMe() &&
             !this.game.myPlayer()?.isFriendly(unit.owner())
           ) {
             this.enemySAMLaunchers.set(update.id, unit);

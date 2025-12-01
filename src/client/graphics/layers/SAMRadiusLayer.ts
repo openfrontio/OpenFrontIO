@@ -332,7 +332,7 @@ export class SAMRadiusLayer implements Layer {
         ctx.lineDashOffset = this.dashOffset + extraOutlineWidth / 2;
         ctx.stroke();
         // Inline
-        if (this.game.isMyPlayer(a.owner)) {
+        if (a.owner.isMe()) {
           ctx.strokeStyle = lineColorSelf;
         } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
           ctx.strokeStyle = lineColorFriend;

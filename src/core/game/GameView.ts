@@ -384,6 +384,10 @@ export class PlayerView {
       .reduce((a, b) => a + b, 0);
   }
 
+  isMe(): boolean {
+    return this.smallID() === this.game.myPlayer()?.smallID();
+  }
+
   isAlliedWith(other: PlayerView): boolean {
     return this.data.allies.some((n) => other.smallID() === n);
   }
@@ -602,10 +606,6 @@ export class GameView implements GameMap {
 
   myPlayer(): PlayerView | null {
     return this._myPlayer;
-  }
-
-  isMyPlayer(player: PlayerView): boolean {
-    return this.myPlayer()?.smallID() === player.smallID();
   }
 
   player(id: PlayerID): PlayerView {
