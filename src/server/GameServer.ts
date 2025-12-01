@@ -147,11 +147,22 @@ export class GameServer {
         clientIP: ipAnonymize(client.ip),
       });
 
-      // Remove stale spectator if this is a reconnect
+      // Handle spectator reconnects: verify persistentID to prevent impersonation
       const existing = this.spectators.find(
         (c) => c.clientID === client.clientID,
       );
       if (existing !== undefined) {
+        if (client.persistentID !== existing.persistentID) {
+          this.log.warn("spectator reconnect rejected: persistentID mismatch", {
+            clientID: client.clientID,
+            incomingPersistentID: client.persistentID,
+            existingPersistentID: existing.persistentID,
+            clientIP: ipAnonymize(client.ip),
+          });
+          // Do not remove or replace existing spectator; reject join
+          return;
+        }
+        // Same account reconnect: remove stale spectator entry
         this.spectators = this.spectators.filter((c) => c !== existing);
       }
 
