@@ -137,6 +137,17 @@ export class GameServer {
       });
       return;
     }
+
+    if (
+      this.gameConfig.maxPlayers &&
+      this.activeClients.length >= this.gameConfig.maxPlayers
+    ) {
+      this.log.warn(`cannot add client, game full`, {
+        clientID: client.clientID,
+      });
+      return;
+    }
+
     // Log when lobby creator joins private game
     if (client.clientID === this.lobbyCreatorID) {
       this.log.info("Lobby creator joined", {
