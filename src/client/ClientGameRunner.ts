@@ -116,7 +116,7 @@ export function joinLobby(
       ).then((r) => r.start());
     }
     if (message.type === "error") {
-      if (message.error == "full-lobby") {
+      if (message.error === "full-lobby") {
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
             detail: { lobby: lobbyConfig.gameID },
