@@ -210,7 +210,8 @@
     "montreal": "Montreal",
     "achiran": "Achiran",
     "baikalnukewars": "Baikal (Nuke Wars)",
-    "fourislands": "Four Islands"
+    "fourislands": "Four Islands",
+    "gulfofstlawrence": "Gulf of St. Lawrence"
   },
   "map_categories": {
     "continental": "Continental",
@@ -269,7 +270,7 @@
     "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
-    "compact_map": "Mini Map",
+    "compact_map": "Compact Map",
     "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",

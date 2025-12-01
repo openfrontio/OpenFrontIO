@@ -145,7 +145,13 @@ describe("Shell Random Damage", () => {
   });
 
   test("Defense post shell attacks have random damage", () => {
-    const defensePost = new DefensePostExecution(player1, game.ref(coastX, 5));
+    player1.conquer(game.ref(coastX, 5));
+    const spawn = player1.canBuild(UnitType.DefensePost, game.ref(coastX, 5));
+    if (spawn === false) {
+      throw new Error("Unable to build defense post for test");
+    }
+    const defensePostUnit = player1.buildUnit(UnitType.DefensePost, spawn, {});
+    const defensePost = new DefensePostExecution(defensePostUnit);
 
     const target = player2.buildUnit(
       UnitType.Warship,

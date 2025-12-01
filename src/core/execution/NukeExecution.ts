@@ -104,7 +104,7 @@ export class NukeExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
-      const spawn = this.src ?? this.player.canBuild(this.nukeType, this.dst);
+      const spawn = this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {
         console.warn(`cannot build Nuke`);
         this.active = false;

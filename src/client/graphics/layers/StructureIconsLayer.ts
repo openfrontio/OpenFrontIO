@@ -475,10 +475,7 @@ export class StructureIconsLayer implements Layer {
         this.checkForOwnershipChange(render, unitView);
         this.checkForLevelChange(render, unitView);
       }
-    } else if (
-      this.structures.has(unitView.type()) ||
-      unitView.type() === UnitType.Construction
-    ) {
+    } else if (this.structures.has(unitView.type())) {
       this.addNewStructure(unitView);
     }
   }
@@ -491,10 +488,7 @@ export class StructureIconsLayer implements Layer {
   }
 
   private modifyVisibility(render: StructureRenderInfo) {
-    const structureType =
-      render.unit.type() === UnitType.Construction
-        ? render.unit.constructionType()!
-        : render.unit.type();
+    const structureType = render.unit.type();
     const structureInfos = this.structures.get(structureType);
 
     let focusStructure = false;
@@ -535,10 +529,7 @@ export class StructureIconsLayer implements Layer {
     render: StructureRenderInfo,
     unit: UnitView,
   ) {
-    if (
-      render.underConstruction &&
-      render.unit.type() !== UnitType.Construction
-    ) {
+    if (render.underConstruction && !unit.isUnderConstruction()) {
       render.underConstruction = false;
       render.iconContainer?.destroy();
       render.dotContainer?.destroy();
@@ -586,10 +577,7 @@ export class StructureIconsLayer implements Layer {
         : screenPos.y,
     );
 
-    const type =
-      render.unit.type() === UnitType.Construction
-        ? render.unit.constructionType()
-        : render.unit.type();
+    const type = render.unit.type();
     const margin =
       type !== undefined && STRUCTURE_SHAPES[type] !== undefined
         ? ICON_SIZE[STRUCTURE_SHAPES[type]]
@@ -643,7 +631,7 @@ export class StructureIconsLayer implements Layer {
       this.createLevelSprite(unitView),
       this.createDotSprite(unitView),
       unitView.level(),
-      unitView.type() === UnitType.Construction,
+      unitView.isUnderConstruction(),
     );
     this.renders.push(render);
     this.computeNewLocation(render);
