@@ -648,6 +648,21 @@ export class GameServer {
       }
     }
     this.activeClients = alive;
+    // Clean up stale spectators
+    const aliveSpectators: Client[] = [];
+    for (const spectator of this.spectators) {
+      if (now - spectator.lastPing > 60_000) {
+        this.log.info("spectator no pings, terminating", {
+          clientID: spectator.clientID,
+        });
+        if (spectator.ws.readyState === WebSocket.OPEN) {
+          spectator.ws.close(1000, "no heartbeats received");
+        }
+      } else {
+        aliveSpectators.push(spectator);
+      }
+    }
+    this.spectators = aliveSpectators;
     if (now > this.createdAt + this.maxGameDuration) {
       this.log.warn("game past max duration", {
         gameID: this.id,
