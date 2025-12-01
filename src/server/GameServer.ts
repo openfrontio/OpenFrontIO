@@ -149,7 +149,7 @@ export class GameServer {
       client.ws.send(
         JSON.stringify({
           type: "error",
-          error: "Lobby full",
+          error: "full-lobby",
         } satisfies ServerErrorMessage),
       );
       return;
