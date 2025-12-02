@@ -639,6 +639,10 @@ export class DefaultConfig implements Config {
   numSpawnPhaseTurns(): number {
     return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
   }
+  // Amount of ticks for player to change spawn placement in singleplayer
+  numSingleplayerGracePeriodTurns(): number {
+    return 15;
+  }
   numBots(): number {
     return this.bots();
   }

@@ -476,6 +476,8 @@ export class GameView implements GameMap {
 
   private _map: GameMap;
 
+  private firstHumanSpawnTurn: number;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,
@@ -656,15 +658,25 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
+    if (this.ticks() > this._config.numSpawnPhaseTurns()) {
+      return false;
+    }
     if (this._config.gameConfig().gameType === GameType.Singleplayer) {
-      const hasHumanSpawned = Array.from(this._players.values()).some(
-        (player) => player.type() === PlayerType.Human && player.hasSpawned(),
-      );
-      if (hasHumanSpawned) {
-        return false;
+      if (!this.firstHumanSpawnTurn) {
+        this.firstHumanSpawnTurn = Array.from(this._players.values()).some(
+          (player) => player.type() === PlayerType.Human && player.hasSpawned(),
+        )
+          ? this.ticks()
+          : 0;
+      } else {
+        return (
+          this.ticks() <=
+          this.firstHumanSpawnTurn +
+            this._config.numSingleplayerGracePeriodTurns()
+        );
       }
     }
-    return this.ticks() <= this._config.numSpawnPhaseTurns();
+    return true;
   }
   config(): Config {
     return this._config;
