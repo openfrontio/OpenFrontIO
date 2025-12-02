@@ -25,10 +25,7 @@ export class SpawnExecution implements Execution {
       return;
     }
 
-    if (
-      !this.mg.inSpawnPhase() &&
-      this.playerInfo.playerType !== PlayerType.FakeHuman
-    ) {
+    if (!this.mg.inSpawnPhase()) {
       this.active = false;
       return;
     }
