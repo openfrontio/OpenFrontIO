@@ -42,6 +42,7 @@ import {
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getUserMe, isLoggedIn } from "./jwt";
+import "./snow.css";
 import "./styles.css";
 
 declare global {
