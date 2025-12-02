@@ -13,7 +13,7 @@ import {
   Team,
   Trios,
 } from "../../core/game/Game";
-import { assignTeams } from "../../core/game/TeamAssignment";
+import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { translateText } from "../Utils";
 
@@ -31,19 +31,23 @@ export class LobbyTeamView extends LitElement {
   @property({ type: String }) lobbyCreatorClientID: string = "";
   @property({ attribute: "team-count" }) teamCount: TeamCountConfig = 2;
   @property({ type: Function }) onKickPlayer?: (clientID: string) => void;
+  @property({ type: Number }) nationCount: number = 0;
 
   private theme: PastelTheme = new PastelTheme();
   @state() private showTeamColors: boolean = false;
 
   willUpdate(changedProperties: Map<string, any>) {
     // Recompute team preview when relevant properties change
+    // clients is 'changed' every 1s from pollPlayers, chose to not compare for actual change
     if (
       changedProperties.has("gameMode") ||
       changedProperties.has("clients") ||
-      changedProperties.has("teamCount")
+      changedProperties.has("teamCount") ||
+      changedProperties.has("nationCount")
     ) {
-      this.computeTeamPreview();
-      this.showTeamColors = this.getTeamList().length <= 7;
+      const teamsList = this.getTeamList();
+      this.computeTeamPreview(teamsList);
+      this.showTeamColors = teamsList.length <= 7;
     }
   }
 
@@ -60,8 +64,12 @@ export class LobbyTeamView extends LitElement {
   }
 
   private renderTeamMode() {
-    const active = this.teamPreview.filter((t) => t.players.length > 0);
-    const empty = this.teamPreview.filter((t) => t.players.length === 0);
+    const active = this.teamPreview.filter(
+      (t) => t.players.length > 0 || t.team === ColoredTeams.Nations,
+    );
+    const empty = this.teamPreview.filter(
+      (t) => t.players.length === 0 && t.team !== ColoredTeams.Nations,
+    );
     return html` <div
       class="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch max-h-[65vh]"
     >
@@ -96,9 +104,11 @@ export class LobbyTeamView extends LitElement {
           </div>
         </div>
         <div>
-          <div class="font-semibold text-gray-200 mb-1 text-sm">
-            ${translateText("host_modal.empty_teams")}
-          </div>
+          ${empty.length > 0
+            ? html`<div class="font-semibold text-gray-200 mb-1 text-sm">
+                ${translateText("host_modal.empty_teams")}
+              </div>`
+            : ""}
           <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
             ${repeat(
               empty,
@@ -136,6 +146,16 @@ export class LobbyTeamView extends LitElement {
   }
 
   private renderTeamCard(preview: TeamPreviewData, isEmpty: boolean = false) {
+    const displayCount =
+      preview.team === ColoredTeams.Nations
+        ? this.nationCount
+        : preview.players.length;
+
+    const maxTeamSize =
+      preview.team === ColoredTeams.Nations
+        ? this.nationCount
+        : this.teamMaxSize;
+
     return html`
       <div class="bg-gray-800 border border-gray-700 rounded-xl flex flex-col">
         <div
@@ -148,9 +168,7 @@ export class LobbyTeamView extends LitElement {
               ></span>`
             : null}
           <span class="truncate">${preview.team}</span>
-          <span class="text-white/90"
-            >${preview.players.length}/${this.teamMaxSize}</span
-          >
+          <span class="text-white/90">${displayCount}/${maxTeamSize}</span>
         </div>
         <div class="p-2 ${isEmpty ? "" : "flex flex-col gap-1.5"}">
           ${isEmpty
@@ -190,7 +208,7 @@ export class LobbyTeamView extends LitElement {
 
   private getTeamList(): Team[] {
     if (this.gameMode !== GameMode.Team) return [];
-    const playerCount = this.clients.length;
+    const playerCount = this.clients.length + this.nationCount;
     const config = this.teamCount;
 
     if (config === HumansVsNations) {
@@ -230,13 +248,12 @@ export class LobbyTeamView extends LitElement {
     }
   }
 
-  private computeTeamPreview() {
+  private computeTeamPreview(teams: Team[] = []) {
     if (this.gameMode !== GameMode.Team) {
       this.teamPreview = [];
       this.teamMaxSize = 0;
       return;
     }
-    const teams = this.getTeamList();
 
     // HumansVsNations: show all clients under Humans initially
     if (this.teamCount === HumansVsNations) {
@@ -252,7 +269,11 @@ export class LobbyTeamView extends LitElement {
       (c) =>
         new PlayerInfo(c.username, PlayerType.Human, c.clientID, c.clientID),
     );
-    const assignment = assignTeams(players, teams);
+    const assignment = assignTeamsLobbyPreview(
+      players,
+      teams,
+      this.nationCount,
+    );
     const buckets = new Map<Team, ClientInfo[]>();
     for (const t of teams) buckets.set(t, []);
 
@@ -260,9 +281,7 @@ export class LobbyTeamView extends LitElement {
       if (team === "kicked") continue;
       const bucket = buckets.get(team);
       if (!bucket) continue;
-      const client =
-        this.clients.find((c) => c.clientID === p.clientID) ??
-        this.clients.find((c) => c.username === p.name);
+      const client = this.clients.find((c) => c.clientID === p.clientID);
       if (client) bucket.push(client);
     }
 
@@ -277,7 +296,7 @@ export class LobbyTeamView extends LitElement {
       // Fallback: divide players across teams; guard against 0 and empty lobbies
       this.teamMaxSize = Math.max(
         1,
-        Math.ceil(this.clients.length / teams.length),
+        Math.ceil((this.clients.length + this.nationCount) / teams.length),
       );
     }
     this.teamPreview = teams.map((t) => ({

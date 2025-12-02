@@ -6,7 +6,18 @@
     "lang_code": "zh-CN"
   },
   "common": {
-    "close": "关闭"
+    "close": "关闭",
+    "available": "剩余",
+    "preset_max": "最大",
+    "summary_send": "发送",
+    "summary_keep": "保留",
+    "cancel": "取消",
+    "send": "发送",
+    "cap_label": "上限",
+    "cap_tooltip": "接收者的可接收数量",
+    "target_dead": "目标已淘汰",
+    "target_dead_note": "你不能向已淘汰玩家发送资源。",
+    "none": "空"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -23,7 +34,8 @@
     "advertise": "广告",
     "wiki": "游戏百科",
     "privacy_policy": "隐私政策",
-    "terms_of_service": "服务条款"
+    "terms_of_service": "服务条款",
+    "reddit": "Reddit"
   },
   "news": {
     "see_all_releases": "查看所有版本信息",
@@ -75,7 +87,7 @@
     "radial_boat": "发送一艘运输船攻击选中的区域。仅当你与水域毗邻时才可用。",
     "radial_close": "关闭菜单。",
     "info_title": "信息菜单",
-    "info_enemy_desc": "包含以下信息：所选玩家的名称、黄金数量、军队数量、是否已停止与你贸易、是否对你发射了核弹，以及该玩家是否为叛徒。“停止贸易”表示你将无法从该玩家处获得金币，对方也无法通过贸易船向你发送金币。这种状态可能是手动触发（该玩家点击了“停止贸易”，此状态将持续，直到你们双方都点击“开始贸易”）或自动触发（当你背叛了联盟时，此状态会持续，直到你们重新结盟或5分钟后自动结束）。当玩家背叛并攻击其盟友时，“叛徒”状态将显示为“是”，持续30秒。下方图标表示你与该玩家的互动关系：",
+    "info_enemy_desc": "包含以下信息：所选玩家的名称、黄金数量、军队数量、是否已停止与你贸易、是否对你发射了核弹，以及该玩家是否为叛徒。“停止贸易”表示你将无法从该玩家处获得金币，对方也无法通过商船向你发送金币。这种状态可能是手动触发（该玩家点击了“停止贸易”，此状态将持续，直到你们双方都点击“开始贸易”）或自动触发（当你背叛了联盟时，此状态会持续，直到你们重新结盟或5分钟后自动结束）。当玩家背叛并攻击其盟友时，“叛徒”状态将显示为“是”，持续30秒。下方图标表示你与该玩家的互动关系：",
     "info_chat": "发送快速聊天消息给该玩家。选择一个类别、一句话，如果句子中包含 [P1]，请选择一个玩家名字来替换它。点击发送。",
     "info_target": "在该玩家身上放置目标标记，使所有盟友都能看到，用于协调攻击。",
     "info_alliance": "向该玩家发送结盟请求。盟友间可发送资源和军队，但无法互相攻击。",
@@ -95,12 +107,12 @@
     "build_city_desc": "增加你的最大人口。当你无法拓展领土，或者即将达到人口上限时很有用。",
     "build_factory": "工厂",
     "build_factory_desc": "自动修建通往附近城市、港口及其他工厂的铁路，并能与友好的邻居相连。列车会定期出现，并在沿途访问的每座建筑物上为你提供固定金币；在邻居的建筑上会额外增加收益。",
-    "build_defense": "防守据点",
+    "build_defense": "要塞",
     "build_defense_desc": "增加附近边境的防御力，并以棋盘图案标记。敌人在此处的进攻将更慢，伤亡也更高。",
     "build_port": "港口",
     "build_port_desc": "只能建造在水域附近。解锁军舰。会在本国与他国港口之间自动派遣商船（若贸易未被中止），为双方带来金币。当你攻击或被攻击时，与该玩家的贸易将自动中止。等待5分钟，或者双方结盟均可恢复贸易。你也可以手动使用“停止贸易”或“开始贸易”来切换贸易状态。",
     "build_warship": "军舰",
-    "build_warship_desc": "在指定区域巡逻，可俘获敌方的贸易船并摧毁其运输船和军舰。军舰从最近的港口出发，巡逻你最初点击部署的位置。你可以通过点击来控制军舰移动 (详见快捷键中的“攻击”操作)：先点击军舰，再点击你希望其前往的新区域。",
+    "build_warship_desc": "在指定区域巡逻，可俘获敌方的商船并摧毁其运输船和军舰。军舰从最近的港口出发，巡逻你最初点击部署的位置。你可以通过点击来控制军舰移动（详见快捷键中的“攻击”操作）：先点击军舰，再点击你希望其前往的新区域。",
     "build_silo": "导弹发射井",
     "build_silo_desc": "允许发射导弹。",
     "build_sam": "防空塔",
@@ -127,12 +139,15 @@
     "options_title": "选项",
     "bots": "机器人： ",
     "bots_disabled": "已禁用",
+    "nations": "国家：",
     "disable_nations": "禁用国家",
     "instant_build": "立即建造",
     "infinite_gold": "无限黄金",
     "infinite_troops": "无限军队",
     "compact_map": "小地图",
+    "max_timer": "游戏时长（分钟）",
     "disable_nukes": "禁用核弹",
+    "automatic_difficulty": "自动难度",
     "enables_title": "启用设置",
     "start": "开始游戏"
   },
@@ -144,6 +159,7 @@
   "account_modal": {
     "title": "账号",
     "logged_in_as": "以 {email} 身份登录成功",
+    "fetching_account": "正在获取帐户信息......",
     "logged_in_with_discord": "使用 Discord 登录",
     "recovery_email_sent": "账号找回邮件已发送至 {email}"
   },
@@ -179,7 +195,9 @@
     "japan": "日本",
     "yenisei": "叶尼塞河",
     "pluto": "冥王星",
-    "montreal": "蒙特利尔"
+    "montreal": "蒙特利尔",
+    "achiran": "阿基尔岛/阿伦群岛",
+    "baikalnukewars": "贝加尔湖（核战争）"
   },
   "map_categories": {
     "continental": "大陆",
@@ -207,7 +225,14 @@
     "teams_Duos": "2人小队",
     "teams_Trios": "3人小队",
     "teams_Quads": "4人小队",
+    "teams_hvn": "人类 VS 国家",
     "teams": "{num} 个队伍"
+  },
+  "matchmaking_modal": {
+    "title": "匹配中",
+    "connecting": "正在连接到匹配服务器……",
+    "searching": "正在搜索游戏……",
+    "waiting_for_game": "正在等待游戏开始……"
   },
   "username": {
     "enter_username": "输入用户名",
@@ -223,13 +248,16 @@
     "options_title": "选项",
     "bots": "机器人： ",
     "bots_disabled": "禁用",
+    "nations": "国家：",
     "disable_nations": "禁用国家",
+    "max_timer": "游戏时长（分钟）",
     "instant_build": "立即建造",
     "infinite_gold": "无限金钱",
     "donate_gold": "捐赠金币",
     "infinite_troops": "无限军队",
     "donate_troops": "捐赠军队",
     "compact_map": "小地图",
+    "automatic_difficulty": "自动难度",
     "enables_title": "启用设置",
     "player": "玩家",
     "players": "玩家",
@@ -249,7 +277,8 @@
   },
   "game_starting_modal": {
     "title": "游戏正在启动...",
-    "desc": "正在等待游戏开始，请稍候。"
+    "credits": "鸣谢",
+    "code_license": "代码采用 AGPL-3.0 许可证授权（无担保）"
   },
   "difficulty": {
     "difficulty": "难度",
@@ -267,7 +296,7 @@
   },
   "unit_type": {
     "city": "城市",
-    "defense_post": "防守据点",
+    "defense_post": "要塞",
     "port": "港口",
     "warship": "军舰",
     "missile_silo": "导弹发射井",
@@ -283,33 +312,21 @@
     "tab_keybinds": "热键绑定",
     "dark_mode_label": "深色模式",
     "dark_mode_desc": "在浅色和深色主题之间切换网站外观",
-    "dark_mode_enabled": "深色模式已启用",
-    "light_mode_enabled": "亮色模式已启用",
     "emojis_label": "表情符号",
-    "emojis_visible": "已启用表情符号",
-    "emojis_hidden": "已屏蔽表情符号",
     "emojis_desc": "切换是否在游戏中显示表情符号",
     "alert_frame_label": "警告框",
     "alert_frame_desc": "切换警告框显示。若启用，当您被背叛时会弹出警告框。",
     "special_effects_label": "特效",
     "special_effects_desc": "切换特效开关。停用以改进性能",
-    "special_effects_enabled": "已启用动画特效",
-    "special_effects_disabled": "已禁用动画特效",
     "structure_sprites_label": "建筑贴图",
     "structure_sprites_desc": "切换建筑贴图",
-    "structure_sprites_enabled": "建筑贴图已启用",
-    "structure_sprites_disabled": "建筑贴图已禁用",
     "anonymous_names_label": "隐藏的名称",
     "anonymous_names_desc": "将真实玩家名字替换为随机名字。",
-    "anonymous_names_enabled": "主播模式启用（将玩家匿名）",
     "lobby_id_visibility_label": "隐藏的房间ID",
     "lobby_id_visibility_desc": "在创建私人房间时隐藏房间ID",
-    "real_names_shown": "已显示真实玩家名",
     "left_click_label": "左键单击打开菜单",
     "left_click_desc": "开启时，先左键单击打开菜单，然后再点进攻。关闭时，左键将直接进攻。",
     "left_click_menu": "左键点击菜单",
-    "left_click_opens_menu": "左键单击打开菜单",
-    "right_click_opens_menu": "右键单击打开菜单",
     "attack_ratio_label": "⚔️ 攻击比例",
     "attack_ratio_desc": "你要派出多少比例的军队进攻 (1–100%)",
     "troop_ratio_desc": "调整军队 (用于战斗) 和工人 (用于生产黄金) 之间的比例 (1-100%)",
@@ -317,8 +334,6 @@
     "territory_patterns_desc": "选择是否在游戏中显示领土皮肤",
     "performance_overlay_label": "性能叠层",
     "performance_overlay_desc": "切换性能叠层。启用后将显示性能叠层。在游戏过程中按下 Shift+D 可进行切换。",
-    "performance_overlay_enabled": "已启用性能叠层",
-    "performance_overlay_disabled": "已禁用性能叠层",
     "easter_writing_speed_label": "写入速度乘数",
     "easter_writing_speed_desc": "调节你“假装写代码”的速度 (x1–x100)",
     "easter_bug_count_label": "Bug 计数",
@@ -326,6 +341,27 @@
     "view_options": "视图选项",
     "toggle_view": "切换视图",
     "toggle_view_desc": "备选视图 (地形/国家)",
+    "build_controls": "建造菜单",
+    "build_city": "建造城市",
+    "build_city_desc": "在鼠标位置建造城市。",
+    "build_factory": "建造工厂",
+    "build_factory_desc": "在鼠标位置建造工厂。",
+    "build_defense_post": "建造要塞",
+    "build_defense_post_desc": "在鼠标位置建造要塞。",
+    "build_port": "建造港口",
+    "build_port_desc": "在鼠标位置建造港口。",
+    "build_warship": "部署军舰",
+    "build_warship_desc": "在鼠标位置部署军舰。",
+    "build_missile_silo": "建造导弹发射井",
+    "build_missile_silo_desc": "在鼠标位置建造导弹发射井。",
+    "build_sam_launcher": "建造防空塔",
+    "build_sam_launcher_desc": "在鼠标位置建造防空塔。",
+    "build_atom_bomb": "发射原子弹",
+    "build_atom_bomb_desc": "向鼠标位置发射原子弹。",
+    "build_hydrogen_bomb": "发射氢弹",
+    "build_hydrogen_bomb_desc": "向鼠标位置发射氢弹。",
+    "build_mirv": "发射 MIRV",
+    "build_mirv_desc": "向鼠标位置发射 MIRV。",
     "attack_ratio_controls": "攻击比例控制",
     "attack_ratio_up": "增加攻击比例",
     "attack_ratio_up_desc": "增加 10% 攻击比例",
@@ -357,10 +393,10 @@
     "on": "开",
     "off": "关",
     "toggle_terrain": "切换地形视图",
-    "terrain_enabled": "已启用地形视图",
-    "terrain_disabled": "已禁用地形视图",
     "exit_game_label": "退出游戏",
-    "exit_game_info": "返回主菜单"
+    "exit_game_info": "返回主菜单",
+    "background_music_volume": "背景音量",
+    "sound_effects_volume": "音效音量"
   },
   "chat": {
     "title": "快捷聊天",
@@ -402,7 +438,7 @@
       "defend_from": "防御 [P1]！",
       "dont_attack": "不要攻击 [P1]！",
       "ally": "[P1] 是我的盟友！",
-      "build_posts": "建造防守据点！"
+      "build_posts": "建造要塞！"
     },
     "greet": {
       "hello": "你好 ！",
@@ -467,7 +503,7 @@
   },
   "win_modal": {
     "support_openfront": "支持 OpenFront！",
-    "territory_pattern": "购买一个领土皮肤以支持 OpenFront！",
+    "territory_pattern": "购买皮肤即可去除广告！",
     "died": "你已经死了",
     "your_team": "你的队伍获胜了！",
     "other_team": "{team} 队获胜了！",
@@ -475,6 +511,7 @@
     "other_won": "{player} 获胜了！",
     "exit": "退出游戏",
     "keep": "继续游戏",
+    "spectate": "观战",
     "wishlist": "将游戏加入 Steam 愿望单！"
   },
   "leaderboard": {
@@ -545,6 +582,11 @@
     "upgrade": "升级",
     "level": "等级"
   },
+  "player_type": {
+    "player": "玩家",
+    "nation": "国家",
+    "bot": "机器人"
+  },
   "relation": {
     "hostile": "敌对",
     "distrustful": "可疑",
@@ -560,23 +602,51 @@
   "player_panel": {
     "gold": "黄金",
     "troops": "军队",
-    "betrayals": "叛变者数量",
+    "betrayals": "背叛",
     "traitor": "叛变者",
+    "trading": "交易",
+    "active": "活跃",
+    "stopped": "终止",
     "alliance_time_remaining": "结盟有效期截至",
     "embargo": "已停止与你交易",
     "nuke": "他们向你发射的核弹",
-    "start_trade": "开始交易",
+    "start_trade": "开启交易",
     "stop_trade": "停止交易",
-    "yes": "是",
-    "no": "否",
-    "none": "空",
+    "stop_trade_all": "与所有人停止交易",
+    "start_trade_all": "与所有人开展交易",
     "alliances": "盟友",
-    "flag": "旗帜"
+    "flag": "旗帜",
+    "chat": "聊天",
+    "target": "目标",
+    "break": "破裂",
+    "break_alliance": "撕毁盟约",
+    "alliance": "结盟",
+    "send_alliance": "请求结盟",
+    "send_troops": "发送军队",
+    "send_gold": "发送黄金",
+    "emotes": "表情符号"
+  },
+  "send_troops_modal": {
+    "title_with_name": "向 {name} 发送军队",
+    "available_tooltip": "你的剩余军队",
+    "min_keep": "最小保留值",
+    "min_keep_pct": "(30%)",
+    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "toggle_attack_bar_mode": "在攻击栏中发送军队",
+    "warning_attackbar": "启用后，你无法直接打开此模式，只能在攻击栏中发送军队。",
+    "aria_slider": "军队滑块",
+    "capacity_note": "接收者现在仅能接收 {{amount}}。"
+  },
+  "send_gold_modal": {
+    "title_with_name": "向 {name} 发送黄金",
+    "available_tooltip": "你的剩余黄金",
+    "aria_slider": "数量滑块",
+    "slider_tooltip": "{{percent}}% • {{amount}}"
   },
   "replay_panel": {
     "replay_speed": "回放速度",
     "game_speed": "游戏速度",
-    "fastest_game_speed": "最快"
+    "fastest_game_speed": "最大"
   },
   "error_modal": {
     "crashed": "游戏崩溃了！",
@@ -591,46 +661,15 @@
     "choose_spawn": "选择出生点"
   },
   "territory_patterns": {
-    "title": "选择领土皮肤",
+    "title": "皮肤",
+    "colors": "颜色",
     "purchase": "购买",
     "blocked": {
       "login": "您必须登录才能使用此皮肤。",
       "purchase": "购买以解锁此皮肤。"
     },
     "pattern": {
-      "default": "默认",
-      "custom": "自定义",
-      "stripes_v": "垂直",
-      "stripes_h": "水平",
-      "horizontal_stripes": "水平 (替换)",
-      "vertical_bars": "垂直 (替换)",
-      "checkerboard": "棋盘格",
-      "choco": "巧克力",
-      "diagonal": "对角线",
-      "cross": "十字线",
-      "mini_cross": "迷你十字线",
-      "sword": "剑",
-      "sparse_dots": "稀疏点",
-      "evan": "埃文",
-      "diagonal_stripe": "斜纹",
-      "mountain_ridge": "山脊",
-      "scattered_dots": "散点",
-      "circuit_board": "电路板",
-      "shells": "贝壳",
-      "-w-": ".w.",
-      "white_rabbit": "小白兔",
-      "goat": "山羊",
-      "cats": "猫",
-      "cursor": "光标",
-      "hand": "手",
-      "radiation": "辐射",
-      "openfront_qr": "OpenFront.io 二维码",
-      "openfront": "OpenFront",
-      "t_rex": "霸王龙",
-      "embelem": "徽章",
-      "contributor": "贡献者",
-      "grogu_head": "格罗古的头",
-      "grogu": "格罗古"
+      "default": "默认"
     }
   },
   "flag_input": {
@@ -664,11 +703,11 @@
     "weapon": "武器",
     "built": "已建造",
     "destroyed": "已摧毁",
-    "captured": "已捕获",
-    "lost": "损失",
+    "captured": "已抢夺",
+    "lost": "已损失",
     "hits": "击中",
     "launched": "已发射",
-    "landed": "已登陆",
+    "landed": "已着陆",
     "sent": "已发送",
     "arrived": "已抵达",
     "attack": "攻击",
@@ -683,12 +722,12 @@
     "unit": {
       "city": "城市",
       "port": "港口",
-      "defp": "防守据点",
+      "defp": "要塞",
       "saml": "防空塔",
       "silo": "导弹发射井",
       "wshp": "军舰",
       "fact": "工厂",
-      "trade": "贸易船",
+      "trade": "商船",
       "trans": "运输船",
       "abomb": "原子弹",
       "hbomb": "氢弹",
@@ -702,11 +741,23 @@
     "mode": "模式",
     "mode_ffa": "混战",
     "mode_team": "团队",
-    "view": "视图",
-    "details": "详细信息",
+    "view": "查看",
+    "details": "详情",
     "started": "已开始",
     "map": "地图",
     "difficulty": "难度",
     "type": "类型"
+  },
+  "player_stats_tree": {
+    "public": "公开",
+    "private": "私有",
+    "singleplayer": "单人玩家",
+    "mode": "模式",
+    "stats_wins": "胜场数",
+    "stats_losses": "败场数",
+    "stats_wlr": "胜败比",
+    "stats_games_played": "游戏场数",
+    "mode_ffa": "混战",
+    "mode_team": "团队"
   }
 }

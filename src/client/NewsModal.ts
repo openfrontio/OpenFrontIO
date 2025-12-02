@@ -2,6 +2,8 @@ import { LitElement, css, html } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import changelog from "../../resources/changelog.md";
+import megaphone from "../../resources/images/Megaphone.svg";
+import version from "../../resources/version.txt";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -126,5 +128,51 @@ export class NewsModal extends LitElement {
 
   private close() {
     this.modalEl?.close();
+  }
+}
+
+@customElement("news-button")
+export class NewsButton extends LitElement {
+  @query("news-modal") private newsModal!: NewsModal;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.checkForNewVersion();
+  }
+
+  private checkForNewVersion() {
+    const lastSeenVersion = localStorage.getItem("last-seen-version");
+    if (lastSeenVersion !== null && lastSeenVersion !== version) {
+      setTimeout(() => {
+        this.openNewsModel();
+      }, 500);
+    }
+  }
+
+  private openNewsModel() {
+    localStorage.setItem("last-seen-version", version);
+    this.newsModal.open();
+  }
+
+  render() {
+    return html`
+      <div class="flex relative">
+        <button
+          class="border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
+          @click=${this.openNewsModel}
+        >
+          <img
+            class="size-[48px] dark:invert"
+            src="${megaphone}"
+            alt=${translateText("news.title")}
+          />
+        </button>
+      </div>
+      <news-modal></news-modal>
+    `;
+  }
+
+  createRenderRoot() {
+    return this;
   }
 }

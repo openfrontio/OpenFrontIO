@@ -439,6 +439,7 @@ export class NameLayer implements Layer {
             // Update existing alliance icon
             allianceWrapper.style.width = `${iconSize}px`;
             allianceWrapper.style.height = `${iconSize}px`;
+            allianceWrapper.style.flexShrink = "0";
 
             const overlay = allianceWrapper.querySelector(
               ".alliance-progress-overlay",

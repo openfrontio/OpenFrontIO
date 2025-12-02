@@ -206,35 +206,34 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null || this.behavior === null) {
       throw new Error("not initialized");
     }
+
     const enemyborder = Array.from(this.player.borderTiles())
       .flatMap((t) => this.mg.neighbors(t))
       .filter(
         (t) =>
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
+    const borderPlayers = enemyborder.map((t) =>
+      this.mg.playerBySmallID(this.mg.ownerID(t)),
+    );
+    const borderingEnemies = borderPlayers
+      .filter((o) => o.isPlayer())
+      .sort((a, b) => a.troops() - b.troops());
 
-    let borderingEnemies: Player[] = [];
     if (enemyborder.length === 0) {
       if (this.random.chance(5)) {
-        this.sendBoatRandomly();
+        this.sendBoatRandomly(borderingEnemies);
       }
     } else {
       if (this.random.chance(10)) {
-        this.sendBoatRandomly();
+        this.sendBoatRandomly(borderingEnemies);
         return;
       }
 
-      const borderPlayers = enemyborder.map((t) =>
-        this.mg.playerBySmallID(this.mg.ownerID(t)),
-      );
       if (borderPlayers.some((o) => !o.isPlayer())) {
         this.behavior.sendAttack(this.mg.terraNullius());
         return;
       }
-
-      borderingEnemies = borderPlayers
-        .filter((o) => o.isPlayer())
-        .sort((a, b) => a.troops() - b.troops());
 
       // 5% chance to send a random alliance request
       if (this.random.chance(20)) {
@@ -598,7 +597,7 @@ export class FakeHumanExecution implements Execution {
     return this.mg.unitInfo(type).cost(this.player);
   }
 
-  sendBoatRandomly() {
+  sendBoatRandomly(borderingEnemies: Player[]) {
     if (this.player === null) throw new Error("not initialized");
     const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
       this.mg.isOceanShore(t),
@@ -610,10 +609,10 @@ export class FakeHumanExecution implements Execution {
     const src = this.random.randElement(oceanShore);
 
     // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
-    let dst = this.randomBoatTarget(src, 150, true);
+    let dst = this.randomBoatTarget(src, borderingEnemies, true);
     if (dst === null) {
       // None found? Then look for players
-      dst = this.randomBoatTarget(src, 150, false);
+      dst = this.randomBoatTarget(src, borderingEnemies, false);
       if (dst === null) {
         return;
       }
@@ -658,15 +657,15 @@ export class FakeHumanExecution implements Execution {
 
   private randomBoatTarget(
     tile: TileRef,
-    dist: number,
+    borderingEnemies: Player[],
     highInterestOnly: boolean = false,
   ): TileRef | null {
     if (this.player === null) throw new Error("not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
     for (let i = 0; i < 500; i++) {
-      const randX = this.random.nextInt(x - dist, x + dist);
-      const randY = this.random.nextInt(y - dist, y + dist);
+      const randX = this.random.nextInt(x - 150, x + 150);
+      const randY = this.random.nextInt(y - 150, y + 150);
       if (!this.mg.isValidCoord(randX, randY)) {
         continue;
       }
@@ -676,6 +675,10 @@ export class FakeHumanExecution implements Execution {
       }
       const owner = this.mg.owner(randTile);
       if (owner === this.player) {
+        continue;
+      }
+      // Don't send boats to players with which we share a border, that usually looks stupid
+      if (owner.isPlayer() && borderingEnemies.includes(owner)) {
         continue;
       }
       // Don't spam boats into players that are more than twice as large as us

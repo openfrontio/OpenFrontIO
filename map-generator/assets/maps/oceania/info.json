@@ -69,7 +69,7 @@
     },
     {
       "coordinates": [143, 37],
-      "name": "Lao People's Democratic Republic",
+      "name": "Lao PDR",
       "strength": 1,
       "flag": "la"
     },
@@ -99,7 +99,7 @@
     },
     {
       "coordinates": [834, 215],
-      "name": "Federated States of Micronesia",
+      "name": "Micronesia",
       "strength": 1,
       "flag": "fm"
     },
