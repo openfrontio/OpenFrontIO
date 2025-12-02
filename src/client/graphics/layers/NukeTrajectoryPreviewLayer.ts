@@ -361,6 +361,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     // Set of line colors, targeted is after SAM intercept is detected.
     const untargetedOutlineColor = "rgba(140, 140, 140, 1)";
     const targetedOutlineColor = "rgba(150, 90, 90, 1)";
+    const symbolOutlineColor = "rgba(0, 0, 0, 1)";
     const targetedLocationColor = "rgba(255, 0, 0, 1)";
     const untargetableAndUntargetedLineColor = "rgba(255, 255, 255, 1)";
     const targetableAndUntargetedLineColor = "rgba(255, 255, 255, 1)";
@@ -370,6 +371,8 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     // Set of line widths
     const outlineExtraWidth = 1.5; // adds onto below
     const lineWidth = 1.25;
+    const XLineWidth = 2;
+    const XSize = 6;
 
     // Set of line dashes
     // Outline dashes calculated automatically
@@ -386,19 +389,40 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     let currentOutlineColor = untargetedOutlineColor;
     let currentLineColor = targetableAndUntargetedLineColor;
     let currentLineDash = targetableAndUntargetedLineDash;
+    let currentLineWidth = lineWidth;
 
     // Take in set of "current" parameters and draw both outline and line.
     const outlineAndStroke = () => {
-      context.lineWidth = lineWidth + outlineExtraWidth;
+      context.lineWidth = currentLineWidth + outlineExtraWidth;
       context.setLineDash(outlineDash(currentLineDash, outlineExtraWidth));
       context.lineDashOffset = outlineExtraWidth / 2;
       context.strokeStyle = currentOutlineColor;
       context.stroke();
-      context.lineWidth = lineWidth;
+      context.lineWidth = currentLineWidth;
       context.setLineDash(currentLineDash);
       context.lineDashOffset = 0;
       context.strokeStyle = currentLineColor;
       context.stroke();
+    };
+    const drawUntargetableCircle = (x: number, y: number) => {
+      context.beginPath();
+      context.arc(x, y, 4, 0, 2 * Math.PI, false);
+      currentOutlineColor = untargetedOutlineColor;
+      currentLineColor = targetableAndUntargetedLineColor;
+      currentLineDash = [1, 0];
+      outlineAndStroke();
+    };
+    const drawTargetedX = (x: number, y: number) => {
+      context.beginPath();
+      context.moveTo(x - XSize, y - XSize);
+      context.lineTo(x + XSize, y + XSize);
+      context.moveTo(x - XSize, y + XSize);
+      context.lineTo(x + XSize, y - XSize);
+      currentOutlineColor = symbolOutlineColor;
+      currentLineColor = targetedLocationColor;
+      currentLineDash = [1, 0];
+      currentLineWidth = XLineWidth;
+      outlineAndStroke();
     };
 
     // Calculate offset to center coordinates (same as canvas drawing)
@@ -421,13 +445,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       }
       if (i === this.untargetableSegmentBounds[0]) {
         outlineAndStroke();
-        // Draw Circle
-        context.beginPath();
-        context.arc(x, y, 4, 0, 2 * Math.PI, false);
-        currentLineColor = targetableAndUntargetedLineColor;
-        currentLineDash = [1, 0];
-        outlineAndStroke();
-        // Start New Line
+        drawUntargetableCircle(x, y);
         context.beginPath();
         if (i >= this.targetedIndex) {
           currentOutlineColor = targetedOutlineColor;
@@ -440,13 +458,7 @@ export class NukeTrajectoryPreviewLayer implements Layer {
         }
       } else if (i === this.untargetableSegmentBounds[1]) {
         outlineAndStroke();
-        // Draw Circle
-        context.beginPath();
-        context.arc(x, y, 4, 0, 2 * Math.PI, false);
-        currentLineColor = targetableAndUntargetedLineColor;
-        currentLineDash = [1, 0];
-        outlineAndStroke();
-        // Start New Line
+        drawUntargetableCircle(x, y);
         context.beginPath();
         if (i >= this.targetedIndex) {
           currentOutlineColor = targetedOutlineColor;
@@ -460,21 +472,13 @@ export class NukeTrajectoryPreviewLayer implements Layer {
       }
       if (i === this.targetedIndex) {
         outlineAndStroke();
-        // Draw X
-        context.beginPath();
-        context.moveTo(x - 4, y - 4);
-        context.lineTo(x + 4, y + 4);
-        context.moveTo(x - 4, y + 4);
-        context.lineTo(x + 4, y - 4);
-        currentOutlineColor = targetedOutlineColor;
-        currentLineColor = targetedLocationColor;
-        currentLineDash = [1, 0];
-        outlineAndStroke();
-        // Start New Line
+        drawTargetedX(x, y);
         context.beginPath();
         // Always in the targetable zone by definition.
+        currentOutlineColor = targetedOutlineColor;
         currentLineColor = targetableAndTargetedLineColor;
         currentLineDash = targetableAndTargetedLineDash;
+        currentLineWidth = lineWidth;
       }
     }
 
