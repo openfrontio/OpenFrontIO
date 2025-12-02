@@ -9,6 +9,7 @@ import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
+import { SharedTileRingBuffers } from "./SharedTileRing";
 import { WorkerMessage } from "./WorkerMessages";
 
 export class WorkerClient {
@@ -22,6 +23,9 @@ export class WorkerClient {
   constructor(
     private gameStartInfo: GameStartInfo,
     private clientID: ClientID,
+    private sharedTileRingBuffers?: SharedTileRingBuffers,
+    private sharedStateBuffer?: SharedArrayBuffer,
+    private sharedDirtyBuffer?: SharedArrayBuffer,
   ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
     this.messageHandlers = new Map();
@@ -70,6 +74,10 @@ export class WorkerClient {
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
+        sharedTileRingHeader: this.sharedTileRingBuffers?.header,
+        sharedTileRingData: this.sharedTileRingBuffers?.data,
+        sharedStateBuffer: this.sharedStateBuffer,
+        sharedDirtyBuffer: this.sharedDirtyBuffer,
       });
 
       // Add timeout for initialization
@@ -97,12 +105,6 @@ export class WorkerClient {
     this.worker.postMessage({
       type: "turn",
       turn,
-    });
-  }
-
-  sendHeartbeat() {
-    this.worker.postMessage({
-      type: "heartbeat",
     });
   }
 
