@@ -17,6 +17,8 @@ import {
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
+import { TransportShipExecution } from "../TransportShipExecution";
+import { closestTwoTiles } from "../Util";
 
 const emojiId = (e: (typeof flattenedEmojiTable)[number]) =>
   flattenedEmojiTable.indexOf(e);
@@ -24,11 +26,11 @@ const EMOJI_ASSIST_ACCEPT = (["👍", "⛵", "🤝", "🎯"] as const).map(emoji
 const EMOJI_RELATION_TOO_LOW = (["🥱", "🤦‍♂️"] as const).map(emojiId);
 const EMOJI_TARGET_ME = (["🥺", "💀"] as const).map(emojiId);
 const EMOJI_TARGET_ALLY = (["🕊️", "👎"] as const).map(emojiId);
-export const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
+const EMOJI_HECKLE = (["🤡", "😡"] as const).map(emojiId);
 
 export class BotBehavior {
-  private enemy: Player | TerraNullius | null = null;
-  private enemyUpdated: Tick | undefined;
+  private botAttackTroopsSent: number = 0;
+  private readonly lastEmojiSent = new Map<Player, Tick>();
 
   constructor(
     private random: PseudoRandom,
@@ -76,26 +78,25 @@ export class BotBehavior {
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
-  private setNewEnemy(newEnemy: Player | TerraNullius | null, force = false) {
-    if (newEnemy !== null && !force && !this.shouldAttack(newEnemy)) return;
-    this.enemy = newEnemy;
-    this.enemyUpdated = this.game.ticks();
-  }
-
+  // Prevent attacking of humans on lower difficulties
   private shouldAttack(other: Player | TerraNullius): boolean {
-    if (this.player === null) throw new Error("not initialized");
-    if (!other.isPlayer()) {
+    // Always attack Terra Nullius, non-humans and traitors
+    if (
+      other.isPlayer() === false ||
+      other.type() !== PlayerType.Human ||
+      other.isTraitor()
+    ) {
       return true;
     }
-    if (this.player.isOnSameTeam(other)) {
+
+    const { difficulty } = this.game.config().gameConfig();
+    if (difficulty === Difficulty.Easy && this.random.chance(4)) {
       return false;
     }
-    const shouldAttack = this.attackChance(other);
-    if (shouldAttack && this.player.isAlliedWith(other)) {
-      this.betray(other);
-      return true;
+    if (difficulty === Difficulty.Medium && this.random.chance(2)) {
+      return false;
     }
-    return shouldAttack;
+    return true;
   }
 
   private betray(target: Player): void {
@@ -103,47 +104,6 @@ export class BotBehavior {
     const alliance = this.player.allianceWith(target);
     if (!alliance) return;
     this.player.breakAlliance(alliance);
-  }
-
-  private attackChance(other: Player): boolean {
-    if (this.player === null) throw new Error("not initialized");
-
-    if (this.player.isAlliedWith(other)) {
-      return this.shouldDiscourageAttack(other)
-        ? this.random.chance(200)
-        : this.random.chance(50);
-    } else {
-      return this.shouldDiscourageAttack(other) ? this.random.chance(4) : true;
-    }
-  }
-
-  private shouldDiscourageAttack(other: Player) {
-    if (other.isTraitor()) {
-      return false;
-    }
-    const { difficulty } = this.game.config().gameConfig();
-    if (
-      difficulty === Difficulty.Hard ||
-      difficulty === Difficulty.Impossible
-    ) {
-      return false;
-    }
-    if (other.type() !== PlayerType.Human) {
-      return false;
-    }
-    // Only discourage attacks on Humans who are not traitors on easy or medium difficulty.
-    return true;
-  }
-
-  private clearEnemy() {
-    this.enemy = null;
-  }
-
-  forgetOldEnemies() {
-    // Forget old enemies
-    if (this.game.ticks() - (this.enemyUpdated ?? 0) > 100) {
-      this.clearEnemy();
-    }
   }
 
   private hasReserveRatioTroops(): boolean {
@@ -158,11 +118,14 @@ export class BotBehavior {
     return ratio >= this.triggerRatio;
   }
 
-  private checkIncomingAttacks() {
-    // Switch enemies if we're under attack. But ignore bot attacks, they are harmless.
-    const incomingAttacks = this.player
-      .incomingAttacks()
-      .filter((attack) => attack.attacker().type() !== PlayerType.Bot);
+  private findIncomingAttackPlayer(): Player | null {
+    // Ignore bot attacks if we are not a bot.
+    let incomingAttacks = this.player.incomingAttacks();
+    if (this.player.type() !== PlayerType.Bot) {
+      incomingAttacks = incomingAttacks.filter(
+        (attack) => attack.attacker().type() !== PlayerType.Bot,
+      );
+    }
     let largestAttack = 0;
     let largestAttacker: Player | undefined;
     for (const attack of incomingAttacks) {
@@ -171,14 +134,18 @@ export class BotBehavior {
       largestAttacker = attack.attacker();
     }
     if (largestAttacker !== undefined) {
-      this.setNewEnemy(largestAttacker, true);
+      return largestAttacker;
     }
+    return null;
   }
 
   getNeighborTraitorToAttack(): Player | null {
     const traitors = this.player
       .neighbors()
-      .filter((n): n is Player => n.isPlayer() && n.isTraitor());
+      .filter(
+        (n): n is Player =>
+          n.isPlayer() && this.player.isFriendly(n) === false && n.isTraitor(),
+      );
     return traitors.length > 0 ? this.random.randElement(traitors) : null;
   }
 
@@ -194,91 +161,175 @@ export class BotBehavior {
           this.emoji(ally, this.random.randElement(EMOJI_TARGET_ME));
           continue;
         }
-        if (this.player.isAlliedWith(target)) {
+        if (this.player.isFriendly(target)) {
           this.emoji(ally, this.random.randElement(EMOJI_TARGET_ALLY));
           continue;
         }
         // All checks passed, assist them
         this.player.updateRelation(ally, -20);
-        this.setNewEnemy(target);
+        this.sendAttack(target);
         this.emoji(ally, this.random.randElement(EMOJI_ASSIST_ACCEPT));
         return;
       }
     }
   }
 
-  selectEnemy(borderingEnemies: Player[]): Player | TerraNullius | null {
-    if (this.enemy === null) {
-      // Save up troops until we reach the reserve ratio
-      if (!this.hasReserveRatioTroops()) return null;
+  attackBestTarget(borderingFriends: Player[], borderingEnemies: Player[]) {
+    if (this.player === null) throw new Error("not initialized");
 
-      // Maybe save up troops until we reach the trigger ratio
-      if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return null;
+    // Save up troops until we reach the reserve ratio
+    if (!this.hasReserveRatioTroops()) return;
 
-      // Retaliate against incoming attacks (Most important!)
-      this.checkIncomingAttacks();
+    // Maybe save up troops until we reach the trigger ratio
+    if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return;
 
-      // Select a neighboring bot
-      if (this.enemy === null) {
-        const bots = this.player
-          .neighbors()
-          .filter(
-            (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
-          );
-        if (bots.length > 0) {
-          const density = (p: Player) => p.troops() / p.numTilesOwned();
-          let lowestDensityBot: Player | undefined;
-          let lowestDensity = Infinity;
+    // Retaliate against incoming attacks (Most important!)
+    const incomingAttackPlayer = this.findIncomingAttackPlayer();
+    if (incomingAttackPlayer) {
+      this.sendAttack(incomingAttackPlayer, true);
+      return;
+    }
 
-          for (const bot of bots) {
-            const currentDensity = density(bot);
-            if (currentDensity < lowestDensity) {
-              lowestDensity = currentDensity;
-              lowestDensityBot = bot;
-            }
-          }
+    // Attack bots
+    if (this.attackBots()) return;
 
-          if (lowestDensityBot !== undefined) {
-            this.setNewEnemy(lowestDensityBot);
-          }
-        }
+    // Maybe betray and attack
+    if (this.maybeBetrayAndAttack(borderingFriends)) return;
+
+    // Attack nuked territory
+    if (this.isBorderingNukedTerritory()) {
+      this.sendAttack(this.game.terraNullius());
+      return;
+    }
+
+    // Attack the most hated player with hostile relation
+    const mostHated = this.player.allRelationsSorted()[0];
+    if (
+      mostHated !== undefined &&
+      mostHated.relation === Relation.Hostile &&
+      this.player.isFriendly(mostHated.player) === false
+    ) {
+      this.sendAttack(mostHated.player);
+      return;
+    }
+
+    // Attack the weakest player
+    if (borderingEnemies.length > 0) {
+      this.sendAttack(borderingEnemies[0]);
+      return;
+    }
+
+    // If we don't have bordering enemies, attack someone on an island next to us
+    if (borderingEnemies.length === 0) {
+      const nearestIslandEnemy = this.findNearestIslandEnemy();
+      if (nearestIslandEnemy) {
+        this.sendAttack(nearestIslandEnemy);
+        return;
       }
+    }
+  }
 
-      // Select nuked territory
-      if (this.enemy === null && this.isBorderingNukedTerritory()) {
-        this.setNewEnemy(this.game.terraNullius());
+  // Sort neighboring bots by density (troops / tiles) and attempt to attack many of them (Parallel attacks)
+  // sendAttack will do nothing if we don't have enough reserve troops left
+  attackBots(): boolean {
+    const bots = this.player
+      .neighbors()
+      .filter(
+        (n): n is Player =>
+          n.isPlayer() &&
+          this.player.isFriendly(n) === false &&
+          n.type() === PlayerType.Bot,
+      );
+
+    if (bots.length > 0) {
+      this.botAttackTroopsSent = 0;
+
+      const density = (p: Player) => p.troops() / p.numTilesOwned();
+      const sortedBots = bots.slice().sort((a, b) => density(a) - density(b));
+      const reducedBots = sortedBots.slice(
+        0,
+        this.getBotAttackMaxParallelism(),
+      );
+
+      for (const bot of reducedBots) {
+        this.sendAttack(bot);
       }
+      return true;
+    }
+    return false;
+  }
 
-      // Select the most hated player
-      if (this.enemy === null && this.random.chance(2)) {
-        // 50% chance
-        const mostHated = this.player.allRelationsSorted()[0];
+  getBotAttackMaxParallelism(): number {
+    const { difficulty } = this.game.config().gameConfig();
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return 1;
+      case Difficulty.Medium:
+        return 2;
+      case Difficulty.Hard:
+        return 4;
+      // On impossible difficulty, attack as much bots as possible in parallel
+      default:
+        return 100;
+    }
+  }
+
+  // Betray friends if we have 10 times more troops than them
+  // TODO: Implement better and deeper strategies, for example:
+  // Check impact on relations with other players
+  // Check value of targets territory
+  // Check if target is distracted
+  // Check the targets territory size
+  maybeBetrayAndAttack(borderingFriends: Player[]): boolean {
+    if (borderingFriends.length > 0) {
+      for (const friend of borderingFriends) {
         if (
-          mostHated !== undefined &&
-          mostHated.relation === Relation.Hostile
+          this.player.isAlliedWith(friend) &&
+          this.player.troops() >= friend.troops() * 10
         ) {
-          this.setNewEnemy(mostHated.player);
+          this.betray(friend);
+          this.sendAttack(friend);
+          return true;
         }
       }
+    }
+    return false;
+  }
 
-      // Select the weakest player
-      if (this.enemy === null && borderingEnemies.length > 0) {
-        this.setNewEnemy(borderingEnemies[0]);
-      }
+  // TODO: Nuke the crown if it's far enough ahead of everybody else (based on difficulty)
+  findBestNukeTarget(borderingEnemies: Player[]): Player | null {
+    if (this.player === null) throw new Error("not initialized");
 
-      // Select a random player
-      if (this.enemy === null && borderingEnemies.length > 0) {
-        this.setNewEnemy(this.random.randElement(borderingEnemies));
-      }
+    // Retaliate against incoming attacks (Most important!)
+    const incomingAttackPlayer = this.findIncomingAttackPlayer();
+    if (incomingAttackPlayer) {
+      return incomingAttackPlayer;
+    }
 
-      // If we don't have bordering enemies, we are on an island. Attack someone on an island next to us
-      if (this.enemy === null && borderingEnemies.length === 0) {
-        this.selectNearestIslandEnemy();
+    // Find the most hated player with hostile relation
+    const mostHated = this.player.allRelationsSorted()[0];
+    if (
+      mostHated !== undefined &&
+      mostHated.relation === Relation.Hostile &&
+      this.player.isFriendly(mostHated.player) === false
+    ) {
+      return mostHated.player;
+    }
+
+    // Find the weakest player
+    if (borderingEnemies.length > 0) {
+      return borderingEnemies[0];
+    }
+
+    // If we don't have bordering enemies, find someone on an island next to us
+    if (borderingEnemies.length === 0) {
+      const nearestIslandEnemy = this.findNearestIslandEnemy();
+      if (nearestIslandEnemy) {
+        return nearestIslandEnemy;
       }
     }
 
-    // Sanity check, don't attack our allies or teammates
-    return this.enemySanityCheck();
+    return null;
   }
 
   getPlayerCenter(player: Player) {
@@ -288,9 +339,9 @@ export class BotBehavior {
     return calculateBoundingBoxCenter(this.game, player.borderTiles());
   }
 
-  selectNearestIslandEnemy() {
+  findNearestIslandEnemy(): Player | null {
     const myBorder = this.player.borderTiles();
-    if (myBorder.size === 0) return;
+    if (myBorder.size === 0) return null;
 
     const filteredPlayers = this.game.players().filter((p) => {
       if (p === this.player) return false;
@@ -334,58 +385,51 @@ export class BotBehavior {
       }
 
       if (selectedEnemy !== null) {
-        this.setNewEnemy(selectedEnemy);
+        return selectedEnemy;
       }
     }
+    return null;
   }
 
-  selectRandomEnemy(): Player | TerraNullius | null {
-    if (this.enemy === null) {
-      // Save up troops until we reach the trigger ratio
-      if (!this.hasTriggerRatioTroops()) return null;
+  attackRandomTarget() {
+    if (this.player === null) throw new Error("not initialized");
 
-      // Choose a new enemy randomly
-      const neighbors = this.player.neighbors();
-      for (const neighbor of this.random.shuffleArray(neighbors)) {
-        if (!neighbor.isPlayer()) continue;
-        if (this.player.isFriendly(neighbor)) continue;
-        if (neighbor.type() === PlayerType.FakeHuman) {
-          if (this.random.chance(2)) {
-            continue;
-          }
-        }
-        this.setNewEnemy(neighbor);
-      }
+    // Save up troops until we reach the trigger ratio
+    if (!this.hasTriggerRatioTroops()) return;
 
-      // Retaliate against incoming attacks
-      if (this.enemy === null) {
-        this.checkIncomingAttacks();
-      }
+    // Retaliate against incoming attacks
+    const incomingAttackPlayer = this.findIncomingAttackPlayer();
+    if (incomingAttackPlayer) {
+      this.sendAttack(incomingAttackPlayer, true);
+      return;
+    }
 
-      // Select a traitor as an enemy
-      if (this.enemy === null) {
-        const toAttack = this.getNeighborTraitorToAttack();
-        if (toAttack !== null) {
-          if (!this.player.isFriendly(toAttack) && this.random.chance(3)) {
-            this.setNewEnemy(toAttack);
-          }
-        }
+    // Select a traitor as an enemy
+    const toAttack = this.getNeighborTraitorToAttack();
+    if (toAttack !== null) {
+      if (this.random.chance(3)) {
+        this.sendAttack(toAttack);
+        return;
       }
     }
 
-    // Sanity check, don't attack our allies or teammates
-    return this.enemySanityCheck();
-  }
-
-  private enemySanityCheck(): Player | TerraNullius | null {
-    if (
-      this.enemy &&
-      this.enemy.isPlayer() &&
-      this.player.isFriendly(this.enemy)
-    ) {
-      this.clearEnemy();
+    // Choose a new enemy randomly
+    const { difficulty } = this.game.config().gameConfig();
+    const neighbors = this.player.neighbors();
+    for (const neighbor of this.random.shuffleArray(neighbors)) {
+      if (!neighbor.isPlayer()) continue;
+      if (this.player.isFriendly(neighbor)) continue;
+      if (
+        neighbor.type() === PlayerType.FakeHuman ||
+        neighbor.type() === PlayerType.Human
+      ) {
+        if (this.random.chance(2) || difficulty === Difficulty.Easy) {
+          continue;
+        }
+      }
+      this.sendAttack(neighbor);
+      return;
     }
-    return this.enemy;
   }
 
   isBorderingNukedTerritory(): boolean {
@@ -409,22 +453,124 @@ export class BotBehavior {
     );
   }
 
-  sendAttack(target: Player | TerraNullius) {
-    // Skip attacking friendly targets (allies or teammates) - decision to break alliances should be made by caller
-    if (target.isPlayer() && this.player.isFriendly(target)) return;
+  sendAttack(target: Player | TerraNullius, force = false) {
+    if (!force && !this.shouldAttack(target)) return;
 
+    if (this.player.sharesBorderWith(target)) {
+      this.sendLandAttack(target);
+    } else if (target.isPlayer()) {
+      this.sendBoatAttack(target);
+    }
+  }
+
+  sendLandAttack(target: Player | TerraNullius) {
     const maxTroops = this.game.config().maxTroops(this.player);
     const reserveRatio = target.isPlayer()
       ? this.reserveRatio
       : this.expandRatio;
     const targetTroops = maxTroops * reserveRatio;
-    const troops = this.player.troops() - targetTroops;
-    if (troops < 1) return;
+
+    let troops;
+    if (
+      target.isPlayer() &&
+      target.type() === PlayerType.Bot &&
+      this.player.type() !== PlayerType.Bot
+    ) {
+      troops = this.calculateBotAttackTroops(
+        target,
+        this.player.troops() - targetTroops - this.botAttackTroopsSent,
+      );
+    } else {
+      troops = this.player.troops() - targetTroops;
+    }
+
+    if (troops < 1) {
+      return;
+    }
+
     this.game.addExecution(
       new AttackExecution(
         troops,
         this.player,
         target.isPlayer() ? target.id() : this.game.terraNullius().id(),
+      ),
+    );
+
+    if (target.isPlayer()) {
+      this.maybeSendEmoji(target);
+    }
+  }
+
+  sendBoatAttack(other: Player) {
+    if (other.isPlayer() && this.player.isFriendly(other)) return;
+    const closest = closestTwoTiles(
+      this.game,
+      Array.from(this.player.borderTiles()).filter((t) =>
+        this.game.isOceanShore(t),
+      ),
+      Array.from(other.borderTiles()).filter((t) => this.game.isOceanShore(t)),
+    );
+    if (closest === null) {
+      return;
+    }
+
+    let troops;
+    if (other.isPlayer() && other.type() === PlayerType.Bot) {
+      troops = this.calculateBotAttackTroops(other, this.player.troops() / 5);
+    } else {
+      troops = this.player.troops() / 5;
+    }
+
+    if (troops < 1) {
+      return;
+    }
+
+    this.game.addExecution(
+      new TransportShipExecution(
+        this.player,
+        other.id(),
+        closest.y,
+        troops,
+        null,
+      ),
+    );
+
+    this.maybeSendEmoji(other);
+  }
+
+  calculateBotAttackTroops(target: Player, maxTroops: number): number {
+    const { difficulty } = this.game.config().gameConfig();
+    if (difficulty === Difficulty.Easy) {
+      this.botAttackTroopsSent += maxTroops;
+      return maxTroops;
+    }
+    let troops = target.troops() * 4;
+
+    // Don't send more troops than maxTroops (Keep reserve)
+    if (troops > maxTroops) {
+      // If we haven't enough troops left to do a big enough bot attack, skip it
+      if (maxTroops < target.troops() * 2) {
+        troops = 0;
+      } else {
+        troops = maxTroops;
+      }
+    }
+    this.botAttackTroopsSent += troops;
+    return troops;
+  }
+
+  maybeSendEmoji(enemy: Player) {
+    if (this.player === null) throw new Error("not initialized");
+    if (this.player.type() === PlayerType.Bot) return;
+    if (enemy.type() !== PlayerType.Human) return;
+    const lastSent = this.lastEmojiSent.get(enemy) ?? -300;
+    if (this.game.ticks() - lastSent <= 300) return;
+    this.lastEmojiSent.set(enemy, this.game.ticks());
+    this.game.addExecution(
+      new EmojiExecution(
+        this.player,
+        enemy.id(),
+        this.random.randElement(EMOJI_HECKLE),
       ),
     );
   }
