@@ -1,8 +1,7 @@
 import { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { GameView } from "../../../core/game/GameView";
 import { ParabolaPathFinder } from "../../../core/pathfinding/PathFinding";
 import { GhostStructureChangedEvent, MouseMoveEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
@@ -23,8 +22,6 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   private currentGhostStructure: UnitType | null = null;
   // Cache spawn tile to avoid expensive player.actions() calls
   private cachedSpawnTile: TileRef | null = null;
-  // Track SAM launcher IDs -> SAM launcher unit
-  private readonly enemySAMLaunchers: Map<number, UnitView> = new Map();
 
   constructor(
     private game: GameView,
@@ -56,7 +53,6 @@ export class NukeTrajectoryPreviewLayer implements Layer {
   }
 
   tick() {
-    this.updateSAMs();
     this.updateTrajectoryPreview();
   }
 
@@ -64,72 +60,6 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     // Update trajectory path each frame for smooth responsiveness
     this.updateTrajectoryPath();
     this.drawTrajectoryPreview(context);
-  }
-
-  /**
-   * Check for updates to the list of SAMS for intercept prediction
-   */
-  private updateSAMs() {
-    // Check for updates to SAM launchers
-    const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates?.[GameUpdateType.Unit];
-    const allianceResponse = updates?.[GameUpdateType.AllianceRequestReply];
-    const allianceBroke = updates?.[GameUpdateType.BrokeAlliance];
-    const allianceExpired = updates?.[GameUpdateType.AllianceExpired];
-
-    if (unitUpdates) {
-      for (const update of unitUpdates) {
-        const unit = this.game.unit(update.id);
-        if (!unit || unit.type() !== UnitType.SAMLauncher) continue;
-        if (this.enemySAMLaunchers.has(update.id) && !unit.isActive()) {
-          // SAM was destroyed
-          this.enemySAMLaunchers.delete(update.id);
-        } else if (unit.isActive()) {
-          // New SAM was built or owner swap, check if friendly.
-          if (
-            !unit.owner().isMe() &&
-            !this.game.myPlayer()?.isFriendly(unit.owner())
-          ) {
-            this.enemySAMLaunchers.set(update.id, unit);
-          } else if (this.enemySAMLaunchers.has(update.id)) {
-            this.enemySAMLaunchers.delete(update.id);
-          }
-        }
-      }
-    }
-    for (const update of allianceResponse ?? []) {
-      if (update.accepted) {
-        // check for good SAMs
-        this.enemySAMLaunchers.forEach((sam, sam_id) => {
-          if (this.game.myPlayer()?.isFriendly(sam.owner())) {
-            this.enemySAMLaunchers.delete(sam_id);
-          }
-        });
-        break;
-      }
-    }
-    const checkPlayers: number[] = [];
-    for (const update of allianceBroke ?? []) {
-      if (this.game.myPlayer()?.smallID() === update.traitorID) {
-        checkPlayers.push(update.betrayedID);
-      } else if (this.game.myPlayer()?.smallID() === update.betrayedID) {
-        checkPlayers.push(update.traitorID);
-      }
-    }
-    for (const update of allianceExpired ?? []) {
-      if (this.game.myPlayer()?.smallID() === update.player1ID) {
-        checkPlayers.push(update.player2ID);
-      } else if (this.game.myPlayer()?.smallID() === update.player2ID) {
-        checkPlayers.push(update.player1ID);
-      }
-    }
-    for (const playerID of checkPlayers) {
-      const player = this.game.playerBySmallID(playerID) as PlayerView;
-      if (!player) continue;
-      for (const sam of player.units(UnitType.SAMLauncher)) {
-        this.enemySAMLaunchers.set(sam.id(), sam);
-      }
-    }
   }
 
   /**
@@ -325,10 +255,21 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     // Check trajectory
     for (let i = 0; i < this.trajectoryPoints.length; i++) {
       const tile = this.trajectoryPoints[i];
-      for (const [, sam] of this.enemySAMLaunchers.entries()) {
-        const samTile = sam.tile();
-        const r = this.game.config().samRange(sam.level());
-        if (this.game.euclideanDistSquared(tile, samTile) <= r ** 2) {
+      for (const sam of this.game.nearbyUnits(
+        tile,
+        this.game.config().maxSamRange(),
+        UnitType.SAMLauncher,
+      )) {
+        if (
+          sam.unit.owner().isMe() ||
+          this.game.myPlayer()?.isFriendly(sam.unit.owner())
+        ) {
+          continue;
+        }
+        if (
+          sam.distSquared <=
+          this.game.config().samRange(sam.unit.level()) ** 2
+        ) {
           this.targetedIndex = i;
           break;
         }
