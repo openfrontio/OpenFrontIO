@@ -281,7 +281,6 @@ export class LobbyTeamView extends LitElement {
       if (team === "kicked") continue;
       const bucket = buckets.get(team);
       if (!bucket) continue;
-      // no fallback check on name, since names can be non-unique
       const client = this.clients.find((c) => c.clientID === p.clientID);
       if (client) bucket.push(client);
     }
