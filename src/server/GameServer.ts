@@ -245,6 +245,23 @@ export class GameServer {
       this.activeClients = this.activeClients.filter((c) => c !== existing);
     }
 
+    if (
+      this.gameConfig.maxPlayers &&
+      this.activeClients.length >= this.gameConfig.maxPlayers
+    ) {
+      this.log.warn(`cannot add client, game full`, {
+        clientID: client.clientID,
+      });
+
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "full-lobby",
+        } satisfies ServerErrorMessage),
+      );
+      return;
+    }
+
     // Client connection accepted
     this.activeClients.push(client);
     client.lastPing = Date.now();

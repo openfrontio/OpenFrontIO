@@ -117,15 +117,25 @@ export function joinLobby(
       ).then((r) => r.start());
     }
     if (message.type === "error") {
-      showErrorModal(
-        message.error,
-        message.message,
-        lobbyConfig.gameID,
-        lobbyConfig.clientID,
-        true,
-        false,
-        "error_modal.connection_error",
-      );
+      if (message.error === "full-lobby") {
+        document.dispatchEvent(
+          new CustomEvent("leave-lobby", {
+            detail: { lobby: lobbyConfig.gameID },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      } else {
+        showErrorModal(
+          message.error,
+          message.message,
+          lobbyConfig.gameID,
+          lobbyConfig.clientID,
+          true,
+          false,
+          "error_modal.connection_error",
+        );
+      }
     }
   };
   transport.connect(onconnect, onmessage);
