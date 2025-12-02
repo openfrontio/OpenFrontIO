@@ -29,6 +29,7 @@ export enum GameEnv {
 
 export interface ServerConfig {
   turnIntervalMs(gameType?: GameType): number;
+  startDelay(gameType: GameType): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(
     map: GameMapType,

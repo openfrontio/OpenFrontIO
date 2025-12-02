@@ -1,6 +1,6 @@
 import { JWK } from "jose";
 import { GameEnv, ServerConfig } from "../../src/core/configuration/Config";
-import { GameMapType } from "../../src/core/game/Game";
+import { GameMapType, GameType } from "../../src/core/game/Game";
 import { GameID } from "../../src/core/Schemas";
 
 export class TestServerConfig implements ServerConfig {
@@ -62,6 +62,9 @@ export class TestServerConfig implements ServerConfig {
     throw new Error("Method not implemented.");
   }
   numWorkers(): number {
+    throw new Error("Method not implemented.");
+  }
+  startDelay(gameType: GameType): number {
     throw new Error("Method not implemented.");
   }
   workerIndex(gameID: GameID): number {

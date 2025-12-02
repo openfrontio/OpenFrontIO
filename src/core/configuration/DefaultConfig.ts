@@ -178,6 +178,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
     }
     return 100;
   }
+  // Start game immediately for single player games, with delay for multiplayer games
+  startDelay(gameType: GameType): number {
+    return gameType === GameType.Singleplayer ? 0 : 2000;
+  }
   gameCreationRate(): number {
     return 60 * 1000;
   }
@@ -277,7 +281,7 @@ export class DefaultConfig implements Config {
   }
 
   turnIntervalMs(gameType?: GameType): number {
-	return this._serverConfig.turnIntervalMs(gameType);
+    return this._serverConfig.turnIntervalMs(gameType);
   }
 
   userSettings(): UserSettings {
