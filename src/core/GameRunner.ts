@@ -187,15 +187,6 @@ export class GameRunner {
         );
     }
 
-    if (this.nationsSpawned && this.game.ticks() % 2 === 0) {
-      this.game
-        .players()
-        .filter((p) => p.type() === PlayerType.FakeHuman)
-        .forEach(
-          (p) => (this.playerViewData[p.id()] = placeName(this.game, p)),
-        );
-    }
-
     if (this.game.ticks() < 3 || this.game.ticks() % 30 === 0) {
       this.game.players().forEach((p) => {
         this.playerViewData[p.id()] = placeName(this.game, p);
