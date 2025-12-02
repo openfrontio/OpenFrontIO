@@ -8,7 +8,6 @@ export class BotExecution implements Execution {
   private random: PseudoRandom;
   private mg: Game;
   private neighborsTerraNullius = true;
-  private initializationDelay = 0;
 
   private behavior: BotBehavior | null = null;
   private attackRate: number;
@@ -35,8 +34,6 @@ export class BotExecution implements Execution {
   }
 
   tick(ticks: number) {
-    if (ticks < this.initializationDelay) return;
-
     if (ticks % this.attackRate !== this.attackTick) return;
 
     if (!this.bot.isAlive()) {
@@ -85,10 +82,7 @@ export class BotExecution implements Execution {
       }
     }
 
-    if (
-      this.neighborsTerraNullius &&
-      this.mg.ticks() > this.initializationDelay
-    ) {
+    if (this.neighborsTerraNullius) {
       if (this.bot.sharesBorderWith(this.mg.terraNullius())) {
         this.behavior.sendAttack(this.mg.terraNullius());
         return;
