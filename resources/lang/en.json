@@ -209,7 +209,9 @@
     "montreal": "Montreal",
     "achiran": "Achiran",
     "baikalnukewars": "Baikal (Nuke Wars)",
-    "fourislands": "Four Islands"
+    "fourislands": "Four Islands",
+    "gulfofstlawrence": "Gulf of St. Lawrence",
+    "lisbon": "Lisbon"
   },
   "map_categories": {
     "continental": "Continental",
@@ -268,11 +270,13 @@
     "donate_gold": "Donate gold",
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
-    "compact_map": "Mini Map",
+    "compact_map": "Compact Map",
     "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
+    "nation_players": "Nations",
+    "nation_player": "Nation",
     "waiting": "Waiting for players...",
     "random_spawn": "Random spawn",
     "start": "Start Game",
@@ -280,7 +284,7 @@
     "assigned_teams": "Assigned Teams",
     "empty_teams": "Empty Teams",
     "empty_team": "Empty",
-    "remove_player": "Remove {{username}}"
+    "remove_player": "Remove {username}"
   },
   "team_colors": {
     "red": "Red",
@@ -575,6 +579,7 @@
   },
   "events_display": {
     "retreating": "retreating",
+    "retaliate": "Retaliate",
     "boat": "Boat",
     "alliance_request_status": "{name} {status} your alliance request",
     "alliance_accepted": "accepted",
