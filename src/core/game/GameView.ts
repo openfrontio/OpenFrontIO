@@ -482,6 +482,7 @@ export class GameView implements GameMap {
     private _myClientID: ClientID,
     private _gameID: GameID,
     private humans: Player[],
+    private usesSharedTileState: boolean = false,
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
@@ -512,9 +513,16 @@ export class GameView implements GameMap {
     this.lastUpdate = gu;
 
     this.updatedTiles = [];
-    this.lastUpdate.packedTileUpdates.forEach((tu) => {
-      this.updatedTiles.push(this.updateTile(tu));
-    });
+    if (this.usesSharedTileState) {
+      this.lastUpdate.packedTileUpdates.forEach((tu) => {
+        const tileRef = Number(tu);
+        this.updatedTiles.push(tileRef);
+      });
+    } else {
+      this.lastUpdate.packedTileUpdates.forEach((tu) => {
+        this.updatedTiles.push(this.updateTile(tu));
+      });
+    }
 
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");

@@ -129,6 +129,26 @@ export class TickMetricsEvent implements GameEvent {
   constructor(
     public readonly tickExecutionDuration?: number,
     public readonly tickDelay?: number,
+    // Number of turns the client is behind the server (if known)
+    public readonly backlogTurns?: number,
+    // Number of simulation ticks applied since last render
+    public readonly ticksPerRender?: number,
+    // Approximate worker simulation ticks per second
+    public readonly workerTicksPerSecond?: number,
+    // Approximate render tick() calls per second
+    public readonly renderTicksPerSecond?: number,
+    // Tile update metrics
+    public readonly tileUpdatesCount?: number,
+    public readonly ringBufferUtilization?: number,
+    public readonly ringBufferOverflows?: number,
+    public readonly ringDrainTime?: number,
+  ) {}
+}
+
+export class BacklogStatusEvent implements GameEvent {
+  constructor(
+    public readonly backlogTurns: number,
+    public readonly backlogGrowing: boolean,
   ) {}
 }
 
