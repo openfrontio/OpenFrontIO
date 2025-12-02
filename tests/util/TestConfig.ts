@@ -42,10 +42,6 @@ export class TestConfig extends DefaultConfig {
     return this._defaultNukeSpeed;
   }
 
-  defaultNukeInvulnerability(): boolean {
-    return true;
-  }
-
   defaultNukeTargetableRange(): number {
     return 20;
   }

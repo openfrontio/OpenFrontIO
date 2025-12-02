@@ -920,10 +920,6 @@ export class DefaultConfig implements Config {
     return 6;
   }
 
-  defaultNukeInvulnerability(): boolean {
-    return true;
-  }
-
   defaultNukeTargetableRange(): number {
     return 150;
   }

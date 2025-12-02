@@ -289,9 +289,8 @@ export class NukeTrajectoryPreviewLayer implements Layer {
     // From testing, does not seem to have much effect, so I keep it this way.
 
     // Calculate points when bomb targetability switches
-    const targetRangeSquared = this.game.config().defaultNukeInvulnerability()
-      ? this.game.config().defaultNukeTargetableRange() ** 2
-      : Number.MAX_VALUE;
+    const targetRangeSquared =
+      this.game.config().defaultNukeTargetableRange() ** 2;
 
     // Find two switch points where bomb transitions:
     // [0]: leaves spawn range, enters untargetable zone

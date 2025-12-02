@@ -188,9 +188,8 @@ export class NukeExecution implements Execution {
 
   private getTrajectory(target: TileRef): TrajectoryTile[] {
     const trajectoryTiles: TrajectoryTile[] = [];
-    const targetRangeSquared = this.mg.config().defaultNukeInvulnerability()
-      ? this.mg.config().defaultNukeTargetableRange() ** 2
-      : Number.MAX_VALUE;
+    const targetRangeSquared =
+      this.mg.config().defaultNukeTargetableRange() ** 2;
     const allTiles: TileRef[] = this.pathFinder.allTiles();
     for (const tile of allTiles) {
       trajectoryTiles.push({
@@ -219,9 +218,8 @@ export class NukeExecution implements Execution {
     if (this.nuke === null || this.nuke.targetTile() === undefined) {
       return;
     }
-    const targetRangeSquared = this.mg.config().defaultNukeInvulnerability()
-      ? this.mg.config().defaultNukeTargetableRange() ** 2
-      : Number.MAX_VALUE;
+    const targetRangeSquared =
+      this.mg.config().defaultNukeTargetableRange() ** 2;
     const targetTile = this.nuke.targetTile();
     this.nuke.setTargetable(
       this.isTargetable(targetTile!, this.nuke.tile(), targetRangeSquared),

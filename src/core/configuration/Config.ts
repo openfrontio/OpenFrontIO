@@ -170,8 +170,6 @@ export interface Config {
   // Number of tiles destroyed to break an alliance
   nukeAllianceBreakThreshold(): number;
   defaultNukeSpeed(): number;
-  // If nuke can ever be invulnerable.
-  defaultNukeInvulnerability(): boolean;
   defaultNukeTargetableRange(): number;
   defaultSamMissileSpeed(): number;
   defaultSamRange(): number;
