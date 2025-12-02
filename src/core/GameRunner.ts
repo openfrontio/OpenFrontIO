@@ -115,7 +115,6 @@ export class GameRunner {
     if (this.game.config().spawnNPCs()) {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
-
     this.game.addExecution(new WinCheckExecution());
   }
 

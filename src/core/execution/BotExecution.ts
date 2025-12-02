@@ -53,7 +53,6 @@ export class BotExecution implements Execution {
 
       // Send an attack on the first tick
       this.behavior.sendAttack(this.mg.terraNullius());
-
       return;
     }
 
