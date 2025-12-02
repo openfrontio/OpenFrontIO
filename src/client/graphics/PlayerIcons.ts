@@ -169,6 +169,7 @@ export function createAllianceProgressIcon(
   wrapper.style.width = `${size}px`;
   wrapper.style.height = `${size}px`;
   wrapper.style.display = "inline-block";
+  wrapper.style.flexShrink = "0";
 
   // Base faded icon (full)
   const base = document.createElement("img");

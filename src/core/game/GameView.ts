@@ -121,8 +121,8 @@ export class UnitView {
   health(): number {
     return this.data.health ?? 0;
   }
-  constructionType(): UnitType | undefined {
-    return this.data.constructionType;
+  isUnderConstruction(): boolean {
+    return this.data.underConstruction === true;
   }
   targetUnitId(): number | undefined {
     return this.data.targetUnitId;
@@ -220,7 +220,9 @@ export class PlayerView {
       .theme()
       .borderColor(defaultTerritoryColor);
 
-    const pattern = this.cosmetics.pattern;
+    const pattern = userSettings.territoryPatterns()
+      ? this.cosmetics.pattern
+      : undefined;
     if (pattern) {
       pattern.colorPalette ??= {
         name: "",
@@ -232,7 +234,7 @@ export class PlayerView {
     if (this.team() === null) {
       this._territoryColor = colord(
         this.cosmetics.color?.color ??
-          this.cosmetics.pattern?.colorPalette?.primaryColor ??
+          pattern?.colorPalette?.primaryColor ??
           defaultTerritoryColor.toHex(),
       );
     } else {
@@ -261,9 +263,9 @@ export class PlayerView {
       .defendedBorderColors(this._borderColor);
 
     this.decoder =
-      this.cosmetics.pattern === undefined
+      pattern === undefined
         ? undefined
-        : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
+        : new PatternDecoder(pattern, base64url.decode);
   }
 
   territoryColor(tile?: TileRef): Colord {
