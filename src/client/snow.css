@@ -1,0 +1,43 @@
+/* https://www.youtube.com/watch?v=kZXER24S2bA */
+.snow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.snow::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url(https://i.imgur.com/gG2i4fT.png);
+  animation: snow-fall 20s linear infinite;
+}
+
+.snow::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url(https://i.imgur.com/gG2i4fT.png);
+  animation: snow-fall 10s linear infinite;
+  animation-direction: reverse;
+  filter: blur(2px);
+}
+
+@keyframes snow-fall {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100vh);
+  }
+}
