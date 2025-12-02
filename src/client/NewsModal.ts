@@ -2,6 +2,7 @@ import { LitElement, css, html } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import changelog from "../../resources/changelog.md";
+import christmas from "../../resources/christmas.md";
 import megaphone from "../../resources/images/Megaphone.svg";
 import version from "../../resources/version.txt";
 import { translateText } from "../client/Utils";
@@ -105,7 +106,11 @@ export class NewsModal extends LitElement {
   public open() {
     if (!this.initialized) {
       this.initialized = true;
-      fetch(changelog)
+
+      const isDecember = new Date().getMonth() === 11;
+      const markdownFile = isDecember ? christmas : changelog;
+
+      fetch(markdownFile)
         .then((response) => (response.ok ? response.text() : "Failed to load"))
         .then((markdown) =>
           markdown
