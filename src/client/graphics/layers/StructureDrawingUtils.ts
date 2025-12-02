@@ -143,19 +143,12 @@ export class SpriteFactory {
     const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
 
     const isMarkedForDeletion = unit.markedForDeletion() !== false;
-    const isConstruction = unit.type() === UnitType.Construction;
-    const constructionType = unit.constructionType();
-    const structureType = isConstruction ? constructionType! : unit.type();
+    const isConstruction = unit.isUnderConstruction();
+    const structureType = unit.type();
     const { type, stage } = options;
     const { scale } = this.transformHandler;
 
     if (type === "icon" || type === "dot") {
-      if (isConstruction && constructionType === undefined) {
-        console.warn(
-          `Unit ${unit.id()} is a construction but has no construction type.`,
-        );
-        return parentContainer;
-      }
       const texture = this.createTexture(
         structureType,
         unit.owner(),
@@ -253,26 +246,13 @@ export class SpriteFactory {
     structureCanvas.height = Math.ceil(iconSize);
     const context = structureCanvas.getContext("2d")!;
 
-    const tc = owner.territoryColor();
-    const bc = owner.borderColor();
-
-    // Potentially change logic here. Some TC/BC combinations do not provide good color contrast.
-    const darker = bc.luminance() < tc.luminance() ? bc : tc;
-    const lighter = bc.luminance() < tc.luminance() ? tc : bc;
-
-    let borderColor: string;
-    if (isConstruction) {
-      context.fillStyle = "rgb(198, 198, 198)";
-      borderColor = "rgb(128, 127, 127)";
-    } else {
-      context.fillStyle = lighter
-        .lighten(0.13)
-        .alpha(renderIcon ? 0.65 : 1)
-        .toRgbString();
-      const darken = darker.isLight() ? 0.17 : 0.15;
-      borderColor = darker.darken(darken).toRgbString();
-    }
-    context.strokeStyle = borderColor;
+    // Use structureColors defined from the PlayerView.
+    context.fillStyle = isConstruction
+      ? "rgb(198,198,198)"
+      : owner.structureColors().light.toRgbString();
+    context.strokeStyle = isConstruction
+      ? "rgb(127,127, 127)"
+      : owner.structureColors().dark.toRgbString();
     context.lineWidth = 1;
     const halfIconSize = iconSize / 2;
 
@@ -400,7 +380,10 @@ export class SpriteFactory {
       };
       const [offsetX, offsetY] = SHAPE_OFFSETS[shape] || [0, 0];
       context.drawImage(
-        this.getImageColored(structureInfo.image, borderColor),
+        this.getImageColored(
+          structureInfo.image,
+          owner.structureColors().dark.toRgbString(),
+        ),
         offsetX,
         offsetY,
       );
