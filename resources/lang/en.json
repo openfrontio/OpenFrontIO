@@ -211,7 +211,8 @@
     "achiran": "Achiran",
     "baikalnukewars": "Baikal (Nuke Wars)",
     "fourislands": "Four Islands",
-    "gulfofstlawrence": "Gulf of St. Lawrence"
+    "gulfofstlawrence": "Gulf of St. Lawrence",
+    "lisbon": "Lisbon"
   },
   "map_categories": {
     "continental": "Continental",
@@ -275,6 +276,8 @@
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
+    "nation_players": "Nations",
+    "nation_player": "Nation",
     "waiting": "Waiting for players...",
     "random_spawn": "Random spawn",
     "start": "Start Game",
@@ -282,7 +285,7 @@
     "assigned_teams": "Assigned Teams",
     "empty_teams": "Empty Teams",
     "empty_team": "Empty",
-    "remove_player": "Remove {{username}}"
+    "remove_player": "Remove {username}"
   },
   "team_colors": {
     "red": "Red",
