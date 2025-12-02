@@ -1,0 +1,110 @@
+{
+  "map": {
+    "height": 1600,
+    "num_land_tiles": 1495986,
+    "width": 1600
+  },
+  "map16x": {
+    "height": 400,
+    "num_land_tiles": 90227,
+    "width": 400
+  },
+  "map4x": {
+    "height": 800,
+    "num_land_tiles": 369447,
+    "width": 800
+  },
+  "name": "Lisbon",
+  "nations": [
+    {
+      "coordinates": [750, 630],
+      "flag": "pt",
+      "name": "Lisbon",
+      "strength": 3
+    },
+    {
+      "coordinates": [602, 450],
+      "flag": "pt",
+      "name": "Amadora",
+      "strength": 2
+    },
+    {
+      "coordinates": [120, 644],
+      "flag": "pt",
+      "name": "Cascais",
+      "strength": 1
+    },
+    {
+      "coordinates": [372, 334],
+      "flag": "pt",
+      "name": "Pero Pinheiro",
+      "strength": 1
+    },
+    {
+      "coordinates": [214, 36],
+      "flag": "pt",
+      "name": "Ericeira",
+      "strength": 1
+    },
+    {
+      "coordinates": [924, 210],
+      "flag": "pt",
+      "name": "Alverca do Ribatejo",
+      "strength": 2
+    },
+    {
+      "coordinates": [680, 760],
+      "flag": "pt",
+      "name": "Almada",
+      "strength": 2
+    },
+    {
+      "coordinates": [944, 808],
+      "flag": "pt",
+      "name": "Barreiro",
+      "strength": 2
+    },
+    {
+      "coordinates": [1078, 630],
+      "flag": "pt",
+      "name": "Montijo",
+      "strength": 2
+    },
+    {
+      "coordinates": [762, 1266],
+      "flag": "pt",
+      "name": "Sesimbra",
+      "strength": 1
+    },
+    {
+      "coordinates": [1330, 60],
+      "flag": "pt",
+      "name": "Samora Correia",
+      "strength": 2
+    },
+    {
+      "coordinates": [1506, 412],
+      "flag": "pt",
+      "name": "Pegoes",
+      "strength": 1
+    },
+    {
+      "coordinates": [1210, 1100],
+      "flag": "pt",
+      "name": "Setubal",
+      "strength": 3
+    },
+    {
+      "coordinates": [1560, 1186],
+      "flag": "pt",
+      "name": "Sado",
+      "strength": 1
+    },
+    {
+      "coordinates": [1470, 1470],
+      "flag": "pt",
+      "name": "Carvalhal",
+      "strength": 1
+    }
+  ]
+}
