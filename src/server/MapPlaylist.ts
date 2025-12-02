@@ -25,7 +25,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Africa: 7,
   Asia: 6,
   Australia: 4,
-  Achiran: 14,
+  Achiran: 5,
   Baikal: 5,
   BetweenTwoSeas: 5,
   BlackSea: 6,
@@ -37,10 +37,12 @@ const frequency: Partial<Record<GameMapName, number>> = {
   FalklandIslands: 4,
   FaroeIslands: 4,
   GatewayToTheAtlantic: 5,
+  GulfOfStLawrence: 4,
   Halkidiki: 4,
   Iceland: 4,
   Italia: 6,
   Japan: 6,
+  Lisbon: 4,
   Mars: 3,
   Mena: 6,
   Montreal: 6,
@@ -50,7 +52,6 @@ const frequency: Partial<Record<GameMapName, number>> = {
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
   World: 8,
-  Yenisei: 0,
 };
 
 interface MapWithMode {
@@ -95,6 +96,7 @@ export class MapPlaylist {
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
+      randomSpawn: false,
       disableNPCs: mode === GameMode.Team && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,

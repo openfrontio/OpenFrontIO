@@ -96,11 +96,13 @@ export enum GameMapType {
   StraitOfGibraltar = "Strait of Gibraltar",
   Italia = "Italia",
   Japan = "Japan",
-  Yenisei = "Yenisei",
   Pluto = "Pluto",
   Montreal = "Montreal",
   Achiran = "Achiran",
   BaikalNukeWars = "Baikal (Nuke Wars)",
+  FourIslands = "Four Islands",
+  GulfOfStLawrence = "Gulf of St. Lawrence",
+  Lisbon = "Lisbon",
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -133,8 +135,9 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.StraitOfGibraltar,
     GameMapType.Italia,
     GameMapType.Japan,
-    GameMapType.Yenisei,
     GameMapType.Montreal,
+    GameMapType.GulfOfStLawrence,
+    GameMapType.Lisbon,
   ],
   fantasy: [
     GameMapType.Pangaea,
@@ -143,6 +146,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.DeglaciatedAntarctica,
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
+    GameMapType.FourIslands,
   ],
 };
 
@@ -193,7 +197,6 @@ export enum UnitType {
   City = "City",
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
-  Construction = "Construction",
   Train = "Train",
   Factory = "Factory",
 }
@@ -205,7 +208,6 @@ export enum TrainType {
 
 const _structureTypes: ReadonlySet<UnitType> = new Set([
   UnitType.City,
-  UnitType.Construction,
   UnitType.DefensePost,
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
@@ -279,8 +281,6 @@ export interface UnitParamsMap {
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
   };
-
-  [UnitType.Construction]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -305,7 +305,6 @@ export enum Relation {
 export class Nation {
   constructor(
     public readonly spawnCell: Cell,
-    public readonly strength: number,
     public readonly playerInfo: PlayerInfo,
   ) {}
 }
@@ -413,7 +412,7 @@ export class PlayerInfo {
     public readonly clientID: ClientID | null,
     // TODO: make player id the small id
     public readonly id: PlayerID,
-    public readonly nation?: Nation | null,
+    public readonly nationStrength?: number,
   ) {
     this.clan = getClanTag(name);
   }
@@ -451,6 +450,7 @@ export interface Unit {
   toUpdate(): UnitUpdate;
   hasTrainStation(): boolean;
   setTrainStation(trainStation: boolean): void;
+  wasDestroyedByEnemy(): boolean;
 
   // Train
   trainType(): TrainType | undefined;
@@ -495,9 +495,9 @@ export interface Unit {
   setSafeFromPirates(): void; // Only for trade ships
   isSafeFromPirates(): boolean; // Only for trade ships
 
-  // Construction
-  constructionType(): UnitType | null;
-  setConstructionType(type: UnitType): void;
+  // Construction phase on structures
+  isUnderConstruction(): boolean;
+  setUnderConstruction(underConstruction: boolean): void;
 
   // Upgradable Structures
   level(): number;
@@ -594,7 +594,7 @@ export interface Player {
   decayRelations(): void;
   isOnSameTeam(other: Player): boolean;
   // Either allied or on same team.
-  isFriendly(other: Player): boolean;
+  isFriendly(other: Player, treatAFKFriendly?: boolean): boolean;
   team(): Team | null;
   clan(): string | null;
   incomingAllianceRequests(): AllianceRequest[];
@@ -607,6 +607,7 @@ export interface Player {
   canSendAllianceRequest(other: Player): boolean;
   breakAlliance(alliance: Alliance): void;
   createAllianceRequest(recipient: Player): AllianceRequest | null;
+  betrayals(): number;
 
   // Targeting
   canTarget(other: Player): boolean;
@@ -655,7 +656,6 @@ export interface Player {
   // Misc
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
-  tradingPorts(port: Unit): Unit[];
   // WARNING: this operation is expensive.
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
@@ -702,12 +702,14 @@ export interface Game extends GameMap {
     searchRange: number,
     type: UnitType,
     playerId?: PlayerID,
+    includeUnderConstruction?: boolean,
   ): boolean;
   nearbyUnits(
     tile: TileRef,
     searchRange: number,
     types: UnitType | UnitType[],
     predicate?: UnitPredicate,
+    includeUnderConstruction?: boolean,
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;

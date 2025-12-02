@@ -35,6 +35,7 @@ import {
   CancelBoatIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
+  SendAttackIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -736,28 +737,54 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
+  private handleRetaliate(attack: AttackUpdate) {
+    const attacker = this.game.playerBySmallID(attack.attackerID) as PlayerView;
+    if (!attacker) return;
+
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return;
+
+    // Launch counterattack with the same number of troops as the incoming attack
+    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), attack.troops));
+  }
+
   private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
         ? html`
-            ${this.incomingAttacks.map(
-              (attack) => html`
-                ${this.renderButton({
-                  content: html`
-                    ${renderTroops(attack.troops)}
-                    ${(
-                      this.game.playerBySmallID(attack.attackerID) as PlayerView
-                    )?.name()}
-                    ${attack.retreating
-                      ? `(${translateText("events_display.retreating")}...)`
+            <div class="flex flex-wrap gap-y-1 gap-x-2">
+              ${this.incomingAttacks.map(
+                (attack) => html`
+                  <div class="inline-flex items-center gap-1">
+                    ${this.renderButton({
+                      content: html`
+                        ${renderTroops(attack.troops)}
+                        ${(
+                          this.game.playerBySmallID(
+                            attack.attackerID,
+                          ) as PlayerView
+                        )?.name()}
+                        ${attack.retreating
+                          ? `(${translateText("events_display.retreating")}...)`
+                          : ""}
+                      `,
+                      onClick: () => this.attackWarningOnClick(attack),
+                      className: "text-left text-red-400",
+                      translate: false,
+                    })}
+                    ${!attack.retreating
+                      ? this.renderButton({
+                          content: translateText("events_display.retaliate"),
+                          onClick: () => this.handleRetaliate(attack),
+                          className:
+                            "inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300 bg-red-600 hover:bg-red-700",
+                          translate: true,
+                        })
                       : ""}
-                  `,
-                  onClick: () => this.attackWarningOnClick(attack),
-                  className: "text-left text-red-400",
-                  translate: false,
-                })}
-              `,
-            )}
+                  </div>
+                `,
+              )}
+            </div>
           `
         : ""}
     `;
@@ -874,6 +901,30 @@ export class EventsDisplay extends LitElement implements Layer {
             </div>
           `
         : ""}
+    `;
+  }
+
+  private renderBetrayalDebuffTimer() {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || !myPlayer.isTraitor()) {
+      return html``;
+    }
+
+    const remainingTicks = myPlayer.getTraitorRemainingTicks();
+    const remainingSeconds = Math.ceil(remainingTicks / 10);
+
+    if (remainingSeconds <= 0) {
+      return html``;
+    }
+
+    return html`
+      ${this.renderButton({
+        content: html`${translateText("events_display.betrayal_debuff_ends", {
+          time: remainingSeconds,
+        })}`,
+        className: "text-left text-yellow-400",
+        translate: false,
+      })}
     `;
   }
 
@@ -1081,6 +1132,24 @@ export class EventsDisplay extends LitElement implements Layer {
                           `
                         : ""}
 
+                      <!--- Betrayal debuff timer row -->
+                      ${(() => {
+                        const myPlayer = this.game.myPlayer();
+                        return (
+                          myPlayer &&
+                          myPlayer.isTraitor() &&
+                          myPlayer.getTraitorRemainingTicks() > 0
+                        );
+                      })()
+                        ? html`
+                            <tr class="lg:px-2 lg:py-1 p-1">
+                              <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                ${this.renderBetrayalDebuffTimer()}
+                              </td>
+                            </tr>
+                          `
+                        : ""}
+
                       <!--- Outgoing attacks row -->
                       ${this.outgoingAttacks.length > 0
                         ? html`
@@ -1119,7 +1188,15 @@ export class EventsDisplay extends LitElement implements Layer {
                       this.incomingAttacks.length === 0 &&
                       this.outgoingAttacks.length === 0 &&
                       this.outgoingLandAttacks.length === 0 &&
-                      this.outgoingBoats.length === 0
+                      this.outgoingBoats.length === 0 &&
+                      !(() => {
+                        const myPlayer = this.game.myPlayer();
+                        return (
+                          myPlayer &&
+                          myPlayer.isTraitor() &&
+                          myPlayer.getTraitorRemainingTicks() > 0
+                        );
+                      })()
                         ? html`
                             <tr>
                               <td

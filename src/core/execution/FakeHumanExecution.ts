@@ -1,5 +1,6 @@
 import {
   Cell,
+  Difficulty,
   Execution,
   Game,
   Gold,
@@ -45,6 +46,11 @@ export class FakeHumanExecution implements Execution {
   private readonly lastNukeSent: [Tick, TileRef][] = [];
   private readonly lastMIRVSent: [Tick, TileRef][] = [];
   private readonly embargoMalusApplied = new Set<PlayerID>();
+
+  // Track our transport ships we currently own
+  private trackedTransportShips: Set<Unit> = new Set();
+  // Track our trade ships we currently own
+  private trackedTradeShips: Set<Unit> = new Set();
 
   /** MIRV Strategy Constants */
 
@@ -133,6 +139,16 @@ export class FakeHumanExecution implements Execution {
   }
 
   tick(ticks: number) {
+    // Ship tracking
+    if (
+      this.player !== null &&
+      this.player.isAlive() &&
+      this.mg.config().gameConfig().difficulty !== Difficulty.Easy
+    ) {
+      this.trackTransportShipsAndRetaliate();
+      this.trackTradeShipsAndRetaliate();
+    }
+
     if (ticks % this.attackRate !== this.attackTick) {
       return;
     }
@@ -186,77 +202,54 @@ export class FakeHumanExecution implements Execution {
     this.maybeAttack();
   }
 
-  /**
-   * TODO: Implement strategic betrayal logic
-   * Currently this just breaks alliances without strategic consideration.
-   * Future implementation should consider:
-   * - Relative strength (troop count, territory size) compared to target
-   * - Risk vs reward of betrayal
-   * - Potential impact on relations with other players
-   * - Timing (don't betray when already fighting other enemies)
-   * - Strategic value of target's territory
-   * - If target is distracted
-   */
-  private maybeConsiderBetrayal(target: Player): boolean {
-    if (this.player === null) throw new Error("not initialized");
-
-    const alliance = this.player.allianceWith(target);
-
-    if (!alliance) return false;
-
-    this.player.breakAlliance(alliance);
-
-    return true;
-  }
-
   private maybeAttack() {
     if (this.player === null || this.behavior === null) {
       throw new Error("not initialized");
     }
+
     const enemyborder = Array.from(this.player.borderTiles())
       .flatMap((t) => this.mg.neighbors(t))
       .filter(
         (t) =>
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
-
-    if (enemyborder.length === 0) {
-      if (this.random.chance(10)) {
-        this.sendBoatRandomly();
-      }
-      return;
-    }
-    if (this.random.chance(20)) {
-      this.sendBoatRandomly();
-      return;
-    }
-
     const borderPlayers = enemyborder.map((t) =>
       this.mg.playerBySmallID(this.mg.ownerID(t)),
     );
-    if (borderPlayers.some((o) => !o.isPlayer())) {
-      this.behavior.sendAttack(this.mg.terraNullius());
-      return;
-    }
-
-    const enemies = borderPlayers
+    const borderingEnemies = borderPlayers
       .filter((o) => o.isPlayer())
       .sort((a, b) => a.troops() - b.troops());
 
-    // 5% chance to send a random alliance request
-    if (this.random.chance(20)) {
-      const toAlly = this.random.randElement(enemies);
-      if (this.player.canSendAllianceRequest(toAlly)) {
-        this.mg.addExecution(
-          new AllianceRequestExecution(this.player, toAlly.id()),
-        );
+    if (enemyborder.length === 0) {
+      if (this.random.chance(5)) {
+        this.sendBoatRandomly(borderingEnemies);
+      }
+    } else {
+      if (this.random.chance(10)) {
+        this.sendBoatRandomly(borderingEnemies);
+        return;
+      }
+
+      if (borderPlayers.some((o) => !o.isPlayer())) {
+        this.behavior.sendAttack(this.mg.terraNullius());
+        return;
+      }
+
+      // 5% chance to send a random alliance request
+      if (this.random.chance(20)) {
+        const toAlly = this.random.randElement(borderingEnemies);
+        if (this.player.canSendAllianceRequest(toAlly)) {
+          this.mg.addExecution(
+            new AllianceRequestExecution(this.player, toAlly.id()),
+          );
+        }
       }
     }
 
     this.behavior.forgetOldEnemies();
     this.behavior.assistAllies();
 
-    const enemy = this.behavior.selectEnemy(enemies);
+    const enemy = this.behavior.selectEnemy(borderingEnemies);
     if (!enemy) return;
     this.maybeSendEmoji(enemy);
     this.maybeSendNuke(enemy);
@@ -604,7 +597,7 @@ export class FakeHumanExecution implements Execution {
     return this.mg.unitInfo(type).cost(this.player);
   }
 
-  sendBoatRandomly() {
+  sendBoatRandomly(borderingEnemies: Player[]) {
     if (this.player === null) throw new Error("not initialized");
     const oceanShore = Array.from(this.player.borderTiles()).filter((t) =>
       this.mg.isOceanShore(t),
@@ -615,9 +608,14 @@ export class FakeHumanExecution implements Execution {
 
     const src = this.random.randElement(oceanShore);
 
-    const dst = this.randomBoatTarget(src, 150);
+    // First look for high-interest targets (unowned or bot-owned). Mainly relevant for earlygame
+    let dst = this.randomBoatTarget(src, borderingEnemies, true);
     if (dst === null) {
-      return;
+      // None found? Then look for players
+      dst = this.randomBoatTarget(src, borderingEnemies, false);
+      if (dst === null) {
+        return;
+      }
     }
 
     this.mg.addExecution(
@@ -657,13 +655,17 @@ export class FakeHumanExecution implements Execution {
     return null;
   }
 
-  private randomBoatTarget(tile: TileRef, dist: number): TileRef | null {
+  private randomBoatTarget(
+    tile: TileRef,
+    borderingEnemies: Player[],
+    highInterestOnly: boolean = false,
+  ): TileRef | null {
     if (this.player === null) throw new Error("not initialized");
     const x = this.mg.x(tile);
     const y = this.mg.y(tile);
     for (let i = 0; i < 500; i++) {
-      const randX = this.random.nextInt(x - dist, x + dist);
-      const randY = this.random.nextInt(y - dist, y + dist);
+      const randX = this.random.nextInt(x - 150, x + 150);
+      const randY = this.random.nextInt(y - 150, y + 150);
       if (!this.mg.isValidCoord(randX, randY)) {
         continue;
       }
@@ -672,11 +674,27 @@ export class FakeHumanExecution implements Execution {
         continue;
       }
       const owner = this.mg.owner(randTile);
-      if (!owner.isPlayer()) {
-        return randTile;
+      if (owner === this.player) {
+        continue;
       }
-      if (!owner.isFriendly(this.player)) {
-        return randTile;
+      // Don't send boats to players with which we share a border, that usually looks stupid
+      if (owner.isPlayer() && borderingEnemies.includes(owner)) {
+        continue;
+      }
+      // Don't spam boats into players that are more than twice as large as us
+      if (owner.isPlayer() && owner.troops() > this.player.troops() * 2) {
+        continue;
+      }
+      // High-interest targeting: prioritize unowned tiles or tiles owned by bots
+      if (highInterestOnly) {
+        if (!owner.isPlayer() || owner.type() === PlayerType.Bot) {
+          return randTile;
+        }
+      } else {
+        // Normal targeting: return unowned tiles or tiles owned by non-friendly players
+        if (!owner.isPlayer() || !owner.isFriendly(this.player)) {
+          return randTile;
+        }
       }
     }
     return null;
@@ -899,6 +917,70 @@ export class FakeHumanExecution implements Execution {
       this.lastMIRVSent[0][0] + maxAge <= tick
     ) {
       this.lastMIRVSent.shift();
+    }
+  }
+
+  // Send out a warship if our transport ship got captured
+  private trackTransportShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    // Add any currently owned transport ships to our tracking set
+    this.player
+      .units(UnitType.TransportShip)
+      .forEach((u) => this.trackedTransportShips.add(u));
+
+    // Iterate tracked transport ships; if it got destroyed by an enemy: retaliate
+    for (const ship of Array.from(this.trackedTransportShips)) {
+      if (!ship.isActive()) {
+        // Distinguish between arrival/retreat and enemy destruction
+        if (ship.wasDestroyedByEnemy()) {
+          this.maybeRetaliateWithWarship(ship.tile());
+        }
+        this.trackedTransportShips.delete(ship);
+      }
+    }
+  }
+
+  // Send out a warship if our trade ship got captured
+  private trackTradeShipsAndRetaliate(): void {
+    if (this.player === null) return;
+
+    // Add any currently owned trade ships to our tracking map
+    this.player
+      .units(UnitType.TradeShip)
+      .forEach((u) => this.trackedTradeShips.add(u));
+
+    // Iterate tracked trade ships; if we no longer own it, it was captured: retaliate
+    for (const ship of Array.from(this.trackedTradeShips)) {
+      if (!ship.isActive()) {
+        this.trackedTradeShips.delete(ship);
+        continue;
+      }
+      if (ship.owner().id() !== this.player.id()) {
+        // Ship was ours and is now owned by someone else -> captured
+        this.maybeRetaliateWithWarship(ship.tile());
+        this.trackedTradeShips.delete(ship);
+      }
+    }
+  }
+
+  private maybeRetaliateWithWarship(tile: TileRef): void {
+    if (this.player === null) return;
+
+    const { difficulty } = this.mg.config().gameConfig();
+    // In Easy never retaliate. In Medium retaliate with 15% chance. Hard with 50%, Impossible with 80%.
+    if (
+      (difficulty === Difficulty.Medium && this.random.nextInt(0, 100) < 15) ||
+      (difficulty === Difficulty.Hard && this.random.nextInt(0, 100) < 50) ||
+      (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
+    ) {
+      const canBuild = this.player.canBuild(UnitType.Warship, tile);
+      if (canBuild === false) {
+        return;
+      }
+      this.mg.addExecution(
+        new ConstructionExecution(this.player, UnitType.Warship, tile),
+      );
     }
   }
 

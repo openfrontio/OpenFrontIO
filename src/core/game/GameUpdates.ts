@@ -19,6 +19,7 @@ export interface GameUpdateViewData {
   updates: GameUpdates;
   packedTileUpdates: BigUint64Array;
   playerNameViewData: Record<string, NameViewData>;
+  tickExecutionDuration?: number;
 }
 
 export interface ErrorUpdate {
@@ -127,7 +128,7 @@ export interface UnitUpdate {
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
-  constructionType?: UnitType;
+  underConstruction?: boolean;
   missileTimerQueue: number[];
   level: number;
   hasTrainStation: boolean;
@@ -169,7 +170,7 @@ export interface PlayerUpdate {
   outgoingAllianceRequests: PlayerID[];
   alliances: AllianceView[];
   hasSpawned: boolean;
-  betrayals?: bigint;
+  betrayals: number;
   lastDeleteUnitTick: Tick;
 }
 
@@ -178,6 +179,7 @@ export interface AllianceView {
   other: PlayerID;
   createdAt: Tick;
   expiresAt: Tick;
+  hasExtensionRequest: boolean;
 }
 
 export interface AllianceRequestUpdate {

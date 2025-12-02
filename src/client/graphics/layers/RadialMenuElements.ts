@@ -452,7 +452,7 @@ export const deleteUnitElement: MenuElement = {
       .units()
       .filter(
         (unit) =>
-          unit.constructionType() === undefined &&
+          !unit.isUnderConstruction() &&
           unit.markedForDeletion() === false &&
           params.game.manhattanDist(unit.tile(), params.tile) <=
             DELETE_SELECTION_RADIUS,
@@ -583,16 +583,10 @@ export const rootMenuElement: MenuElement = {
 
     const menuItems: (MenuElement | null)[] = [
       infoMenuElement,
-      boatMenuElement,
-      ally,
+      ...(isOwnTerritory
+        ? [deleteUnitElement, ally, buildMenuElement]
+        : [boatMenuElement, ally, attackMenuElement]),
     ];
-
-    if (isOwnTerritory) {
-      menuItems.push(buildMenuElement);
-      menuItems.push(deleteUnitElement);
-    } else {
-      menuItems.push(attackMenuElement);
-    }
 
     return menuItems.filter((item): item is MenuElement => item !== null);
   },

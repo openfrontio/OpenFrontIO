@@ -8,9 +8,11 @@ import bn from "../../resources/lang/bn.json";
 import cs from "../../resources/lang/cs.json";
 import da from "../../resources/lang/da.json";
 import de from "../../resources/lang/de.json";
+import el from "../../resources/lang/el.json";
 import en from "../../resources/lang/en.json";
 import eo from "../../resources/lang/eo.json";
 import es from "../../resources/lang/es.json";
+import fa from "../../resources/lang/fa.json";
 import fi from "../../resources/lang/fi.json";
 import fr from "../../resources/lang/fr.json";
 import gl from "../../resources/lang/gl.json";
@@ -51,6 +53,7 @@ export class LangSelector extends LitElement {
     bg,
     bn,
     de,
+    el,
     en,
     es,
     eo,
@@ -71,6 +74,7 @@ export class LangSelector extends LitElement {
     cs,
     he,
     da,
+    fa,
     fi,
     "sv-SE": sv_SE,
     "zh-CN": zh_CN,
