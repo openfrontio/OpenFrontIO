@@ -209,7 +209,7 @@ export class StructureLayer implements Layer {
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
-        unit.type() === UnitType.Construction
+        unit.isUnderConstruction()
           ? underConstructionColor
           : unit.owner().territoryColor(),
         130,
@@ -218,7 +218,7 @@ export class StructureLayer implements Layer {
   }
 
   private handleUnitRendering(unit: UnitView) {
-    const unitType = unit.constructionType() ?? unit.type();
+    const unitType = unit.type();
     const iconType = unitType;
     if (!this.isUnitTypeSupported(unitType)) return;
 
@@ -227,7 +227,7 @@ export class StructureLayer implements Layer {
     let borderColor = unit.owner().borderColor();
 
     // Handle cooldown states and special icons
-    if (unit.type() === UnitType.Construction) {
+    if (unit.isUnderConstruction()) {
       icon = this.unitIcons.get(iconType);
       borderColor = underConstructionColor;
     } else {
@@ -266,7 +266,7 @@ export class StructureLayer implements Layer {
     unit: UnitView,
   ) {
     let color = unit.owner().borderColor();
-    if (unit.type() === UnitType.Construction) {
+    if (unit.isUnderConstruction()) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       color = underConstructionColor;
     }
