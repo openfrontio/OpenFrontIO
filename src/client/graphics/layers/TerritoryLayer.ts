@@ -90,6 +90,11 @@ export class TerritoryLayer implements Layer {
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
     unitUpdates.forEach((update) => {
       if (update.unitType === UnitType.DefensePost) {
+        // Only update borders if the defense post is not under construction
+        if (update.underConstruction) {
+          return; // Skip barrier creation while under construction
+        }
+
         const tile = update.pos;
         this.game
           .bfs(tile, euclDistFN(tile, this.game.config().defensePostRange()))

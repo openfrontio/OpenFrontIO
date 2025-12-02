@@ -38,6 +38,8 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   Achiran: "Achiran",
   BaikalNukeWars: "Baikal (Nuke Wars)",
   FourIslands: "Four Islands",
+  GulfOfStLawrence: "Gulf of St. Lawrence",
+  Lisbon: "Lisbon",
 };
 
 @customElement("map-display")
