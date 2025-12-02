@@ -8,7 +8,7 @@ export class BotExecution implements Execution {
   private random: PseudoRandom;
   private mg: Game;
   private neighborsTerraNullius = true;
-  private initializationDelay = 50;
+  private initializationDelay = 0;
 
   private behavior: BotBehavior | null = null;
   private attackRate: number;
@@ -54,6 +54,9 @@ export class BotExecution implements Execution {
         this.expandRatio,
       );
 
+      // Send an attack on the first tick
+      this.behavior.sendAttack(this.mg.terraNullius());
+
       return;
     }
 
@@ -84,7 +87,7 @@ export class BotExecution implements Execution {
 
     if (
       this.neighborsTerraNullius &&
-      this.mg.ticks() > this.initializationDelay + 100
+      this.mg.ticks() > this.initializationDelay
     ) {
       if (this.bot.sharesBorderWith(this.mg.terraNullius())) {
         this.behavior.sendAttack(this.mg.terraNullius());
