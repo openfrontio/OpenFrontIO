@@ -76,6 +76,8 @@ export class TrainStation {
     {};
   private cluster: Cluster | null;
   private railroads: Set<Railroad> = new Set();
+  // Quick lookup from neighboring station to connecting railroad
+  private railroadByNeighbor: Map<TrainStation, Railroad> = new Map();
 
   constructor(
     private mg: Game,
@@ -91,10 +93,19 @@ export class TrainStation {
 
   clearRailroads() {
     this.railroads.clear();
+    this.railroadByNeighbor.clear();
   }
 
   addRailroad(railRoad: Railroad) {
     this.railroads.add(railRoad);
+    const neighbor = railRoad.from === this ? railRoad.to : railRoad.from;
+    this.railroadByNeighbor.set(neighbor, railRoad);
+  }
+
+  removeRailroad(railRoad: Railroad) {
+    this.railroads.delete(railRoad);
+    const neighbor = railRoad.from === this ? railRoad.to : railRoad.from;
+    this.railroadByNeighbor.delete(neighbor);
   }
 
   removeNeighboringRails(station: TrainStation) {
@@ -111,7 +122,7 @@ export class TrainStation {
         isActive: false,
         railTiles,
       });
-      this.railroads.delete(toRemove);
+      this.removeRailroad(toRemove);
     }
   }
 
@@ -137,6 +148,10 @@ export class TrainStation {
 
   getRailroads(): Set<Railroad> {
     return this.railroads;
+  }
+
+  getRailroadTo(station: TrainStation): Railroad | null {
+    return this.railroadByNeighbor.get(station) ?? null;
   }
 
   setCluster(cluster: Cluster | null) {
