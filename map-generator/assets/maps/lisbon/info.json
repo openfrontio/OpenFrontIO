@@ -1,0 +1,95 @@
+{
+  "name": "Lisbon",
+  "nations": [
+    {
+      "coordinates": [750, 630],
+      "name": "Lisbon",
+      "strength": 3,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [602, 450],
+      "name": "Amadora",
+      "strength": 2,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [120, 644],
+      "name": "Cascais",
+      "strength": 1,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [372, 334],
+      "name": "Pero Pinheiro",
+      "strength": 1,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [214, 36],
+      "name": "Ericeira",
+      "strength": 1,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [924, 210],
+      "name": "Alverca do Ribatejo",
+      "strength": 2,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [680, 760],
+      "name": "Almada",
+      "strength": 2,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [944, 808],
+      "name": "Barreiro",
+      "strength": 2,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [1078, 630],
+      "name": "Montijo",
+      "strength": 2,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [762, 1266],
+      "name": "Sesimbra",
+      "strength": 1,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [1330, 60],
+      "name": "Samora Correia",
+      "strength": 2,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [1506, 412],
+      "name": "Pegoes",
+      "strength": 1,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [1210, 1100],
+      "name": "Setubal",
+      "strength": 3,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [1560, 1186],
+      "name": "Sado",
+      "strength": 1,
+      "flag": "pt"
+    },
+    {
+      "coordinates": [1470, 1470],
+      "name": "Carvalhal",
+      "strength": 1,
+      "flag": "pt"
+    }
+  ]
+}

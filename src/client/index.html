@@ -317,21 +317,19 @@
     </div>
 
     <!-- Footer section -->
-    <footer class="l-footer">
-      <div class="l-footer__content">
-        <div class="l-footer__col t-text-white">
+    <footer
+      class="flex justify-center px-3 py-3 md:px-6 md:py-3 bg-[var(--boxBackgroundColor)] backdrop-blur-sm"
+    >
+      <div
+        class="flex flex-col md:flex-row flex-nowrap justify-between items-center gap-4 md:gap-0 w-full max-w-[860px] flex-1"
+      >
+        <div
+          class="flex flex-col sm:flex-row gap-4 sm:gap-5 text-white/70 justify-center md:justify-start flex-shrink-0"
+        >
           <a
-            href="https://youtu.be/jvHEvbko3uw?si=znspkP84P76B1w5I"
-            data-i18n="main.how_to_play"
-            class="t-link"
-            target="_blank"
-          >
-            How to Play
-          </a>
-          <a
-            href="https://openfront.miraheze.org/wiki/Main_Page"
+            href="https://openfront.wiki/Main_Page"
             data-i18n="main.wiki"
-            class="t-link"
+            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
             target="_blank"
           >
             Wiki
@@ -339,25 +337,25 @@
           <a
             target="_blank"
             href="https://www.reddit.com/r/Openfront/"
-            class="t-link"
+            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
           >
             <span data-i18n="main.reddit"> Reddit </span>
           </a>
           <a
             target="_blank"
             href="https://discord.gg/jRpxXvG42t"
-            class="t-link"
+            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
           >
-            <span data-i18n="main.join_discord"> Join the Discord! </span>
+            <span data-i18n="main.join_discord"> Discord </span>
           </a>
         </div>
-        <div class="l-footer__col t-text-white space-x-4">
+        <div class="flex justify-center text-white/70 flex-shrink-0">
           <a
             href="https://github.com/openfrontio/OpenFrontIO"
-            class="t-link inline-flex items-center space-x-2"
+            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out inline-flex items-center gap-2 whitespace-nowrap"
             target="_blank"
           >
-            ©2025 OpenFront™
+            © OpenFront™ and Contributors
             <img
               src="../../resources/icons/github-mark-white.svg"
               alt="GitHub"
@@ -366,10 +364,14 @@
               class="ml-2"
             />
           </a>
+        </div>
+        <div
+          class="flex flex-col sm:flex-row gap-4 sm:gap-4 text-white/70 justify-center md:justify-end flex-shrink-0"
+        >
           <a
             href="/privacy-policy.html"
             data-i18n="main.privacy_policy"
-            class="t-link"
+            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
             target="_blank"
           >
             Privacy Policy
@@ -377,7 +379,7 @@
           <a
             href="/terms-of-service.html"
             data-i18n="main.terms_of_service"
-            class="t-link"
+            class="text-white/70 hover:text-white transition-colors duration-300 ease-in-out whitespace-nowrap"
             target="_blank"
           >
             Terms of Service
@@ -410,7 +412,6 @@
     <chat-modal></chat-modal>
     <user-setting></user-setting>
     <multi-tab-modal></multi-tab-modal>
-    <news-modal></news-modal>
     <game-left-sidebar></game-left-sidebar>
     <flag-input-modal></flag-input-modal>
     <performance-overlay></performance-overlay>
