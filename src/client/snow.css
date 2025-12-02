@@ -7,6 +7,7 @@
   height: 100%;
   pointer-events: none;
   z-index: 10;
+  border: 5px solid red; /* Added for diagnostic purposes */
 }
 
 .snow::before {
