@@ -30,7 +30,7 @@ import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
 import { ClientID, GameStartInfo, Turn } from "./Schemas";
 import { sanitize, simpleHash } from "./Util";
-import { fixProfaneUsername } from "./validations/username";
+import { censorNameWithClanTag } from "./validations/username";
 
 export async function createGameRunner(
   gameStart: GameStartInfo,
@@ -46,17 +46,16 @@ export async function createGameRunner(
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
-  const humans = gameStart.players.map(
-    (p) =>
-      new PlayerInfo(
-        p.clientID === clientID
-          ? sanitize(p.username)
-          : fixProfaneUsername(sanitize(p.username)),
-        PlayerType.Human,
-        p.clientID,
-        random.nextID(),
-      ),
-  );
+  const humans = gameStart.players.map((p) => {
+    return new PlayerInfo(
+      p.clientID === clientID
+        ? sanitize(p.username)
+        : censorNameWithClanTag(p.username),
+      PlayerType.Human,
+      p.clientID,
+      random.nextID(),
+    );
+  });
 
   const nations = gameStart.config.disableNPCs
     ? []
@@ -64,8 +63,13 @@ export async function createGameRunner(
         (n) =>
           new Nation(
             new Cell(n.coordinates[0], n.coordinates[1]),
-            n.strength,
-            new PlayerInfo(n.name, PlayerType.FakeHuman, null, random.nextID()),
+            new PlayerInfo(
+              n.name,
+              PlayerType.FakeHuman,
+              null,
+              random.nextID(),
+              n.strength,
+            ),
           ),
       );
 
