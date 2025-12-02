@@ -5,6 +5,7 @@ import {
   Game,
   GameMapType,
   GameMode,
+  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -27,7 +28,7 @@ export enum GameEnv {
 }
 
 export interface ServerConfig {
-  turnIntervalMs(): number;
+  turnIntervalMs(gameType?: GameType): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(
     map: GameMapType,
@@ -72,6 +73,7 @@ export interface NukeMagnitude {
 }
 
 export interface Config {
+  turnIntervalMs(gameType?: GameType): number;
   samHittingChance(): number;
   samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;

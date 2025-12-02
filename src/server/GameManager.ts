@@ -89,8 +89,7 @@ export class GameManager {
           // Prestart tells clients to start loading the game.
           game.prestart();
           // Start game immediately for single player games, with delay for multiplayer games
-          const startDelay =
-            game.gameConfig.gameType === GameType.Singleplayer ? 0 : 2000;
+          const startDelay = this.config.turnIntervalMs(game.gameConfig.gameType);
           setTimeout(() => {
             try {
               game.start();

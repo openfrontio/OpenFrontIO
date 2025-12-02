@@ -172,7 +172,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;
-  turnIntervalMs(): number {
+  turnIntervalMs(gameType?: GameType): number {
+    if (gameType && gameType === GameType.Singleplayer) {
+      return 10;
+    }
     return 100;
   }
   gameCreationRate(): number {
@@ -273,11 +276,8 @@ export class DefaultConfig implements Config {
     return this._serverConfig;
   }
 
-  turnIntervalMs(): number {
-    if (this._gameConfig.gameType === GameType.Singleplayer) {
-      return 10;
-    }
-    return this._serverConfig.turnIntervalMs();
+  turnIntervalMs(gameType?: GameType): number {
+	return this._serverConfig.turnIntervalMs(gameType);
   }
 
   userSettings(): UserSettings {
