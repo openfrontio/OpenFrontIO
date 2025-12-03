@@ -1,6 +1,5 @@
 import fs from "fs";
 import { globSync } from "glob";
-import path from "path";
 
 type Nation = {
   name?: string;
