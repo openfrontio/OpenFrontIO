@@ -160,7 +160,9 @@
     "logged_in_as": "Logged in as {email}",
     "fetching_account": "Fetching account information...",
     "logged_in_with_discord": "Logged in with Discord",
-    "recovery_email_sent": "Recovery email sent to {email}"
+    "recovery_email_sent": "Recovery email sent to {email}",
+    "make_public_profile": "Make my profile public",
+    "failed_update_public_setting": "Failed to update public setting"
   },
   "stats_modal": {
     "title": "Stats",

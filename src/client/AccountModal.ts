@@ -17,6 +17,7 @@ import {
   getApiBase,
   getUserMe,
   logOut,
+  updateUserMe,
 } from "./jwt";
 import { isInIframe, translateText } from "./Utils";
 
@@ -29,6 +30,7 @@ export class AccountModal extends LitElement {
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
+  @state() private isPublicOptimistic: boolean | null = null;
 
   private loggedInEmail: string | null = null;
   private loggedInDiscord: string | null = null;
@@ -124,6 +126,7 @@ export class AccountModal extends LitElement {
             .games=${this.recentGames}
             .onViewGame=${(id: string) => this.viewGame(id)}
           ></game-list>
+          ${this.publicProfileToggle()}
         </div>
       </div>
     `;
@@ -150,6 +153,55 @@ export class AccountModal extends LitElement {
       >
         Log Out
       </button>
+    `;
+  }
+
+  // Toggle for making profile stats public/private
+  private publicProfileToggle(): TemplateResult {
+    const actualValue = this.userMeResponse?.user?.public ?? false;
+    const checked = this.isPublicOptimistic ?? actualValue;
+
+    return html`
+      <div class="flex items-center justify-between w-full max-w-md mt-4 px-4">
+        <label class="text-white text-sm">
+          ${translateText("account_modal.make_public_profile")}
+        </label>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            class="sr-only peer"
+            ?checked=${checked}
+            @change=${async (e: Event) => {
+              const input = e.target as HTMLInputElement;
+              const newValue = input.checked;
+
+              // Optimistically update UI immediately
+              this.isPublicOptimistic = newValue;
+
+              const success = await updateUserMe({ public: newValue });
+              if (success) {
+                const updated = await getUserMe();
+                if (updated) {
+                  this.userMeResponse = updated;
+                  this.isPublicOptimistic = null;
+                  this.requestUpdate();
+                }
+              } else {
+                // Revert on failure
+                this.isPublicOptimistic = null;
+                alert(
+                  translateText("account_modal.failed_update_public_setting"),
+                );
+                this.requestUpdate();
+              }
+            }}
+          />
+          <div
+            class="w-11 h-6 rounded-full peer peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"
+            style="background-color: ${checked ? "#4caf50" : "#d9534f"}"
+          ></div>
+        </label>
+      </div>
     `;
   }
 
@@ -282,12 +334,13 @@ export class AccountModal extends LitElement {
     this.isLoadingUser = true;
 
     void getUserMe()
-      .then((userMe) => {
+      .then(async (userMe) => {
         if (userMe) {
           this.loggedInEmail = userMe.user.email ?? null;
           this.loggedInDiscord = userMe.user.discord?.global_name ?? null;
           if (this.playerId) {
-            this.loadFromApi(this.playerId);
+            await this.loadFromApi(this.playerId);
+            await this.loadPublicStatus();
           }
         } else {
           this.loggedInEmail = null;
@@ -313,6 +366,33 @@ export class AccountModal extends LitElement {
     this.close();
     // Refresh the page after logout to update the UI state
     window.location.reload();
+  }
+
+  // Workaround: GET /users/@me doesn't return public status,
+  // so check the public profile API to determine current state
+  private async loadPublicStatus(): Promise<void> {
+    if (!this.userMeResponse?.player?.publicId) return;
+
+    try {
+      const response = await fetch(
+        `${getApiBase()}/public/player/${this.userMeResponse.player.publicId}`,
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (this.userMeResponse) {
+          this.userMeResponse = {
+            ...this.userMeResponse,
+            user: {
+              ...this.userMeResponse.user,
+              public: !!data.user,
+            },
+          };
+          this.requestUpdate();
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load public status:", err);
+    }
   }
 
   private async loadFromApi(playerId: string): Promise<void> {
