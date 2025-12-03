@@ -12,9 +12,7 @@ type Manifest = {
 
 describe("Map manifests: nation name length constraint", () => {
   test("All nations' names must be ≤ 27 characters", () => {
-    const manifestPaths = globSync(
-      path.resolve(process.cwd(), "resources/maps/**/manifest.json"),
-    );
+    const manifestPaths = globSync("resources/maps/**/manifest.json");
 
     expect(manifestPaths.length).toBeGreaterThan(0);
 
