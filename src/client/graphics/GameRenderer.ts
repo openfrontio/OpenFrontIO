@@ -311,7 +311,11 @@ export class GameRenderer {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
     this.layers.forEach((l) => l.init?.());
 
-    document.body.appendChild(this.canvas);
+    // only append the canvas if it's not already in the document to avoid reparenting side-effects
+    if (!document.body.contains(this.canvas)) {
+      document.body.appendChild(this.canvas);
+    }
+
     window.addEventListener("resize", () => this.resizeCanvas());
     this.resizeCanvas();
 
