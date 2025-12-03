@@ -33,11 +33,7 @@ export class BotSpawner {
       const spawn = this.spawnBot(candidate.name);
       if (spawn !== null) {
         // Only use candidate name once bot successfully spawned
-        if (
-          candidate.source === "community" ||
-          candidate.source === "special" ||
-          candidate.source === "prefix"
-        ) {
+        if (candidate.source === "list") {
           this.nameIndex++;
         }
         this.bots.push(spawn);
@@ -66,7 +62,7 @@ export class BotSpawner {
 
   private nextCandidateName(): {
     name: string;
-    source: "community" | "special" | "prefix" | "random";
+    source: "list" | "random";
   } {
     if (this.bots.length < 20) {
       //first few usually overwritten by Nation spawn
@@ -76,21 +72,21 @@ export class BotSpawner {
     if (this.nameIndex < COMMUNITY_FULL_ELF_NAMES.length) {
       return {
         name: COMMUNITY_FULL_ELF_NAMES[this.nameIndex],
-        source: "community",
+        source: "list",
       };
     }
     const specialOffset = COMMUNITY_FULL_ELF_NAMES.length;
     if (this.nameIndex < specialOffset + SPECIAL_FULL_ELF_NAMES.length) {
       return {
         name: SPECIAL_FULL_ELF_NAMES[this.nameIndex - specialOffset],
-        source: "special",
+        source: "list",
       };
     }
     const prefixOffset = specialOffset + SPECIAL_FULL_ELF_NAMES.length;
     if (this.nameIndex < prefixOffset + COMMUNITY_PREFIXES.length) {
       return {
         name: `${COMMUNITY_PREFIXES[this.nameIndex - prefixOffset]} the Elf`,
-        source: "prefix",
+        source: "list",
       };
     }
 
