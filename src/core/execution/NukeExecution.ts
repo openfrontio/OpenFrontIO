@@ -138,7 +138,9 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
-      this.maybeBreakAlliances(this.tilesInRange());
+      if (this.nuke.type() !== UnitType.MIRVWarhead) {
+        this.maybeBreakAlliances(this.tilesInRange());
+      }
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
         if (!target.isPlayer()) {
