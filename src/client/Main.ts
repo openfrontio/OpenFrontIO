@@ -548,7 +548,7 @@ class Client {
 
         // Ensure there's a homepage entry in history before adding the lobby entry
         if (window.location.hash === "" || window.location.hash === "#") {
-          history.pushState(null, "", window.location.origin + "#refresh");
+          history.replaceState(null, "", window.location.origin + "#refresh");
         }
         history.pushState(null, "", `#join=${lobby.gameID}`);
       },
