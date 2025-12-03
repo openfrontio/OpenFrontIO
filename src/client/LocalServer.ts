@@ -18,7 +18,7 @@ import {
   replacer,
 } from "../core/Util";
 import { LobbyConfig } from "./ClientGameRunner";
-import { BacklogStatusEvent, ReplaySpeedChangeEvent } from "./InputHandler";
+import { ReplaySpeedChangeEvent } from "./InputHandler";
 import { getPersistentID } from "./Main";
 import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
@@ -33,10 +33,6 @@ export class LocalServer {
 
   private paused = false;
   private replaySpeedMultiplier = defaultReplaySpeedMultiplier;
-
-  private clientBacklog = 0;
-  private readonly TARGET_BACKLOG = 10;
-  private readonly MAX_TURNS_PER_BATCH = 50; // Prevent sending too many at once
 
   private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
@@ -55,16 +51,18 @@ export class LocalServer {
   ) {}
 
   start() {
-    this.eventBus.on(BacklogStatusEvent, (event) => {
-      this.clientBacklog = event.backlogTurns;
-    });
-
     this.turnCheckInterval = setInterval(() => {
-      if (this.replaySpeedMultiplier === 0) {
-        // Only for fastest speed
-        this.handleFastestReplay();
-      } else {
-        this.handleTimedReplay();
+      const turnIntervalMs =
+        this.lobbyConfig.serverConfig.turnIntervalMs() *
+        this.replaySpeedMultiplier;
+
+      if (
+        this.turnsExecuted === this.turns.length &&
+        Date.now() > this.turnStartTime + turnIntervalMs
+      ) {
+        this.turnStartTime = Date.now();
+        // End turn on the server means the client will start processing the turn.
+        this.endTurn();
       }
     }, 5);
 
@@ -88,41 +86,6 @@ export class LocalServer {
       turns: [],
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
     } satisfies ServerStartGameMessage);
-  }
-
-  private handleFastestReplay() {
-    const turnsNeeded = Math.max(
-      0,
-      this.TARGET_BACKLOG * 2 - this.clientBacklog,
-    );
-    if (turnsNeeded > 0) {
-      const turnsToSend = Math.min(turnsNeeded, this.MAX_TURNS_PER_BATCH);
-      this.sendTurnBatch(turnsToSend);
-    }
-  }
-
-  private handleTimedReplay() {
-    const turnIntervalMs =
-      this.lobbyConfig.serverConfig.turnIntervalMs() *
-      this.replaySpeedMultiplier;
-
-    if (
-      this.turnsExecuted === this.turns.length &&
-      Date.now() > this.turnStartTime + turnIntervalMs
-    ) {
-      this.turnStartTime = Date.now();
-      this.endTurn();
-    }
-  }
-
-  private sendTurnBatch(count: number) {
-    for (let i = 0; i < count; i++) {
-      if (this.turnsExecuted === this.turns.length) {
-        this.endTurn();
-      } else {
-        break; // No more turns available
-      }
-    }
   }
 
   pause() {
