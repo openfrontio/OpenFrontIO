@@ -84,7 +84,7 @@ export class NukeExecution implements Execution {
 
   /**
    * Break alliances based on all tiles in range.
-   * Tiles are weighted based on their chance (1/odds) of being destroyed.
+   * Tiles are weighted roughly based on their chance of being destroyed.
    */
   private maybeBreakAlliances(inRange: Map<TileRef, number>) {
     if (this.nuke === null) {
