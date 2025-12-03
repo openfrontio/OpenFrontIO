@@ -28,6 +28,16 @@ Licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.
 License: (https://docs.sentinel-hub.com/api/latest/static/files/data/dem/resources/license/License-COPDEM-30.pdf)
 
+### Topographic Map
+
+[Topographic Map](https://en-gb.topographic-map.com/)
+Licensed under [Open Data Commons Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/summary/)
+
+### Geographicus Rare Antique Maps
+
+[Geographicus Rare Antique Maps](https://www.geographicus.com/)
+Public Domain
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
