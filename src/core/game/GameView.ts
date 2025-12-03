@@ -9,7 +9,6 @@ import { WorkerClient } from "../worker/WorkerClient";
 import {
   Cell,
   EmojiMessage,
-  GameType,
   GameUpdates,
   Gold,
   NameViewData,
@@ -658,25 +657,17 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
-    if (this.ticks() > this._config.numSpawnPhaseTurns()) {
-      return false;
+    if (!this.firstHumanSpawnTick) {
+      const humanSpawned = this.playerViews().some(
+        (p) => p.type() === PlayerType.Human && p.hasSpawned(),
+      );
+      if (humanSpawned) this.firstHumanSpawnTick = this.ticks();
     }
-    if (this._config.gameConfig().gameType === GameType.Singleplayer) {
-      if (!this.firstHumanSpawnTick) {
-        this.firstHumanSpawnTick = Array.from(this._players.values()).some(
-          (player) => player.type() === PlayerType.Human && player.hasSpawned(),
-        )
-          ? this.ticks()
-          : 0;
-      } else {
-        return (
-          this.ticks() <=
-          this.firstHumanSpawnTick +
-            this._config.numSingleplayerGracePeriodTurns()
-        );
-      }
-    }
-    return true;
+    return this.config().isSpawnPhase(
+      this.ticks(),
+      this.config().gameConfig().gameType,
+      this.firstHumanSpawnTick,
+    );
   }
   config(): Config {
     return this._config;

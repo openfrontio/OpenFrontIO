@@ -14,7 +14,6 @@ import {
   Execution,
   Game,
   GameMode,
-  GameType,
   GameUpdates,
   HumansVsNations,
   MessageType,
@@ -341,24 +340,17 @@ export class GameImpl implements Game {
   }
 
   inSpawnPhase(): boolean {
-    if (this._ticks > this.config().numSpawnPhaseTurns()) {
-      return false;
+    if (!this.firstHumanSpawnTick) {
+      const humanSpawned = Array.from(this._players.values()).some(
+        (p) => p.type() === PlayerType.Human && p.hasSpawned(),
+      );
+      if (humanSpawned) this.firstHumanSpawnTick = this._ticks;
     }
-    if (this.config().gameConfig().gameType === GameType.Singleplayer) {
-      if (!this.firstHumanSpawnTick) {
-        this.firstHumanSpawnTick = Array.from(this._players.values()).some(
-          (player) => player.type() === PlayerType.Human && player.hasSpawned(),
-        )
-          ? this._ticks
-          : 0;
-      } else {
-        return (
-          this._ticks <=
-          this.firstHumanSpawnTick +
-            this.config().numSingleplayerGracePeriodTurns()
-        );
-      }
-    }
+    return this._config.isSpawnPhase(
+      this.ticks(),
+      this.config().gameConfig().gameType,
+      this.firstHumanSpawnTick,
+    );
     return true;
   }
 

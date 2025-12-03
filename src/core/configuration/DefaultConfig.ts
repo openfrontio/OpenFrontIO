@@ -633,13 +633,31 @@ export class DefaultConfig implements Config {
   boatMaxNumber(): number {
     return 3;
   }
+
   numSpawnPhaseTurns(): number {
     return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
   }
   // Amount of ticks for player to change spawn placement in singleplayer
-  numSingleplayerGracePeriodTurns(): number {
+  numGracePeriodTurns(): number {
     return 15;
   }
+  isSpawnPhase(
+    ticks: number,
+    gameType: GameType,
+    firstHumanSpawnTick?: number,
+  ): boolean {
+    if (ticks > this.numSpawnPhaseTurns()) {
+      return false;
+    }
+    if (gameType !== GameType.Singleplayer) {
+      return true;
+    }
+    if (!firstHumanSpawnTick) {
+      return true;
+    }
+    return ticks <= firstHumanSpawnTick + this.numGracePeriodTurns();
+  }
+
   numBots(): number {
     return this.bots();
   }

@@ -93,7 +93,12 @@ export interface Config {
   instantBuild(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
-  numSingleplayerGracePeriodTurns(): number;
+  numGracePeriodTurns(): number;
+  isSpawnPhase(
+    ticks: number,
+    gameType: GameType,
+    firstHumanSpawnTick?: number,
+  ): boolean;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
 
