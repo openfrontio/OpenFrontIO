@@ -142,6 +142,11 @@ export default async (env, argv) => {
       new CopyPlugin({
         patterns: [
           {
+            from: path.resolve(__dirname, "resources"),
+            to: path.resolve(__dirname, "static"),
+            noErrorOnMissing: true,
+          },
+          {
             from: path.resolve(__dirname, "proprietary"),
             to: path.resolve(__dirname, "static"),
             noErrorOnMissing: true,

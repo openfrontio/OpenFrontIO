@@ -3,6 +3,7 @@ import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import christmas from "../../resources/christmas.md";
 import megaphone from "../../resources/images/Megaphone.svg";
+
 import version from "../../resources/version.txt";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Button";

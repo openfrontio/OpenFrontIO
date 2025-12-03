@@ -528,6 +528,9 @@ class Client {
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
+        // Hide snowflakes and Santa hat when joining lobby
+        document.documentElement.classList.add("in-game");
+        removeSnowflakes(); // Stop snowflakes when joining a game
 
         // show when the game loads
         const startingModal = document.querySelector(
@@ -565,6 +568,9 @@ class Client {
     this.gameStop = null;
     this.gutterAds.hide();
     this.publicLobby.leaveLobby();
+    // Show snowflakes and Santa hat when leaving lobby (back to homepage)
+    document.documentElement.classList.remove("in-game");
+    enableSnowflakes(); // Restart snowflakes when leaving a game
   }
 
   private handleKickPlayer(event: CustomEvent) {
@@ -604,15 +610,16 @@ import Snowflake3Png from "../../resources/images/Snowflake_3.png";
 // ... (rest of imports)
 
 // Initialize the client when the DOM is loaded
-document.addEventListener("DOMContentLoaded", () => {
-  new Client().initialize();
-
+function enableSnowflakes() {
   const snowContainer = document.querySelector(".snow") as HTMLElement;
   console.log("Snow container:", snowContainer); // Log 1: Check if container is found
   if (!snowContainer) {
     console.warn("Snow container element not found");
     return;
   }
+
+  // Clear existing snowflakes if any
+  removeSnowflakes();
 
   const numberOfSnowflakes = 200; // Increased count
   console.log("Creating", numberOfSnowflakes, "snowflakes..."); // Log 3: Confirm snowflake creation starts
@@ -632,6 +639,22 @@ document.addEventListener("DOMContentLoaded", () => {
     snowContainer.appendChild(snowflake);
   }
   console.log("Finished creating snowflakes."); // Log 4: Confirm snowflake creation ends
+}
+
+function removeSnowflakes() {
+  const snowContainer = document.querySelector(".snow") as HTMLElement;
+  if (snowContainer) {
+    snowContainer.innerHTML = ""; // Clear all snowflakes
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  new Client().initialize();
+
+  // Initially enable snowflakes if not in-game
+  if (!document.documentElement.classList.contains("in-game")) {
+    enableSnowflakes();
+  }
 });
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPlayToken(): string {

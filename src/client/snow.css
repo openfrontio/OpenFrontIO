@@ -17,11 +17,11 @@
   animation-name: snowflake-fall;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+  animation-duration: 10s; /* Adjust duration to taste */
   z-index: 9999; /* Increased z-index for visibility */
   opacity: 0.8; /* Default opacity */
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5)); /* Subtle glow */
 }
-
 .santa-hat-overlay {
   position: absolute;
   width: 60px; /* Increased size */
@@ -31,7 +31,7 @@
   background-repeat: no-repeat;
   top: -25px; /* Adjusted position */
   right: -25px; /* Adjusted position */
-  z-index: 10;
+  z-index: 10000; /* Ensure hat appears above snow */
 }
 
 @keyframes snowflake-fall {
@@ -41,4 +41,12 @@
   to {
     transform: translateY(105vh) rotate(360deg); /* Fall completely out of view */
   }
+}
+
+html.in-game .santa-hat-overlay {
+  display: none;
+}
+
+html.in-game .snow {
+  display: none;
 }
