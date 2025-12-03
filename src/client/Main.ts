@@ -602,6 +602,33 @@ class Client {
 // Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
+
+  const snowContainer = document.querySelector(".snow") as HTMLElement;
+  console.log("Snow container:", snowContainer); // Log 1: Check if container is found
+  if (!snowContainer) {
+    console.warn("Snow container element not found");
+    return;
+  }
+
+  const numberOfSnowflakes = 200; // Increased count
+  console.log("Creating", numberOfSnowflakes, "snowflakes..."); // Log 3: Confirm snowflake creation starts
+
+  for (let i = 0; i < numberOfSnowflakes; i++) {
+    const snowflake = document.createElement("div");
+    snowflake.classList.add("snowflake");
+    snowflake.style.left = `${Math.random() * 100}vw`; // Random horizontal position
+    snowflake.style.animationDuration = `${Math.random() * 10 + 5}s`; // Random duration between 5-15s
+    snowflake.style.animationDelay = `${Math.random() * 10}s`; // Random delay
+    snowflake.style.opacity = `${Math.random() * 0.5 + 0.5}`; // Random opacity between 0.5-1
+    const size = Math.random() * 20 + 10; // Random size between 10-30px
+    snowflake.style.width = `${size}px`;
+    snowflake.style.height = `${size}px`;
+    snowflake.style.backgroundImage =
+      'url("/images/NewSnowflake Background Removed.png")';
+
+    snowContainer.appendChild(snowflake);
+  }
+  console.log("Finished creating snowflakes."); // Log 4: Confirm snowflake creation ends
 });
 
 // WARNING: DO NOT EXPOSE THIS ID
