@@ -106,24 +106,24 @@ export class NewsModal extends LitElement {
     if (!this.initialized) {
       this.initialized = true;
 
-      const markdownFile = christmas;
+      // Direct assignment of markdown content from the import.
+      // Assuming the Webpack loader for .md files provides the content as a string.
+      let markdown = christmas;
 
-      fetch(markdownFile)
-        .then((response) => (response.ok ? response.text() : "Failed to load"))
-        .then((markdown) =>
-          markdown
-            .replace(
-              /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
-              (_match, prNumber) =>
-                `[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
-            )
-            .replace(
-              /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g,
-              (_match, comparison) =>
-                `[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
-            ),
+      // Apply markdown processing directly
+      markdown = markdown
+        .replace(
+          /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
+          (_match, prNumber) =>
+            `[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
         )
-        .then((markdown) => (this.markdown = markdown));
+        .replace(
+          /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g,
+          (_match, comparison) =>
+            `[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
+        );
+
+      this.markdown = markdown;
     }
     this.requestUpdate();
     this.modalEl?.open();

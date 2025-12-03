@@ -625,7 +625,7 @@ document.addEventListener("DOMContentLoaded", () => {
     snowflake.style.width = `${size}px`;
     snowflake.style.height = `${size}px`;
     snowflake.style.backgroundImage =
-    snowflake.style.backgroundImage = 'url("../../resources/images/NewSnowflake Background Removed.png")';
+      'url("../../resources/images/NewSnowflake Background Removed.png")';
 
     snowContainer.appendChild(snowflake);
   }
