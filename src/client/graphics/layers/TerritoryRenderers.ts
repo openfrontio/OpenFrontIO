@@ -274,7 +274,7 @@ export class WebglTerritoryRenderer implements TerritoryRendererStrategy {
         : null;
     const isBorderTile = this.game.isBorder(tile);
 
-    // Update defended and relation state in the shared buffer
+    // Update defended state in the shared buffer (used for checkerboard pattern).
     if (owner && isBorderTile) {
       const isDefended = this.game.hasUnitNearby(
         tile,
@@ -282,19 +282,10 @@ export class WebglTerritoryRenderer implements TerritoryRendererStrategy {
         UnitType.DefensePost,
         owner.id(),
       );
-      const { hasEmbargo, hasFriendly } = owner.borderRelationFlags(tile);
-      let relation = 0; // neutral
-      if (hasFriendly) {
-        relation = 1; // friendly
-      } else if (hasEmbargo) {
-        relation = 2; // embargo
-      }
       this.game.setDefended(tile, isDefended);
-      this.game.setRelation(tile, relation);
     } else {
-      // Clear defended/relation state for non-border tiles
+      // Clear defended state for non-border tiles
       this.game.setDefended(tile, false);
-      this.game.setRelation(tile, 0);
     }
 
     this.renderer.markTile(tile);

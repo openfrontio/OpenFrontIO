@@ -106,9 +106,7 @@ export class TerritoryLayer implements Layer {
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
     const playerUpdates =
       updates !== null ? updates[GameUpdateType.Player] : [];
-    if (playerUpdates.length > 0) {
-      this.territoryRenderer?.refreshPalette();
-    }
+    let needsRelationRefresh = playerUpdates.length > 0;
     unitUpdates.forEach((update) => {
       if (update.unitType === UnitType.DefensePost) {
         // Only update borders if the defense post is not under construction
@@ -138,6 +136,7 @@ export class TerritoryLayer implements Layer {
         const territory = this.game.playerBySmallID(update.betrayedID);
         if (territory && territory instanceof PlayerView) {
           this.redrawBorder(territory);
+          needsRelationRefresh = true;
         }
       });
 
@@ -154,6 +153,7 @@ export class TerritoryLayer implements Layer {
           const territory = this.game.playerBySmallID(territoryId);
           if (territory && territory instanceof PlayerView) {
             this.redrawBorder(territory);
+            needsRelationRefresh = true;
           }
         }
       });
@@ -168,8 +168,12 @@ export class TerritoryLayer implements Layer {
           embargoed.id() === myPlayer?.id()
         ) {
           this.redrawBorder(player, embargoed);
+          needsRelationRefresh = true;
         }
       });
+    }
+    if (needsRelationRefresh) {
+      this.territoryRenderer?.refreshPalette();
     }
 
     const focusedPlayer = this.game.focusedPlayer();

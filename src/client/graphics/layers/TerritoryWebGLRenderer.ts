@@ -52,6 +52,7 @@ export class TerritoryWebGLRenderer {
     hoverPulseStrength: WebGLUniformLocation | null;
     hoverPulseSpeed: WebGLUniformLocation | null;
     time: WebGLUniformLocation | null;
+    viewerId: WebGLUniformLocation | null;
     // Border color uniforms for shader-computed borders
     borderNeutral: WebGLUniformLocation | null;
     borderFriendly: WebGLUniformLocation | null;
@@ -126,6 +127,7 @@ export class TerritoryWebGLRenderer {
         hoverPulseStrength: null,
         hoverPulseSpeed: null,
         time: null,
+        viewerId: null,
         borderNeutral: null,
         borderFriendly: null,
         borderEmbargo: null,
@@ -167,6 +169,7 @@ export class TerritoryWebGLRenderer {
         hoverPulseStrength: null,
         hoverPulseSpeed: null,
         time: null,
+        viewerId: null,
         borderNeutral: null,
         borderFriendly: null,
         borderEmbargo: null,
@@ -208,6 +211,7 @@ export class TerritoryWebGLRenderer {
       ),
       hoverPulseSpeed: gl.getUniformLocation(this.program, "u_hoverPulseSpeed"),
       time: gl.getUniformLocation(this.program, "u_time"),
+      viewerId: gl.getUniformLocation(this.program, "u_viewerId"),
       borderNeutral: gl.getUniformLocation(this.program, "u_borderNeutral"),
       borderFriendly: gl.getUniformLocation(this.program, "u_borderFriendly"),
       borderEmbargo: gl.getUniformLocation(this.program, "u_borderEmbargo"),
@@ -374,6 +378,10 @@ export class TerritoryWebGLRenderer {
         c.b / 255,
         c.a ?? 1,
       );
+    }
+    if (this.uniforms.viewerId) {
+      const viewerId = this.game.myPlayer()?.smallID() ?? 0;
+      gl.uniform1i(this.uniforms.viewerId, viewerId);
     }
     if (this.uniforms.alternativeView) {
       gl.uniform1i(this.uniforms.alternativeView, 0);
@@ -573,6 +581,10 @@ export class TerritoryWebGLRenderer {
       const currentTime = (Date.now() - this.animationStartTime) / 1000.0;
       gl.uniform1f(this.uniforms.time, currentTime);
     }
+    if (this.uniforms.viewerId) {
+      const viewerId = this.game.myPlayer()?.smallID() ?? 0;
+      gl.uniform1i(this.uniforms.viewerId, viewerId);
+    }
 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -714,13 +726,12 @@ export class TerritoryWebGLRenderer {
     if (!this.gl || !this.paletteTexture || !this.relationTexture) return;
     const gl = this.gl;
     const players = this.game.playerViews().filter((p) => p.isPlayer());
-    const myPlayer = this.game.myPlayer();
 
     const maxId = players.reduce((max, p) => Math.max(max, p.smallID()), 0) + 1;
     this.paletteWidth = Math.max(maxId, 1);
 
     const paletteData = new Uint8Array(this.paletteWidth * 8); // 8 bytes per player: territory RGBA + border RGBA
-    const relationData = new Uint8Array(this.paletteWidth);
+    const relationData = new Uint8Array(this.paletteWidth * this.paletteWidth);
 
     for (const p of players) {
       const id = p.smallID();
@@ -737,8 +748,16 @@ export class TerritoryWebGLRenderer {
       paletteData[id * 8 + 5] = borderRgba.g;
       paletteData[id * 8 + 6] = borderRgba.b;
       paletteData[id * 8 + 7] = Math.round((borderRgba.a ?? 1) * 255);
+    }
 
-      relationData[id] = this.resolveRelationCode(p, myPlayer);
+    // Build relation matrix: friendly/embargo/self flags per owner/other pair.
+    for (let ownerId = 0; ownerId < this.paletteWidth; ownerId++) {
+      const owner = this.safePlayerBySmallId(ownerId);
+      for (let otherId = 0; otherId < this.paletteWidth; otherId++) {
+        const other = this.safePlayerBySmallId(otherId);
+        relationData[ownerId * this.paletteWidth + otherId] =
+          this.resolveRelationCode(owner, other);
+      }
     }
 
     gl.activeTexture(gl.TEXTURE1);
@@ -772,7 +791,7 @@ export class TerritoryWebGLRenderer {
       0,
       gl.R8UI,
       this.paletteWidth,
-      1,
+      this.paletteWidth,
       0,
       gl.RED_INTEGER,
       gl.UNSIGNED_BYTE,
@@ -781,22 +800,31 @@ export class TerritoryWebGLRenderer {
   }
 
   private resolveRelationCode(
-    owner: PlayerView,
-    myPlayer: PlayerView | null,
+    owner: PlayerView | null,
+    other: PlayerView | null,
   ): number {
-    if (!myPlayer) {
-      return 3; // Neutral
+    if (!owner || !other || !owner.isPlayer() || !other.isPlayer()) {
+      return 0; // Neutral / no relation
     }
-    if (owner.smallID() === myPlayer.smallID()) {
-      return 1; // Self
+
+    let code = 0;
+    if (owner.smallID() === other.smallID()) {
+      code |= 4; // self bit
     }
-    if (owner.isFriendly(myPlayer)) {
-      return 2; // Ally
+    // Friendly if either side is friendly toward the other.
+    if (owner.isFriendly(other) || other.isFriendly(owner)) {
+      code |= 1;
     }
-    if (!owner.hasEmbargo(myPlayer)) {
-      return 3; // Neutral
+    // Embargo if owner has embargo against other.
+    if (owner.hasEmbargo(other)) {
+      code |= 2;
     }
-    return 4; // Enemy
+    return code;
+  }
+
+  private safePlayerBySmallId(id: number): PlayerView | null {
+    const player = this.game.playerBySmallID(id);
+    return player instanceof PlayerView ? player : null;
   }
 
   private createProgram(gl: WebGL2RenderingContext): WebGLProgram | null {
@@ -820,6 +848,7 @@ export class TerritoryWebGLRenderer {
       uniform sampler2D u_palette;
       uniform usampler2D u_relations;
       uniform sampler2D u_borderColor;
+      uniform int u_viewerId;
       uniform vec2 u_resolution;
       uniform vec4 u_fallout;
       uniform vec4 u_altSelf;
@@ -855,6 +884,25 @@ export class TerritoryWebGLRenderer {
         return texelFetch(u_state, clamped, 0).r & 0xFFFu;
       }
 
+      uint relationCode(uint owner, uint other) {
+        if (owner == 0u || other == 0u) {
+          return 0u;
+        }
+        return texelFetch(u_relations, ivec2(int(owner), int(other)), 0).r;
+      }
+
+      bool isFriendly(uint code) {
+        return (code & 1u) != 0u;
+      }
+
+      bool isEmbargo(uint code) {
+        return (code & 2u) != 0u;
+      }
+
+      bool isSelf(uint code) {
+        return (code & 4u) != 0u;
+      }
+
       void main() {
         ivec2 fragCoord = ivec2(gl_FragCoord.xy);
         // gl_FragCoord origin is bottom-left; flip Y to match top-left oriented buffers.
@@ -864,7 +912,6 @@ export class TerritoryWebGLRenderer {
         uint owner = state & 0xFFFu;
         bool hasFallout = (state & 0x2000u) != 0u; // bit 13
         bool isDefended = (state & 0x1000u) != 0u; // bit 12
-        uint relation = (state & 0xC000u) >> 14u; // bits 14-15
 
         if (owner == 0u) {
           if (hasFallout) {
@@ -877,25 +924,47 @@ export class TerritoryWebGLRenderer {
           return;
         }
 
-        // Border detection via neighbor comparison
+        // Border detection via neighbor comparison and relation checks
         bool isBorder = false;
+        bool hasFriendlyRelation = false;
+        bool hasEmbargoRelation = false;
         uint nOwner = ownerAtTex(texCoord + ivec2(1, 0));
         isBorder = isBorder || (nOwner != owner);
+        if (nOwner != owner && nOwner != 0u) {
+          uint rel = relationCode(owner, nOwner);
+          hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
+          hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
+        }
         nOwner = ownerAtTex(texCoord + ivec2(-1, 0));
         isBorder = isBorder || (nOwner != owner);
+        if (nOwner != owner && nOwner != 0u) {
+          uint rel = relationCode(owner, nOwner);
+          hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
+          hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
+        }
         nOwner = ownerAtTex(texCoord + ivec2(0, 1));
         isBorder = isBorder || (nOwner != owner);
+        if (nOwner != owner && nOwner != 0u) {
+          uint rel = relationCode(owner, nOwner);
+          hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
+          hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
+        }
         nOwner = ownerAtTex(texCoord + ivec2(0, -1));
         isBorder = isBorder || (nOwner != owner);
+        if (nOwner != owner && nOwner != 0u) {
+          uint rel = relationCode(owner, nOwner);
+          hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
+          hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
+        }
 
         if (u_alternativeView) {
-          uint relation = texelFetch(u_relations, ivec2(int(owner), 0), 0).r;
+          uint relationAlt = relationCode(owner, uint(u_viewerId));
           vec4 altColor = u_altNeutral;
-          if (relation == 1u) {
+          if (isSelf(relationAlt)) {
             altColor = u_altSelf;
-          } else if (relation == 2u) {
+          } else if (isFriendly(relationAlt)) {
             altColor = u_altAlly;
-          } else if (relation >= 4u) {
+          } else if (isEmbargo(relationAlt)) {
             altColor = u_altEnemy;
           }
           float a = isBorder ? 1.0 : 0.0;
@@ -925,19 +994,18 @@ export class TerritoryWebGLRenderer {
           const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0); // green
           const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);   // red
 
-          if (relation == 1u) { // friendly
+          if (hasFriendlyRelation) { // friendly
             borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
                           FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
-          } else if (relation == 2u) { // embargo
+          }
+          if (hasEmbargoRelation) { // embargo
             borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
                           EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
           }
-          // relation == 0u (neutral) uses base border color as-is
 
           // Apply defended checkerboard pattern
           if (isDefended) {
             bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
-            // Simple checkerboard: alternate between lighter and darker versions
             const float LIGHT_FACTOR = 1.2;
             const float DARK_FACTOR = 0.8;
             borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
