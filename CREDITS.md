@@ -30,13 +30,14 @@ License: (https://docs.sentinel-hub.com/api/latest/static/files/data/dem/resourc
 
 ### Topographic Map
 
-[Topographic Map](https://en-gb.topographic-map.com/)
+[New Jersey Topographic Map](https://en-gb.topographic-map.com/map-b8knh/New-Jersey/)
 Licensed under [Open Data Commons Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/summary/)
 
 ### Geographicus Rare Antique Maps
 
-[Geographicus Rare Antique Maps](https://www.geographicus.com/)
-Public Domain
+1901 (1915) U.S. Geological Survey Topographic Map of New York City
+[Geographicus Rare Antique Maps](https://www.geographicus.com/P/AntiqueMap/newyorkcity-usgs-1915)
+[Public Domain](https://www.geographicus.com/P/faq)
 
 ## Icons
 
