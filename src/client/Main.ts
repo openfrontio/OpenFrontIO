@@ -600,6 +600,9 @@ class Client {
 }
 
 // Initialize the client when the DOM is loaded
+import Snowflake3Png from "../../resources/images/Snowflake_3.png";
+// ... (rest of imports)
+
 // Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
@@ -624,14 +627,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const size = Math.random() * 20 + 10; // Random size between 10-30px
     snowflake.style.width = `${size}px`;
     snowflake.style.height = `${size}px`;
-    snowflake.style.backgroundImage =
-      'url("../../resources/images/NewSnowflake Background Removed.png")';
+    snowflake.style.backgroundImage = `url(${Snowflake3Png})`;
 
     snowContainer.appendChild(snowflake);
   }
   console.log("Finished creating snowflakes."); // Log 4: Confirm snowflake creation ends
 });
-
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPlayToken(): string {
   const result = isLoggedIn();
