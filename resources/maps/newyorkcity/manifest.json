@@ -14,22 +14,6 @@
     "num_land_tiles": 406268,
     "width": 750
   },
-  "mapInfoState": {
-    "colorMappings": [],
-    "cropData": {
-      "cropHeight": 0,
-      "cropWidth": 0,
-      "cropX": 0,
-      "cropY": 0,
-      "isCropped": false,
-      "originalHeight": 0,
-      "originalWidth": 0
-    },
-    "height": 1900,
-    "originalHeight": 1900,
-    "originalWidth": 1500,
-    "width": 1500
-  },
   "name": "New York City",
   "nations": [
     {
