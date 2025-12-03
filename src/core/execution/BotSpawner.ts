@@ -14,7 +14,6 @@ export class BotSpawner {
   private random: PseudoRandom;
   private bots: SpawnExecution[] = [];
   private nameIndex = 0;
-  private usedNames = new Set<string>();
 
   constructor(
     private gs: Game,
@@ -41,7 +40,6 @@ export class BotSpawner {
         ) {
           this.nameIndex++;
         }
-        this.usedNames.add(candidate.name);
         this.bots.push(spawn);
       } else {
         tries++;
