@@ -403,7 +403,6 @@ export const COMMUNITY_PREFIXES = [
   "extraextra",
   "MotivatedMonkey",
   "6uzm4n",
-  "Moha",
   "theangel2",
   "Keevee",
   "Makonede",
