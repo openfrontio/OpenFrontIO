@@ -172,10 +172,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
   }
   abstract numWorkers(): number;
   abstract env(): GameEnv;
-  turnIntervalMs(gameType?: GameType): number {
-    if (gameType && gameType === GameType.Singleplayer) {
-      return 10;
-    }
+  turnIntervalMs(): number {
     return 100;
   }
   // Start game immediately for single player games, with delay for multiplayer games
@@ -280,8 +277,8 @@ export class DefaultConfig implements Config {
     return this._serverConfig;
   }
 
-  turnIntervalMs(gameType?: GameType): number {
-    return this._serverConfig.turnIntervalMs(gameType);
+  turnIntervalMs(): number {
+    return this._serverConfig.turnIntervalMs();
   }
 
   userSettings(): UserSettings {

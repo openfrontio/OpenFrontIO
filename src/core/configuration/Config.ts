@@ -28,7 +28,7 @@ export enum GameEnv {
 }
 
 export interface ServerConfig {
-  turnIntervalMs(gameType?: GameType): number;
+  turnIntervalMs(): number;
   startDelay(gameType: GameType): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(
@@ -74,7 +74,7 @@ export interface NukeMagnitude {
 }
 
 export interface Config {
-  turnIntervalMs(gameType?: GameType): number;
+  turnIntervalMs(): number;
   samHittingChance(): number;
   samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
