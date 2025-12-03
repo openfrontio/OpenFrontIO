@@ -20,8 +20,6 @@ export class NukeExecution implements Execution {
   private active = true;
   private mg: Game;
   private nuke: Unit | null = null;
-  private tilesInRangeCache: Map<TileRef, number>;
-  private tilesToDestroyCache: Set<TileRef> | undefined;
   private pathFinder: ParabolaPathFinder;
 
   constructor(
@@ -46,28 +44,22 @@ export class NukeExecution implements Execution {
   }
 
   private tilesInRange(): Map<TileRef, number> {
-    if (this.tilesInRangeCache !== undefined) {
-      return this.tilesInRangeCache;
-    }
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
-    this.tilesInRangeCache = new Map<TileRef, number>();
+    const tilesInRange = new Map<TileRef, number>();
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
     this.mg.bfs(this.dst, (_, n: TileRef) => {
       const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
-      this.tilesInRangeCache.set(n, d2 <= inner2 ? 1 : 0.5);
+      tilesInRange.set(n, d2 <= inner2 ? 1 : 0.5);
       return d2 <= outer2;
     });
-    return this.tilesInRangeCache;
+    return tilesInRange;
   }
 
   private tilesToDestroy(): Set<TileRef> {
-    if (this.tilesToDestroyCache !== undefined) {
-      return this.tilesToDestroyCache;
-    }
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
@@ -75,11 +67,10 @@ export class NukeExecution implements Execution {
     const rand = new PseudoRandom(this.mg.ticks());
     const inner2 = magnitude.inner * magnitude.inner;
     const outer2 = magnitude.outer * magnitude.outer;
-    this.tilesToDestroyCache = this.mg.bfs(this.dst, (_, n: TileRef) => {
+    return this.mg.bfs(this.dst, (_, n: TileRef) => {
       const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
       return d2 <= outer2 && (d2 <= inner2 || rand.chance(2));
     });
-    return this.tilesToDestroyCache;
   }
 
   /**
