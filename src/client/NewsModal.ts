@@ -134,6 +134,8 @@ export class NewsModal extends LitElement {
   }
 }
 
+// ... other imports
+
 @customElement("news-button")
 export class NewsButton extends LitElement {
   @query("news-modal") private newsModal!: NewsModal;
@@ -169,6 +171,7 @@ export class NewsButton extends LitElement {
             src="${megaphone}"
             alt=${translateText("news.title")}
           />
+          <div class="santa-hat-overlay"></div>
         </button>
       </div>
       <news-modal></news-modal>

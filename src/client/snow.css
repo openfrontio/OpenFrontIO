@@ -22,6 +22,18 @@
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5)); /* Subtle glow */
 }
 
+.santa-hat-overlay {
+  position: absolute;
+  width: 60px; /* Increased size */
+  height: 60px; /* Increased size */
+  background-image: url("/resources/images/SantaHat.png"); /* Use direct path for CSS background */
+  background-size: contain;
+  background-repeat: no-repeat;
+  top: -25px; /* Adjusted position */
+  right: -25px; /* Adjusted position */
+  z-index: 10;
+}
+
 @keyframes snowflake-fall {
   from {
     transform: translateY(-100%) rotate(0deg); /* Start off-screen */
