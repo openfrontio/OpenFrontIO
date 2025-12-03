@@ -53,8 +53,11 @@ export class NukeExecution implements Execution {
     const outer2 = magnitude.outer * magnitude.outer;
     this.mg.bfs(this.dst, (_, n: TileRef) => {
       const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
-      tilesInRange.set(n, d2 <= inner2 ? 1 : 0.5);
-      return d2 <= outer2;
+      if (d2 <= outer2) {
+        tilesInRange.set(n, d2 <= inner2 ? 1 : 0.5);
+        return true;
+      }
+      return false;
     });
     return tilesInRange;
   }
