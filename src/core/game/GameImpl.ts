@@ -351,7 +351,6 @@ export class GameImpl implements Game {
       this.config().gameConfig().gameType,
       this.firstHumanSpawnTick,
     );
-    return true;
   }
 
   ticks(): number {
