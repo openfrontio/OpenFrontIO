@@ -399,7 +399,7 @@ export class TerritoryWebGLRenderer {
     }
 
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
   }
 
@@ -868,7 +868,9 @@ export class TerritoryWebGLRenderer {
 
         if (owner == 0u) {
           if (hasFallout) {
-            outColor = vec4(u_fallout.rgb, u_alpha);
+            vec3 color = u_fallout.rgb;
+            float a = u_alpha;
+            outColor = vec4(color * a, a);
           } else {
             outColor = vec4(0.0);
           }
@@ -905,7 +907,7 @@ export class TerritoryWebGLRenderer {
               : 1.0;
             color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
           }
-          outColor = vec4(color, a);
+          outColor = vec4(color * a, a);
           return;
         }
 
@@ -953,7 +955,7 @@ export class TerritoryWebGLRenderer {
           color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
         }
 
-        outColor = vec4(color, a);
+        outColor = vec4(color * a, a);
       }
     `;
 
