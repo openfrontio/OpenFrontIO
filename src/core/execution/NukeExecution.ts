@@ -20,6 +20,7 @@ export class NukeExecution implements Execution {
   private active = true;
   private mg: Game;
   private nuke: Unit | null = null;
+  private tilesInRangeCache: Map<TileRef, number>;
   private tilesToDestroyCache: Set<TileRef> | undefined;
   private pathFinder: ParabolaPathFinder;
 
@@ -44,6 +45,25 @@ export class NukeExecution implements Execution {
     return this.mg.owner(this.dst);
   }
 
+  private tilesInRange(): Map<TileRef, number> {
+    if (this.tilesInRangeCache !== undefined) {
+      return this.tilesInRangeCache;
+    }
+    if (this.nuke === null) {
+      throw new Error("Not initialized");
+    }
+    this.tilesInRangeCache = new Map<TileRef, number>();
+    const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
+    const inner2 = magnitude.inner * magnitude.inner;
+    const outer2 = magnitude.outer * magnitude.outer;
+    this.mg.bfs(this.dst, (_, n: TileRef) => {
+      const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
+      this.tilesInRangeCache.set(n, d2 <= inner2 ? 1 : 0.5);
+      return d2 <= outer2;
+    });
+    return this.tilesInRangeCache;
+  }
+
   private tilesToDestroy(): Set<TileRef> {
     if (this.tilesToDestroyCache !== undefined) {
       return this.tilesToDestroyCache;
@@ -62,16 +82,20 @@ export class NukeExecution implements Execution {
     return this.tilesToDestroyCache;
   }
 
-  private maybeBreakAlliances(toDestroy: Set<TileRef>) {
+  /**
+   * Break alliances based on all tiles in range.
+   * Tiles are weighted based on their chance (1/odds) of being destroyed.
+   */
+  private maybeBreakAlliances(inRange: Map<TileRef, number>) {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
     const attacked = new Map<Player, number>();
-    for (const tile of toDestroy) {
+    for (const [tile, weight] of inRange.entries()) {
       const owner = this.mg.owner(tile);
       if (owner.isPlayer()) {
         const prev = attacked.get(owner) ?? 0;
-        attacked.set(owner, prev + 1);
+        attacked.set(owner, prev + weight);
       }
     }
 
@@ -82,7 +106,7 @@ export class NukeExecution implements Execution {
         this.nuke.type() !== UnitType.MIRVWarhead
       ) {
         // Resolves exploit of alliance breaking in which a pending alliance request
-        // was accepeted in the middle of an missle attack.
+        // was accepted in the middle of a missile attack.
         const allianceRequest = attackedPlayer
           .incomingAllianceRequests()
           .find((ar) => ar.requestor() === this.player);
@@ -120,7 +144,7 @@ export class NukeExecution implements Execution {
         targetTile: this.dst,
         trajectory: this.getTrajectory(this.dst),
       });
-      this.maybeBreakAlliances(this.tilesToDestroy());
+      this.maybeBreakAlliances(this.tilesInRange());
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
         if (!target.isPlayer()) {
@@ -233,7 +257,6 @@ export class NukeExecution implements Execution {
 
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
-    this.maybeBreakAlliances(toDestroy);
 
     const maxTroops = this.target().isPlayer()
       ? this.mg.config().maxTroops(this.target() as Player)
