@@ -4,11 +4,17 @@ import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
 import { SpawnExecution } from "./SpawnExecution";
-import { BOT_NAME_PREFIXES, BOT_NAME_SUFFIXES } from "./utils/BotNames";
+import {
+  COMMUNITY_FULL_ELF_NAMES,
+  COMMUNITY_PREFIXES,
+  SPECIAL_FULL_ELF_NAMES,
+} from "./utils/BotNames";
 
 export class BotSpawner {
   private random: PseudoRandom;
   private bots: SpawnExecution[] = [];
+  private nameIndex = 0;
+  private usedNames = new Set<string>();
 
   constructor(
     private gs: Game,
@@ -24,9 +30,18 @@ export class BotSpawner {
         console.log("too many retries while spawning bots, giving up");
         return this.bots;
       }
-      const botName = this.randomBotName();
-      const spawn = this.spawnBot(botName);
+      const candidate = this.nextCandidateName();
+      const spawn = this.spawnBot(candidate.name);
       if (spawn !== null) {
+        // Only use candidate name once bot successfully spawned
+        if (
+          candidate.source === "community" ||
+          candidate.source === "special" ||
+          candidate.source === "prefix"
+        ) {
+          this.nameIndex++;
+        }
+        this.usedNames.add(candidate.name);
         this.bots.push(spawn);
       } else {
         tries++;
@@ -51,10 +66,42 @@ export class BotSpawner {
     );
   }
 
-  private randomBotName(): string {
-    const prefixIndex = this.random.nextInt(0, BOT_NAME_PREFIXES.length);
-    const suffixIndex = this.random.nextInt(0, BOT_NAME_SUFFIXES.length);
-    return `${BOT_NAME_PREFIXES[prefixIndex]} ${BOT_NAME_SUFFIXES[suffixIndex]}`;
+  private nextCandidateName(): {
+    name: string;
+    source: "community" | "special" | "prefix" | "random";
+  } {
+    if (this.bots.length < 20) {
+      //first few usually overwritten by Nation spawn
+      return { name: this.getRandomElf(), source: "random" };
+    }
+
+    if (this.nameIndex < COMMUNITY_FULL_ELF_NAMES.length) {
+      return {
+        name: COMMUNITY_FULL_ELF_NAMES[this.nameIndex],
+        source: "community",
+      };
+    }
+    const specialOffset = COMMUNITY_FULL_ELF_NAMES.length;
+    if (this.nameIndex < specialOffset + SPECIAL_FULL_ELF_NAMES.length) {
+      return {
+        name: SPECIAL_FULL_ELF_NAMES[this.nameIndex - specialOffset],
+        source: "special",
+      };
+    }
+    const prefixOffset = specialOffset + SPECIAL_FULL_ELF_NAMES.length;
+    if (this.nameIndex < prefixOffset + COMMUNITY_PREFIXES.length) {
+      return {
+        name: `${COMMUNITY_PREFIXES[this.nameIndex - prefixOffset]} the Elf`,
+        source: "prefix",
+      };
+    }
+
+    return { name: this.getRandomElf(), source: "random" };
+  }
+
+  private getRandomElf(): string {
+    const suffixNumber = this.random.nextInt(1, 10001);
+    return `Elf ${suffixNumber}`;
   }
 
   private randTile(): TileRef {
