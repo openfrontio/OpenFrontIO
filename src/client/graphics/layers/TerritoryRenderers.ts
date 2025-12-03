@@ -1,6 +1,5 @@
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { FrameProfiler } from "../FrameProfiler";
@@ -83,15 +82,8 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
         : null;
     const isBorderTile = this.game.isBorder(tile);
     const hasFallout = this.game.hasFallout(tile);
-    let isDefended = false;
-    if (owner && isBorderTile) {
-      isDefended = this.game.hasUnitNearby(
-        tile,
-        this.game.config().defensePostRange(),
-        UnitType.DefensePost,
-        owner.id(),
-      );
-    }
+    const isDefended =
+      owner && isBorderTile ? this.game.isDefended(tile) : false;
 
     if (!owner) {
       if (hasFallout) {
@@ -264,30 +256,6 @@ export class WebglTerritoryRenderer implements TerritoryRendererStrategy {
   }
 
   paintTile(tile: TileRef): void {
-    const hasOwner = this.game.hasOwner(tile);
-    const rawOwner = hasOwner ? this.game.owner(tile) : null;
-    const owner =
-      rawOwner &&
-      typeof (rawOwner as any).isPlayer === "function" &&
-      (rawOwner as any).isPlayer()
-        ? (rawOwner as PlayerView)
-        : null;
-    const isBorderTile = this.game.isBorder(tile);
-
-    // Update defended state in the shared buffer (used for checkerboard pattern).
-    if (owner && isBorderTile) {
-      const isDefended = this.game.hasUnitNearby(
-        tile,
-        this.game.config().defensePostRange(),
-        UnitType.DefensePost,
-        owner.id(),
-      );
-      this.game.setDefended(tile, isDefended);
-    } else {
-      // Clear defended state for non-border tiles
-      this.game.setDefended(tile, false);
-    }
-
     this.renderer.markTile(tile);
   }
 
