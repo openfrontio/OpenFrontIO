@@ -600,6 +600,7 @@ class Client {
 }
 
 // Initialize the client when the DOM is loaded
+// Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 
@@ -624,7 +625,7 @@ document.addEventListener("DOMContentLoaded", () => {
     snowflake.style.width = `${size}px`;
     snowflake.style.height = `${size}px`;
     snowflake.style.backgroundImage =
-      'url("/images/NewSnowflake Background Removed.png")';
+    snowflake.style.backgroundImage = 'url("../../resources/images/NewSnowflake Background Removed.png")';
 
     snowContainer.appendChild(snowflake);
   }
