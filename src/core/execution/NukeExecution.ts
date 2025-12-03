@@ -91,9 +91,9 @@ export class NukeExecution implements Execution {
     }
 
     const threshold = this.mg.config().nukeAllianceBreakThreshold();
-    for (const [attackedPlayer, tilesDestroyed] of attacked) {
+    for (const [attackedPlayer, totalWeight] of attacked) {
       if (
-        tilesDestroyed > threshold &&
+        totalWeight > threshold &&
         this.nuke.type() !== UnitType.MIRVWarhead
       ) {
         // Resolves exploit of alliance breaking in which a pending alliance request
