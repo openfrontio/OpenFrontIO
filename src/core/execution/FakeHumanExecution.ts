@@ -186,6 +186,7 @@ export class FakeHumanExecution implements Execution {
         this.triggerRatio,
         this.reserveRatio,
         this.expandRatio,
+        this.random.chance(20),
       );
 
       // Send an attack on the first tick
