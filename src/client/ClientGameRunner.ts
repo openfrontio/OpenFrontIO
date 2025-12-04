@@ -79,7 +79,7 @@ export function joinLobby(
   // Expose current clientID for UI alignment decisions
   (window as any).__clientID = lobbyConfig.clientID;
   // Expose username for message identification
-  (window as any).__username = lobby.playerName;
+  (window as any).__username = lobbyConfig.playerName;
   // Notify components that the EventBus is ready
   document.dispatchEvent(
     new CustomEvent("event-bus:ready", { bubbles: true, composed: true }),
