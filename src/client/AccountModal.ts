@@ -170,7 +170,7 @@ export class AccountModal extends LitElement {
           <input
             type="checkbox"
             class="sr-only peer"
-            ?checked=${checked}
+            .checked=${checked}
             @change=${async (e: Event) => {
               const input = e.target as HTMLInputElement;
               const newValue = input.checked;
