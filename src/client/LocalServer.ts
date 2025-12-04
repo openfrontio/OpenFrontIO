@@ -194,12 +194,13 @@ export class LocalServer {
     });
   }
 
-  public endGame() {
+  public async endGame() {
     console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
     if (this.isReplay) {
       return;
     }
+
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
