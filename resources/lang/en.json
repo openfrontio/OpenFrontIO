@@ -288,7 +288,6 @@
     "empty_team": "Empty",
     "remove_player": "Remove {{username}}",
     "spectators_count": "{count} spectator(s) watching"
-    "remove_player": "Remove {username}"
   },
   "team_colors": {
     "red": "Red",
