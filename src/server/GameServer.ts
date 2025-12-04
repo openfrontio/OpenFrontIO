@@ -315,17 +315,17 @@ export class GameServer {
             break;
           }
           case "lobby_chat": {
-            // Validate lobby chat usage: must be in lobby phase and chat enabled
             if (this.phase() !== GamePhase.Lobby) {
               return;
             }
-            if (!this.gameConfig.chatEnabled || this.isPublic()) {
+            if (!this.gameConfig.chatEnabled) {
               return;
             }
-            // Broadcast to all clients in the same lobby
+            const isHost = client.clientID === this.lobbyCreatorID;
             const payload = JSON.stringify({
               type: "lobby_chat",
-              sender: client.clientID,
+              username: client.username,
+              isHost,
               text: (JSON.parse(message) as any).text,
             });
             this.activeClients.forEach((c) => c.ws.send(payload));

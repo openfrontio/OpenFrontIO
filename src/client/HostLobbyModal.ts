@@ -52,7 +52,6 @@ export class HostLobbyModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private compactMap: boolean = false;
-  // New: Lobby chat toggle (private lobbies only)
   @state() private chatEnabled: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;

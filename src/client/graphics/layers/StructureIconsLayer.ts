@@ -272,7 +272,7 @@ export class StructureIconsLayer implements Layer {
             canUpgrade: false,
           });
           this.ghostUnit.container.filters = [
-            new OutlineFilter(2, 0xff0000) as any,
+            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
           return;
         }
@@ -290,15 +290,15 @@ export class StructureIconsLayer implements Layer {
           );
           if (this.potentialUpgrade) {
             this.potentialUpgrade.iconContainer.filters = [
-              new OutlineFilter(2, 0x00ff00) as any,
+              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
             ];
             this.potentialUpgrade.dotContainer.filters = [
-              new OutlineFilter(2, 0x00ff00) as any,
+              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
             ];
           }
         } else if (unit.canBuild === false) {
           this.ghostUnit.container.filters = [
-            new OutlineFilter(2, 0xff0000) as any,
+            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
           ];
         }
 
@@ -496,8 +496,12 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
       render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
       if (structureInfos.visible && focusStructure) {
-        render.iconContainer.filters = [new OutlineFilter(2, 0xffffff) as any];
-        render.dotContainer.filters = [new OutlineFilter(2, 0xffffff) as any];
+        render.iconContainer.filters = [
+          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
+        ];
+        render.dotContainer.filters = [
+          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
+        ];
       } else {
         render.iconContainer.filters = [];
         render.dotContainer.filters = [];

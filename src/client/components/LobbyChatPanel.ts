@@ -5,7 +5,8 @@ import { EventBus } from "../../core/EventBus";
 import { SendLobbyChatEvent } from "../Transport";
 
 interface ChatMessage {
-  sender: string;
+  username: string;
+  isHost: boolean;
   text: string;
 }
 
@@ -15,20 +16,14 @@ export class LobbyChatPanel extends LitElement {
   @state() private inputText: string = "";
 
   private bus: EventBus | null = null;
-  private myClientID: string | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
-    // Listen for websocket relay from ClientGameRunner
     document.addEventListener("lobby-chat:message", this.onIncoming as any);
-    // Attempt to attach global EventBus if available
     const globalBus = (window as any).__eventBus as EventBus | undefined;
     if (globalBus) {
       this.bus = globalBus;
     }
-    // Capture my client ID for alignment
-    this.myClientID = (window as any).__clientID ?? null;
-    // Proactively bind when the bus becomes ready later
     document.addEventListener("event-bus:ready", this.onBusReady as any);
   }
 
@@ -43,10 +38,10 @@ export class LobbyChatPanel extends LitElement {
   }
 
   private onIncoming = async (
-    e: CustomEvent<{ sender: string; text: string }>,
+    e: CustomEvent<{ username: string; isHost: boolean; text: string }>,
   ) => {
-    const { sender, text } = e.detail;
-    this.messages = [...this.messages, { sender, text }];
+    const { username, isHost, text } = e.detail;
+    this.messages = [...this.messages, { username, isHost, text }];
     await this.updateComplete;
     const container = this.renderRoot.querySelector(
       ".lcp-messages",
@@ -59,25 +54,21 @@ export class LobbyChatPanel extends LitElement {
     if (globalBus) {
       this.bus = globalBus;
     }
-    this.myClientID = (window as any).__clientID ?? this.myClientID;
   };
 
   private sendMessage() {
     const text = this.inputText.trim();
     if (!text) return;
-    // Lazily attach global EventBus if it wasn't ready at connect time
     if (!this.bus) {
       const globalBus = (window as any).__eventBus as EventBus | undefined;
       if (globalBus) {
         this.bus = globalBus;
       }
     }
-    // If bus is still unavailable, surface the failure and do not clear input
     if (!this.bus) {
       console.warn("LobbyChatPanel: EventBus unavailable. Message not sent.");
       return;
     }
-    // Enforce 300-char limit matching server SafeString.max(300)
     const capped = text.slice(0, 300);
     this.bus.emit(new SendLobbyChatEvent(capped));
     this.inputText = "";
@@ -88,11 +79,9 @@ export class LobbyChatPanel extends LitElement {
       <div class="lcp-container">
         <div class="lcp-messages">
           ${this.messages.map((m) => {
-            const isSelf =
-              this.myClientID !== null && m.sender === this.myClientID;
-            const cls = isSelf ? "lcp-msg lcp-right" : "lcp-msg lcp-left";
-            return html`<div class="${cls}">
-              <span class="lcp-sender">${m.sender}:</span> ${m.text}
+            const displayName = m.isHost ? `${m.username} (Host)` : m.username;
+            return html`<div class="lcp-msg">
+              <span class="lcp-sender">${displayName}:</span> ${m.text}
             </div>`;
           })}
         </div>
@@ -126,17 +115,49 @@ export class LobbyChatPanel extends LitElement {
   }
 }
 
-// Basic Tailwind-like classes, prefixed to avoid global conflicts
 const style = document.createElement("style");
 style.textContent = `
-.lcp-container { display:flex; flex-direction:column; gap:8px; max-height:240px; }
-.lcp-messages { overflow-y:auto; border:1px solid #444; border-radius:8px; padding:8px; height:180px; background:#111; color:#ddd; display:flex; flex-direction:column; gap:6px; }
-.lcp-msg { font-size: 0.9rem; max-width: 80%; padding:6px 10px; border-radius:10px; background:#1b1b1b; }
-.lcp-msg.lcp-left { align-self: flex-start; }
-.lcp-msg.lcp-right { align-self: flex-end; background:#243b55; }
-.lcp-sender { color:#9ae6b4; margin-right:4px; }
-.lcp-input-row { display:flex; gap:8px; }
-.lcp-input { flex:1; border-radius:8px; padding:6px 10px; color:#000; }
-.lcp-send { border-radius:8px; padding:6px 12px; }
+  .lcp-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 240px;
+  }
+  .lcp-messages {
+    overflow-y: auto;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px;
+    height: 180px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #ddd;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .lcp-msg {
+    font-size: 0.9rem;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  .lcp-sender {
+    color: #9ae6b4;
+    margin-right: 4px;
+  }
+  .lcp-input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .lcp-input {
+    flex: 1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #000;
+  }
+  .lcp-send {
+    border-radius: 8px;
+    padding: 6px 12px;
+  }
 `;
 document.head.appendChild(style);

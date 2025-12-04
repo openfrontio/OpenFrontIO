@@ -146,10 +146,13 @@ export function joinLobby(
       }
     }
     if (message.type === "lobby_chat") {
-      // Relay to UI components listening for lobby chat
       document.dispatchEvent(
         new CustomEvent("lobby-chat:message", {
-          detail: { sender: message.sender, text: message.text },
+          detail: {
+            username: message.username,
+            isHost: message.isHost,
+            text: message.text,
+          },
           bubbles: true,
           composed: true,
         }),
