@@ -99,7 +99,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
               >
                 ${translateText("help_modal.ui_your_team")}
                 <span style="color: ${this.playerColor.toRgbString()}">
-                  ${this.getTranslatedPlayerTeamLabel()} &#10687;
+                  &nbsp;${this.getTranslatedPlayerTeamLabel()} &#10687;
                 </span>
               </div>
             `
