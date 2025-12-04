@@ -70,11 +70,15 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
   switch (message.type) {
     case "init":
       try {
-        if (message.sharedTileRingHeader && message.sharedTileRingData) {
+        if (
+          message.sharedTileRingHeader &&
+          message.sharedTileRingData &&
+          message.sharedDirtyBuffer
+        ) {
           sharedTileRing = createSharedTileRingViews({
             header: message.sharedTileRingHeader,
             data: message.sharedTileRingData,
-            dirty: message.sharedDirtyBuffer!,
+            dirty: message.sharedDirtyBuffer,
           });
           dirtyFlags = sharedTileRing.dirtyFlags;
         } else {
