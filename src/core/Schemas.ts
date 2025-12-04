@@ -491,7 +491,8 @@ export const ServerErrorSchema = z.object({
 
 export const ServerLobbyChatSchema = z.object({
   type: z.literal("lobby_chat"),
-  sender: ID,
+  username: z.string(),
+  isHost: z.boolean(),
   text: SafeString.max(300),
 });
 

@@ -46,16 +46,17 @@ describe("Lobby Chat Schemas", () => {
   test("ServerLobbyChatSchema valid message", () => {
     const msg = ServerLobbyChatSchema.parse({
       type: "lobby_chat",
-      sender: "ABCDEFGH",
+      username: "TestUser",
+      isHost: true,
       text: "Hi host",
     });
-    expect(msg.sender).toBe("ABCDEFGH");
+    expect(msg.username).toBe("TestUser");
+    expect(msg.isHost).toBe(true);
   });
 
-  test("ServerLobbyChatSchema rejects invalid sender id", () => {
+  test("ServerLobbyChatSchema rejects missing fields", () => {
     const result = ServerLobbyChatSchema.safeParse({
       type: "lobby_chat",
-      sender: "BAD-ID", // hyphen invalid for ID regex
       text: "Hi host",
     });
     expect(result.success).toBe(false);
