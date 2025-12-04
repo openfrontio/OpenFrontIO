@@ -29,8 +29,6 @@ export interface GameMap {
   setFallout(ref: TileRef, value: boolean): void;
   isDefended(ref: TileRef): boolean;
   setDefended(ref: TileRef, value: boolean): void;
-  getRelation(ref: TileRef): number;
-  setRelation(ref: TileRef, relation: number): void;
   isOnEdgeOfMap(ref: TileRef): boolean;
   isBorder(ref: TileRef): boolean;
   neighbors(ref: TileRef): TileRef[];
@@ -77,12 +75,6 @@ export class GameMapImpl implements GameMap {
   private static readonly PLAYER_ID_MASK = 0xfff;
   private static readonly FALLOUT_BIT = 13;
   private static readonly DEFENDED_BIT = 12;
-  private static readonly RELATION_MASK = 0xc000; // bits 14-15
-  private static readonly RELATION_SHIFT = 14;
-  // Relation values (stored in bits 14-15)
-  private static readonly RELATION_NEUTRAL = 0;
-  private static readonly RELATION_FRIENDLY = 1;
-  private static readonly RELATION_EMBARGO = 2;
 
   constructor(
     width: number,
@@ -236,21 +228,6 @@ export class GameMapImpl implements GameMap {
     } else {
       this.state[ref] &= ~(1 << GameMapImpl.DEFENDED_BIT);
     }
-  }
-
-  getRelation(ref: TileRef): number {
-    return (
-      (this.state[ref] & GameMapImpl.RELATION_MASK) >>
-      GameMapImpl.RELATION_SHIFT
-    );
-  }
-
-  setRelation(ref: TileRef, relation: number): void {
-    // Clear existing relation bits
-    this.state[ref] &= ~GameMapImpl.RELATION_MASK;
-    // Set new relation bits
-    this.state[ref] |=
-      (relation << GameMapImpl.RELATION_SHIFT) & GameMapImpl.RELATION_MASK;
   }
 
   isOnEdgeOfMap(ref: TileRef): boolean {
