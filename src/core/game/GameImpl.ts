@@ -788,10 +788,10 @@ export class GameImpl implements Game {
     }
   }
   removeUnit(u: Unit) {
+    this.unitGrid.removeUnit(u);
     if (u.type() === UnitType.DefensePost) {
       this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
     }
-    this.unitGrid.removeUnit(u);
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
