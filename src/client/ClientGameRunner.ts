@@ -343,7 +343,7 @@ export class ClientGameRunner {
 
         // Spectators send join_spectator intent instead of spawning
         if (this.lobby.isSpectator) {
-          this.transport.sendIntent({
+          this.transport.publishIntent({
             type: "join_spectator",
             clientID: this.lobby.clientID,
           });
