@@ -39,6 +39,11 @@ export interface GameMap {
 
   manhattanDist(c1: TileRef, c2: TileRef): number;
   euclideanDistSquared(c1: TileRef, c2: TileRef): number;
+  circleSearch(
+    tile: TileRef,
+    radius: number,
+    filter?: (tile: TileRef, d2: number) => boolean,
+  ): Set<TileRef>;
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
@@ -287,6 +292,25 @@ export class GameMapImpl implements GameMap {
     const x = this.x(c1) - this.x(c2);
     const y = this.y(c1) - this.y(c2);
     return x * x + y * y;
+  }
+  circleSearch(
+    tile: TileRef,
+    radius: number,
+    filter?: (tile: TileRef, d2: number) => boolean,
+  ): Set<TileRef> {
+    const center = { x: this.x(tile), y: this.y(tile) };
+    const tiles: Set<TileRef> = new Set<TileRef>();
+    for (let i = center.x - radius; i <= center.x + radius; ++i) {
+      for (let j = center.y - radius; j <= center.y + radius; j++) {
+        const t = this.ref(i, j);
+        const d2 = this.euclideanDistSquared(tile, t);
+        if (d2 > radius * radius) continue;
+        if (!filter || filter(t, d2)) {
+          tiles.add(t);
+        }
+      }
+    }
+    return tiles;
   }
   bfs(
     tile: TileRef,

@@ -50,15 +50,14 @@ export class NukeExecution implements Execution {
     const tilesInRange = new Map<TileRef, number>();
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const inner2 = magnitude.inner * magnitude.inner;
-    const outer2 = magnitude.outer * magnitude.outer;
-    this.mg.bfs(this.dst, (_, n: TileRef) => {
-      const d2 = this.mg?.euclideanDistSquared(this.dst, n) ?? 0;
-      if (d2 <= outer2) {
-        tilesInRange.set(n, d2 <= inner2 ? 1 : 0.5);
+    this.mg.circleSearch(
+      this.dst,
+      magnitude.outer,
+      (t: TileRef, d2: number) => {
+        tilesInRange.set(t, d2 <= inner2 ? 1 : 0.5);
         return true;
-      }
-      return false;
-    });
+      },
+    );
     return tilesInRange;
   }
 
