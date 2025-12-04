@@ -148,7 +148,7 @@ export class GameRightSidebar extends LitElement implements Layer {
         <!-- Timer display below buttons -->
         <div class="flex justify-center items-center mt-2">
           <div
-            class="w-[70px] h-8 lg:w-24 lg:h-10 border border-slate-400 p-0.5 text-xs md:text-sm lg:text-base flex items-center justify-center text-white px-1"
+            class="w-[70px] h-8 lg:w-24 lg:h-10 p-0.5 text-xs md:text-sm lg:text-base flex items-center justify-center text-white px-1"
             style="${this.game.config().gameConfig().maxTimerValue !==
               undefined && this.timer < 60
               ? "color: #ff8080;"

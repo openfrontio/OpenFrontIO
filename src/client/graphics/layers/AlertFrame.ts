@@ -21,6 +21,8 @@ export class AlertFrame extends LitElement implements Layer {
 
   @state()
   private isActive = false;
+  @state()
+  private alertType: "betrayal" | "land-attack" = "betrayal";
 
   private animationTimeout: number | null = null;
   private seenAttackIds: Set<string> = new Set();
@@ -36,10 +38,18 @@ export class AlertFrame extends LitElement implements Layer {
       width: 100%;
       height: 100%;
       pointer-events: none;
-      border: 17px solid #ee0000;
+      border: 17px solid;
       box-sizing: border-box;
       z-index: 40;
       opacity: 0;
+    }
+
+    .alert-border.betrayal {
+      border-color: #ee0000;
+    }
+
+    .alert-border.land-attack {
+      border-color: #ffa500;
     }
 
     .alert-border.animate {
@@ -119,6 +129,7 @@ export class AlertFrame extends LitElement implements Layer {
 
     // Only trigger alert if the current player is the betrayed one
     if (betrayed === myPlayer) {
+      this.alertType = "betrayal";
       this.activateAlert();
     }
   }
@@ -202,6 +213,7 @@ export class AlertFrame extends LitElement implements Layer {
         // 3. The attack is too small (less than 1/5 of our troops)
         if (!inCooldown && !isRetaliation && !isSmallAttack) {
           this.seenAttackIds.add(attack.id);
+          this.alertType = "land-attack";
           this.activateAlert();
         } else {
           // Still mark as seen so we don't alert later
@@ -237,7 +249,7 @@ export class AlertFrame extends LitElement implements Layer {
 
     return html`
       <div
-        class="alert-border animate"
+        class=${`alert-border animate ${this.alertType}`}
         @animationend=${() => this.dismissAlert()}
       ></div>
     `;
