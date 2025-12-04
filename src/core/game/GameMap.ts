@@ -300,8 +300,12 @@ export class GameMapImpl implements GameMap {
   ): Set<TileRef> {
     const center = { x: this.x(tile), y: this.y(tile) };
     const tiles: Set<TileRef> = new Set<TileRef>();
-    for (let i = center.x - radius; i <= center.x + radius; ++i) {
-      for (let j = center.y - radius; j <= center.y + radius; j++) {
+    const minX = Math.max(0, center.x - radius);
+    const maxX = Math.min(this.width_ - 1, center.x + radius);
+    const minY = Math.max(0, center.y - radius);
+    const maxY = Math.min(this.height_ - 1, center.y + radius);
+    for (let i = minX; i <= maxX; ++i) {
+      for (let j = minY; j <= maxY; j++) {
         const t = this.ref(i, j);
         const d2 = this.euclideanDistSquared(tile, t);
         if (d2 > radius * radius) continue;
