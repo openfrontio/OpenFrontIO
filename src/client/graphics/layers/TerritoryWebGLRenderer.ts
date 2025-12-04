@@ -572,6 +572,12 @@ export class TerritoryWebGLRenderer {
     return { rows: rowsUploaded, bytes: bytesUploaded };
   }
 
+  /**
+   * Formats upload metrics into a human-readable string for logging/debugging.
+   * Used for performance monitoring of WebGL texture uploads, bucketing values
+   * to provide meaningful categories rather than exact numbers.
+   * currently unused.
+   */
   private labelUpload(
     base: string,
     metrics: { rows: number; bytes: number },
