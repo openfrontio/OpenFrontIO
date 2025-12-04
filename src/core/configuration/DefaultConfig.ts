@@ -60,13 +60,16 @@ const numPlayersConfig = {
   [GameMapType.Europe]: [100, 70, 50],
   [GameMapType.EuropeClassic]: [50, 30, 30],
   [GameMapType.FalklandIslands]: [50, 30, 20],
+  [GameMapType.FourIslands]: [20, 15, 10],
   [GameMapType.FaroeIslands]: [20, 15, 10],
   [GameMapType.GatewayToTheAtlantic]: [100, 70, 50],
   [GameMapType.GiantWorldMap]: [100, 70, 50],
+  [GameMapType.GulfOfStLawrence]: [60, 40, 30],
   [GameMapType.Halkidiki]: [100, 50, 40],
   [GameMapType.Iceland]: [50, 40, 30],
   [GameMapType.Italia]: [50, 30, 20],
   [GameMapType.Japan]: [20, 15, 10],
+  [GameMapType.Lisbon]: [50, 40, 30],
   [GameMapType.Mars]: [70, 40, 30],
   [GameMapType.Mena]: [70, 50, 40],
   [GameMapType.Montreal]: [60, 40, 30],
@@ -77,7 +80,6 @@ const numPlayersConfig = {
   [GameMapType.SouthAmerica]: [70, 50, 40],
   [GameMapType.StraitOfGibraltar]: [100, 70, 50],
   [GameMapType.World]: [50, 30, 20],
-  [GameMapType.Yenisei]: [150, 100, 70],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
@@ -545,11 +547,6 @@ export class DefaultConfig implements Config {
           experimental: true,
           upgradable: true,
         };
-      case UnitType.Construction:
-        return {
-          cost: () => 0n,
-          territoryBound: true,
-        };
       case UnitType.Train:
         return {
           cost: () => 0n,
@@ -692,7 +689,7 @@ export class DefaultConfig implements Config {
 
     if (attacker.isPlayer() && defender.isPlayer()) {
       if (defender.isDisconnected() && attacker.isOnSameTeam(defender)) {
-        // No troop loss if defender is disconnected.
+        // No troop loss if defender is disconnected and on same team
         mag = 0;
       }
       if (
@@ -805,20 +802,31 @@ export class DefaultConfig implements Config {
     }
   }
 
+  useNationStrengthForStartManpower(): boolean {
+    // Currently disabled: FakeHumans became harder to play against due to AI improvements
+    // nation strength multiplier was unintentionally disabled during those AI improvements (playerInfo.nation was undefined),
+    // Re-enabling this without rebalancing FakeHuman difficulty elsewhere may make them overpowered
+    return false;
+  }
+
   startManpower(playerInfo: PlayerInfo): number {
     if (playerInfo.playerType === PlayerType.Bot) {
       return 10_000;
     }
     if (playerInfo.playerType === PlayerType.FakeHuman) {
+      const strength = this.useNationStrengthForStartManpower()
+        ? (playerInfo.nationStrength ?? 1)
+        : 1;
+
       switch (this._gameConfig.difficulty) {
         case Difficulty.Easy:
-          return 2_500 * (playerInfo?.nation?.strength ?? 1);
+          return 2_500 * strength;
         case Difficulty.Medium:
-          return 5_000 * (playerInfo?.nation?.strength ?? 1);
+          return 5_000 * strength;
         case Difficulty.Hard:
-          return 20_000 * (playerInfo?.nation?.strength ?? 1);
+          return 20_000 * strength;
         case Difficulty.Impossible:
-          return 50_000 * (playerInfo?.nation?.strength ?? 1);
+          return 50_000 * strength;
       }
     }
     return this.infiniteTroops() ? 1_000_000 : 25_000;

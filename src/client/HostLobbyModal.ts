@@ -26,10 +26,11 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
-
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
@@ -59,11 +60,13 @@ export class HostLobbyModal extends LitElement {
   @state() private disabledUnits: UnitType[] = [];
   @state() private lobbyCreatorClientID: string = "";
   @state() private lobbyIdVisible: boolean = true;
+  @state() private nationCount: number = 0;
 
   private playersInterval: NodeJS.Timeout | null = null;
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
+  private mapLoader = terrainMapFileLoader;
 
   connectedCallback() {
     super.connectedCallback();
@@ -575,29 +578,23 @@ export class HostLobbyModal extends LitElement {
                 ? translateText("host_modal.player")
                 : translateText("host_modal.players")
             }
+            <span style="margin: 0 8px;">•</span>
+            ${this.nationCount}
+            ${
+              this.nationCount === 1
+                ? translateText("host_modal.nation_player")
+                : translateText("host_modal.nation_players")
+            }
           </div>
 
-          <div class="players-list">
-            ${this.clients.map(
-              (client) => html`
-                <span class="player-tag">
-                  ${client.username}
-                  ${client.clientID === this.lobbyCreatorClientID
-                    ? html`<span class="host-badge"
-                        >(${translateText("host_modal.host_badge")})</span
-                      >`
-                    : html`
-                        <button
-                          class="remove-player-btn"
-                          @click=${() => this.kickPlayer(client.clientID)}
-                          title="Remove ${client.username}"
-                        >
-                          ×
-                        </button>
-                      `}
-                </span>
-              `,
-            )}
+          <lobby-team-view
+            .gameMode=${this.gameMode}
+            .clients=${this.clients}
+            .lobbyCreatorClientID=${this.lobbyCreatorClientID}
+            .teamCount=${this.teamCount}
+            .nationCount=${this.disableNPCs ? 0 : this.nationCount}
+            .onKickPlayer=${(clientID: string) => this.kickPlayer(clientID)}
+          ></lobby-team-view>
         </div>
 
         <div class="start-game-button-container">
@@ -649,6 +646,7 @@ export class HostLobbyModal extends LitElement {
       });
     this.modalEl?.open();
     this.playersInterval = setInterval(() => this.pollPlayers(), 1000);
+    this.loadNationCount();
   }
 
   public close() {
@@ -667,12 +665,15 @@ export class HostLobbyModal extends LitElement {
 
   private async handleRandomMapToggle() {
     this.useRandomMap = true;
+    this.selectedMap = this.getRandomMap();
+    await this.loadNationCount();
     this.putGameConfig();
   }
 
   private async handleMapSelection(value: GameMapType) {
     this.selectedMap = value;
     this.useRandomMap = false;
+    await this.loadNationCount();
     this.putGameConfig();
   }
 
@@ -848,10 +849,6 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async startGame() {
-    if (this.useRandomMap) {
-      this.selectedMap = this.getRandomMap();
-    }
-
     await this.putGameConfig();
     console.log(
       `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
@@ -910,6 +907,17 @@ export class HostLobbyModal extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  private async loadNationCount() {
+    try {
+      const mapData = this.mapLoader.getMapData(this.selectedMap);
+      const manifest = await mapData.manifest();
+      this.nationCount = manifest.nations.length;
+    } catch (error) {
+      console.warn("Failed to load nation count", error);
+      this.nationCount = 0;
+    }
   }
 }
 

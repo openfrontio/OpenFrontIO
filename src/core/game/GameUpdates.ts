@@ -128,7 +128,7 @@ export interface UnitUpdate {
   targetUnitId?: number; // Only for trade ships
   targetTile?: TileRef; // Only for nukes
   health?: number;
-  constructionType?: UnitType;
+  underConstruction?: boolean;
   missileTimerQueue: number[];
   level: number;
   hasTrainStation: boolean;
@@ -179,6 +179,7 @@ export interface AllianceView {
   other: PlayerID;
   createdAt: Tick;
   expiresAt: Tick;
+  hasExtensionRequest: boolean;
 }
 
 export interface AllianceRequestUpdate {

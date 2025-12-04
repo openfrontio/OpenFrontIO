@@ -171,6 +171,10 @@ export class PlayerImpl implements Player {
             other: a.other(this).id(),
             createdAt: a.createdAt(),
             expiresAt: a.expiresAt(),
+            hasExtensionRequest:
+              a.expiresAt() <=
+              this.mg.ticks() +
+                this.mg.config().allianceExtensionPromptOffset(),
           }) satisfies AllianceView,
       ),
       hasSpawned: this.hasSpawned(),
@@ -228,8 +232,8 @@ export class PlayerImpl implements Player {
     const built = this.numUnitsConstructed[type] ?? 0;
     let constructing = 0;
     for (const unit of this._units) {
-      if (unit.type() !== UnitType.Construction) continue;
-      if (unit.constructionType() !== type) continue;
+      if (unit.type() !== type) continue;
+      if (!unit.isUnderConstruction()) continue;
       constructing++;
     }
     const total = constructing + built;
@@ -252,12 +256,12 @@ export class PlayerImpl implements Player {
     let total = 0;
     for (const unit of this._units) {
       if (unit.type() === type) {
-        total += unit.level();
-        continue;
+        if (unit.isUnderConstruction()) {
+          total++;
+        } else {
+          total += unit.level();
+        }
       }
-      if (unit.type() !== UnitType.Construction) continue;
-      if (unit.constructionType() !== type) continue;
-      total++;
     }
     return total;
   }
@@ -789,8 +793,8 @@ export class PlayerImpl implements Player {
     return this._team === other.team();
   }
 
-  isFriendly(other: Player): boolean {
-    if (other.isDisconnected()) {
+  isFriendly(other: Player, treatAFKFriendly: boolean = false): boolean {
+    if (other.isDisconnected() && !treatAFKFriendly) {
       return false;
     }
     return this.isOnSameTeam(other) || this.isAlliedWith(other);
@@ -882,7 +886,7 @@ export class PlayerImpl implements Player {
   public findUnitToUpgrade(type: UnitType, targetTile: TileRef): Unit | false {
     const range = this.mg.config().structureMinDist();
     const existing = this.mg
-      .nearbyUnits(targetTile, range, type)
+      .nearbyUnits(targetTile, range, type, undefined, true)
       .sort((a, b) => a.distSquared - b.distSquared);
     if (existing.length === 0) {
       return false;
@@ -896,6 +900,9 @@ export class PlayerImpl implements Player {
 
   public canUpgradeUnit(unit: Unit): boolean {
     if (unit.isMarkedForDeletion()) {
+      return false;
+    }
+    if (unit.isUnderConstruction()) {
       return false;
     }
     if (!this.mg.config().unitInfo(unit.type()).upgradable) {
@@ -984,7 +991,6 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
-      case UnitType.Construction:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
@@ -1005,10 +1011,10 @@ export class PlayerImpl implements Player {
         return false;
       }
     }
-    // only get missilesilos that are not on cooldown
+    // only get missilesilos that are not on cooldown and not under construction
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
-        return !silo.isInCooldown();
+        return !silo.isInCooldown() && !silo.isUnderConstruction();
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length === 0) {
@@ -1080,7 +1086,13 @@ export class PlayerImpl implements Player {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 
-    const nearbyUnits = this.mg.nearbyUnits(tile, searchRadius * 2, types);
+    const nearbyUnits = this.mg.nearbyUnits(
+      tile,
+      searchRadius * 2,
+      types,
+      undefined,
+      true,
+    );
     const nearbyTiles = this.mg.bfs(tile, (gm, t) => {
       return (
         this.mg.euclideanDistSquared(tile, t) < searchRadiusSquared &&
