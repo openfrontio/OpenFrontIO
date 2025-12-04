@@ -43,6 +43,7 @@ export class FxLayer implements Layer {
 
   tick() {
     this.manageBoatTargetFx();
+    this.updateNukeTargetFxRemainingTime();
     this.game
       .updatesSinceLastTick()
       ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
@@ -89,28 +90,115 @@ export class FxLayer implements Layer {
     }
   }
 
+  private updateNukeTargetFxRemainingTime() {
+    // Update timer and trajectory data, and check if inbound status changed
+    // (e.g., if player recaptures territory while bomb is in flight)
+    // Alert intensity is computed internally by NukeAreaFx based on trajectory data
+    for (const [unitId, fx] of Array.from(
+      this.nukeTargetFxByUnitId.entries(),
+    )) {
+      const unit = this.game.unit(unitId);
+      if (!unit || !unit.isActive()) continue;
+
+      const targetTile = unit.targetTile();
+      if (!targetTile) continue;
+
+      const my = this.game.myPlayer();
+      if (!my) continue;
+
+      // Recompute isInbound based on current target tile ownership
+      const targetOwner = this.game.owner(targetTile);
+      const isInbound =
+        targetOwner.isPlayer() &&
+        (targetOwner.id() === my.id() || my.isOnSameTeam(targetOwner));
+
+      // Update inbound flag if it changed
+      if (fx.isInboundBomb() !== isInbound) {
+        fx.setInbound(isInbound);
+      }
+
+      // Calculate remaining time
+      const trajectoryIndex = unit.trajectoryIndex();
+      const trajectoryLength = unit.trajectoryLength();
+      let remainingSeconds: number | null = null;
+      if (
+        trajectoryIndex !== undefined &&
+        trajectoryLength !== undefined &&
+        trajectoryLength > 0
+      ) {
+        const remainingTicks = trajectoryLength - trajectoryIndex;
+        remainingSeconds = Math.max(0, Math.ceil(remainingTicks / 10));
+      }
+
+      // Determine if bomb is outbound (launched by my player or teammate)
+      const isOutbound = unit.owner() === my || my.isOnSameTeam(unit.owner());
+
+      // Only show timer for bombs that are either outbound or inbound
+      if (isOutbound || isInbound) {
+        fx.updateTimer(
+          remainingSeconds,
+          isOutbound,
+          trajectoryIndex,
+          trajectoryLength,
+        );
+      }
+    }
+  }
+
   // Register a persistent nuke target marker for the current player or teammates
+  // Also shows marker for inbound bombs targeting the player
   private createNukeTargetFxIfOwned(unit: UnitView) {
     const my = this.game.myPlayer();
     if (!my) return;
-    // Show nuke marker owned by the player or by players on the same team
+    if (!unit.isActive()) return;
+
+    // Check if bomb is outbound (owned by player or teammate)
+    const isOutbound = unit.owner() === my || my.isOnSameTeam(unit.owner());
+
+    // Check if bomb is inbound (targeting player's or teammate's territory)
+    const targetTile = unit.targetTile();
+    let isInbound = false;
+    if (targetTile !== undefined) {
+      const targetOwner = this.game.owner(targetTile);
+      isInbound =
+        targetOwner.isPlayer() &&
+        (targetOwner.id() === my.id() || my.isOnSameTeam(targetOwner));
+    }
+
+    // Show nuke marker for outbound or inbound bombs
     if (
-      (unit.owner() === my || my.isOnSameTeam(unit.owner())) &&
-      unit.isActive()
+      (isOutbound || isInbound) &&
+      !this.nukeTargetFxByUnitId.has(unit.id())
     ) {
-      if (!this.nukeTargetFxByUnitId.has(unit.id())) {
-        const t = unit.targetTile();
-        if (t !== undefined) {
-          const x = this.game.x(t);
-          const y = this.game.y(t);
-          const fx = new NukeAreaFx(
-            x,
-            y,
-            this.game.config().nukeMagnitudes(unit.type()),
-          );
-          this.allFx.push(fx);
-          this.nukeTargetFxByUnitId.set(unit.id(), fx);
+      if (targetTile !== undefined) {
+        const x = this.game.x(targetTile);
+        const y = this.game.y(targetTile);
+
+        // Calculate remaining time
+        const trajectoryIndex = unit.trajectoryIndex();
+        const trajectoryLength = unit.trajectoryLength();
+        let remainingSeconds: number | null = null;
+        if (
+          trajectoryIndex !== undefined &&
+          trajectoryLength !== undefined &&
+          trajectoryLength > 0
+        ) {
+          const remainingTicks = trajectoryLength - trajectoryIndex;
+          remainingSeconds = Math.max(0, Math.ceil(remainingTicks / 10));
         }
+
+        const fx = new NukeAreaFx(
+          x,
+          y,
+          this.game.config().nukeMagnitudes(unit.type()),
+          isInbound,
+          isOutbound,
+          remainingSeconds,
+          trajectoryIndex,
+          trajectoryLength,
+        );
+        this.allFx.push(fx);
+        this.nukeTargetFxByUnitId.set(unit.id(), fx);
       }
     }
   }
