@@ -2,6 +2,9 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 
+// At class level, outside the class definition
+let activeModalCount = 0;
+
 @customElement("o-modal")
 export class OModal extends LitElement {
   @state() public isModalOpen = false;
@@ -70,11 +73,34 @@ export class OModal extends LitElement {
       backdrop-filter: blur(8px);
     }
   `;
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.isModalOpen) {
+      activeModalCount--;
+      if (activeModalCount === 0) {
+        document.documentElement.classList.remove("modal-active");
+      }
+      this.isModalOpen = false;
+    }
+  }
+
   public open() {
+    if (!this.isModalOpen) {
+      activeModalCount++;
+      if (activeModalCount === 1) {
+        document.documentElement.classList.add("modal-active");
+      }
+    }
     this.isModalOpen = true;
   }
 
   public close() {
+    if (this.isModalOpen) {
+      activeModalCount--;
+      if (activeModalCount === 0) {
+        document.documentElement.classList.remove("modal-active");
+      }
+    }
     this.isModalOpen = false;
     this.dispatchEvent(
       new CustomEvent("modal-close", { bubbles: true, composed: true }),

@@ -3,6 +3,7 @@ import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
 import christmas from "../../resources/christmas.md";
 import megaphone from "../../resources/images/Megaphone.svg";
+import santaHatIcon from "../../resources/images/SantaHat.png";
 
 import version from "../../resources/version.txt";
 import { translateText } from "../client/Utils";
@@ -135,8 +136,6 @@ export class NewsModal extends LitElement {
   }
 }
 
-// ... other imports
-
 @customElement("news-button")
 export class NewsButton extends LitElement {
   @query("news-modal") private newsModal!: NewsModal;
@@ -172,7 +171,10 @@ export class NewsButton extends LitElement {
             src="${megaphone}"
             alt=${translateText("news.title")}
           />
-          <div class="santa-hat-overlay"></div>
+          <div
+            class="santa-hat-overlay absolute -top-2 -right-2 w-8 h-8 bg-contain bg-no-repeat pointer-events-none"
+            style="background-image: url('${santaHatIcon}')"
+          ></div>
         </button>
       </div>
       <news-modal></news-modal>

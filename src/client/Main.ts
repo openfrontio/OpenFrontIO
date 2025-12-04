@@ -1,3 +1,4 @@
+import Snowflake3Png from "../../resources/images/Snowflake_3.png";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
@@ -528,7 +529,7 @@ class Client {
         document.querySelectorAll(".ad").forEach((ad) => {
           (ad as HTMLElement).style.display = "none";
         });
-        // Hide snowflakes and Santa hat when joining lobby
+        // Hide snowflakes when joining lobby
         document.documentElement.classList.add("in-game");
         removeSnowflakes(); // Stop snowflakes when joining a game
 
@@ -568,7 +569,7 @@ class Client {
     this.gameStop = null;
     this.gutterAds.hide();
     this.publicLobby.leaveLobby();
-    // Show snowflakes and Santa hat when leaving lobby (back to homepage)
+    // Show snowflakes when leaving lobby (back to homepage)
     document.documentElement.classList.remove("in-game");
     enableSnowflakes(); // Restart snowflakes when leaving a game
   }
@@ -604,15 +605,8 @@ class Client {
     }, 100);
   }
 }
-
-// Initialize the client when the DOM is loaded
-import Snowflake3Png from "../../resources/images/Snowflake_3.png";
-// ... (rest of imports)
-
-// Initialize the client when the DOM is loaded
 function enableSnowflakes() {
   const snowContainer = document.querySelector(".snow") as HTMLElement;
-  console.log("Snow container:", snowContainer); // Log 1: Check if container is found
   if (!snowContainer) {
     console.warn("Snow container element not found");
     return;
@@ -622,7 +616,6 @@ function enableSnowflakes() {
   removeSnowflakes();
 
   const numberOfSnowflakes = 200; // Increased count
-  console.log("Creating", numberOfSnowflakes, "snowflakes..."); // Log 3: Confirm snowflake creation starts
 
   for (let i = 0; i < numberOfSnowflakes; i++) {
     const snowflake = document.createElement("div");
@@ -638,7 +631,6 @@ function enableSnowflakes() {
 
     snowContainer.appendChild(snowflake);
   }
-  console.log("Finished creating snowflakes."); // Log 4: Confirm snowflake creation ends
 }
 
 function removeSnowflakes() {
