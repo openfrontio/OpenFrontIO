@@ -171,21 +171,31 @@ export class AccountModal extends LitElement {
             type="checkbox"
             class="sr-only peer"
             .checked=${checked}
+            ?disabled=${this.isPublicOptimistic !== null}
             @change=${async (e: Event) => {
               const input = e.target as HTMLInputElement;
               const newValue = input.checked;
+
+              // Prevent concurrent requests
+              if (this.isPublicOptimistic !== null) return;
 
               // Optimistically update UI immediately
               this.isPublicOptimistic = newValue;
 
               const success = await updateUserMe({ public: newValue });
               if (success) {
-                const updated = await getUserMe();
-                if (updated) {
-                  this.userMeResponse = updated;
-                  this.isPublicOptimistic = null;
-                  this.requestUpdate();
+                // Update local state directly since GET /users/@me doesn't return public field
+                if (this.userMeResponse) {
+                  this.userMeResponse = {
+                    ...this.userMeResponse,
+                    user: {
+                      ...this.userMeResponse.user,
+                      public: newValue,
+                    },
+                  };
                 }
+                this.isPublicOptimistic = null;
+                this.requestUpdate();
               } else {
                 // Revert on failure
                 this.isPublicOptimistic = null;
