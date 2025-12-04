@@ -341,6 +341,14 @@ export class ClientGameRunner {
         this.hasJoined = true;
         console.log("starting game!");
 
+        // Spectators send join_spectator intent instead of spawning
+        if (this.lobby.isSpectator) {
+          this.transport.sendIntent({
+            type: "join_spectator",
+            clientID: this.lobby.clientID,
+          });
+        }
+
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
             const myPlayer = this.gameView.myPlayer();

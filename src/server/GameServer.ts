@@ -40,7 +40,6 @@ export class GameServer {
   private turns: Turn[] = [];
   private intents: Intent[] = [];
   public activeClients: Client[] = [];
-  public spectators: Client[] = [];
   private allClients: Map<ClientID, Client> = new Map();
   private clientsDisconnectedStatus: Map<ClientID, boolean> = new Map();
   private _hasStarted = false;
@@ -136,42 +135,6 @@ export class GameServer {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
       });
-      return;
-    }
-
-    // Handle spectators separately
-    if (client.isSpectator) {
-      this.log.info("spectator joining game", {
-        clientID: client.clientID,
-        persistentID: client.persistentID,
-        clientIP: ipAnonymize(client.ip),
-      });
-
-      // Handle spectator reconnects: verify persistentID to prevent impersonation
-      const existing = this.spectators.find(
-        (c) => c.clientID === client.clientID,
-      );
-      if (existing !== undefined) {
-        if (client.persistentID !== existing.persistentID) {
-          this.log.warn("spectator reconnect rejected: persistentID mismatch", {
-            clientID: client.clientID,
-            incomingPersistentID: client.persistentID,
-            existingPersistentID: existing.persistentID,
-            clientIP: ipAnonymize(client.ip),
-          });
-          // Do not remove or replace existing spectator; reject join
-          return;
-        }
-        // Same account reconnect: remove stale spectator entry
-        this.spectators = this.spectators.filter((c) => c !== existing);
-      }
-
-      this.spectators.push(client);
-      client.lastPing = Date.now();
-      this.allClients.set(client.clientID, client);
-
-      // Set up spectator message handlers (receive only, no intents)
-      this.setupSpectatorHandlers(client, lastTurn);
       return;
     }
 
@@ -395,89 +358,6 @@ export class GameServer {
     }
   }
 
-  private setupSpectatorHandlers(client: Client, lastTurn: number) {
-    client.ws.removeAllListeners("message");
-    client.ws.on("message", async (message: string) => {
-      try {
-        const parsed = ClientMessageSchema.safeParse(JSON.parse(message));
-        if (!parsed.success) {
-          const error = z.prettifyError(parsed.error);
-          this.log.error("Spectator sent invalid message, closing connection", {
-            clientID: client.clientID,
-            persistentID: client.persistentID,
-            validationErrors: error,
-          });
-          if (client.ws.readyState === WebSocket.OPEN) {
-            // 1002: protocol error / policy violation is acceptable for invalid payload
-            client.ws.close(1002, "invalid spectator message schema");
-          }
-          // Remove spectator immediately (same as close handler)
-          this.spectators = this.spectators.filter(
-            (c) => c.clientID !== client.clientID,
-          );
-          return; // stop further processing
-        }
-        const clientMsg = parsed.data;
-
-        // Spectators can only ping, not send intents or other commands
-        switch (clientMsg.type) {
-          case "ping": {
-            this.lastPingUpdate = Date.now();
-            client.lastPing = Date.now();
-            break;
-          }
-          case "intent": {
-            this.log.warn("Spectator attempted to send intent, ignoring", {
-              clientID: client.clientID,
-              intentType: clientMsg.intent.type,
-            });
-            break;
-          }
-          default: {
-            this.log.warn("Spectator sent non-ping message, ignoring", {
-              clientID: client.clientID,
-              messageType: (clientMsg as any).type,
-            });
-            break;
-          }
-        }
-      } catch (error) {
-        this.log.error("Unhandled exception processing spectator message", {
-          clientID: client.clientID,
-          persistentID: client.persistentID,
-          error: String(error).substring(0, 250),
-        });
-        if (client.ws.readyState === WebSocket.OPEN) {
-          client.ws.close(1002, "spectator message handler exception");
-        }
-        this.spectators = this.spectators.filter(
-          (c) => c.clientID !== client.clientID,
-        );
-      }
-    });
-
-    client.ws.on("close", () => {
-      this.log.info("spectator disconnected", {
-        clientID: client.clientID,
-        persistentID: client.persistentID,
-      });
-      this.spectators = this.spectators.filter(
-        (c) => c.clientID !== client.clientID,
-      );
-    });
-
-    client.ws.on("error", (error: Error) => {
-      if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
-      }
-    });
-
-    // Send start message to spectator if game already started
-    if (this._hasStarted) {
-      this.sendStartGameMsg(client.ws, lastTurn);
-    }
-  }
-
   public numClients(): number {
     return this.activeClients.length;
   }
@@ -521,13 +401,6 @@ export class GameServer {
       });
       c.ws.send(msg);
     });
-    // Also send to spectators
-    this.spectators.forEach((c) => {
-      this.log.info("sending prestart message to spectator", {
-        clientID: c.clientID,
-      });
-      c.ws.send(msg);
-    });
   }
 
   public start() {
@@ -565,13 +438,6 @@ export class GameServer {
       this.log.info("sending start message", {
         clientID: c.clientID,
         persistentID: c.persistentID,
-      });
-      this.sendStartGameMsg(c.ws, 0);
-    });
-    // Also send to spectators
-    this.spectators.forEach((c) => {
-      this.log.info("sending start message to spectator", {
-        clientID: c.clientID,
       });
       this.sendStartGameMsg(c.ws, 0);
     });
@@ -617,10 +483,6 @@ export class GameServer {
       turn: pastTurn,
     } satisfies ServerTurnMessage);
     this.activeClients.forEach((c) => {
-      c.ws.send(msg);
-    });
-    // Also send to spectators
-    this.spectators.forEach((c) => {
       c.ws.send(msg);
     });
   }
@@ -694,21 +556,6 @@ export class GameServer {
       }
     }
     this.activeClients = alive;
-    // Clean up stale spectators
-    const aliveSpectators: Client[] = [];
-    for (const spectator of this.spectators) {
-      if (now - spectator.lastPing > 60_000) {
-        this.log.info("spectator no pings, terminating", {
-          clientID: spectator.clientID,
-        });
-        if (spectator.ws.readyState === WebSocket.OPEN) {
-          spectator.ws.close(1000, "no heartbeats received");
-        }
-      } else {
-        aliveSpectators.push(spectator);
-      }
-    }
-    this.spectators = aliveSpectators;
     if (now > this.createdAt + this.maxGameDuration) {
       this.log.warn("game past max duration", {
         gameID: this.id,
@@ -759,15 +606,19 @@ export class GameServer {
   public gameInfo(): GameInfo {
     return {
       gameID: this.id,
-      clients: this.activeClients.map((c) => ({
-        username: c.username,
-        clientID: c.clientID,
-      })),
-      spectators: this.spectators.map((c) => ({
-        username: c.username,
-        clientID: c.clientID,
-        isSpectator: true,
-      })),
+      clients: this.activeClients
+        .filter((c) => !c.isSpectator)
+        .map((c) => ({
+          username: c.username,
+          clientID: c.clientID,
+        })),
+      spectators: this.activeClients
+        .filter((c) => c.isSpectator)
+        .map((c) => ({
+          username: c.username,
+          clientID: c.clientID,
+          isSpectator: true,
+        })),
       gameConfig: this.gameConfig,
       msUntilStart: this.isPublic()
         ? this.createdAt + this.config.gameCreationRate()

@@ -638,7 +638,7 @@ export class Transport {
     });
   }
 
-  private sendIntent(intent: Intent) {
+  public sendIntent(intent: Intent) {
     if (this.isLocal || this.socket?.readyState === WebSocket.OPEN) {
       const msg = {
         type: "intent",

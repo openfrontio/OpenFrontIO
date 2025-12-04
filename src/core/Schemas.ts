@@ -27,6 +27,7 @@ export type ClientID = string;
 
 export type Intent =
   | SpawnIntent
+  | JoinSpectatorIntent
   | AttackIntent
   | CancelAttackIntent
   | BoatAttackIntent
@@ -52,6 +53,7 @@ export type Intent =
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
 export type SpawnIntent = z.infer<typeof SpawnIntentSchema>;
+export type JoinSpectatorIntent = z.infer<typeof JoinSpectatorIntentSchema>;
 export type BoatAttackIntent = z.infer<typeof BoatAttackIntentSchema>;
 export type EmbargoAllIntent = z.infer<typeof EmbargoAllIntentSchema>;
 export type CancelBoatIntent = z.infer<typeof CancelBoatIntentSchema>;
@@ -242,6 +244,10 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
   tile: z.number(),
 });
 
+export const JoinSpectatorIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("join_spectator"),
+});
+
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
   targetID: ID.nullable(),
@@ -354,6 +360,7 @@ const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
+  JoinSpectatorIntentSchema,
   MarkDisconnectedIntentSchema,
   BoatAttackIntentSchema,
   CancelBoatIntentSchema,
