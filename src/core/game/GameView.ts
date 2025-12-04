@@ -846,13 +846,13 @@ export class GameView implements GameMap {
     return this._map.hasOwner(ref);
   }
   setOwnerID(ref: TileRef, playerId: number): void {
-    return this._map.setOwnerID(ref, playerId);
+    this._map.setOwnerID(ref, playerId);
   }
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);
   }
   setFallout(ref: TileRef, value: boolean): void {
-    return this._map.setFallout(ref, value);
+    this._map.setFallout(ref, value);
   }
 
   isDefended(ref: TileRef): boolean {
@@ -860,7 +860,7 @@ export class GameView implements GameMap {
   }
 
   setDefended(ref: TileRef, value: boolean): void {
-    return this._map.setDefended(ref, value);
+    this._map.setDefended(ref, value);
   }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
@@ -884,7 +884,7 @@ export class GameView implements GameMap {
     return this._map.terrainType(ref);
   }
   forEachTile(fn: (tile: TileRef) => void): void {
-    return this._map.forEachTile(fn);
+    this._map.forEachTile(fn);
   }
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
