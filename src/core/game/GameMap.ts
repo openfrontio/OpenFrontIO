@@ -306,7 +306,7 @@ export class GameMapImpl implements GameMap {
     const maxY = Math.min(this.height_ - 1, center.y + radius);
     for (let i = minX; i <= maxX; ++i) {
       for (let j = minY; j <= maxY; j++) {
-        const t = this.ref(i, j);
+        const t = this.yToRef[j] + i;
         const d2 = this.euclideanDistSquared(tile, t);
         if (d2 > radius * radius) continue;
         if (!filter || filter(t, d2)) {
