@@ -16,6 +16,7 @@ export class LobbyChatPanel extends LitElement {
   @state() private inputText: string = "";
 
   private bus: EventBus | null = null;
+  private username: string | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -24,6 +25,7 @@ export class LobbyChatPanel extends LitElement {
     if (globalBus) {
       this.bus = globalBus;
     }
+    this.username = (window as any).__username ?? null;
     document.addEventListener("event-bus:ready", this.onBusReady as any);
   }
 
@@ -54,6 +56,7 @@ export class LobbyChatPanel extends LitElement {
     if (globalBus) {
       this.bus = globalBus;
     }
+    this.username ??= (window as any).__username ?? null;
   };
 
   private sendMessage() {
@@ -80,7 +83,12 @@ export class LobbyChatPanel extends LitElement {
         <div class="lcp-messages">
           ${this.messages.map((m) => {
             const displayName = m.isHost ? `${m.username} (Host)` : m.username;
-            return html`<div class="lcp-msg">
+            const isLocal =
+              this.username !== null && m.username === this.username;
+            const msgClass = isLocal
+              ? "lcp-msg lcp-msg--local"
+              : "lcp-msg lcp-msg--remote";
+            return html`<div class="${msgClass}">
               <span class="lcp-sender">${displayName}:</span> ${m.text}
             </div>`;
           })}
@@ -139,6 +147,16 @@ style.textContent = `
     font-size: 0.9rem;
     padding: 6px 10px;
     border-radius: 10px;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  .lcp-msg--local {
+    align-self: flex-end;
+    text-align: right;
+    background: rgba(36, 59, 85, 0.7);
+  }
+  .lcp-msg--remote {
+    align-self: flex-start;
+    text-align: left;
     background: rgba(0, 0, 0, 0.6);
   }
   .lcp-sender {

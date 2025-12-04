@@ -326,7 +326,7 @@ export class GameServer {
               type: "lobby_chat",
               username: client.username,
               isHost,
-              text: (JSON.parse(message) as any).text,
+              text: clientMsg.text,
             });
             this.activeClients.forEach((c) => c.ws.send(payload));
             break;
