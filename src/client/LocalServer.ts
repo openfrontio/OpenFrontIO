@@ -17,9 +17,9 @@ import {
   getClanTag,
   replacer,
 } from "../core/Util";
+import { getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { ReplaySpeedChangeEvent } from "./InputHandler";
-import { getPersistentID } from "./Main";
 import { defaultReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 
 export class LocalServer {
@@ -177,12 +177,13 @@ export class LocalServer {
     });
   }
 
-  public endGame() {
+  public async endGame() {
     console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
     if (this.isReplay) {
       return;
     }
+
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),

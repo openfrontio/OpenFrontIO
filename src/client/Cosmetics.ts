@@ -5,8 +5,7 @@ import {
   CosmeticsSchema,
   Pattern,
 } from "../core/CosmeticSchemas";
-import { getApiBase, getAuthHeader } from "./jwt";
-import { getPersistentID } from "./Main";
+import { createCheckoutSession, getApiBase } from "./Api";
 
 export async function handlePurchase(
   pattern: Pattern,
@@ -17,36 +16,14 @@ export async function handlePurchase(
     return;
   }
 
-  const response = await fetch(
-    `${getApiBase()}/stripe/create-checkout-session`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        authorization: getAuthHeader(),
-        "X-Persistent-Id": getPersistentID(),
-      },
-      body: JSON.stringify({
-        priceId: pattern.product.priceId,
-        hostname: window.location.origin,
-        colorPaletteName: colorPalette?.name,
-      }),
-    },
+  const url = await createCheckoutSession(
+    pattern.product.priceId,
+    colorPalette?.name ?? null,
   );
-
-  if (!response.ok) {
-    console.error(
-      `Error purchasing pattern:${response.status} ${response.statusText}`,
-    );
-    if (response.status === 401) {
-      alert("You are not logged in. Please log in to purchase a pattern.");
-    } else {
-      alert("Something went wrong. Please try again later.");
-    }
+  if (url === false) {
+    alert("Failed to create checkout session.");
     return;
   }
-
-  const { url } = await response.json();
 
   // Redirect to Stripe checkout
   window.location.href = url;

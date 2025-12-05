@@ -134,17 +134,9 @@ export class TerritoryPatternsModal extends LitElement {
     return html`
       <div class="flex flex-col gap-2">
         <div class="flex justify-center">
-          <button
-            class="px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg ${this
-              .showOnlyOwned
-              ? "bg-blue-500 text-white hover:bg-blue-600"
-              : "bg-gray-700 text-gray-300 hover:bg-gray-600"}"
-            @click=${() => {
-              this.showOnlyOwned = !this.showOnlyOwned;
-            }}
-          >
-            ${translateText("territory_patterns.show_only_owned")}
-          </button>
+          ${this.isLoggedIn()
+            ? this.renderMySkinsButton()
+            : this.renderNotLoggedInWarning()}
         </div>
         <div
           class="flex flex-wrap gap-4 p-2"
@@ -162,6 +154,28 @@ export class TerritoryPatternsModal extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  private renderMySkinsButton(): TemplateResult {
+    return html`<button
+      class="px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg ${this
+        .showOnlyOwned
+        ? "bg-blue-500 text-white hover:bg-blue-600"
+        : "bg-gray-700 text-gray-300 hover:bg-gray-600"}"
+      @click=${() => {
+        this.showOnlyOwned = !this.showOnlyOwned;
+      }}
+    >
+      ${translateText("territory_patterns.show_only_owned")}
+    </button>`;
+  }
+
+  private renderNotLoggedInWarning(): TemplateResult {
+    return html`<label
+      class="px-4 py-2 text-sm font-medium transition-colors duration-200 rounded-lg bg-red-500 text-white"
+    >
+      ${translateText("territory_patterns.not_logged_in")}
+    </label>`;
   }
 
   private renderColorSwatchGrid(): TemplateResult {
@@ -275,5 +289,15 @@ export class TerritoryPatternsModal extends LitElement {
     if (this.previewButton === null) return;
     render(preview, this.previewButton);
     this.requestUpdate();
+  }
+
+  private isLoggedIn(): boolean {
+    if (this.userMeResponse === false) {
+      return false;
+    }
+    return (
+      this.userMeResponse.user.discord !== undefined ||
+      this.userMeResponse.user.email !== undefined
+    );
   }
 }

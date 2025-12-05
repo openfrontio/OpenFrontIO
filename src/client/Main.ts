@@ -5,6 +5,8 @@ import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
+import { getUserMe } from "./Api";
+import { getPlayToken, userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
@@ -34,14 +36,9 @@ import { SendKickPlayerIntentEvent } from "./Transport";
 import { UserSettingModal } from "./UserSettingModal";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
-import {
-  generateCryptoRandomUUID,
-  incrementGamesPlayed,
-  isInIframe,
-} from "./Utils";
+import { incrementGamesPlayed, isInIframe } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { getUserMe, isLoggedIn } from "./jwt";
 import "./styles.css";
 
 declare global {
@@ -107,7 +104,7 @@ class Client {
 
   constructor() {}
 
-  initialize(): void {
+  async initialize(): Promise<void> {
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;
@@ -272,7 +269,7 @@ class Client {
       }
     };
 
-    if (isLoggedIn() === false) {
+    if ((await userAuth()) === false) {
       // Not logged in
       onUserMe(false);
     } else {
@@ -485,7 +482,7 @@ class Client {
               : this.flagInput.getCurrentFlag(),
         },
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: getPlayToken(),
+        token: await getPlayToken(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,
@@ -602,43 +599,3 @@ class Client {
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
-
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPlayToken(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.token;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPersistentID(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.claims.sub;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-function getPersistentIDFromCookie(): string {
-  const COOKIE_NAME = "player_persistent_id";
-
-  // Try to get existing cookie
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
-    if (cookieName === COOKIE_NAME) {
-      return cookieValue;
-    }
-  }
-
-  // If no cookie exists, create new ID and set cookie
-  const newID = generateCryptoRandomUUID();
-  document.cookie = [
-    `${COOKIE_NAME}=${newID}`,
-    `max-age=${5 * 365 * 24 * 60 * 60}`, // 5 years
-    "path=/",
-    "SameSite=Strict",
-    "Secure",
-  ].join(";");
-
-  return newID;
-}
