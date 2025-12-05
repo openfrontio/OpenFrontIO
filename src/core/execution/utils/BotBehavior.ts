@@ -378,7 +378,7 @@ export class BotBehavior {
   forceSendAttack(target: Player | TerraNullius) {
     this.game.addExecution(
       new AttackExecution(
-        this.player.troops() / 2,
+        0.5,
         this.player,
         target.isPlayer() ? target.id() : this.game.terraNullius().id(),
       ),
@@ -396,9 +396,10 @@ export class BotBehavior {
     const targetTroops = maxTroops * reserveRatio;
     const troops = this.player.troops() - targetTroops;
     if (troops < 1) return;
+    const ratio = troops / this.player.troops();
     this.game.addExecution(
       new AttackExecution(
-        troops,
+        ratio,
         this.player,
         target.isPlayer() ? target.id() : this.game.terraNullius().id(),
       ),
