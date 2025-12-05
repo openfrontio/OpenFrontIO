@@ -89,11 +89,7 @@ export class BotExecution implements Execution {
       this.neighborsTerraNullius = false;
     }
 
-    this.behavior.forgetOldEnemies();
-    const enemy = this.behavior.selectRandomEnemy();
-    if (!enemy) return;
-    if (!this.bot.sharesBorderWith(enemy)) return;
-    this.behavior.sendAttack(enemy);
+    this.behavior.attackRandomTarget();
   }
 
   isActive(): boolean {
