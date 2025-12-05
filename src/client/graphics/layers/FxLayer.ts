@@ -5,7 +5,7 @@ import {
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import SoundManager from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
@@ -267,7 +267,7 @@ export class FxLayer implements Layer {
       return;
     }
 
-    SoundManager.playSoundEffect(SoundEffect.KaChing);
+    SoundManager.playSoundEffect("ka-ching");
 
     const conquestFx = conquestFxFactory(
       this.animatedSpriteLoader,

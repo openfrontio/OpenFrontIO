@@ -1,12 +1,12 @@
 import { Howl } from "howler";
+import z from "zod";
 import of4 from "../../../proprietary/sounds/music/of4.mp3";
 import openfront from "../../../proprietary/sounds/music/openfront.mp3";
 import war from "../../../proprietary/sounds/music/war.mp3";
 import kaChingSound from "../../../resources/sounds/effects/ka-ching.mp3";
 
-export enum SoundEffect {
-  KaChing = "ka-ching",
-}
+export const SoundEffectSchema = z.enum(["ka-ching"]);
+export type SoundEffect = z.infer<typeof SoundEffectSchema>;
 
 class SoundManager {
   private backgroundMusic: Howl[] = [];
@@ -36,7 +36,7 @@ class SoundManager {
         volume: 0,
       }),
     ];
-    this.loadSoundEffect(SoundEffect.KaChing, kaChingSound);
+    this.loadSoundEffect("ka-ching", kaChingSound);
   }
 
   public playBackgroundMusic(): void {
