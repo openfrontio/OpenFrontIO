@@ -149,7 +149,8 @@ export class FakeHumanExecution implements Execution {
       this.trackTradeShipsAndRetaliate();
     }
 
-    if (ticks % this.attackRate !== this.attackTick) {
+    // Tries to spawn nations on the first tick of the match
+    if (ticks > 1 && ticks % this.attackRate !== this.attackTick) {
       return;
     }
 

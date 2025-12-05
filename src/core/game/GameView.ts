@@ -475,6 +475,8 @@ export class GameView implements GameMap {
 
   private _map: GameMap;
 
+  private firstHumanSpawnTick: number;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,
@@ -655,7 +657,17 @@ export class GameView implements GameMap {
     return this.lastUpdate.tick;
   }
   inSpawnPhase(): boolean {
-    return this.ticks() <= this._config.numSpawnPhaseTurns();
+    if (!this.firstHumanSpawnTick) {
+      const humanSpawned = this.playerViews().some(
+        (p) => p.type() === PlayerType.Human && p.hasSpawned(),
+      );
+      if (humanSpawned) this.firstHumanSpawnTick = this.ticks();
+    }
+    return this.config().isSpawnPhase(
+      this.ticks(),
+      this.config().gameConfig().gameType,
+      this.firstHumanSpawnTick,
+    );
   }
   config(): Config {
     return this._config;

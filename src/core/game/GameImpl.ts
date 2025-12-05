@@ -69,6 +69,8 @@ export class GameImpl implements Game {
   private _height: number;
   _terraNullius: TerraNulliusImpl;
 
+  private firstHumanSpawnTick: number;
+
   allianceRequests: AllianceRequestImpl[] = [];
   alliances_: AllianceImpl[] = [];
 
@@ -338,7 +340,17 @@ export class GameImpl implements Game {
   }
 
   inSpawnPhase(): boolean {
-    return this._ticks <= this.config().numSpawnPhaseTurns();
+    if (!this.firstHumanSpawnTick) {
+      const humanSpawned = Array.from(this._players.values()).some(
+        (p) => p.type() === PlayerType.Human && p.hasSpawned(),
+      );
+      if (humanSpawned) this.firstHumanSpawnTick = this._ticks;
+    }
+    return this._config.isSpawnPhase(
+      this.ticks(),
+      this.config().gameConfig().gameType,
+      this.firstHumanSpawnTick,
+    );
   }
 
   ticks(): number {

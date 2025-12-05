@@ -175,6 +175,10 @@ export abstract class DefaultServerConfig implements ServerConfig {
   turnIntervalMs(): number {
     return 100;
   }
+  // Start game immediately for single player games, with delay for multiplayer games
+  startDelay(gameType: GameType): number {
+    return gameType === GameType.Singleplayer ? 0 : 2000;
+  }
   gameCreationRate(): number {
     return 60 * 1000;
   }
@@ -271,6 +275,10 @@ export class DefaultConfig implements Config {
 
   serverConfig(): ServerConfig {
     return this._serverConfig;
+  }
+
+  turnIntervalMs(): number {
+    return this._serverConfig.turnIntervalMs();
   }
 
   userSettings(): UserSettings {
@@ -625,9 +633,31 @@ export class DefaultConfig implements Config {
   boatMaxNumber(): number {
     return 3;
   }
+
   numSpawnPhaseTurns(): number {
     return this._gameConfig.gameType === GameType.Singleplayer ? 100 : 300;
   }
+  // Amount of ticks for player to change spawn placement in singleplayer
+  numGracePeriodTurns(): number {
+    return 15;
+  }
+  isSpawnPhase(
+    ticks: number,
+    gameType: GameType,
+    firstHumanSpawnTick?: number,
+  ): boolean {
+    if (ticks > this.numSpawnPhaseTurns()) {
+      return false;
+    }
+    if (gameType !== GameType.Singleplayer) {
+      return true;
+    }
+    if (!firstHumanSpawnTick) {
+      return true;
+    }
+    return ticks <= firstHumanSpawnTick + this.numGracePeriodTurns();
+  }
+
   numBots(): number {
     return this.bots();
   }
