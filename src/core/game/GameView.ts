@@ -593,6 +593,8 @@ export class GameView implements GameMap {
 
   private _map: GameMap;
   private readonly usesSharedTileState: boolean;
+  private readonly _sharedDrawPhaseBuffer?: SharedArrayBuffer;
+  private readonly _timeBaseMs?: number;
   private readonly terraNullius = new TerraNulliusImpl();
 
   constructor(
@@ -603,9 +605,13 @@ export class GameView implements GameMap {
     private _gameID: GameID,
     private humans: Player[],
     usesSharedTileState: boolean = false,
+    sharedDrawPhaseBuffer?: SharedArrayBuffer,
+    timeBaseMs?: number,
   ) {
     this._map = this._mapData.gameMap;
     this.usesSharedTileState = usesSharedTileState;
+    this._sharedDrawPhaseBuffer = sharedDrawPhaseBuffer;
+    this._timeBaseMs = timeBaseMs;
     this.lastUpdate = null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
@@ -928,6 +934,14 @@ export class GameView implements GameMap {
     }
     const buffer = this._mapData.sharedStateBuffer;
     return buffer instanceof SharedArrayBuffer ? buffer : undefined;
+  }
+
+  sharedDrawPhaseBuffer(): SharedArrayBuffer | undefined {
+    return this._sharedDrawPhaseBuffer;
+  }
+
+  timeBaseMs(): number | undefined {
+    return this._timeBaseMs;
   }
 
   focusedPlayer(): PlayerView | null {

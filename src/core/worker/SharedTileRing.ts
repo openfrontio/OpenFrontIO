@@ -4,12 +4,14 @@ export interface SharedTileRingBuffers {
   header: SharedArrayBuffer;
   data: SharedArrayBuffer;
   dirty: SharedArrayBuffer;
+  drawPhase: SharedArrayBuffer;
 }
 
 export interface SharedTileRingViews {
   header: Int32Array;
   buffer: Uint32Array;
   dirtyFlags: Uint8Array;
+  drawPhase: Uint32Array;
   capacity: number;
 }
 
@@ -25,7 +27,10 @@ export function createSharedTileRingBuffers(
   const header = new SharedArrayBuffer(3 * Int32Array.BYTES_PER_ELEMENT);
   const data = new SharedArrayBuffer(capacity * Uint32Array.BYTES_PER_ELEMENT);
   const dirty = new SharedArrayBuffer(numTiles * Uint8Array.BYTES_PER_ELEMENT);
-  return { header, data, dirty };
+  const drawPhase = new SharedArrayBuffer(
+    numTiles * Uint32Array.BYTES_PER_ELEMENT,
+  );
+  return { header, data, dirty, drawPhase };
 }
 
 export function createSharedTileRingViews(
@@ -34,10 +39,12 @@ export function createSharedTileRingViews(
   const header = new Int32Array(buffers.header);
   const buffer = new Uint32Array(buffers.data);
   const dirtyFlags = new Uint8Array(buffers.dirty);
+  const drawPhase = new Uint32Array(buffers.drawPhase);
   return {
     header,
     buffer,
     dirtyFlags,
+    drawPhase,
     capacity: buffer.length,
   };
 }

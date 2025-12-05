@@ -1,6 +1,7 @@
 import version from "../../../resources/version.txt";
 import { createGameRunner, GameRunner } from "../GameRunner";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
+import { Game } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
@@ -25,6 +26,13 @@ const mapLoader = new FetchGameMapLoader(`/maps`, version);
 let isProcessingTurns = false;
 let sharedTileRing: SharedTileRingViews | null = null;
 let dirtyFlags: Uint8Array | null = null;
+let sharedDrawPhase: Uint32Array | null = null;
+let lastOwner: Uint16Array | null = null;
+let timeBaseMs = Date.now();
+let tickNowOffset = 0;
+let nextCaptureOffset = 0;
+const STAGGER_MS = 2;
+let gameRef: Game | null = null;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
   // skip if ErrorUpdate
@@ -57,6 +65,8 @@ async function processPendingTurns() {
   isProcessingTurns = true;
   try {
     while (gr.hasPendingTurns()) {
+      tickNowOffset = Math.max(0, Date.now() - timeBaseMs);
+      nextCaptureOffset = 0;
       gr.executeNextTick();
     }
   } finally {
@@ -73,35 +83,74 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         if (
           message.sharedTileRingHeader &&
           message.sharedTileRingData &&
-          message.sharedDirtyBuffer
+          message.sharedDirtyBuffer &&
+          message.sharedDrawPhaseBuffer
         ) {
           sharedTileRing = createSharedTileRingViews({
             header: message.sharedTileRingHeader,
             data: message.sharedTileRingData,
             dirty: message.sharedDirtyBuffer,
+            drawPhase: message.sharedDrawPhaseBuffer,
           });
           dirtyFlags = sharedTileRing.dirtyFlags;
+          sharedDrawPhase = sharedTileRing.drawPhase;
         } else {
           sharedTileRing = null;
           dirtyFlags = null;
+          sharedDrawPhase = null;
         }
+        timeBaseMs = message.timeBaseMs ?? Date.now();
+
+        const tileUpdateSink =
+          sharedTileRing || sharedDrawPhase
+            ? (tile: TileRef) => {
+                if (sharedTileRing && dirtyFlags) {
+                  if (Atomics.compareExchange(dirtyFlags, tile, 0, 1) === 0) {
+                    pushTileUpdate(sharedTileRing, tile);
+                  }
+                } else if (sharedTileRing) {
+                  pushTileUpdate(sharedTileRing, tile);
+                }
+
+                if (!sharedDrawPhase || !gameRef || !lastOwner) {
+                  return;
+                }
+
+                const newOwner = gameRef.ownerID(tile);
+                const prevOwner = lastOwner[tile];
+                const ownerChanged = newOwner !== prevOwner;
+                lastOwner[tile] = newOwner;
+
+                const nowOffset = tickNowOffset;
+                let reveal = nowOffset;
+                if (ownerChanged) {
+                  const offset = nowOffset - nextCaptureOffset * STAGGER_MS;
+                  reveal = offset <= 0 ? 0 : offset >>> 0;
+                  nextCaptureOffset++;
+                }
+                sharedDrawPhase[tile] = reveal >>> 0;
+              }
+            : undefined;
 
         gameRunner = createGameRunner(
           message.gameStartInfo,
           message.clientID,
           mapLoader,
           gameUpdate,
-          sharedTileRing && dirtyFlags
-            ? (tile: TileRef) => {
-                if (Atomics.compareExchange(dirtyFlags!, tile, 0, 1) === 0) {
-                  pushTileUpdate(sharedTileRing!, tile);
-                }
-              }
-            : sharedTileRing
-              ? (tile: TileRef) => pushTileUpdate(sharedTileRing!, tile)
-              : undefined,
+          tileUpdateSink,
           message.sharedStateBuffer,
         ).then((gr) => {
+          gameRef = gr.game;
+          const map = gameRef.map();
+          const numTiles = map.width() * map.height();
+          lastOwner = new Uint16Array(numTiles);
+          map.forEachTile((tile) => {
+            lastOwner![tile] = map.ownerID(tile);
+          });
+          tickNowOffset = Math.max(0, Date.now() - timeBaseMs);
+          if (sharedDrawPhase) {
+            sharedDrawPhase.fill(tickNowOffset >>> 0);
+          }
           sendMessage({
             type: "initialized",
             id: message.id,
