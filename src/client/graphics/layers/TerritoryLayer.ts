@@ -70,6 +70,9 @@ export class TerritoryLayer implements Layer {
   private lastMyPlayerSmallId: number | null = null;
   private useWebGL: boolean;
   private webglSupported = true;
+  private lastTickSeen = 0;
+  private tickParity = 0;
+  private tickDurationMs = 100;
 
   constructor(
     private game: GameView,
@@ -97,6 +100,28 @@ export class TerritoryLayer implements Layer {
 
   tick() {
     const tickProfile = FrameProfiler.start();
+
+    const currentTick = this.game.ticks();
+    if (currentTick !== this.lastTickSeen) {
+      this.lastTickSeen = currentTick;
+      this.tickParity ^= 1;
+      const tickStartMs = performance.now();
+      const changedTiles = this.game.recentlyUpdatedTiles();
+      if (this.territoryRenderer?.isWebGL()) {
+        const webglRenderer = this.territoryRenderer as WebglTerritoryRenderer;
+        webglRenderer.updateArrivalForChangedTiles(
+          changedTiles,
+          this.tickParity,
+        );
+        webglRenderer.setTickTiming(
+          currentTick,
+          tickStartMs,
+          this.tickDurationMs,
+          this.tickParity,
+        );
+      }
+    }
+
     if (this.game.inSpawnPhase()) {
       this.spawnHighlight();
     }

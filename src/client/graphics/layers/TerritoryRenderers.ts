@@ -23,6 +23,13 @@ export interface TerritoryRendererStrategy {
   setHoverHighlightOptions(options: HoverHighlightOptions): void;
   refreshPalette(): void;
   clearTile(tile: TileRef): void;
+  updateArrivalForChangedTiles(tiles: TileRef[], tickParity: number): void;
+  setTickTiming(
+    tick: number,
+    startMs: number,
+    durationMs: number,
+    parity: number,
+  ): void;
 }
 
 export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
@@ -235,6 +242,14 @@ export class CanvasTerritoryRenderer implements TerritoryRendererStrategy {
       this.alternativeImageData.data[offset + 3] = 0;
     });
   }
+
+  updateArrivalForChangedTiles(): void {
+    // No tick intrapolation for canvas renderer.
+  }
+
+  setTickTiming(): void {
+    // No tick intrapolation for canvas renderer.
+  }
 }
 
 export class WebglTerritoryRenderer implements TerritoryRendererStrategy {
@@ -297,5 +312,18 @@ export class WebglTerritoryRenderer implements TerritoryRendererStrategy {
 
   clearTile(): void {
     // No-op for WebGL; canvas alpha clearing is not used.
+  }
+
+  updateArrivalForChangedTiles(tiles: TileRef[], tickParity: number): void {
+    this.renderer.updateArrivalForChangedTiles(this.game, tiles, tickParity);
+  }
+
+  setTickTiming(
+    tick: number,
+    startMs: number,
+    durationMs: number,
+    parity: number,
+  ): void {
+    this.renderer.setTickTiming(tick, startMs, durationMs, parity);
   }
 }
