@@ -15,17 +15,15 @@ import { MoveWarshipIntentEvent } from "../../Transport";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
+import z from "zod";
 import {
   getColoredSprite,
   isSpriteReady,
   loadAllSprites,
 } from "../SpriteLoader";
 
-enum Relationship {
-  Self,
-  Ally,
-  Enemy,
-}
+export const RelationshipSchema = z.enum(["Self", "Ally", "Enemy"]);
+export type Relationship = z.infer<typeof RelationshipSchema>;
 
 export class UnitLayer implements Layer {
   private canvas: HTMLCanvasElement;
@@ -287,15 +285,15 @@ export class UnitLayer implements Layer {
   private relationship(unit: UnitView): Relationship {
     const myPlayer = this.game.myPlayer();
     if (myPlayer === null) {
-      return Relationship.Enemy;
+      return "Enemy";
     }
     if (myPlayer === unit.owner()) {
-      return Relationship.Self;
+      return "Self";
     }
     if (myPlayer.isFriendly(unit.owner())) {
-      return Relationship.Ally;
+      return "Ally";
     }
-    return Relationship.Enemy;
+    return "Enemy";
   }
 
   onUnitEvent(unit: UnitView) {
@@ -514,13 +512,13 @@ export class UnitLayer implements Layer {
     this.clearCell(x, y, context);
     if (this.alternateView) {
       switch (relationship) {
-        case Relationship.Self:
+        case "Self":
           context.fillStyle = this.theme.selfColor().toRgbString();
           break;
-        case Relationship.Ally:
+        case "Ally":
           context.fillStyle = this.theme.allyColor().toRgbString();
           break;
-        case Relationship.Enemy:
+        case "Enemy":
           context.fillStyle = this.theme.enemyColor().toRgbString();
           break;
       }
@@ -552,20 +550,20 @@ export class UnitLayer implements Layer {
         const myPlayer = this.game.myPlayer();
         if (myPlayer !== null && target !== undefined) {
           if (myPlayer === target) {
-            rel = Relationship.Self;
+            rel = "Self";
           } else if (myPlayer.isFriendly(target)) {
-            rel = Relationship.Ally;
+            rel = "Ally";
           }
         }
       }
       switch (rel) {
-        case Relationship.Self:
+        case "Self":
           alternateViewColor = this.theme.selfColor();
           break;
-        case Relationship.Ally:
+        case "Ally":
           alternateViewColor = this.theme.allyColor();
           break;
-        case Relationship.Enemy:
+        case "Enemy":
           alternateViewColor = this.theme.enemyColor();
           break;
       }
