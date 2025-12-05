@@ -33,6 +33,7 @@ import {
 } from "../../Transport";
 import { renderNumber } from "../../Utils";
 import { TransformHandler } from "../TransformHandler";
+import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 export interface BuildItemDisplay {
@@ -125,6 +126,7 @@ export const flattenedBuildTable = buildTable.flat();
 export class BuildMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
+  public uiState: UIState;
   private clickedTile: TileRef;
   public playerActions: PlayerActions | null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
@@ -395,7 +397,14 @@ export class BuildMenu extends LitElement implements Layer {
         ),
       );
     } else if (buildableUnit.canBuild) {
-      this.eventBus.emit(new BuildUnitIntentEvent(buildableUnit.type, tile));
+      const rocketDirectionUp =
+        buildableUnit.type === UnitType.AtomBomb ||
+        buildableUnit.type === UnitType.HydrogenBomb
+          ? this.uiState.rocketDirectionUp
+          : undefined;
+      this.eventBus.emit(
+        new BuildUnitIntentEvent(buildableUnit.type, tile, rocketDirectionUp),
+      );
     }
     this.hideMenu();
   }

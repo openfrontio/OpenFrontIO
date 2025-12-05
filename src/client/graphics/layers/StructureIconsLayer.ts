@@ -334,10 +334,16 @@ export class StructureIconsLayer implements Layer {
         ),
       );
     } else if (this.ghostUnit.buildableUnit.canBuild) {
+      const unitType = this.ghostUnit.buildableUnit.type;
+      const rocketDirectionUp =
+        unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb
+          ? this.uiState.rocketDirectionUp
+          : undefined;
       this.eventBus.emit(
         new BuildUnitIntentEvent(
-          this.ghostUnit.buildableUnit.type,
+          unitType,
           this.game.ref(tile.x, tile.y),
+          rocketDirectionUp,
         ),
       );
     }
