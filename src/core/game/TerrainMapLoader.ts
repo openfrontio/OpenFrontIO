@@ -41,19 +41,19 @@ export async function loadTerrainMap(
   const manifest = await mapFiles.manifest();
 
   const gameMap =
-    mapSize === GameMapSize.Normal
+    mapSize === "Normal"
       ? await genTerrainFromBin(manifest.map, await mapFiles.mapBin())
       : await genTerrainFromBin(manifest.map4x, await mapFiles.map4xBin());
 
   const miniMap =
-    mapSize === GameMapSize.Normal
+    mapSize === "Normal"
       ? await genTerrainFromBin(
-          mapSize === GameMapSize.Normal ? manifest.map4x : manifest.map16x,
+          mapSize === "Normal" ? manifest.map4x : manifest.map16x,
           await mapFiles.map4xBin(),
         )
       : await genTerrainFromBin(manifest.map16x, await mapFiles.map16xBin());
 
-  if (mapSize === GameMapSize.Compact) {
+  if (mapSize === "Compact") {
     manifest.nations.forEach((nation) => {
       nation.coordinates = [
         Math.floor(nation.coordinates[0] / 2),

@@ -10,7 +10,7 @@ import {
   AllPlayers,
   DifficultySchema,
   Duos,
-  GameMapSize,
+  GameMapSizeSchema,
   GameMapTypeSchema,
   GameModeSchema,
   GameTypeSchema,
@@ -165,7 +165,7 @@ export const GameConfigSchema = z.object({
   donateTroops: z.boolean(), // Configures donations to humans only
   gameType: GameTypeSchema,
   gameMode: GameModeSchema,
-  gameMapSize: z.enum(GameMapSize),
+  gameMapSize: GameMapSizeSchema,
   disableNations: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
@@ -465,7 +465,7 @@ export const ServerPingMessageSchema = z.object({
 export const ServerPrestartMessageSchema = z.object({
   type: z.literal("prestart"),
   gameMap: GameMapTypeSchema,
-  gameMapSize: z.enum(GameMapSize),
+  gameMapSize: GameMapSizeSchema,
 });
 
 export const ServerStartGameMessageSchema = z.object({

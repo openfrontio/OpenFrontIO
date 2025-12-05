@@ -6,7 +6,6 @@ import {
   Difficulty,
   DifficultySchema,
   Duos,
-  GameMapSize,
   GameMapType,
   GameMapTypeSchema,
   GameMode,
@@ -571,9 +570,7 @@ export class SinglePlayerModal extends LitElement {
             ],
             config: {
               gameMap: this.selectedMap,
-              gameMapSize: this.compactMap
-                ? GameMapSize.Compact
-                : GameMapSize.Normal,
+              gameMapSize: this.compactMap ? "Compact" : "Normal",
               gameType: "Singleplayer",
               gameMode: this.gameMode,
               playerTeams: this.teamCount,

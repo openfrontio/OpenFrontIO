@@ -13,13 +13,6 @@ import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
 import { UnitPredicate } from "./UnitGrid";
 
-function isEnumValue<T extends Record<string, string | number>>(
-  enumObj: T,
-  value: unknown,
-): value is T[keyof T] {
-  return Object.values(enumObj).includes(value as T[keyof T]);
-}
-
 export type PlayerID = string;
 export type Tick = number;
 export type Gold = bigint;
@@ -175,10 +168,8 @@ export type GameMode = z.infer<typeof GameModeSchema>;
 export const isGameMode = (value: unknown): value is GameMode =>
   GameModeSchema.safeParse(value).success;
 
-export enum GameMapSize {
-  Compact = "Compact",
-  Normal = "Normal",
-}
+export const GameMapSizeSchema = z.enum(["Compact", "Normal"]);
+export type GameMapSize = z.infer<typeof GameMapSizeSchema>;
 
 export interface UnitInfo {
   cost: (game: Game, player: Player) => Gold;
