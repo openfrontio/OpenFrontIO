@@ -116,14 +116,6 @@ export class AttackExecution implements Execution {
         .attackAmount(this._owner, this.target);
     }
 
-    if (this.startTroops > currentTroops)
-      console.debug(
-        this._owner.displayName(),
-        this.startTroops,
-        currentTroops,
-        this.attackRatio,
-      );
-
     if (this.removeTroops) {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
       this._owner.removeTroops(this.startTroops);
