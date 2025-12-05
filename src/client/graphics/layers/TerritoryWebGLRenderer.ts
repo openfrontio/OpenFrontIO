@@ -32,11 +32,15 @@ export class TerritoryWebGLRenderer {
   private readonly stateTexture: WebGLTexture | null;
   private readonly paletteTexture: WebGLTexture | null;
   private readonly relationTexture: WebGLTexture | null;
+  private readonly drawPhaseTexture: WebGLTexture | null;
+  private readonly drawPhase: Uint32Array;
   private readonly uniforms: {
     resolution: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
+    drawPhase: WebGLUniformLocation | null;
+    nowMs: WebGLUniformLocation | null;
     fallout: WebGLUniformLocation | null;
     altSelf: WebGLUniformLocation | null;
     altAlly: WebGLUniformLocation | null;
@@ -68,6 +72,7 @@ export class TerritoryWebGLRenderer {
   private needsFullUpload = true;
   private alternativeView = false;
   private paletteWidth = 0;
+  private readonly timeBaseMs: number;
   private hoverHighlightStrength = 0.7;
   private hoverHighlightColor: [number, number, number] = [1, 1, 1];
   private hoverPulseStrength = 0.25;
@@ -80,11 +85,17 @@ export class TerritoryWebGLRenderer {
     private readonly theme: Theme,
     sharedState: SharedArrayBuffer,
   ) {
+    this.timeBaseMs = game.timeBaseMs() ?? Date.now();
     this.canvas = document.createElement("canvas");
     this.canvas.width = game.width();
     this.canvas.height = game.height();
 
     this.state = new Uint16Array(sharedState);
+    const drawPhaseBuffer = game.sharedDrawPhaseBuffer();
+    const numTiles = this.canvas.width * this.canvas.height;
+    this.drawPhase = drawPhaseBuffer
+      ? new Uint32Array(drawPhaseBuffer)
+      : new Uint32Array(numTiles);
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -99,11 +110,14 @@ export class TerritoryWebGLRenderer {
       this.stateTexture = null;
       this.paletteTexture = null;
       this.relationTexture = null;
+      this.drawPhaseTexture = null;
       this.uniforms = {
         resolution: null,
         state: null,
         palette: null,
         relations: null,
+        drawPhase: null,
+        nowMs: null,
         fallout: null,
         altSelf: null,
         altAlly: null,
@@ -139,11 +153,14 @@ export class TerritoryWebGLRenderer {
       this.stateTexture = null;
       this.paletteTexture = null;
       this.relationTexture = null;
+      this.drawPhaseTexture = null;
       this.uniforms = {
         resolution: null,
         state: null,
         palette: null,
         relations: null,
+        drawPhase: null,
+        nowMs: null,
         fallout: null,
         altSelf: null,
         altAlly: null,
@@ -176,6 +193,8 @@ export class TerritoryWebGLRenderer {
       state: gl.getUniformLocation(this.program, "u_state"),
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
+      drawPhase: gl.getUniformLocation(this.program, "u_drawPhase"),
+      nowMs: gl.getUniformLocation(this.program, "u_nowMs"),
       fallout: gl.getUniformLocation(this.program, "u_fallout"),
       altSelf: gl.getUniformLocation(this.program, "u_altSelf"),
       altAlly: gl.getUniformLocation(this.program, "u_altAlly"),
@@ -278,12 +297,35 @@ export class TerritoryWebGLRenderer {
       this.state,
     );
 
+    this.drawPhaseTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.drawPhaseTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R32UI,
+      this.canvas.width,
+      this.canvas.height,
+      0,
+      gl.RED_INTEGER,
+      gl.UNSIGNED_INT,
+      this.drawPhase,
+    );
+
     this.uploadPalette();
 
     gl.useProgram(this.program);
     gl.uniform1i(this.uniforms.state, 0);
     gl.uniform1i(this.uniforms.palette, 1);
     gl.uniform1i(this.uniforms.relations, 2);
+    if (this.uniforms.drawPhase) {
+      gl.uniform1i(this.uniforms.drawPhase, 3);
+    }
 
     if (this.uniforms.resolution) {
       gl.uniform2f(
@@ -509,6 +551,10 @@ export class TerritoryWebGLRenderer {
       const viewerId = this.game.myPlayer()?.smallID() ?? 0;
       gl.uniform1i(this.uniforms.viewerId, viewerId);
     }
+    if (this.uniforms.nowMs) {
+      const nowOffset = Math.max(0, Date.now() - this.timeBaseMs);
+      gl.uniform1ui(this.uniforms.nowMs, nowOffset >>> 0);
+    }
 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -524,6 +570,7 @@ export class TerritoryWebGLRenderer {
     gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
 
     const bytesPerPixel = Uint16Array.BYTES_PER_ELEMENT;
+    const hasDrawPhase = !!this.drawPhaseTexture;
     let rowsUploaded = 0;
     let bytesUploaded = 0;
 
@@ -539,6 +586,22 @@ export class TerritoryWebGLRenderer {
         gl.UNSIGNED_SHORT,
         this.state,
       );
+      if (hasDrawPhase) {
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.drawPhaseTexture);
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.R32UI,
+          this.canvas.width,
+          this.canvas.height,
+          0,
+          gl.RED_INTEGER,
+          gl.UNSIGNED_INT,
+          this.drawPhase,
+        );
+        gl.activeTexture(gl.TEXTURE0);
+      }
       this.needsFullUpload = false;
       this.dirtyRows.clear();
       rowsUploaded = this.canvas.height;
@@ -565,6 +628,23 @@ export class TerritoryWebGLRenderer {
         gl.UNSIGNED_SHORT,
         rowSlice,
       );
+      if (hasDrawPhase) {
+        gl.activeTexture(gl.TEXTURE3);
+        gl.bindTexture(gl.TEXTURE_2D, this.drawPhaseTexture);
+        const phaseSlice = this.drawPhase.subarray(offset, offset + width);
+        gl.texSubImage2D(
+          gl.TEXTURE_2D,
+          0,
+          span.minX,
+          y,
+          width,
+          1,
+          gl.RED_INTEGER,
+          gl.UNSIGNED_INT,
+          phaseSlice,
+        );
+        gl.activeTexture(gl.TEXTURE0);
+      }
       rowsUploaded++;
       bytesUploaded += width * bytesPerPixel;
     }
@@ -719,8 +799,10 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_state;
       uniform sampler2D u_palette;
       uniform usampler2D u_relations;
+      uniform usampler2D u_drawPhase;
       uniform int u_viewerId;
       uniform vec2 u_resolution;
+      uniform uint u_nowMs;
       uniform vec4 u_fallout;
       uniform vec4 u_altSelf;
       uniform vec4 u_altAlly;
@@ -783,6 +865,12 @@ export class TerritoryWebGLRenderer {
         uint owner = state & 0xFFFu;
         bool hasFallout = (state & 0x2000u) != 0u; // bit 13
         bool isDefended = (state & 0x1000u) != 0u; // bit 12
+
+        uint revealTime = texelFetch(u_drawPhase, texCoord, 0).r;
+        if (u_nowMs < revealTime) {
+          outColor = vec4(0.0);
+          return;
+        }
 
         if (owner == 0u) {
           if (hasFallout) {

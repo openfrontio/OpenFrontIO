@@ -175,6 +175,7 @@ async function createClientGame(
   let sharedTileRingViews: SharedTileRingViews | null = null;
   let sharedDirtyBuffer: SharedArrayBuffer | undefined;
   let sharedDirtyFlags: Uint8Array | null = null;
+  let sharedDrawPhaseBuffer: SharedArrayBuffer | undefined;
   const isIsolated =
     typeof (globalThis as any).crossOriginIsolated === "boolean"
       ? (globalThis as any).crossOriginIsolated === true
@@ -200,14 +201,18 @@ async function createClientGame(
     sharedTileRingViews = createSharedTileRingViews(sharedTileRingBuffers);
     sharedDirtyBuffer = sharedTileRingBuffers.dirty;
     sharedDirtyFlags = sharedTileRingViews.dirtyFlags;
+    sharedDrawPhaseBuffer = sharedTileRingBuffers.drawPhase;
   }
 
+  const timeBaseMs = Date.now();
   const worker = new WorkerClient(
     lobbyConfig.gameStartInfo,
     lobbyConfig.clientID,
     sharedTileRingBuffers,
     sharedStateBuffer,
     sharedDirtyBuffer,
+    sharedDrawPhaseBuffer,
+    timeBaseMs,
   );
   await worker.initialize();
   const gameView = new GameView(
@@ -218,6 +223,8 @@ async function createClientGame(
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
     usesSharedTileState,
+    sharedDrawPhaseBuffer,
+    timeBaseMs,
   );
 
   const canvas = createCanvas();
