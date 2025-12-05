@@ -61,6 +61,11 @@ export class TerritoryWebGLRenderer {
     borderDefendedFriendlyDark: WebGLUniformLocation | null;
     borderDefendedEmbargoLight: WebGLUniformLocation | null;
     borderDefendedEmbargoDark: WebGLUniformLocation | null;
+    // Tick intrapolation uniforms
+    prevState: WebGLUniformLocation | null;
+    arrivalPhase: WebGLUniformLocation | null;
+    tickProgress: WebGLUniformLocation | null;
+    tickParity: WebGLUniformLocation | null;
   };
 
   private readonly state: Uint16Array;
@@ -75,6 +80,23 @@ export class TerritoryWebGLRenderer {
   private hoveredPlayerId = -1;
   private animationStartTime = Date.now();
 
+  // Tick intrapolation buffers (client-side only, WebGL path).
+  private readonly prevState: Uint16Array;
+  private readonly arrivalPhase: Uint8Array;
+  private readonly changeParity: Uint8Array;
+
+  // Packed texel buffer backing the arrivalPhase texture (RG8: phase, parity).
+  private readonly arrivalPhaseTexData: Uint8Array;
+
+  // Corresponding textures.
+  private readonly arrivalPhaseTexture: WebGLTexture | null = null;
+
+  // Tick timing for shader.
+  private lastTickId = 0;
+  private lastTickStartMs = 0;
+  private tickDurationMs = 100;
+  private tickParity = 0;
+
   private constructor(
     private readonly game: GameView,
     private readonly theme: Theme,
@@ -85,6 +107,12 @@ export class TerritoryWebGLRenderer {
     this.canvas.height = game.height();
 
     this.state = new Uint16Array(sharedState);
+    // Allocate intrapolation buffers.
+    const numTiles = this.canvas.width * this.canvas.height;
+    this.prevState = new Uint16Array(numTiles);
+    this.arrivalPhase = new Uint8Array(numTiles);
+    this.changeParity = new Uint8Array(numTiles);
+    this.arrivalPhaseTexData = new Uint8Array(numTiles * 2);
 
     this.gl = this.canvas.getContext("webgl2", {
       premultipliedAlpha: true,
@@ -127,6 +155,10 @@ export class TerritoryWebGLRenderer {
         borderDefendedFriendlyDark: null,
         borderDefendedEmbargoLight: null,
         borderDefendedEmbargoDark: null,
+        prevState: null,
+        arrivalPhase: null,
+        tickProgress: null,
+        tickParity: null,
       };
       return;
     }
@@ -167,6 +199,10 @@ export class TerritoryWebGLRenderer {
         borderDefendedFriendlyDark: null,
         borderDefendedEmbargoLight: null,
         borderDefendedEmbargoDark: null,
+        prevState: null,
+        arrivalPhase: null,
+        tickProgress: null,
+        tickParity: null,
       };
       return;
     }
@@ -226,6 +262,10 @@ export class TerritoryWebGLRenderer {
         this.program,
         "u_borderDefendedEmbargoDark",
       ),
+      prevState: null,
+      arrivalPhase: gl.getUniformLocation(this.program, "u_arrivalPhase"),
+      tickProgress: gl.getUniformLocation(this.program, "u_tickProgress"),
+      tickParity: gl.getUniformLocation(this.program, "u_tickParity"),
     };
 
     // Vertex data: two triangles covering the full map (pixel-perfect).
@@ -259,6 +299,14 @@ export class TerritoryWebGLRenderer {
     this.paletteTexture = gl.createTexture();
     this.relationTexture = gl.createTexture();
 
+    // Initialize intrapolation buffers from current game state.
+    this.initPrevStateFromGame();
+
+    // Create texture for arrivalPhase.
+    const arrivalTex = gl.createTexture();
+    this.arrivalPhaseTexture = arrivalTex;
+
+    // State texture (current map state from SAB).
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.stateTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -278,12 +326,37 @@ export class TerritoryWebGLRenderer {
       this.state,
     );
 
+    // Arrival phase texture (use RG8, R=phase, G=parity flag).
+    if (this.arrivalPhaseTexture) {
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, this.arrivalPhaseTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RG8,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RG,
+        gl.UNSIGNED_BYTE,
+        this.arrivalPhaseTexData,
+      );
+    }
+
     this.uploadPalette();
 
     gl.useProgram(this.program);
     gl.uniform1i(this.uniforms.state, 0);
     gl.uniform1i(this.uniforms.palette, 1);
     gl.uniform1i(this.uniforms.relations, 2);
+    if (this.uniforms.arrivalPhase) {
+      gl.uniform1i(this.uniforms.arrivalPhase, 4);
+    }
 
     if (this.uniforms.resolution) {
       gl.uniform2f(
@@ -438,6 +511,128 @@ export class TerritoryWebGLRenderer {
     }
   }
 
+  /**
+   * Initialize prevState buffer from the current GameView map state.
+   * Only called once during construction.
+   */
+  private initPrevStateFromGame() {
+    const numTiles = this.canvas.width * this.canvas.height;
+    for (let tile = 0; tile < numTiles; tile++) {
+      const ownerId = this.game.ownerID(tile as TileRef);
+      const hasFallout = this.game.hasFallout(tile as TileRef);
+      const isDefended = this.game.isDefended(tile as TileRef);
+      let state = ownerId & 0x0fff;
+      if (isDefended) {
+        state |= 1 << 12;
+      }
+      if (hasFallout) {
+        state |= 1 << 13;
+      }
+      this.prevState[tile] = state;
+      this.arrivalPhase[tile] = 0xff;
+      this.changeParity[tile] = 0;
+      const idx = tile * 2;
+      this.arrivalPhaseTexData[idx] = this.arrivalPhase[tile];
+      this.arrivalPhaseTexData[idx + 1] = this.changeParity[tile];
+    }
+  }
+
+  /**
+   * Update arrival phase and parity for tiles that changed this tick.
+   * prevState is used as "old" state for animated tiles and is not
+   * overwritten here for those tiles.
+   */
+  updateArrivalForChangedTiles(
+    game: GameView,
+    tiles: TileRef[],
+    tickParity: number,
+  ) {
+    const maxRadius = 8;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+
+    for (const tile of tiles) {
+      const prevStateWord = this.prevState[tile];
+      const prevOwner = prevStateWord & 0x0fff;
+      const newStateWord = this.state[tile];
+      const newOwner = newStateWord & 0x0fff;
+
+      // Only animate owner changes for now.
+      if (prevOwner === newOwner) {
+        // Keep prevState in sync so future owner-change detection is correct.
+        this.prevState[tile] = newStateWord;
+        continue;
+      }
+
+      const x0 = game.x(tile);
+      const y0 = game.y(tile);
+      let minDistSq = Number.POSITIVE_INFINITY;
+
+      for (let dy = -maxRadius; dy <= maxRadius; dy++) {
+        const y = y0 + dy;
+        if (y < 0 || y >= height) continue;
+        for (let dx = -maxRadius; dx <= maxRadius; dx++) {
+          const x = x0 + dx;
+          if (x < 0 || x >= width) continue;
+          const distSq = dx * dx + dy * dy;
+          if (distSq > maxRadius * maxRadius) continue;
+          const t2 = game.ref(x, y);
+          const prevOwnerHere = this.prevState[t2] & 0x0fff;
+          if (prevOwnerHere === newOwner && distSq < minDistSq) {
+            minDistSq = distSq;
+            if (minDistSq <= 1) break;
+          }
+        }
+        if (minDistSq <= 1) break;
+      }
+
+      let phaseByte = 0xff;
+      if (minDistSq !== Number.POSITIVE_INFINITY) {
+        const dist = Math.sqrt(minDistSq);
+        const clipped = Math.min(dist, maxRadius);
+        const phase = maxRadius > 0 ? clipped / maxRadius : 1.0;
+        phaseByte = Math.max(0, Math.min(255, Math.round(phase * 255)));
+      }
+
+      this.arrivalPhase[tile] = phaseByte;
+      // Store parity as 0 or 255 so the sampler2D normalized channel is easy to threshold.
+      this.changeParity[tile] = tickParity ? 255 : 0;
+
+      const idx = tile * 2;
+      this.arrivalPhaseTexData[idx] = this.arrivalPhase[tile];
+      this.arrivalPhaseTexData[idx + 1] = this.changeParity[tile];
+
+      // Update the previous-state snapshot to reflect the newly applied state,
+      // so subsequent ticks treat this owner as the "old" owner.
+      this.prevState[tile] = newStateWord;
+    }
+
+    // Mark all potentially affected rows dirty so the textures will be updated.
+    for (const tile of tiles) {
+      const x = tile % this.canvas.width;
+      const y = Math.floor(tile / this.canvas.width);
+      const span = this.dirtyRows.get(y);
+      if (span === undefined) {
+        this.dirtyRows.set(y, { minX: x, maxX: x });
+      } else {
+        span.minX = Math.min(span.minX, x);
+        span.maxX = Math.max(span.maxX, x);
+      }
+    }
+  }
+
+  setTickTiming(
+    tick: number,
+    startMs: number,
+    durationMs: number,
+    parity: number,
+  ) {
+    this.lastTickId = tick;
+    this.lastTickStartMs = startMs;
+    this.tickDurationMs = durationMs;
+    this.tickParity = parity;
+  }
+
   markTile(tile: TileRef) {
     if (this.needsFullUpload) {
       return;
@@ -501,6 +696,18 @@ export class TerritoryWebGLRenderer {
     if (this.uniforms.hoverPulseSpeed) {
       gl.uniform1f(this.uniforms.hoverPulseSpeed, this.hoverPulseSpeed);
     }
+    if (this.uniforms.tickProgress) {
+      const now = performance.now();
+      const dt = Math.max(0, now - this.lastTickStartMs);
+      const progress =
+        this.tickDurationMs > 0
+          ? Math.max(0, Math.min(1, dt / this.tickDurationMs))
+          : 1;
+      gl.uniform1f(this.uniforms.tickProgress, progress);
+    }
+    if (this.uniforms.tickParity) {
+      gl.uniform1i(this.uniforms.tickParity, this.tickParity);
+    }
     if (this.uniforms.time) {
       const currentTime = (Date.now() - this.animationStartTime) / 1000.0;
       gl.uniform1f(this.uniforms.time, currentTime);
@@ -543,10 +750,13 @@ export class TerritoryWebGLRenderer {
       this.dirtyRows.clear();
       rowsUploaded = this.canvas.height;
       bytesUploaded = this.canvas.width * this.canvas.height * bytesPerPixel;
+      // Full upload: also refresh arrivalPhase texture.
+      this.uploadArrivalPhaseTexture(true);
       return { rows: rowsUploaded, bytes: bytesUploaded };
     }
 
     if (this.dirtyRows.size === 0) {
+      // No state changes; still keep prev/arrival textures as-is.
       return { rows: 0, bytes: 0 };
     }
 
@@ -568,8 +778,56 @@ export class TerritoryWebGLRenderer {
       rowsUploaded++;
       bytesUploaded += width * bytesPerPixel;
     }
+
+    // Apply same row set to arrivalPhase.
+    this.uploadArrivalPhaseTexture(false);
+
     this.dirtyRows.clear();
     return { rows: rowsUploaded, bytes: bytesUploaded };
+  }
+
+  private uploadArrivalPhaseTexture(full: boolean) {
+    if (!this.gl || !this.arrivalPhaseTexture) return;
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, this.arrivalPhaseTexture);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
+    if (full) {
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RG8,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        gl.RG,
+        gl.UNSIGNED_BYTE,
+        this.arrivalPhaseTexData,
+      );
+      return;
+    }
+
+    if (this.dirtyRows.size === 0) return;
+
+    for (const [y, span] of this.dirtyRows) {
+      const width = span.maxX - span.minX + 1;
+      const startPixel = y * this.canvas.width + span.minX;
+      const startByte = startPixel * 2;
+      const endByte = (startPixel + width) * 2;
+      const rowSlice = this.arrivalPhaseTexData.subarray(startByte, endByte);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        span.minX,
+        y,
+        width,
+        1,
+        gl.RG,
+        gl.UNSIGNED_BYTE,
+        rowSlice,
+      );
+    }
   }
 
   /**
@@ -713,36 +971,39 @@ export class TerritoryWebGLRenderer {
     `;
 
     const fragmentShaderSource = `#version 300 es
-      precision mediump float;
-      precision highp usampler2D;
-
-      uniform usampler2D u_state;
-      uniform sampler2D u_palette;
-      uniform usampler2D u_relations;
-      uniform int u_viewerId;
-      uniform vec2 u_resolution;
-      uniform vec4 u_fallout;
-      uniform vec4 u_altSelf;
-      uniform vec4 u_altAlly;
-      uniform vec4 u_altNeutral;
-      uniform vec4 u_altEnemy;
-      uniform float u_alpha;
-      uniform vec4 u_borderNeutral;
-      uniform vec4 u_borderFriendly;
-      uniform vec4 u_borderEmbargo;
-      uniform vec4 u_borderDefendedNeutralLight;
-      uniform vec4 u_borderDefendedNeutralDark;
-      uniform vec4 u_borderDefendedFriendlyLight;
-      uniform vec4 u_borderDefendedFriendlyDark;
-      uniform vec4 u_borderDefendedEmbargoLight;
-      uniform vec4 u_borderDefendedEmbargoDark;
-      uniform bool u_alternativeView;
-      uniform float u_hoveredPlayerId;
-      uniform vec3 u_hoverHighlightColor;
-      uniform float u_hoverHighlightStrength;
-      uniform float u_hoverPulseStrength;
-      uniform float u_hoverPulseSpeed;
-      uniform float u_time;
+        precision mediump float;
+        precision highp usampler2D;
+  
+        uniform usampler2D u_state;
+        uniform sampler2D u_palette;
+        uniform usampler2D u_relations;
+        uniform int u_viewerId;
+        uniform vec2 u_resolution;
+        uniform vec4 u_fallout;
+        uniform vec4 u_altSelf;
+        uniform vec4 u_altAlly;
+        uniform vec4 u_altNeutral;
+        uniform vec4 u_altEnemy;
+        uniform float u_alpha;
+        uniform vec4 u_borderNeutral;
+        uniform vec4 u_borderFriendly;
+        uniform vec4 u_borderEmbargo;
+        uniform vec4 u_borderDefendedNeutralLight;
+        uniform vec4 u_borderDefendedNeutralDark;
+        uniform vec4 u_borderDefendedFriendlyLight;
+        uniform vec4 u_borderDefendedFriendlyDark;
+        uniform vec4 u_borderDefendedEmbargoLight;
+        uniform vec4 u_borderDefendedEmbargoDark;
+        uniform bool u_alternativeView;
+        uniform float u_hoveredPlayerId;
+        uniform vec3 u_hoverHighlightColor;
+        uniform float u_hoverHighlightStrength;
+        uniform float u_hoverPulseStrength;
+        uniform float u_hoverPulseSpeed;
+        uniform float u_time;
+        uniform sampler2D u_arrivalPhase;
+        uniform float u_tickProgress;
+        uniform int u_tickParity;
 
       out vec4 outColor;
 
@@ -774,72 +1035,123 @@ export class TerritoryWebGLRenderer {
         return (code & 4u) != 0u;
       }
 
-      void main() {
-        ivec2 fragCoord = ivec2(gl_FragCoord.xy);
-        // gl_FragCoord origin is bottom-left; flip Y to match top-left oriented buffers.
-        ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
+        void main() {
+          ivec2 fragCoord = ivec2(gl_FragCoord.xy);
+          // gl_FragCoord origin is bottom-left; flip Y to match top-left oriented buffers.
+          ivec2 texCoord = ivec2(fragCoord.x, int(u_resolution.y) - 1 - fragCoord.y);
 
-        uint state = texelFetch(u_state, texCoord, 0).r;
-        uint owner = state & 0xFFFu;
-        bool hasFallout = (state & 0x2000u) != 0u; // bit 13
-        bool isDefended = (state & 0x1000u) != 0u; // bit 12
+          uint state = texelFetch(u_state, texCoord, 0).r;
+          uint owner = state & 0xFFFu;
+          bool hasFallout = (state & 0x2000u) != 0u; // bit 13
+          bool isDefended = (state & 0x1000u) != 0u; // bit 12
 
-        if (owner == 0u) {
-          if (hasFallout) {
-            vec3 color = u_fallout.rgb;
-            float a = u_alpha;
+          vec4 arrival = texture(u_arrivalPhase, (vec2(texCoord) + 0.5) / u_resolution);
+          float arrivalPhase = arrival.r;
+          int changeParity = arrival.g > 0.5 ? 1 : 0;
+
+          if (owner == 0u) {
+            if (hasFallout) {
+              vec3 color = u_fallout.rgb;
+              float a = u_alpha;
+              outColor = vec4(color * a, a);
+            } else {
+              outColor = vec4(0.0);
+            }
+            return;
+          }
+
+          // Border detection via neighbor comparison and relation checks
+          bool isBorder = false;
+          bool hasFriendlyRelation = false;
+          bool hasEmbargoRelation = false;
+          uint nOwner = ownerAtTex(texCoord + ivec2(1, 0));
+          isBorder = isBorder || (nOwner != owner);
+          if (nOwner != owner && nOwner != 0u) {
+            uint rel = relationCode(owner, nOwner);
+            hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
+            hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
+          }
+          nOwner = ownerAtTex(texCoord + ivec2(-1, 0));
+          isBorder = isBorder || (nOwner != owner);
+          if (nOwner != owner && nOwner != 0u) {
+            uint rel = relationCode(owner, nOwner);
+            hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
+            hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
+          }
+          nOwner = ownerAtTex(texCoord + ivec2(0, 1));
+          isBorder = isBorder || (nOwner != owner);
+          if (nOwner != owner && nOwner != 0u) {
+            uint rel = relationCode(owner, nOwner);
+            hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
+            hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
+          }
+          nOwner = ownerAtTex(texCoord + ivec2(0, -1));
+          isBorder = isBorder || (nOwner != owner);
+          if (nOwner != owner && nOwner != 0u) {
+            uint rel = relationCode(owner, nOwner);
+            hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
+            hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
+          }
+
+          if (u_alternativeView) {
+            uint relationAlt = relationCode(owner, uint(u_viewerId));
+            vec4 altColor = u_altNeutral;
+            if (isSelf(relationAlt)) {
+              altColor = u_altSelf;
+            } else if (isFriendly(relationAlt)) {
+              altColor = u_altAlly;
+            } else if (isEmbargo(relationAlt)) {
+              altColor = u_altEnemy;
+            }
+            float a = isBorder ? 1.0 : 0.0;
+            vec3 color = altColor.rgb;
+            if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
+              float pulse = u_hoverPulseStrength > 0.0
+                ? (1.0 - u_hoverPulseStrength) +
+                  u_hoverPulseStrength * (0.5 + 0.5 * sin(u_time * u_hoverPulseSpeed))
+                : 1.0;
+              color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
+            }
             outColor = vec4(color * a, a);
-          } else {
-            outColor = vec4(0.0);
+            return;
           }
-          return;
-        }
 
-        // Border detection via neighbor comparison and relation checks
-        bool isBorder = false;
-        bool hasFriendlyRelation = false;
-        bool hasEmbargoRelation = false;
-        uint nOwner = ownerAtTex(texCoord + ivec2(1, 0));
-        isBorder = isBorder || (nOwner != owner);
-        if (nOwner != owner && nOwner != 0u) {
-          uint rel = relationCode(owner, nOwner);
-          hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
-          hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
-        }
-        nOwner = ownerAtTex(texCoord + ivec2(-1, 0));
-        isBorder = isBorder || (nOwner != owner);
-        if (nOwner != owner && nOwner != 0u) {
-          uint rel = relationCode(owner, nOwner);
-          hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
-          hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
-        }
-        nOwner = ownerAtTex(texCoord + ivec2(0, 1));
-        isBorder = isBorder || (nOwner != owner);
-        if (nOwner != owner && nOwner != 0u) {
-          uint rel = relationCode(owner, nOwner);
-          hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
-          hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
-        }
-        nOwner = ownerAtTex(texCoord + ivec2(0, -1));
-        isBorder = isBorder || (nOwner != owner);
-        if (nOwner != owner && nOwner != 0u) {
-          uint rel = relationCode(owner, nOwner);
-          hasEmbargoRelation = hasEmbargoRelation || isEmbargo(rel);
-          hasFriendlyRelation = hasFriendlyRelation || isFriendly(rel);
-        }
+          // Current owner color
+          vec4 base = texelFetch(u_palette, ivec2(int(owner) * 2, 0), 0); // territory color
+          vec4 baseBorder = texelFetch(u_palette, ivec2(int(owner) * 2 + 1, 0), 0); // base border color
+          vec3 color = base.rgb;
+          float a = u_alpha;
 
-        if (u_alternativeView) {
-          uint relationAlt = relationCode(owner, uint(u_viewerId));
-          vec4 altColor = u_altNeutral;
-          if (isSelf(relationAlt)) {
-            altColor = u_altSelf;
-          } else if (isFriendly(relationAlt)) {
-            altColor = u_altAlly;
-          } else if (isEmbargo(relationAlt)) {
-            altColor = u_altEnemy;
+          if (isBorder) {
+            // Start with base border color and apply relation tint
+            vec3 borderColor = baseBorder.rgb;
+
+            // Apply relation-based tinting (same logic as PlayerView.borderColor)
+            const float BORDER_TINT_RATIO = 0.35;
+            const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0); // green
+            const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);   // red
+
+            if (hasFriendlyRelation) { // friendly
+              borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
+                            FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
+            }
+            if (hasEmbargoRelation) { // embargo
+              borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
+                            EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+            }
+
+            // Apply defended checkerboard pattern
+            if (isDefended) {
+              bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
+              const float LIGHT_FACTOR = 1.2;
+              const float DARK_FACTOR = 0.8;
+              borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
+            }
+
+            color = borderColor;
+            a = baseBorder.a; // Already in 0-1 range from RGBA8 texture
           }
-          float a = isBorder ? 1.0 : 0.0;
-          vec3 color = altColor.rgb;
+
           if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
             float pulse = u_hoverPulseStrength > 0.0
               ? (1.0 - u_hoverPulseStrength) +
@@ -847,56 +1159,20 @@ export class TerritoryWebGLRenderer {
               : 1.0;
             color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
           }
-          outColor = vec4(color * a, a);
-          return;
-        }
 
-        vec4 base = texelFetch(u_palette, ivec2(int(owner) * 2, 0), 0); // territory color
-        vec4 baseBorder = texelFetch(u_palette, ivec2(int(owner) * 2 + 1, 0), 0); // base border color
-        vec3 color = base.rgb;
-        float a = u_alpha;
+          vec4 currColor = vec4(color * a, a);
 
-        if (isBorder) {
-          // Start with base border color and apply relation tint
-          vec3 borderColor = baseBorder.rgb;
-
-          // Apply relation-based tinting (same logic as PlayerView.borderColor)
-          const float BORDER_TINT_RATIO = 0.35;
-          const vec3 FRIENDLY_TINT_TARGET = vec3(0.0, 1.0, 0.0); // green
-          const vec3 EMBARGO_TINT_TARGET = vec3(1.0, 0.0, 0.0);   // red
-
-          if (hasFriendlyRelation) { // friendly
-            borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
-                          FRIENDLY_TINT_TARGET * BORDER_TINT_RATIO;
-          }
-          if (hasEmbargoRelation) { // embargo
-            borderColor = borderColor * (1.0 - BORDER_TINT_RATIO) +
-                          EMBARGO_TINT_TARGET * BORDER_TINT_RATIO;
+          // Simple arrival-based gating: tiles that changed this tick
+          // remain invisible until their local arrivalPhase is reached.
+          bool tileChangedThisTick = (changeParity == u_tickParity) && (arrivalPhase < 1.0);
+          if (tileChangedThisTick && u_tickProgress < arrivalPhase) {
+            outColor = vec4(0.0);
+            return;
           }
 
-          // Apply defended checkerboard pattern
-          if (isDefended) {
-            bool isLightTile = ((texCoord.x % 2) == (texCoord.y % 2));
-            const float LIGHT_FACTOR = 1.2;
-            const float DARK_FACTOR = 0.8;
-            borderColor *= isLightTile ? LIGHT_FACTOR : DARK_FACTOR;
-          }
-
-          color = borderColor;
-          a = baseBorder.a; // Already in 0-1 range from RGBA8 texture
+          outColor = currColor;
         }
-
-        if (u_hoveredPlayerId >= 0.0 && abs(float(owner) - u_hoveredPlayerId) < 0.5) {
-          float pulse = u_hoverPulseStrength > 0.0
-            ? (1.0 - u_hoverPulseStrength) +
-              u_hoverPulseStrength * (0.5 + 0.5 * sin(u_time * u_hoverPulseSpeed))
-            : 1.0;
-          color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
-        }
-
-        outColor = vec4(color * a, a);
-      }
-    `;
+      `;
 
     const vertexShader = this.compileShader(
       gl,
