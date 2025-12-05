@@ -30,6 +30,7 @@ export class TransportShipExecution implements Execution {
   // TODO make private
   public path: TileRef[];
   private dst: TileRef | null;
+  private startTroops: number | null = null;
 
   private boat: Unit;
 
@@ -41,7 +42,7 @@ export class TransportShipExecution implements Execution {
     private attacker: Player,
     private targetID: PlayerID | null,
     private ref: TileRef,
-    private startTroops: number,
+    private attackRatio: number,
     private src: TileRef | null,
   ) {
     this.originalOwner = this.attacker;
@@ -94,9 +95,13 @@ export class TransportShipExecution implements Execution {
       this.target = mg.player(this.targetID);
     }
 
-    this.startTroops ??= this.mg
-      .config()
-      .boatAttackAmount(this.attacker, this.target);
+    if (this.attackRatio) {
+      this.startTroops = this.attacker.troops() * this.attackRatio;
+    } else {
+      this.startTroops = this.mg
+        .config()
+        .boatAttackAmount(this.attacker, this.target);
+    }
 
     this.startTroops = Math.min(this.startTroops, this.attacker.troops());
 
@@ -249,11 +254,12 @@ export class TransportShipExecution implements Execution {
         } else {
           this.mg.addExecution(
             new AttackExecution(
-              this.boat.troops(),
+              null, // Don't use ratio for creating attack on landing
               this.attacker,
               this.targetID,
               this.dst,
               false,
+              this.boat.troops(),
             ),
           );
         }

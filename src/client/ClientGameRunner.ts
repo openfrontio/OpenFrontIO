@@ -491,7 +491,7 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.renderer.uiState.attackRatio,
           ),
         );
       } else if (this.canAutoBoat(actions, tile)) {
@@ -607,7 +607,7 @@ export class ClientGameRunner {
         this.eventBus.emit(
           new SendAttackIntentEvent(
             this.gameView.owner(tile).id(),
-            this.myPlayer.troops() * this.renderer.uiState.attackRatio,
+            this.renderer.uiState.attackRatio,
           ),
         );
       }

@@ -21,6 +21,8 @@ export class AttackExecution implements Execution {
 
   private random = new PseudoRandom(123);
 
+  private startTroops: number | null = null;
+
   private target: Player | TerraNullius;
 
   private mg: Game;
@@ -28,11 +30,12 @@ export class AttackExecution implements Execution {
   private attack: Attack | null = null;
 
   constructor(
-    private startTroops: number | null = null,
+    private attackRatio: number | null = null,
     private _owner: Player,
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null = null,
     private removeTroops: boolean = true,
+    private extraTroops?: number,
   ) {}
 
   public targetID(): PlayerID | null {
@@ -102,13 +105,30 @@ export class AttackExecution implements Execution {
       }
     }
 
-    this.startTroops ??= this.mg
-      .config()
-      .attackAmount(this._owner, this.target);
+    const currentTroops = this._owner.troops();
+    if (this.attackRatio) {
+      this.startTroops = this.attackRatio * currentTroops;
+    } else if (this.extraTroops) {
+      this.startTroops = this.extraTroops;
+    } else {
+      this.startTroops = this.mg
+        .config()
+        .attackAmount(this._owner, this.target);
+    }
+
+    if (this.startTroops > currentTroops)
+      console.debug(
+        this._owner.displayName(),
+        this.startTroops,
+        currentTroops,
+        this.attackRatio,
+      );
+
     if (this.removeTroops) {
       this.startTroops = Math.min(this._owner.troops(), this.startTroops);
       this._owner.removeTroops(this.startTroops);
     }
+
     this.attack = this._owner.createAttack(
       this.target,
       this.startTroops,
