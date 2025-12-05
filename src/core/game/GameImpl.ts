@@ -1013,7 +1013,7 @@ export class GameImpl implements Game {
       });
     }
 
-    // If the conquered tile has a defense post, update nearby border tiles
+    //If the conquered tile has a defense post, update nearby border tiles
     if (
       this.unitGrid.hasUnitNearby(tile, 0, UnitType.DefensePost, owner.id())
     ) {
