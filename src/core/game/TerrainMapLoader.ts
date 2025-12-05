@@ -6,6 +6,8 @@ export type TerrainMapData = {
   nations: Nation[];
   gameMap: GameMap;
   miniGameMap: GameMap;
+  sharedStateBuffer?: SharedArrayBuffer;
+  sharedDirtyBuffer?: SharedArrayBuffer;
 };
 
 const loadedMaps = new Map<GameMapType, TerrainMapData>();
@@ -35,15 +37,42 @@ export async function loadTerrainMap(
   map: GameMapType,
   mapSize: GameMapSize,
   terrainMapFileLoader: GameMapLoader,
+  sharedStateBuffer?: SharedArrayBuffer,
 ): Promise<TerrainMapData> {
-  const cached = loadedMaps.get(map);
-  if (cached !== undefined) return cached;
+  const useCache = sharedStateBuffer === undefined;
+  const canUseSharedBuffers =
+    typeof SharedArrayBuffer !== "undefined" &&
+    typeof Atomics !== "undefined" &&
+    typeof (globalThis as any).crossOriginIsolated === "boolean" &&
+    (globalThis as any).crossOriginIsolated === true;
+
+  // Don't use cache if we can create SharedArrayBuffer but none was provided
+  const shouldUseCache = useCache && !canUseSharedBuffers;
+
+  if (shouldUseCache) {
+    const cached = loadedMaps.get(map);
+    if (cached !== undefined) return cached;
+  }
   const mapFiles = terrainMapFileLoader.getMapData(map);
   const manifest = await mapFiles.manifest();
 
+  const stateBuffer =
+    sharedStateBuffer ??
+    (canUseSharedBuffers
+      ? new SharedArrayBuffer(
+          manifest.map.width *
+            manifest.map.height *
+            Uint16Array.BYTES_PER_ELEMENT,
+        )
+      : undefined);
+
   const gameMap =
     mapSize === GameMapSize.Normal
-      ? await genTerrainFromBin(manifest.map, await mapFiles.mapBin())
+      ? await genTerrainFromBin(
+          manifest.map,
+          await mapFiles.mapBin(),
+          stateBuffer,
+        )
       : await genTerrainFromBin(manifest.map4x, await mapFiles.map4xBin());
 
   const miniMap =
@@ -63,18 +92,28 @@ export async function loadTerrainMap(
     });
   }
 
-  const result = {
+  const result: TerrainMapData = {
     nations: manifest.nations,
     gameMap: gameMap,
     miniGameMap: miniMap,
+    sharedStateBuffer:
+      typeof SharedArrayBuffer !== "undefined" &&
+      stateBuffer instanceof SharedArrayBuffer
+        ? stateBuffer
+        : undefined,
+    sharedDirtyBuffer: undefined, // populated by consumer when needed
   };
-  loadedMaps.set(map, result);
+  // Only cache the result when caching is actually used (non-SAB path)
+  if (shouldUseCache) {
+    loadedMaps.set(map, result);
+  }
   return result;
 }
 
 export async function genTerrainFromBin(
   mapData: MapMetadata,
   data: Uint8Array,
+  stateBuffer?: ArrayBufferLike,
 ): Promise<GameMap> {
   if (data.length !== mapData.width * mapData.height) {
     throw new Error(
@@ -87,5 +126,6 @@ export async function genTerrainFromBin(
     mapData.height,
     data,
     mapData.num_land_tiles,
+    stateBuffer,
   );
 }
