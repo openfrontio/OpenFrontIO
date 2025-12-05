@@ -22,7 +22,9 @@ const matcher = new RegExpMatcher({
 export const MIN_USERNAME_LENGTH = 3;
 export const MAX_USERNAME_LENGTH = 27;
 
-const validPattern = /^[a-zA-Z0-9_[\] 🐈🍀üÜ]+$/u;
+// Allow Unicode letters, numbers, spaces, underscores, brackets, and common symbols/emojis
+// \p{L} = any Unicode letter, \p{N} = any Unicode number, \p{Emoji} = emojis
+const validPattern = /^[\p{L}\p{N}_[\] \p{Emoji}\u{1F300}-\u{1F9FF}]+$/u;
 
 const shadowNames = [
   "NicePeopleOnly",
