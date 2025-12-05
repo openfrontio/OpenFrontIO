@@ -7,7 +7,6 @@ import {
   Difficulty,
   DifficultySchema,
   Duos,
-  GameMapSize,
   GameMapType,
   GameMapTypeSchema,
   GameMode,
@@ -762,9 +761,7 @@ export class HostLobbyModal extends LitElement {
         },
         body: JSON.stringify({
           gameMap: this.selectedMap,
-          gameMapSize: this.compactMap
-            ? GameMapSize.Compact
-            : GameMapSize.Normal,
+          gameMapSize: this.compactMap ? "Compact" : "Normal",
           difficulty: this.selectedDifficulty,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
