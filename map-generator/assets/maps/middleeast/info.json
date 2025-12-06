@@ -1,0 +1,83 @@
+{
+  "name": "Middle East",
+  "nations": [
+    {
+      "coordinates": [544, 865],
+      "name": "Saudi Arabia",
+      "strength": 2,
+      "flag": "sa"
+    },
+    {
+      "coordinates": [708, 1236],
+      "name": "Yemen",
+      "strength": 1,
+      "flag": "ye"
+    },
+    {
+      "coordinates": [676, 565],
+      "name": "Iraq",
+      "strength": 1,
+      "flag": "iq"
+    },
+    {
+      "coordinates": [1079, 484],
+      "name": "Iran",
+      "strength": 2,
+      "flag": "ir"
+    },
+    {
+      "coordinates": [498, 189],
+      "name": "Turkey",
+      "strength": 1,
+      "flag": "tr"
+    },
+    {
+      "coordinates": [392, 608],
+      "name": "Israel",
+      "strength": 1,
+      "flag": "il"
+    },
+    {
+      "coordinates": [395, 638],
+      "name": "Palestine",
+      "strength": 1,
+      "flag": "ps"
+    },
+    {
+      "coordinates": [852, 908],
+      "name": "United Arab Emirates",
+      "strength": 1,
+      "flag": "ae"
+    },
+    {
+      "coordinates": [1250, 1331],
+      "name": "Oman",
+      "strength": 1,
+      "flag": "om"
+    },
+    {
+      "coordinates": [1250, 147],
+      "name": "Turkmenistan",
+      "strength": 1,
+      "flag": "tm"
+    },
+    {
+      "coordinates": [598, 1600],
+      "name": "Djibouti",
+      "strength": 1,
+      "flag": "dj"
+    },
+    {
+      "coordinates": [312, 1600],
+      "name": "Ethiopia",
+      "strength": 1,
+      "flag": "et"
+    },
+    {
+      "coordinates": [911, 1600],
+      "name": "Somalia",
+      "strength": 1,
+      "flag": "so"
+    }
+  ]
+}
