@@ -386,6 +386,10 @@ export class PlayerView {
       .reduce((a, b) => a + b, 0);
   }
 
+  isMe(): boolean {
+    return this.smallID() === this.game.myPlayer()?.smallID();
+  }
+
   isAlliedWith(other: PlayerView): boolean {
     return this.data.allies.some((n) => other.smallID() === n);
   }

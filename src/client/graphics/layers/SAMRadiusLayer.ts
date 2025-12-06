@@ -1,14 +1,14 @@
 import type { EventBus } from "../../../core/EventBus";
 import { UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import type { GameView } from "../../../core/game/GameView";
+import type { GameView, PlayerView } from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
 
 /**
- * Layer responsible for rendering SAM launcher defense radiuses
+ * Layer responsible for rendering SAM launcher defense radii
  */
 export class SAMRadiusLayer implements Layer {
   private readonly canvas: HTMLCanvasElement;
@@ -157,14 +157,14 @@ export class SAMRadiusLayer implements Layer {
       this.samLaunchers.set(sam.id(), sam.owner().smallID()),
     );
 
-    // Draw union of SAM radiuses. Collect circle data then draw union outer arcs only
+    // Draw union of SAM radii. Collect circle data then draw union outer arcs only
     const circles = samLaunchers.map((sam) => {
       const tile = sam.tile();
       return {
         x: this.game.x(tile),
         y: this.game.y(tile),
         r: this.game.config().samRange(sam.level()),
-        owner: sam.owner().smallID(),
+        owner: sam.owner(),
       };
     });
 
@@ -176,13 +176,19 @@ export class SAMRadiusLayer implements Layer {
    * so overlapping circles appear as one combined shape.
    */
   private drawCirclesUnion(
-    circles: Array<{ x: number; y: number; r: number; owner: number }>,
+    circles: Array<{ x: number; y: number; r: number; owner: PlayerView }>,
   ) {
     const ctx = this.context;
     if (circles.length === 0) return;
 
-    // styles
-    const strokeStyleOuter = "rgba(0, 0, 0, 1)";
+    // Line Parameters
+    const outlineColor = "rgba(0, 0, 0, 1)";
+    const lineColorSelf = "rgba(0, 255, 0, 1)";
+    const lineColorEnemy = "rgba(255, 0, 0, 1)";
+    const lineColorFriend = "rgba(255, 255, 0, 1)";
+    const extraOutlineWidth = 1; // adds onto below
+    const lineWidth = 2;
+    const lineDash = [12, 6];
 
     // 1) Fill union simply by drawing all full circle paths and filling once
     ctx.save();
@@ -199,10 +205,6 @@ export class SAMRadiusLayer implements Layer {
     if (!this.showStroke) return;
 
     ctx.save();
-    ctx.lineWidth = 2;
-    ctx.setLineDash([12, 6]);
-    ctx.lineDashOffset = this.dashOffset;
-    ctx.strokeStyle = strokeStyleOuter;
 
     const TWO_PI = Math.PI * 2;
 
@@ -258,7 +260,8 @@ export class SAMRadiusLayer implements Layer {
         // Only consider coverage from circles owned by the same player.
         // This shows separate boundaries for different players' SAM coverage,
         // making contested areas visually distinct.
-        if (a.owner !== circles[j].owner) continue;
+        if (a.owner.smallID() !== circles[j].owner.smallID()) continue;
+
         const b = circles[j];
         const dx = b.x - a.x;
         const dy = b.y - a.y;
@@ -318,6 +321,27 @@ export class SAMRadiusLayer implements Layer {
         if (e - s < 1e-3) continue;
         ctx.beginPath();
         ctx.arc(a.x, a.y, a.r, s, e);
+
+        // Outline
+        ctx.strokeStyle = outlineColor;
+        ctx.lineWidth = lineWidth + extraOutlineWidth;
+        ctx.setLineDash([
+          lineDash[0] + extraOutlineWidth,
+          Math.max(lineDash[1] - extraOutlineWidth, 0),
+        ]);
+        ctx.lineDashOffset = this.dashOffset + extraOutlineWidth / 2;
+        ctx.stroke();
+        // Inline
+        if (a.owner.isMe()) {
+          ctx.strokeStyle = lineColorSelf;
+        } else if (this.game.myPlayer()?.isFriendly(a.owner)) {
+          ctx.strokeStyle = lineColorFriend;
+        } else {
+          ctx.strokeStyle = lineColorEnemy;
+        }
+        ctx.lineWidth = lineWidth;
+        ctx.setLineDash(lineDash);
+        ctx.lineDashOffset = this.dashOffset;
         ctx.stroke();
       }
     }
