@@ -24,6 +24,11 @@ import "./components/Difficulties";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
+import {
+  LobbyPreset,
+  LobbyPresetConfig,
+  LobbyPresetStore,
+} from "./LobbyPresets";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
@@ -40,6 +45,8 @@ export class SinglePlayerModal extends LitElement {
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
+  @state() private donateGold: boolean = true;
+  @state() private donateTroops: boolean = true;
   @state() private compactMap: boolean = false;
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
@@ -50,8 +57,12 @@ export class SinglePlayerModal extends LitElement {
   @state() private teamCount: TeamCountConfig = 2;
 
   @state() private disabledUnits: UnitType[] = [];
+  @state() private lobbyPresets: LobbyPreset[] = [];
+  @state() private selectedPresetName = "";
+  @state() private presetNameInput = "";
 
   private userSettings: UserSettings = new UserSettings();
+  private presetStore = new LobbyPresetStore(this.userSettings);
 
   connectedCallback() {
     super.connectedCallback();
@@ -61,6 +72,10 @@ export class SinglePlayerModal extends LitElement {
   disconnectedCallback() {
     window.removeEventListener("keydown", this.handleKeyDown);
     super.disconnectedCallback();
+  }
+
+  firstUpdated() {
+    this.loadPresets();
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
@@ -74,6 +89,57 @@ export class SinglePlayerModal extends LitElement {
     return html`
       <o-modal title=${translateText("single_modal.title")}>
         <div class="options-layout">
+          <div class="options-section">
+            <div class="option-title">Presets</div>
+            <div class="option-cards" style="gap: 10px;">
+              <div
+                style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;"
+              >
+                <select
+                  @change=${this.handlePresetSelect}
+                  .value=${this.selectedPresetName}
+                  class="px-2 py-1 rounded-lg border border-gray-300 text-black dark:bg-gray-700 dark:text-white dark:border-gray-300/60"
+                  style="flex: 1; min-width: 160px;"
+                >
+                  <option value="">Select preset</option>
+                  ${this.lobbyPresets.map(
+                    (preset) => html`
+                      <option value=${preset.name}>${preset.name}</option>
+                    `,
+                  )}
+                </select>
+                <o-button
+                  title="Load"
+                  @click=${() => this.applyPreset()}
+                  ?disabled=${!this.selectedPresetName}
+                  secondary
+                ></o-button>
+                <o-button
+                  title="Delete"
+                  @click=${this.deletePreset}
+                  ?disabled=${!this.selectedPresetName}
+                  secondary
+                ></o-button>
+              </div>
+              <div
+                style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;"
+              >
+                <input
+                  type="text"
+                  placeholder="Preset name"
+                  .value=${this.presetNameInput}
+                  @input=${this.handlePresetNameInput}
+                  class="px-2 py-2 rounded-lg border border-gray-300 text-black dark:bg-gray-700 dark:text-white dark:border-gray-300/60"
+                  style="flex: 1; min-width: 160px;"
+                />
+                <o-button
+                  title="Save current"
+                  @click=${this.savePreset}
+                  secondary
+                ></o-button>
+              </div>
+            </div>
+          </div>
           <!-- Map Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
@@ -423,7 +489,89 @@ export class SinglePlayerModal extends LitElement {
     return this; // light DOM
   }
 
+  private loadPresets() {
+    this.lobbyPresets = this.presetStore.list();
+  }
+
+  private handlePresetSelect(e: Event) {
+    this.selectedPresetName = (e.target as HTMLSelectElement).value;
+  }
+
+  private handlePresetNameInput(e: Event) {
+    this.presetNameInput = (e.target as HTMLInputElement).value;
+  }
+
+  private buildPresetConfig(): LobbyPresetConfig {
+    return {
+      gameMap: this.selectedMap,
+      useRandomMap: this.useRandomMap,
+      difficulty: this.selectedDifficulty,
+      disableNPCs: this.disableNPCs,
+      bots: this.bots,
+      infiniteGold: this.infiniteGold,
+      donateGold: this.donateGold,
+      infiniteTroops: this.infiniteTroops,
+      donateTroops: this.donateTroops,
+      instantBuild: this.instantBuild,
+      randomSpawn: this.randomSpawn,
+      compactMap: this.compactMap,
+      maxTimer: this.maxTimer,
+      maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
+      gameMode: this.gameMode,
+      playerTeams: this.teamCount,
+      disabledUnits: this.disabledUnits,
+    };
+  }
+
+  private savePreset() {
+    const name = (this.presetNameInput || this.selectedPresetName).trim();
+    if (!name) {
+      return;
+    }
+    this.lobbyPresets = this.presetStore.save(name, this.buildPresetConfig());
+    this.selectedPresetName = name;
+    this.presetNameInput = "";
+  }
+
+  private applyPreset(name?: string) {
+    const presetName = name ?? this.selectedPresetName;
+    const preset = this.lobbyPresets.find((p) => p.name === presetName);
+    if (!preset) {
+      return;
+    }
+
+    const config = preset.config;
+    this.useRandomMap = config.useRandomMap;
+    this.selectedMap = config.useRandomMap
+      ? this.getRandomMap()
+      : (config.gameMap ?? this.selectedMap);
+    this.selectedDifficulty = config.difficulty ?? this.selectedDifficulty;
+    this.disableNPCs = config.disableNPCs ?? this.disableNPCs;
+    this.bots = config.bots ?? this.bots;
+    this.infiniteGold = config.infiniteGold ?? this.infiniteGold;
+    this.donateGold = config.donateGold ?? this.donateGold;
+    this.infiniteTroops = config.infiniteTroops ?? this.infiniteTroops;
+    this.donateTroops = config.donateTroops ?? this.donateTroops;
+    this.instantBuild = config.instantBuild ?? this.instantBuild;
+    this.randomSpawn = config.randomSpawn ?? this.randomSpawn;
+    this.gameMode = config.gameMode ?? this.gameMode;
+    this.teamCount = config.playerTeams ?? this.teamCount;
+    this.disabledUnits = config.disabledUnits ?? [];
+    this.maxTimer = config.maxTimer ?? false;
+    this.maxTimerValue = config.maxTimerValue;
+    this.compactMap = config.compactMap ?? false;
+  }
+
+  private deletePreset() {
+    if (!this.selectedPresetName) {
+      return;
+    }
+    this.lobbyPresets = this.presetStore.delete(this.selectedPresetName);
+    this.selectedPresetName = "";
+  }
+
   public open() {
+    this.loadPresets();
     this.modalEl?.open();
     this.useRandomMap = false;
   }
@@ -580,8 +728,8 @@ export class SinglePlayerModal extends LitElement {
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
               bots: this.bots,
               infiniteGold: this.infiniteGold,
-              donateGold: true,
-              donateTroops: true,
+              donateGold: this.donateGold,
+              donateTroops: this.donateTroops,
               infiniteTroops: this.infiniteTroops,
               instantBuild: this.instantBuild,
               randomSpawn: this.randomSpawn,

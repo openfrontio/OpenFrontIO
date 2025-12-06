@@ -1,3 +1,4 @@
+import { LobbyPreset } from "../../client/LobbyPresets";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 
@@ -31,6 +32,39 @@ export class UserSettings {
 
   setFloat(key: string, value: number) {
     localStorage.setItem(key, value.toString());
+  }
+
+  getJson<T>(key: string, defaultValue: T): T {
+    const value = localStorage.getItem(key);
+    if (!value) return defaultValue;
+
+    try {
+      return JSON.parse(value) as T;
+    } catch (error) {
+      console.warn(`Failed to parse JSON for key ${key}`, error);
+      return defaultValue;
+    }
+  }
+
+  setJson<T>(key: string, value: T) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  getLobbyPresets(defaultValue: LobbyPreset[] = []): LobbyPreset[] {
+    const value = localStorage.getItem("settings.lobbyPresets");
+    if (!value) return defaultValue;
+
+    try {
+      const parsed = JSON.parse(value) as LobbyPreset[];
+      return Array.isArray(parsed) ? parsed : defaultValue;
+    } catch (error) {
+      console.warn("Failed to parse lobby presets", error);
+      return defaultValue;
+    }
+  }
+
+  setLobbyPresets(presets: LobbyPreset[]): void {
+    this.setJson("settings.lobbyPresets", presets);
   }
 
   emojis() {
