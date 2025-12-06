@@ -2,7 +2,10 @@ import { EventBus } from "../../core/EventBus";
 import { GameView } from "../../core/game/GameView";
 import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
-import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
+import {
+  BacklogStatusEvent,
+  RefreshGraphicsEvent as RedrawGraphicsEvent,
+} from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
 import { TransformHandler } from "./TransformHandler";
 import { UIState } from "./UIState";
@@ -37,6 +40,7 @@ import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
 import { TerrainLayer } from "./layers/TerrainLayer";
 import { TerritoryLayer } from "./layers/TerritoryLayer";
+import { TerritoryWebGLStatus } from "./layers/TerritoryWebGLStatus";
 import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
@@ -220,6 +224,18 @@ export function createRenderer(
   performanceOverlay.eventBus = eventBus;
   performanceOverlay.userSettings = userSettings;
 
+  let territoryWebGLStatus = document.querySelector(
+    "territory-webgl-status",
+  ) as TerritoryWebGLStatus;
+  if (!(territoryWebGLStatus instanceof TerritoryWebGLStatus)) {
+    territoryWebGLStatus = document.createElement(
+      "territory-webgl-status",
+    ) as TerritoryWebGLStatus;
+    document.body.appendChild(territoryWebGLStatus);
+  }
+  territoryWebGLStatus.eventBus = eventBus;
+  territoryWebGLStatus.userSettings = userSettings;
+
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -237,6 +253,7 @@ export function createRenderer(
   // Try to group layers by the return value of shouldTransform.
   // Not grouping the layers may cause excessive calls to context.save() and context.restore().
   const layers: Layer[] = [
+    territoryWebGLStatus,
     new TerrainLayer(game, transformHandler),
     new TerritoryLayer(game, eventBus, transformHandler, userSettings),
     new RailroadLayer(game, transformHandler),
@@ -292,6 +309,9 @@ export function createRenderer(
 
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
+  private backlogTurns: number = 0;
+  private backlogGrowing: boolean = false;
+  private lastRenderTime: number = 0;
 
   constructor(
     private game: GameView,
@@ -309,6 +329,10 @@ export class GameRenderer {
 
   initialize() {
     this.eventBus.on(RedrawGraphicsEvent, () => this.redraw());
+    this.eventBus.on(BacklogStatusEvent, (event: BacklogStatusEvent) => {
+      this.backlogTurns = event.backlogTurns;
+      this.backlogGrowing = event.backlogGrowing;
+    });
     this.layers.forEach((l) => l.init?.());
 
     // only append the canvas if it's not already in the document to avoid reparenting side-effects
@@ -348,6 +372,28 @@ export class GameRenderer {
   }
 
   renderGame() {
+    const now = performance.now();
+
+    if (this.backlogTurns > 0) {
+      const BASE_FPS = 60;
+      const MIN_FPS = 30;
+      const BACKLOG_MAX_TURNS = 50;
+
+      const scale = Math.min(1, this.backlogTurns / BACKLOG_MAX_TURNS);
+      const targetFps = BASE_FPS - scale * (BASE_FPS - MIN_FPS);
+      const minFrameInterval = 1000 / targetFps;
+
+      if (this.lastRenderTime !== 0) {
+        const sinceLast = now - this.lastRenderTime;
+        if (sinceLast < minFrameInterval) {
+          requestAnimationFrame(() => this.renderGame());
+          return;
+        }
+      }
+    }
+
+    this.lastRenderTime = now;
+
     FrameProfiler.clear();
     const start = performance.now();
     // Set background
@@ -384,7 +430,11 @@ export class GameRenderer {
 
       const layerStart = FrameProfiler.start();
       layer.renderLayer?.(this.context);
-      FrameProfiler.end(layer.constructor?.name ?? "UnknownLayer", layerStart);
+      const profileName =
+        (layer as any).profileName?.() ??
+        layer.constructor?.name ??
+        "UnknownLayer";
+      FrameProfiler.end(profileName, layerStart);
     }
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();

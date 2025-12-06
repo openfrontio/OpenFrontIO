@@ -517,6 +517,30 @@ export class GameImpl implements Game {
     return ns;
   }
 
+  // Zero-allocation neighbor iteration for performance-critical code
+  forEachNeighborWithDiag(
+    tile: TileRef,
+    callback: (neighbor: TileRef) => void,
+  ): void {
+    const x = this.x(tile);
+    const y = this.y(tile);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue; // Skip the center tile
+        const newX = x + dx;
+        const newY = y + dy;
+        if (
+          newX >= 0 &&
+          newX < this._width &&
+          newY >= 0 &&
+          newY < this._height
+        ) {
+          callback(this._map.ref(newX, newY));
+        }
+      }
+    }
+  }
+
   conquer(owner: PlayerImpl, tile: TileRef): void {
     if (!this.isLand(tile)) {
       throw Error(`cannot conquer water`);
@@ -532,6 +556,10 @@ export class GameImpl implements Game {
     owner._lastTileChange = this._ticks;
     this.updateBorders(tile);
     this._map.setFallout(tile, false);
+
+    // Update defended state for the conquered tile and nearby border tiles
+    this.updateDefendedStateForTileChange(tile, owner);
+
     this.addUpdate({
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
@@ -553,6 +581,9 @@ export class GameImpl implements Game {
 
     this._map.setOwnerID(tile, 0);
     this.updateBorders(tile);
+    if (this._map.isDefended(tile)) {
+      this._map.setDefended(tile, false);
+    }
     this.addUpdate({
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
@@ -752,14 +783,23 @@ export class GameImpl implements Game {
 
   addUnit(u: Unit) {
     this.unitGrid.addUnit(u);
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
   }
   removeUnit(u: Unit) {
     this.unitGrid.removeUnit(u);
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
     if (u.hasTrainStation()) {
       this._railNetwork.removeStation(u);
     }
   }
   updateUnitTile(u: Unit) {
+    if (u.type() === UnitType.DefensePost) {
+      this.updateDefendedStateForDefensePost(u.tile(), u.owner() as PlayerImpl);
+    }
     this.unitGrid.updateUnitCell(u);
   }
 
@@ -847,16 +887,33 @@ export class GameImpl implements Game {
     return this._map.hasOwner(ref);
   }
   setOwnerID(ref: TileRef, playerId: number): void {
-    return this._map.setOwnerID(ref, playerId);
+    this._map.setOwnerID(ref, playerId);
   }
   hasFallout(ref: TileRef): boolean {
     return this._map.hasFallout(ref);
+  }
+
+  isDefended(ref: TileRef): boolean {
+    return this._map.isDefended(ref);
+  }
+
+  setDefended(ref: TileRef, value: boolean): void {
+    this._map.setDefended(ref, value);
   }
   isBorder(ref: TileRef): boolean {
     return this._map.isBorder(ref);
   }
   neighbors(ref: TileRef): TileRef[] {
     return this._map.neighbors(ref);
+  }
+  // Zero-allocation neighbor iteration (cardinal only)
+  forEachNeighbor(tile: TileRef, callback: (neighbor: TileRef) => void): void {
+    const x = this.x(tile);
+    const y = this.y(tile);
+    if (x > 0) callback(this._map.ref(x - 1, y));
+    if (x + 1 < this._width) callback(this._map.ref(x + 1, y));
+    if (y > 0) callback(this._map.ref(x, y - 1));
+    if (y + 1 < this._height) callback(this._map.ref(x, y + 1));
   }
   isWater(ref: TileRef): boolean {
     return this._map.isWater(ref);
@@ -874,7 +931,7 @@ export class GameImpl implements Game {
     return this._map.terrainType(ref);
   }
   forEachTile(fn: (tile: TileRef) => void): void {
-    return this._map.forEachTile(fn);
+    this._map.forEachTile(fn);
   }
   manhattanDist(c1: TileRef, c2: TileRef): number {
     return this._map.manhattanDist(c1, c2);
@@ -938,6 +995,63 @@ export class GameImpl implements Game {
 
     // Record stats
     this.stats().goldWar(conqueror, conquered, gold);
+  }
+
+  /**
+   * Update defended state for border tiles within range of a defense post.
+   */
+  private updateDefendedStateForDefensePost(
+    center: TileRef,
+    owner: PlayerImpl,
+  ) {
+    const range = this.config().defensePostRange();
+    const rangeSq = range * range;
+
+    for (const tile of owner._borderTiles) {
+      if (this._map.euclideanDistSquared(center, tile) <= rangeSq) {
+        const wasDefended = this._map.isDefended(tile);
+        const isDefended = this.unitGrid.hasUnitNearby(
+          tile,
+          range,
+          UnitType.DefensePost,
+          owner.id(),
+        );
+        if (wasDefended !== isDefended) {
+          this._map.setDefended(tile, isDefended);
+          this.addUpdate({
+            type: GameUpdateType.Tile,
+            update: this.toTileUpdate(tile),
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Update defended state when a tile changes ownership.
+   */
+  private updateDefendedStateForTileChange(tile: TileRef, owner: PlayerImpl) {
+    const wasDefended = this._map.isDefended(tile);
+    const isDefended = this.unitGrid.hasUnitNearby(
+      tile,
+      this.config().defensePostRange(),
+      UnitType.DefensePost,
+      owner.id(),
+    );
+    if (wasDefended !== isDefended) {
+      this._map.setDefended(tile, isDefended);
+      this.addUpdate({
+        type: GameUpdateType.Tile,
+        update: this.toTileUpdate(tile),
+      });
+    }
+
+    // If the conquered tile has a defense post, update nearby border tiles
+    if (
+      this.unitGrid.hasUnitNearby(tile, 0, UnitType.DefensePost, owner.id())
+    ) {
+      this.updateDefendedStateForDefensePost(tile, owner);
+    }
   }
 }
 
