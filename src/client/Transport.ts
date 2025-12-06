@@ -385,6 +385,7 @@ export class Transport {
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
+      isSpectator: this.lobbyConfig.isSpectator,
     } satisfies ClientJoinMessage);
   }
 
@@ -635,6 +636,16 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       target: event.target,
     });
+  }
+
+  /**
+   * Public facade for publishing intents directly (bypassing event bus).
+   * Use this when you need to send an intent programmatically, such as
+   * when spectators join the game. Validates client state before sending.
+   * @param intent The intent to publish to the server
+   */
+  public publishIntent(intent: Intent) {
+    this.sendIntent(intent);
   }
 
   private sendIntent(intent: Intent) {
