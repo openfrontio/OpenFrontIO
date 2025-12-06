@@ -34,13 +34,17 @@ export class TerritoryWebGLRenderer {
   private readonly relationTexture: WebGLTexture | null;
   private readonly drawPhaseTexture: WebGLTexture | null;
   private readonly drawPhase: Uint32Array;
+  private readonly fadeMs = 100;
   private readonly uniforms: {
     resolution: WebGLUniformLocation | null;
     state: WebGLUniformLocation | null;
     palette: WebGLUniformLocation | null;
     relations: WebGLUniformLocation | null;
     drawPhase: WebGLUniformLocation | null;
+    overlayMode: WebGLUniformLocation | null;
+    overlayMaxAlpha: WebGLUniformLocation | null;
     nowMs: WebGLUniformLocation | null;
+    fadeMs: WebGLUniformLocation | null;
     fallout: WebGLUniformLocation | null;
     altSelf: WebGLUniformLocation | null;
     altAlly: WebGLUniformLocation | null;
@@ -118,6 +122,9 @@ export class TerritoryWebGLRenderer {
         relations: null,
         drawPhase: null,
         nowMs: null,
+        overlayMode: null,
+        overlayMaxAlpha: null,
+        fadeMs: null,
         fallout: null,
         altSelf: null,
         altAlly: null,
@@ -160,7 +167,10 @@ export class TerritoryWebGLRenderer {
         palette: null,
         relations: null,
         drawPhase: null,
+        overlayMode: null,
+        overlayMaxAlpha: null,
         nowMs: null,
+        fadeMs: null,
         fallout: null,
         altSelf: null,
         altAlly: null,
@@ -194,7 +204,10 @@ export class TerritoryWebGLRenderer {
       palette: gl.getUniformLocation(this.program, "u_palette"),
       relations: gl.getUniformLocation(this.program, "u_relations"),
       drawPhase: gl.getUniformLocation(this.program, "u_drawPhase"),
+      overlayMode: gl.getUniformLocation(this.program, "u_overlayMode"),
+      overlayMaxAlpha: gl.getUniformLocation(this.program, "u_overlayMaxAlpha"),
       nowMs: gl.getUniformLocation(this.program, "u_nowMs"),
+      fadeMs: gl.getUniformLocation(this.program, "u_fadeMs"),
       fallout: gl.getUniformLocation(this.program, "u_fallout"),
       altSelf: gl.getUniformLocation(this.program, "u_altSelf"),
       altAlly: gl.getUniformLocation(this.program, "u_altAlly"),
@@ -325,6 +338,15 @@ export class TerritoryWebGLRenderer {
     gl.uniform1i(this.uniforms.relations, 2);
     if (this.uniforms.drawPhase) {
       gl.uniform1i(this.uniforms.drawPhase, 3);
+    }
+    if (this.uniforms.fadeMs) {
+      gl.uniform1f(this.uniforms.fadeMs, this.fadeMs);
+    }
+    if (this.uniforms.overlayMode) {
+      gl.uniform1i(this.uniforms.overlayMode, 0);
+    }
+    if (this.uniforms.overlayMaxAlpha) {
+      gl.uniform1f(this.uniforms.overlayMaxAlpha, 0.25);
     }
 
     if (this.uniforms.resolution) {
@@ -555,10 +577,25 @@ export class TerritoryWebGLRenderer {
       const nowOffset = Math.max(0, Date.now() - this.timeBaseMs);
       gl.uniform1ui(this.uniforms.nowMs, nowOffset >>> 0);
     }
+    if (this.uniforms.fadeMs) {
+      gl.uniform1f(this.uniforms.fadeMs, this.fadeMs);
+    }
 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Overlay pass: show pre-reveal tiles at low opacity.
+    if (this.uniforms.overlayMode) {
+      gl.uniform1i(this.uniforms.overlayMode, 1);
+    }
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+    // Main pass: normal reveal / fade-in.
+    if (this.uniforms.overlayMode) {
+      gl.uniform1i(this.uniforms.overlayMode, 0);
+    }
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+
     gl.bindVertexArray(null);
     FrameProfiler.end("TerritoryWebGLRenderer:draw", renderSpan);
   }
@@ -801,6 +838,8 @@ export class TerritoryWebGLRenderer {
       uniform usampler2D u_relations;
       uniform usampler2D u_drawPhase;
       uniform int u_viewerId;
+      uniform bool u_overlayMode;
+      uniform float u_overlayMaxAlpha;
       uniform vec2 u_resolution;
       uniform uint u_nowMs;
       uniform vec4 u_fallout;
@@ -825,6 +864,7 @@ export class TerritoryWebGLRenderer {
       uniform float u_hoverPulseStrength;
       uniform float u_hoverPulseSpeed;
       uniform float u_time;
+      uniform float u_fadeMs;
 
       out vec4 outColor;
 
@@ -867,16 +907,42 @@ export class TerritoryWebGLRenderer {
         bool isDefended = (state & 0x1000u) != 0u; // bit 12
 
         uint revealTime = texelFetch(u_drawPhase, texCoord, 0).r;
+        float fadeFactor = 1.0;
+
+        if (u_overlayMode) {
+          if (u_nowMs >= revealTime) {
+            outColor = vec4(0.0);
+            return;
+          }
+          if (owner == 0u) {
+            outColor = vec4(0.0);
+            return;
+          }
+          float remain = float(revealTime) - float(u_nowMs);
+          float progress = clamp(1.0 - remain / u_fadeMs, 0.0, 1.0);
+          float alpha = u_overlayMaxAlpha * progress;
+          if (alpha <= 0.0) {
+            outColor = vec4(0.0);
+            return;
+          }
+          vec4 base = texelFetch(u_palette, ivec2(int(owner) * 2, 0), 0); // territory color
+          outColor = vec4(base.rgb * alpha, alpha);
+          return;
+        }
+
         if (u_nowMs < revealTime) {
           outColor = vec4(0.0);
           return;
+        } else if (u_fadeMs > 0.0) {
+          float dt = float(u_nowMs - revealTime);
+          fadeFactor = clamp(dt / u_fadeMs, 0.0, 1.0);
         }
 
         if (owner == 0u) {
           if (hasFallout) {
             vec3 color = u_fallout.rgb;
             float a = u_alpha;
-            outColor = vec4(color * a, a);
+            outColor = vec4(color * (a * fadeFactor), a * fadeFactor);
           } else {
             outColor = vec4(0.0);
           }
@@ -935,7 +1001,7 @@ export class TerritoryWebGLRenderer {
               : 1.0;
             color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
           }
-          outColor = vec4(color * a, a);
+          outColor = vec4(color * (a * fadeFactor), a * fadeFactor);
           return;
         }
 
@@ -982,7 +1048,7 @@ export class TerritoryWebGLRenderer {
           color = mix(color, u_hoverHighlightColor, u_hoverHighlightStrength * pulse);
         }
 
-        outColor = vec4(color * a, a);
+        outColor = vec4(color * (a * fadeFactor), a * fadeFactor);
       }
     `;
 
