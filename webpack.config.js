@@ -136,7 +136,10 @@ export default async (env, argv) => {
         "process.env.STRIPE_PUBLISHABLE_KEY": JSON.stringify(
           process.env.STRIPE_PUBLISHABLE_KEY,
         ),
-        "process.env.API_DOMAIN": JSON.stringify(process.env.API_DOMAIN),
+        "process.env.API_DOMAIN": JSON.stringify(process.env.API_DOMAIN ?? ""),
+        "process.env.MATCHMAKING_WS_URL": JSON.stringify(
+          isProduction ? "" : "ws://localhost:8787",
+        ),
       }),
       new CopyPlugin({
         patterns: [

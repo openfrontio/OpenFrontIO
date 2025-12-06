@@ -26,6 +26,7 @@ import { MatchmakingModal } from "./Matchmaking";
 import "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
+import "./RankedQueue";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
