@@ -258,6 +258,35 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
   }
 }
 
+export async function updateUserMe(updates: {
+  public?: boolean;
+}): Promise<boolean> {
+  try {
+    const token = getToken();
+    if (!token) return false;
+
+    // call the API to update the public field for the current user
+    const call = await fetch(getApiBase() + "/users/@me", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(updates),
+    });
+    if (call.status === 401) {
+      clearToken();
+      return false;
+    }
+    if (call.status === 204) {
+      return true;
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
 export async function fetchPlayerById(
   playerId: string,
 ): Promise<PlayerProfile | false> {

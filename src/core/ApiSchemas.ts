@@ -46,6 +46,7 @@ export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
     email: z.string().optional(),
+    public: z.boolean().optional().default(false),
   }),
   player: z.object({
     publicId: z.string(),
