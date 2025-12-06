@@ -30,8 +30,9 @@ let sharedDrawPhase: Uint32Array | null = null;
 let lastOwner: Uint16Array | null = null;
 let timeBaseMs = Date.now();
 let tickNowOffset = 0;
-let nextCaptureOffset = 0;
-const STAGGER_MS = 2;
+let captureBaseOffset = 0;
+const captureOwnerCounts: Map<number, number> = new Map();
+const CAPTURE_WINDOW_MS = 100;
 let gameRef: Game | null = null;
 
 function gameUpdate(gu: GameUpdateViewData | ErrorUpdate) {
@@ -64,9 +65,11 @@ async function processPendingTurns() {
 
   isProcessingTurns = true;
   try {
+    captureOwnerCounts.clear();
     while (gr.hasPendingTurns()) {
       tickNowOffset = Math.max(0, Date.now() - timeBaseMs);
-      nextCaptureOffset = 0;
+      captureBaseOffset = tickNowOffset + CAPTURE_WINDOW_MS;
+      captureOwnerCounts.clear();
       gr.executeNextTick();
     }
   } finally {
@@ -124,9 +127,19 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
                 const nowOffset = tickNowOffset;
                 let reveal = nowOffset;
                 if (ownerChanged) {
-                  const offset = nowOffset - nextCaptureOffset * STAGGER_MS;
+                  // Spread this tick's ownership changes across the capture window
+                  // without hard-capping at ~50 tiles. Spread independently per
+                  // owner so each player's capture wave occupies the full window.
+                  const ownerUpdatesSeen =
+                    captureOwnerCounts.get(newOwner) ?? 0;
+                  const updatesSeen = ownerUpdatesSeen;
+                  const spreadDenom = Math.max(1, updatesSeen + 1);
+                  const revealOffset = Math.round(
+                    (CAPTURE_WINDOW_MS * updatesSeen) / spreadDenom,
+                  );
+                  const offset = captureBaseOffset - revealOffset;
                   reveal = offset <= 0 ? 0 : offset >>> 0;
-                  nextCaptureOffset++;
+                  captureOwnerCounts.set(newOwner, ownerUpdatesSeen + 1);
                 }
                 sharedDrawPhase[tile] = reveal >>> 0;
               }
