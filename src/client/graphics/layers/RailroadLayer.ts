@@ -228,12 +228,6 @@ export class RailroadLayer implements Layer {
 
     if (this.nextRailIndexToCheck >= this.railTileList.length) {
       this.nextRailIndexToCheck = 0;
-    } else if (
-      idx <= this.nextRailIndexToCheck &&
-      this.nextRailIndexToCheck > 0
-    ) {
-      // Keep iteration stable when removing an element before the current cursor
-      this.nextRailIndexToCheck--;
     }
   }
 
