@@ -65,7 +65,7 @@ export class LobbyPresetStore {
       useRandomMap: config.useRandomMap ?? false,
       difficulty: config.difficulty ?? Difficulty.Medium,
       disableNPCs: config.disableNPCs ?? false,
-      bots: config.bots ?? 0,
+      bots: config.bots ?? 400,
       infiniteGold: config.infiniteGold ?? false,
       donateGold: config.donateGold ?? false,
       infiniteTroops: config.infiniteTroops ?? false,
