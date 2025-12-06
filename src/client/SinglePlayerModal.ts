@@ -90,7 +90,9 @@ export class SinglePlayerModal extends LitElement {
       <o-modal title=${translateText("single_modal.title")}>
         <div class="options-layout">
           <div class="options-section">
-            <div class="option-title">Presets</div>
+            <div class="option-title">
+              ${translateText("single_modal.presets_title")}
+            </div>
             <div class="option-cards" style="gap: 10px;">
               <div
                 style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;"
@@ -101,7 +103,9 @@ export class SinglePlayerModal extends LitElement {
                   class="px-2 py-1 rounded-lg border border-gray-300 text-black dark:bg-gray-700 dark:text-white dark:border-gray-300/60"
                   style="flex: 1; min-width: 160px;"
                 >
-                  <option value="">Select preset</option>
+                  <option value="">
+                    ${translateText("single_modal.presets_select")}
+                  </option>
                   ${this.lobbyPresets.map(
                     (preset) => html`
                       <option value=${preset.name}>${preset.name}</option>
@@ -109,13 +113,13 @@ export class SinglePlayerModal extends LitElement {
                   )}
                 </select>
                 <o-button
-                  title="Load"
+                  title=${translateText("single_modal.presets_load")}
                   @click=${() => this.applyPreset()}
                   ?disabled=${!this.selectedPresetName}
                   secondary
                 ></o-button>
                 <o-button
-                  title="Delete"
+                  title=${translateText("single_modal.presets_delete")}
                   @click=${this.deletePreset}
                   ?disabled=${!this.selectedPresetName}
                   secondary
@@ -126,14 +130,16 @@ export class SinglePlayerModal extends LitElement {
               >
                 <input
                   type="text"
-                  placeholder="Preset name"
+                  placeholder=${translateText(
+                    "single_modal.presets_placeholder",
+                  )}
                   .value=${this.presetNameInput}
                   @input=${this.handlePresetNameInput}
                   class="px-2 py-2 rounded-lg border border-gray-300 text-black dark:bg-gray-700 dark:text-white dark:border-gray-300/60"
                   style="flex: 1; min-width: 160px;"
                 />
                 <o-button
-                  title="Save current"
+                  title=${translateText("single_modal.presets_save")}
                   @click=${this.savePreset}
                   secondary
                 ></o-button>
