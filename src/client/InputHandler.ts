@@ -290,6 +290,15 @@ export class InputHandler {
     }, 1);
 
     window.addEventListener("keydown", (e) => {
+      const target = e.target as HTMLElement | null;
+      const isTextInput =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+      if (isTextInput && e.code !== "Escape") {
+        return;
+      }
+
       if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         if (!this.alternateView) {
@@ -331,6 +340,15 @@ export class InputHandler {
       }
     });
     window.addEventListener("keyup", (e) => {
+      const target = e.target as HTMLElement | null;
+      const isTextInput =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+      if (isTextInput && !this.activeKeys.has(e.code)) {
+        return;
+      }
+
       if (e.code === this.keybinds.toggleView) {
         e.preventDefault();
         this.alternateView = false;
