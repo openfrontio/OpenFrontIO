@@ -69,7 +69,7 @@ export class ReplayPanel extends LitElement implements Layer {
         class="p-2 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
-        <label class="block mb-1 text-white" translate="no">
+        <label class="block mb-2 text-white" translate="no">
           ${this.game?.config()?.isReplay()
             ? translateText("replay_panel.replay_speed")
             : translateText("replay_panel.game_speed")}
@@ -93,7 +93,7 @@ export class ReplayPanel extends LitElement implements Layer {
 
     return html`
       <button
-        class="text-white font-bold py-0 rounded border transition border-gray-500 ${backgroundColor} hover:border-gray-200"
+        class="py-0.5 px-1 text-sm text-white rounded border transition border-gray-500 ${backgroundColor} hover:border-gray-200"
         @click=${() => this.onReplaySpeedChange(value)}
       >
         ${label}
