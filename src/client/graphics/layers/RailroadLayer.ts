@@ -55,12 +55,14 @@ export class RailroadLayer implements Layer {
     if (this.railTileList.length === 0) {
       return;
     }
+    // Throttle color checks so we do not re-evaluate on every frame
     const now = performance.now();
     if (now - this.lastRailColorUpdate < this.railColorIntervalMs) {
       return;
     }
     this.lastRailColorUpdate = now;
 
+    // Spread work over multiple frames to avoid large bursts when many rails exist
     const maxTilesPerFrame = Math.max(
       1,
       Math.ceil(this.railTileList.length / 120),
@@ -73,15 +75,14 @@ export class RailroadLayer implements Layer {
       if (railRef) {
         const currentOwner = this.game.owner(tile)?.id() ?? null;
         if (railRef.lastOwnerId !== currentOwner) {
+          // Repaint only when the owner changed to keep colors in sync
           railRef.lastOwnerId = currentOwner;
           this.paintRail(railRef.tile);
         }
       }
 
-      this.nextRailIndexToCheck++;
-      if (this.nextRailIndexToCheck >= this.railTileList.length) {
-        this.nextRailIndexToCheck = 0;
-      }
+      this.nextRailIndexToCheck =
+        (this.nextRailIndexToCheck + 1) % this.railTileList.length;
       checked++;
     }
   }
