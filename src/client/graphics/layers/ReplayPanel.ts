@@ -66,7 +66,7 @@ export class ReplayPanel extends LitElement implements Layer {
 
     return html`
       <div
-        class="flex-shrink-0 bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md"
+        class="p-2 bg-gray-800/70 backdrop-blur-sm shadow-xs rounded-lg"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <label class="block mb-1 text-white" translate="no">
@@ -74,7 +74,7 @@ export class ReplayPanel extends LitElement implements Layer {
             ? translateText("replay_panel.replay_speed")
             : translateText("replay_panel.game_speed")}
         </label>
-        <div class="grid grid-cols-2 gap-1">
+        <div class="grid grid-cols-4 gap-2">
           ${this.renderSpeedButton(ReplaySpeedMultiplier.slow, "×0.5")}
           ${this.renderSpeedButton(ReplaySpeedMultiplier.normal, "×1")}
           ${this.renderSpeedButton(ReplaySpeedMultiplier.fast, "×2")}
@@ -88,12 +88,12 @@ export class ReplayPanel extends LitElement implements Layer {
   }
 
   private renderSpeedButton(value: ReplaySpeedMultiplier, label: string) {
-    const isActive = this._replaySpeedMultiplier === value;
+    const backgroundColor =
+      this._replaySpeedMultiplier === value ? "bg-blue-400" : "";
+
     return html`
       <button
-        class="text-white font-bold py-0 rounded border transition ${isActive
-          ? "bg-blue-500 border-gray-400"
-          : "border-gray-500"}"
+        class="text-white font-bold py-0 rounded border transition border-gray-500 ${backgroundColor} hover:border-gray-200"
         @click=${() => this.onReplaySpeedChange(value)}
       >
         ${label}
