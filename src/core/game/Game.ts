@@ -109,7 +109,7 @@ export const generateMapSlug = (
 ): string => {
   if (!map) return "";
 
-  return map.toLowerCase().replace(/[\s()]+/g, "");
+  return map.toLowerCase().replace(/[\s().]+/g, "");
 };
 
 export const mapCategories: Record<string, GameMapType[]> = {
