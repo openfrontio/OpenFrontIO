@@ -18,7 +18,6 @@ jest.mock("../../../src/client/Utils", () => ({
 }));
 
 jest.mock("../../../src/client/graphics/layers/BuildMenu", () => {
-  const { UnitType } = jest.requireActual("../../../src/core/game/Game");
   return {
     flattenedBuildTable: [
       {
