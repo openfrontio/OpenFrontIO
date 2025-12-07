@@ -52,6 +52,9 @@ export class RailroadLayer implements Layer {
   }
 
   updateRailColors() {
+    if (this.railTileList.length === 0) {
+      return;
+    }
     const now = performance.now();
     if (now - this.lastRailColorUpdate < this.railColorIntervalMs) {
       return;
@@ -62,9 +65,6 @@ export class RailroadLayer implements Layer {
       1,
       Math.ceil(this.railTileList.length / 120),
     );
-    if (this.railTileList.length === 0) {
-      return;
-    }
     let checked = 0;
 
     while (checked < maxTilesPerFrame && this.railTileList.length > 0) {
