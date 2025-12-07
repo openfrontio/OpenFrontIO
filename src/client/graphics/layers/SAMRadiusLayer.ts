@@ -107,8 +107,9 @@ export class SAMRadiusLayer implements Layer {
       }
     }
 
-    // show when in ghost mode for sam/atom/hydrogen
+    // show when in ghost mode for silo/sam/atom/hydrogen
     this.ghostShow =
+      this.uiState.ghostStructure === UnitType.MissileSilo ||
       this.uiState.ghostStructure === UnitType.SAMLauncher ||
       this.uiState.ghostStructure === UnitType.AtomBomb ||
       this.uiState.ghostStructure === UnitType.HydrogenBomb;
