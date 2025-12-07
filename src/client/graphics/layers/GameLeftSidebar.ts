@@ -87,8 +87,8 @@ export class GameLeftSidebar extends LitElement implements Layer {
   render() {
     return html`
       <aside
-        class=${`fixed top-0 left-0 z-[1000] flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-br-lg transition-transform duration-300 ease-out transform ${
-          this.isVisible ? "translate-x-0" : "-translate-x-full"
+        class=${`fixed top-4 left-4 z-[1000] flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-slate-800/40 backdrop-blur-sm shadow-xs rounded-lg transition-transform duration-300 ease-out transform ${
+          this.isVisible ? "translate-x-0" : "hidden"
         }`}
       >
         ${this.isPlayerTeamLabelVisible
@@ -109,7 +109,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
             this.isLeaderboardShow || this.isTeamLeaderboardShow ? "mb-2" : ""
           }`}
         >
-          <div class="w-6 h-6 cursor-pointer" @click=${this.toggleLeaderboard}>
+          <div class="cursor-pointer" @click=${this.toggleLeaderboard}>
             <img
               src=${this.isLeaderboardShow
                 ? leaderboardSolidIcon
@@ -122,7 +122,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
           ${this.isTeamGame
             ? html`
                 <div
-                  class="w-6 h-6 cursor-pointer"
+                  class="cursor-pointer"
                   @click=${this.toggleTeamLeaderboard}
                 >
                   <img
