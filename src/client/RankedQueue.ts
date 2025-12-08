@@ -1,9 +1,10 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { generateID } from "../core/Util";
+import { getApiBase, getUserMe } from "./Api";
+import { userAuth } from "./Auth";
 import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
-import { getApiBase, getUserMe, isLoggedIn } from "./jwt";
 
 type QueueType = "ranked" | "unranked";
 type GameMode = "ffa" | "team";
@@ -126,12 +127,12 @@ export class RankedQueue extends LitElement {
 
     try {
       // Get authentication information
-      const loginResult = isLoggedIn();
+      const loginResult = await userAuth();
       if (loginResult === false) {
         throw new Error("Please log in to join ranked matchmaking");
       }
 
-      const token = loginResult.token;
+      const token = loginResult.jwt;
 
       // Determine WebSocket URL based on environment
       // In development, use local matchmaking server; in production, use API
