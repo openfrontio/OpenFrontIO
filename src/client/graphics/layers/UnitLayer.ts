@@ -45,6 +45,10 @@ export class UnitLayer implements Layer {
 
   private transformHandler: TransformHandler;
 
+  private reindeerImage: ImageBitmap | null = null;
+  private presentImage: ImageBitmap | null = null;
+  private santaImage: ImageBitmap | null = null;
+
   // Selected unit property as suggested in the review comment
   private selectedUnit: UnitView | null = null;
 
@@ -77,9 +81,7 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(TouchEvent, (e) => this.onTouch(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
-    this.redraw();
-
-    loadAllSprites();
+    this.initializeAssetsAndRedraw(); // Call the async method without awaiting
   }
 
   /**
@@ -196,6 +198,41 @@ export class UnitLayer implements Layer {
   private handleUnitDeactivation(unit: UnitView) {
     if (this.selectedUnit === unit && !unit.isActive()) {
       this.eventBus.emit(new UnitSelectionEvent(unit, false));
+    }
+  }
+
+  private async loadPngs() {
+    const loadImage = async (url: string): Promise<ImageBitmap> => {
+      const img = new Image();
+      img.src = url;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = (err) => reject(err);
+      });
+      return createImageBitmap(img);
+    };
+
+    try {
+      this.reindeerImage = await loadImage(
+        "../../../resources/sprites/reindeer.png",
+      );
+      this.presentImage = await loadImage(
+        "../../../resources/sprites/present.png",
+      );
+      this.santaImage = await loadImage("../../../resources/sprites/santa.png");
+      console.log("Custom PNGs loaded successfully.");
+    } catch (error) {
+      console.error("Failed to load custom PNGs:", error);
+    }
+  }
+
+  private async initializeAssetsAndRedraw() {
+    try {
+      await this.loadPngs();
+      await loadAllSprites();
+      this.redraw();
+    } catch (error) {
+      console.error("Initialization of assets and redraw failed:", error);
     }
   }
 
@@ -478,110 +515,161 @@ export class UnitLayer implements Layer {
 
       switch (unit.type()) {
         case UnitType.AtomBomb: {
-          // Reindeer
-          const bodyGradient = this.context.createLinearGradient(-6, 0, 6, 0);
-          bodyGradient.addColorStop(0, "#A0522D");
-          bodyGradient.addColorStop(1, "#8B4513");
-          this.context.fillStyle = bodyGradient;
-          this.context.beginPath();
-          this.context.moveTo(-7, 2);
-          this.context.bezierCurveTo(-8, -2, -5, -6, 0, -3);
-          this.context.lineTo(5, -3);
-          this.context.bezierCurveTo(8, -3, 9, 0, 6, 2);
-          this.context.lineTo(6, 6);
-          this.context.lineTo(4, 8);
-          this.context.lineTo(-5, 8);
-          this.context.lineTo(-7, 6);
-          this.context.closePath();
-          this.context.fill();
+          if (this.reindeerImage) {
+            const img = this.reindeerImage;
+            this.context.drawImage(
+              img,
+              -img.width / 2,
+              -img.height / 2,
+              img.width,
+              img.height,
+            );
 
-          this.context.fillStyle = "#654321";
-          this.context.beginPath();
-          this.context.moveTo(0, -8);
-          this.context.lineTo(-2, -12);
-          this.context.lineTo(-1, -12);
-          this.context.lineTo(1, -8);
-          this.context.moveTo(2, -8);
-          this.context.lineTo(4, -12);
-          this.context.lineTo(5, -12);
-          this.context.lineTo(3, -8);
-          this.context.stroke();
+            // Glowing red nose
+            this.context.fillStyle = "red";
+            this.context.beginPath();
+            this.context.arc(
+              img.width / 2 - 10,
+              img.height / 2 - 12,
+              4,
+              0,
+              2 * Math.PI,
+            ); // Adjust position relative to image
+            this.context.shadowBlur = 15;
+            this.context.shadowColor = "red";
+            this.context.fill();
+            this.context.shadowBlur = 0;
 
-          this.context.fillStyle = "red";
-          this.context.beginPath();
-          this.context.arc(8, -1, 2, 0, 2 * Math.PI);
-          this.context.shadowBlur = 5;
-          this.context.shadowColor = "red";
-          this.context.fill();
-          this.context.shadowBlur = 0;
-
-          this.context.fillStyle = "black";
-          this.context.fillRect(6, -2, 1, 1);
+            // More defined antlers
+            this.context.strokeStyle = "#A0522D"; // Sienna
+            this.context.lineWidth = 2;
+            this.context.beginPath();
+            this.context.moveTo(img.width / 2 - 20, -img.height / 2 + 5);
+            this.context.lineTo(img.width / 2 - 25, -img.height / 2 - 5);
+            this.context.lineTo(img.width / 2 - 22, -img.height / 2 - 10);
+            this.context.moveTo(img.width / 2 - 20, -img.height / 2 + 5);
+            this.context.lineTo(img.width / 2 - 15, -img.height / 2 - 5);
+            this.context.lineTo(img.width / 2 - 18, -img.height / 2 - 10);
+            this.context.stroke();
+          }
           break;
         }
         case UnitType.HydrogenBomb: {
-          // Christmas Present
-          this.context.rotate(-angle);
-          this.context.fillStyle = "#008000";
-          this.context.fillRect(-7, -7, 14, 14);
-          this.context.fillStyle = "green";
-          for (let i = 0; i < 7; i++) {
-            for (let j = 0; j < 7; j++) {
-              if ((i + j) % 2 === 0) {
-                this.context.fillRect(-6 + i * 2, -6 + j * 2, 1, 1);
-              }
-            }
-          }
-          const ribbonGradient = this.context.createLinearGradient(-2, 0, 2, 0);
-          ribbonGradient.addColorStop(0, "darkred");
-          ribbonGradient.addColorStop(0.5, "red");
-          ribbonGradient.addColorStop(1, "darkred");
-          this.context.fillStyle = ribbonGradient;
-          this.context.fillRect(-2, -7, 4, 14);
-          this.context.fillRect(-7, -2, 14, 4);
+          this.context.rotate(-angle); // Present should not rotate
+          if (this.presentImage) {
+            const img = this.presentImage;
+            this.context.drawImage(
+              img,
+              -img.width / 2,
+              -img.height / 2,
+              img.width,
+              img.height,
+            );
 
-          this.context.fillStyle = "red";
-          this.context.beginPath();
-          this.context.moveTo(0, -2);
-          this.context.bezierCurveTo(-5, -4, -5, -8, 0, -8);
-          this.context.bezierCurveTo(5, -8, 5, -4, 0, -2);
-          this.context.fill();
+            // Detailed ribbon and bow
+            const ribbonGradient = this.context.createLinearGradient(
+              -5,
+              0,
+              5,
+              0,
+            );
+            ribbonGradient.addColorStop(0, "darkred");
+            ribbonGradient.addColorStop(0.5, "red");
+            ribbonGradient.addColorStop(1, "darkred");
+            this.context.fillStyle = ribbonGradient;
+            this.context.fillRect(-5, -img.height / 2, 10, img.height);
+            this.context.fillRect(-img.width / 2, -5, img.width, 10);
+
+            // More elaborate bow
+            this.context.fillStyle = "goldenrod";
+            this.context.beginPath();
+            this.context.moveTo(0, -5);
+            this.context.quadraticCurveTo(-10, -15, -20, -10);
+            this.context.quadraticCurveTo(-10, -25, 0, -15);
+            this.context.quadraticCurveTo(10, -25, 20, -10);
+            this.context.quadraticCurveTo(10, -15, 0, -5);
+            this.context.closePath();
+            this.context.fill();
+
+            // Gift tag
+            this.context.fillStyle = "white";
+            this.context.fillRect(
+              img.width / 2 - 10,
+              img.height / 2 - 20,
+              15,
+              10,
+            );
+            this.context.strokeStyle = "black";
+            this.context.strokeRect(
+              img.width / 2 - 10,
+              img.height / 2 - 20,
+              15,
+              10,
+            );
+            this.context.fillStyle = "black";
+            this.context.font = "8px Arial";
+            this.context.fillText(
+              "TO: U",
+              img.width / 2 - 8,
+              img.height / 2 - 12,
+            );
+          }
           break;
         }
         case UnitType.MIRV: {
-          // Santa
-          this.context.fillStyle = "#FFDAB9";
-          this.context.beginPath();
-          this.context.arc(0, -2, 4, 0, 2 * Math.PI);
-          this.context.fill();
+          if (this.santaImage) {
+            const img = this.santaImage;
+            this.context.drawImage(
+              img,
+              -img.width / 2,
+              -img.height / 2,
+              img.width,
+              img.height,
+            );
 
-          this.context.fillStyle = "white";
-          this.context.beginPath();
-          this.context.moveTo(-5, 0);
-          this.context.bezierCurveTo(-6, 4, 6, 4, 5, 0);
-          this.context.fill();
+            // Fluffy beard
+            this.context.fillStyle = "white";
+            this.context.beginPath();
+            this.context.moveTo(0, img.height / 2 - 10);
+            this.context.bezierCurveTo(
+              -img.width / 2 + 5,
+              img.height / 2 + 5,
+              img.width / 2 - 5,
+              img.height / 2 + 5,
+              0,
+              img.height / 2 - 10,
+            );
+            this.context.closePath();
+            this.context.fill();
 
-          this.context.fillStyle = "red";
-          this.context.beginPath();
-          this.context.moveTo(0, -9);
-          this.context.lineTo(-5, -5);
-          this.context.lineTo(5, -5);
-          this.context.closePath();
-          this.context.fill();
+            // Hat trim and pom-pom
+            this.context.fillStyle = "white";
+            this.context.fillRect(
+              -img.width / 2,
+              -img.height / 2 + 5,
+              img.width,
+              5,
+            ); // Hat trim
+            this.context.beginPath();
+            this.context.arc(0, -img.height / 2 - 5, 5, 0, 2 * Math.PI); // Pom-pom
+            this.context.fill();
 
-          this.context.fillStyle = "white";
-          this.context.fillRect(-5, -5, 10, 2);
-          this.context.beginPath();
-          this.context.arc(0, -10, 1.5, 0, 2 * Math.PI);
-          this.context.fill();
+            // Defined eyes and mouth
+            this.context.fillStyle = "black";
+            this.context.beginPath();
+            this.context.arc(-5, -5, 1.5, 0, 2 * Math.PI); // Left eye
+            this.context.arc(5, -5, 1.5, 0, 2 * Math.PI); // Right eye
+            this.context.fill();
 
-          this.context.fillStyle = "black";
-          this.context.fillRect(-1, -3, 1, 1);
-          this.context.fillRect(1, -3, 1, 1);
+            this.context.fillStyle = "red";
+            this.context.beginPath();
+            this.context.arc(0, img.height / 2 - 15, 3, 0, 2 * Math.PI); // Mouth
+            this.context.fill();
+          }
           break;
         }
         default:
-          this.context.rotate(-angle);
+          this.context.rotate(-angle); // Undo rotation if not a special nuke
           this.drawSprite(unit);
           break;
       }
