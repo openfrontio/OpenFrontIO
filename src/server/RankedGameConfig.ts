@@ -45,6 +45,7 @@ export function buildRankedGameConfig(
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
+    randomSpawn: true,
     maxTimerValue: undefined,
 
     // No disabled units in ranked
