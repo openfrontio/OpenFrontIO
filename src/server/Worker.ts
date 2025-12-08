@@ -24,8 +24,10 @@ import { GameManager } from "./GameManager";
 import { getUserMe, verifyClientToken } from "./jwt";
 import { logger } from "./Logger";
 
+import { GameEnv } from "../core/configuration/Config";
 import { MapPlaylist } from "./MapPlaylist";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { verifyTurnstileToken } from "./Turnstile";
 import { initWorkerMetrics } from "./WorkerMetrics";
 
 const config = getServerConfigFromServer();
@@ -404,6 +406,31 @@ export async function startWorker() {
           });
           ws.close(1002, cosmeticResult.reason);
           return;
+        }
+
+        if (config.env() !== GameEnv.Dev) {
+          const turnstileResult = await verifyTurnstileToken(
+            ip,
+            clientMsg.turnstileToken,
+            config.turnstileSecretKey(),
+          );
+          switch (turnstileResult.status) {
+            case "approved":
+              break;
+            case "rejected":
+              log.warn("Unauthorized: Turnstile token rejected", {
+                clientID: clientMsg.clientID,
+                reason: turnstileResult.reason,
+              });
+              ws.close(1002, "Unauthorized");
+              return;
+            case "error":
+              // Fail open, allow the client to join.
+              log.error("Turnstile token error", {
+                clientID: clientMsg.clientID,
+                reason: turnstileResult.reason,
+              });
+          }
         }
 
         // Create client and add to game

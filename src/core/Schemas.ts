@@ -534,6 +534,7 @@ export const ClientJoinMessageSchema = z.object({
   username: UsernameSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
+  turnstileToken: z.string().nullable(),
 });
 
 export const ClientRejoinMessageSchema = z.object({

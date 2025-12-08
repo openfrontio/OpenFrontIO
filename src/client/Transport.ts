@@ -393,6 +393,7 @@ export class Transport {
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
+      turnstileToken: this.lobbyConfig.turnstileToken,
     } satisfies ClientJoinMessage);
   }
 

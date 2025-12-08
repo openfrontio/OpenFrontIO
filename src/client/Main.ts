@@ -2,7 +2,9 @@ import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
 import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
@@ -46,6 +48,7 @@ import "./styles.css";
 
 declare global {
   interface Window {
+    turnstile: any;
     enableAds: boolean;
     PageOS: {
       session: {
@@ -105,9 +108,16 @@ class Client {
 
   private gutterAds: GutterAds;
 
+  private turnstileTokenPromise: Promise<{
+    token: string;
+    createdAt: number;
+  }> | null = null;
+
   constructor() {}
 
   initialize(): void {
+    this.turnstileTokenPromise = getTurnstileToken();
+
     const gameVersion = document.getElementById(
       "game-version",
     ) as HTMLDivElement;
@@ -484,6 +494,7 @@ class Client {
               ? ""
               : this.flagInput.getCurrentFlag(),
         },
+        turnstileToken: await this.getTurnstileToken(lobby),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
         token: getPlayToken(),
         clientID: lobby.clientID,
@@ -596,6 +607,40 @@ class Client {
       }
     }, 100);
   }
+
+  private async getTurnstileToken(
+    lobby: JoinLobbyEvent,
+  ): Promise<string | null> {
+    const config = await getServerConfigFromClient();
+    if (
+      config.env() === GameEnv.Dev ||
+      lobby.gameStartInfo?.config.gameType === GameType.Singleplayer
+    ) {
+      return null;
+    }
+
+    const token = await this.turnstileTokenPromise;
+    if (token === null) {
+      return null;
+    }
+
+    const tokenTTL = 3 * 60 * 1000;
+    // If token is still valid, use it and kick off new one for next time
+    if (Date.now() < token.createdAt + tokenTTL) {
+      this.turnstileTokenPromise = getTurnstileToken(); // Prefetch for next join
+      return token.token;
+    }
+
+    // Token expired, get new one immediately
+    console.log("Turnstile token expired, getting new token");
+    const newToken = await getTurnstileToken();
+    this.turnstileTokenPromise = getTurnstileToken(); // Prefetch for next time
+
+    if (newToken === null) {
+      return null;
+    }
+    return newToken.token;
+  }
 }
 
 // Initialize the client when the DOM is loaded
@@ -641,4 +686,32 @@ function getPersistentIDFromCookie(): string {
   ].join(";");
 
   return newID;
+}
+
+async function getTurnstileToken(): Promise<{
+  token: string;
+  createdAt: number;
+}> {
+  const config = await getServerConfigFromClient();
+  const widgetId = window.turnstile.render("#turnstile-container", {
+    sitekey: config.turnstileSiteKey(),
+    size: "normal",
+    appearance: "interaction-only",
+    theme: "light",
+  });
+
+  return new Promise((resolve, reject) => {
+    window.turnstile.execute(widgetId, {
+      callback: (token: string) => {
+        window.turnstile.remove(widgetId);
+        console.log(`Turnstile token received: ${token}`);
+        resolve({ token, createdAt: Date.now() });
+      },
+      "error-callback": () => {
+        window.turnstile.remove(widgetId);
+        alert("Something went wrong, please refresh the page and try again.");
+        reject(new Error("Turnstile failed"));
+      },
+    });
+  });
 }
