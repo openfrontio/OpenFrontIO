@@ -104,9 +104,6 @@ export class TerritoryLayer implements Layer {
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
     const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
-    const playerUpdates =
-      updates !== null ? updates[GameUpdateType.Player] : [];
-    let needsRelationRefresh = playerUpdates.length > 0;
     unitUpdates.forEach((update) => {
       if (update.unitType === UnitType.DefensePost) {
         // Only update borders if the defense post is not under construction
@@ -136,7 +133,6 @@ export class TerritoryLayer implements Layer {
         const territory = this.game.playerBySmallID(update.betrayedID);
         if (territory && territory instanceof PlayerView) {
           this.redrawBorder(territory);
-          needsRelationRefresh = true;
         }
       });
 
@@ -153,7 +149,6 @@ export class TerritoryLayer implements Layer {
           const territory = this.game.playerBySmallID(territoryId);
           if (territory && territory instanceof PlayerView) {
             this.redrawBorder(territory);
-            needsRelationRefresh = true;
           }
         }
       });
@@ -168,12 +163,8 @@ export class TerritoryLayer implements Layer {
           embargoed.id() === myPlayer?.id()
         ) {
           this.redrawBorder(player, embargoed);
-          needsRelationRefresh = true;
         }
       });
-    }
-    if (needsRelationRefresh) {
-      this.territoryRenderer?.refreshPalette();
     }
 
     const focusedPlayer = this.game.focusedPlayer();
@@ -483,6 +474,7 @@ export class TerritoryLayer implements Layer {
   }
 
   redrawBorder(...players: PlayerView[]) {
+    const shouldRefreshPalette = this.territoryRenderer?.isWebGL() ?? false;
     return Promise.all(
       players.map(async (player) => {
         const tiles = await player.borderTiles();
@@ -490,7 +482,11 @@ export class TerritoryLayer implements Layer {
           this.paintTerritory(tile, true);
         });
       }),
-    );
+    ).then(() => {
+      if (shouldRefreshPalette) {
+        this.territoryRenderer?.refreshPalette();
+      }
+    });
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
