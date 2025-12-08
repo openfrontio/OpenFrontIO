@@ -81,7 +81,9 @@ export class UnitLayer implements Layer {
     this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
     this.eventBus.on(TouchEvent, (e) => this.onTouch(e));
     this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
-    this.initializeAssetsAndRedraw(); // Call the async method without awaiting
+    this.initializeAssetsAndRedraw().catch((error) =>
+      console.error("Error in async initialization:", error),
+    ); // Call the async method without awaiting
   }
 
   /**
