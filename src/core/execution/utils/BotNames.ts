@@ -274,7 +274,7 @@ export const COMMUNITY_FULL_ELF_NAMES = [
   "Lumiin the YT Elf",
   "youngfentanyl OFM Elf",
   "Remorse the Wiki Elf",
-  "Lonely Millenial Twitch Elf",
+  "Lonely Millennial Twitch Elf",
   "Kaizeron OFM Elf",
   "Zilka OFM Elf",
   "JIZK Caster Elf",
