@@ -738,10 +738,13 @@ export class ClientGameRunner {
         combinedPackedTileUpdates.push(BigInt(ref));
       }
     } else {
-      // Non-SAB mode: count tile updates from batch
+      // Non-SAB mode: merge packed tile updates from batch
       let totalTileUpdates = 0;
       for (const gu of batch) {
         totalTileUpdates += gu.packedTileUpdates.length;
+        for (const tu of gu.packedTileUpdates) {
+          combinedPackedTileUpdates.push(tu);
+        }
       }
       tileMetrics.count = totalTileUpdates;
     }
