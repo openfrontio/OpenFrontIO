@@ -54,7 +54,7 @@ export class DonateTroopsExecution implements Execution {
     this.active = false;
   }
 
-  getMinTroopsForRelationUpdate(): number {
+  private getMinTroopsForRelationUpdate(): number {
     const { difficulty } = this.mg.config().gameConfig();
     const recipientMaxTroops = this.mg.config().maxTroops(this.recipient);
 

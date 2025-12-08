@@ -60,7 +60,7 @@ export class DonateGoldExecution implements Execution {
     this.active = false;
   }
 
-  getGoldChunkSize(): number {
+  private getGoldChunkSize(): number {
     const { difficulty } = this.mg.config().gameConfig();
     switch (difficulty) {
       case Difficulty.Easy:
@@ -76,7 +76,7 @@ export class DonateGoldExecution implements Execution {
     }
   }
 
-  calculateRelationUpdate(goldSent: Gold, ticks: number): number {
+  private calculateRelationUpdate(goldSent: Gold, ticks: number): number {
     const chunkSize = this.getGoldChunkSize();
     // For every 5 minutes that pass, multiply the chunk size to scale with game progression
     const chunkSizeMultiplier =
