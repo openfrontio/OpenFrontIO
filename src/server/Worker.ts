@@ -317,7 +317,7 @@ export async function startWorker() {
         if (clientMsg.type === "ping") {
           // Ignore ping
           return;
-        } else if (clientMsg.type !== "join") {
+        } else if (clientMsg.type !== "join" && clientMsg.type !== "rejoin") {
           log.warn(
             `Invalid message before join: ${JSON.stringify(clientMsg, replacer)}`,
           );
@@ -341,6 +341,23 @@ export async function startWorker() {
           return;
         }
         const { persistentId, claims } = result;
+
+        if (clientMsg.type === "rejoin") {
+          log.info("rejoining game", {
+            gameID: clientMsg.gameID,
+            clientID: clientMsg.clientID,
+            persistentID: persistentId,
+          });
+          const wasFound = gm.rejoinClient(ws, persistentId, clientMsg);
+
+          if (!wasFound) {
+            log.warn(
+              `game ${clientMsg.gameID} not found on worker ${workerId}`,
+            );
+            ws.close(1002, "Game not found");
+          }
+          return;
+        }
 
         let roles: string[] | undefined;
         let flares: string[] | undefined;
@@ -402,11 +419,7 @@ export async function startWorker() {
           cosmeticResult.cosmetics,
         );
 
-        const wasFound = gm.addClient(
-          client,
-          clientMsg.gameID,
-          clientMsg.lastTurn,
-        );
+        const wasFound = gm.joinClient(client, clientMsg.gameID);
 
         if (!wasFound) {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
