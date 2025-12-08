@@ -479,71 +479,105 @@ export class UnitLayer implements Layer {
       switch (unit.type()) {
         case UnitType.AtomBomb: {
           // Reindeer
-          this.context.fillStyle = "#8B4513";
+          const bodyGradient = this.context.createLinearGradient(-6, 0, 6, 0);
+          bodyGradient.addColorStop(0, "#A0522D");
+          bodyGradient.addColorStop(1, "#8B4513");
+          this.context.fillStyle = bodyGradient;
           this.context.beginPath();
-          this.context.moveTo(-6, -2);
-          this.context.bezierCurveTo(-7, -5, -4, -8, 0, -5);
-          this.context.lineTo(6, -5);
-          this.context.bezierCurveTo(8, -5, 9, -2, 6, 0);
-          this.context.lineTo(6, 4);
-          this.context.lineTo(4, 6);
-          this.context.lineTo(-4, 6);
-          this.context.lineTo(-6, 4);
+          this.context.moveTo(-7, 2);
+          this.context.bezierCurveTo(-8, -2, -5, -6, 0, -3);
+          this.context.lineTo(5, -3);
+          this.context.bezierCurveTo(8, -3, 9, 0, 6, 2);
+          this.context.lineTo(6, 6);
+          this.context.lineTo(4, 8);
+          this.context.lineTo(-5, 8);
+          this.context.lineTo(-7, 6);
           this.context.closePath();
           this.context.fill();
-          this.context.fillStyle = "#A0522D";
-          this.context.fillRect(0, -10, 1, 5);
-          this.context.fillRect(-2, -12, 5, 2);
+
+          this.context.fillStyle = "#654321";
+          this.context.beginPath();
+          this.context.moveTo(0, -8);
+          this.context.lineTo(-2, -12);
+          this.context.lineTo(-1, -12);
+          this.context.lineTo(1, -8);
+          this.context.moveTo(2, -8);
+          this.context.lineTo(4, -12);
+          this.context.lineTo(5, -12);
+          this.context.lineTo(3, -8);
+          this.context.stroke();
+
           this.context.fillStyle = "red";
           this.context.beginPath();
-          this.context.arc(7, -3, 1.5, 0, 2 * Math.PI);
+          this.context.arc(8, -1, 2, 0, 2 * Math.PI);
+          this.context.shadowBlur = 5;
+          this.context.shadowColor = "red";
           this.context.fill();
+          this.context.shadowBlur = 0;
+
           this.context.fillStyle = "black";
-          this.context.fillRect(5, -4, 1, 1);
+          this.context.fillRect(6, -2, 1, 1);
           break;
         }
         case UnitType.HydrogenBomb: {
           // Christmas Present
           this.context.rotate(-angle);
-          this.context.fillStyle = "#006400";
-          this.context.fillRect(-6, -6, 12, 12);
+          this.context.fillStyle = "#008000";
+          this.context.fillRect(-7, -7, 14, 14);
           this.context.fillStyle = "green";
-          for (let i = 0; i < 6; i++) {
-            this.context.fillRect(-5 + i * 2, -5, 1, 10);
+          for (let i = 0; i < 7; i++) {
+            for (let j = 0; j < 7; j++) {
+              if ((i + j) % 2 === 0) {
+                this.context.fillRect(-6 + i * 2, -6 + j * 2, 1, 1);
+              }
+            }
           }
+          const ribbonGradient = this.context.createLinearGradient(-2, 0, 2, 0);
+          ribbonGradient.addColorStop(0, "darkred");
+          ribbonGradient.addColorStop(0.5, "red");
+          ribbonGradient.addColorStop(1, "darkred");
+          this.context.fillStyle = ribbonGradient;
+          this.context.fillRect(-2, -7, 4, 14);
+          this.context.fillRect(-7, -2, 14, 4);
+
           this.context.fillStyle = "red";
-          this.context.fillRect(-2, -6, 4, 12);
-          this.context.fillRect(-6, -2, 12, 4);
-          this.context.fillStyle = "darkred";
           this.context.beginPath();
-          this.context.arc(-4, -8, 3, Math.PI, 2 * Math.PI);
-          this.context.arc(4, -8, 3, Math.PI, 2 * Math.PI);
+          this.context.moveTo(0, -2);
+          this.context.bezierCurveTo(-5, -4, -5, -8, 0, -8);
+          this.context.bezierCurveTo(5, -8, 5, -4, 0, -2);
           this.context.fill();
-          this.context.fillRect(-1.5, -7, 3, 3);
           break;
         }
         case UnitType.MIRV: {
-          // Santa with Sleigh
-          this.context.fillStyle = "#8B0000";
+          // Santa
+          this.context.fillStyle = "#FFDAB9";
           this.context.beginPath();
-          this.context.moveTo(-8, 6);
-          this.context.quadraticCurveTo(-10, 0, -4, 0);
-          this.context.lineTo(8, -2);
-          this.context.lineTo(8, 4);
-          this.context.closePath();
+          this.context.arc(0, -2, 4, 0, 2 * Math.PI);
           this.context.fill();
+
+          this.context.fillStyle = "white";
+          this.context.beginPath();
+          this.context.moveTo(-5, 0);
+          this.context.bezierCurveTo(-6, 4, 6, 4, 5, 0);
+          this.context.fill();
+
           this.context.fillStyle = "red";
           this.context.beginPath();
-          this.context.arc(0, -4, 3, 0, 2 * Math.PI);
-          this.context.fill();
-          this.context.fillStyle = "white";
-          this.context.fillRect(-1, -10, 2, 3);
-          this.context.beginPath();
-          this.context.moveTo(-2, -9);
-          this.context.lineTo(2, -9);
-          this.context.lineTo(0, -12);
+          this.context.moveTo(0, -9);
+          this.context.lineTo(-5, -5);
+          this.context.lineTo(5, -5);
           this.context.closePath();
           this.context.fill();
+
+          this.context.fillStyle = "white";
+          this.context.fillRect(-5, -5, 10, 2);
+          this.context.beginPath();
+          this.context.arc(0, -10, 1.5, 0, 2 * Math.PI);
+          this.context.fill();
+
+          this.context.fillStyle = "black";
+          this.context.fillRect(-1, -3, 1, 1);
+          this.context.fillRect(1, -3, 1, 1);
           break;
         }
         default:
