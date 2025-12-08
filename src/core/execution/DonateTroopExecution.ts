@@ -84,7 +84,10 @@ export class DonateTroopsExecution implements Execution {
           recipientMaxTroops / 5,
         );
       default:
-        return recipientMaxTroops / 11;
+        return this.random.nextInt(
+          recipientMaxTroops / 13,
+          recipientMaxTroops / 11,
+        );
     }
   }
 

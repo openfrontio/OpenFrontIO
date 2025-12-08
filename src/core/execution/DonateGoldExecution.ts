@@ -6,12 +6,10 @@ import {
   Player,
   PlayerID,
 } from "../game/Game";
-import { PseudoRandom } from "../PseudoRandom";
 import { toInt } from "../Util";
 
 export class DonateGoldExecution implements Execution {
   private recipient: Player;
-  private random: PseudoRandom;
   private mg: Game;
 
   private active = true;
@@ -27,7 +25,6 @@ export class DonateGoldExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    this.random = new PseudoRandom(mg.ticks());
 
     if (!mg.hasPlayer(this.recipientID)) {
       console.warn(
