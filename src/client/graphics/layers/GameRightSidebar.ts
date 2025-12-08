@@ -52,7 +52,7 @@ export class GameRightSidebar extends LitElement implements Layer {
     // Timer logic
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
-      this.hasWinner = this.hasWinner || updates["Win"].length > 0;
+      this.hasWinner = this.hasWinner || !!updates["Win"]?.length;
     }
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== undefined) {
