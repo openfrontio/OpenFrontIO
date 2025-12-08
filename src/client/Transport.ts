@@ -17,6 +17,7 @@ import {
   ClientJoinMessage,
   ClientMessage,
   ClientPingMessage,
+  ClientRejoinMessage,
   ClientSendWinnerMessage,
   Intent,
   ServerMessage,
@@ -287,6 +288,14 @@ export class Transport {
     }
   }
 
+  public updateCallback(
+    onconnect: () => void,
+    onmessage: (message: ServerMessage) => void,
+  ) {
+    this.onconnect = onconnect;
+    this.onmessage = onmessage;
+  }
+
   private connectLocal(
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
@@ -376,16 +385,25 @@ export class Transport {
     }
   }
 
-  joinGame(numTurns: number) {
+  joinGame() {
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
       clientID: this.lobbyConfig.clientID,
-      lastTurn: numTurns,
       token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
     } satisfies ClientJoinMessage);
+  }
+
+  rejoinGame(lastTurn: number) {
+    this.sendMsg({
+      type: "rejoin",
+      gameID: this.lobbyConfig.gameID,
+      clientID: this.lobbyConfig.clientID,
+      lastTurn: lastTurn,
+      token: this.lobbyConfig.token,
+    } satisfies ClientRejoinMessage);
   }
 
   leaveGame() {
