@@ -34,18 +34,6 @@ export class UserSettings {
     localStorage.setItem(key, value.toString());
   }
 
-  getJson<T>(key: string, defaultValue: T): T {
-    const value = localStorage.getItem(key);
-    if (!value) return defaultValue;
-
-    try {
-      return JSON.parse(value) as T;
-    } catch (error) {
-      console.warn(`Failed to parse JSON for key ${key}`, error);
-      return defaultValue;
-    }
-  }
-
   setJson<T>(key: string, value: T) {
     localStorage.setItem(key, JSON.stringify(value));
   }
