@@ -456,7 +456,98 @@ export class UnitLayer implements Layer {
       unit.owner().territoryColor(),
       rel,
     );
-    this.drawSprite(unit);
+
+    const x = Math.round(this.game.x(unit.tile()));
+    const y = Math.round(this.game.y(unit.tile()));
+    const lastX = Math.round(this.game.x(unit.lastTile()));
+    const lastY = Math.round(this.game.y(unit.lastTile()));
+    this.context.clearRect(lastX - 7, lastY - 7, 15, 15);
+
+    if (unit.isActive()) {
+      switch (unit.type()) {
+        case UnitType.AtomBomb: {
+          // Reindeer
+          this.context.save();
+          // Antlers
+          this.context.fillStyle = "#A0522D"; // Sienna
+          this.context.fillRect(x - 5, y - 6, 2, 4);
+          this.context.fillRect(x + 4, y - 6, 2, 4);
+          this.context.fillRect(x - 6, y - 5, 4, 2);
+          this.context.fillRect(x + 3, y - 5, 4, 2);
+          // Head
+          this.context.fillStyle = "#8B4513"; // SaddleBrown
+          this.context.fillRect(x - 3, y - 4, 6, 4);
+          // Body
+          this.context.fillRect(x - 4, y, 8, 4);
+          // Eyes
+          this.context.fillStyle = "black";
+          this.context.fillRect(x - 2, y - 3, 1, 1);
+          this.context.fillRect(x + 1, y - 3, 1, 1);
+          // Nose
+          this.context.fillStyle = "red";
+          this.context.fillRect(x - 1, y - 1, 2, 2);
+          this.context.restore();
+          break;
+        }
+        case UnitType.HydrogenBomb: {
+          // Christmas present
+          this.context.save();
+          // Box
+          this.context.fillStyle = "green";
+          this.context.fillRect(x - 4, y - 4, 8, 8);
+          this.context.strokeStyle = "darkgreen";
+          this.context.strokeRect(x - 4, y - 4, 8, 8);
+          // Ribbon
+          this.context.fillStyle = "red";
+          this.context.fillRect(x - 1, y - 4, 2, 8);
+          this.context.fillRect(x - 4, y - 1, 8, 2);
+          // Bow
+          this.context.fillStyle = "darkred";
+          this.context.fillRect(x - 3, y - 6, 2, 2);
+          this.context.fillRect(x + 1, y - 6, 2, 2);
+          this.context.fillRect(x - 1, y - 4, 2, 2);
+          this.context.restore();
+          break;
+        }
+        case UnitType.MIRV: {
+          // Santa
+          this.context.save();
+          // Hat
+          this.context.fillStyle = "red";
+          this.context.beginPath();
+          this.context.moveTo(x, y - 8);
+          this.context.lineTo(x - 4, y - 4);
+          this.context.lineTo(x + 4, y - 4);
+          this.context.closePath();
+          this.context.fill();
+          this.context.fillStyle = "white";
+          this.context.fillRect(x - 4, y - 4, 8, 2); // Trim
+          this.context.fillRect(x - 1, y - 9, 2, 2); // Pom-pom
+          // Face
+          this.context.fillStyle = "#FFDAB9"; // PeachPuff
+          this.context.fillRect(x - 2, y - 3, 4, 3);
+          // Beard
+          this.context.fillStyle = "white";
+          this.context.fillRect(x - 3, y, 6, 3);
+          // Body
+          this.context.fillStyle = "red";
+          this.context.fillRect(x - 4, y + 2, 8, 5);
+          // Belt
+          this.context.fillStyle = "black";
+          this.context.fillRect(x - 4, y + 4, 8, 2);
+          // Eyes
+          this.context.fillStyle = "black";
+          this.context.fillRect(x - 1, y - 2, 1, 1);
+          this.context.fillRect(x + 1, y - 2, 1, 1);
+          this.context.restore();
+          break;
+        }
+        default:
+          this.drawSprite(unit);
+          break;
+      }
+    }
+
     if (!unit.isActive()) {
       this.clearTrail(unit);
     }
