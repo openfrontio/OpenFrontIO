@@ -461,7 +461,7 @@ export class UnitLayer implements Layer {
     const y = Math.round(this.game.y(unit.tile()));
     const lastX = Math.round(this.game.x(unit.lastTile()));
     const lastY = Math.round(this.game.y(unit.lastTile()));
-    this.context.clearRect(lastX - 10, lastY - 10, 20, 20);
+    this.context.clearRect(lastX - 12, lastY - 12, 24, 24);
 
     if (unit.isActive()) {
       const trail = this.unitToTrail.get(unit) ?? [];
@@ -478,103 +478,76 @@ export class UnitLayer implements Layer {
 
       switch (unit.type()) {
         case UnitType.AtomBomb: {
-          // Reindeer in profile
-          // Body
-          this.context.fillStyle = "#8B4513"; // SaddleBrown
-          this.context.fillRect(-4, -2, 8, 4);
-          // Legs
-          this.context.fillStyle = "#A0522D"; // Sienna
-          this.context.fillRect(-3, 2, 2, 4);
-          this.context.fillRect(2, 2, 2, 4);
-          // Head
+          // Reindeer
           this.context.fillStyle = "#8B4513";
-          this.context.fillRect(4, -4, 3, 3);
-          // Antler
+          this.context.beginPath();
+          this.context.moveTo(-6, -2);
+          this.context.bezierCurveTo(-7, -5, -4, -8, 0, -5);
+          this.context.lineTo(6, -5);
+          this.context.bezierCurveTo(8, -5, 9, -2, 6, 0);
+          this.context.lineTo(6, 4);
+          this.context.lineTo(4, 6);
+          this.context.lineTo(-4, 6);
+          this.context.lineTo(-6, 4);
+          this.context.closePath();
+          this.context.fill();
           this.context.fillStyle = "#A0522D";
-          this.context.fillRect(4, -7, 2, 4);
-          this.context.fillRect(2, -8, 4, 2);
-          // Nose
+          this.context.fillRect(0, -10, 1, 5);
+          this.context.fillRect(-2, -12, 5, 2);
           this.context.fillStyle = "red";
           this.context.beginPath();
-          this.context.arc(7, -2.5, 1.5, 0, 2 * Math.PI);
+          this.context.arc(7, -3, 1.5, 0, 2 * Math.PI);
           this.context.fill();
-          // Eye
           this.context.fillStyle = "black";
-          this.context.fillRect(5, -3, 1, 1);
+          this.context.fillRect(5, -4, 1, 1);
           break;
         }
         case UnitType.HydrogenBomb: {
-          // 3D-ish Christmas Present
-          this.context.rotate(-angle); // Present should not rotate
-          // Main box
-          this.context.fillStyle = "darkgreen";
-          this.context.fillRect(-5, -5, 10, 10);
-          // Top face (lighter green for 3D effect)
+          // Christmas Present
+          this.context.rotate(-angle);
+          this.context.fillStyle = "#006400";
+          this.context.fillRect(-6, -6, 12, 12);
           this.context.fillStyle = "green";
-          this.context.beginPath();
-          this.context.moveTo(-5, -5);
-          this.context.lineTo(0, -8);
-          this.context.lineTo(5, -5);
-          this.context.lineTo(0, -2);
-          this.context.closePath();
-          this.context.fill();
-          // Side face
-          this.context.fillStyle = "#008000"; // Green
-          this.context.beginPath();
-          this.context.moveTo(5, -5);
-          this.context.lineTo(8, -2);
-          this.context.lineTo(8, 8);
-          this.context.lineTo(5, 5);
-          this.context.closePath();
-          this.context.fill();
-          // Ribbon
+          for (let i = 0; i < 6; i++) {
+            this.context.fillRect(-5 + i * 2, -5, 1, 10);
+          }
           this.context.fillStyle = "red";
-          this.context.fillRect(-1, -5, 2, 10);
-          this.context.fillRect(-5, -1, 10, 2);
-          // Bow
+          this.context.fillRect(-2, -6, 4, 12);
+          this.context.fillRect(-6, -2, 12, 4);
           this.context.fillStyle = "darkred";
           this.context.beginPath();
-          this.context.arc(-3, -7, 2, 0, 2 * Math.PI);
-          this.context.arc(3, -7, 2, 0, 2 * Math.PI);
+          this.context.arc(-4, -8, 3, Math.PI, 2 * Math.PI);
+          this.context.arc(4, -8, 3, Math.PI, 2 * Math.PI);
           this.context.fill();
-          this.context.fillRect(-1, -6, 2, 2);
+          this.context.fillRect(-1.5, -7, 3, 3);
           break;
         }
         case UnitType.MIRV: {
           // Santa with Sleigh
-          // Sleigh
-          this.context.fillStyle = "#8B0000"; // DarkRed
-          this.context.fillRect(-6, 0, 12, 5);
-          this.context.fillRect(-8, 5, 16, 2);
+          this.context.fillStyle = "#8B0000";
           this.context.beginPath();
-          this.context.moveTo(6, 0);
-          this.context.lineTo(8, -3);
-          this.context.lineTo(6, -3);
+          this.context.moveTo(-8, 6);
+          this.context.quadraticCurveTo(-10, 0, -4, 0);
+          this.context.lineTo(8, -2);
+          this.context.lineTo(8, 4);
           this.context.closePath();
           this.context.fill();
-
-          // Santa Body
-          this.context.fillStyle = "red";
-          this.context.fillRect(-2, -5, 4, 5);
-
-          // Santa Face
-          this.context.fillStyle = "#FFDAB9"; // PeachPuff
-          this.context.fillRect(-1, -7, 2, 2);
-
-          // Santa Hat
           this.context.fillStyle = "red";
           this.context.beginPath();
-          this.context.moveTo(0, -9);
-          this.context.lineTo(-2, -7);
-          this.context.lineTo(2, -7);
-          this.context.closePath();
+          this.context.arc(0, -4, 3, 0, 2 * Math.PI);
           this.context.fill();
           this.context.fillStyle = "white";
-          this.context.fillRect(-1, -10, 1, 1);
+          this.context.fillRect(-1, -10, 2, 3);
+          this.context.beginPath();
+          this.context.moveTo(-2, -9);
+          this.context.lineTo(2, -9);
+          this.context.lineTo(0, -12);
+          this.context.closePath();
+          this.context.fill();
           break;
         }
         default:
-          this.context.rotate(-angle); // Undo rotation if not a special nuke
+          this.context.rotate(-angle);
           this.drawSprite(unit);
           break;
       }
