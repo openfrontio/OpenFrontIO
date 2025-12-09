@@ -4,7 +4,7 @@ import {
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
 } from "../core/ApiSchemas";
-import { getApiBase } from "./jwt";
+import { getApiBase } from "./Api";
 import { translateText } from "./Utils";
 
 @customElement("stats-modal")

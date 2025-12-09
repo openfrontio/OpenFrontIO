@@ -1,8 +1,8 @@
 import { html, LitElement } from "lit";
 import { customElement, query } from "lit/decorators.js";
+import { tempTokenLogin } from "./Auth";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { tokenLogin } from "./jwt";
 import { translateText } from "./Utils";
 
 @customElement("token-login")
@@ -79,7 +79,7 @@ export class TokenLoginModal extends LitElement {
       return;
     }
     try {
-      this.email = await tokenLogin(this.token);
+      this.email = await tempTokenLogin(this.token);
       if (!this.email) {
         return;
       }
