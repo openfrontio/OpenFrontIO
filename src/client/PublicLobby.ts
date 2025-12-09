@@ -179,17 +179,15 @@ export class PublicLobby extends LitElement {
                 class="text-sm ${this.isLobbyHighlighted
                   ? "text-green-600"
                   : "text-blue-600"} bg-white rounded-sm px-1"
-              >
-                ${modeLabel}</span
+                >${modeLabel}</span
               >
               ${teamDetailLabel
                 ? html`<span
                     class="text-sm ${this.isLobbyHighlighted
                       ? "text-green-600"
                       : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
-                  >
-                    ${teamDetailLabel}
-                  </span>`
+                    >${teamDetailLabel}</span
+                  >`
                 : ""}
               <span
                 >${translateText(
