@@ -69,6 +69,9 @@ export function joinLobby(
   lobbyConfig: LobbyConfig,
   onPrestart: () => void,
   onJoin: () => void,
+  onJoinAttempt?: () => void,
+  onJoinSuccess?: () => void,
+  onJoinFailure?: (error: string) => void,
 ): () => void {
   console.log(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
@@ -81,7 +84,7 @@ export function joinLobby(
 
   const onconnect = () => {
     console.log(`Joined game lobby ${lobbyConfig.gameID}`);
-    transport.joinGame(0);
+    transport.joinGame(0, onJoinAttempt, onJoinSuccess, onJoinFailure);
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
@@ -113,6 +116,9 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
+        onJoinAttempt,
+        onJoinSuccess,
+        onJoinFailure,
       ).then((r) => r.start());
     }
     if (message.type === "error") {
@@ -151,6 +157,9 @@ async function createClientGame(
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
   mapLoader: GameMapLoader,
+  onJoinAttempt?: () => void,
+  onJoinSuccess?: () => void,
+  onJoinFailure?: (error: string) => void,
 ): Promise<ClientGameRunner> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
@@ -200,6 +209,9 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    onJoinAttempt,
+    onJoinSuccess,
+    onJoinFailure,
   );
 }
 
@@ -226,6 +238,9 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private onJoinAttempt?: () => void,
+    private onJoinSuccess?: () => void,
+    private onJoinFailure?: (error: string) => void,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -332,7 +347,12 @@ export class ClientGameRunner {
 
     const onconnect = () => {
       console.log("Connected to game server!");
-      this.transport.joinGame(this.turnsSeen);
+      this.transport.joinGame(
+        this.turnsSeen,
+        this.onJoinAttempt,
+        this.onJoinSuccess,
+        this.onJoinFailure,
+      );
     };
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
@@ -414,7 +434,12 @@ export class ClientGameRunner {
       }
       if (message.type === "turn") {
         if (!this.hasJoined) {
-          this.transport.joinGame(0);
+          this.transport.joinGame(
+            0,
+            this.onJoinAttempt,
+            this.onJoinSuccess,
+            this.onJoinFailure,
+          );
           return;
         }
         // Track when we receive the turn to calculate delay

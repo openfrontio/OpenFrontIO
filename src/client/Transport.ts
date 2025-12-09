@@ -182,6 +182,15 @@ export class Transport {
   private onconnect: () => void;
   private onmessage: (msg: ServerMessage) => void;
 
+  private joinPromise: Promise<void> = Promise.resolve();
+  private resolveJoinPromise:
+    | ((value: void | PromiseLike<void>) => void)
+    | null = null;
+  private rejectJoinPromise: ((reason?: any) => void) | null = null;
+  private onJoinAttempt: (() => void) | null = null;
+  private onJoinSuccess: (() => void) | null = null;
+  private onJoinFailure: ((error: string) => void) | null = null;
+
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
   constructor(
@@ -341,6 +350,26 @@ export class Transport {
           console.error("Error parsing server message", error);
           return;
         }
+        // intercept join messages
+        if (result.data.type === "join-success") {
+          if (this.resolveJoinPromise !== null) {
+            this.resolveJoinPromise();
+          }
+          if (this.onJoinSuccess !== null) {
+            this.onJoinSuccess();
+          }
+          return;
+        }
+        if (result.data.type === "join-failure") {
+          const error = result.data.error;
+          if (this.rejectJoinPromise !== null) {
+            this.rejectJoinPromise(new Error(error));
+          }
+          if (this.onJoinFailure !== null) {
+            this.onJoinFailure(error);
+          }
+          return;
+        }
         this.onmessage(result.data);
       } catch (e) {
         console.error("Error in onmessage handler:", e, event.data);
@@ -350,6 +379,12 @@ export class Transport {
     this.socket.onerror = (err) => {
       console.error("Socket encountered error: ", err, "Closing socket");
       if (this.socket === null) return;
+      if (this.rejectJoinPromise !== null) {
+        this.rejectJoinPromise(new Error("Socket error during join"));
+      }
+      if (this.onJoinFailure !== null) {
+        this.onJoinFailure("Socket error during join");
+      }
       this.socket.close();
     };
     this.socket.onclose = (event: CloseEvent) => {
@@ -362,6 +397,16 @@ export class Transport {
       } else if (event.code !== 1000) {
         console.log(`received error code ${event.code}, reconnecting`);
         this.reconnect();
+      }
+      if (this.rejectJoinPromise !== null) {
+        this.rejectJoinPromise(
+          new Error(`Connection closed: ${event.reason || "unknown reason"}`),
+        );
+      }
+      if (this.onJoinFailure !== null) {
+        this.onJoinFailure(
+          `Connection closed: ${event.reason || "unknown reason"}`,
+        );
       }
     };
   }
@@ -376,7 +421,12 @@ export class Transport {
     }
   }
 
-  joinGame(numTurns: number) {
+  async joinGame(
+    numTurns: number,
+    onJoinAttempt?: () => void,
+    onJoinSuccess?: () => void,
+    onJoinFailure?: (error: string) => void,
+  ) {
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
@@ -386,6 +436,37 @@ export class Transport {
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
     } satisfies ClientJoinMessage);
+
+    if (this.isLocal) {
+      return;
+    }
+
+    this.onJoinAttempt = onJoinAttempt ?? null;
+    this.onJoinSuccess = onJoinSuccess ?? null;
+    this.onJoinFailure = onJoinFailure ?? null;
+
+    this.joinPromise = new Promise<void>((resolve, reject) => {
+      this.resolveJoinPromise = resolve;
+      this.rejectJoinPromise = reject;
+    });
+
+    if (this.onJoinAttempt !== null) {
+      this.onJoinAttempt();
+    }
+
+    try {
+      await this.joinPromise;
+      console.log("Join successful");
+    } catch (error) {
+      console.error("Join failed:", error);
+      throw error;
+    } finally {
+      this.resolveJoinPromise = null;
+      this.rejectJoinPromise = null;
+      this.onJoinAttempt = null;
+      this.onJoinSuccess = null;
+      this.onJoinFailure = null;
+    }
   }
 
   leaveGame() {

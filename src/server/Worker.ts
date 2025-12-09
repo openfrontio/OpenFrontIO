@@ -15,6 +15,8 @@ import {
   ID,
   PartialGameRecordSchema,
   ServerErrorMessage,
+  ServerJoinFailureMessage,
+  ServerJoinSuccessMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
@@ -410,9 +412,22 @@ export async function startWorker() {
 
         if (!wasFound) {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          // Handle game not found case
+
+          ws.send(
+            JSON.stringify({
+              type: "join-failure",
+              error: "Game not found",
+            } satisfies ServerJoinFailureMessage),
+          );
+          ws.close(1002, "Game not found");
+          return;
         }
 
+        ws.send(
+          JSON.stringify({
+            type: "join-success",
+          } satisfies ServerJoinSuccessMessage),
+        );
         // Handle other message types
       } catch (error) {
         ws.close(1011, "Internal server error");
