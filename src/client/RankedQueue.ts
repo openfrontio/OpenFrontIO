@@ -7,7 +7,7 @@ import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
 type QueueType = "ranked" | "unranked";
-type GameMode = "ffa" | "team";
+type GameMode = "ffa" | "team" | "duel";
 
 interface QueueStatus {
   queueSize: number;
@@ -30,7 +30,10 @@ export class RankedQueue extends LitElement {
   @state() private queueType: QueueType = "ranked";
   @state() private gameMode: GameMode = "ffa";
   @state() private queueStatus: QueueStatus | null = null;
-  @state() private playerElo: number | null = null;
+  @state() private playerEloByMode: {
+    ffa: number | null;
+    duel: number | null;
+  } = { ffa: null, duel: null };
   @state() private isConnecting: boolean = false;
   @state() private error: string | null = null;
   @state() private isLoadingElo: boolean = false;
@@ -46,6 +49,15 @@ export class RankedQueue extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  /**
+   * Get the current player's ELO for the selected game mode
+   */
+  private get currentPlayerElo(): number | null {
+    return this.gameMode === "duel"
+      ? this.playerEloByMode.duel
+      : this.playerEloByMode.ffa;
   }
 
   async connectedCallback() {
@@ -66,8 +78,18 @@ export class RankedQueue extends LitElement {
     this.isLoadingElo = true;
     try {
       const userMe = await getUserMe();
-      if (userMe !== false && userMe.player.elo !== undefined) {
-        this.playerElo = userMe.player.elo;
+      if (userMe !== false) {
+        // Use eloByMode if available, fall back to elo for backward compatibility
+        const eloByMode = (userMe.player as any).eloByMode;
+        if (eloByMode) {
+          this.playerEloByMode = {
+            ffa: eloByMode.ffa ?? null,
+            duel: eloByMode.duel ?? null,
+          };
+        } else if (userMe.player.elo !== undefined) {
+          // Backward compatibility: only FFA ELO available
+          this.playerEloByMode = { ffa: userMe.player.elo, duel: null };
+        }
       }
     } catch (error) {
       console.error("Failed to fetch player ELO:", error);
@@ -83,7 +105,10 @@ export class RankedQueue extends LitElement {
     this.isLoadingLeaderboard = true;
     try {
       const apiBase = getApiBase();
-      const response = await fetch(`${apiBase}/leaderboard/public/ffa`);
+      const leaderboardMode = this.gameMode === "duel" ? "duel" : "ffa";
+      const response = await fetch(
+        `${apiBase}/leaderboard/public/${leaderboardMode}`,
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -215,7 +240,18 @@ export class RankedQueue extends LitElement {
       case "auth_success":
         console.log("Authentication successful");
         if (message.playerElo !== undefined) {
-          this.playerElo = message.playerElo;
+          // Update the ELO for the current game mode from the server response
+          if (this.gameMode === "duel") {
+            this.playerEloByMode = {
+              ...this.playerEloByMode,
+              duel: message.playerElo,
+            };
+          } else {
+            this.playerEloByMode = {
+              ...this.playerEloByMode,
+              ffa: message.playerElo,
+            };
+          }
         }
         break;
 
@@ -336,120 +372,163 @@ export class RankedQueue extends LitElement {
     if (this.inQueue) {
       return; // Can't change while in queue
     }
-    this.gameMode = mode;
+    if (this.gameMode !== mode) {
+      this.gameMode = mode;
+      // Refresh leaderboard for the new mode
+      this.fetchLeaderboard();
+    }
   }
 
   render() {
     return html`
-      <div class="flex flex-col gap-3">
-        <!-- Join Queue Button -->
-        <button
-          @click=${this.inQueue
-            ? () => this.leaveQueue()
-            : () => this.joinQueue()}
-          ?disabled=${this.isConnecting}
-          class="w-full h-16 rounded-xl font-medium text-lg transition-opacity duration-200 ${this
-            .inQueue
-            ? "bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90"
-            : "bg-gradient-to-r from-purple-600 to-purple-500 hover:opacity-90"} text-white ${this
-            .isConnecting
-            ? "opacity-50 cursor-not-allowed"
-            : ""}"
-        >
-          <div class="flex flex-col items-center justify-center">
-            <div>
-              ${this.isConnecting
-                ? translateText("ranked_queue.connecting")
-                : this.inQueue
-                  ? translateText("ranked_queue.leave_queue")
-                  : translateText("ranked_queue.join_ranked_queue")}
-            </div>
-            ${!this.inQueue && this.playerElo !== null
-              ? html`<div class="text-sm mt-1 opacity-90">
-                  ${translateText("ranked_queue.your_elo")} ${this.playerElo}
-                </div>`
-              : !this.inQueue && this.isLoadingElo
+      <div class="bg-gray-900 border border-blue-500/50 rounded-2xl p-4">
+        <!-- Header -->
+        <div class="text-center mb-3">
+          <h3 class="text-white font-bold text-lg">
+            ${translateText("ranked_queue.ranked_matchmaking")}
+          </h3>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <!-- Game Mode Toggle -->
+          <div class="flex gap-2">
+            <button
+              @click=${() => this.setGameMode("ffa")}
+              ?disabled=${this.inQueue}
+              class="flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${this
+                .gameMode === "ffa"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"} ${this.inQueue
+                ? "opacity-50 cursor-not-allowed"
+                : ""}"
+            >
+              ${translateText("ranked_queue.ffa")}
+            </button>
+            <button
+              @click=${() => this.setGameMode("duel")}
+              ?disabled=${this.inQueue}
+              class="flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${this
+                .gameMode === "duel"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-700 text-gray-300 hover:bg-gray-600"} ${this.inQueue
+                ? "opacity-50 cursor-not-allowed"
+                : ""}"
+            >
+              ${translateText("ranked_queue.duel")}
+            </button>
+          </div>
+
+          <!-- Join Queue Button -->
+          <button
+            @click=${this.inQueue
+              ? () => this.leaveQueue()
+              : () => this.joinQueue()}
+            ?disabled=${this.isConnecting}
+            class="w-full h-16 rounded-xl font-medium text-lg transition-opacity duration-200 ${this
+              .inQueue
+              ? "bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90"
+              : "bg-blue-600 hover:bg-blue-500"} text-white ${this.isConnecting
+              ? "opacity-50 cursor-not-allowed"
+              : ""}"
+          >
+            <div class="flex flex-col items-center justify-center">
+              <div>
+                ${this.isConnecting
+                  ? translateText("ranked_queue.connecting")
+                  : this.inQueue
+                    ? translateText("ranked_queue.leave_queue")
+                    : translateText("ranked_queue.join_ranked_queue")}
+              </div>
+              ${!this.inQueue && this.currentPlayerElo !== null
                 ? html`<div class="text-sm mt-1 opacity-90">
-                    ${translateText("ranked_queue.loading_elo")}
+                    ${translateText("ranked_queue.your_elo")}
+                    ${this.currentPlayerElo}
+                  </div>`
+                : !this.inQueue && this.isLoadingElo
+                  ? html`<div class="text-sm mt-1 opacity-90">
+                      ${translateText("ranked_queue.loading_elo")}
+                    </div>`
+                  : ""}
+              ${this.error
+                ? html`<div class="text-sm mt-1 text-red-200">
+                    ${this.error}
                   </div>`
                 : ""}
-            ${this.error
-              ? html`<div class="text-sm mt-1 text-red-200">${this.error}</div>`
-              : ""}
-          </div>
-        </button>
+            </div>
+          </button>
 
-        <!-- Leaderboard Toggle Button -->
-        <button
-          @click=${() => (this.showLeaderboard = !this.showLeaderboard)}
-          class="w-full py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
-        >
+          <!-- Leaderboard Toggle Button -->
+          <button
+            @click=${() => (this.showLeaderboard = !this.showLeaderboard)}
+            class="w-full py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
+          >
+            ${this.showLeaderboard
+              ? translateText("ranked_queue.hide_leaderboard")
+              : translateText("ranked_queue.view_leaderboard")}
+          </button>
+
+          <!-- Leaderboard Display -->
           ${this.showLeaderboard
-            ? translateText("ranked_queue.hide_leaderboard")
-            : translateText("ranked_queue.view_leaderboard")}
-        </button>
-
-        <!-- Leaderboard Display -->
-        ${this.showLeaderboard
-          ? html`
-              <div
-                class="bg-gray-800 rounded-xl p-4 text-white max-h-96 overflow-y-auto"
-              >
-                ${this.isLoadingLeaderboard
-                  ? html`<div class="text-center py-4">
-                      ${translateText("ranked_queue.loading_leaderboard")}
-                    </div>`
-                  : this.leaderboard.length === 0
-                    ? html`<div class="text-center py-4 text-gray-400">
-                        ${translateText("ranked_queue.no_ranked_players")}
+            ? html`
+                <div
+                  class="bg-gray-800 rounded-xl p-4 text-white max-h-96 overflow-y-auto"
+                >
+                  ${this.isLoadingLeaderboard
+                    ? html`<div class="text-center py-4">
+                        ${translateText("ranked_queue.loading_leaderboard")}
                       </div>`
-                    : html`
-                        <div class="space-y-2">
-                          ${this.leaderboard.slice(0, 10).map(
-                            (entry) => html`
-                              <div
-                                class="flex items-center justify-between p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
-                              >
-                                <div class="flex items-center gap-3">
-                                  <div
-                                    class="font-bold text-lg ${entry.rank <= 3
-                                      ? "text-yellow-400"
-                                      : "text-gray-400"}"
-                                  >
-                                    #${entry.rank}
+                    : this.leaderboard.length === 0
+                      ? html`<div class="text-center py-4 text-gray-400">
+                          ${translateText("ranked_queue.no_ranked_players")}
+                        </div>`
+                      : html`
+                          <div class="space-y-2">
+                            ${this.leaderboard.slice(0, 10).map(
+                              (entry) => html`
+                                <div
+                                  class="flex items-center justify-between p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                                >
+                                  <div class="flex items-center gap-3">
+                                    <div
+                                      class="font-bold text-lg ${entry.rank <= 3
+                                        ? "text-yellow-400"
+                                        : "text-gray-400"}"
+                                    >
+                                      #${entry.rank}
+                                    </div>
+                                    <div>
+                                      <div class="font-medium">
+                                        ${entry.username}
+                                      </div>
+                                      <div class="text-xs text-gray-400">
+                                        ${entry.gamesPlayed}
+                                        ${translateText("ranked_queue.games")} •
+                                        ${entry.wins}${translateText(
+                                          "ranked_queue.wins_short",
+                                        )}
+                                        ${entry.losses}${translateText(
+                                          "ranked_queue.losses_short",
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <div class="font-medium">
-                                      ${entry.username}
+                                  <div class="text-right">
+                                    <div class="font-bold text-blue-400">
+                                      ${entry.currentElo}
                                     </div>
                                     <div class="text-xs text-gray-400">
-                                      ${entry.gamesPlayed}
-                                      ${translateText("ranked_queue.games")} •
-                                      ${entry.wins}${translateText(
-                                        "ranked_queue.wins_short",
-                                      )}
-                                      ${entry.losses}${translateText(
-                                        "ranked_queue.losses_short",
-                                      )}
+                                      ${translateText("ranked_queue.elo")}
                                     </div>
                                   </div>
                                 </div>
-                                <div class="text-right">
-                                  <div class="font-bold text-purple-400">
-                                    ${entry.currentElo}
-                                  </div>
-                                  <div class="text-xs text-gray-400">
-                                    ${translateText("ranked_queue.elo")}
-                                  </div>
-                                </div>
-                              </div>
-                            `,
-                          )}
-                        </div>
-                      `}
-              </div>
-            `
-          : ""}
+                              `,
+                            )}
+                          </div>
+                        `}
+                </div>
+              `
+            : ""}
+        </div>
       </div>
     `;
   }
