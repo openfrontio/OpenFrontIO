@@ -58,6 +58,7 @@ export interface LobbyConfig {
   clientID: ClientID;
   gameID: GameID;
   token: string;
+  turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
