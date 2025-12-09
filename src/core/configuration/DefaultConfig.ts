@@ -83,6 +83,10 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  turnstileSecretKey(): string {
+    return process.env.TURNSTILE_SECRET_KEY ?? "";
+  }
+  abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
   }

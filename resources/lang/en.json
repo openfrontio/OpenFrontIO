@@ -539,7 +539,8 @@
     "join_tournament": "Join Tournament",
     "join_discord": "Join Our Discord Community!",
     "discord_description": "Connect with other players, get updates, and share strategies",
-    "join_server": "Join Server"
+    "join_server": "Join Server",
+    "youtube_tutorial": "Need some help?"
   },
   "leaderboard": {
     "title": "Leaderboard",
