@@ -720,10 +720,11 @@ async function getTurnstileToken(): Promise<{
         console.log(`Turnstile token received: ${token}`);
         resolve({ token, createdAt: Date.now() });
       },
-      "error-callback": () => {
+      "error-callback": (errorCode: string) => {
         window.turnstile.remove(widgetId);
-        alert("Something went wrong, please refresh the page and try again.");
-        reject(new Error("Turnstile failed"));
+        console.error(`Turnstile error: ${errorCode}`);
+        alert(`Turnstile error: ${errorCode}. Please refresh and try again.`);
+        reject(new Error(`Turnstile failed: ${errorCode}`));
       },
     });
   });
