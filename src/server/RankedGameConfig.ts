@@ -9,7 +9,7 @@ import { GameConfig, TeamCountConfig } from "../core/Schemas";
 
 export interface RankedMatchConfig {
   queueType: "ranked" | "unranked";
-  gameMode: "ffa" | "team";
+  gameMode: "ffa" | "team" | "duel";
   playerCount: number;
   teamConfig?: TeamCountConfig;
 }
@@ -24,18 +24,19 @@ export function buildRankedGameConfig(
   matchConfig: RankedMatchConfig,
 ): GameConfig {
   const { gameMode, playerCount } = matchConfig;
-  const mode = gameMode === "ffa" ? GameMode.FFA : GameMode.Team;
+  const isDuel = gameMode === "duel";
+  const mode = gameMode === "team" ? GameMode.Team : GameMode.FFA;
 
   return {
     gameMap: map,
-    gameMapSize: selectMapSize(playerCount),
+    gameMapSize: isDuel ? GameMapSize.Compact : selectMapSize(playerCount),
     gameType: GameType.Public,
     gameMode: mode,
     maxPlayers: playerCount,
 
     bots: 400,
     difficulty: Difficulty.Medium,
-    disableNPCs: false,
+    disableNPCs: isDuel ? true : false,
 
     // Donation rules
     donateGold: mode === GameMode.Team,
