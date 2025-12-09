@@ -274,10 +274,12 @@ export async function updateUserMe(updates: {
       },
       body: JSON.stringify(updates),
     });
+    // 401 Unauthorized - clear token and log out user
     if (call.status === 401) {
       clearToken();
       return false;
     }
+    // 204 No Content - update successful
     if (call.status === 204) {
       return true;
     }
