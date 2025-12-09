@@ -692,6 +692,17 @@ async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
 }> {
+  // Wait for Turnstile script to load (handles slow connections)
+  let attempts = 0;
+  while (typeof window.turnstile === "undefined" && attempts < 100) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    attempts++;
+  }
+
+  if (typeof window.turnstile === "undefined") {
+    throw new Error("Failed to load Turnstile script");
+  }
+
   const config = await getServerConfigFromClient();
   const widgetId = window.turnstile.render("#turnstile-container", {
     sitekey: config.turnstileSiteKey(),
