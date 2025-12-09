@@ -292,8 +292,12 @@ export class Transport {
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
   ) {
-    this.onconnect = onconnect;
-    this.onmessage = onmessage;
+    if (this.isLocal) {
+      this.localServer.updateCallback(onconnect, onmessage);
+    } else {
+      this.onconnect = onconnect;
+      this.onmessage = onmessage;
+    }
   }
 
   private connectLocal(
@@ -302,11 +306,10 @@ export class Transport {
   ) {
     this.localServer = new LocalServer(
       this.lobbyConfig,
-      onconnect,
-      onmessage,
       this.lobbyConfig.gameRecord !== undefined,
       this.eventBus,
     );
+    this.localServer.updateCallback(onconnect, onmessage);
     this.localServer.start();
   }
 
