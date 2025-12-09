@@ -116,6 +116,8 @@ class Client {
   constructor() {}
 
   initialize(): void {
+    // Prefetch turnstile token so it is available when
+    // the user joins a lobby.
     this.turnstileTokenPromise = getTurnstileToken();
 
     const gameVersion = document.getElementById(
@@ -619,27 +621,27 @@ class Client {
       return null;
     }
 
+    if (this.turnstileTokenPromise === null) {
+      console.log("No prefetched turnstile token, getting new token");
+      return (await getTurnstileToken())?.token ?? null;
+    }
+
     const token = await this.turnstileTokenPromise;
-    if (token === null) {
+    // Clear promise so a new token is fetched next time
+    this.turnstileTokenPromise = null;
+    if (!token) {
+      console.log("No turnstile token");
       return null;
     }
 
     const tokenTTL = 3 * 60 * 1000;
-    // If token is still valid, use it and kick off new one for next time
     if (Date.now() < token.createdAt + tokenTTL) {
-      this.turnstileTokenPromise = getTurnstileToken(); // Prefetch for next join
+      console.log("Prefetched turnstile token is valid");
       return token.token;
+    } else {
+      console.log("Turnstile token expired, getting new token");
+      return (await getTurnstileToken())?.token ?? null;
     }
-
-    // Token expired, get new one immediately
-    console.log("Turnstile token expired, getting new token");
-    const newToken = await getTurnstileToken();
-    this.turnstileTokenPromise = getTurnstileToken(); // Prefetch for next time
-
-    if (newToken === null) {
-      return null;
-    }
-    return newToken.token;
   }
 }
 
