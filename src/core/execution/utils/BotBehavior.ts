@@ -100,7 +100,6 @@ export class BotBehavior {
   }
 
   private betray(target: Player): void {
-    if (this.player === null) throw new Error("not initialized");
     const alliance = this.player.allianceWith(target);
     if (!alliance) return;
     this.player.breakAlliance(alliance);
@@ -175,8 +174,6 @@ export class BotBehavior {
   }
 
   attackBestTarget(borderingFriends: Player[], borderingEnemies: Player[]) {
-    if (this.player === null) throw new Error("not initialized");
-
     // Save up troops until we reach the reserve ratio
     if (!this.hasReserveRatioTroops()) return;
 
@@ -299,8 +296,6 @@ export class BotBehavior {
 
   // TODO: Nuke the crown if it's far enough ahead of everybody else (based on difficulty)
   findBestNukeTarget(borderingEnemies: Player[]): Player | null {
-    if (this.player === null) throw new Error("not initialized");
-
     // Retaliate against incoming attacks (Most important!)
     const incomingAttackPlayer = this.findIncomingAttackPlayer();
     if (incomingAttackPlayer) {
@@ -393,8 +388,6 @@ export class BotBehavior {
   }
 
   attackRandomTarget() {
-    if (this.player === null) throw new Error("not initialized");
-
     // Save up troops until we reach the trigger ratio
     if (!this.hasTriggerRatioTroops()) return;
 
@@ -507,7 +500,6 @@ export class BotBehavior {
   }
 
   sendBoatAttack(other: Player) {
-    if (other.isPlayer() && this.player.isFriendly(other)) return;
     const closest = closestTwoTiles(
       this.game,
       Array.from(this.player.borderTiles()).filter((t) =>
@@ -565,7 +557,6 @@ export class BotBehavior {
   }
 
   maybeSendEmoji(enemy: Player) {
-    if (this.player === null) throw new Error("not initialized");
     if (this.player.type() === PlayerType.Bot) return;
     if (enemy.type() !== PlayerType.Human) return;
     const lastSent = this.lastEmojiSent.get(enemy) ?? -300;
