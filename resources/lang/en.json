@@ -236,11 +236,12 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "Duos (teams of 2)",
-    "teams_Trios": "Trios (teams of 3)",
-    "teams_Quads": "Quads (teams of 4)",
+    "teams_Duos": "of 2 (Duos)",
+    "teams_Trios": "of 3 (Trios)",
+    "teams_Quads": "of 4 (Quads)",
     "teams_hvn": "Humans Vs Nations",
-    "teams": "{num} teams"
+    "teams": "{num} teams",
+    "players_per_team": "of {num}"
   },
   "matchmaking_modal": {
     "title": "Matchmaking",
