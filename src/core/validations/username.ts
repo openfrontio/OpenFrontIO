@@ -54,7 +54,7 @@ export function isProfaneUsername(username: string): boolean {
  *
  * Removing bad clan tags won't hurt existing clans nor cause desyncs:
  * - full name including clan tag was overwritten in the past, if any part of name was bad
- * - only each seperate local player name with a profane clan tag will remain, no clan team assignment
+ * - only each separate local player name with a profane clan tag will remain, no clan team assignment
  *
  * Examples:
  * - "GoodName" -> "GoodName"

@@ -73,6 +73,7 @@ const numPlayersConfig = {
   [GameMapType.Mars]: [70, 40, 30],
   [GameMapType.Mena]: [70, 50, 40],
   [GameMapType.Montreal]: [60, 40, 30],
+  [GameMapType.NewYorkCity]: [60, 40, 30],
   [GameMapType.NorthAmerica]: [70, 40, 30],
   [GameMapType.Oceania]: [10, 10, 10],
   [GameMapType.Pangaea]: [20, 15, 10],
@@ -83,6 +84,10 @@ const numPlayersConfig = {
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  turnstileSecretKey(): string {
+    return process.env.TURNSTILE_SECRET_KEY ?? "";
+  }
+  abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
   }
