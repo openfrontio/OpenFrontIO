@@ -433,14 +433,18 @@ export class BotBehavior {
   }
 
   isBorderingNukedTerritory(): boolean {
-    return Array.from(this.player.borderTiles())
-      .flatMap((t) => this.game.neighbors(t))
-      .some(
-        (t) =>
-          this.game.isLand(t) &&
-          !this.game.hasOwner(t) &&
-          this.game.hasFallout(t),
-      );
+    for (const tile of this.player.borderTiles()) {
+      for (const neighbor of this.game.neighbors(tile)) {
+        if (
+          this.game.isLand(neighbor) &&
+          !this.game.hasOwner(neighbor) &&
+          this.game.hasFallout(neighbor)
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   forceSendAttack(target: Player | TerraNullius) {
