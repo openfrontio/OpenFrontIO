@@ -136,12 +136,6 @@
     "random_spawn": "Random spawn",
     "allow_alliances": "Allow alliances",
     "options_title": "Options",
-    "presets_title": "Presets",
-    "presets_select": "Select preset",
-    "presets_load": "Load",
-    "presets_delete": "Delete",
-    "presets_save": "Save current",
-    "presets_placeholder": "Preset name",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
     "nations": "Nations: ",
@@ -266,12 +260,6 @@
     "mode": "Mode",
     "team_count": "Number of Teams",
     "options_title": "Options",
-    "presets_title": "Presets",
-    "presets_select": "Select preset",
-    "presets_load": "Load",
-    "presets_delete": "Delete",
-    "presets_save": "Save current",
-    "presets_placeholder": "Preset name",
     "bots": "Bots: ",
     "bots_disabled": "Disabled",
     "nations": "Nations: ",
@@ -820,5 +808,15 @@
     "stats_games_played": "Games Played",
     "mode_ffa": "Free-for-All",
     "mode_team": "Team"
+  },
+  "lobby_config": {
+    "preset": {
+      "title": "Presets",
+      "select": "Select preset",
+      "load": "Load",
+      "delete": "Delete",
+      "placeholder": "Preset name",
+      "save": "Save current"
+    }
   }
 }

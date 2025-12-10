@@ -25,6 +25,7 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
+import "./components/lobbyConfig/PresetControls";
 import "./components/LobbyTeamView";
 import "./components/Maps";
 import {
@@ -184,57 +185,17 @@ export class HostLobbyModal extends LitElement {
           </button>
         </div>
         <div class="options-layout">
-          <div class="options-section">
-            <div class="option-title">
-              ${translateText("host_modal.presets_title")}
-            </div>
-            <div class="option-cards" style="gap: 10px;">
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;">
-                <select
-                  @change=${this.handlePresetSelect}
-                  .value=${this.selectedPresetName}
-                  class="preset-select px-2 py-1 rounded-lg border border-gray-300 text-black dark:bg-gray-700 dark:text-white dark:border-gray-300/60"
-                  style="flex: 1; min-width: 160px;"
-                >
-                  <option value="">
-                    ${translateText("host_modal.presets_select")}
-                  </option>
-                  ${this.lobbyPresets.map(
-                    (preset) => html`
-                      <option value=${preset.name}>${preset.name}</option>
-                    `,
-                  )}
-                </select>
-                <o-button
-                  title=${translateText("host_modal.presets_load")}
-                  @click=${() => this.applyPreset()}
-                  ?disabled=${!this.selectedPresetName}
-                  secondary
-                ></o-button>
-                <o-button
-                  title=${translateText("host_modal.presets_delete")}
-                  @click=${this.deletePreset}
-                  ?disabled=${!this.selectedPresetName}
-                  secondary
-                ></o-button>
-              </div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;">
-                <input
-                  type="text"
-                  placeholder=${translateText("host_modal.presets_placeholder")}
-                  .value=${this.presetNameInput}
-                  @input=${this.handlePresetNameInput}
-                  class="px-2 py-2 rounded-lg border border-gray-300 text-black dark:bg-gray-700 dark:text-white dark:border-gray-300/60"
-                  style="flex: 1; min-width: 160px;"
-                />
-                <o-button
-                  title=${translateText("host_modal.presets_save")}
-                  @click=${this.savePreset}
-                  secondary
-                ></o-button>
-              </div>
-            </div>
-          </div>
+          <lobby-preset-controls
+            .presets=${this.lobbyPresets}
+            .selectedName=${this.selectedPresetName}
+            .nameInput=${this.presetNameInput}
+            @preset-select=${this.handlePresetSelect}
+            @preset-load=${(e: CustomEvent<string>) =>
+              this.applyPreset(e.detail)}
+            @preset-delete=${this.deletePreset}
+            @preset-name-input=${this.handlePresetNameInput}
+            @preset-save=${this.savePreset}
+          ></lobby-preset-controls>
           <!-- Map Selection -->
           <div class="options-section">
             <div class="option-title">${translateText("map.map")}</div>
@@ -709,12 +670,12 @@ export class HostLobbyModal extends LitElement {
     this.lobbyPresets = this.presetStore.list();
   }
 
-  private handlePresetSelect(e: Event) {
-    this.selectedPresetName = (e.target as HTMLSelectElement).value;
+  private handlePresetSelect(e: CustomEvent<string>) {
+    this.selectedPresetName = e.detail;
   }
 
-  private handlePresetNameInput(e: Event) {
-    this.presetNameInput = (e.target as HTMLInputElement).value;
+  private handlePresetNameInput(e: CustomEvent<string>) {
+    this.presetNameInput = e.detail;
   }
 
   private buildPresetConfig(): LobbyPresetConfig {
@@ -739,8 +700,12 @@ export class HostLobbyModal extends LitElement {
     };
   }
 
-  private savePreset() {
-    const name = (this.presetNameInput || this.selectedPresetName).trim();
+  private savePreset(e: CustomEvent<string>) {
+    const name = (
+      e.detail ??
+      this.presetNameInput ??
+      this.selectedPresetName
+    ).trim();
     if (!name) {
       return;
     }
@@ -781,12 +746,15 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private deletePreset() {
-    if (!this.selectedPresetName) {
+  private deletePreset(e?: CustomEvent<string>) {
+    const presetName = (e?.detail ?? this.selectedPresetName).trim();
+    if (!presetName) {
       return;
     }
-    this.lobbyPresets = this.presetStore.delete(this.selectedPresetName);
-    this.selectedPresetName = "";
+    this.lobbyPresets = this.presetStore.delete(presetName);
+    if (this.selectedPresetName === presetName) {
+      this.selectedPresetName = "";
+    }
   }
 
   private async handleRandomMapToggle() {
