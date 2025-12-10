@@ -17,6 +17,16 @@ This is a tool to generate map files for OpenFront.
 5. Run the generator: `go run .`
 6. Find the output folder at `../resources/maps/<map_name>`
 
+By default, this will process all defined maps.
+
+Use `--maps` to process a single map:
+
+`go run . --maps=fourislands`
+
+To process a subset of maps, pass a comma-separated list:
+
+`go run . --maps=northamerica,world`
+
 ## Create image.png
 
 1. [Download world map (warning very large file)](https://drive.google.com/file/d/1W2oMPj1L5zWRyPhh8LfmnY3_kve-FBR2/view?usp=sharing)

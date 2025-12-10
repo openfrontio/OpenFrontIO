@@ -135,6 +135,9 @@ export class StatsModal extends LitElement {
             <thead>
               <tr class="border-b border-gray-700 text-gray-300">
                 <th class="py-2 pr-3 text-left">
+                  ${translateText("stats_modal.rank")}
+                </th>
+                <th class="py-2 pr-3 text-left">
                   ${translateText("stats_modal.clan")}
                 </th>
                 <th class="py-2 px-2 text-right">
@@ -153,8 +156,11 @@ export class StatsModal extends LitElement {
             </thead>
             <tbody>
               ${clans.map(
-                (clan) => html`
+                (clan, index) => html`
                   <tr class="border-b border-gray-800 last:border-b-0">
+                    <td class="py-2 pr-3 text-center">
+                      ${(index + 1).toLocaleString()}
+                    </td>
                     <td class="py-2 pr-3 font-semibold text-left">
                       ${clan.clanTag}
                     </td>
