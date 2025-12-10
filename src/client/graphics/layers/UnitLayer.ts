@@ -376,7 +376,7 @@ export class UnitLayer implements Layer {
     );
   }
 
-  // interception missle from SAM
+  // interception missile from SAM
   private handleMissileEvent(unit: UnitView) {
     this.drawSprite(unit);
   }

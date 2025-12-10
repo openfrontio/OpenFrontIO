@@ -176,7 +176,7 @@ GET https://openfront.io/public/clan/:clanTag
 **Query Parameters:**
 
 - `start` (optional): ISO 8601 timestamp
-- `end` (optonal): ISO 8601 timestamp
+- `end` (optional): ISO 8601 timestamp
 
 **Example**
 
@@ -198,7 +198,7 @@ GET https://api.openfront.io/public/clan/:clanTag/sessions
 **Query Parameters:**
 
 - `start` (optional): ISO 8601 timestamp
-- `end` (optonal): ISO 8601 timestamp
+- `end` (optional): ISO 8601 timestamp
 
 **Example**
 
