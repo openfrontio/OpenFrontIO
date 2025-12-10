@@ -69,7 +69,6 @@ const TEAM_COUNTS = [
   Duos,
   Trios,
   Quads,
-  HumansVsNations,
 ] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
