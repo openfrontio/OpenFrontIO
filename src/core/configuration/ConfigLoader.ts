@@ -1,6 +1,6 @@
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
-import { Config, GameEnv, ServerConfig } from "./Config";
+import { Config, ServerConfig } from "./Config";
 import { DefaultConfig } from "./DefaultConfig";
 import { DevConfig, DevServerConfig } from "./DevConfig";
 import { preprodConfig } from "./PreprodConfig";
@@ -15,10 +15,10 @@ export async function getConfig(
 ): Promise<Config> {
   const sc = await getServerConfigFromClient();
   switch (sc.env()) {
-    case GameEnv.Dev:
+    case "Dev":
       return new DevConfig(sc, gameConfig, userSettings, isReplay);
-    case GameEnv.Preprod:
-    case GameEnv.Prod:
+    case "Preprod":
+    case "Prod":
       console.log("using prod config");
       return new DefaultConfig(sc, gameConfig, userSettings, isReplay);
     default:

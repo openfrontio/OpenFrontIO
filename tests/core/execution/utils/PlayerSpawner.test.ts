@@ -1,5 +1,5 @@
 import { PlayerSpawner } from "../../../../src/core/execution/utils/PlayerSpawner";
-import { PlayerInfo, PlayerType } from "../../../../src/core/game/Game";
+import { PlayerInfo } from "../../../../src/core/game/Game";
 import { setup } from "../../../util/Setup";
 
 describe("PlayerSpawner", () => {
@@ -19,7 +19,7 @@ describe("PlayerSpawner", () => {
         players.push(
           new PlayerInfo(
             `player${i}`,
-            PlayerType.Human,
+            "HUMAN",
             `client_id${i}`,
             `player_id${i}`,
           ),
@@ -54,12 +54,7 @@ describe("PlayerSpawner", () => {
     // Try to spawn more players than possible on a small map
     for (let i = 0; i < 5; i++) {
       players.push(
-        new PlayerInfo(
-          `player${i}`,
-          PlayerType.Human,
-          `client_id${i}`,
-          `player_id${i}`,
-        ),
+        new PlayerInfo(`player${i}`, "HUMAN", `client_id${i}`, `player_id${i}`),
       );
     }
 

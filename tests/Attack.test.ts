@@ -1,13 +1,7 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
@@ -34,14 +28,14 @@ describe("Attack", () => {
     });
     const attackerInfo = new PlayerInfo(
       "attacker dude",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "attacker_id",
     );
     game.addPlayer(attackerInfo);
     const defenderInfo = new PlayerInfo(
       "defender dude",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "defender_id",
     );
@@ -76,11 +70,11 @@ describe("Attack", () => {
   test("Nuke reduce attacking troop counts", async () => {
     // Not building exactly spawn to it's better protected from attacks (but still
     // on defender territory)
-    constructionExecution(game, defender, 1, 1, UnitType.MissileSilo);
-    expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
+    constructionExecution(game, defender, 1, 1, "Missile Silo");
+    expect(defender.units("Missile Silo")).toHaveLength(1);
     game.addExecution(new AttackExecution(100, attacker, defender.id()));
-    constructionExecution(game, defender, 0, 15, UnitType.AtomBomb, 3);
-    const nuke = defender.units(UnitType.AtomBomb)[0];
+    constructionExecution(game, defender, 0, 15, "Atom Bomb", 3);
+    const nuke = defender.units("Atom Bomb")[0];
     expect(nuke.isActive()).toBe(true);
 
     expect(attacker.outgoingAttacks()).toHaveLength(1);
@@ -94,22 +88,22 @@ describe("Attack", () => {
   });
 
   test("Nuke reduce attacking boat troop count", async () => {
-    constructionExecution(game, defender, 1, 1, UnitType.MissileSilo);
-    expect(defender.units(UnitType.MissileSilo)).toHaveLength(1);
+    constructionExecution(game, defender, 1, 1, "Missile Silo");
+    expect(defender.units("Missile Silo")).toHaveLength(1);
 
     sendBoat(game.ref(15, 8), game.ref(10, 5), 100);
 
-    constructionExecution(game, defender, 0, 15, UnitType.AtomBomb, 3);
-    const nuke = defender.units(UnitType.AtomBomb)[0];
+    constructionExecution(game, defender, 0, 15, "Atom Bomb", 3);
+    const nuke = defender.units("Atom Bomb")[0];
     expect(nuke.isActive()).toBe(true);
 
-    const ship = defender.units(UnitType.TransportShip)[0];
+    const ship = defender.units("Transport Ship")[0];
     expect(ship.troops()).toBe(100);
 
     game.executeNextTick();
 
     expect(nuke.isActive()).toBe(false);
-    expect(defender.units(UnitType.TransportShip)[0].troops()).toBeLessThan(90);
+    expect(defender.units("Transport Ship")[0].troops()).toBeLessThan(90);
   });
 
   test("Boat penalty on retreat Transport Ship arrival", async () => {
@@ -120,7 +114,7 @@ describe("Attack", () => {
 
     game.executeNextTick();
 
-    const ship = defender.units(UnitType.TransportShip)[0];
+    const ship = defender.units("Transport Ship")[0];
     expect(ship.troops()).toBe(boat_troops);
     expect(ship.isActive()).toBe(true);
 
@@ -154,20 +148,10 @@ describe("Attack race condition with alliance requests", () => {
       infiniteTroops: true,
     });
 
-    const playerAInfo = new PlayerInfo(
-      "playerA",
-      PlayerType.Human,
-      null,
-      "playerA_id",
-    );
+    const playerAInfo = new PlayerInfo("playerA", "HUMAN", null, "playerA_id");
     playerA = addPlayerToGame(playerAInfo, game, game.ref(0, 10));
 
-    const playerBInfo = new PlayerInfo(
-      "playerB",
-      PlayerType.Human,
-      null,
-      "playerB_id",
-    );
+    const playerBInfo = new PlayerInfo("playerB", "HUMAN", null, "playerB_id");
     playerB = addPlayerToGame(playerBInfo, game, game.ref(0, 10));
 
     while (game.inSpawnPhase()) {
@@ -277,12 +261,7 @@ describe("Attack race condition with alliance requests", () => {
 
   test("should cancel the proper alliance request among many", async () => {
     // Add a new player to have more alliance requests
-    const playerCInfo = new PlayerInfo(
-      "playerB",
-      PlayerType.Human,
-      null,
-      "playerB_id",
-    );
+    const playerCInfo = new PlayerInfo("playerB", "HUMAN", null, "playerB_id");
     const playerC = addPlayerToGame(playerCInfo, game, game.ref(10, 10));
 
     // Player A sends alliance request to Player B

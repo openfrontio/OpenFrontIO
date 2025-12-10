@@ -1,12 +1,9 @@
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import {
-  Difficulty,
   Duos,
-  GameMapName,
-  GameMapSize,
   GameMapType,
+  GameMapTypeSchema,
   GameMode,
-  GameType,
   HumansVsNations,
   Quads,
   Trios,
@@ -21,23 +18,23 @@ const config = getServerConfigFromServer();
 
 // How many times each map should appear in the playlist.
 // Note: The Partial should eventually be removed for better type safety.
-const frequency: Partial<Record<GameMapName, number>> = {
+const frequency: Partial<Record<GameMapType, number>> = {
   Africa: 7,
   Asia: 6,
   Australia: 4,
   Achiran: 5,
   Baikal: 5,
-  BetweenTwoSeas: 5,
-  BlackSea: 6,
+  "Between Two Seas": 5,
+  "Black Sea": 6,
   Britannia: 5,
-  DeglaciatedAntarctica: 4,
-  EastAsia: 5,
+  "Deglaciated Antarctica": 4,
+  "East Asia": 5,
   Europe: 3,
-  EuropeClassic: 3,
-  FalklandIslands: 4,
-  FaroeIslands: 4,
-  GatewayToTheAtlantic: 5,
-  GulfOfStLawrence: 4,
+  "Europe Classic": 3,
+  "Falkland Islands": 4,
+  "Faroe Islands": 4,
+  "Gateway to the Atlantic": 5,
+  "Gulf of St. Lawrence": 4,
   Halkidiki: 4,
   Iceland: 4,
   Italia: 6,
@@ -46,11 +43,11 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Mars: 3,
   Mena: 6,
   Montreal: 6,
-  NorthAmerica: 5,
+  "North America": 5,
   Pangaea: 5,
   Pluto: 6,
-  SouthAmerica: 5,
-  StraitOfGibraltar: 5,
+  "South America": 5,
+  "Strait of Gibraltar": 5,
   World: 8,
 };
 
@@ -79,24 +76,23 @@ export class MapPlaylist {
   public gameConfig(): GameConfig {
     const { map, mode } = this.getNextMap();
 
-    const playerTeams =
-      mode === GameMode.Team ? this.getTeamCount() : undefined;
+    const playerTeams = mode === "Team" ? this.getTeamCount() : undefined;
 
     // Create the default public game config (from your GameManager)
     return {
-      donateGold: mode === GameMode.Team,
-      donateTroops: mode === GameMode.Team,
+      donateGold: mode === "Team",
+      donateTroops: mode === "Team",
       gameMap: map,
       maxPlayers: config.lobbyMaxPlayers(map, mode, playerTeams),
-      gameType: GameType.Public,
-      gameMapSize: GameMapSize.Normal,
-      difficulty: Difficulty.Medium,
+      gameType: "Public",
+      gameMapSize: "Normal",
+      difficulty: "Medium",
       infiniteGold: false,
       infiniteTroops: false,
       maxTimerValue: undefined,
       instantBuild: false,
       randomSpawn: false,
-      disableNPCs: mode === GameMode.Team && playerTeams !== HumansVsNations,
+      disableNPCs: mode === "Team" && playerTeams !== HumansVsNations,
       gameMode: mode,
       playerTeams,
       bots: 400,
@@ -125,9 +121,9 @@ export class MapPlaylist {
 
   private shuffleMapsPlaylist(): boolean {
     const maps: GameMapType[] = [];
-    (Object.keys(GameMapType) as GameMapName[]).forEach((key) => {
-      for (let i = 0; i < (frequency[key] ?? 0); i++) {
-        maps.push(GameMapType[key]);
+    GameMapTypeSchema.options.forEach((option) => {
+      for (let i = 0; i < (frequency[option] ?? 0); i++) {
+        maps.push(option as GameMapType);
       }
     });
 
@@ -141,23 +137,23 @@ export class MapPlaylist {
 
     this.mapsPlaylist = [];
     for (let i = 0; i < maps.length; i++) {
-      if (!this.addNextMap(this.mapsPlaylist, ffa1, GameMode.FFA)) {
+      if (!this.addNextMap(this.mapsPlaylist, ffa1, "Free For All")) {
         return false;
       }
       if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team1, GameMode.Team)) {
+        if (!this.addNextMap(this.mapsPlaylist, team1, "Team")) {
           return false;
         }
       }
-      if (!this.addNextMap(this.mapsPlaylist, ffa2, GameMode.FFA)) {
+      if (!this.addNextMap(this.mapsPlaylist, ffa2, "Free For All")) {
         return false;
       }
       if (!this.disableTeams) {
-        if (!this.addNextMap(this.mapsPlaylist, team2, GameMode.Team)) {
+        if (!this.addNextMap(this.mapsPlaylist, team2, "Team")) {
           return false;
         }
       }
-      if (!this.addNextMap(this.mapsPlaylist, ffa3, GameMode.FFA)) {
+      if (!this.addNextMap(this.mapsPlaylist, ffa3, "Free For All")) {
         return false;
       }
     }

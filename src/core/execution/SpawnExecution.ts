@@ -1,4 +1,4 @@
-import { Execution, Game, Player, PlayerInfo, PlayerType } from "../game/Game";
+import { Execution, Game, Player, PlayerInfo } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { BotExecution } from "./BotExecution";
 import { PlayerExecution } from "./PlayerExecution";
@@ -44,7 +44,7 @@ export class SpawnExecution implements Execution {
 
     if (!player.hasSpawned()) {
       this.mg.addExecution(new PlayerExecution(player));
-      if (player.type() === PlayerType.Bot) {
+      if (player.type() === "BOT") {
         this.mg.addExecution(new BotExecution(player));
       }
     }

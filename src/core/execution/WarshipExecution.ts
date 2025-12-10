@@ -5,10 +5,8 @@ import {
   OwnerComp,
   Unit,
   UnitParams,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
 import { ShellExecution } from "./ShellExecution";
@@ -21,9 +19,7 @@ export class WarshipExecution implements Execution {
   private lastShellAttack = 0;
   private alreadySentShell = new Set<Unit>();
 
-  constructor(
-    private input: (UnitParams<UnitType.Warship> & OwnerComp) | Unit,
-  ) {}
+  constructor(private input: (UnitParams<"Warship"> & OwnerComp) | Unit) {}
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
@@ -32,21 +28,14 @@ export class WarshipExecution implements Execution {
     if (isUnit(this.input)) {
       this.warship = this.input;
     } else {
-      const spawn = this.input.owner.canBuild(
-        UnitType.Warship,
-        this.input.patrolTile,
-      );
+      const spawn = this.input.owner.canBuild("Warship", this.input.patrolTile);
       if (spawn === false) {
         console.warn(
           `Failed to spawn warship for ${this.input.owner.name()} at ${this.input.patrolTile}`,
         );
         return;
       }
-      this.warship = this.input.owner.buildUnit(
-        UnitType.Warship,
-        spawn,
-        this.input,
-      );
+      this.warship = this.input.owner.buildUnit("Warship", spawn, this.input);
     }
   }
 
@@ -56,13 +45,13 @@ export class WarshipExecution implements Execution {
       return;
     }
 
-    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
+    const hasPort = this.warship.owner().unitCount("Port") > 0;
     if (hasPort) {
       this.warship.modifyHealth(1);
     }
 
     this.warship.setTargetUnit(this.findTargetUnit());
-    if (this.warship.targetUnit()?.type() === UnitType.TradeShip) {
+    if (this.warship.targetUnit()?.type() === "Trade Ship") {
       this.huntDownTradeShip();
       return;
     }
@@ -76,13 +65,13 @@ export class WarshipExecution implements Execution {
   }
 
   private findTargetUnit(): Unit | undefined {
-    const hasPort = this.warship.owner().unitCount(UnitType.Port) > 0;
+    const hasPort = this.warship.owner().unitCount("Port") > 0;
     const patrolRangeSquared = this.mg.config().warshipPatrolRange() ** 2;
 
     const ships = this.mg.nearbyUnits(
       this.warship.tile()!,
       this.mg.config().warshipTargettingRange(),
-      [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+      ["Transport Ship", "Warship", "Trade Ship"],
     );
     const potentialTargets: { unit: Unit; distSquared: number }[] = [];
     for (const { unit, distSquared } of ships) {
@@ -94,7 +83,7 @@ export class WarshipExecution implements Execution {
       ) {
         continue;
       }
-      if (unit.type() === UnitType.TradeShip) {
+      if (unit.type() === "Trade Ship") {
         if (
           !hasPort ||
           unit.isSafeFromPirates() ||
@@ -123,27 +112,19 @@ export class WarshipExecution implements Execution {
 
       // Prioritize Transport Ships above all other units
       if (
-        unitA.type() === UnitType.TransportShip &&
-        unitB.type() !== UnitType.TransportShip
+        unitA.type() === "Transport Ship" &&
+        unitB.type() !== "Transport Ship"
       )
         return -1;
       if (
-        unitA.type() !== UnitType.TransportShip &&
-        unitB.type() === UnitType.TransportShip
+        unitA.type() !== "Transport Ship" &&
+        unitB.type() === "Transport Ship"
       )
         return 1;
 
       // Then prioritize Warships.
-      if (
-        unitA.type() === UnitType.Warship &&
-        unitB.type() !== UnitType.Warship
-      )
-        return -1;
-      if (
-        unitA.type() !== UnitType.Warship &&
-        unitB.type() === UnitType.Warship
-      )
-        return 1;
+      if (unitA.type() === "Warship" && unitB.type() !== "Warship") return -1;
+      if (unitA.type() !== "Warship" && unitB.type() === "Warship") return 1;
 
       // If both are the same type, sort by distance (lower `distSquared` means closer)
       return distA - distB;
@@ -153,7 +134,7 @@ export class WarshipExecution implements Execution {
   private shootTarget() {
     const shellAttackRate = this.mg.config().warshipShellAttackRate();
     if (this.mg.ticks() - this.lastShellAttack > shellAttackRate) {
-      if (this.warship.targetUnit()?.type() !== UnitType.TransportShip) {
+      if (this.warship.targetUnit()?.type() !== "Transport Ship") {
         // Warships don't need to reload when attacking transport ships.
         this.lastShellAttack = this.mg.ticks();
       }
@@ -183,18 +164,18 @@ export class WarshipExecution implements Execution {
         5,
       );
       switch (result.type) {
-        case PathFindResultType.Completed:
+        case "Completed":
           this.warship.owner().captureUnit(this.warship.targetUnit()!);
           this.warship.setTargetUnit(undefined);
           this.warship.move(this.warship.tile());
           return;
-        case PathFindResultType.NextTile:
+        case "NextTile":
           this.warship.move(result.node);
           break;
-        case PathFindResultType.Pending:
+        case "Pending":
           this.warship.touch();
           break;
-        case PathFindResultType.PathNotFound:
+        case "PathNotFound":
           console.log(`path not found to target`);
           break;
       }
@@ -214,17 +195,17 @@ export class WarshipExecution implements Execution {
       this.warship.targetTile()!,
     );
     switch (result.type) {
-      case PathFindResultType.Completed:
+      case "Completed":
         this.warship.setTargetTile(undefined);
         this.warship.move(result.node);
         break;
-      case PathFindResultType.NextTile:
+      case "NextTile":
         this.warship.move(result.node);
         break;
-      case PathFindResultType.Pending:
+      case "Pending":
         this.warship.touch();
         return;
-      case PathFindResultType.PathNotFound:
+      case "PathNotFound":
         console.warn(`path not found to target tile`);
         this.warship.setTargetTile(undefined);
         break;

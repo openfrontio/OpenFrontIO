@@ -1,13 +1,6 @@
 import { FakeHumanExecution } from "../src/core/execution/FakeHumanExecution";
 import { MirvExecution } from "../src/core/execution/MIRVExecution";
-import {
-  Cell,
-  GameMode,
-  Nation,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Cell, Nation, PlayerInfo } from "../src/core/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
@@ -21,13 +14,13 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Create two players
     const attackerInfo = new PlayerInfo(
       "attacker",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "attacker_id",
     );
     const fakehumanInfo = new PlayerInfo(
       "defender_fakehuman",
-      PlayerType.FakeHuman,
+      "FAKEHUMAN",
       null,
       "fakehuman_id",
     );
@@ -52,7 +45,7 @@ describe("FakeHuman MIRV Retaliation", () => {
         }
       }
     }
-    attacker.buildUnit(UnitType.MissileSilo, game.ref(10, 10), {});
+    attacker.buildUnit("Missile Silo", game.ref(10, 10), {});
 
     // Give fakehuman territory and missile silo
     for (let x = 25; x < 75; x++) {
@@ -63,20 +56,20 @@ describe("FakeHuman MIRV Retaliation", () => {
         }
       }
     }
-    fakehuman.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    fakehuman.buildUnit("Missile Silo", game.ref(50, 50), {});
 
     // Give both players enough gold for MIRVs
     attacker.addGold(100_000_000n);
     fakehuman.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(attacker.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
+    expect(attacker.units("Missile Silo")).toHaveLength(1);
+    expect(fakehuman.units("Missile Silo")).toHaveLength(1);
     expect(attacker.gold()).toBeGreaterThan(35_000_000n);
     expect(fakehuman.gold()).toBeGreaterThan(35_000_000n);
 
     // Track MIRVs before fakehuman retaliates
-    const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountBefore = fakehuman.units("MIRV").length;
 
     // Initialize fakehuman with FakeHumanExecution to enable retaliation logic
     const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
@@ -102,7 +95,7 @@ describe("FakeHuman MIRV Retaliation", () => {
         }
 
         // Check if fakehuman attempted retaliation
-        if (fakehuman.units(UnitType.MIRV).length > mirvCountBefore) {
+        if (fakehuman.units("MIRV").length > mirvCountBefore) {
           retaliationAttempted = true;
           break;
         }
@@ -118,11 +111,11 @@ describe("FakeHuman MIRV Retaliation", () => {
     executeTicks(game, 2);
 
     // Assert: Fakehuman launched a retaliatory MIRV
-    const mirvCountAfter = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountAfter = fakehuman.units("MIRV").length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
     // Verify the retaliatory MIRV targets the attacker's territory
-    const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
+    const fakehumanMirvs = fakehuman.units("MIRV");
     expect(fakehumanMirvs.length).toBeGreaterThan(0);
 
     const retaliationMirv = fakehumanMirvs[fakehumanMirvs.length - 1];
@@ -145,13 +138,13 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Create two players
     const dominantPlayerInfo = new PlayerInfo(
       "dominant_player",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "dominant_id",
     );
     const fakehumanInfo = new PlayerInfo(
       "defender_fakehuman",
-      PlayerType.FakeHuman,
+      "FAKEHUMAN",
       null,
       "fakehuman_id",
     );
@@ -197,7 +190,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Build missile silo on one of the fakehuman's tiles
     const fakehumanTile = Array.from(fakehuman.tiles())[0];
     if (fakehumanTile) {
-      fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
+      fakehuman.buildUnit("Missile Silo", fakehumanTile, {});
     }
 
     // Then give dominant player a large amount of territory
@@ -229,10 +222,10 @@ describe("FakeHuman MIRV Retaliation", () => {
     fakehuman.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(dominantPlayer.units(UnitType.MissileSilo)).toHaveLength(0);
-    expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(fakehuman.units(UnitType.MIRV)).toHaveLength(0);
-    expect(dominantPlayer.units(UnitType.MIRV)).toHaveLength(0);
+    expect(dominantPlayer.units("Missile Silo")).toHaveLength(0);
+    expect(fakehuman.units("Missile Silo")).toHaveLength(1);
+    expect(fakehuman.units("MIRV")).toHaveLength(0);
+    expect(dominantPlayer.units("MIRV")).toHaveLength(0);
     expect(dominantPlayer.gold()).toBeGreaterThan(35_000_000n);
     expect(fakehuman.gold()).toBeGreaterThan(35_000_000n);
     expect(fakehuman.isAlive()).toBe(true);
@@ -244,7 +237,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     expect(dominantTerritoryShare).toBeGreaterThan(0.65);
 
     // Track MIRVs before fakehuman considers victory denial
-    const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountBefore = fakehuman.units("MIRV").length;
 
     // Initialize fakehuman with FakeHumanExecution to enable victory denial logic
     const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
@@ -263,7 +256,7 @@ describe("FakeHuman MIRV Retaliation", () => {
         if (tick % 10 === 0) {
           game.executeNextTick();
         }
-        if (fakehuman.units(UnitType.MIRV).length > mirvCountBefore) {
+        if (fakehuman.units("MIRV").length > mirvCountBefore) {
           victoryDenialSuccessful = true;
           break;
         }
@@ -279,11 +272,11 @@ describe("FakeHuman MIRV Retaliation", () => {
     executeTicks(game, 2);
 
     // Assert: Fakehuman launched a victory denial MIRV
-    const mirvCountAfter = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountAfter = fakehuman.units("MIRV").length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
     // Verify the victory denial MIRV targets the dominant player's territory
-    const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
+    const fakehumanMirvs = fakehuman.units("MIRV");
     expect(fakehumanMirvs.length).toBeGreaterThan(0);
 
     const victoryDenialMirv = fakehumanMirvs[fakehumanMirvs.length - 1];
@@ -306,19 +299,19 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Create three players
     const steamrollerInfo = new PlayerInfo(
       "steamroller",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "steamroller_id",
     );
     const secondPlayerInfo = new PlayerInfo(
       "second_player",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "second_id",
     );
     const fakehumanInfo = new PlayerInfo(
       "defender_fakehuman",
-      PlayerType.FakeHuman,
+      "FAKEHUMAN",
       null,
       "fakehuman_id",
     );
@@ -347,7 +340,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     }
     const fakehumanTile = Array.from(fakehuman.tiles())[0];
     if (fakehumanTile) {
-      fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
+      fakehuman.buildUnit("Missile Silo", fakehumanTile, {});
     }
 
     // Give second player some territory and cities
@@ -363,7 +356,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     for (let i = 0; i < 5; i++) {
       const secondPlayerTile = Array.from(secondPlayer.tiles())[0];
       if (secondPlayerTile) {
-        secondPlayer.buildUnit(UnitType.City, secondPlayerTile, {});
+        secondPlayer.buildUnit("City", secondPlayerTile, {});
       }
     }
 
@@ -381,7 +374,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     for (let i = 0; i < minLeaderCities + 2; i++) {
       const steamrollerTile = Array.from(steamroller.tiles())[0];
       if (steamrollerTile) {
-        steamroller.buildUnit(UnitType.City, steamrollerTile, {});
+        steamroller.buildUnit("City", steamrollerTile, {});
       }
     }
 
@@ -391,13 +384,13 @@ describe("FakeHuman MIRV Retaliation", () => {
     fakehuman.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(steamroller.unitCount(UnitType.City)).toBe(minLeaderCities + 2);
-    expect(secondPlayer.unitCount(UnitType.City)).toBe(5);
-    expect(fakehuman.units(UnitType.MIRV)).toHaveLength(0);
+    expect(fakehuman.units("Missile Silo")).toHaveLength(1);
+    expect(steamroller.unitCount("City")).toBe(minLeaderCities + 2);
+    expect(secondPlayer.unitCount("City")).toBe(5);
+    expect(fakehuman.units("MIRV")).toHaveLength(0);
 
     // Track MIRVs before fakehuman considers steamroll stop
-    const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountBefore = fakehuman.units("MIRV").length;
 
     // Initialize fakehuman with FakeHumanExecution to enable steamroll stop logic
     const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
@@ -416,7 +409,7 @@ describe("FakeHuman MIRV Retaliation", () => {
         if (tick % 10 === 0) {
           game.executeNextTick();
         }
-        if (fakehuman.units(UnitType.MIRV).length > mirvCountBefore) {
+        if (fakehuman.units("MIRV").length > mirvCountBefore) {
           steamrollStopSuccessful = true;
           break;
         }
@@ -432,11 +425,11 @@ describe("FakeHuman MIRV Retaliation", () => {
     executeTicks(game, 2);
 
     // Assert: Fakehuman launched a steamroll stop MIRV
-    const mirvCountAfter = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountAfter = fakehuman.units("MIRV").length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
     // Verify the steamroll stop MIRV targets the steamroller's territory
-    const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
+    const fakehumanMirvs = fakehuman.units("MIRV");
     expect(fakehumanMirvs.length).toBeGreaterThan(0);
 
     const steamrollStopMirv = fakehumanMirvs[fakehumanMirvs.length - 1];
@@ -459,19 +452,19 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Create three players
     const steamrollerInfo = new PlayerInfo(
       "steamroller",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "steamroller_id",
     );
     const secondPlayerInfo = new PlayerInfo(
       "second_player",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "second_id",
     );
     const fakehumanInfo = new PlayerInfo(
       "defender_fakehuman",
-      PlayerType.FakeHuman,
+      "FAKEHUMAN",
       null,
       "fakehuman_id",
     );
@@ -500,7 +493,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     }
     const fakehumanTile = Array.from(fakehuman.tiles())[0];
     if (fakehumanTile) {
-      fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
+      fakehuman.buildUnit("Missile Silo", fakehumanTile, {});
     }
 
     // Give second player territory and cities (5 cities)
@@ -515,7 +508,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     for (let i = 0; i < 5; i++) {
       const secondPlayerTile = Array.from(secondPlayer.tiles())[0];
       if (secondPlayerTile) {
-        secondPlayer.buildUnit(UnitType.City, secondPlayerTile, {});
+        secondPlayer.buildUnit("City", secondPlayerTile, {});
       }
     }
 
@@ -532,7 +525,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     for (let i = 0; i < minLeaderCities; i++) {
       const steamrollerTile = Array.from(steamroller.tiles())[0];
       if (steamrollerTile) {
-        steamroller.buildUnit(UnitType.City, steamrollerTile, {});
+        steamroller.buildUnit("City", steamrollerTile, {});
       }
     }
 
@@ -542,13 +535,13 @@ describe("FakeHuman MIRV Retaliation", () => {
     fakehuman.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(steamroller.unitCount(UnitType.City)).toBe(minLeaderCities);
-    expect(secondPlayer.unitCount(UnitType.City)).toBe(5);
-    expect(fakehuman.units(UnitType.MIRV)).toHaveLength(0);
+    expect(fakehuman.units("Missile Silo")).toHaveLength(1);
+    expect(steamroller.unitCount("City")).toBe(minLeaderCities);
+    expect(secondPlayer.unitCount("City")).toBe(5);
+    expect(fakehuman.units("MIRV")).toHaveLength(0);
 
     // Track MIRVs before fakehuman considers steamroll stop
-    const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountBefore = fakehuman.units("MIRV").length;
 
     // Initialize fakehuman with FakeHumanExecution to enable steamroll stop logic
     const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
@@ -567,7 +560,7 @@ describe("FakeHuman MIRV Retaliation", () => {
       }
 
       // Check if any MIRVs were launched for steamroll stop
-      const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
+      const fakehumanMirvs = fakehuman.units("MIRV");
       if (fakehumanMirvs.length > mirvCountBefore) {
         steamrollStopAttempted = true;
         break;
@@ -582,19 +575,19 @@ describe("FakeHuman MIRV Retaliation", () => {
     // Setup game
     const teamPlayer1Info = new PlayerInfo(
       "[ALPHA]team_player_1",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "team1_id",
     );
     const teamPlayer2Info = new PlayerInfo(
       "[ALPHA]team_player_2",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "team2_id",
     );
     const fakehumanInfo = new PlayerInfo(
       "defender_fakehuman",
-      PlayerType.FakeHuman,
+      "FAKEHUMAN",
       null,
       "fakehuman_id",
     );
@@ -603,7 +596,7 @@ describe("FakeHuman MIRV Retaliation", () => {
       {
         infiniteGold: true,
         instantBuild: true,
-        gameMode: GameMode.Team,
+        gameMode: "Team",
         playerTeams: 2,
       },
       [teamPlayer1Info, teamPlayer2Info, fakehumanInfo],
@@ -631,7 +624,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     }
     const fakehumanTile = Array.from(fakehuman.tiles())[0];
     if (fakehumanTile) {
-      fakehuman.buildUnit(UnitType.MissileSilo, fakehumanTile, {});
+      fakehuman.buildUnit("Missile Silo", fakehumanTile, {});
     }
 
     // Give team players a large amount of territory to exceed team threshold,
@@ -667,8 +660,8 @@ describe("FakeHuman MIRV Retaliation", () => {
     fakehuman.addGold(100_000_000n);
 
     // Verify preconditions
-    expect(fakehuman.units(UnitType.MissileSilo)).toHaveLength(1);
-    expect(fakehuman.units(UnitType.MIRV)).toHaveLength(0);
+    expect(fakehuman.units("Missile Silo")).toHaveLength(1);
+    expect(fakehuman.units("MIRV")).toHaveLength(0);
     expect(teamPlayer1.gold()).toBeGreaterThan(35_000_000n);
     expect(teamPlayer2.gold()).toBeGreaterThan(35_000_000n);
     expect(fakehuman.gold()).toBeGreaterThan(35_000_000n);
@@ -682,7 +675,7 @@ describe("FakeHuman MIRV Retaliation", () => {
     expect(teamShare).toBeGreaterThan(0.8); //
 
     // Track MIRVs before fakehuman considers team victory denial
-    const mirvCountBefore = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountBefore = fakehuman.units("MIRV").length;
 
     // Initialize fakehuman with FakeHumanExecution to enable team victory denial logic
     const fakehumanNation = new Nation(new Cell(50, 50), fakehuman.info());
@@ -701,7 +694,7 @@ describe("FakeHuman MIRV Retaliation", () => {
         if (tick % 10 === 0) {
           game.executeNextTick();
         }
-        if (fakehuman.units(UnitType.MIRV).length > mirvCountBefore) {
+        if (fakehuman.units("MIRV").length > mirvCountBefore) {
           teamVictoryDenialSuccessful = true;
           break;
         }
@@ -717,11 +710,11 @@ describe("FakeHuman MIRV Retaliation", () => {
     executeTicks(game, 2);
 
     // Assert: Fakehuman launched a team victory denial MIRV
-    const mirvCountAfter = fakehuman.units(UnitType.MIRV).length;
+    const mirvCountAfter = fakehuman.units("MIRV").length;
     expect(mirvCountAfter).toBeGreaterThan(mirvCountBefore);
 
     // Verify the team victory denial MIRV targets the largest member of the team
-    const fakehumanMirvs = fakehuman.units(UnitType.MIRV);
+    const fakehumanMirvs = fakehuman.units("MIRV");
     expect(fakehumanMirvs.length).toBeGreaterThan(0);
 
     const teamVictoryDenialMirv = fakehumanMirvs[fakehumanMirvs.length - 1];

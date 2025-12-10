@@ -252,11 +252,11 @@ export class GameMapImpl implements GameMap {
   terrainType(ref: TileRef): TerrainType {
     if (this.isLand(ref)) {
       const magnitude = this.magnitude(ref);
-      if (magnitude < 10) return TerrainType.Plains;
-      if (magnitude < 20) return TerrainType.Highland;
-      return TerrainType.Mountain;
+      if (magnitude < 10) return "Plains";
+      if (magnitude < 20) return "Highland";
+      return "Mountain";
     }
-    return this.isOcean(ref) ? TerrainType.Ocean : TerrainType.Lake;
+    return this.isOcean(ref) ? "Ocean" : "Lake";
   }
 
   neighbors(ref: TileRef): TileRef[] {

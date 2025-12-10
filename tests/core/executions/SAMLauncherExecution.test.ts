@@ -2,13 +2,7 @@ import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../../src/core/game/Game";
 import { setup } from "../../util/Setup";
 import { constructionExecution, executeTicks } from "../../util/utils";
 
@@ -26,25 +20,25 @@ describe("SAM", () => {
     });
     const defender_info = new PlayerInfo(
       "defender_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "defender_id",
     );
     const middle_defender_info = new PlayerInfo(
       "middle_defender_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "middle_defender_id",
     );
     const far_defender_info = new PlayerInfo(
       "far_defender_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "far_defender_id",
     );
     const attacker_info = new PlayerInfo(
       "attacker_id",
-      PlayerType.Human,
+      "HUMAN",
       null,
       "attacker_id",
     );
@@ -75,16 +69,16 @@ describe("SAM", () => {
     middle_defender = game.player("middle_defender_id");
     far_defender = game.player("far_defender_id");
 
-    constructionExecution(game, attacker, 7, 7, UnitType.MissileSilo);
+    constructionExecution(game, attacker, 7, 7, "Missile Silo");
   });
 
   test("one sam should take down one nuke", async () => {
-    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    const sam = defender.buildUnit("SAM Launcher", game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
 
     // Sam will only target nukes it can destroy before it reaches its target
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
+    const nuke = attacker.buildUnit("Atom Bomb", game.ref(1, 1), {
       targetTile: game.ref(3, 1),
       trajectory: [
         { tile: game.ref(1, 1), targetable: true },
@@ -94,13 +88,13 @@ describe("SAM", () => {
     });
     executeTicks(game, 3);
 
-    expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
+    expect(attacker.units("Atom Bomb")).toHaveLength(0);
   });
 
   test("sam should only get one nuke at a time", async () => {
-    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    const sam = defender.buildUnit("SAM Launcher", game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
-    attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
+    attacker.buildUnit("Atom Bomb", game.ref(2, 1), {
       targetTile: game.ref(3, 1),
       trajectory: [
         { tile: game.ref(1, 1), targetable: true },
@@ -108,7 +102,7 @@ describe("SAM", () => {
         { tile: game.ref(3, 1), targetable: true },
       ],
     });
-    attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
+    attacker.buildUnit("Atom Bomb", game.ref(1, 2), {
       targetTile: game.ref(1, 3),
       trajectory: [
         { tile: game.ref(1, 1), targetable: true },
@@ -116,19 +110,19 @@ describe("SAM", () => {
         { tile: game.ref(1, 3), targetable: true },
       ],
     });
-    expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
+    expect(attacker.units("Atom Bomb")).toHaveLength(2);
 
     executeTicks(game, 3);
 
-    expect(attacker.units(UnitType.AtomBomb)).toHaveLength(1);
+    expect(attacker.units("Atom Bomb")).toHaveLength(1);
   });
 
   test("sam should cooldown as long as configured", async () => {
-    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    const sam = defender.buildUnit("SAM Launcher", game.ref(1, 1), {});
 
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
     expect(sam.isInCooldown()).toBeFalsy();
-    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
+    const nuke = attacker.buildUnit("Atom Bomb", game.ref(1, 1), {
       targetTile: game.ref(1, 3),
       trajectory: [
         { tile: game.ref(1, 1), targetable: true },
@@ -152,11 +146,11 @@ describe("SAM", () => {
   });
 
   test("two sams should not target twice same nuke", async () => {
-    const sam1 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    const sam1 = defender.buildUnit("SAM Launcher", game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam1));
-    const sam2 = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 2), {});
+    const sam2 = defender.buildUnit("SAM Launcher", game.ref(1, 2), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam2));
-    const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
+    const nuke = attacker.buildUnit("Atom Bomb", game.ref(1, 1), {
       targetTile: game.ref(1, 3),
       trajectory: [
         { tile: game.ref(1, 1), targetable: true },
@@ -174,11 +168,11 @@ describe("SAM", () => {
   test("SAMs should target close to launch site", async () => {
     const targetDistance = 199;
     // Close SAM: should intercept the nuke
-    const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+    const sam = defender.buildUnit("SAM Launcher", game.ref(1, 1), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
 
     const nukeExecution = new NukeExecution(
-      UnitType.AtomBomb,
+      "Atom Bomb",
       attacker,
       game.ref(targetDistance, 1),
       null,
@@ -197,23 +191,19 @@ describe("SAM", () => {
   test("SAMs should target only nukes aimed at nearby targets if not close to launch site", async () => {
     const targetDistance = 199;
     // Middle SAM: should not intercept the nuke
-    const sam1 = middle_defender.buildUnit(
-      UnitType.SAMLauncher,
-      game.ref(50, 1),
-      {},
-    );
+    const sam1 = middle_defender.buildUnit("SAM Launcher", game.ref(50, 1), {});
     game.addExecution(new SAMLauncherExecution(defender, null, sam1));
 
     // Far SAM: Should intercept the nuke. Use the far_defender so the SAM can be built
     const sam2 = far_defender.buildUnit(
-      UnitType.SAMLauncher,
+      "SAM Launcher",
       game.ref(targetDistance, 1),
       {},
     );
     game.addExecution(new SAMLauncherExecution(far_defender, null, sam2));
 
     const nukeExecution = new NukeExecution(
-      UnitType.AtomBomb,
+      "Atom Bomb",
       attacker,
       game.ref(targetDistance, 1),
       null,
@@ -230,16 +220,16 @@ describe("SAM", () => {
   });
 
   test("SAM should have increased level after upgrade", async () => {
-    defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
-    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(1);
+    defender.buildUnit("SAM Launcher", game.ref(1, 1), {});
+    expect(defender.units("SAM Launcher")[0].level()).toEqual(1);
 
     const upgradeStructureExecution = new UpgradeStructureExecution(
       defender,
-      defender.units(UnitType.SAMLauncher)[0].id(),
+      defender.units("SAM Launcher")[0].id(),
     );
     game.addExecution(upgradeStructureExecution);
     executeTicks(game, 2);
 
-    expect(defender.units(UnitType.SAMLauncher)[0].level()).toEqual(2);
+    expect(defender.units("SAM Launcher")[0].level()).toEqual(2);
   });
 });

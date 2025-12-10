@@ -29,7 +29,6 @@ import { GameMap, TileRef, TileUpdate } from "./GameMap";
 import {
   AllianceView,
   AttackUpdate,
-  GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
   UnitUpdate,
@@ -98,7 +97,7 @@ export class UnitView {
     return this.data.troops;
   }
   retreating(): boolean {
-    if (this.type() !== UnitType.TransportShip) {
+    if (this.type() !== "Transport Ship") {
       throw Error("Must be a transport ship");
     }
     return this.data.retreating;
@@ -151,7 +150,7 @@ export class UnitView {
     let readiness = missilesReady / maxMissiles;
 
     const cooldownDuration =
-      this.data.unitType === UnitType.SAMLauncher
+      this.data.unitType === "SAM Launcher"
         ? this.gameView.config().SAMCooldown()
         : this.gameView.config().SiloCooldown();
 
@@ -524,7 +523,7 @@ export class GameView implements GameMap {
     if (gu.updates === null) {
       throw new Error("lastUpdate.updates not initialized");
     }
-    gu.updates[GameUpdateType.Player].forEach((pu) => {
+    gu.updates["Player"].forEach((pu) => {
       this.smallIDToID.set(pu.smallID, pu.id);
       const player = this._players.get(pu.id);
       if (player !== undefined) {
@@ -552,7 +551,7 @@ export class GameView implements GameMap {
       unit._wasUpdated = false;
       unit.lastPos = unit.lastPos.slice(-1);
     }
-    gu.updates[GameUpdateType.Unit].forEach((update) => {
+    gu.updates["Unit"].forEach((update) => {
       let unit = this._units.get(update.id);
       if (unit !== undefined) {
         unit.update(update);

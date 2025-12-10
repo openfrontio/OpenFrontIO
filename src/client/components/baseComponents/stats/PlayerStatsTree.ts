@@ -17,9 +17,9 @@ import "./PlayerStatsTable";
 @customElement("player-stats-tree-view")
 export class PlayerStatsTreeView extends LitElement {
   @property({ type: Object }) statsTree?: PlayerStatsTree;
-  @state() selectedType: GameType = GameType.Public;
-  @state() selectedMode: GameMode = GameMode.FFA;
-  @state() selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() selectedType: GameType = "Public";
+  @state() selectedMode: GameMode = "Free For All";
+  @state() selectedDifficulty: Difficulty = "Medium";
 
   private get availableTypes(): GameType[] {
     if (!this.statsTree) return [];
@@ -40,7 +40,7 @@ export class PlayerStatsTreeView extends LitElement {
   }
 
   private labelForMode(m: GameMode) {
-    return m === GameMode.FFA
+    return m === "Free For All"
       ? translateText("player_stats_tree.mode_ffa")
       : translateText("player_stats_tree.mode_team");
   }
@@ -128,9 +128,9 @@ export class PlayerStatsTreeView extends LitElement {
                 : "border-white/20 text-gray-300"}"
               @click=${() => this.setGameType(t)}
             >
-              ${t === GameType.Public
+              ${t === "Public"
                 ? translateText("player_stats_tree.public")
-                : t === GameType.Private
+                : t === "Private"
                   ? translateText("player_stats_tree.private")
                   : translateText("player_stats_tree.singleplayer")}
             </button>

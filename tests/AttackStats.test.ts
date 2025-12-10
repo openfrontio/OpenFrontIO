@@ -1,6 +1,6 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../src/core/game/Game";
 import { GOLD_INDEX_WAR, GOLD_INDEX_WORK } from "../src/core/StatsSchemas";
 import { setup } from "./util/Setup";
 
@@ -11,8 +11,8 @@ let player2: Player;
 describe("AttackStats", () => {
   beforeEach(async () => {
     game = await setup("plains", { infiniteTroops: true }, [
-      new PlayerInfo("player1", PlayerType.Human, "player1", "player1"),
-      new PlayerInfo("player2", PlayerType.Human, "player2", "player2"),
+      new PlayerInfo("player1", "HUMAN", "player1", "player1"),
+      new PlayerInfo("player2", "HUMAN", "player2", "player2"),
     ]);
 
     player1 = game.player("player1");

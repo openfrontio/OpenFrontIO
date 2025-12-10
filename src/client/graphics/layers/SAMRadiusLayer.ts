@@ -1,6 +1,4 @@
 import type { EventBus } from "../../../core/EventBus";
-import { UnitType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import type { GameView, PlayerView } from "../../../core/game/GameView";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
@@ -25,7 +23,7 @@ export class SAMRadiusLayer implements Layer {
 
   private handleToggleStructure(e: ToggleStructureEvent) {
     const types = e.structureTypes;
-    this.hoveredShow = !!types && types.indexOf(UnitType.SAMLauncher) !== -1;
+    this.hoveredShow = !!types && types.indexOf("SAM Launcher") !== -1;
     this.updateStrokeVisibility();
   }
 
@@ -71,14 +69,14 @@ export class SAMRadiusLayer implements Layer {
   tick() {
     // Check for updates to SAM launchers
     const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates?.[GameUpdateType.Unit];
+    const unitUpdates = updates?.["Unit"];
 
     if (unitUpdates) {
       let hasChanges = false;
 
       for (const update of unitUpdates) {
         const unit = this.game.unit(update.id);
-        if (unit && unit.type() === UnitType.SAMLauncher) {
+        if (unit && unit.type() === "SAM Launcher") {
           const wasTracked = this.samLaunchers.has(update.id);
           const shouldTrack = unit.isActive();
           const owner = unit.owner().smallID();
@@ -109,10 +107,10 @@ export class SAMRadiusLayer implements Layer {
 
     // show when in ghost mode for silo/sam/atom/hydrogen
     this.ghostShow =
-      this.uiState.ghostStructure === UnitType.MissileSilo ||
-      this.uiState.ghostStructure === UnitType.SAMLauncher ||
-      this.uiState.ghostStructure === UnitType.AtomBomb ||
-      this.uiState.ghostStructure === UnitType.HydrogenBomb;
+      this.uiState.ghostStructure === "Missile Silo" ||
+      this.uiState.ghostStructure === "SAM Launcher" ||
+      this.uiState.ghostStructure === "Atom Bomb" ||
+      this.uiState.ghostStructure === "Hydrogen Bomb";
     this.updateStrokeVisibility();
 
     // Redraw if transform changed or if we need to redraw
@@ -149,7 +147,7 @@ export class SAMRadiusLayer implements Layer {
 
     // Get all active SAM launchers
     const samLaunchers = this.game
-      .units(UnitType.SAMLauncher)
+      .units("SAM Launcher")
       .filter((unit) => unit.isActive());
 
     // Update our tracking set

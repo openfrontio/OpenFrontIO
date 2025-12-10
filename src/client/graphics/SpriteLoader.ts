@@ -10,7 +10,7 @@ import trainEngineSprite from "../../../resources/sprites/trainEngine.png";
 import transportShipSprite from "../../../resources/sprites/transportship.png";
 import warshipSprite from "../../../resources/sprites/warship.png";
 import { Theme } from "../../core/configuration/Config";
-import { TrainType, UnitType } from "../../core/game/Game";
+import { UnitType } from "../../core/game/Game";
 import { UnitView } from "../../core/game/GameView";
 
 // Can't reuse TrainType because "loaded" is not a type, just an attribute
@@ -23,13 +23,13 @@ const TrainTypeSprite = {
 type TrainTypeSprite = (typeof TrainTypeSprite)[keyof typeof TrainTypeSprite];
 
 const SPRITE_CONFIG: Partial<Record<UnitType | TrainTypeSprite, string>> = {
-  [UnitType.TransportShip]: transportShipSprite,
-  [UnitType.Warship]: warshipSprite,
-  [UnitType.SAMMissile]: samMissileSprite,
-  [UnitType.AtomBomb]: atomBombSprite,
-  [UnitType.HydrogenBomb]: hydrogenBombSprite,
-  [UnitType.TradeShip]: tradeShipSprite,
-  [UnitType.MIRV]: mirvSprite,
+  ["Transport Ship"]: transportShipSprite,
+  ["Warship"]: warshipSprite,
+  ["SAM Missile"]: samMissileSprite,
+  ["Atom Bomb"]: atomBombSprite,
+  ["Hydrogen Bomb"]: hydrogenBombSprite,
+  ["Trade Ship"]: tradeShipSprite,
+  ["MIRV"]: mirvSprite,
   [TrainTypeSprite.Engine]: trainEngineSprite,
   [TrainTypeSprite.Carriage]: trainCarriageSprite,
   [TrainTypeSprite.LoadedCarriage]: trainLoadedCarriageSprite,
@@ -80,7 +80,7 @@ export const loadAllSprites = async (): Promise<void> => {
  * The train sprites rely on the train attributes and not only on its type
  */
 function trainTypeToSpriteType(unit: UnitView): TrainTypeSprite {
-  return unit.trainType() === TrainType.Engine
+  return unit.trainType() === "Engine"
     ? TrainTypeSprite.Engine
     : unit.isLoaded()
       ? TrainTypeSprite.LoadedCarriage
@@ -89,7 +89,7 @@ function trainTypeToSpriteType(unit: UnitView): TrainTypeSprite {
 
 const getSpriteForUnit = (unit: UnitView): ImageBitmap | null => {
   const unitType = unit.type();
-  if (unitType === UnitType.Train) {
+  if (unitType === "Train") {
     const trainType = trainTypeToSpriteType(unit);
     return spriteMap.get(trainType) ?? null;
   }
@@ -98,7 +98,7 @@ const getSpriteForUnit = (unit: UnitView): ImageBitmap | null => {
 
 export const isSpriteReady = (unit: UnitView): boolean => {
   const unitType = unit.type();
-  if (unitType === UnitType.Train) {
+  if (unitType === "Train") {
     const trainType = trainTypeToSpriteType(unit);
     return spriteMap.has(trainType);
   }

@@ -1,16 +1,9 @@
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { ServerConfig } from "../core/configuration/Config";
-import {
-  Difficulty,
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  GameType,
-} from "../core/game/Game";
 import { ClientRejoinMessage, GameConfig, GameID } from "../core/Schemas";
 import { Client } from "./Client";
-import { GamePhase, GameServer } from "./GameServer";
+import { GameServer } from "./GameServer";
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
@@ -61,17 +54,17 @@ export class GameManager {
       {
         donateGold: false,
         donateTroops: false,
-        gameMap: GameMapType.World,
-        gameType: GameType.Private,
-        gameMapSize: GameMapSize.Normal,
-        difficulty: Difficulty.Medium,
+        gameMap: "World",
+        gameType: "Private",
+        gameMapSize: "Normal",
+        difficulty: "Medium",
         disableNPCs: false,
         infiniteGold: false,
         infiniteTroops: false,
         maxTimerValue: undefined,
         instantBuild: false,
         randomSpawn: false,
-        gameMode: GameMode.FFA,
+        gameMode: "Free For All",
         bots: 400,
         disabledUnits: [],
         ...gameConfig,
@@ -98,7 +91,7 @@ export class GameManager {
     const active = new Map<GameID, GameServer>();
     for (const [id, game] of this.games) {
       const phase = game.phase();
-      if (phase === GamePhase.Active) {
+      if (phase === "ACTIVE") {
         if (!game.hasStarted()) {
           // Prestart tells clients to start loading the game.
           game.prestart();
@@ -113,7 +106,7 @@ export class GameManager {
         }
       }
 
-      if (phase === GamePhase.Finished) {
+      if (phase === "FINISHED") {
         try {
           game.end();
         } catch (error) {

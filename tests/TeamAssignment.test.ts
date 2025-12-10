@@ -1,4 +1,4 @@
-import { ColoredTeams, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { ColoredTeams, PlayerInfo } from "../src/core/game/Game";
 import { assignTeams } from "../src/core/game/TeamAssignment";
 
 const teams = [ColoredTeams.Red, ColoredTeams.Blue];
@@ -8,7 +8,7 @@ describe("assignTeams", () => {
     const name = clan ? `[${clan}]Player ${id}` : `Player ${id}`;
     return new PlayerInfo(
       name,
-      PlayerType.Human,
+      "HUMAN",
       null, // clientID (null for testing)
       id,
     );

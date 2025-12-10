@@ -5,7 +5,6 @@ import leaderboardRegularIcon from "../../../../resources/images/LeaderboardIcon
 import leaderboardSolidIcon from "../../../../resources/images/LeaderboardIconSolidWhite.svg";
 import teamRegularIcon from "../../../../resources/images/TeamIconRegularWhite.svg";
 import teamSolidIcon from "../../../../resources/images/TeamIconSolidWhite.svg";
-import { GameMode } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -74,7 +73,7 @@ export class GameLeftSidebar extends LitElement implements Layer {
   }
 
   private get isTeamGame(): boolean {
-    return this.game?.config().gameConfig().gameMode === GameMode.Team;
+    return this.game?.config().gameConfig().gameMode === "Team";
   }
 
   private getTranslatedPlayerTeamLabel(): string {

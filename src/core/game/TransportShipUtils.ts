@@ -1,6 +1,5 @@
-import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
-import { Game, Player, UnitType } from "./Game";
+import { Game, Player } from "./Game";
 import { andFN, GameMap, manhattanDistFN, TileRef } from "./GameMap";
 
 export function canBuildTransportShip(
@@ -8,9 +7,7 @@ export function canBuildTransportShip(
   player: Player,
   tile: TileRef,
 ): TileRef | false {
-  if (
-    player.unitCount(UnitType.TransportShip) >= game.config().boatMaxNumber()
-  ) {
+  if (player.unitCount("Transport Ship") >= game.config().boatMaxNumber()) {
     return false;
   }
 
@@ -152,7 +149,7 @@ export function bestShoreDeploymentSource(
 
   const aStar = new MiniAStar(gm, gm.miniMap(), candidates, t, 1_000_000, 1);
   const result = aStar.compute();
-  if (result !== PathFindResultType.Completed) {
+  if (result !== "Completed") {
     console.warn(`bestShoreDeploymentSource: path not found: ${result}`);
     return false;
   }

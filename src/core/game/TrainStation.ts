@@ -3,7 +3,7 @@ import { GraphAdapter } from "../pathfinding/SerialAStar";
 import { PseudoRandom } from "../PseudoRandom";
 import { Game, Player, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
-import { GameUpdateType, RailTile, RailType } from "./GameUpdates";
+import { RailTile } from "./GameUpdates";
 import { Railroad } from "./Railroad";
 
 /**
@@ -65,9 +65,9 @@ export function createTrainStopHandlers(
   random: PseudoRandom,
 ): Partial<Record<UnitType, TrainStopHandler>> {
   return {
-    [UnitType.City]: new CityStopHandler(),
-    [UnitType.Port]: new PortStopHandler(random),
-    [UnitType.Factory]: new FactoryStopHandler(),
+    ["City"]: new CityStopHandler(),
+    ["Port"]: new PortStopHandler(random),
+    ["Factory"]: new FactoryStopHandler(),
   };
 }
 
@@ -115,10 +115,10 @@ export class TrainStation {
     if (toRemove) {
       const railTiles: RailTile[] = toRemove.tiles.map((tile) => ({
         tile,
-        railType: RailType.VERTICAL,
+        railType: "VERTICAL",
       }));
       this.mg.addUpdate({
-        type: GameUpdateType.RailroadEvent,
+        type: "RailroadEvent",
         isActive: false,
         railTiles,
       });
@@ -229,8 +229,7 @@ export class Cluster {
     const tradingStations = new Set<TrainStation>();
     for (const station of this.stations) {
       if (
-        (station.unit.type() === UnitType.City ||
-          station.unit.type() === UnitType.Port) &&
+        (station.unit.type() === "City" || station.unit.type() === "Port") &&
         station.tradeAvailable(player)
       ) {
         tradingStations.add(station);

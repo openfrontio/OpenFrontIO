@@ -1,4 +1,4 @@
-import { Execution, Game, Player, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { AirPathFinder } from "../pathfinding/PathFinding";
 import { PseudoRandom } from "../PseudoRandom";
@@ -25,7 +25,7 @@ export class ShellExecution implements Execution {
   }
 
   tick(ticks: number): void {
-    this.shell ??= this._owner.buildUnit(UnitType.Shell, this.spawn, {});
+    this.shell ??= this._owner.buildUnit("Shell", this.spawn, {});
     if (!this.shell.isActive()) {
       this.active = false;
       return;
@@ -62,7 +62,7 @@ export class ShellExecution implements Execution {
   }
 
   private effectOnTarget(): number {
-    const { damage } = this.mg.config().unitInfo(UnitType.Shell);
+    const { damage } = this.mg.config().unitInfo("Shell");
     const baseDamage = damage ?? 250;
 
     const roll = this.random.nextInt(1, 6);

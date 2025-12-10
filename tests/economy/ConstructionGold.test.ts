@@ -1,12 +1,6 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../../src/core/game/Game";
+import { Game, Player, PlayerInfo } from "../../src/core/game/Game";
 import { setup } from "../util/Setup";
 
 describe("Construction economy", () => {
@@ -19,12 +13,7 @@ describe("Construction economy", () => {
       instantBuild: false,
       infiniteTroops: true,
     });
-    const info = new PlayerInfo(
-      "builder",
-      PlayerType.Human,
-      null,
-      "builder_id",
-    );
+    const info = new PlayerInfo("builder", "HUMAN", null, "builder_id");
     game.addPlayer(info);
     const spawn = game.ref(0, 10);
     game.addExecution(new SpawnExecution(info, spawn));
@@ -36,12 +25,12 @@ describe("Construction economy", () => {
 
   test("City charges gold once and no refund thereafter (allow passive income)", () => {
     const target = game.ref(0, 10);
-    const cost = game.unitInfo(UnitType.City).cost(player);
+    const cost = game.unitInfo("City").cost(player);
     player.addGold(cost);
     expect(player.gold()).toBe(cost);
 
     const startTick = game.ticks();
-    game.addExecution(new ConstructionExecution(player, UnitType.City, target));
+    game.addExecution(new ConstructionExecution(player, "City", target));
 
     // First tick usually initializes the execution, second tick performs build and deduction
     game.executeNextTick();
@@ -53,7 +42,7 @@ describe("Construction economy", () => {
     expect(afterBuild <= ticksAfterBuild * passivePerTick).toBe(true); // only passive income allowed
 
     // Advance through construction duration
-    const duration = game.unitInfo(UnitType.City).constructionDuration ?? 0;
+    const duration = game.unitInfo("City").constructionDuration ?? 0;
     for (let i = 0; i <= duration + 2; i++) game.executeNextTick();
 
     const finalGold = player.gold();
@@ -63,9 +52,9 @@ describe("Construction economy", () => {
     expect(finalGold <= ticksElapsed * passivePerTick).toBe(true);
 
     // Structure exists and is active
-    expect(player.units(UnitType.City)).toHaveLength(1);
+    expect(player.units("City")).toHaveLength(1);
     expect(
-      (player.units(UnitType.City)[0] as any).isUnderConstruction?.() ?? false,
+      (player.units("City")[0] as any).isUnderConstruction?.() ?? false,
     ).toBe(false);
   });
 });

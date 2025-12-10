@@ -1,46 +1,8 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType } from "../../core/game/Game";
+import { GameMapType, GameMapTypeSchema } from "../../core/game/Game";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { translateText } from "../Utils";
-
-// Add map descriptions
-export const MapDescription: Record<keyof typeof GameMapType, string> = {
-  World: "World",
-  GiantWorldMap: "Giant World Map",
-  Europe: "Europe",
-  EuropeClassic: "Europe Classic",
-  Mena: "MENA",
-  NorthAmerica: "North America",
-  Oceania: "Oceania",
-  BlackSea: "Black Sea",
-  Africa: "Africa",
-  Pangaea: "Pangaea",
-  Asia: "Asia",
-  Mars: "Mars",
-  SouthAmerica: "South America",
-  Britannia: "Britannia",
-  GatewayToTheAtlantic: "Gateway to the Atlantic",
-  Australia: "Australia",
-  Iceland: "Iceland",
-  EastAsia: "East Asia",
-  BetweenTwoSeas: "Between Two Seas",
-  FaroeIslands: "Faroe Islands",
-  DeglaciatedAntarctica: "Deglaciated Antarctica",
-  FalklandIslands: "Falkland Islands",
-  Baikal: "Baikal",
-  Halkidiki: "Halkidiki",
-  StraitOfGibraltar: "Strait of Gibraltar",
-  Italia: "Italia",
-  Japan: "Japan",
-  Pluto: "Pluto",
-  Montreal: "Montreal",
-  Achiran: "Achiran",
-  BaikalNukeWars: "Baikal (Nuke Wars)",
-  FourIslands: "Four Islands",
-  GulfOfStLawrence: "Gulf of St. Lawrence",
-  Lisbon: "Lisbon",
-};
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
@@ -110,7 +72,13 @@ export class MapDisplay extends LitElement {
 
     try {
       this.isLoading = true;
-      const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
+      const mapValue = this.mapKey as GameMapType;
+
+      // Ensure the map exists in the GameMapTypeSchema
+      if (!GameMapTypeSchema.options.includes(mapValue)) {
+        throw new Error(`Unknown map: ${mapValue}`);
+      }
+
       const data = terrainMapFileLoader.getMapData(mapValue);
       this.mapWebpPath = await data.webpPath();
       this.mapName = (await data.manifest()).name;

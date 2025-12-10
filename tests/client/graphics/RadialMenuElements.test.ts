@@ -7,9 +7,8 @@ import {
   COLORS,
   MenuElementParams,
   rootMenuElement,
-  Slot,
 } from "../../../src/client/graphics/layers/RadialMenuElements";
-import { UnitType } from "../../../src/core/game/Game";
+import { UnitTypeSchema } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
 import { GameView, PlayerView } from "../../../src/core/game/GameView";
 
@@ -19,46 +18,45 @@ jest.mock("../../../src/client/Utils", () => ({
 }));
 
 jest.mock("../../../src/client/graphics/layers/BuildMenu", () => {
-  const { UnitType } = jest.requireActual("../../../src/core/game/Game");
   return {
     flattenedBuildTable: [
       {
-        unitType: UnitType.City,
+        unitType: "City",
         key: "unit_type.city",
         description: "unit_type.city_desc",
         icon: "city-icon",
         countable: true,
       },
       {
-        unitType: UnitType.Factory,
+        unitType: "Factory",
         key: "unit_type.factory",
         description: "unit_type.factory_desc",
         icon: "factory-icon",
         countable: true,
       },
       {
-        unitType: UnitType.AtomBomb,
+        unitType: "Atom Bomb",
         key: "unit_type.atom_bomb",
         description: "unit_type.atom_bomb_desc",
         icon: "atom-bomb-icon",
         countable: false,
       },
       {
-        unitType: UnitType.Warship,
+        unitType: "Warship",
         key: "unit_type.warship",
         description: "unit_type.warship_desc",
         icon: "warship-icon",
         countable: true,
       },
       {
-        unitType: UnitType.HydrogenBomb,
+        unitType: "Hydrogen Bomb",
         key: "unit_type.hydrogen_bomb",
         description: "unit_type.hydrogen_bomb_desc",
         icon: "hydrogen-bomb-icon",
         countable: false,
       },
       {
-        unitType: UnitType.MIRV,
+        unitType: "MIRV",
         key: "unit_type.mirv",
         description: "unit_type.mirv_desc",
         icon: "mirv-icon",
@@ -117,13 +115,13 @@ describe("RadialMenuElements", () => {
 
     mockPlayerActions = {
       buildableUnits: [
-        { type: UnitType.City, canBuild: true },
-        { type: UnitType.Factory, canBuild: true },
-        { type: UnitType.AtomBomb, canBuild: true },
-        { type: UnitType.Warship, canBuild: true },
-        { type: UnitType.HydrogenBomb, canBuild: true },
-        { type: UnitType.MIRV, canBuild: true },
-        { type: UnitType.TransportShip, canBuild: true },
+        { type: "City", canBuild: true },
+        { type: "Factory", canBuild: true },
+        { type: "Atom Bomb", canBuild: true },
+        { type: "Warship", canBuild: true },
+        { type: "Hydrogen Bomb", canBuild: true },
+        { type: "MIRV", canBuild: true },
+        { type: "Transport Ship", canBuild: true },
       ],
       canAttack: true,
       interaction: {
@@ -154,7 +152,7 @@ describe("RadialMenuElements", () => {
 
   describe("attackMenuElement", () => {
     it("should have correct basic properties", () => {
-      expect(attackMenuElement.id).toBe(Slot.Attack);
+      expect(attackMenuElement.id).toBe("attack");
       expect(attackMenuElement.name).toBe("radial_attack");
       expect(attackMenuElement.icon).toBeDefined();
       expect(attackMenuElement.color).toBe(COLORS.attack);
@@ -182,15 +180,10 @@ describe("RadialMenuElements", () => {
       expect(subMenu).toBeDefined();
       expect(subMenu.length).toBeGreaterThan(0);
 
-      const attackUnitTypes = [
-        UnitType.AtomBomb,
-        UnitType.MIRV,
-        UnitType.HydrogenBomb,
-        UnitType.Warship,
-      ];
+      const attackUnitTypes = ["Atom Bomb", "MIRV", "Hydrogen Bomb", "Warship"];
       const returnedUnitTypes = subMenu.map((item) => {
         const unitTypeStr = item.id.replace("attack_", "");
-        return Object.values(UnitType).find(
+        return UnitTypeSchema.options.find(
           (type) => type.toString() === unitTypeStr,
         );
       });
@@ -209,10 +202,10 @@ describe("RadialMenuElements", () => {
 
       const subMenu = attackMenuElement.subMenu!(mockParams);
 
-      const constructionUnitTypes = [UnitType.City, UnitType.Factory];
+      const constructionUnitTypes = ["City", "Factory"];
       const returnedUnitTypes = subMenu.map((item) => {
         const unitTypeStr = item.id.replace("attack_", "");
-        return Object.values(UnitType).find(
+        return UnitTypeSchema.options.find(
           (type) => type.toString() === unitTypeStr,
         );
       });
@@ -230,7 +223,7 @@ describe("RadialMenuElements", () => {
 
   describe("buildMenuElement", () => {
     it("should have correct basic properties", () => {
-      expect(buildMenuElement.id).toBe(Slot.Build);
+      expect(buildMenuElement.id).toBe("build");
       expect(buildMenuElement.name).toBe("build");
       expect(buildMenuElement.icon).toBeDefined();
       expect(buildMenuElement.color).toBe(COLORS.build);
@@ -252,10 +245,10 @@ describe("RadialMenuElements", () => {
       expect(subMenu).toBeDefined();
       expect(subMenu.length).toBeGreaterThan(0);
 
-      const constructionUnitTypes = [UnitType.City, UnitType.Factory];
+      const constructionUnitTypes = ["City", "Factory"];
       const returnedUnitTypes = subMenu.map((item) => {
         const unitTypeStr = item.id.replace("build_", "");
-        return Object.values(UnitType).find(
+        return UnitTypeSchema.options.find(
           (type) => type.toString() === unitTypeStr,
         );
       });
@@ -268,15 +261,10 @@ describe("RadialMenuElements", () => {
     it("should not include attack units in build menu", () => {
       const subMenu = buildMenuElement.subMenu!(mockParams);
 
-      const attackUnitTypes = [
-        UnitType.AtomBomb,
-        UnitType.MIRV,
-        UnitType.HydrogenBomb,
-        UnitType.Warship,
-      ];
+      const attackUnitTypes = ["Atom Bomb", "MIRV", "Hydrogen Bomb", "Warship"];
       const returnedUnitTypes = subMenu.map((item) => {
         const unitTypeStr = item.id.replace("build_", "");
-        return Object.values(UnitType).find(
+        return UnitTypeSchema.options.find(
           (type) => type.toString() === unitTypeStr,
         );
       });
@@ -301,9 +289,9 @@ describe("RadialMenuElements", () => {
 
     it("should show build and delete menu on own territory", () => {
       const subMenu = rootMenuElement.subMenu!(mockParams);
-      const buildMenu = subMenu.find((item) => item.id === Slot.Build);
-      const attackMenu = subMenu.find((item) => item.id === Slot.Attack);
-      const deleteMenu = subMenu.find((item) => item.id === Slot.Delete);
+      const buildMenu = subMenu.find((item) => item.id === "build");
+      const attackMenu = subMenu.find((item) => item.id === "attack");
+      const deleteMenu = subMenu.find((item) => item.id === "delete");
 
       expect(buildMenu).toBeDefined();
       expect(attackMenu).toBeUndefined();
@@ -318,9 +306,9 @@ describe("RadialMenuElements", () => {
       mockGame.owner = jest.fn(() => enemyPlayer);
 
       const subMenu = rootMenuElement.subMenu!(mockParams);
-      const buildMenu = subMenu.find((item) => item.id === Slot.Build);
-      const attackMenu = subMenu.find((item) => item.id === Slot.Attack);
-      const boatMenu = subMenu.find((item) => item.id === Slot.Boat);
+      const buildMenu = subMenu.find((item) => item.id === "build");
+      const attackMenu = subMenu.find((item) => item.id === "attack");
+      const boatMenu = subMenu.find((item) => item.id === "boat");
 
       expect(attackMenu).toBeDefined();
       expect(buildMenu).toBeUndefined();
@@ -329,7 +317,7 @@ describe("RadialMenuElements", () => {
 
     it("should include info menu in both cases", () => {
       const subMenu = rootMenuElement.subMenu!(mockParams);
-      const infoMenu = subMenu.find((item) => item.id === Slot.Info);
+      const infoMenu = subMenu.find((item) => item.id === "info");
 
       expect(infoMenu).toBeDefined();
     });

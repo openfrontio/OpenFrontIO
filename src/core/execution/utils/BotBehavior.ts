@@ -1,10 +1,8 @@
 import {
   AllianceRequest,
-  Difficulty,
   Game,
+  getRelationValue,
   Player,
-  PlayerType,
-  Relation,
   TerraNullius,
   Tick,
 } from "../../game/Game";
@@ -59,8 +57,8 @@ export class BotBehavior {
       // If Friendly or Bot, always agree to extend. If Neutral, have random chance decide
       const human = alliance.other(this.player);
       if (
-        this.player.type() === PlayerType.FakeHuman &&
-        this.player.relation(human) === Relation.Neutral
+        this.player.type() === "FAKEHUMAN" &&
+        this.player.relation(human) === "Neutral"
       ) {
         if (!this.random.chance(1.5)) continue;
       }
@@ -72,7 +70,7 @@ export class BotBehavior {
   }
 
   private emoji(player: Player, emoji: number) {
-    if (player.type() !== PlayerType.Human) return;
+    if (player.type() !== "HUMAN") return;
     this.game.addExecution(new EmojiExecution(this.player, player.id(), emoji));
   }
 
@@ -119,13 +117,10 @@ export class BotBehavior {
       return false;
     }
     const { difficulty } = this.game.config().gameConfig();
-    if (
-      difficulty === Difficulty.Hard ||
-      difficulty === Difficulty.Impossible
-    ) {
+    if (difficulty === "Hard" || difficulty === "Impossible") {
       return false;
     }
-    if (other.type() !== PlayerType.Human) {
+    if (other.type() !== "HUMAN") {
       return false;
     }
     // Only discourage attacks on Humans who are not traitors on easy or medium difficulty.
@@ -180,7 +175,10 @@ export class BotBehavior {
   assistAllies() {
     for (const ally of this.player.allies()) {
       if (ally.targets().length === 0) continue;
-      if (this.player.relation(ally) < Relation.Friendly) {
+      if (
+        getRelationValue(this.player.relation(ally)) <
+        getRelationValue("Friendly")
+      ) {
         this.emoji(ally, this.random.randElement(EMOJI_RELATION_TOO_LOW));
         continue;
       }
@@ -213,9 +211,7 @@ export class BotBehavior {
       // Prefer neighboring bots
       const bots = this.player
         .neighbors()
-        .filter(
-          (n): n is Player => n.isPlayer() && n.type() === PlayerType.Bot,
-        );
+        .filter((n): n is Player => n.isPlayer() && n.type() === "BOT");
       if (bots.length > 0) {
         const density = (p: Player) => p.troops() / p.numTilesOwned();
         let lowestDensityBot: Player | undefined;
@@ -244,10 +240,7 @@ export class BotBehavior {
       if (this.enemy === null && this.random.chance(2)) {
         // 50% chance
         const mostHated = this.player.allRelationsSorted()[0];
-        if (
-          mostHated !== undefined &&
-          mostHated.relation === Relation.Hostile
-        ) {
+        if (mostHated !== undefined && mostHated.relation === "Hostile") {
           this.setNewEnemy(mostHated.player);
         }
       }
@@ -340,7 +333,7 @@ export class BotBehavior {
       for (const neighbor of this.random.shuffleArray(neighbors)) {
         if (!neighbor.isPlayer()) continue;
         if (this.player.isFriendly(neighbor)) continue;
-        if (neighbor.type() === PlayerType.FakeHuman) {
+        if (neighbor.type() === "FAKEHUMAN") {
           if (this.random.chance(2)) {
             continue;
           }
@@ -407,7 +400,10 @@ export class BotBehavior {
 }
 
 function shouldAcceptAllianceRequest(player: Player, request: AllianceRequest) {
-  if (player.relation(request.requestor()) < Relation.Neutral) {
+  if (
+    getRelationValue(player.relation(request.requestor())) <
+    getRelationValue("Neutral")
+  ) {
     return false; // Reject if hasMalice
   }
   if (request.requestor().isTraitor()) {

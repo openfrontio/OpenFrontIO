@@ -5,14 +5,16 @@ import { translateText } from "../client/Utils";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import {
   Difficulty,
+  DifficultySchema,
   Duos,
-  GameMapSize,
   GameMapType,
+  GameMapTypeSchema,
   GameMode,
   HumansVsNations,
   Quads,
   Trios,
   UnitType,
+  generateMapSlug,
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -36,10 +38,10 @@ export class HostLobbyModal extends LitElement {
     open: () => void;
     close: () => void;
   };
-  @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private selectedMap: GameMapType = "World";
+  @state() private selectedDifficulty: Difficulty = "Medium";
   @state() private disableNPCs = false;
-  @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private gameMode: GameMode = "Free For All";
   @state() private teamCount: TeamCountConfig = 2;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -186,10 +188,8 @@ export class HostLobbyModal extends LitElement {
                     </h3>
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
-                        const mapKey = Object.keys(GameMapType).find(
-                          (key) =>
-                            GameMapType[key as keyof typeof GameMapType] ===
-                            mapValue,
+                        const mapKey = GameMapTypeSchema.options.find(
+                          (option) => option === mapValue,
                         );
                         return html`
                           <div
@@ -200,7 +200,7 @@ export class HostLobbyModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey?.toLowerCase()}`,
+                                `map.${generateMapSlug(mapKey)}`,
                               )}
                             ></map-display>
                           </div>
@@ -234,25 +234,24 @@ export class HostLobbyModal extends LitElement {
           <div class="options-section">
             <div class="option-title">${translateText("difficulty.difficulty")}</div>
             <div class="option-cards">
-              ${Object.entries(Difficulty)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
-                    >
-                      <difficulty-display
-                        .difficultyKey=${key}
-                      ></difficulty-display>
-                      <p class="option-card-title">
-                        ${translateText(`difficulty.${key}`)}
-                      </p>
-                    </div>
-                  `,
-                )}
+              ${DifficultySchema.options.map(
+                (value) => html`
+                  <div
+                    class="option-card ${this.selectedDifficulty === value
+                      ? "selected"
+                      : ""}"
+                    @click=${() => this.handleDifficultySelection(value)}
+                  >
+                    <difficulty-display
+                      .difficultyKey=${value}
+                    ></difficulty-display>
+                    <p class="option-card-title">
+                      ${translateText(`difficulty.${value.toLowerCase()}`)}
+                    </p>
+                  </div>
+                `,
+              )}
+
             </div>
           </div>
 
@@ -261,16 +260,16 @@ export class HostLobbyModal extends LitElement {
             <div class="option-title">${translateText("host_modal.mode")}</div>
             <div class="option-cards">
               <div
-                class="option-card ${this.gameMode === GameMode.FFA ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+                class="option-card ${this.gameMode === "Free For All" ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection("Free For All")}
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.ffa")}
                 </div>
               </div>
               <div
-                class="option-card ${this.gameMode === GameMode.Team ? "selected" : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+                class="option-card ${this.gameMode === "Team" ? "selected" : ""}"
+                @click=${() => this.handleGameModeSelection("Team")}
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.teams")}
@@ -280,7 +279,7 @@ export class HostLobbyModal extends LitElement {
           </div>
 
           ${
-            this.gameMode === GameMode.FFA
+            this.gameMode === "Free For All"
               ? ""
               : html`
                   <!-- Team Count Selection -->
@@ -353,7 +352,7 @@ export class HostLobbyModal extends LitElement {
 
                 ${
                   !(
-                    this.gameMode === GameMode.Team &&
+                    this.gameMode === "Team" &&
                     this.teamCount === HumansVsNations
                   )
                     ? html`
@@ -762,9 +761,7 @@ export class HostLobbyModal extends LitElement {
         },
         body: JSON.stringify({
           gameMap: this.selectedMap,
-          gameMapSize: this.compactMap
-            ? GameMapSize.Compact
-            : GameMapSize.Normal,
+          gameMapSize: this.compactMap ? "Compact" : "Normal",
           difficulty: this.selectedDifficulty,
           bots: this.bots,
           infiniteGold: this.infiniteGold,
@@ -776,8 +773,7 @@ export class HostLobbyModal extends LitElement {
           gameMode: this.gameMode,
           disabledUnits: this.disabledUnits,
           playerTeams: this.teamCount,
-          ...(this.gameMode === GameMode.Team &&
-          this.teamCount === HumansVsNations
+          ...(this.gameMode === "Team" && this.teamCount === HumansVsNations
             ? {
                 disableNPCs: false,
               }
@@ -802,7 +798,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
+    const maps = GameMapTypeSchema.options;
     const randIdx = Math.floor(Math.random() * maps.length);
     return maps[randIdx] as GameMapType;
   }
@@ -810,7 +806,7 @@ export class HostLobbyModal extends LitElement {
   private async startGame() {
     await this.putGameConfig();
     console.log(
-      `Starting private game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting private game with map: ${this.selectedMap as GameMapType} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
     const config = await getServerConfigFromClient();

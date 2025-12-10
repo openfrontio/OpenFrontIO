@@ -1,17 +1,15 @@
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
 import {
   BonusEventUpdate,
   ConquestUpdate,
-  GameUpdateType,
   RailroadUpdate,
 } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import SoundManager, { SoundEffect } from "../../sound/SoundManager";
+import SoundManager from "../../sound/SoundManager";
 import { renderNumber } from "../../Utils";
 import { AnimatedSpriteLoader } from "../AnimatedSpriteLoader";
 import { conquestFxFactory } from "../fx/ConquestFx";
-import { Fx, FxType } from "../fx/Fx";
+import { Fx } from "../fx/Fx";
 import { NukeAreaFx } from "../fx/NukeAreaFx";
 import { nukeFxFactory, ShockwaveFx } from "../fx/NukeFx";
 import { SpriteFx } from "../fx/SpriteFx";
@@ -45,30 +43,24 @@ export class FxLayer implements Layer {
     this.manageBoatTargetFx();
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.["Unit"]?.map((unit) => this.game.unit(unit.id))
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
         this.onUnitEvent(unitView);
       });
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.BonusEvent]?.forEach((bonusEvent) => {
-        if (bonusEvent === undefined) return;
-        this.onBonusEvent(bonusEvent);
-      });
+    this.game.updatesSinceLastTick()?.["BonusEvent"]?.forEach((bonusEvent) => {
+      if (bonusEvent === undefined) return;
+      this.onBonusEvent(bonusEvent);
+    });
 
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.RailroadEvent]?.forEach((update) => {
-        if (update === undefined) return;
-        this.onRailroadEvent(update);
-      });
-    this.game
-      .updatesSinceLastTick()
-      ?.[GameUpdateType.ConquestEvent]?.forEach((update) => {
-        if (update === undefined) return;
-        this.onConquestEvent(update);
-      });
+    this.game.updatesSinceLastTick()?.["RailroadEvent"]?.forEach((update) => {
+      if (update === undefined) return;
+      this.onRailroadEvent(update);
+    });
+    this.game.updatesSinceLastTick()?.["ConquestEvent"]?.forEach((update) => {
+      if (update === undefined) return;
+      this.onConquestEvent(update);
+    });
   }
 
   private manageBoatTargetFx() {
@@ -146,7 +138,7 @@ export class FxLayer implements Layer {
 
   onUnitEvent(unit: UnitView) {
     switch (unit.type()) {
-      case UnitType.TransportShip: {
+      case "Transport Ship": {
         const my = this.game.myPlayer();
         if (!my) return;
         if (unit.owner() !== my) return;
@@ -163,34 +155,34 @@ export class FxLayer implements Layer {
         }
         break;
       }
-      case UnitType.AtomBomb: {
+      case "Atom Bomb": {
         this.createNukeTargetFxIfOwned(unit);
         this.onNukeEvent(unit, 70);
         break;
       }
-      case UnitType.MIRVWarhead:
+      case "MIRV Warhead":
         this.onNukeEvent(unit, 70);
         break;
-      case UnitType.HydrogenBomb: {
+      case "Hydrogen Bomb": {
         this.createNukeTargetFxIfOwned(unit);
         this.onNukeEvent(unit, 160);
         break;
       }
-      case UnitType.Warship:
+      case "Warship":
         this.onWarshipEvent(unit);
         break;
-      case UnitType.Shell:
+      case "Shell":
         this.onShellEvent(unit);
         break;
-      case UnitType.Train:
+      case "Train":
         this.onTrainEvent(unit);
         break;
-      case UnitType.DefensePost:
-      case UnitType.City:
-      case UnitType.Port:
-      case UnitType.MissileSilo:
-      case UnitType.SAMLauncher:
-      case UnitType.Factory:
+      case "Defense Post":
+      case "City":
+      case "Port":
+      case "Missile Silo":
+      case "SAM Launcher":
+      case "Factory":
         this.onStructureEvent(unit);
         break;
     }
@@ -205,7 +197,7 @@ export class FxLayer implements Layer {
           this.animatedSpriteLoader,
           x,
           y,
-          FxType.MiniExplosion,
+          "MiniExplosion",
         );
         this.allFx.push(explosion);
       }
@@ -221,7 +213,7 @@ export class FxLayer implements Layer {
           this.animatedSpriteLoader,
           x,
           y,
-          FxType.MiniExplosion,
+          "MiniExplosion",
         );
         this.allFx.push(explosion);
       }
@@ -236,12 +228,7 @@ export class FxLayer implements Layer {
       if (chanceFx === 0) {
         const x = this.game.x(rail.tile);
         const y = this.game.y(rail.tile);
-        const animation = new SpriteFx(
-          this.animatedSpriteLoader,
-          x,
-          y,
-          FxType.Dust,
-        );
+        const animation = new SpriteFx(this.animatedSpriteLoader, x, y, "Dust");
         this.allFx.push(animation);
       }
     }
@@ -254,7 +241,7 @@ export class FxLayer implements Layer {
       return;
     }
 
-    SoundManager.playSoundEffect(SoundEffect.KaChing);
+    SoundManager.playSoundEffect("ka-ching");
 
     const conquestFx = conquestFxFactory(
       this.animatedSpriteLoader,
@@ -279,7 +266,7 @@ export class FxLayer implements Layer {
         this.animatedSpriteLoader,
         x,
         y,
-        FxType.SinkingShip,
+        "SinkingShip",
         undefined,
         unit.owner(),
         this.theme,
@@ -296,7 +283,7 @@ export class FxLayer implements Layer {
         this.animatedSpriteLoader,
         x,
         y,
-        FxType.BuildingExplosion,
+        "BuildingExplosion",
       );
       this.allFx.push(explosion);
     }
@@ -338,7 +325,7 @@ export class FxLayer implements Layer {
       this.animatedSpriteLoader,
       x,
       y,
-      FxType.SAMExplosion,
+      "SAMExplosion",
     );
     this.allFx.push(explosion);
     const shockwave = new ShockwaveFx(x, y, 800, 40);

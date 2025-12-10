@@ -1,8 +1,7 @@
 import { RailroadExecution } from "../execution/RailroadExecution";
-import { PathFindResultType } from "../pathfinding/AStar";
 import { MiniAStar } from "../pathfinding/MiniAStar";
 import { SerialAStar } from "../pathfinding/SerialAStar";
-import { Game, Unit, UnitType } from "./Game";
+import { Game, Unit } from "./Game";
 import { TileRef } from "./GameMap";
 import { RailNetwork } from "./RailNetwork";
 import { Railroad } from "./Railroad";
@@ -62,9 +61,7 @@ class RailPathFinderServiceImpl implements RailPathFinderService {
       false,
       3,
     );
-    return astar.compute() === PathFindResultType.Completed
-      ? astar.reconstructPath()
-      : [];
+    return astar.compute() === "Completed" ? astar.reconstructPath() : [];
   }
 
   findStationsPath(from: TrainStation, to: TrainStation): TrainStation[] {
@@ -75,7 +72,7 @@ class RailPathFinderServiceImpl implements RailPathFinderService {
       20,
       new TrainStationMapAdapter(this.game),
     );
-    return stationAStar.compute() === PathFindResultType.Completed
+    return stationAStar.compute() === "Completed"
       ? stationAStar.reconstructPath()
       : [];
   }
@@ -134,7 +131,7 @@ export class RailNetworkImpl implements RailNetwork {
     const neighbors = this.game.nearbyUnits(
       station.tile(),
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Factory, UnitType.Port],
+      ["City", "Factory", "Port"],
     );
 
     const editedClusters = new Set<Cluster>();

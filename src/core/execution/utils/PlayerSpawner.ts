@@ -1,4 +1,4 @@
-import { Game, PlayerType } from "../../game/Game";
+import { Game } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
 import { GameID } from "../../Schemas";
@@ -64,7 +64,7 @@ export class PlayerSpawner {
 
   spawnPlayers(): SpawnExecution[] {
     for (const player of this.gm.allPlayers()) {
-      if (player.type() !== PlayerType.Human) {
+      if (player.type() !== "HUMAN") {
         continue;
       }
 

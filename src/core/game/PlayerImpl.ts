@@ -22,7 +22,6 @@ import {
   Embargo,
   EmojiMessage,
   Gold,
-  MessageType,
   MutableAlliance,
   Player,
   PlayerID,
@@ -36,15 +35,11 @@ import {
   Unit,
   UnitParams,
   UnitType,
+  UnitTypeSchema,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
-import {
-  AllianceView,
-  AttackUpdate,
-  GameUpdateType,
-  PlayerUpdate,
-} from "./GameUpdates";
+import { AllianceView, AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import {
   bestShoreDeploymentSource,
   canBuildTransportShip,
@@ -126,7 +121,7 @@ export class PlayerImpl implements Player {
     );
 
     return {
-      type: GameUpdateType.Player,
+      type: "Player",
       clientID: this.clientID(),
       name: this.name(),
       displayName: this.displayName(),
@@ -472,15 +467,15 @@ export class PlayerImpl implements Player {
 
   private relationFromValue(relationValue: number): Relation {
     if (relationValue < -50) {
-      return Relation.Hostile;
+      return "Hostile";
     }
     if (relationValue < 0) {
-      return Relation.Distrustful;
+      return "Distrustful";
     }
     if (relationValue < 50) {
-      return Relation.Neutral;
+      return "Neutral";
     }
-    return Relation.Friendly;
+    return "Friendly";
   }
 
   allRelationsSorted(): { player: Player; relation: Relation }[] {
@@ -602,7 +597,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (
-      recipient.type() === PlayerType.Human &&
+      recipient.type() === "HUMAN" &&
       this.mg.config().donateGold() === false
     ) {
       return false;
@@ -629,7 +624,7 @@ export class PlayerImpl implements Player {
       return false;
     }
     if (
-      recipient.type() === PlayerType.Human &&
+      recipient.type() === "HUMAN" &&
       this.mg.config().donateTroops() === false
     ) {
       return false;
@@ -656,12 +651,12 @@ export class PlayerImpl implements Player {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
       `Sent ${renderTroops(troops)} troops to ${recipient.name()}`,
-      MessageType.SENT_TROOPS_TO_PLAYER,
+      "SENT_TROOPS_TO_PLAYER",
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderTroops(troops)} troops from ${this.name()}`,
-      MessageType.RECEIVED_TROOPS_FROM_PLAYER,
+      "RECEIVED_TROOPS_FROM_PLAYER",
       recipient.id(),
     );
     return true;
@@ -676,12 +671,12 @@ export class PlayerImpl implements Player {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.displayMessage(
       `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
-      MessageType.SENT_GOLD_TO_PLAYER,
+      "SENT_GOLD_TO_PLAYER",
       this.id(),
     );
     this.mg.displayMessage(
       `Received ${renderNumber(gold)} gold from ${this.name()}`,
-      MessageType.RECEIVED_GOLD_FROM_PLAYER,
+      "RECEIVED_GOLD_FROM_PLAYER",
       recipient.id(),
       gold,
     );
@@ -710,7 +705,7 @@ export class PlayerImpl implements Player {
     // At least one eligible player exists
     for (const p of this.mg.players()) {
       if (p.id() === this.id()) continue;
-      if (p.type() === PlayerType.Bot) continue;
+      if (p.type() === "BOT") continue;
       if (this.isOnSameTeam(p)) continue;
       return true;
     }
@@ -740,7 +735,7 @@ export class PlayerImpl implements Player {
     if (embargo !== undefined && !embargo.isTemporary) return;
 
     this.mg.addUpdate({
-      type: GameUpdateType.EmbargoEvent,
+      type: "EmbargoEvent",
       event: "start",
       playerID: this.smallID(),
       embargoedID: other.smallID(),
@@ -756,7 +751,7 @@ export class PlayerImpl implements Player {
   stopEmbargo(other: Player): void {
     this.embargoes.delete(other.id());
     this.mg.addUpdate({
-      type: GameUpdateType.EmbargoEvent,
+      type: "EmbargoEvent",
       event: "stop",
       playerID: this.smallID(),
       embargoedID: other.smallID(),
@@ -808,7 +803,7 @@ export class PlayerImpl implements Player {
     this._gold += toAdd;
     if (tile) {
       this.mg.addUpdate({
-        type: GameUpdateType.BonusEvent,
+        type: "BonusEvent",
         player: this.id(),
         tile,
         gold: Number(toAdd),
@@ -929,7 +924,7 @@ export class PlayerImpl implements Player {
 
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
-    return Object.values(UnitType).map((u) => {
+    return UnitTypeSchema.options.map((u) => {
       let canUpgrade: number | false = false;
       if (!this.mg.inSpawnPhase()) {
         const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
@@ -963,34 +958,34 @@ export class PlayerImpl implements Player {
       return false;
     }
     switch (unitType) {
-      case UnitType.MIRV:
+      case "MIRV":
         if (!this.mg.hasOwner(targetTile)) {
           return false;
         }
         return this.nukeSpawn(targetTile);
-      case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
+      case "Atom Bomb":
+      case "Hydrogen Bomb":
         return this.nukeSpawn(targetTile);
-      case UnitType.MIRVWarhead:
+      case "MIRV Warhead":
         return targetTile;
-      case UnitType.Port:
+      case "Port":
         return this.portSpawn(targetTile, validTiles);
-      case UnitType.Warship:
+      case "Warship":
         return this.warshipSpawn(targetTile);
-      case UnitType.Shell:
-      case UnitType.SAMMissile:
+      case "Shell":
+      case "SAM Missile":
         return targetTile;
-      case UnitType.TransportShip:
+      case "Transport Ship":
         return canBuildTransportShip(this.mg, this, targetTile);
-      case UnitType.TradeShip:
+      case "Trade Ship":
         return this.tradeShipSpawn(targetTile);
-      case UnitType.Train:
+      case "Train":
         return this.landBasedUnitSpawn(targetTile);
-      case UnitType.MissileSilo:
-      case UnitType.DefensePost:
-      case UnitType.SAMLauncher:
-      case UnitType.City:
-      case UnitType.Factory:
+      case "Missile Silo":
+      case "Defense Post":
+      case "SAM Launcher":
+      case "City":
+      case "Factory":
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
@@ -1005,7 +1000,7 @@ export class PlayerImpl implements Player {
       }
     }
     // only get missilesilos that are not on cooldown and not under construction
-    const spawns = this.units(UnitType.MissileSilo)
+    const spawns = this.units("Missile Silo")
       .filter((silo) => {
         return !silo.isInCooldown() && !silo.isUnderConstruction();
       })
@@ -1043,7 +1038,7 @@ export class PlayerImpl implements Player {
     if (!this.mg.isOcean(tile)) {
       return false;
     }
-    const spawns = this.units(UnitType.Port).sort(
+    const spawns = this.units("Port").sort(
       (a, b) =>
         this.mg.manhattanDist(a.tile(), tile) -
         this.mg.manhattanDist(b.tile(), tile),
@@ -1075,7 +1070,7 @@ export class PlayerImpl implements Player {
     }
     const searchRadius = 15;
     const searchRadiusSquared = searchRadius ** 2;
-    const types = Object.values(UnitType).filter((unitTypeValue) => {
+    const types = UnitTypeSchema.options.filter((unitTypeValue) => {
       return this.mg.config().unitInfo(unitTypeValue).territoryBound;
     });
 
@@ -1113,9 +1108,7 @@ export class PlayerImpl implements Player {
   }
 
   tradeShipSpawn(targetTile: TileRef): TileRef | false {
-    const spawns = this.units(UnitType.Port).filter(
-      (u) => u.tile() === targetTile,
-    );
+    const spawns = this.units("Port").filter((u) => u.tile() === targetTile);
     if (spawns.length === 0) {
       return false;
     }

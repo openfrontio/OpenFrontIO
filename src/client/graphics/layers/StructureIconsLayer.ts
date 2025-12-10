@@ -13,7 +13,6 @@ import {
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, UnitView } from "../../../core/game/GameView";
 import {
   GhostStructureChangedEvent,
@@ -77,12 +76,12 @@ export class StructureIconsLayer implements Layer {
   private renderSprites = true;
   private factory: SpriteFactory;
   private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
-    [UnitType.City, { visible: true }],
-    [UnitType.Factory, { visible: true }],
-    [UnitType.DefensePost, { visible: true }],
-    [UnitType.Port, { visible: true }],
-    [UnitType.MissileSilo, { visible: true }],
-    [UnitType.SAMLauncher, { visible: true }],
+    ["City", { visible: true }],
+    ["Factory", { visible: true }],
+    ["Defense Post", { visible: true }],
+    ["Port", { visible: true }],
+    ["Missile Silo", { visible: true }],
+    ["SAM Launcher", { visible: true }],
   ]);
   private lastGhostQueryAt: number;
   potentialUpgrade: StructureRenderInfo | undefined;
@@ -178,7 +177,7 @@ export class StructureIconsLayer implements Layer {
   tick() {
     this.game
       .updatesSinceLastTick()
-      ?.[GameUpdateType.Unit]?.map((unit) => this.game.unit(unit.id))
+      ?.["Unit"]?.map((unit) => this.game.unit(unit.id))
       ?.forEach((unitView) => {
         if (unitView === undefined) return;
 
@@ -403,7 +402,7 @@ export class StructureIconsLayer implements Layer {
   private resolveGhostRangeLevel(
     buildableUnit: BuildableUnit,
   ): number | undefined {
-    if (buildableUnit.type !== UnitType.SAMLauncher) {
+    if (buildableUnit.type !== "SAM Launcher") {
       return undefined;
     }
     if (buildableUnit.canUpgrade !== false) {

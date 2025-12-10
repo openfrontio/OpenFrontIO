@@ -1,7 +1,7 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { GameMode, Team, UnitType } from "../../../core/game/Game";
+import { Team } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderNumber, translateText } from "../../Utils";
 import { Layer } from "./Layer";
@@ -38,7 +38,7 @@ export class TeamStats extends LitElement implements Layer {
   init() {}
 
   tick() {
-    if (this.game.config().gameConfig().gameMode !== GameMode.Team) return;
+    if (this.game.config().gameConfig().gameMode !== "Team") return;
 
     if (!this._shownOnInit && !this.game.inSpawnPhase()) {
       this._shownOnInit = true;
@@ -83,10 +83,10 @@ export class TeamStats extends LitElement implements Layer {
             totalTroops += p.troops();
             totalGold += p.gold();
             totalScoreSort += p.numTilesOwned();
-            totalLaunchers += p.totalUnitLevels(UnitType.MissileSilo);
-            totalSAMs += p.totalUnitLevels(UnitType.SAMLauncher);
-            totalWarShips += p.totalUnitLevels(UnitType.Warship);
-            totalCities += p.totalUnitLevels(UnitType.City);
+            totalLaunchers += p.totalUnitLevels("Missile Silo");
+            totalSAMs += p.totalUnitLevels("SAM Launcher");
+            totalWarShips += p.totalUnitLevels("Warship");
+            totalCities += p.totalUnitLevels("City");
           }
         }
 

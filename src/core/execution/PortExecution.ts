@@ -1,4 +1,4 @@
-import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Unit } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
@@ -68,11 +68,9 @@ export class PortExecution implements Execution {
   }
 
   shouldSpawnTradeShip(): boolean {
-    const numTradeShips = this.mg.unitCount(UnitType.TradeShip);
-    const numPlayerPorts = this.port!.owner().unitCount(UnitType.Port);
-    const numPlayerTradeShips = this.port!.owner().unitCount(
-      UnitType.TradeShip,
-    );
+    const numTradeShips = this.mg.unitCount("Trade Ship");
+    const numPlayerPorts = this.port!.owner().unitCount("Port");
+    const numPlayerTradeShips = this.port!.owner().unitCount("Trade Ship");
     const spawnRate = this.mg
       .config()
       .tradeShipSpawnRate(numTradeShips, numPlayerPorts, numPlayerTradeShips);
@@ -88,7 +86,7 @@ export class PortExecution implements Execution {
     const nearbyFactory = this.mg.hasUnitNearby(
       this.port.tile()!,
       this.mg.config().trainStationMaxRange(),
-      UnitType.Factory,
+      "Factory",
     );
     if (nearbyFactory) {
       this.mg.addExecution(new TrainStationExecution(this.port));
@@ -101,7 +99,7 @@ export class PortExecution implements Execution {
     const ports = this.mg
       .players()
       .filter((p) => p !== this.port!.owner() && p.canTrade(this.port!.owner()))
-      .flatMap((p) => p.units(UnitType.Port))
+      .flatMap((p) => p.units("Port"))
       .sort((p1, p2) => {
         return (
           this.mg.manhattanDist(this.port!.tile(), p1.tile()) -

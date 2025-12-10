@@ -1,6 +1,6 @@
 import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
-import { PlayerInfo, PlayerType, Team } from "./Game";
+import { PlayerInfo, Team } from "./Game";
 
 export function assignTeams(
   players: PlayerInfo[],
@@ -59,7 +59,7 @@ export function assignTeams(
 
   // Then, assign non-clan players to balance teams
   let nationPlayers = noClanPlayers.filter(
-    (player) => player.playerType === PlayerType.FakeHuman,
+    (player) => player.playerType === "FAKEHUMAN",
   );
   if (nationPlayers.length > 0) {
     // Shuffle only nations to randomize their team assignment
@@ -67,7 +67,7 @@ export function assignTeams(
     nationPlayers = random.shuffleArray(nationPlayers);
   }
   const otherPlayers = noClanPlayers.filter(
-    (player) => player.playerType !== PlayerType.FakeHuman,
+    (player) => player.playerType !== "FAKEHUMAN",
   );
 
   for (const player of otherPlayers.concat(nationPlayers)) {

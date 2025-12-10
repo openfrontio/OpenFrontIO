@@ -8,16 +8,16 @@ import {
 } from "./CosmeticSchemas";
 import {
   AllPlayers,
-  Difficulty,
+  DifficultySchema,
   Duos,
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  GameType,
+  GameMapSizeSchema,
+  GameMapTypeSchema,
+  GameModeSchema,
+  GameTypeSchema,
   HumansVsNations,
   Quads,
   Trios,
-  UnitType,
+  UnitTypeSchema,
 } from "./game/Game";
 import { PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable } from "./Util";
@@ -135,13 +135,15 @@ export interface ClientInfo {
   clientID: ClientID;
   username: string;
 }
-export enum LogSeverity {
-  Debug = "DEBUG",
-  Info = "INFO",
-  Warn = "WARN",
-  Error = "ERROR",
-  Fatal = "FATAL",
-}
+
+export const LogSeveritySchema = z.enum([
+  "DEBUG",
+  "INFO",
+  "WARN",
+  "ERROR",
+  "FATAL",
+]);
+export type LogSeverity = z.infer<typeof LogSeveritySchema>;
 
 //
 // Utility types
@@ -157,13 +159,13 @@ const TeamCountConfigSchema = z.union([
 export type TeamCountConfig = z.infer<typeof TeamCountConfigSchema>;
 
 export const GameConfigSchema = z.object({
-  gameMap: z.enum(GameMapType),
-  difficulty: z.enum(Difficulty),
+  gameMap: GameMapTypeSchema,
+  difficulty: DifficultySchema,
   donateGold: z.boolean(), // Configures donations to humans only
   donateTroops: z.boolean(), // Configures donations to humans only
-  gameType: z.enum(GameType),
-  gameMode: z.enum(GameMode),
-  gameMapSize: z.enum(GameMapSize),
+  gameType: GameTypeSchema,
+  gameMode: GameModeSchema,
+  gameMapSize: GameMapSizeSchema,
   disableNPCs: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
@@ -172,7 +174,7 @@ export const GameConfigSchema = z.object({
   randomSpawn: z.boolean(),
   maxPlayers: z.number().optional(),
   maxTimerValue: z.number().int().min(1).max(120).optional(),
-  disabledUnits: z.enum(UnitType).array().optional(),
+  disabledUnits: UnitTypeSchema.array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
 });
 
@@ -302,13 +304,13 @@ export const DonateTroopIntentSchema = BaseIntentSchema.extend({
 
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
-  unit: z.enum(UnitType),
+  unit: UnitTypeSchema,
   tile: z.number(),
 });
 
 export const UpgradeStructureIntentSchema = BaseIntentSchema.extend({
   type: z.literal("upgrade_structure"),
-  unit: z.enum(UnitType),
+  unit: UnitTypeSchema,
   unitId: z.number(),
 });
 
@@ -458,8 +460,8 @@ export const ServerPingMessageSchema = z.object({
 
 export const ServerPrestartMessageSchema = z.object({
   type: z.literal("prestart"),
-  gameMap: z.enum(GameMapType),
-  gameMapSize: z.enum(GameMapSize),
+  gameMap: GameMapTypeSchema,
+  gameMapSize: GameMapSizeSchema,
 });
 
 export const ServerStartGameMessageSchema = z.object({
@@ -512,7 +514,7 @@ export const ClientHashSchema = z.object({
 
 export const ClientLogMessageSchema = z.object({
   type: z.literal("log"),
-  severity: z.enum(LogSeverity),
+  severity: LogSeveritySchema,
   log: ID,
 });
 

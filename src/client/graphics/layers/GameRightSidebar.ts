@@ -7,8 +7,6 @@ import replayRegularIcon from "../../../../resources/images/ReplayRegularIconWhi
 import replaySolidIcon from "../../../../resources/images/ReplaySolidIconWhite.svg";
 import settingsIcon from "../../../../resources/images/SettingIconWhite.svg";
 import { EventBus } from "../../../core/EventBus";
-import { GameType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView } from "../../../core/game/GameView";
 import { PauseGameEvent } from "../../Transport";
 import { translateText } from "../../Utils";
@@ -44,8 +42,8 @@ export class GameRightSidebar extends LitElement implements Layer {
 
   init() {
     this._isSinglePlayer =
-      this.game?.config()?.gameConfig()?.gameType === GameType.Singleplayer ||
-      this.game.config().isReplay();
+      this.game?.config()?.gameConfig()?.gameType === "Singleplayer" ||
+      !!this.game?.config()?.isReplay();
     this._isVisible = true;
     this.game.inSpawnPhase();
     this.requestUpdate();
@@ -55,7 +53,7 @@ export class GameRightSidebar extends LitElement implements Layer {
     // Timer logic
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
-      this.hasWinner = this.hasWinner || updates[GameUpdateType.Win].length > 0;
+      this.hasWinner = this.hasWinner || !!updates["Win"]?.length;
     }
     const maxTimerValue = this.game.config().gameConfig().maxTimerValue;
     if (maxTimerValue !== undefined) {

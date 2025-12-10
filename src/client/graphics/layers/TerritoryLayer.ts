@@ -2,15 +2,8 @@ import { PriorityQueue } from "@datastructures-js/priority-queue";
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { EventBus } from "../../../core/EventBus";
-import {
-  Cell,
-  ColoredTeams,
-  PlayerType,
-  Team,
-  UnitType,
-} from "../../../core/game/Game";
+import { Cell, ColoredTeams, Team } from "../../../core/game/Game";
 import { euclDistFN, TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { PseudoRandom } from "../../../core/PseudoRandom";
@@ -87,9 +80,9 @@ export class TerritoryLayer implements Layer {
 
     this.game.recentlyUpdatedTiles().forEach((t) => this.enqueueTile(t));
     const updates = this.game.updatesSinceLastTick();
-    const unitUpdates = updates !== null ? updates[GameUpdateType.Unit] : [];
+    const unitUpdates = updates !== null ? updates["Unit"] : [];
     unitUpdates.forEach((update) => {
-      if (update.unitType === UnitType.DefensePost) {
+      if (update.unitType === "Defense Post") {
         // Only update borders if the defense post is not under construction
         if (update.underConstruction) {
           return; // Skip barrier creation while under construction
@@ -113,14 +106,14 @@ export class TerritoryLayer implements Layer {
     // Detect alliance mutations
     const myPlayer = this.game.myPlayer();
     if (myPlayer) {
-      updates?.[GameUpdateType.BrokeAlliance]?.forEach((update) => {
+      updates?.["BrokeAlliance"]?.forEach((update) => {
         const territory = this.game.playerBySmallID(update.betrayedID);
         if (territory && territory instanceof PlayerView) {
           this.redrawBorder(territory);
         }
       });
 
-      updates?.[GameUpdateType.AllianceRequestReply]?.forEach((update) => {
+      updates?.["AllianceRequestReply"]?.forEach((update) => {
         if (
           update.accepted &&
           (update.request.requestorID === myPlayer.smallID() ||
@@ -136,7 +129,7 @@ export class TerritoryLayer implements Layer {
           }
         }
       });
-      updates?.[GameUpdateType.EmbargoEvent]?.forEach((update) => {
+      updates?.["EmbargoEvent"]?.forEach((update) => {
         const player = this.game.playerBySmallID(update.playerID) as PlayerView;
         const embargoed = this.game.playerBySmallID(
           update.embargoedID,
@@ -177,9 +170,7 @@ export class TerritoryLayer implements Layer {
 
     this.drawFocusedPlayerHighlight();
 
-    const humans = this.game
-      .playerViews()
-      .filter((p) => p.type() === PlayerType.Human);
+    const humans = this.game.playerViews().filter((p) => p.type() === "HUMAN");
 
     const focusedPlayer = this.game.focusedPlayer();
     const teamColors = Object.values(ColoredTeams);
@@ -516,7 +507,7 @@ export class TerritoryLayer implements Layer {
       const isDefended = this.game.hasUnitNearby(
         tile,
         this.game.config().defensePostRange(),
-        UnitType.DefensePost,
+        "Defense Post",
         owner.id(),
       );
 

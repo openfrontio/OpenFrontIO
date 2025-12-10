@@ -1,14 +1,6 @@
 import { renderNumber } from "../../client/Utils";
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
-import { PathFindResultType } from "../pathfinding/AStar";
 import { PathFinder } from "../pathfinding/PathFinding";
 import { distSortUnit } from "../Util";
 
@@ -33,16 +25,13 @@ export class TradeShipExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.tradeShip === undefined) {
-      const spawn = this.origOwner.canBuild(
-        UnitType.TradeShip,
-        this.srcPort.tile(),
-      );
+      const spawn = this.origOwner.canBuild("Trade Ship", this.srcPort.tile());
       if (spawn === false) {
         console.warn(`cannot build trade ship`);
         this.active = false;
         return;
       }
-      this.tradeShip = this.origOwner.buildUnit(UnitType.TradeShip, spawn, {
+      this.tradeShip = this.origOwner.buildUnit("Trade Ship", spawn, {
         targetUnit: this._dstPort,
         lastSetSafeFromPirates: ticks,
       });
@@ -84,7 +73,7 @@ export class TradeShipExecution implements Execution {
     ) {
       const ports = this.tradeShip
         .owner()
-        .units(UnitType.Port)
+        .units("Port")
         .sort(distSortUnit(this.mg, this.tradeShip));
       if (ports.length === 0) {
         this.tradeShip.delete(false);
@@ -105,11 +94,11 @@ export class TradeShipExecution implements Execution {
     const result = this.pathFinder.nextTile(curTile, this._dstPort.tile());
 
     switch (result.type) {
-      case PathFindResultType.Pending:
+      case "Pending":
         // Fire unit event to rerender.
         this.tradeShip.move(curTile);
         break;
-      case PathFindResultType.NextTile:
+      case "NextTile":
         // Update safeFromPirates status
         if (this.mg.isWater(result.node) && this.mg.isShoreline(result.node)) {
           this.tradeShip.setSafeFromPirates();
@@ -117,10 +106,10 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.move(result.node);
         this.tilesTraveled++;
         break;
-      case PathFindResultType.Completed:
+      case "Completed":
         this.complete();
         break;
-      case PathFindResultType.PathNotFound:
+      case "PathNotFound":
         console.warn("captured trade ship cannot find route");
         if (this.tradeShip.isActive()) {
           this.tradeShip.delete(false);
@@ -137,14 +126,14 @@ export class TradeShipExecution implements Execution {
       .config()
       .tradeShipGold(
         this.tilesTraveled,
-        this.tradeShip!.owner().unitCount(UnitType.Port),
+        this.tradeShip!.owner().unitCount("Port"),
       );
 
     if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
-        MessageType.CAPTURED_ENEMY_UNIT,
+        "CAPTURED_ENEMY_UNIT",
         this.tradeShip!.owner().id(),
         gold,
       );
@@ -157,13 +146,13 @@ export class TradeShipExecution implements Execution {
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this.srcPort.owner().displayName()}`,
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
+        "RECEIVED_GOLD_FROM_TRADE",
         this._dstPort.owner().id(),
         gold,
       );
       this.mg.displayMessage(
         `Received ${renderNumber(gold)} gold from trade with ${this._dstPort.owner().displayName()}`,
-        MessageType.RECEIVED_GOLD_FROM_TRADE,
+        "RECEIVED_GOLD_FROM_TRADE",
         this.srcPort.owner().id(),
         gold,
       );

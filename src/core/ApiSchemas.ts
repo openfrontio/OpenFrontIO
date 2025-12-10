@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import { BigIntStringSchema, PlayerStatsSchema } from "./StatsSchemas";
-import { Difficulty, GameMapType, GameMode, GameType } from "./game/Game";
+import {
+  DifficultySchema,
+  GameMapTypeSchema,
+  GameModeSchema,
+  GameTypeSchema,
+} from "./game/Game";
 
 export const RefreshResponseSchema = z.object({
   token: z.string(),
@@ -64,10 +69,10 @@ export const PlayerStatsLeafSchema = z.object({
 export type PlayerStatsLeaf = z.infer<typeof PlayerStatsLeafSchema>;
 
 export const PlayerStatsTreeSchema = z.partialRecord(
-  z.enum(GameType),
+  GameTypeSchema,
   z.partialRecord(
-    z.enum(GameMode),
-    z.partialRecord(z.enum(Difficulty), PlayerStatsLeafSchema),
+    GameModeSchema,
+    z.partialRecord(DifficultySchema, PlayerStatsLeafSchema),
   ),
 );
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
@@ -75,10 +80,10 @@ export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 export const PlayerGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
-  mode: z.enum(GameMode),
-  type: z.enum(GameType),
-  map: z.enum(GameMapType),
-  difficulty: z.enum(Difficulty),
+  mode: GameModeSchema,
+  type: GameTypeSchema,
+  map: GameMapTypeSchema,
+  difficulty: DifficultySchema,
   clientId: z.string().optional(),
 });
 export type PlayerGame = z.infer<typeof PlayerGameSchema>;

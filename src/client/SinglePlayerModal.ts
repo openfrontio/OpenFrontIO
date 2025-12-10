@@ -4,15 +4,17 @@ import randomMap from "../../resources/images/RandomMap.webp";
 import { translateText } from "../client/Utils";
 import {
   Difficulty,
+  DifficultySchema,
   Duos,
-  GameMapSize,
   GameMapType,
+  GameMapTypeSchema,
   GameMode,
-  GameType,
   HumansVsNations,
   Quads,
   Trios,
   UnitType,
+  UnitTypeSchema,
+  generateMapSlug,
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
@@ -34,8 +36,8 @@ export class SinglePlayerModal extends LitElement {
     open: () => void;
     close: () => void;
   };
-  @state() private selectedMap: GameMapType = GameMapType.World;
-  @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
+  @state() private selectedMap: GameMapType = "World";
+  @state() private selectedDifficulty: Difficulty = "Medium";
   @state() private disableNPCs: boolean = false;
   @state() private bots: number = 400;
   @state() private infiniteGold: boolean = false;
@@ -46,7 +48,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
   @state() private useRandomMap: boolean = false;
-  @state() private gameMode: GameMode = GameMode.FFA;
+  @state() private gameMode: GameMode = "Free For All";
   @state() private teamCount: TeamCountConfig = 2;
 
   @state() private disabledUnits: UnitType[] = [];
@@ -89,10 +91,8 @@ export class SinglePlayerModal extends LitElement {
                     </h3>
                     <div class="flex flex-row flex-wrap justify-center gap-4">
                       ${maps.map((mapValue) => {
-                        const mapKey = Object.keys(GameMapType).find(
-                          (key) =>
-                            GameMapType[key as keyof typeof GameMapType] ===
-                            mapValue,
+                        const mapKey = GameMapTypeSchema.options.find(
+                          (option) => option === mapValue,
                         );
                         return html`
                           <div
@@ -103,7 +103,7 @@ export class SinglePlayerModal extends LitElement {
                               .selected=${!this.useRandomMap &&
                               this.selectedMap === mapValue}
                               .translation=${translateText(
-                                `map.${mapKey?.toLowerCase()}`,
+                                `map.${generateMapSlug(mapKey)}`,
                               )}
                             ></map-display>
                           </div>
@@ -139,25 +139,23 @@ export class SinglePlayerModal extends LitElement {
               ${translateText("difficulty.difficulty")}
             </div>
             <div class="option-cards">
-              ${Object.entries(Difficulty)
-                .filter(([key]) => isNaN(Number(key)))
-                .map(
-                  ([key, value]) => html`
-                    <div
-                      class="option-card ${this.selectedDifficulty === value
-                        ? "selected"
-                        : ""}"
-                      @click=${() => this.handleDifficultySelection(value)}
-                    >
-                      <difficulty-display
-                        .difficultyKey=${key}
-                      ></difficulty-display>
-                      <p class="option-card-title">
-                        ${translateText(`difficulty.${key}`)}
-                      </p>
-                    </div>
-                  `,
-                )}
+              ${DifficultySchema.options.map(
+                (value) => html`
+                  <div
+                    class="option-card ${this.selectedDifficulty === value
+                      ? "selected"
+                      : ""}"
+                    @click=${() => this.handleDifficultySelection(value)}
+                  >
+                    <difficulty-display
+                      .difficultyKey=${value}
+                    ></difficulty-display>
+                    <p class="option-card-title">
+                      ${translateText(`difficulty.${value.toLowerCase()}`)}
+                    </p>
+                  </div>
+                `,
+              )}
             </div>
           </div>
 
@@ -166,20 +164,20 @@ export class SinglePlayerModal extends LitElement {
             <div class="option-title">${translateText("host_modal.mode")}</div>
             <div class="option-cards">
               <div
-                class="option-card ${this.gameMode === GameMode.FFA
+                class="option-card ${this.gameMode === "Free For All"
                   ? "selected"
                   : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.FFA)}
+                @click=${() => this.handleGameModeSelection("Free For All")}
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.ffa")}
                 </div>
               </div>
               <div
-                class="option-card ${this.gameMode === GameMode.Team
+                class="option-card ${this.gameMode === "Team"
                   ? "selected"
                   : ""}"
-                @click=${() => this.handleGameModeSelection(GameMode.Team)}
+                @click=${() => this.handleGameModeSelection("Team")}
               >
                 <div class="option-card-title">
                   ${translateText("game_mode.teams")}
@@ -188,7 +186,7 @@ export class SinglePlayerModal extends LitElement {
             </div>
           </div>
 
-          ${this.gameMode === GameMode.FFA
+          ${this.gameMode === "Free For All"
             ? ""
             : html`
                 <!-- Team Count Selection -->
@@ -256,8 +254,7 @@ export class SinglePlayerModal extends LitElement {
               </label>
 
               ${!(
-                this.gameMode === GameMode.Team &&
-                this.teamCount === HumansVsNations
+                this.gameMode === "Team" && this.teamCount === HumansVsNations
               )
                 ? html`
                     <label
@@ -504,7 +501,7 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private getRandomMap(): GameMapType {
-    const maps = Object.values(GameMapType);
+    const maps = GameMapTypeSchema.options;
     const randIdx = Math.floor(Math.random() * maps.length);
     return maps[randIdx] as GameMapType;
   }
@@ -523,8 +520,9 @@ export class SinglePlayerModal extends LitElement {
     }
 
     console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting single player game with map: ${this.selectedMap as GameMapType}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
+
     const clientID = generateID();
     const gameID = generateID();
 
@@ -570,10 +568,8 @@ export class SinglePlayerModal extends LitElement {
             ],
             config: {
               gameMap: this.selectedMap,
-              gameMapSize: this.compactMap
-                ? GameMapSize.Compact
-                : GameMapSize.Normal,
-              gameType: GameType.Singleplayer,
+              gameMapSize: this.compactMap ? "Compact" : "Normal",
+              gameType: "Singleplayer",
               gameMode: this.gameMode,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
@@ -586,10 +582,9 @@ export class SinglePlayerModal extends LitElement {
               instantBuild: this.instantBuild,
               randomSpawn: this.randomSpawn,
               disabledUnits: this.disabledUnits
-                .map((u) => Object.values(UnitType).find((ut) => ut === u))
+                .map((u) => UnitTypeSchema.options.find((ut) => ut === u))
                 .filter((ut): ut is UnitType => ut !== undefined),
-              ...(this.gameMode === GameMode.Team &&
-              this.teamCount === HumansVsNations
+              ...(this.gameMode === "Team" && this.teamCount === HumansVsNations
                 ? {
                     disableNPCs: false,
                   }

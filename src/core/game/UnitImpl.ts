@@ -1,7 +1,6 @@
 import { simpleHash, toInt, withinInt } from "../Util";
 import {
   AllUnitParams,
-  MessageType,
   Player,
   Tick,
   TrainType,
@@ -12,7 +11,7 @@ import {
 } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
-import { GameUpdateType, UnitUpdate } from "./GameUpdates";
+import { UnitUpdate } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 
 export class UnitImpl implements Unit {
@@ -69,13 +68,13 @@ export class UnitImpl implements Unit {
     this._trainType = "trainType" in params ? params.trainType : undefined;
 
     switch (this._type) {
-      case UnitType.Warship:
-      case UnitType.Port:
-      case UnitType.MissileSilo:
-      case UnitType.DefensePost:
-      case UnitType.SAMLauncher:
-      case UnitType.City:
-      case UnitType.Factory:
+      case "Warship":
+      case "Port":
+      case "Missile Silo":
+      case "Defense Post":
+      case "SAM Launcher":
+      case "City":
+      case "Factory":
         this.mg.stats().unitBuild(_owner, this._type);
     }
   }
@@ -119,7 +118,7 @@ export class UnitImpl implements Unit {
 
   toUpdate(): UnitUpdate {
     return {
-      type: GameUpdateType.Unit,
+      type: "Unit",
       unitType: this._type,
       id: this._id,
       troops: this._troops,
@@ -188,13 +187,13 @@ export class UnitImpl implements Unit {
   setOwner(newOwner: PlayerImpl): void {
     this.clearPendingDeletion();
     switch (this._type) {
-      case UnitType.Warship:
-      case UnitType.Port:
-      case UnitType.MissileSilo:
-      case UnitType.DefensePost:
-      case UnitType.SAMLauncher:
-      case UnitType.City:
-      case UnitType.Factory:
+      case "Warship":
+      case "Port":
+      case "Missile Silo":
+      case "Defense Post":
+      case "SAM Launcher":
+      case "City":
+      case "Factory":
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
         break;
@@ -206,12 +205,12 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
     this.mg.displayMessage(
       `Your ${this.type()} was captured by ${newOwner.displayName()}`,
-      MessageType.UNIT_CAPTURED_BY_ENEMY,
+      "UNIT_CAPTURED_BY_ENEMY",
       this._lastOwner.id(),
     );
     this.mg.displayMessage(
       `Captured ${this.type()} from ${this._lastOwner.displayName()}`,
-      MessageType.CAPTURED_ENEMY_UNIT,
+      "CAPTURED_ENEMY_UNIT",
       newOwner.id(),
     );
   }
@@ -263,30 +262,30 @@ export class UnitImpl implements Unit {
     this._active = false;
     this.mg.addUpdate(this.toUpdate());
     this.mg.removeUnit(this);
-    if (displayMessage !== false && this._type !== UnitType.MIRVWarhead) {
+    if (displayMessage !== false && this._type !== "MIRV Warhead") {
       this.mg.displayMessage(
         `Your ${this._type} was destroyed`,
-        MessageType.UNIT_DESTROYED,
+        "UNIT_DESTROYED",
         this.owner().id(),
       );
     }
     if (destroyer !== undefined) {
       switch (this._type) {
-        case UnitType.TransportShip:
+        case "Transport Ship":
           this.mg
             .stats()
             .boatDestroyTroops(destroyer, this._owner, this._troops);
           break;
-        case UnitType.TradeShip:
+        case "Trade Ship":
           this.mg.stats().boatDestroyTrade(destroyer, this._owner);
           break;
-        case UnitType.City:
-        case UnitType.DefensePost:
-        case UnitType.MissileSilo:
-        case UnitType.Port:
-        case UnitType.SAMLauncher:
-        case UnitType.Warship:
-        case UnitType.Factory:
+        case "City":
+        case "Defense Post":
+        case "Missile Silo":
+        case "Port":
+        case "SAM Launcher":
+        case "Warship":
+        case "Factory":
           this.mg.stats().unitDestroy(destroyer, this._type);
           this.mg.stats().unitLose(this.owner(), this._type);
           break;
@@ -307,7 +306,7 @@ export class UnitImpl implements Unit {
   }
 
   orderBoatRetreat() {
-    if (this.type() !== UnitType.TransportShip) {
+    if (this.type() !== "Transport Ship") {
       throw new Error(`Cannot retreat ${this.type()}`);
     }
     this._retreating = true;
@@ -425,7 +424,7 @@ export class UnitImpl implements Unit {
 
   increaseLevel(): void {
     this._level++;
-    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+    if (["Missile Silo", "SAM Launcher"].includes(this.type())) {
       this._missileTimerQueue.push(this.mg.ticks());
     }
     this.mg.addUpdate(this.toUpdate());
@@ -433,7 +432,7 @@ export class UnitImpl implements Unit {
 
   decreaseLevel(destroyer?: Player): void {
     this._level--;
-    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+    if (["Missile Silo", "SAM Launcher"].includes(this.type())) {
       this._missileTimerQueue.pop();
     }
     if (this._level <= 0) {
