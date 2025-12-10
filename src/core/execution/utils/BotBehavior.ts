@@ -241,22 +241,23 @@ export class BotBehavior {
           n.type() === PlayerType.Bot,
       );
 
-    if (bots.length > 0) {
-      this.botAttackTroopsSent = 0;
-
-      const density = (p: Player) => p.troops() / p.numTilesOwned();
-      const sortedBots = bots.slice().sort((a, b) => density(a) - density(b));
-      const reducedBots = sortedBots.slice(
-        0,
-        this.getBotAttackMaxParallelism(),
-      );
-
-      for (const bot of reducedBots) {
-        this.sendAttack(bot);
-      }
-      return true;
+    if (bots.length === 0) {
+      return false;
     }
-    return false;
+
+    this.botAttackTroopsSent = 0;
+
+    const density = (p: Player) => p.troops() / p.numTilesOwned();
+    const sortedBots = bots.slice().sort((a, b) => density(a) - density(b));
+    const reducedBots = sortedBots.slice(0, this.getBotAttackMaxParallelism());
+
+    for (const bot of reducedBots) {
+      this.sendAttack(bot);
+    }
+
+    // Only short-circuit the rest of the targeting pipeline if we actually
+    // allocated some troops to bot attacks.
+    return this.botAttackTroopsSent > 0;
   }
 
   getBotAttackMaxParallelism(): number {
@@ -288,7 +289,7 @@ export class BotBehavior {
           this.player.troops() >= friend.troops() * 10
         ) {
           this.betray(friend);
-          this.sendAttack(friend);
+          this.sendAttack(friend, true);
           return true;
         }
       }
