@@ -213,7 +213,9 @@ export class PlayerView {
       .theme()
       .borderColor(defaultTerritoryColor);
 
-    const pattern = this.cosmetics.pattern;
+    const pattern = userSettings.territoryPatterns()
+      ? this.cosmetics.pattern
+      : undefined;
     if (pattern) {
       pattern.colorPalette ??= {
         name: "",
@@ -225,7 +227,7 @@ export class PlayerView {
     if (this.team() === null) {
       this._territoryColor = colord(
         this.cosmetics.color?.color ??
-          this.cosmetics.pattern?.colorPalette?.primaryColor ??
+          pattern?.colorPalette?.primaryColor ??
           defaultTerritoryColor.toHex(),
       );
     } else {
@@ -254,9 +256,9 @@ export class PlayerView {
       .defendedBorderColors(this._borderColor);
 
     this.decoder =
-      this.cosmetics.pattern === undefined
+      pattern === undefined
         ? undefined
-        : new PatternDecoder(this.cosmetics.pattern, base64url.decode);
+        : new PatternDecoder(pattern, base64url.decode);
   }
 
   territoryColor(tile?: TileRef): Colord {
@@ -385,8 +387,13 @@ export class PlayerView {
 
   totalUnitLevels(type: UnitType): number {
     return this.units(type)
+      .filter((unit) => !unit.isUnderConstruction())
       .map((unit) => unit.level())
       .reduce((a, b) => a + b, 0);
+  }
+
+  isMe(): boolean {
+    return this.smallID() === this.game.myPlayer()?.smallID();
   }
 
   isAlliedWith(other: PlayerView): boolean {

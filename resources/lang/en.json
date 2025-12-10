@@ -146,7 +146,6 @@
     "compact_map": "Compact Map",
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
-    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "start": "Start Game"
   },
@@ -172,7 +171,8 @@
     "games": "Games",
     "win_score": "Win Score",
     "loss_score": "Loss Score",
-    "win_loss_ratio": "Win/Loss"
+    "win_loss_ratio": "Win/Loss",
+    "rank": "Rank"
   },
   "map": {
     "map": "Map",
@@ -209,7 +209,9 @@
     "montreal": "Montreal",
     "achiran": "Achiran",
     "baikalnukewars": "Baikal (Nuke Wars)",
-    "fourislands": "Four Islands"
+    "fourislands": "Four Islands",
+    "gulfofstlawrence": "Gulf of St. Lawrence",
+    "lisbon": "Lisbon"
   },
   "map_categories": {
     "continental": "Continental",
@@ -234,11 +236,12 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "Duos (teams of 2)",
-    "teams_Trios": "Trios (teams of 3)",
-    "teams_Quads": "Quads (teams of 4)",
+    "teams_Duos": "of 2 (Duos)",
+    "teams_Trios": "of 3 (Trios)",
+    "teams_Quads": "of 4 (Quads)",
     "teams_hvn": "Humans Vs Nations",
-    "teams": "{num} teams"
+    "teams": "{num} teams",
+    "players_per_team": "of {num}"
   },
   "matchmaking_modal": {
     "title": "Matchmaking",
@@ -269,10 +272,11 @@
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
-    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
+    "nation_players": "Nations",
+    "nation_player": "Nation",
     "waiting": "Waiting for players...",
     "random_spawn": "Random spawn",
     "start": "Start Game",
@@ -280,7 +284,7 @@
     "assigned_teams": "Assigned Teams",
     "empty_teams": "Empty Teams",
     "empty_team": "Empty",
-    "remove_player": "Remove {{username}}"
+    "remove_player": "Remove {username}"
   },
   "team_colors": {
     "red": "Red",
@@ -332,7 +336,7 @@
     "emojis_label": "Emojis",
     "emojis_desc": "Toggle whether emojis are shown in game",
     "alert_frame_label": "Alert Frame",
-    "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed.",
+    "alert_frame_desc": "Toggle the alert frame. When enabled, the frame will be displayed when you are betrayed or attacked over land.",
     "special_effects_label": "Special effects",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "structure_sprites_label": "Structure Sprites",
@@ -535,7 +539,8 @@
     "join_tournament": "Join Tournament",
     "join_discord": "Join Our Discord Community!",
     "discord_description": "Connect with other players, get updates, and share strategies",
-    "join_server": "Join Server"
+    "join_server": "Join Server",
+    "youtube_tutorial": "Need some help?"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -644,7 +649,6 @@
     "flag": "Flag",
     "chat": "Chat",
     "target": "Target",
-    "break": "Break",
     "break_alliance": "Break Alliance",
     "alliance": "Alliance",
     "send_alliance": "Send Alliance",
@@ -656,10 +660,7 @@
     "title_with_name": "Send Troops to {name}",
     "available_tooltip": "Your current available troops",
     "min_keep": "Min keep",
-    "min_keep_pct": "(30%)",
     "slider_tooltip": "{{percent}}% • {{amount}}",
-    "toggle_attack_bar_mode": "Use attack bar to send troops",
-    "warning_attackbar": "Once enabled, you can't open this modal directly. You'll only send troops via the attack bar.",
     "aria_slider": "Troops slider",
     "capacity_note": "Receiver can accept only {{amount}} right now."
   },
