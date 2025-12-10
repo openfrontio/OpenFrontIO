@@ -512,7 +512,7 @@ export class BotBehavior {
     }
 
     let troops;
-    if (other.isPlayer() && other.type() === PlayerType.Bot) {
+    if (other.type() === PlayerType.Bot) {
       troops = this.calculateBotAttackTroops(other, this.player.troops() / 5);
     } else {
       troops = this.player.troops() / 5;
