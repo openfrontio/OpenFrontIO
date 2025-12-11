@@ -37,13 +37,16 @@ const frequency: Partial<Record<GameMapName, number>> = {
   FalklandIslands: 4,
   FaroeIslands: 4,
   GatewayToTheAtlantic: 5,
+  GulfOfStLawrence: 4,
   Halkidiki: 4,
   Iceland: 4,
   Italia: 6,
   Japan: 6,
+  Lisbon: 4,
   Mars: 3,
   Mena: 6,
   Montreal: 6,
+  NewYorkCity: 3,
   NorthAmerica: 5,
   Pangaea: 5,
   Pluto: 6,
@@ -68,7 +71,6 @@ const TEAM_COUNTS = [
   Duos,
   Trios,
   Quads,
-  HumansVsNations,
 ] as const satisfies TeamCountConfig[];
 
 export class MapPlaylist {
