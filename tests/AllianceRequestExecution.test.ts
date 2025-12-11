@@ -87,7 +87,7 @@ describe("AllianceRequestExecution", () => {
     expect(player1.outgoingAllianceRequests().length).toBe(1);
     expect(player2.incomingAllianceRequests().length).toBe(1);
 
-    // Player 1 Builds a silo & launches a missle at player 2.
+    // Player 1 Builds a silo & launches a missile at player 2.
     constructionExecution(game, player1, 0, 0, UnitType.MissileSilo);
     game.addExecution(
       new NukeExecution(UnitType.AtomBomb, player1, game.ref(0, 1), null),

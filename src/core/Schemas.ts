@@ -88,6 +88,7 @@ export type ClientMessage =
   | ClientPingMessage
   | ClientIntentMessage
   | ClientJoinMessage
+  | ClientRejoinMessage
   | ClientLogMessage
   | ClientHashMessage
   | ClientLobbyChatMessage;
@@ -112,6 +113,7 @@ export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
 export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
+export type ClientRejoinMessage = z.infer<typeof ClientRejoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 export type ClientLobbyChatMessage = z.infer<typeof ClientLobbyChatSchema>;
@@ -549,10 +551,18 @@ export const ClientJoinMessageSchema = z.object({
   clientID: ID,
   token: TokenSchema, // WARNING: PII
   gameID: ID,
-  lastTurn: z.number(), // The last turn the client saw.
   username: UsernameSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
+  turnstileToken: z.string().nullable(),
+});
+
+export const ClientRejoinMessageSchema = z.object({
+  type: z.literal("rejoin"),
+  gameID: ID,
+  clientID: ID,
+  lastTurn: z.number(),
+  token: TokenSchema,
 });
 
 export const ClientMessageSchema = z.discriminatedUnion("type", [
@@ -560,6 +570,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   ClientPingMessageSchema,
   ClientIntentMessageSchema,
   ClientJoinMessageSchema,
+  ClientRejoinMessageSchema,
   ClientLogMessageSchema,
   ClientHashSchema,
   ClientLobbyChatSchema,

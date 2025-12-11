@@ -7,6 +7,7 @@ import { GameType } from "../core/game/Game";
 import {
   ClientID,
   ClientMessageSchema,
+  ClientRejoinMessage,
   ClientSendWinnerMessage,
   GameConfig,
   GameInfo,
@@ -135,12 +136,36 @@ export class GameServer {
     }
   }
 
-  public addClient(client: Client, lastTurn: number) {
+  public joinClient(client: Client) {
     this.websockets.add(client.ws);
     if (this.kickedClients.has(client.clientID)) {
       this.log.warn(`cannot add client, already kicked`, {
         clientID: client.clientID,
       });
+      return;
+    }
+
+    if (this.allClients.has(client.clientID)) {
+      this.log.warn("cannot add client, already in game", {
+        clientID: client.clientID,
+      });
+      return;
+    }
+
+    if (
+      this.gameConfig.maxPlayers &&
+      this.activeClients.length >= this.gameConfig.maxPlayers
+    ) {
+      this.log.warn(`cannot add client, game full`, {
+        clientID: client.clientID,
+      });
+
+      client.ws.send(
+        JSON.stringify({
+          type: "error",
+          error: "full-lobby",
+        } satisfies ServerErrorMessage),
+      );
       return;
     }
 
@@ -151,11 +176,10 @@ export class GameServer {
         creatorID: this.lobbyCreatorID,
       });
     }
-    this.log.info("client (re)joining game", {
+    this.log.info("client joining game", {
       clientID: client.clientID,
       persistentID: client.persistentID,
       clientIP: ipAnonymize(client.ip),
-      isRejoin: lastTurn > 0,
     });
 
     if (
@@ -192,53 +216,67 @@ export class GameServer {
       }
     }
 
-    // Remove stale client if this is a reconnect
-    const existing = this.activeClients.find(
-      (c) => c.clientID === client.clientID,
-    );
-    if (existing !== undefined) {
-      if (client.persistentID !== existing.persistentID) {
-        this.log.error("persistent ids do not match", {
-          clientID: client.clientID,
-          clientIP: ipAnonymize(client.ip),
-          clientPersistentID: client.persistentID,
-          existingIP: ipAnonymize(existing.ip),
-          existingPersistentID: existing.persistentID,
-        });
-        return;
-      }
-
-      client.lastPing = existing.lastPing;
-      client.reportedWinner = existing.reportedWinner;
-
-      this.activeClients = this.activeClients.filter((c) => c !== existing);
-    }
-
-    if (
-      this.gameConfig.maxPlayers &&
-      this.activeClients.length >= this.gameConfig.maxPlayers
-    ) {
-      this.log.warn(`cannot add client, game full`, {
-        clientID: client.clientID,
-      });
-
-      client.ws.send(
-        JSON.stringify({
-          type: "error",
-          error: "full-lobby",
-        } satisfies ServerErrorMessage),
-      );
-      return;
-    }
-
     // Client connection accepted
     this.activeClients.push(client);
     client.lastPing = Date.now();
-
     this.markClientDisconnected(client.clientID, false);
-
     this.allClients.set(client.clientID, client);
+    this.addListeners(client);
 
+    // In case a client joined the game late and missed the start message.
+    if (this._hasStarted) {
+      this.sendStartGameMsg(client.ws, 0);
+    }
+  }
+
+  public rejoinClient(
+    ws: WebSocket,
+    persistentID: string,
+    msg: ClientRejoinMessage,
+  ): void {
+    this.websockets.add(ws);
+
+    if (this.kickedClients.has(msg.clientID)) {
+      this.log.warn("cannot rejoin client, client has been kicked", {
+        clientID: msg.clientID,
+      });
+      return;
+    }
+
+    const client = this.allClients.get(msg.clientID);
+    if (!client) {
+      this.log.warn("cannot rejoin client, existing client not found", {
+        clientID: msg.clientID,
+      });
+      return;
+    }
+
+    if (client.persistentID !== persistentID) {
+      this.log.error("persistent ids do not match", {
+        clientID: msg.clientID,
+        clientPersistentID: persistentID,
+        existingIP: ipAnonymize(client.ip),
+        existingPersistentID: client.persistentID,
+      });
+      return;
+    }
+
+    this.activeClients = this.activeClients.filter(
+      (c) => c.clientID !== msg.clientID,
+    );
+    this.activeClients.push(client);
+    client.lastPing = Date.now();
+    this.markClientDisconnected(msg.clientID, false);
+
+    client.ws = ws;
+    this.addListeners(client);
+
+    if (this._hasStarted) {
+      this.sendStartGameMsg(client.ws, msg.lastTurn);
+    }
+  }
+
+  private addListeners(client: Client) {
     client.ws.removeAllListeners("message");
     client.ws.on("message", async (message: string) => {
       try {
@@ -260,6 +298,13 @@ export class GameServer {
         }
         const clientMsg = parsed.data;
         switch (clientMsg.type) {
+          case "rejoin": {
+            // Client is already connected, no auth required, send start game message if game has started
+            if (this._hasStarted) {
+              this.sendStartGameMsg(client.ws, clientMsg.lastTurn);
+            }
+            break;
+          }
           case "intent": {
             if (clientMsg.intent.clientID !== client.clientID) {
               this.log.warn(
@@ -374,11 +419,6 @@ export class GameServer {
         client.ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
       }
     });
-
-    // In case a client joined the game late and missed the start message.
-    if (this._hasStarted) {
-      this.sendStartGameMsg(client.ws, lastTurn);
-    }
   }
 
   public numClients(): number {

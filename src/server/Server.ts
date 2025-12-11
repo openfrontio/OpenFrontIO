@@ -6,9 +6,9 @@ import { Cloudflare, TunnelConfig } from "./Cloudflare";
 import { startMaster } from "./Master";
 import { startWorker } from "./Worker";
 
-const config = getServerConfigFromServer();
-
+// Load environment variables before we read configuration values derived from them.
 dotenv.config();
+const config = getServerConfigFromServer();
 
 // Main entry point of the application
 async function main() {

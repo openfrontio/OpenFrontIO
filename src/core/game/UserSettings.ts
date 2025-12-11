@@ -75,7 +75,7 @@ export class UserSettings {
 
   focusLocked() {
     return false;
-    // TODO: renable when performance issues are fixed.
+    // TODO: re-enable when performance issues are fixed.
     this.get("settings.focusLocked", true);
   }
 
