@@ -6,7 +6,7 @@ import { PlayerInfo, RankType } from "./GameInfoRanking";
 @customElement("player-row")
 export class PlayerRow extends LitElement {
   @property({ type: Object }) player: PlayerInfo;
-  @property({ type: Number }) rankType: RankType;
+  @property({ type: RankType }) rankType: RankType;
   @property({ type: Number }) bestScore = 1;
   @property({ type: Number }) rank = 1;
   @property({ type: Number }) score = 0;
@@ -17,6 +17,7 @@ export class PlayerRow extends LitElement {
   }
 
   render() {
+    if (!this.player) return html``;
     const { player } = this;
     const visibleBorder = player.winner || this.currentPlayer;
     return html`
@@ -122,10 +123,12 @@ export class PlayerRow extends LitElement {
           this.player.atoms,
           this.rankType === RankType.Atoms,
         )}
+        /
         ${this.renderBombType(
           this.player.hydros,
           this.rankType === RankType.Hydros,
         )}
+        /
         ${this.renderBombType(
           this.player.mirv,
           this.rankType === RankType.MIRV,

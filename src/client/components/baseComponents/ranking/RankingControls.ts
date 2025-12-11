@@ -23,7 +23,7 @@ const isWarRanking = (t: RankType) => warRankings.has(t);
 
 @customElement("ranking-controls")
 export class RankingControls extends LitElement {
-  @property({ type: Number }) rankType = RankType.Lifetime;
+  @property({ type: RankType }) rankType = RankType.Lifetime;
 
   private onSort(type: RankType) {
     this.dispatchEvent(new CustomEvent("sort", { detail: type }));
@@ -32,26 +32,26 @@ export class RankingControls extends LitElement {
   private renderMainButtons() {
     return html`
       <div class="flex items-end justify-center p-6 pb-2 gap-5">
-        ${this.renderButton({
-          type: RankType.Lifetime,
-          active: this.rankType === RankType.Lifetime,
-          label: "game_info_modal.duration",
-        })}
-        ${this.renderButton({
-          type: RankType.Conquests,
-          active: isWarRanking(this.rankType),
-          label: "game_info_modal.war",
-        })}
-        ${this.renderButton({
-          type: RankType.TotalGold,
-          active: isEconomyRanking(this.rankType),
-          label: "game_info_modal.economy",
-        })}
+        ${this.renderButton(
+          RankType.Lifetime,
+          this.rankType === RankType.Lifetime,
+          "game_info_modal.duration",
+        )}
+        ${this.renderButton(
+          RankType.Conquests,
+          isWarRanking(this.rankType),
+          "game_info_modal.war",
+        )}
+        ${this.renderButton(
+          RankType.TotalGold,
+          isEconomyRanking(this.rankType),
+          "game_info_modal.economy",
+        )}
       </div>
     `;
   }
 
-  private renderButton({ type, active, label }) {
+  private renderButton(type: RankType, active: boolean, label: string) {
     return html`
       <button
         class="rounded-lg bg-blue-600 text-white text-lg p-3 hover:bg-blue-400 ${active
@@ -97,13 +97,13 @@ export class RankingControls extends LitElement {
     return html`
       <div class="flex justify-center gap-3 pb-1">
         ${econButtons.map(([type, label]) =>
-          this.renderSubButton(type, this.rankType === type, label),
+          this.renderSubButton(type as RankType, this.rankType === type, label),
         )}
       </div>
     `;
   }
 
-  private renderSubButton(type, active, label) {
+  private renderSubButton(type: RankType, active: boolean, label: string) {
     return html`
       <button
         @click=${() => this.onSort(type)}

@@ -176,6 +176,7 @@
     "rank": "Rank"
   },
   "game_info_modal": {
+    "players": "Players",
     "atoms": "Atoms",
     "hydros": "Hydros",
     "mirv": "MIRV",

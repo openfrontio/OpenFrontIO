@@ -26,10 +26,10 @@ export class GameInfoModal extends LitElement {
   @state() private gameInfo: GameEndInfo | null = null;
   @state() private rankedPlayers: Array<PlayerInfo> = [];
   @property({ type: String }) gameId: string | null = null;
-  @property({ type: Number }) rankType = RankType.Lifetime;
+  @property({ type: RankType }) rankType = RankType.Lifetime;
 
-  private username: string | null = null;
-  private isLoadingGame: boolean = true;
+  @state() private username: string | null = null;
+  @state() private isLoadingGame: boolean = true;
 
   private ranking: Ranking | null = null;
 
@@ -128,7 +128,9 @@ export class GameInfoModal extends LitElement {
             <span class="font-bold">${info.config.gameMap}</span>
           </div>
           <div>${renderDuration(info.duration)}</div>
-          <div>${info.players.length} players</div>
+          <div>
+            ${info.players.length} ${translateText("game_info_modal.players")}
+          </div>
         </div>
       </div>
     `;
@@ -195,8 +197,6 @@ export class GameInfoModal extends LitElement {
     try {
       this.isLoadingGame = true;
       this.loadUserName();
-      this.requestUpdate();
-
       const session = await fetchGameById(gameId);
       if (!session) return;
 
@@ -204,10 +204,11 @@ export class GameInfoModal extends LitElement {
       this.ranking = new Ranking(session);
       this.updateRanking();
       this.isLoadingGame = false;
-
       await this.loadMapImage(session.info.config.gameMap);
     } catch (err) {
       console.error("Failed to load game:", err);
+    } finally {
+      this.isLoadingGame = false;
     }
   }
 }

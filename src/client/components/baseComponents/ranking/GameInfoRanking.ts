@@ -22,7 +22,7 @@ export interface PlayerInfo {
   rawUsername: string;
   username: string;
   tag?: string;
-  killedAt?: bigint;
+  killedAt?: number;
   gold: bigint[];
   conquests: number;
   flag?: string;
@@ -83,7 +83,7 @@ export class Ranking {
         tag: player.clanTag,
         conquests: Number(stats.conquests) || 0,
         flag: player.cosmetics?.flag ?? undefined,
-        killedAt: stats.killedAt ?? undefined,
+        killedAt: stats.killedAt !== null ? Number(stats.killedAt) : undefined,
         gold,
         atoms: Number(stats.bombs?.abomb?.[0]) || 0,
         hydros: Number(stats.bombs?.hbomb?.[0]) || 0,
@@ -119,7 +119,7 @@ export class Ranking {
     switch (type) {
       case RankType.Lifetime:
         if (player.killedAt) {
-          return (Number(player.killedAt) / Math.max(this.duration, 1)) * 10;
+          return (player.killedAt / Math.max(this.duration, 1)) * 10;
         }
         return 100;
       case RankType.Conquests:
