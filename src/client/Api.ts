@@ -131,3 +131,14 @@ export function getAudience() {
   const domainname = hostname.split(".").slice(-2).join(".");
   return domainname;
 }
+
+// Check if the user's account is linked to a Discord or email account.
+export function hasLinkedAccount(
+  userMeResponse: UserMeResponse | false,
+): boolean {
+  return (
+    userMeResponse !== false &&
+    (userMeResponse.user?.discord !== undefined ||
+      userMeResponse.user?.email !== undefined)
+  );
+}

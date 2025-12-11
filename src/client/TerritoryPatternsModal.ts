@@ -5,6 +5,7 @@ import { UserMeResponse } from "../core/ApiSchemas";
 import { ColorPalette, Cosmetics, Pattern } from "../core/CosmeticSchemas";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
+import { hasLinkedAccount } from "./Api";
 import "./components/Difficulties";
 import "./components/PatternButton";
 import { renderPatternPreview } from "./components/PatternButton";
@@ -55,7 +56,7 @@ export class TerritoryPatternsModal extends LitElement {
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
-    if (userMeResponse === false) {
+    if (!hasLinkedAccount(userMeResponse)) {
       this.userSettings.setSelectedPatternName(undefined);
       this.selectedPattern = null;
       this.selectedColor = null;
@@ -134,7 +135,7 @@ export class TerritoryPatternsModal extends LitElement {
     return html`
       <div class="flex flex-col gap-2">
         <div class="flex justify-center">
-          ${this.isLoggedIn()
+          ${hasLinkedAccount(this.userMeResponse)
             ? this.renderMySkinsButton()
             : this.renderNotLoggedInWarning()}
         </div>
@@ -289,15 +290,5 @@ export class TerritoryPatternsModal extends LitElement {
     if (this.previewButton === null) return;
     render(preview, this.previewButton);
     this.requestUpdate();
-  }
-
-  private isLoggedIn(): boolean {
-    if (this.userMeResponse === false) {
-      return false;
-    }
-    return (
-      this.userMeResponse.user.discord !== undefined ||
-      this.userMeResponse.user.email !== undefined
-    );
   }
 }
