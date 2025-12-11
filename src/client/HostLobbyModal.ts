@@ -20,16 +20,14 @@ import {
   ClientInfo,
   GameConfig,
   GameInfo,
+  LobbyPreset,
+  LobbyPresetConfig,
   TeamCountConfig,
 } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import {
-  LobbyPreset,
-  LobbyPresetConfig,
-  LobbyPresetStore,
-} from "./components/lobbyConfig/PresetControls";
+import { LobbyPresetStore } from "./components/lobbyConfig/PresetControls";
 import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";

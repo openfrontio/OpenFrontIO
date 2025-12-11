@@ -1,4 +1,4 @@
-import { LobbyPreset } from "../../client/components/lobbyConfig/PresetControls";
+import { LobbyPreset } from "../../core/Schemas";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
 

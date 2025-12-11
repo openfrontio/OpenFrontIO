@@ -180,6 +180,12 @@ export const LobbyPresetConfigSchema = GameConfigSchema.extend({
 }).partial();
 export type LobbyPresetConfig = z.infer<typeof LobbyPresetConfigSchema>;
 
+export const LobbyPresetSchema = z.object({
+  name: z.string().default("Preset"),
+  config: LobbyPresetConfigSchema.default({}),
+});
+export type LobbyPreset = z.infer<typeof LobbyPresetSchema>;
+
 export const TeamSchema = z.string();
 
 const SafeString = z

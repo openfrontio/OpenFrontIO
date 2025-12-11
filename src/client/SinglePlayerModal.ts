@@ -16,16 +16,16 @@ import {
   mapCategories,
 } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
-import { TeamCountConfig } from "../core/Schemas";
+import {
+  LobbyPreset,
+  LobbyPresetConfig,
+  TeamCountConfig,
+} from "../core/Schemas";
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import {
-  LobbyPreset,
-  LobbyPresetConfig,
-  LobbyPresetStore,
-} from "./components/lobbyConfig/PresetControls";
+import { LobbyPresetStore } from "./components/lobbyConfig/PresetControls";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";

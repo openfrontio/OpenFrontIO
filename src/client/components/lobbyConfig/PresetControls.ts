@@ -3,19 +3,13 @@ import { customElement, property } from "lit/decorators.js";
 import { Difficulty, GameMapType, GameMode } from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 import {
+  LobbyPreset,
   LobbyPresetConfig,
   LobbyPresetConfigSchema,
   TeamCountConfig,
 } from "../../../core/Schemas";
 import { translateText } from "../../Utils";
 import "../baseComponents/Button";
-export { LobbyPresetConfigSchema } from "../../../core/Schemas";
-export type { LobbyPresetConfig } from "../../../core/Schemas";
-
-export type LobbyPreset = {
-  name: string;
-  config: LobbyPresetConfig;
-};
 
 export class LobbyPresetStore {
   constructor(private userSettings = new UserSettings()) {}
