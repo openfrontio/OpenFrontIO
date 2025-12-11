@@ -75,13 +75,9 @@ export function joinLobby(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
 
-  // Expose EventBus for lightweight components (e.g., LobbyChatPanel)
   (window as any).__eventBus = eventBus;
-  // Expose current clientID for UI alignment decisions
   (window as any).__clientID = lobbyConfig.clientID;
-  // Expose username for message identification
   (window as any).__username = lobbyConfig.playerName;
-  // Notify components that the EventBus is ready
   document.dispatchEvent(
     new CustomEvent("event-bus:ready", { bubbles: true, composed: true }),
   );
