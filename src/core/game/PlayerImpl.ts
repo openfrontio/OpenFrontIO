@@ -398,7 +398,7 @@ export class PlayerImpl implements Player {
     if (this.isDisconnected() || other.isDisconnected()) {
       // Disconnected players are marked as not-friendly even if they are allies,
       // so we need to return early if either player is disconnected.
-      // Otherise we could end up sending an alliance request to someone
+      // Otherwise we could end up sending an alliance request to someone
       // we are already allied with.
       return false;
     }

@@ -83,7 +83,7 @@ export class NukeExecution implements Execution {
         this.nuke.type() !== UnitType.MIRVWarhead
       ) {
         // Resolves exploit of alliance breaking in which a pending alliance request
-        // was accepeted in the middle of an missle attack.
+        // was accepted in the middle of a missile attack.
         const allianceRequest = attackedPlayer
           .incomingAllianceRequests()
           .find((ar) => ar.requestor() === this.player);

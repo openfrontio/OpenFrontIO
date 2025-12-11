@@ -161,12 +161,12 @@
 - Revert tradeship path caching by @evanpelle in https://github.com/openfrontio/OpenFrontIO/pull/927
 - Meta Adjustments from [UN] clan test by @1brucben in https://github.com/openfrontio/OpenFrontIO/pull/932
 - fix alternate view regression by @evanpelle in https://github.com/openfrontio/OpenFrontIO/pull/937
-- fix warship targetting range by @evanpelle in https://github.com/openfrontio/OpenFrontIO/pull/938
+- fix warship targeting range by @evanpelle in https://github.com/openfrontio/OpenFrontIO/pull/938
 - Add instructional overlay message during spawn phase by @spicydll in https://github.com/openfrontio/OpenFrontIO/pull/934
 - Add test coverage script by @aqw42 in https://github.com/openfrontio/OpenFrontIO/pull/929
 - Added two checkboxes to the default pull request template by @aqw42 in https://github.com/openfrontio/OpenFrontIO/pull/930
 - Fix slow singleplayer timer by @evanpelle in https://github.com/openfrontio/OpenFrontIO/pull/943
-- improved perfomance of PseudoRandom by @falcolnic in https://github.com/openfrontio/OpenFrontIO/pull/933
+- improved performance of PseudoRandom by @falcolnic in https://github.com/openfrontio/OpenFrontIO/pull/933
 - Change deploy concurrency group by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/944
 - Set singleplayer gitCommit in the client by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/945
 - Simplify bots retaliation logic by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/946
@@ -202,7 +202,7 @@
 - Use bigint for gold by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/1000
 - Fix : Donation when max pop already reached by @aqw42 in https://github.com/openfrontio/OpenFrontIO/pull/904
 - Validate incoming API data with zod by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/891
-- this is a fix for the "possibly null" error. dosent seem to cause runtime issues but does cause the compiler to throw an error by @Jerryslang in https://github.com/openfrontio/OpenFrontIO/pull/1005
+- this is a fix for the "possibly null" error. doesn't seem to cause runtime issues but does cause the compiler to throw an error by @Jerryslang in https://github.com/openfrontio/OpenFrontIO/pull/1005
 - Fixnukeboatbug by @rldtech in https://github.com/openfrontio/OpenFrontIO/pull/1011
 - added ratio controls by @falcolnic in https://github.com/openfrontio/OpenFrontIO/pull/963
 - Add a status check for the milestone field by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/1029
@@ -333,7 +333,7 @@
 - improve astar perf by @evanpelle in https://github.com/openfrontio/OpenFrontIO/pull/1268
 - Log public id by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/1278
 - clarify license by @evanpelle in https://github.com/openfrontio/OpenFrontIO/pull/1277
-- Fix sam targetting everything by @jrouillard in https://github.com/openfrontio/OpenFrontIO/pull/1280
+- Fix sam targeting everything by @jrouillard in https://github.com/openfrontio/OpenFrontIO/pull/1280
 - Add Creative Commons License to resources/non-commercial by @evanpelle in https://github.com/openfrontio/OpenFrontIO/pull/1284
 - Sword pattern by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/1283
 - Display OFM25 ad in WinModal by @scottanderson in https://github.com/openfrontio/OpenFrontIO/pull/1281

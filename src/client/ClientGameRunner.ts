@@ -58,6 +58,7 @@ export interface LobbyConfig {
   clientID: ClientID;
   gameID: GameID;
   token: string;
+  turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
@@ -79,9 +80,17 @@ export function joinLobby(
 
   const transport = new Transport(lobbyConfig, eventBus);
 
+  let hasJoined = false;
+
   const onconnect = () => {
-    console.log(`Joined game lobby ${lobbyConfig.gameID}`);
-    transport.joinGame(0);
+    if (hasJoined) {
+      console.log("rejoining game");
+      transport.rejoinGame(0);
+    } else {
+      hasJoined = true;
+      console.log(`Joining game lobby ${lobbyConfig.gameID}`);
+      transport.joinGame();
+    }
   };
   let terrainLoad: Promise<TerrainMapData> | null = null;
 
@@ -208,7 +217,6 @@ export class ClientGameRunner {
   private isActive = false;
 
   private turnsSeen = 0;
-  private hasJoined = false;
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
@@ -332,13 +340,12 @@ export class ClientGameRunner {
 
     const onconnect = () => {
       console.log("Connected to game server!");
-      this.transport.joinGame(this.turnsSeen);
+      this.transport.rejoinGame(this.turnsSeen);
     };
     const onmessage = (message: ServerMessage) => {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
-        this.hasJoined = true;
-        console.log("starting game!");
+        console.log("starting game! in client game runner");
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
@@ -413,10 +420,6 @@ export class ClientGameRunner {
         );
       }
       if (message.type === "turn") {
-        if (!this.hasJoined) {
-          this.transport.joinGame(0);
-          return;
-        }
         // Track when we receive the turn to calculate delay
         const now = Date.now();
         if (this.lastTickReceiveTime > 0) {
@@ -435,7 +438,10 @@ export class ClientGameRunner {
         }
       }
     };
-    this.transport.connect(onconnect, onmessage);
+    this.transport.updateCallback(onconnect, onmessage);
+    console.log("sending join game");
+    // Rejoin game from the start so we don't miss any turns.
+    this.transport.rejoinGame(0);
   }
 
   public stop() {
