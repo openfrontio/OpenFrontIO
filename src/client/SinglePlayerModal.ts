@@ -21,15 +21,14 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import "./components/lobbyConfig/PresetControls";
-import "./components/Maps";
-import { fetchCosmetics } from "./Cosmetics";
-import { FlagInput } from "./FlagInput";
 import {
   LobbyPreset,
   LobbyPresetConfig,
   LobbyPresetStore,
-} from "./LobbyPresets";
+} from "./components/lobbyConfig/PresetControls";
+import "./components/Maps";
+import { fetchCosmetics } from "./Cosmetics";
+import { FlagInput } from "./FlagInput";
 import { JoinLobbyEvent } from "./Main";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";

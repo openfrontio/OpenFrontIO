@@ -25,14 +25,13 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import "./components/lobbyConfig/PresetControls";
-import "./components/LobbyTeamView";
-import "./components/Maps";
 import {
   LobbyPreset,
   LobbyPresetConfig,
   LobbyPresetStore,
-} from "./LobbyPresets";
+} from "./components/lobbyConfig/PresetControls";
+import "./components/LobbyTeamView";
+import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
