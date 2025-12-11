@@ -102,6 +102,7 @@ export enum GameMapType {
   Achiran = "Achiran",
   BaikalNukeWars = "Baikal (Nuke Wars)",
   FourIslands = "Four Islands",
+  Svalmel = "Svalmel",
   GulfOfStLawrence = "Gulf of St. Lawrence",
   Lisbon = "Lisbon",
 }
@@ -149,6 +150,7 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Achiran,
     GameMapType.BaikalNukeWars,
     GameMapType.FourIslands,
+    GameMapType.Svalmel,
   ],
 };
 

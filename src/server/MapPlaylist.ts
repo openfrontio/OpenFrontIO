@@ -52,6 +52,7 @@ const frequency: Partial<Record<GameMapName, number>> = {
   Pluto: 6,
   SouthAmerica: 5,
   StraitOfGibraltar: 5,
+  Svalmel: 8,
   World: 8,
 };
 
