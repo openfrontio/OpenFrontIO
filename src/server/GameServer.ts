@@ -708,7 +708,6 @@ export class GameServer {
 
     const now = Date.now();
     for (const [clientID, client] of this.allClients) {
-      // Spectators are view-only; do not emit mark_disconnected intents for them
       if (client.isSpectator) {
         continue;
       }

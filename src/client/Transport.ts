@@ -659,12 +659,6 @@ export class Transport {
     });
   }
 
-  /**
-   * Public facade for publishing intents directly (bypassing event bus).
-   * Use this when you need to send an intent programmatically, such as
-   * when spectators join the game. Validates client state before sending.
-   * @param intent The intent to publish to the server
-   */
   public publishIntent(intent: Intent) {
     this.sendIntent(intent);
   }

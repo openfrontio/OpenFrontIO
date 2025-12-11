@@ -347,7 +347,6 @@ export class ClientGameRunner {
       if (message.type === "start") {
         console.log("starting game! in client game runner");
 
-        // Spectators send join_spectator intent instead of spawning
         if (this.lobby.isSpectator) {
           this.transport.publishIntent({
             type: "join_spectator",
