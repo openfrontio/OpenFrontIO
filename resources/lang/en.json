@@ -146,7 +146,6 @@
     "compact_map": "Compact Map",
     "max_timer": "Game length (minutes)",
     "disable_nukes": "Disable Nukes",
-    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "start": "Start Game"
   },
@@ -172,7 +171,8 @@
     "games": "Games",
     "win_score": "Win Score",
     "loss_score": "Loss Score",
-    "win_loss_ratio": "Win/Loss"
+    "win_loss_ratio": "Win/Loss",
+    "rank": "Rank"
   },
   "map": {
     "map": "Map",
@@ -207,11 +207,13 @@
     "yenisei": "Yenisei",
     "pluto": "Pluto",
     "montreal": "Montreal",
+    "newyorkcity": "New York City",
     "achiran": "Achiran",
     "baikalnukewars": "Baikal (Nuke Wars)",
     "fourislands": "Four Islands",
     "gulfofstlawrence": "Gulf of St. Lawrence",
-    "lisbon": "Lisbon"
+    "lisbon": "Lisbon",
+    "svalmel": "Svalmel"
   },
   "map_categories": {
     "continental": "Continental",
@@ -238,11 +240,12 @@
   "public_lobby": {
     "join": "Join next Game",
     "waiting": "players waiting",
-    "teams_Duos": "Duos (teams of 2)",
-    "teams_Trios": "Trios (teams of 3)",
-    "teams_Quads": "Quads (teams of 4)",
+    "teams_Duos": "of 2 (Duos)",
+    "teams_Trios": "of 3 (Trios)",
+    "teams_Quads": "of 4 (Quads)",
     "teams_hvn": "Humans Vs Nations",
-    "teams": "{num} teams"
+    "teams": "{num} teams",
+    "players_per_team": "of {num}"
   },
   "matchmaking_modal": {
     "title": "Matchmaking",
@@ -273,7 +276,6 @@
     "infinite_troops": "Infinite troops",
     "donate_troops": "Donate troops",
     "compact_map": "Compact Map",
-    "automatic_difficulty": "Automatic Difficulty",
     "enables_title": "Enable Settings",
     "player": "Player",
     "players": "Players",
@@ -542,7 +544,8 @@
     "join_tournament": "Join Tournament",
     "join_discord": "Join Our Discord Community!",
     "discord_description": "Connect with other players, get updates, and share strategies",
-    "join_server": "Join Server"
+    "join_server": "Join Server",
+    "youtube_tutorial": "Need some help?"
   },
   "leaderboard": {
     "title": "Leaderboard",
@@ -653,7 +656,6 @@
     "flag": "Flag",
     "chat": "Chat",
     "target": "Target",
-    "break": "Break",
     "break_alliance": "Break Alliance",
     "alliance": "Alliance",
     "send_alliance": "Send Alliance",
@@ -665,10 +667,7 @@
     "title_with_name": "Send Troops to {name}",
     "available_tooltip": "Your current available troops",
     "min_keep": "Min keep",
-    "min_keep_pct": "(30%)",
     "slider_tooltip": "{{percent}}% • {{amount}}",
-    "toggle_attack_bar_mode": "Use attack bar to send troops",
-    "warning_attackbar": "Once enabled, you can't open this modal directly. You'll only send troops via the attack bar.",
     "aria_slider": "Troops slider",
     "capacity_note": "Receiver can accept only {{amount}} right now."
   },
