@@ -56,7 +56,7 @@ export class Executor {
     switch (intent.type) {
       case "attack": {
         return new AttackExecution(
-          intent.troops,
+          intent.attackRatio,
           player,
           intent.targetID,
           null,
@@ -75,7 +75,7 @@ export class Executor {
           player,
           intent.targetID,
           intent.dst,
-          intent.troops,
+          intent.attackRatio,
           intent.src,
         );
       case "allianceRequest":

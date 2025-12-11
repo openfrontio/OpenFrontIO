@@ -413,13 +413,7 @@ export class FakeHumanExecution implements Execution {
       return;
     }
     this.mg.addExecution(
-      new TransportShipExecution(
-        this.player,
-        other.id(),
-        closest.y,
-        this.player.troops() / 5,
-        null,
-      ),
+      new TransportShipExecution(this.player, other.id(), closest.y, 0.2, null),
     );
   }
 
@@ -623,7 +617,7 @@ export class FakeHumanExecution implements Execution {
         this.player,
         this.mg.owner(dst).id(),
         dst,
-        this.player.troops() / 5,
+        0.2,
         null,
       ),
     );

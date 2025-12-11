@@ -73,7 +73,7 @@ export class SendSpawnIntentEvent implements GameEvent {
 export class SendAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID | null,
-    public readonly troops: number,
+    public readonly attackRatio: number,
   ) {}
 }
 
@@ -81,7 +81,7 @@ export class SendBoatAttackIntentEvent implements GameEvent {
   constructor(
     public readonly targetID: PlayerID | null,
     public readonly dst: TileRef,
-    public readonly troops: number,
+    public readonly attackRatio: number,
     public readonly src: TileRef | null = null,
   ) {}
 }
@@ -478,7 +478,7 @@ export class Transport {
       type: "attack",
       clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
-      troops: event.troops,
+      attackRatio: event.attackRatio,
     });
   }
 
@@ -487,7 +487,7 @@ export class Transport {
       type: "boat",
       clientID: this.lobbyConfig.clientID,
       targetID: event.targetID,
-      troops: event.troops,
+      attackRatio: event.attackRatio,
       dst: event.dst,
       src: event.src,
     });
