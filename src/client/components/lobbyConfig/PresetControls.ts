@@ -1,35 +1,16 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import {
-  Difficulty,
-  GameMapType,
-  GameMode,
-  UnitType,
-} from "../../../core/game/Game";
+import { Difficulty, GameMapType, GameMode } from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
-import { TeamCountConfig } from "../../../core/Schemas";
+import {
+  LobbyPresetConfig,
+  LobbyPresetConfigSchema,
+  TeamCountConfig,
+} from "../../../core/Schemas";
 import { translateText } from "../../Utils";
 import "../baseComponents/Button";
-
-export type LobbyPresetConfig = {
-  gameMap: GameMapType;
-  useRandomMap: boolean;
-  difficulty: Difficulty;
-  disableNPCs: boolean;
-  bots: number;
-  infiniteGold: boolean;
-  donateGold: boolean;
-  infiniteTroops: boolean;
-  donateTroops: boolean;
-  instantBuild: boolean;
-  randomSpawn: boolean;
-  compactMap: boolean;
-  maxTimer: boolean;
-  maxTimerValue?: number;
-  gameMode: GameMode;
-  playerTeams: TeamCountConfig;
-  disabledUnits: UnitType[];
-};
+export { LobbyPresetConfigSchema } from "../../../core/Schemas";
+export type { LobbyPresetConfig } from "../../../core/Schemas";
 
 export type LobbyPreset = {
   name: string;
@@ -69,24 +50,25 @@ export class LobbyPresetStore {
   private normalizePresetConfig(
     config: Partial<LobbyPresetConfig>,
   ): LobbyPresetConfig {
+    const parsed = LobbyPresetConfigSchema.parse(config);
     return {
-      gameMap: config.gameMap ?? GameMapType.World,
-      useRandomMap: config.useRandomMap ?? false,
-      difficulty: config.difficulty ?? Difficulty.Medium,
-      disableNPCs: config.disableNPCs ?? false,
-      bots: config.bots ?? 400,
-      infiniteGold: config.infiniteGold ?? false,
-      donateGold: config.donateGold ?? false,
-      infiniteTroops: config.infiniteTroops ?? false,
-      donateTroops: config.donateTroops ?? false,
-      instantBuild: config.instantBuild ?? false,
-      randomSpawn: config.randomSpawn ?? false,
-      compactMap: config.compactMap ?? false,
-      maxTimer: config.maxTimer ?? false,
-      maxTimerValue: config.maxTimerValue,
-      gameMode: config.gameMode ?? GameMode.FFA,
-      playerTeams: config.playerTeams ?? 2,
-      disabledUnits: config.disabledUnits ?? [],
+      gameMap: parsed.gameMap ?? GameMapType.World,
+      useRandomMap: parsed.useRandomMap ?? false,
+      difficulty: parsed.difficulty ?? Difficulty.Medium,
+      disableNPCs: parsed.disableNPCs ?? false,
+      bots: parsed.bots ?? 400,
+      infiniteGold: parsed.infiniteGold ?? false,
+      donateGold: parsed.donateGold ?? false,
+      infiniteTroops: parsed.infiniteTroops ?? false,
+      donateTroops: parsed.donateTroops ?? false,
+      instantBuild: parsed.instantBuild ?? false,
+      randomSpawn: parsed.randomSpawn ?? false,
+      compactMap: parsed.compactMap ?? false,
+      maxTimer: parsed.maxTimer ?? false,
+      maxTimerValue: parsed.maxTimerValue,
+      gameMode: parsed.gameMode ?? GameMode.FFA,
+      playerTeams: parsed.playerTeams ?? (2 as TeamCountConfig),
+      disabledUnits: parsed.disabledUnits ?? [],
     };
   }
 }

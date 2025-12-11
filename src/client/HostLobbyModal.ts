@@ -721,7 +721,7 @@ export class HostLobbyModal extends LitElement {
     }
 
     const config = preset.config;
-    this.useRandomMap = config.useRandomMap;
+    this.useRandomMap = config.useRandomMap ?? false;
     this.selectedMap = config.useRandomMap
       ? this.getRandomMap()
       : (config.gameMap ?? this.selectedMap);
