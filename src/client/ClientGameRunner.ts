@@ -26,6 +26,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
+import { getPersistentID } from "./Auth";
 import {
   AutoUpgradeEvent,
   DoBoatAttackEvent,
@@ -36,7 +37,6 @@ import {
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { getPersistentID } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
@@ -228,7 +228,7 @@ export class ClientGameRunner {
     this.lastMessageTime = Date.now();
   }
 
-  private saveGame(update: WinUpdate) {
+  private async saveGame(update: WinUpdate) {
     if (this.myPlayer === null) {
       return;
     }

@@ -157,10 +157,15 @@
   },
   "account_modal": {
     "title": "Account",
-    "logged_in_as": "Logged in as {email}",
+    "logged_in_as": "Logged in as {account_name}",
     "fetching_account": "Fetching account information...",
     "logged_in_with_discord": "Logged in with Discord",
-    "recovery_email_sent": "Recovery email sent to {email}"
+    "recovery_email_sent": "Recovery email sent to {email}",
+    "player_id": "Player ID: {id}",
+    "not_found": "Not Found",
+    "clear_session": "Clear Session",
+    "failed_to_send_recovery_email": "Failed to send recovery email",
+    "enter_email_address": "Please enter an email address"
   },
   "stats_modal": {
     "title": "Stats",
@@ -704,6 +709,7 @@
     "colors": "Colors",
     "purchase": "Purchase",
     "show_only_owned": "My Skins",
+    "not_logged_in": "Not logged in",
     "blocked": {
       "login": "You must be logged in to access this skin.",
       "purchase": "Purchase this skin to unlock it."
