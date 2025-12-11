@@ -46,7 +46,7 @@ export class GameInfoModal extends LitElement {
     return html`
       <o-modal
         id="gameInfoModal"
-        title="Game info"
+        title="${translateText("game_info_modal.title")}"
         translationKey="main.game_info"
       >
         <div
@@ -114,7 +114,7 @@ export class GameInfoModal extends LitElement {
         ${this.mapImage
           ? html`<img
               src="${this.mapImage}"
-              class="absolute place-self-start col-span-full row-span-full h-full rounded-xl w-"
+              class="absolute place-self-start col-span-full row-span-full h-full rounded-xl"
               style="mask-image: linear-gradient(to left, transparent, #fff)"
             />`
           : html`<div

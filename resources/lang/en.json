@@ -176,6 +176,7 @@
     "rank": "Rank"
   },
   "game_info_modal": {
+    "title": "Game info",
     "players": "Players",
     "atoms": "Atoms",
     "hydros": "Hydros",
