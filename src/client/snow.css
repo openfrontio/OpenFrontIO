@@ -21,6 +21,7 @@
   z-index: 10;
   opacity: 0.8; /* Default opacity */
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5)); /* Subtle glow */
+  will-change: transform, opacity;
 }
 .santa-hat-overlay {
   position: absolute;
@@ -49,4 +50,10 @@ html.in-game .santa-hat-overlay {
 
 html.modal-active .santa-hat-overlay {
   display: none;
+}
+
+@media (max-width: 768px) {
+  .snowflake {
+    filter: none;
+  }
 }

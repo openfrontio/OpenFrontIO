@@ -615,7 +615,8 @@ function enableSnowflakes() {
   // Clear existing snowflakes if any
   removeSnowflakes();
 
-  const numberOfSnowflakes = 200; // Increased count
+  const isMobile = window.innerWidth <= 768;
+  const numberOfSnowflakes = isMobile ? 30 : 75; // Increased count
 
   for (let i = 0; i < numberOfSnowflakes; i++) {
     const snowflake = document.createElement("div");
