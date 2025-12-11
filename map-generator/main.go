@@ -44,6 +44,7 @@ var maps = []struct {
 	{Name: "pluto"},
 	{Name: "southamerica"},
 	{Name: "straitofgibraltar"},
+	{Name: "svalmel"},
 	{Name: "world"},
 	{Name: "big_plains", IsTest: true},
 	{Name: "half_land_half_ocean", IsTest: true},
