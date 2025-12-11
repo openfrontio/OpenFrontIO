@@ -15,6 +15,7 @@ import {
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
+  ClientLobbyChatMessage,
   ClientMessage,
   ClientPingMessage,
   ClientRejoinMessage,
@@ -666,13 +667,11 @@ export class Transport {
   }
 
   private onSendLobbyChat(event: SendLobbyChatEvent) {
-    // Send a simple websocket message for lobby chat
-    const msg = {
+    this.sendMsg({
       type: "lobby_chat",
       text: event.text,
       clientID: this.lobbyConfig.clientID,
-    } as const;
-    this.sendMsg(msg as any);
+    } satisfies ClientLobbyChatMessage);
   }
 
   private sendIntent(intent: Intent) {
