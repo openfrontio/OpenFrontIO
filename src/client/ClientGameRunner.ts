@@ -59,6 +59,7 @@ export interface LobbyConfig {
   gameID: GameID;
   token: string;
   turnstileToken: string | null;
+  isSpectator?: boolean;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
   // GameRecord exists when replaying an archived game.
