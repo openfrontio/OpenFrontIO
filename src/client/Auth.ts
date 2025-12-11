@@ -110,7 +110,7 @@ export async function userAuth(
       return false;
     }
     const now = Math.floor(Date.now() / 1000);
-    if (exp !== undefined && now >= exp + 3 * 60) {
+    if (exp !== undefined && now >= exp - 3 * 60) {
       console.log("jwt expired or about to expire");
       if (!shouldRefresh) {
         console.error("jwt expired and shouldRefresh is false");
