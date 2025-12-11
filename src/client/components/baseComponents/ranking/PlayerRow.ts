@@ -6,7 +6,7 @@ import { PlayerInfo, RankType } from "./GameInfoRanking";
 @customElement("player-row")
 export class PlayerRow extends LitElement {
   @property({ type: Object }) player: PlayerInfo;
-  @property({ type: RankType }) rankType: RankType;
+  @property({ type: String }) rankType: RankType;
   @property({ type: Number }) bestScore = 1;
   @property({ type: Number }) rank = 1;
   @property({ type: Number }) score = 0;

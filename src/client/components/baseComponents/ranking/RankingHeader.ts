@@ -5,7 +5,7 @@ import { RankType } from "./GameInfoRanking";
 
 @customElement("ranking-header")
 export class RankingHeader extends LitElement {
-  @property({ type: Number }) rankType = RankType.Lifetime;
+  @property({ type: String }) rankType = RankType.Lifetime;
 
   private onSort(type: RankType) {
     this.dispatchEvent(new CustomEvent("sort", { detail: type }));

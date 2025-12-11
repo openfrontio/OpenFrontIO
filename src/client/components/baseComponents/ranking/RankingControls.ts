@@ -23,7 +23,7 @@ const isWarRanking = (t: RankType) => warRankings.has(t);
 
 @customElement("ranking-controls")
 export class RankingControls extends LitElement {
-  @property({ type: RankType }) rankType = RankType.Lifetime;
+  @property({ type: String }) rankType = RankType.Lifetime;
 
   private onSort(type: RankType) {
     this.dispatchEvent(new CustomEvent("sort", { detail: type }));

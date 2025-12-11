@@ -26,7 +26,7 @@ export class GameInfoModal extends LitElement {
   @state() private gameInfo: GameEndInfo | null = null;
   @state() private rankedPlayers: Array<PlayerInfo> = [];
   @property({ type: String }) gameId: string | null = null;
-  @property({ type: RankType }) rankType = RankType.Lifetime;
+  @property({ type: String }) rankType = RankType.Lifetime;
 
   @state() private username: string | null = null;
   @state() private isLoadingGame: boolean = true;
