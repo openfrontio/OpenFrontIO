@@ -433,27 +433,13 @@
         </div>
       </div>
     </footer>
-    <account-button></account-button>
-    <!-- Game modals and overlays -->
-    <single-player-modal></single-player-modal>
-    <host-lobby-modal></host-lobby-modal>
-    <join-private-lobby-modal></join-private-lobby-modal>
-    <emoji-table></emoji-table>
-    <build-menu></build-menu>
-    <win-modal></win-modal>
-    <game-starting-modal></game-starting-modal>
-    <game-top-bar></game-top-bar>
-    <unit-display></unit-display>
-    <div class="flex fixed top-[20px] right-[20px] z-[1000] items-start gap-2">
-      <replay-panel></replay-panel>
-      <game-right-sidebar></game-right-sidebar>
+    <div
+      id="top-right-buttons-container"
+      class="flex flex-col fixed top-4 right-4 z-[9998] space-y-2"
+    >
+      <account-button></account-button>
+      <stats-button></stats-button>
     </div>
-    <settings-modal></settings-modal>
-    <player-panel></player-panel>
-    <spawn-timer></spawn-timer>
-    <help-modal></help-modal>
-    <dark-mode-button></dark-mode-button>
-    <stats-button></stats-button>
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <user-setting></user-setting>
