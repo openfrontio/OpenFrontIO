@@ -44,6 +44,7 @@ import {
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { getUserMe, isLoggedIn } from "./jwt";
+import MenuSoundManager from "./sound/MenuSoundManager";
 import "./styles.css";
 
 declare global {
@@ -379,6 +380,10 @@ class Client {
       });
 
     this.initializeFuseTag();
+    MenuSoundManager.setBackgroundMusicVolume(
+      this.userSettings.mainMenuMusicVolume(),
+    );
+    MenuSoundManager.playBackgroundMusic();
   }
 
   private handleHash() {
@@ -504,6 +509,7 @@ class Client {
         gameRecord: lobby.gameRecord,
       },
       () => {
+        MenuSoundManager.stopBackgroundMusic();
         console.log("Closing modals");
         document.getElementById("settings-button")?.classList.add("hidden");
         document
