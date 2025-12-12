@@ -11,17 +11,18 @@ import { PersistentIdSchema } from "../core/Schemas";
 
 type TokenVerificationResult =
   | {
+      type: "success";
       persistentId: string;
       claims: TokenPayload | null;
     }
-  | false;
+  | { type: "error"; message: string };
 
 export async function verifyClientToken(
   token: string,
   config: ServerConfig,
 ): Promise<TokenVerificationResult> {
   if (PersistentIdSchema.safeParse(token).success) {
-    return { persistentId: token, claims: null };
+    return { type: "success", persistentId: token, claims: null };
   }
   try {
     const issuer = config.jwtIssuer();
@@ -34,15 +35,23 @@ export async function verifyClientToken(
     });
     const result = TokenPayloadSchema.safeParse(payload);
     if (!result.success) {
-      const error = z.prettifyError(result.error);
-      console.warn("Error parsing token payload", error);
-      return false;
+      return {
+        type: "error",
+        message: z.prettifyError(result.error),
+      };
     }
     const claims = result.data;
     const persistentId = claims.sub;
-    return { persistentId, claims };
+    return { type: "success", persistentId, claims };
   } catch (e) {
-    return false;
+    const message =
+      e instanceof Error
+        ? e.message
+        : typeof e === "string"
+          ? e
+          : "An unknown error occurred";
+
+    return { type: "error", message };
   }
 }
 
