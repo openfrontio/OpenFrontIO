@@ -1,5 +1,5 @@
 import { Config } from "../configuration/Config";
-import { Execution, Game, Player, UnitType } from "../game/Game";
+import { Cell, Execution, Game, Player, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { calculateBoundingBox, getMode, inscribed, simpleHash } from "../Util";
 
@@ -20,6 +20,138 @@ export class PlayerExecution implements Execution {
   private active = true;
 
   constructor(private player: Player) {}
+
+  private isEdgeTileFast(
+    tile: TileRef,
+    x: number,
+    width: number,
+    height: number,
+  ): boolean {
+    return (
+      x === 0 || x === width - 1 || tile < width || tile >= (height - 1) * width
+    );
+  }
+
+  private scanClusterBoundary(
+    cluster: ReadonlySet<TileRef>,
+    opts: {
+      rejectIfEdgeTile?: boolean;
+      // IMPORTANT: This checks `mg.isShore(tile)` which is based on the terrain "shoreline" bit.
+      // That can include shorelines around BOTH oceans and lakes.
+      // If you only want to reject true *ocean* adjacency, use `rejectIfOceanNeighbor` instead.
+      rejectIfShoreTile?: boolean;
+      // Reject if any neighbor is `mg.isOcean(...)` (i.e. true ocean).
+      // This is *not* equivalent to `rejectIfShoreTile`:
+      // - `rejectIfOceanNeighbor` rejects only ocean-adjacent land (like `mg.isOceanShore(tile)`),
+      //   and in this helper we detect it without allocating `neighbors(...)` arrays.
+      // - `rejectIfShoreTile` rejects any shoreline-bit tile (including lake shorelines).
+      rejectIfOceanNeighbor?: boolean;
+      rejectIfUnownedNeighbor?: boolean;
+      trackEnemyBBox?: boolean;
+      trackSingleEnemyId?: boolean;
+    },
+  ):
+    | {
+        enemyId: number | null;
+        hasMultipleEnemies: boolean;
+        hasEnemyNeighbor: boolean;
+        enemyMinX: number;
+        enemyMinY: number;
+        enemyMaxX: number;
+        enemyMaxY: number;
+      }
+    | undefined {
+    const mg = this.mg;
+    const playerSmallID = this.player.smallID();
+    const width = mg.width();
+    const height = mg.height();
+
+    let tileTouchesOcean = false;
+    let tileTouchesUnowned = false;
+
+    let enemyId: number | null = null;
+    let hasMultipleEnemies = false;
+
+    let hasEnemyNeighbor = false;
+    let enemyMinX = Infinity;
+    let enemyMinY = Infinity;
+    let enemyMaxX = -Infinity;
+    let enemyMaxY = -Infinity;
+
+    const visitNeighbor = (n: TileRef) => {
+      if (hasMultipleEnemies) return;
+      if (opts.rejectIfOceanNeighbor && tileTouchesOcean) return;
+      if (opts.rejectIfUnownedNeighbor && tileTouchesUnowned) return;
+
+      // Equivalent to GameMapImpl.isOceanShore(tile) but without allocating neighbor arrays.
+      // Owned tiles are land (GameImpl.conquer rejects water), so any adjacent ocean means "ocean shore".
+      if (opts.rejectIfOceanNeighbor && mg.isOcean(n)) {
+        tileTouchesOcean = true;
+        return;
+      }
+
+      const ownerId = mg.ownerID(n);
+      if (ownerId === 0) {
+        if (opts.rejectIfUnownedNeighbor) {
+          tileTouchesUnowned = true;
+        }
+        return;
+      }
+      if (ownerId === playerSmallID) return;
+
+      hasEnemyNeighbor = true;
+
+      if (opts.trackSingleEnemyId) {
+        if (enemyId === null) {
+          enemyId = ownerId;
+        } else if (enemyId !== ownerId) {
+          hasMultipleEnemies = true;
+          return;
+        }
+      }
+
+      if (opts.trackEnemyBBox) {
+        const nx = mg.x(n);
+        const ny = mg.y(n);
+        if (nx < enemyMinX) enemyMinX = nx;
+        if (ny < enemyMinY) enemyMinY = ny;
+        if (nx > enemyMaxX) enemyMaxX = nx;
+        if (ny > enemyMaxY) enemyMaxY = ny;
+      }
+    };
+
+    for (const tile of cluster) {
+      if (opts.rejectIfShoreTile && mg.isShore(tile)) {
+        return;
+      }
+
+      const x = mg.x(tile);
+      if (
+        (opts.rejectIfEdgeTile ?? true) &&
+        this.isEdgeTileFast(tile, x, width, height)
+      ) {
+        return;
+      }
+
+      tileTouchesOcean = false;
+      tileTouchesUnowned = false;
+      mg.forEachNeighbor(tile, visitNeighbor);
+
+      if (hasMultipleEnemies) return;
+      if (opts.rejectIfOceanNeighbor && tileTouchesOcean) return;
+      if (opts.rejectIfUnownedNeighbor && tileTouchesUnowned) return;
+    }
+
+    return {
+      enemyId,
+      hasMultipleEnemies,
+      hasEnemyNeighbor,
+      enemyMinX,
+      enemyMinY,
+      enemyMaxX,
+      enemyMaxY,
+    };
+  }
 
   activeDuringSpawnPhase(): boolean {
     return false;
@@ -138,79 +270,22 @@ export class PlayerExecution implements Execution {
 
   private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
     const mg = this.mg;
-    const playerSmallID = this.player.smallID();
-
     // Hot path: avoid per-tile allocations and keep neighbor processing single-pass.
     // We only care about "exactly one distinct non-player owner around the cluster",
     // early reject clusters that touch the map edge or ocean shore.
-    let hasUnownedNeighbor = false;
-    let touchesOceanShore = false;
-    let enemyId: number | null = null;
-    let hasMultipleEnemies = false;
-
-    // Reusable callback (allocated once per surroundedBySamePlayer call).
-    const visitNeighbor = (n: TileRef) => {
-      // Can't short-circuit forEachNeighbor, but this guard avoids extra work.
-      if (hasUnownedNeighbor || touchesOceanShore || hasMultipleEnemies) return;
-
-      // Equivalent to GameMapImpl.isOceanShore(tile) but without allocating neighbor arrays.
-      // Owned tiles are land (GameImpl.conquer rejects water), so any adjacent ocean means "ocean shore".
-      if (mg.isOcean(n)) {
-        touchesOceanShore = true;
-        return;
-      }
-
-      if (!mg.hasOwner(n)) {
-        hasUnownedNeighbor = true;
-        return;
-      }
-
-      const ownerId = mg.ownerID(n);
-      if (ownerId === playerSmallID) return;
-
-      if (enemyId === null) {
-        enemyId = ownerId;
-        return;
-      }
-
-      if (enemyId !== ownerId) {
-        hasMultipleEnemies = true;
-      }
-    };
-
-    const width = mg.width();
-    const height = mg.height();
-
-    for (const tile of cluster) {
-      const x = mg.x(tile);
-      // Edge-of-map check
-      if (
-        x === 0 ||
-        x === width - 1 ||
-        tile < width ||
-        tile >= (height - 1) * width
-      ) {
-        return false;
-      }
-
-      hasUnownedNeighbor = false;
-      touchesOceanShore = false;
-      mg.forEachNeighbor(tile, visitNeighbor);
-
-      if (
-        touchesOceanShore ||
-        hasUnownedNeighbor ||
-        hasMultipleEnemies ||
-        enemyId === null
-      ) {
-        return false;
-      }
-    }
-    if (hasMultipleEnemies || enemyId === null) {
+    const scan = this.scanClusterBoundary(cluster, {
+      rejectIfEdgeTile: true,
+      // We want the stricter "ocean shore" behavior (adjacent to true ocean),
+      // matching previous `isOceanShore` semantics without allocating neighbor arrays.
+      rejectIfOceanNeighbor: true,
+      rejectIfUnownedNeighbor: true,
+      trackSingleEnemyId: true,
+    });
+    if (!scan || scan.hasMultipleEnemies || scan.enemyId === null) {
       return false;
     }
     /* dont think this is needed anymore, but keeping it for now */
-    const enemy = mg.playerBySmallID(enemyId) as Player;
+    const enemy = mg.playerBySmallID(scan.enemyId) as Player;
     const enemyBox = calculateBoundingBox(mg, enemy.borderTiles());
     const clusterBox = calculateBoundingBox(mg, cluster);
     if (inscribed(enemyBox, clusterBox)) {
@@ -220,23 +295,22 @@ export class PlayerExecution implements Execution {
   }
 
   private isSurrounded(cluster: Set<TileRef>): boolean {
-    const enemyTiles = new Set<TileRef>();
-    for (const tr of cluster) {
-      if (this.mg.isShore(tr) || this.mg.isOnEdgeOfMap(tr)) {
-        return false;
-      }
-      this.mg.forEachNeighbor(tr, (n) => {
-        const owner = this.mg.owner(n);
-        if (owner.isPlayer() && this.mg.ownerID(n) !== this.player.smallID()) {
-          enemyTiles.add(n);
-        }
-      });
-    }
-    if (enemyTiles.size === 0) {
-      return false;
-    }
-    const enemyBox = calculateBoundingBox(this.mg, enemyTiles);
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
+    const mg = this.mg;
+    const scan = this.scanClusterBoundary(cluster, {
+      rejectIfEdgeTile: true,
+      // This keeps the prior `mg.isShore(tile)` behavior which is based on the terrain "shoreline" bit.
+      // which can include both ocean and lake shorelines.
+      //we may also(only?) want rejectIfOceanNeighbor: true, but this matches the previous behavior.
+      rejectIfShoreTile: true,
+      trackEnemyBBox: true,
+    });
+    if (!scan || !scan.hasEnemyNeighbor) return false;
+
+    const enemyBox = {
+      min: new Cell(scan.enemyMinX, scan.enemyMinY),
+      max: new Cell(scan.enemyMaxX, scan.enemyMaxY),
+    };
+    const clusterBox = calculateBoundingBox(mg, cluster);
     return inscribed(enemyBox, clusterBox);
   }
 
