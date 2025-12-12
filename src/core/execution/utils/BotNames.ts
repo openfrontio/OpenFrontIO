@@ -301,6 +301,8 @@ export const SPECIAL_FULL_ELF_NAMES = [
   "Glorfindel",
 ];
 export const COMMUNITY_PREFIXES = [
+  "The Sparkling Elf",
+  "Valentino",
   "Mr Cube",
   "Nukemen",
   "Baguette Bot",
