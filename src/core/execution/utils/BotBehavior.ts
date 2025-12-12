@@ -677,12 +677,12 @@ export class BotBehavior {
       case Difficulty.Hard:
         return (
           this.player.relation(otherPlayer) === Relation.Friendly &&
-          this.random.nextInt(0, 100) >= 16.66
+          this.random.nextFloat(0, 100) >= 16.66
         );
       default:
         return (
           this.player.relation(otherPlayer) === Relation.Friendly &&
-          this.random.nextInt(0, 100) >= 33.33
+          this.random.nextFloat(0, 100) >= 33.33
         );
     }
   }
