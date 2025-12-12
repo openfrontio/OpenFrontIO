@@ -137,35 +137,82 @@ export class PlayerExecution implements Execution {
   }
 
   private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
-    const enemies = new Set<number>();
+    const mg = this.mg;
+    const playerSmallID = this.player.smallID();
+
+    // Hot path: avoid per-tile allocations and keep neighbor processing single-pass.
+    // We only care about "exactly one distinct non-player owner around the cluster",
+    // early reject clusters that touch the map edge or ocean shore.
+    let hasUnownedNeighbor = false;
+    let touchesOceanShore = false;
+    let enemyId: number | null = null;
+    let hasMultipleEnemies = false;
+
+    // Reusable callback (allocated once per surroundedBySamePlayer call).
+    const visitNeighbor = (n: TileRef) => {
+      // Can't short-circuit forEachNeighbor, but this guard avoids extra work.
+      if (hasUnownedNeighbor || touchesOceanShore || hasMultipleEnemies) return;
+
+      // Equivalent to GameMapImpl.isOceanShore(tile) but without allocating neighbor arrays.
+      // Owned tiles are land (GameImpl.conquer rejects water), so any adjacent ocean means "ocean shore".
+      if (mg.isOcean(n)) {
+        touchesOceanShore = true;
+        return;
+      }
+
+      if (!mg.hasOwner(n)) {
+        hasUnownedNeighbor = true;
+        return;
+      }
+
+      const ownerId = mg.ownerID(n);
+      if (ownerId === playerSmallID) return;
+
+      if (enemyId === null) {
+        enemyId = ownerId;
+        return;
+      }
+
+      if (enemyId !== ownerId) {
+        hasMultipleEnemies = true;
+      }
+    };
+
+    const width = mg.width();
+    const height = mg.height();
+
     for (const tile of cluster) {
-      let hasUnownedNeighbor = false;
-      if (this.mg.isOceanShore(tile) || this.mg.isOnEdgeOfMap(tile)) {
+      const x = mg.x(tile);
+      // Edge-of-map check
+      if (
+        x === 0 ||
+        x === width - 1 ||
+        tile < width ||
+        tile >= (height - 1) * width
+      ) {
         return false;
       }
-      this.mg.forEachNeighbor(tile, (n) => {
-        if (!this.mg.hasOwner(n)) {
-          hasUnownedNeighbor = true;
-          return;
-        }
-        const ownerId = this.mg.ownerID(n);
-        if (ownerId !== this.player.smallID()) {
-          enemies.add(ownerId);
-        }
-      });
-      if (hasUnownedNeighbor) {
-        return false;
-      }
-      if (enemies.size !== 1) {
+
+      hasUnownedNeighbor = false;
+      touchesOceanShore = false;
+      mg.forEachNeighbor(tile, visitNeighbor);
+
+      if (
+        touchesOceanShore ||
+        hasUnownedNeighbor ||
+        hasMultipleEnemies ||
+        enemyId === null
+      ) {
         return false;
       }
     }
-    if (enemies.size !== 1) {
+    if (hasMultipleEnemies || enemyId === null) {
       return false;
     }
-    const enemy = this.mg.playerBySmallID(Array.from(enemies)[0]) as Player;
-    const enemyBox = calculateBoundingBox(this.mg, enemy.borderTiles());
-    const clusterBox = calculateBoundingBox(this.mg, cluster);
+    /* dont think this is needed anymore, but keeping it for now */
+    const enemy = mg.playerBySmallID(enemyId) as Player;
+    const enemyBox = calculateBoundingBox(mg, enemy.borderTiles());
+    const clusterBox = calculateBoundingBox(mg, cluster);
     if (inscribed(enemyBox, clusterBox)) {
       return enemy;
     }
