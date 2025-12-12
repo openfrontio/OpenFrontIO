@@ -131,7 +131,7 @@ export class PublicLobby extends LitElement {
         class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
           .isLobbyHighlighted
           ? "bg-gradient-to-r from-green-600 to-green-500"
-          : "bg-gradient-to-r from-blue-600 to-blue-500"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
+          : "bg-gradient-to-r from-red-700 to-red-600"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
           .isButtonDebounced
           ? "opacity-70 cursor-not-allowed"
           : ""}"
@@ -153,11 +153,11 @@ export class PublicLobby extends LitElement {
             <div class="text-lg md:text-2xl font-semibold">
               ${translateText("public_lobby.join")}
             </div>
-            <div class="text-md font-medium text-blue-100">
+            <div class="text-md font-medium text-red-200">
               <span
                 class="text-sm ${this.isLobbyHighlighted
                   ? "text-green-600"
-                  : "text-blue-600"} bg-white rounded-sm px-1"
+                  : "text-red-700"} bg-white rounded-sm px-1"
               >
                 ${lobby.gameConfig.gameMode === GameMode.Team
                   ? typeof teamCount === "string"
@@ -178,10 +178,10 @@ export class PublicLobby extends LitElement {
           </div>
 
           <div>
-            <div class="text-md font-medium text-blue-100">
+            <div class="text-md font-medium text-red-200">
               ${lobby.numClients} / ${lobby.gameConfig.maxPlayers}
             </div>
-            <div class="text-md font-medium text-blue-100">${timeDisplay}</div>
+            <div class="text-md font-medium text-red-200">${timeDisplay}</div>
           </div>
         </div>
       </button>

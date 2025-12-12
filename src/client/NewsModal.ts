@@ -1,7 +1,7 @@
 import { LitElement, css, html } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
-import christmas from "../../resources/christmas.md";
+
 import megaphone from "../../resources/images/Megaphone.svg";
 import santaHatIcon from "../../resources/images/SantaHat.png";
 
@@ -110,7 +110,7 @@ export class NewsModal extends LitElement {
 
       // Direct assignment of markdown content from the import.
       // Assuming the Webpack loader for .md files provides the content as a string.
-      let markdown = christmas;
+      let markdown = "";
 
       // Apply markdown processing directly
       markdown = markdown

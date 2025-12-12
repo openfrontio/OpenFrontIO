@@ -72,7 +72,13 @@
         content: "";
         position: absolute;
         width: 100%;
-        height: 100vh;
+        height: 100%;
+        background: linear-gradient(
+          to bottom,
+          rgba(198, 40, 40, 0.5),
+          rgba(255, 255, 255, 0.5),
+          rgba(56, 142, 60, 0.5)
+        );
       }
 
       .dark .bg-image {
@@ -312,7 +318,7 @@
       id="settings-button"
       title="Settings"
       class="fixed bottom-4 right-4 z-50 rounded-full p-2 shadow-lg transition-colors duration-300 flex items-center justify-center"
-      style="width: 80px; height: 80px; background-color: #0075ff"
+      style="width: 80px; height: 80px; background-color: var(--primaryColor)"
     >
       <img
         src="../../resources/images/SettingIconWhite.svg"
