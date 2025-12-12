@@ -113,14 +113,14 @@ export class AccountModal extends LitElement {
     const me = this.userMeResponse?.user;
     if (me?.discord) {
       return html`<p>
-          ${translateText("account_modal.logged_in_as", {
+          ${translateText("account_modal.linked_account", {
             account_name: me.discord.global_name ?? "",
           })}
         </p>
         ${this.renderLogoutButton()}`;
     } else if (me?.email) {
       return html`<p>
-          ${translateText("account_modal.logged_in_as", {
+          ${translateText("account_modal.linked_account", {
             account_name: me.email,
           })}
         </p>
@@ -368,11 +368,11 @@ export class AccountButton extends LitElement {
 
     let buttonTitle = "";
     if (this.loggedInEmail) {
-      buttonTitle = translateText("account_modal.logged_in_as", {
-        email: this.loggedInEmail,
+      buttonTitle = translateText("account_modal.linked_account", {
+        account_name: this.loggedInEmail,
       });
     } else if (this.loggedInDiscord) {
-      buttonTitle = translateText("account_modal.logged_in_with_discord");
+      buttonTitle = translateText("account_modal.linked_account");
     }
 
     return html`

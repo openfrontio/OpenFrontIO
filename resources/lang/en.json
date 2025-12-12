@@ -157,7 +157,7 @@
   },
   "account_modal": {
     "title": "Account",
-    "logged_in_as": "Logged in as {account_name}",
+    "linked_account": "Logged in as {account_name}",
     "fetching_account": "Fetching account information...",
     "logged_in_with_discord": "Logged in with Discord",
     "recovery_email_sent": "Recovery email sent to {email}",
