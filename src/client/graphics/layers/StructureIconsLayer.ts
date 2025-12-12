@@ -76,6 +76,21 @@ export class StructureIconsLayer implements Layer {
   private readonly mousePos = { x: 0, y: 0 };
   private renderSprites = true;
   private factory: SpriteFactory;
+
+  // Cached filter instances to reduce GC pressure
+  private readonly redOutlineFilter = new OutlineFilter({
+    thickness: 2,
+    color: "rgba(255, 0, 0, 1)",
+  });
+  private readonly greenOutlineFilter = new OutlineFilter({
+    thickness: 2,
+    color: "rgba(0, 255, 0, 1)",
+  });
+  private readonly whiteOutlineFilter = new OutlineFilter({
+    thickness: 2,
+    color: "rgb(255, 255, 255)",
+  });
+  private readonly emptyFilters: PIXI.Filter[] = [];
   private readonly structures: Map<UnitType, { visible: boolean }> = new Map([
     [UnitType.City, { visible: true }],
     [UnitType.Factory, { visible: true }],
@@ -254,11 +269,11 @@ export class StructureIconsLayer implements Layer {
       ?.actions(tileRef)
       .then((actions) => {
         if (this.potentialUpgrade) {
-          this.potentialUpgrade.iconContainer.filters = [];
-          this.potentialUpgrade.dotContainer.filters = [];
+          this.potentialUpgrade.iconContainer.filters = this.emptyFilters;
+          this.potentialUpgrade.dotContainer.filters = this.emptyFilters;
         }
         if (this.ghostUnit?.container) {
-          this.ghostUnit.container.filters = [];
+          this.ghostUnit.container.filters = this.emptyFilters;
         }
 
         if (!this.ghostUnit) return;
@@ -271,9 +286,7 @@ export class StructureIconsLayer implements Layer {
             canBuild: false,
             canUpgrade: false,
           });
-          this.ghostUnit.container.filters = [
-            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
-          ];
+          this.ghostUnit.container.filters = [this.redOutlineFilter];
           return;
         }
 
@@ -290,16 +303,14 @@ export class StructureIconsLayer implements Layer {
           );
           if (this.potentialUpgrade) {
             this.potentialUpgrade.iconContainer.filters = [
-              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
+              this.greenOutlineFilter,
             ];
             this.potentialUpgrade.dotContainer.filters = [
-              new OutlineFilter({ thickness: 2, color: "rgba(0, 255, 0, 1)" }),
+              this.greenOutlineFilter,
             ];
           }
         } else if (unit.canBuild === false) {
-          this.ghostUnit.container.filters = [
-            new OutlineFilter({ thickness: 2, color: "rgba(255, 0, 0, 1)" }),
-          ];
+          this.ghostUnit.container.filters = [this.redOutlineFilter];
         }
 
         const scale = this.transformHandler.scale;
@@ -496,15 +507,11 @@ export class StructureIconsLayer implements Layer {
       render.iconContainer.alpha = structureInfos.visible ? 1 : 0.3;
       render.dotContainer.alpha = structureInfos.visible ? 1 : 0.3;
       if (structureInfos.visible && focusStructure) {
-        render.iconContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
-        ];
-        render.dotContainer.filters = [
-          new OutlineFilter({ thickness: 2, color: "rgb(255, 255, 255)" }),
-        ];
+        render.iconContainer.filters = [this.whiteOutlineFilter];
+        render.dotContainer.filters = [this.whiteOutlineFilter];
       } else {
-        render.iconContainer.filters = [];
-        render.dotContainer.filters = [];
+        render.iconContainer.filters = this.emptyFilters;
+        render.dotContainer.filters = this.emptyFilters;
       }
     }
   }
