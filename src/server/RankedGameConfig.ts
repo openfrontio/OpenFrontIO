@@ -1,15 +1,18 @@
 import {
   Difficulty,
+  Duos,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
+  Quads,
+  Trios,
 } from "../core/game/Game";
 import { GameConfig, TeamCountConfig } from "../core/Schemas";
 
 export interface RankedMatchConfig {
   queueType: "ranked" | "unranked";
-  gameMode: "ffa" | "team" | "duel";
+  gameMode: "ffa" | "team" | "duel" | "duos" | "trios" | "quads";
   playerCount: number;
   teamConfig?: TeamCountConfig;
 }
@@ -25,11 +28,27 @@ export function buildRankedGameConfig(
 ): GameConfig {
   const { gameMode, playerCount } = matchConfig;
   const isDuel = gameMode === "duel";
-  const mode = gameMode === "team" ? GameMode.Team : GameMode.FFA;
+  const isFFA = gameMode === "ffa";
+  const isTeamMode =
+    gameMode === "team" ||
+    gameMode === "duos" ||
+    gameMode === "trios" ||
+    gameMode === "quads";
+  const mode = isTeamMode ? GameMode.Team : GameMode.FFA;
+
+  // Determine team configuration based on game mode
+  let teamConfig: TeamCountConfig | undefined = matchConfig.teamConfig;
+  if (gameMode === "duos") {
+    teamConfig = Duos;
+  } else if (gameMode === "trios") {
+    teamConfig = Trios;
+  } else if (gameMode === "quads") {
+    teamConfig = Quads;
+  }
 
   return {
     gameMap: map,
-    gameMapSize: isDuel ? GameMapSize.Compact : selectMapSize(playerCount),
+    gameMapSize: isDuel ? GameMapSize.Normal : selectMapSize(playerCount),
     gameType: GameType.Public,
     gameMode: mode,
     maxPlayers: playerCount,
@@ -39,21 +58,21 @@ export function buildRankedGameConfig(
     disableNPCs: isDuel ? true : false,
 
     // Donation rules
-    donateGold: mode === GameMode.Team,
-    donateTroops: mode === GameMode.Team,
+    donateGold: isTeamMode,
+    donateTroops: isTeamMode,
 
     // Standard settings
     infiniteGold: false,
     infiniteTroops: false,
     instantBuild: false,
-    randomSpawn: true,
+    randomSpawn: isFFA,
     maxTimerValue: undefined,
 
     // No disabled units in ranked
     disabledUnits: [],
 
     // Team configuration
-    playerTeams: matchConfig.teamConfig,
+    playerTeams: teamConfig,
   };
 }
 

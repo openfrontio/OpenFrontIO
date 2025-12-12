@@ -305,7 +305,14 @@
     "elo": "ELO",
     "games": "games",
     "wins_short": "W",
-    "losses_short": "L"
+    "losses_short": "L",
+    "ffa": "FFA",
+    "duel": "1v1",
+    "duos": "Duos",
+    "trios": "Trios",
+    "quads": "Quads",
+    "ranked_matchmaking": "Ranked Matchmaking",
+    "quick_match": "Lobby"
   },
   "username": {
     "enter_username": "Enter your username",

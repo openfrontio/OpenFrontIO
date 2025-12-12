@@ -33,6 +33,7 @@ import "./NewsModal";
 import "./PublicLobby";
 import { PublicLobby } from "./PublicLobby";
 import "./RankedQueue";
+import { RankedQueue } from "./RankedQueue";
 import { SinglePlayerModal } from "./SinglePlayerModal";
 import "./StatsModal";
 import { TerritoryPatternsModal } from "./TerritoryPatternsModal";
@@ -351,6 +352,18 @@ class Client {
     joinPrivateLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         this.joinModal.open();
+      }
+    });
+
+    const rankedQueueModal = document.querySelector(
+      "ranked-queue",
+    ) as RankedQueue;
+    const quickMatchButton = document.getElementById("quick-match-button");
+    if (quickMatchButton === null)
+      throw new Error("Missing quick-match-button");
+    quickMatchButton.addEventListener("click", () => {
+      if (this.usernameInput?.isValid()) {
+        rankedQueueModal?.open();
       }
     });
 

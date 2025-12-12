@@ -284,9 +284,13 @@
         <div>
           <matchmaking-button class="w-[20%] md:w-[15%]"></matchmaking-button>
         </div>
-        <div>
-          <ranked-queue class="block"></ranked-queue>
-        </div>
+        <ranked-queue></ranked-queue>
+        <o-button
+          id="quick-match-button"
+          title="Quick Match"
+          translationKey="ranked_queue.quick_match"
+          block
+        ></o-button>
         <div class="container__row container__row--equal">
           <o-button
             id="host-lobby-button"

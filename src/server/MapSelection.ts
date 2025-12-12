@@ -7,6 +7,7 @@ export interface MapSelectionCriteria {
   playerCount: number;
   gameMode: GameMode;
   queueType: "ranked" | "unranked";
+  matchMode?: "ffa" | "team" | "duel" | "duos" | "trios" | "quads";
 }
 
 /**
@@ -16,7 +17,11 @@ export interface MapSelectionCriteria {
 export function selectMapForRanked(
   criteria: MapSelectionCriteria,
 ): GameMapType {
-  const { playerCount, gameMode } = criteria;
+  const { playerCount, gameMode, matchMode } = criteria;
+
+  if (matchMode === "duel") {
+    return GameMapType.Australia;
+  }
 
   // Get maps that can handle this player count
   const suitableMaps = getSuitableMaps(playerCount);
