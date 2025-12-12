@@ -211,10 +211,15 @@ export class FakeHumanExecution implements Execution {
         (t) =>
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
-    const borderingPlayers = border
-      .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
-      .filter((o) => o.isPlayer())
-      .sort((a, b) => a.troops() - b.troops());
+    const borderingPlayers = Array.from(
+      // Deduplication
+      new Map(
+        border
+          .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
+          .filter((o) => o.isPlayer())
+          .map((p) => [p.smallID(), p] as const),
+      ).values(),
+    ).sort((a, b) => a.troops() - b.troops());
     const borderingFriends = borderingPlayers.filter(
       (o) => this.player?.isFriendly(o) === true,
     );
@@ -241,15 +246,7 @@ export class FakeHumanExecution implements Execution {
         return;
       }
 
-      // 5% chance to send a random alliance request
-      if (this.random.chance(20)) {
-        const toAlly = this.random.randElement(borderingEnemies);
-        if (this.player.canSendAllianceRequest(toAlly)) {
-          this.mg.addExecution(
-            new AllianceRequestExecution(this.player, toAlly.id()),
-          );
-        }
-      }
+      this.maybeSendAllianceRequests(borderingEnemies);
     }
 
     this.behavior.assistAllies();
@@ -257,6 +254,45 @@ export class FakeHumanExecution implements Execution {
     this.behavior.attackBestTarget(borderingFriends, borderingEnemies);
 
     this.maybeSendNuke(this.behavior.findBestNukeTarget(borderingEnemies));
+  }
+
+  private maybeSendAllianceRequests(borderingEnemies: Player[]) {
+    if (this.player === null || this.behavior === null) {
+      throw new Error("not initialized");
+    }
+
+    // Impossible / smart nations know the strategic value of alliances and thus send more requests
+    const { difficulty } = this.mg.config().gameConfig();
+    const shouldSendAllianceRequest = () => {
+      switch (difficulty) {
+        case Difficulty.Easy:
+          return this.random.chance(35);
+        case Difficulty.Medium:
+          return this.random.chance(30);
+        case Difficulty.Hard:
+          return this.random.chance(25);
+        default:
+          return this.random.chance(20);
+      }
+    };
+
+    // Only easy nations are allowed to send alliance requests to bots
+    const isAcceptablePlayerType = (p: Player) =>
+      (p.type() === PlayerType.Bot && difficulty === Difficulty.Easy) ||
+      p.type() !== PlayerType.Bot;
+
+    for (const enemy of borderingEnemies) {
+      if (
+        shouldSendAllianceRequest() &&
+        isAcceptablePlayerType(enemy) &&
+        this.player.canSendAllianceRequest(enemy) &&
+        this.behavior.getAllianceRequestDecision(enemy)
+      ) {
+        this.mg.addExecution(
+          new AllianceRequestExecution(this.player, enemy.id()),
+        );
+      }
+    }
   }
 
   private maybeSendNuke(other: Player | null) {
