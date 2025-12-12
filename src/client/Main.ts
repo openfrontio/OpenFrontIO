@@ -623,7 +623,7 @@ function enableSnowflakes() {
     snowflake.classList.add("snowflake");
     snowflake.style.left = `${Math.random() * 100}vw`; // Random horizontal position
     snowflake.style.animationDuration = `${Math.random() * 10 + 5}s`; // Random duration between 5-15s
-    snowflake.style.animationDelay = `${Math.random() * 10}s`; // Random delay
+    snowflake.style.animationDelay = `${Math.random() * -10}s`; // Random delay
     snowflake.style.opacity = `${Math.random() * 0.5 + 0.5}`; // Random opacity between 0.5-1
     const size = Math.random() * 20 + 10; // Random size between 10-30px
     snowflake.style.width = `${size}px`;
