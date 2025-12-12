@@ -1,5 +1,6 @@
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
 import { generateID } from "../core/Util";
 import { getApiBase, getUserMe } from "./Api";
 import { userAuth } from "./Auth";
@@ -7,7 +8,7 @@ import { JoinLobbyEvent } from "./Main";
 import { translateText } from "./Utils";
 
 type QueueType = "ranked" | "unranked";
-type GameMode = "ffa" | "team" | "duel";
+type GameMode = "ffa" | "team" | "duel" | "duos" | "trios" | "quads";
 
 interface QueueStatus {
   queueSize: number;
@@ -26,6 +27,11 @@ interface LeaderboardEntry {
 
 @customElement("ranked-queue")
 export class RankedQueue extends LitElement {
+  @query("o-modal") private modalEl!: HTMLElement & {
+    open: () => void;
+    close: () => void;
+  };
+
   @state() private inQueue: boolean = false;
   @state() private queueType: QueueType = "ranked";
   @state() private gameMode: GameMode = "ffa";
@@ -53,17 +59,25 @@ export class RankedQueue extends LitElement {
 
   /**
    * Get the current player's ELO for the selected game mode
+   * Returns null for unranked modes (duos, trios, quads, unranked ffa)
    */
   private get currentPlayerElo(): number | null {
+    if (this.queueType === "unranked") {
+      return null; // No ELO for unranked modes
+    }
     return this.gameMode === "duel"
       ? this.playerEloByMode.duel
       : this.playerEloByMode.ffa;
   }
 
-  async connectedCallback() {
-    super.connectedCallback();
-    // Fetch player ELO and leaderboard immediately when component loads
-    await Promise.all([this.fetchPlayerElo(), this.fetchLeaderboard()]);
+  /**
+   * Check if the current mode is a ranked mode (has ELO tracking)
+   */
+  private get isRankedMode(): boolean {
+    return (
+      this.queueType === "ranked" &&
+      (this.gameMode === "ffa" || this.gameMode === "duel")
+    );
   }
 
   disconnectedCallback() {
@@ -125,7 +139,6 @@ export class RankedQueue extends LitElement {
       }
     } catch (error) {
       console.error("Failed to fetch leaderboard:", error);
-      // Don't show error to user, just silently fail
     } finally {
       this.isLoadingLeaderboard = false;
     }
@@ -160,7 +173,6 @@ export class RankedQueue extends LitElement {
       const token = loginResult.jwt;
 
       // Determine WebSocket URL based on environment
-      // In development, use local matchmaking server; in production, use API
       const matchmakingBase = process?.env?.MATCHMAKING_WS_URL;
       const wsUrl = matchmakingBase
         ? `${matchmakingBase}/matchmaking/join`
@@ -240,7 +252,6 @@ export class RankedQueue extends LitElement {
       case "auth_success":
         console.log("Authentication successful");
         if (message.playerElo !== undefined) {
-          // Update the ELO for the current game mode from the server response
           if (this.gameMode === "duel") {
             this.playerEloByMode = {
               ...this.playerEloByMode,
@@ -306,6 +317,7 @@ export class RankedQueue extends LitElement {
     this.inQueue = false;
     this.queueStatus = null;
     this.cleanup();
+    this.close();
   }
 
   private async joinQueue() {
@@ -313,10 +325,8 @@ export class RankedQueue extends LitElement {
       return;
     }
 
-    // Connect WebSocket if not connected
     await this.connectWebSocket();
 
-    // Function to send join queue message
     const sendJoinMessage = () => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(
@@ -329,12 +339,10 @@ export class RankedQueue extends LitElement {
       }
     };
 
-    // Send join queue message immediately if connected, or wait for connection
     if (this.ws) {
       if (this.ws.readyState === WebSocket.OPEN) {
         sendJoinMessage();
       } else if (this.ws.readyState === WebSocket.CONNECTING) {
-        // Wait for connection to open before sending join message
         this.ws.addEventListener("open", () => sendJoinMessage(), {
           once: true,
         });
@@ -347,7 +355,6 @@ export class RankedQueue extends LitElement {
       return;
     }
 
-    // Send leave queue message
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(
         JSON.stringify({
@@ -362,61 +369,177 @@ export class RankedQueue extends LitElement {
   }
 
   private setQueueType(type: QueueType) {
-    if (this.inQueue) {
-      return; // Can't change while in queue
+    if (this.inQueue || this.isConnecting) {
+      return;
     }
-    this.queueType = type;
+    if (this.queueType !== type) {
+      this.queueType = type;
+      this.gameMode = "ffa";
+      if (type === "ranked") {
+        this.fetchLeaderboard();
+      }
+    }
   }
 
   private setGameMode(mode: GameMode) {
-    if (this.inQueue) {
-      return; // Can't change while in queue
+    if (this.inQueue || this.isConnecting) {
+      return;
     }
     if (this.gameMode !== mode) {
       this.gameMode = mode;
-      // Refresh leaderboard for the new mode
-      this.fetchLeaderboard();
+      if (this.queueType === "ranked") {
+        this.fetchLeaderboard();
+      }
     }
+  }
+
+  public async open() {
+    this.modalEl?.open();
+    await Promise.all([this.fetchPlayerElo(), this.fetchLeaderboard()]);
+  }
+
+  public close() {
+    if (this.inQueue) {
+      this.leaveQueue();
+    }
+    this.modalEl?.close();
   }
 
   render() {
     return html`
-      <div class="bg-gray-900 border border-blue-500/50 rounded-2xl p-4">
-        <!-- Header -->
-        <div class="text-center mb-3">
-          <h3 class="text-white font-bold text-lg">
-            ${translateText("ranked_queue.ranked_matchmaking")}
-          </h3>
-        </div>
-
-        <div class="flex flex-col gap-3">
-          <!-- Game Mode Toggle -->
+      <o-modal
+        id="ranked-queue-modal"
+        title="${translateText("ranked_queue.quick_match")}"
+      >
+        <div class="flex flex-col gap-4">
+          <!-- Ranked/Unranked Toggle -->
           <div class="flex gap-2">
             <button
-              @click=${() => this.setGameMode("ffa")}
-              ?disabled=${this.inQueue}
-              class="flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${this
-                .gameMode === "ffa"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"} ${this.inQueue
-                ? "opacity-50 cursor-not-allowed"
-                : ""}"
+              @click=${() => this.setQueueType("ranked")}
+              ?disabled=${this.inQueue || this.isConnecting}
+              class=${classMap({
+                "c-button": true,
+                "c-button--block": true,
+                "c-button--secondary": this.queueType !== "ranked",
+                "c-button--disabled": this.inQueue || this.isConnecting,
+              })}
             >
-              ${translateText("ranked_queue.ffa")}
+              ${translateText("ranked_queue.ranked")}
             </button>
             <button
-              @click=${() => this.setGameMode("duel")}
-              ?disabled=${this.inQueue}
-              class="flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${this
-                .gameMode === "duel"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"} ${this.inQueue
-                ? "opacity-50 cursor-not-allowed"
-                : ""}"
+              @click=${() => this.setQueueType("unranked")}
+              ?disabled=${this.inQueue || this.isConnecting}
+              class=${classMap({
+                "c-button": true,
+                "c-button--block": true,
+                "c-button--secondary": this.queueType !== "unranked",
+                "c-button--disabled": this.inQueue || this.isConnecting,
+              })}
             >
-              ${translateText("ranked_queue.duel")}
+              ${translateText("ranked_queue.unranked")}
             </button>
           </div>
+
+          <!-- Game Mode Toggle -->
+          ${this.queueType === "ranked"
+            ? html`
+                <div class="flex gap-2">
+                  <button
+                    @click=${() => this.setGameMode("ffa")}
+                    ?disabled=${this.inQueue || this.isConnecting}
+                    class=${classMap({
+                      "c-button": true,
+                      "c-button--block": true,
+                      "c-button--secondary": this.gameMode !== "ffa",
+                      "c-button--disabled": this.inQueue || this.isConnecting,
+                    })}
+                  >
+                    ${translateText("ranked_queue.ffa")}
+                  </button>
+                  <button
+                    @click=${() => this.setGameMode("duel")}
+                    ?disabled=${this.inQueue || this.isConnecting}
+                    class=${classMap({
+                      "c-button": true,
+                      "c-button--block": true,
+                      "c-button--secondary": this.gameMode !== "duel",
+                      "c-button--disabled": this.inQueue || this.isConnecting,
+                    })}
+                  >
+                    ${translateText("ranked_queue.duel")}
+                  </button>
+                </div>
+              `
+            : html`
+                <div class="flex gap-2 flex-wrap">
+                  <button
+                    @click=${() => this.setGameMode("ffa")}
+                    ?disabled=${this.inQueue || this.isConnecting}
+                    class=${classMap({
+                      "c-button": true,
+                      "flex-1": true,
+                      "c-button--secondary": this.gameMode !== "ffa",
+                      "c-button--disabled": this.inQueue || this.isConnecting,
+                    })}
+                  >
+                    ${translateText("ranked_queue.ffa")}
+                  </button>
+                  <button
+                    @click=${() => this.setGameMode("duos")}
+                    ?disabled=${this.inQueue || this.isConnecting}
+                    class=${classMap({
+                      "c-button": true,
+                      "flex-1": true,
+                      "c-button--secondary": this.gameMode !== "duos",
+                      "c-button--disabled": this.inQueue || this.isConnecting,
+                    })}
+                  >
+                    ${translateText("ranked_queue.duos")}
+                  </button>
+                  <button
+                    @click=${() => this.setGameMode("trios")}
+                    ?disabled=${this.inQueue || this.isConnecting}
+                    class=${classMap({
+                      "c-button": true,
+                      "flex-1": true,
+                      "c-button--secondary": this.gameMode !== "trios",
+                      "c-button--disabled": this.inQueue || this.isConnecting,
+                    })}
+                  >
+                    ${translateText("ranked_queue.trios")}
+                  </button>
+                  <button
+                    @click=${() => this.setGameMode("quads")}
+                    ?disabled=${this.inQueue || this.isConnecting}
+                    class=${classMap({
+                      "c-button": true,
+                      "flex-1": true,
+                      "c-button--secondary": this.gameMode !== "quads",
+                      "c-button--disabled": this.inQueue || this.isConnecting,
+                    })}
+                  >
+                    ${translateText("ranked_queue.quads")}
+                  </button>
+                </div>
+              `}
+
+          <!-- ELO Display for ranked modes -->
+          ${this.isRankedMode
+            ? html`
+                <div class="text-center text-white">
+                  ${this.isLoadingElo
+                    ? html`<span class="opacity-70"
+                        >${translateText("ranked_queue.loading_elo")}</span
+                      >`
+                    : this.currentPlayerElo !== null
+                      ? html`<span
+                          >${translateText("ranked_queue.your_elo")}
+                          <strong>${this.currentPlayerElo}</strong></span
+                        >`
+                      : ""}
+                </div>
+              `
+            : ""}
 
           <!-- Join Queue Button -->
           <button
@@ -424,61 +547,65 @@ export class RankedQueue extends LitElement {
               ? () => this.leaveQueue()
               : () => this.joinQueue()}
             ?disabled=${this.isConnecting}
-            class="w-full h-16 rounded-xl font-medium text-lg transition-opacity duration-200 ${this
-              .inQueue
-              ? "bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90"
-              : "bg-blue-600 hover:bg-blue-500"} text-white ${this.isConnecting
-              ? "opacity-50 cursor-not-allowed"
-              : ""}"
+            class=${classMap({
+              "c-button": true,
+              "c-button--block": true,
+              "c-button--disabled": this.isConnecting,
+            })}
+            style=${this.inQueue ? "background: #dc2626; color: white;" : ""}
           >
-            <div class="flex flex-col items-center justify-center">
-              <div>
-                ${this.isConnecting
-                  ? translateText("ranked_queue.connecting")
-                  : this.inQueue
-                    ? translateText("ranked_queue.leave_queue")
-                    : translateText("ranked_queue.join_ranked_queue")}
-              </div>
-              ${!this.inQueue && this.currentPlayerElo !== null
-                ? html`<div class="text-sm mt-1 opacity-90">
-                    ${translateText("ranked_queue.your_elo")}
-                    ${this.currentPlayerElo}
-                  </div>`
-                : !this.inQueue && this.isLoadingElo
-                  ? html`<div class="text-sm mt-1 opacity-90">
-                      ${translateText("ranked_queue.loading_elo")}
-                    </div>`
-                  : ""}
-              ${this.error
-                ? html`<div class="text-sm mt-1 text-red-200">
-                    ${this.error}
-                  </div>`
-                : ""}
-            </div>
+            ${this.isConnecting
+              ? translateText("ranked_queue.connecting")
+              : this.inQueue
+                ? translateText("ranked_queue.leave_queue")
+                : this.isRankedMode
+                  ? translateText("ranked_queue.join_ranked_queue")
+                  : translateText("ranked_queue.join_queue")}
           </button>
 
-          <!-- Leaderboard Toggle Button -->
-          <button
-            @click=${() => (this.showLeaderboard = !this.showLeaderboard)}
-            class="w-full py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors"
-          >
-            ${this.showLeaderboard
-              ? translateText("ranked_queue.hide_leaderboard")
-              : translateText("ranked_queue.view_leaderboard")}
-          </button>
+          <!-- Error Display -->
+          ${this.error
+            ? html`<div class="text-red-400 text-center text-sm">
+                ${this.error}
+              </div>`
+            : ""}
+
+          <!-- Queue Status -->
+          ${this.inQueue && this.queueStatus
+            ? html`
+                <div class="text-center text-white opacity-70">
+                  ${this.queueStatus.queueSize}
+                  ${translateText("ranked_queue.players_in_queue")}
+                </div>
+              `
+            : ""}
+
+          <!-- Leaderboard Toggle (only for ranked modes) -->
+          ${this.isRankedMode
+            ? html`
+                <button
+                  @click=${() => (this.showLeaderboard = !this.showLeaderboard)}
+                  class="c-button c-button--block c-button--secondary"
+                >
+                  ${this.showLeaderboard
+                    ? translateText("ranked_queue.hide_leaderboard")
+                    : translateText("ranked_queue.view_leaderboard")}
+                </button>
+              `
+            : ""}
 
           <!-- Leaderboard Display -->
-          ${this.showLeaderboard
+          ${this.isRankedMode && this.showLeaderboard
             ? html`
                 <div
-                  class="bg-gray-800 rounded-xl p-4 text-white max-h-96 overflow-y-auto"
+                  class="bg-black/30 rounded-lg p-4 text-white max-h-64 overflow-y-auto"
                 >
                   ${this.isLoadingLeaderboard
-                    ? html`<div class="text-center py-4">
+                    ? html`<div class="text-center py-4 opacity-70">
                         ${translateText("ranked_queue.loading_leaderboard")}
                       </div>`
                     : this.leaderboard.length === 0
-                      ? html`<div class="text-center py-4 text-gray-400">
+                      ? html`<div class="text-center py-4 opacity-50">
                           ${translateText("ranked_queue.no_ranked_players")}
                         </div>`
                       : html`
@@ -486,13 +613,13 @@ export class RankedQueue extends LitElement {
                             ${this.leaderboard.slice(0, 10).map(
                               (entry) => html`
                                 <div
-                                  class="flex items-center justify-between p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
+                                  class="flex items-center justify-between p-2 bg-white/10 rounded-lg"
                                 >
                                   <div class="flex items-center gap-3">
                                     <div
-                                      class="font-bold text-lg ${entry.rank <= 3
+                                      class="font-bold ${entry.rank <= 3
                                         ? "text-yellow-400"
-                                        : "text-gray-400"}"
+                                        : "opacity-60"}"
                                     >
                                       #${entry.rank}
                                     </div>
@@ -500,15 +627,9 @@ export class RankedQueue extends LitElement {
                                       <div class="font-medium">
                                         ${entry.username}
                                       </div>
-                                      <div class="text-xs text-gray-400">
+                                      <div class="text-xs opacity-60">
                                         ${entry.gamesPlayed}
-                                        ${translateText("ranked_queue.games")} •
-                                        ${entry.wins}${translateText(
-                                          "ranked_queue.wins_short",
-                                        )}
-                                        ${entry.losses}${translateText(
-                                          "ranked_queue.losses_short",
-                                        )}
+                                        ${translateText("ranked_queue.games")}
                                       </div>
                                     </div>
                                   </div>
@@ -516,7 +637,7 @@ export class RankedQueue extends LitElement {
                                     <div class="font-bold text-blue-400">
                                       ${entry.currentElo}
                                     </div>
-                                    <div class="text-xs text-gray-400">
+                                    <div class="text-xs opacity-60">
                                       ${translateText("ranked_queue.elo")}
                                     </div>
                                   </div>
@@ -529,7 +650,7 @@ export class RankedQueue extends LitElement {
               `
             : ""}
         </div>
-      </div>
+      </o-modal>
     `;
   }
 }

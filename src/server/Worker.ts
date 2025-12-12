@@ -82,12 +82,13 @@ export async function startWorker() {
       config,
       log,
       async (gameId, assignment) => {
-        // Select map based on player count
+        // Select map based on player count and mode
         const selectedMap = selectMapForRanked({
           playerCount: assignment.config.playerCount,
           gameMode:
             assignment.config.gameMode === "ffa" ? GameMode.FFA : GameMode.Team,
           queueType: assignment.config.queueType,
+          matchMode: assignment.config.gameMode,
         });
 
         // Build full game config
