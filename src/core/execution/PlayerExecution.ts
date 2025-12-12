@@ -8,8 +8,8 @@ interface ClusterTraversalState {
   gen: number;
 }
 
-// Single shared traversal state; there is only ever one Game per runtime.
-let traversalState: ClusterTraversalState | null = null;
+// Per-game traversal state used by calculateClusters() to avoid per-player buffers.
+const traversalStates = new WeakMap<Game, ClusterTraversalState>();
 
 export class PlayerExecution implements Execution {
   private readonly ticksPerClusterCalc = 20;
@@ -311,13 +311,15 @@ export class PlayerExecution implements Execution {
 
   private traversalState(): ClusterTraversalState {
     const totalTiles = this.mg.width() * this.mg.height();
-    if (!traversalState || traversalState.visited.length < totalTiles) {
-      traversalState = {
+    let state = traversalStates.get(this.mg);
+    if (!state || state.visited.length < totalTiles) {
+      state = {
         visited: new Uint32Array(totalTiles),
         gen: 0,
       };
+      traversalStates.set(this.mg, state);
     }
-    return traversalState;
+    return state;
   }
 
   private bumpGeneration(): number {
