@@ -221,10 +221,22 @@ export class ClientGameRunner {
 
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
+  private connectionCheckTimeout: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
+
+  private readonly mouseUpHandler = (event: MouseUpEvent) =>
+    this.inputEvent(event);
+  private readonly mouseMoveHandler = (event: MouseMoveEvent) =>
+    this.onMouseMove(event);
+  private readonly autoUpgradeHandler = (event: AutoUpgradeEvent) =>
+    this.autoUpgradeEvent(event);
+  private readonly boatAttackHandler = (_event: DoBoatAttackEvent) =>
+    this.doBoatAttackUnderCursor();
+  private readonly groundAttackHandler = (_event: DoGroundAttackEvent) =>
+    this.doGroundAttackUnderCursor();
 
   constructor(
     private lobby: LobbyConfig,
@@ -274,24 +286,18 @@ export class ClientGameRunner {
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
-    setTimeout(() => {
+    this.connectionCheckTimeout = setTimeout(() => {
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
         1000,
       );
     }, 20000);
 
-    this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
-    this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
-    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
-    this.eventBus.on(
-      DoBoatAttackEvent,
-      this.doBoatAttackUnderCursor.bind(this),
-    );
-    this.eventBus.on(
-      DoGroundAttackEvent,
-      this.doGroundAttackUnderCursor.bind(this),
-    );
+    this.eventBus.on(MouseUpEvent, this.mouseUpHandler);
+    this.eventBus.on(MouseMoveEvent, this.mouseMoveHandler);
+    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeHandler);
+    this.eventBus.on(DoBoatAttackEvent, this.boatAttackHandler);
+    this.eventBus.on(DoGroundAttackEvent, this.groundAttackHandler);
 
     this.renderer.initialize();
     this.input.initialize();
@@ -449,8 +455,18 @@ export class ClientGameRunner {
     if (!this.isActive) return;
 
     this.isActive = false;
+    this.eventBus.off(MouseUpEvent, this.mouseUpHandler);
+    this.eventBus.off(MouseMoveEvent, this.mouseMoveHandler);
+    this.eventBus.off(AutoUpgradeEvent, this.autoUpgradeHandler);
+    this.eventBus.off(DoBoatAttackEvent, this.boatAttackHandler);
+    this.eventBus.off(DoGroundAttackEvent, this.groundAttackHandler);
+    this.input.destroy();
     this.worker.cleanup();
     this.transport.leaveGame();
+    if (this.connectionCheckTimeout) {
+      clearTimeout(this.connectionCheckTimeout);
+      this.connectionCheckTimeout = null;
+    }
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
       this.connectionCheckInterval = null;
