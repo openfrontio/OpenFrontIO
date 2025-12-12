@@ -10,6 +10,7 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { AnalyticsRecord, AnalyticsRecordSchema } from "../core/Schemas";
 
 function getAudience() {
   const { hostname } = new URL(window.location.href);
@@ -293,6 +294,43 @@ export async function fetchPlayerById(
     return parsed.data;
   } catch (err) {
     console.warn("fetchPlayerById: request failed", err);
+    return false;
+  }
+}
+
+export async function fetchGameById(
+  gameId: string,
+): Promise<AnalyticsRecord | false> {
+  try {
+    const token = getToken();
+    if (!token) return false;
+    const url = `${getApiBase()}/public/game/${gameId}/?turns=false`;
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.status !== 200) {
+      console.warn(
+        "fetchGameById: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const json = await res.json();
+    const parsed = AnalyticsRecordSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchGameById: Zod validation failed", parsed.error);
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.warn("fetchGameById: request failed", err);
     return false;
   }
 }
