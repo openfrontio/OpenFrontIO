@@ -649,8 +649,7 @@ export class BotBehavior {
         const borderingPlayers = this.player
           .neighbors()
           .filter(
-            (n): n is Player =>
-              n.isPlayer() && this.player.type() !== PlayerType.Bot,
+            (n): n is Player => n.isPlayer() && n.type() !== PlayerType.Bot,
           );
         const borderingFriends = borderingPlayers.filter(
           (o) => this.player?.isFriendly(o) === true,
@@ -659,7 +658,7 @@ export class BotBehavior {
           borderingPlayers.length >= 3 &&
           borderingPlayers.includes(otherPlayer)
         ) {
-          return borderingPlayers.length < borderingFriends.length + 1;
+          return borderingPlayers.length <= borderingFriends.length + 1;
         }
         if (difficulty === Difficulty.Hard) {
           return this.player.alliances().length >= this.random.nextInt(3, 6);
