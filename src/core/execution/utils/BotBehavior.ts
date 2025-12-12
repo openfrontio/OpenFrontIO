@@ -569,7 +569,7 @@ export class BotBehavior {
       return this.random.chance(2);
     }
     // Nearly always reject traitors
-    if (otherPlayer.isTraitor() && this.random.nextInt(0, 100) >= 90) {
+    if (otherPlayer.isTraitor() && this.random.nextInt(0, 100) >= 10) {
       return false;
     }
     // Before caring about the relation, first check if the otherPlayer is a threat
@@ -672,17 +672,18 @@ export class BotBehavior {
   isAlliancePartnerFriendly(otherPlayer: Player): boolean {
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {
-      case Difficulty.Easy || Difficulty.Medium:
+      case Difficulty.Easy:
+      case Difficulty.Medium:
         return this.player.relation(otherPlayer) === Relation.Friendly;
       case Difficulty.Hard:
         return (
           this.player.relation(otherPlayer) === Relation.Friendly &&
-          this.random.nextInt(0, 100) >= 75
+          this.random.nextInt(0, 100) >= 16.66
         );
       default:
         return (
           this.player.relation(otherPlayer) === Relation.Friendly &&
-          this.random.nextInt(0, 100) >= 50
+          this.random.nextInt(0, 100) >= 33.33
         );
     }
   }
