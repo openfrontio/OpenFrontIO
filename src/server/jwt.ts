@@ -58,7 +58,10 @@ export async function verifyClientToken(
 export async function getUserMe(
   token: string,
   config: ServerConfig,
-): Promise<UserMeResponse | false> {
+): Promise<
+  | { type: "success"; response: UserMeResponse }
+  | { type: "error"; message: string }
+> {
   try {
     // Get the user object
     const response = await fetch(config.jwtIssuer() + "/users/@me", {
@@ -66,19 +69,25 @@ export async function getUserMe(
         authorization: `Bearer ${token}`,
       },
     });
-    if (response.status !== 200) return false;
+    if (response.status !== 200) {
+      return {
+        type: "error",
+        message: `Failed to fetch user me: ${response.statusText}`,
+      };
+    }
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
-      console.error(
-        "Invalid response",
-        JSON.stringify(body),
-        JSON.stringify(result.error),
-      );
-      return false;
+      return {
+        type: "error",
+        message: `Invalid response: ${z.prettifyError(result.error)}`,
+      };
     }
-    return result.data;
+    return { type: "success", response: result.data };
   } catch (e) {
-    return false;
+    return {
+      type: "error",
+      message: `Failed to fetch user me: ${e}`,
+    };
   }
 }

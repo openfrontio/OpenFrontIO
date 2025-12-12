@@ -341,7 +341,10 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             clientID: clientMsg.clientID,
           });
-          ws.close(1002, "Unauthorized");
+          ws.close(
+            1002,
+            `Unauthorized: invalid token for client ${clientMsg.clientID}`,
+          );
           return;
         }
         const { persistentId, claims } = result;
@@ -376,13 +379,18 @@ export async function startWorker() {
         } else {
           // Verify token and get player permissions
           const result = await getUserMe(clientMsg.token, config);
-          if (result === false) {
-            log.warn("Unauthorized: Invalid session");
-            ws.close(1002, "Unauthorized");
+          if (result.type === "error") {
+            log.warn(`Unauthorized: ${result.message}`, {
+              clientID: clientMsg.clientID,
+            });
+            ws.close(
+              1002,
+              `Unauthorized: user me fetch failed for client ${clientMsg.clientID}`,
+            );
             return;
           }
-          roles = result.player.roles;
-          flares = result.player.flares;
+          roles = result.response.player.roles;
+          flares = result.response.player.flares;
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -424,7 +432,7 @@ export async function startWorker() {
                 clientID: clientMsg.clientID,
                 reason: turnstileResult.reason,
               });
-              ws.close(1002, "Unauthorized");
+              ws.close(1002, "Unauthorized: Turnstile token rejected");
               return;
             case "error":
               // Fail open, allow the client to join.
