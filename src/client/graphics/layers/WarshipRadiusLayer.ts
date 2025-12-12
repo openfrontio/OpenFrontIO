@@ -74,7 +74,11 @@ export class WarshipRadiusLayer implements Layer {
       this.needsRedraw = true;
     }
 
-    // Animate dash offset only when preview square is visible
+    // Note: Animation timing is handled in renderLayer() for smooth frame-rate animation
+  }
+
+  renderLayer(context: CanvasRenderingContext2D) {
+    // Animate dash offset every frame for smooth animation on high refresh rate displays
     const now = Date.now();
     const dt = now - this.lastTickTime;
     this.lastTickTime = now;
@@ -91,9 +95,7 @@ export class WarshipRadiusLayer implements Layer {
       this.redraw();
       this.needsRedraw = false;
     }
-  }
 
-  renderLayer(context: CanvasRenderingContext2D) {
     context.drawImage(
       this.canvas,
       -this.game.width() / 2,
