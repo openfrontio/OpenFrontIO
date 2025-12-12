@@ -8,7 +8,7 @@ import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
-import { getPlayToken, userAuth } from "./Auth";
+import { userAuth } from "./Auth";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
 import "./DarkModeButton";
@@ -495,7 +495,6 @@ class Client {
         },
         turnstileToken: await this.getTurnstileToken(lobby),
         playerName: this.usernameInput?.getCurrentUsername() ?? "",
-        token: await getPlayToken(),
         clientID: lobby.clientID,
         gameStartInfo: lobby.gameStartInfo ?? lobby.gameRecord?.info,
         gameRecord: lobby.gameRecord,

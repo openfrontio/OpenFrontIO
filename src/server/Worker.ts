@@ -337,8 +337,10 @@ export async function startWorker() {
 
         // Verify token signature
         const result = await verifyClientToken(clientMsg.token, config);
-        if (result === false) {
-          log.warn("Unauthorized: Invalid token");
+        if (result.type === "error") {
+          log.warn(`Invalid token: ${result.message}`, {
+            clientID: clientMsg.clientID,
+          });
           ws.close(1002, "Unauthorized");
           return;
         }

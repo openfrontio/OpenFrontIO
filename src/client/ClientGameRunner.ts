@@ -57,7 +57,6 @@ export interface LobbyConfig {
   playerName: string;
   clientID: ClientID;
   gameID: GameID;
-  token: string;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
   gameStartInfo?: GameStartInfo;
