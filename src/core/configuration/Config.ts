@@ -156,7 +156,7 @@ export interface Config {
   defensePostRange(): number;
   SAMCooldown(): number;
   SiloCooldown(): number;
-  defensePostDefenseBonus(): number;
+  defensePostDefenseBonus(level: number): number;
   defensePostSpeedBonus(): number;
   falloutDefenseModifier(percentOfFallout: number): number;
   difficultyModifier(difficulty: Difficulty): number;
