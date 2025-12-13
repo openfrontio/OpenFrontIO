@@ -5,6 +5,7 @@ import {
   Game,
   GameMapType,
   GameMode,
+  GameType,
   Gold,
   Player,
   PlayerInfo,
@@ -30,6 +31,7 @@ export interface ServerConfig {
   turnstileSiteKey(): string;
   turnstileSecretKey(): string;
   turnIntervalMs(): number;
+  startDelay(gameType: GameType): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(
     map: GameMapType,
@@ -74,6 +76,7 @@ export interface NukeMagnitude {
 }
 
 export interface Config {
+  turnIntervalMs(): number;
   samHittingChance(): number;
   samWarheadHittingChance(): number;
   spawnImmunityDuration(): Tick;
@@ -92,6 +95,12 @@ export interface Config {
   instantBuild(): boolean;
   isRandomSpawn(): boolean;
   numSpawnPhaseTurns(): number;
+  numGracePeriodTurns(): number;
+  isSpawnPhase(
+    ticks: number,
+    gameType: GameType,
+    firstHumanSpawnTick?: number,
+  ): boolean;
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
 

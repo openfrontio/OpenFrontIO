@@ -59,7 +59,7 @@ export async function setup(
     gameMap: GameMapType.Asia,
     gameMapSize: GameMapSize.Normal,
     gameMode: GameMode.FFA,
-    gameType: GameType.Singleplayer,
+    gameType: GameType.Public,
     difficulty: Difficulty.Medium,
     disableNPCs: false,
     donateGold: false,
