@@ -17,6 +17,7 @@ import {
   ClientJoinMessage,
   ClientMessage,
   ClientPingMessage,
+  ClientRejoinMessage,
   ClientSendWinnerMessage,
   Intent,
   ServerMessage,
@@ -24,6 +25,7 @@ import {
   Winner,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
+import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -287,17 +289,28 @@ export class Transport {
     }
   }
 
+  public updateCallback(
+    onconnect: () => void,
+    onmessage: (message: ServerMessage) => void,
+  ) {
+    if (this.isLocal) {
+      this.localServer.updateCallback(onconnect, onmessage);
+    } else {
+      this.onconnect = onconnect;
+      this.onmessage = onmessage;
+    }
+  }
+
   private connectLocal(
     onconnect: () => void,
     onmessage: (message: ServerMessage) => void,
   ) {
     this.localServer = new LocalServer(
       this.lobbyConfig,
-      onconnect,
-      onmessage,
       this.lobbyConfig.gameRecord !== undefined,
       this.eventBus,
     );
+    this.localServer.updateCallback(onconnect, onmessage);
     this.localServer.start();
   }
 
@@ -376,16 +389,26 @@ export class Transport {
     }
   }
 
-  joinGame(numTurns: number) {
+  async joinGame() {
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
       clientID: this.lobbyConfig.clientID,
-      lastTurn: numTurns,
-      token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
+      turnstileToken: this.lobbyConfig.turnstileToken,
+      token: await getPlayToken(),
     } satisfies ClientJoinMessage);
+  }
+
+  async rejoinGame(lastTurn: number) {
+    this.sendMsg({
+      type: "rejoin",
+      gameID: this.lobbyConfig.gameID,
+      clientID: this.lobbyConfig.clientID,
+      lastTurn: lastTurn,
+      token: await getPlayToken(),
+    } satisfies ClientRejoinMessage);
   }
 
   leaveGame() {

@@ -70,12 +70,12 @@ describe("UILayer", () => {
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
 
-    // a full hp unit doesnt have a health bar
+    // a full hp unit doesn't have a health bar
     unit.health = () => 10;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(false);
 
-    // a dead unit doesnt have a health bar
+    // a dead unit doesn't have a health bar
     unit.health = () => 5;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
@@ -98,7 +98,7 @@ describe("UILayer", () => {
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
 
-    // an inactive unit doesnt have a health bar
+    // an inactive unit doesn't have a health bar
     unit.isActive = () => false;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(false);
