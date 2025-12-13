@@ -119,32 +119,38 @@ export class PlayerExecution implements Execution {
 
   private removeClusters() {
     const clusters = this.calculateClusters();
-    // We only need the largest cluster; avoid sorting (O(k log k)) when a linear scan (O(k)) is enough.
-    let mainIdx = -1;
-    let mainSize = -1;
-    for (let i = 0; i < clusters.length; i++) {
+
+    if (clusters.length === 0) {
+      this.player.largestClusterBoundingBox = null;
+      return;
+    }
+
+    // Find the largest cluster with a single linear scan (O(n)).
+    let largestIndex = 0;
+    let largestSize = clusters[0].size;
+    for (let i = 1; i < clusters.length; i++) {
       const size = clusters[i].size;
-      if (size > mainSize) {
-        mainSize = size;
-        mainIdx = i;
+      if (size > largestSize) {
+        largestSize = size;
+        largestIndex = i;
       }
     }
 
-    const main = clusters[mainIdx];
-    if (main === undefined) throw new Error("No clusters");
-    if (mainIdx > 0) {
-      // Swap to make iteration over "other clusters" straightforward without copying.
-      const tmp = clusters[0];
-      clusters[0] = main;
-      clusters[mainIdx] = tmp;
-    }
-    this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
-    const surroundedBy = this.surroundedBySamePlayer(main);
+    const largestCluster = clusters[largestIndex];
+    if (largestCluster === undefined) throw new Error("No clusters");
+
+    this.player.largestClusterBoundingBox = calculateBoundingBox(
+      this.mg,
+      largestCluster,
+    );
+    const surroundedBy = this.surroundedBySamePlayer(largestCluster);
     if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
-      this.removeCluster(main);
+      this.removeCluster(largestCluster);
     }
 
-    for (let i = 1; i < clusters.length; i++) {
+    // Process remaining clusters
+    for (let i = 0; i < clusters.length; i++) {
+      if (i === largestIndex) continue;
       const cluster = clusters[i];
       if (this.isSurrounded(cluster)) {
         this.removeCluster(cluster);
