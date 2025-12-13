@@ -175,17 +175,12 @@ export class PublicLobby extends LitElement {
               ${translateText("public_lobby.join")}
             </div>
             <div class="text-md font-medium text-red-300">
-              <span
-                class="text-sm ${this.isLobbyHighlighted
-                  ? "text-emerald-600"
-                  : "text-red-800"} bg-white rounded-sm px-1"
+              <span class="text-sm text-red-800 bg-white rounded-sm px-1"
                 >${modeLabel}</span
               >
               ${teamDetailLabel
                 ? html`<span
-                    class="text-sm ${this.isLobbyHighlighted
-                      ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
+                    class="text-sm text-red-800 bg-white rounded-sm px-1 ml-1"
                     >${teamDetailLabel}</span
                   >`
                 : ""}

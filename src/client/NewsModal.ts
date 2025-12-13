@@ -168,7 +168,7 @@ export class NewsButton extends LitElement {
             alt=${translateText("news.title")}
           />
           <div
-            class="santa-hat-overlay absolute -top-2 -right-2 w-8 h-8 bg-contain bg-no-repeat pointer-events-none"
+            class="santa-hat-overlay absolute bg-contain bg-no-repeat pointer-events-none"
             style="background-image: url('${santaHatIcon}')"
           ></div>
         </button>

@@ -44,7 +44,6 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./snow.css";
 import "./styles.css";
-export { getPersistentID, getPlayToken } from "./Auth";
 
 declare global {
   interface Window {

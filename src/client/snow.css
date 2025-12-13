@@ -24,13 +24,13 @@
 }
 .santa-hat-overlay {
   position: absolute;
-  width: 89px; /* Increased size */
-  height: 89px; /* Increased size */
+  width: 55px;
+  height: 55px;
   background-image: url("/resources/images/SantaHat.webp"); /* Use direct path for CSS background */
   background-size: contain;
   background-repeat: no-repeat;
-  top: -25px; /* Adjusted position */
-  right: -25px; /* Adjusted position */
+  top: -15px;
+  right: -15px;
   z-index: 10000; /* Above snowflakes */
 }
 

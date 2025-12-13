@@ -73,7 +73,6 @@
         position: absolute;
         width: 100%;
         height: 100vh;
-        height: 100%;
 
         background: linear-gradient(
           to bottom,
@@ -441,12 +440,7 @@
         </div>
       </div>
     </footer>
-    <div
-      id="top-right-buttons-container"
-      class="flex flex-col fixed top-4 right-4 z-[9998] space-y-2"
-    >
-      <account-button></account-button>
-    </div>
+    <account-button></account-button>
     <!-- Game modals and overlays -->
     <single-player-modal></single-player-modal>
     <host-lobby-modal></host-lobby-modal>
@@ -465,6 +459,7 @@
     <settings-modal></settings-modal>
     <player-panel></player-panel>
     <spawn-timer></spawn-timer>
+    <help-modal></help-modal>
     <dark-mode-button></dark-mode-button>
     <stats-button></stats-button>
     <alert-frame></alert-frame>
