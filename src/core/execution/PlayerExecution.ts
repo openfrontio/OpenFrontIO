@@ -280,13 +280,18 @@ export class PlayerExecution implements Execution {
       rejectIfOceanNeighbor: true,
       rejectIfUnownedNeighbor: true,
       trackSingleEnemyId: true,
+      // Avoid scanning enemy.borderTiles() bounding box of enemy neighbors is enough.
+      trackEnemyBBox: true,
     });
     if (!scan || scan.hasMultipleEnemies || scan.enemyId === null) {
       return false;
     }
     /* dont think this is needed anymore, but keeping it for now */
     const enemy = mg.playerBySmallID(scan.enemyId) as Player;
-    const enemyBox = calculateBoundingBox(mg, enemy.borderTiles());
+    const enemyBox = {
+      min: new Cell(scan.enemyMinX, scan.enemyMinY),
+      max: new Cell(scan.enemyMaxX, scan.enemyMaxY),
+    };
     const clusterBox = calculateBoundingBox(mg, cluster);
     if (inscribed(enemyBox, clusterBox)) {
       return enemy;
