@@ -100,7 +100,7 @@ export class EventsDisplay extends LitElement implements Layer {
   ]);
 
   @query(".events-container")
-  private _eventsContainer: HTMLDivElement;
+  private _eventsContainer?: HTMLDivElement;
   private _shouldScrollToBottom = true;
 
   updated(changed: Map<string, unknown>) {
