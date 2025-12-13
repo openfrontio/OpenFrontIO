@@ -6,7 +6,18 @@
     "lang_code": "pl"
   },
   "common": {
-    "close": "Zamknij"
+    "close": "Zamknij",
+    "available": "Dostępne",
+    "preset_max": "Maks",
+    "summary_send": "Wyślij",
+    "summary_keep": "Zatrzymaj",
+    "cancel": "Anuluj",
+    "send": "Wyślij",
+    "cap_label": "Pojemność",
+    "cap_tooltip": "Pozostała pojemność odbiorcy",
+    "target_dead": "Cel wyeliminowany",
+    "target_dead_note": "Nie możesz wysłać zasobów do wyeliminowanego gracza.",
+    "none": "Brak"
   },
   "main": {
     "title": "OpenFront (ALPHA)",
@@ -23,7 +34,8 @@
     "advertise": "Reklamuj",
     "wiki": "Wiki",
     "privacy_policy": "Polityka prywatności",
-    "terms_of_service": "Regulamin"
+    "terms_of_service": "Regulamin",
+    "reddit": "Reddit"
   },
   "news": {
     "see_all_releases": "Wyświetl wszystkie wersje",
@@ -127,13 +139,15 @@
     "options_title": "Opcje",
     "bots": "Boty: ",
     "bots_disabled": "Wyłączone",
+    "nations": "Narody: ",
     "disable_nations": "Wyłącz Państwa",
     "instant_build": "Natychmiastowa budowa",
     "infinite_gold": "Nieskończone złoto",
-    "donate_gold": "Wyślij złoto",
     "infinite_troops": "Nieskończone wojsko",
-    "donate_troops": "Wyślij jednostki",
+    "compact_map": "Mini Mapa",
+    "max_timer": "Długość gry (minuty)",
     "disable_nukes": "Wyłącz broń nuklearną",
+    "automatic_difficulty": "Automatyczna Trudność",
     "enables_title": "Włącz ustawienia",
     "start": "Rozpocznij Grę"
   },
@@ -145,6 +159,7 @@
   "account_modal": {
     "title": "Konto",
     "logged_in_as": "Zalogowany jako {email}",
+    "fetching_account": "Pobieranie informacji o koncie...",
     "logged_in_with_discord": "Zalogowany przez Discord'a",
     "recovery_email_sent": "Wysłano e-mail odzyskiwania na adres {email}"
   },
@@ -174,11 +189,15 @@
     "europeclassic": "Europa (klasyczna)",
     "falklandislands": "Falklandy",
     "baikal": "Bajkał",
-    "halkidiki": "Półwysep Chalcydycki\n",
+    "halkidiki": "Półwysep Chalcydycki",
     "straitofgibraltar": "Cieśnina Gibraltarska",
     "italia": "Włochy",
+    "japan": "Japonia",
     "yenisei": "Jenisej",
-    "pluto": "Pluton"
+    "pluto": "Pluton",
+    "montreal": "Montreal",
+    "achiran": "Achiran",
+    "baikalnukewars": "Bajkał (Wojny Atomowe)"
   },
   "map_categories": {
     "continental": "Kontynentalny",
@@ -196,8 +215,9 @@
     "join_lobby": "Dołącz do Lobby",
     "checking": "Sprawdzanie lobby...",
     "not_found": "Lobby nie zostało znalezione. Proszę sprawdzić ID i spróbować ponownie.",
-    "error": "Wystąpił błąd. Proszę spróbować ponownie.",
-    "joined_waiting": "Dołączono pomyślnie! Oczekiwanie na rozpoczęcie gry..."
+    "error": "Wystąpił błąd. Spróbuj ponownie lub skontaktuj się z pomocą techniczną.",
+    "joined_waiting": "Dołączono pomyślnie! Oczekiwanie na rozpoczęcie gry...",
+    "version_mismatch": "Ta gra została utworzona w innej wersji. Nie można dołączyć."
   },
   "public_lobby": {
     "join": "Dołącz do następnej gry",
@@ -205,7 +225,14 @@
     "teams_Duos": "Duety (zespoły 2-osobowe)",
     "teams_Trios": "Trójki (zespoły 3-osobowe)",
     "teams_Quads": "Czwórki (zespoły 4-osobowe)",
+    "teams_hvn": "Ludzie Kontra Narody",
     "teams": "{num} drużyn"
+  },
+  "matchmaking_modal": {
+    "title": "Wyszukiwanie meczy",
+    "connecting": "Łączenie z serwerem wyszukiwania meczów...",
+    "searching": "Wyszukiwanie gier...",
+    "waiting_for_game": "Oczekiwanie na rozpoczęcie gry..."
   },
   "username": {
     "enter_username": "Wprowadź swoją nazwę użytkownika",
@@ -221,12 +248,16 @@
     "options_title": "Opcje",
     "bots": "Boty: ",
     "bots_disabled": "Wyłączone",
+    "nations": "Narody: ",
     "disable_nations": "Wyłącz Państwa",
+    "max_timer": "Długość gry (minuty)",
     "instant_build": "Natychmiastowa budowa",
     "infinite_gold": "Nieskończone złoto",
     "donate_gold": "Wyślij złoto",
     "infinite_troops": "Nieskończone wojsko",
     "donate_troops": "Wyślij jednostki",
+    "compact_map": "Mini Mapa",
+    "automatic_difficulty": "Automatyczna Trudność",
     "enables_title": "Włącz ustawienia",
     "player": "Gracz",
     "players": "Gracze",
@@ -246,7 +277,8 @@
   },
   "game_starting_modal": {
     "title": "Gra się rozpoczyna...",
-    "desc": "Przygotowanie do uruchomienia lobby. Proszę czekać."
+    "credits": "Autorzy",
+    "code_license": "Kod licencjonowany zgodnie z AGPL-3.0 (bez gwarancji)"
   },
   "difficulty": {
     "difficulty": "Poziom trudności",
@@ -280,33 +312,21 @@
     "tab_keybinds": "Skróty klawiszowe",
     "dark_mode_label": "Tryb ciemny",
     "dark_mode_desc": "Przełącz wygląd strony pomiędzy jasnym a ciemnym trybem",
-    "dark_mode_enabled": "Tryb ciemny włączony",
-    "light_mode_enabled": "Tryb jasny włączony",
     "emojis_label": "Emotikony",
-    "emojis_visible": "Emotikony są widoczne",
-    "emojis_hidden": "Emotikony są ukryte",
     "emojis_desc": "Przełącz, czy emotki mają być wyświetlane w grze",
     "alert_frame_label": "Ramka ostrzeżenia",
     "alert_frame_desc": "Przełącz ramkę ostrzeżenia. Po włączeniu ramka wyświetli się, gdy zostaniesz zdradzony.",
     "special_effects_label": "Efekty specjalne",
     "special_effects_desc": "Włącz/wyłącz efekty specjalne. Wyłącz, żeby gra działała płynniej",
-    "special_effects_enabled": "Specjalne efekty włączone",
-    "special_effects_disabled": "Specjalne efekty wyłączone",
     "structure_sprites_label": "Grafiki budynków",
     "structure_sprites_desc": "Przełącz grafikę struktur",
-    "structure_sprites_enabled": "Włączono grafikę struktur",
-    "structure_sprites_disabled": "Wyłączono grafikę struktur",
     "anonymous_names_label": "Ukryte Nazwy",
     "anonymous_names_desc": "Ukryj prawdziwe nazwy graczy, zastępując je losowymi na swoim ekranie.",
-    "anonymous_names_enabled": "Anonimowe nazwy włączone",
     "lobby_id_visibility_label": "Ukryte ID lobby",
     "lobby_id_visibility_desc": "Ukryj ID lobby podczas tworzenia prywatnej poczekalni",
-    "real_names_shown": "Prawdziwe nazwy widoczne",
     "left_click_label": "Kliknij lewym przyciskiem myszy, aby otworzyć menu",
     "left_click_desc": "Gdy WŁĄCZONE, lewy przycisk myszy otwiera menu, a przycisk z mieczem atakuje. Gdy WYŁĄCZONE, lewy przycisk myszy atakuje bezpośrednio.",
     "left_click_menu": "Menu lewego przycisku myszy",
-    "left_click_opens_menu": "Lewy przycisk myszy otwiera menu",
-    "right_click_opens_menu": "Prawy przycisk myszy otwiera menu",
     "attack_ratio_label": "⚔️ Współczynnik ataku",
     "attack_ratio_desc": "Jaki procent swoich żołnierzy chcesz wysłać do ataku (1–100%)",
     "troop_ratio_desc": "Dostosuj balans między żołnierzami (do walki) a pracownikami (do produkcji złota) (1–100%)",
@@ -321,6 +341,27 @@
     "view_options": "Opcje widoku",
     "toggle_view": "Przełącz widok",
     "toggle_view_desc": "Alternatywny widok (teren/państwa)",
+    "build_controls": "Skróty Klawiszowe Budowania",
+    "build_city": "Zbuduj miasto",
+    "build_city_desc": "Zbuduj miasto pod twoim kursorem.",
+    "build_factory": "Zbuduj fabrykę",
+    "build_factory_desc": "Zbuduj fabrykę pod twoim kursorem.",
+    "build_defense_post": "Buduj posterunek obronny",
+    "build_defense_post_desc": "Zbuduj posterunek obronny pod twoim kursorem.",
+    "build_port": "Zbuduj port",
+    "build_port_desc": "Zbuduj port pod twoim kursorem.",
+    "build_warship": "Zbuduj okręt wojenny",
+    "build_warship_desc": "Zbuduj okręt wojenny pod twoim kursorem.",
+    "build_missile_silo": "Zbuduj silos rakietowy",
+    "build_missile_silo_desc": "Zbuduj silos rakietowy pod twoim kursorem.",
+    "build_sam_launcher": "Zbuduj wyrzutnię SAM",
+    "build_sam_launcher_desc": "Zbuduj wyrzutnię SAM pod twoim kursorem.",
+    "build_atom_bomb": "Zbuduj Bombę Atomową",
+    "build_atom_bomb_desc": "Zbuduj Bombę Atomową pod twoim kursorem.",
+    "build_hydrogen_bomb": "Zbuduj Bombę Wodorową",
+    "build_hydrogen_bomb_desc": "Zbuduj Bombę Wodorową pod twoim kursorem.",
+    "build_mirv": "Zbuduj MIRV",
+    "build_mirv_desc": "Zbuduj MIRV pod twoim kursorem.",
     "attack_ratio_controls": "Sterowanie współczynnikiem ataku",
     "attack_ratio_up": "Zwiększ współczynnik ataku",
     "attack_ratio_up_desc": "Zwiększ współczynnik ataku o 10%",
@@ -352,10 +393,10 @@
     "on": "Włączone",
     "off": "Wyłączone",
     "toggle_terrain": "Przełącz teren",
-    "terrain_enabled": "Widok terenu włączony",
-    "terrain_disabled": "Widok terenu wyłączony",
     "exit_game_label": "Wyjdź z gry",
-    "exit_game_info": "Powrót do menu głównego"
+    "exit_game_info": "Powrót do menu głównego",
+    "background_music_volume": "Głośność muzyki w tle",
+    "sound_effects_volume": "Głośność efektów dźwiękowych"
   },
   "chat": {
     "title": "Szybka rozmowa",
@@ -462,7 +503,7 @@
   },
   "win_modal": {
     "support_openfront": "Wesprzyj OpenFront!",
-    "territory_pattern": "Kup wzór terytorium, aby wesprzeć OpenFront!",
+    "territory_pattern": "Kup skórkę na terytorium, aby zwolnić z reklam!",
     "died": "Nie żyjesz",
     "your_team": "Twoja drużyna wygrała!",
     "other_team": "Drużyna {team} wygrała!",
@@ -470,6 +511,7 @@
     "other_won": "{player} wygrał!",
     "exit": "Wyjdź z gry",
     "keep": "Graj dalej",
+    "spectate": "Obserwuj",
     "wishlist": "Dodaj do listy życzeń na Steam!"
   },
   "leaderboard": {
@@ -494,7 +536,8 @@
     "nation": "Naród",
     "player": "Gracz",
     "team": "Drużyna",
-    "d_troops": "Jednostki Obronne",
+    "alliance_timeout": "Sojusz kończy się za",
+    "troops": "Wojsko",
     "a_troops": "Atakujące wojska",
     "gold": "Złoto",
     "ports": "Porty",
@@ -539,6 +582,11 @@
     "upgrade": "Ulepsz",
     "level": "Poziom"
   },
+  "player_type": {
+    "player": "Gracz",
+    "nation": "Naród",
+    "bot": "Bot"
+  },
   "relation": {
     "hostile": "Nieprzyjazny",
     "distrustful": "Nieufne",
@@ -554,23 +602,51 @@
   "player_panel": {
     "gold": "Złoto",
     "troops": "Wojsko",
-    "betrayals": "Liczba zdrad",
+    "betrayals": "Liczba Zdrad",
     "traitor": "Zdrajca",
+    "trading": "Handel",
+    "active": "Aktywny",
+    "stopped": "Zatrzymany",
     "alliance_time_remaining": "Sojusz wygasa za",
     "embargo": "Zaprzestali wymiany handlowej z tobą",
     "nuke": "Bomby nuklearne, które oni wysłali w twoją stronę",
     "start_trade": "Rozpocznij Handel",
     "stop_trade": "Zatrzymaj handel",
-    "yes": "Tak",
-    "no": "Nie",
-    "none": "Brak",
+    "stop_trade_all": "Zatrzymaj handel ze Wszystkimi",
+    "start_trade_all": "Rozpocznij handel ze Wszystkimi",
     "alliances": "Sojusze",
-    "flag": "Flaga"
+    "flag": "Flaga",
+    "chat": "Czat",
+    "target": "Cel",
+    "break": "Zerwij",
+    "break_alliance": "Zerwij Sojusz",
+    "alliance": "Sojusz",
+    "send_alliance": "Poproś o Sojusz",
+    "send_troops": "Wyślij wojska",
+    "send_gold": "Wyślij Złoto",
+    "emotes": "Emotikony"
+  },
+  "send_troops_modal": {
+    "title_with_name": "Wyślij wojsko do {name}",
+    "available_tooltip": "Obecnie dostępne wojsko",
+    "min_keep": "Min. utrzymanie",
+    "min_keep_pct": "(30%)",
+    "slider_tooltip": "{{percent}}% • {{amount}}",
+    "toggle_attack_bar_mode": "Użyj suwaka ataku, aby wysłać wojsko",
+    "warning_attackbar": "Po włączeniu tej opcji nie możesz bezpośrednio otworzyć tego modułu. Będziesz wysyłał wojsko tylko przez suwak ataku.",
+    "aria_slider": "Suwak Jednostek",
+    "capacity_note": "Odbiorca może teraz zaakceptować tylko {{amount}}."
+  },
+  "send_gold_modal": {
+    "title_with_name": "Wyślij Złoto do {name}",
+    "available_tooltip": "Obecnie dostępne złoto",
+    "aria_slider": "Suwak Ilości Złota",
+    "slider_tooltip": "{{percent}}% • {{amount}}"
   },
   "replay_panel": {
     "replay_speed": "Prędkość powtórki",
     "game_speed": "Prędkość gry",
-    "fastest_game_speed": "maks"
+    "fastest_game_speed": "Maksymalna"
   },
   "error_modal": {
     "crashed": "Gra uległa awarii!",
@@ -585,46 +661,15 @@
     "choose_spawn": "Wybierz lokalizację początkową"
   },
   "territory_patterns": {
-    "title": "Wybierz wzór terytorium",
+    "title": "Skórki",
+    "colors": "Kolory",
     "purchase": "Kup",
     "blocked": {
       "login": "Musisz być zalogowany, aby uzyskać dostęp do tego wzoru.",
       "purchase": "Kup ten wzór, aby go odblokować."
     },
     "pattern": {
-      "default": "Domyślny",
-      "custom": "Niestandardowy",
-      "stripes_v": "Pionowy",
-      "stripes_h": "Poziomy",
-      "horizontal_stripes": "Poziomy (Alt)",
-      "vertical_bars": "Pionowy (Alt)",
-      "checkerboard": "Szachownica",
-      "choco": "Czekolada",
-      "diagonal": "Skośny",
-      "cross": "Krzyż",
-      "mini_cross": "Mini krzyż",
-      "sword": "Miecz",
-      "sparse_dots": "Rzadkie kropki",
-      "evan": "Evan",
-      "diagonal_stripe": "Skośne pasy",
-      "mountain_ridge": "Grzbiet górski",
-      "scattered_dots": "Rozproszone kropki",
-      "circuit_board": "Płytka drukowana",
-      "shells": "Muszle",
-      "-w-": ".w.",
-      "white_rabbit": "Biały królik",
-      "goat": "Koza",
-      "cats": "Koty",
-      "cursor": "Kursor",
-      "hand": "Ręka",
-      "radiation": "Promieniowanie",
-      "openfront_qr": "Kod QR OpenFront.io",
-      "openfront": "OpenFront",
-      "t_rex": "T-Rex",
-      "embelem": "Emblemat",
-      "contributor": "Współtwórca",
-      "grogu_head": "Głowa Grogu",
-      "grogu": "Grogu"
+      "default": "Domyślny"
     }
   },
   "flag_input": {
@@ -644,5 +689,75 @@
   "radial_menu": {
     "delete_unit_title": "Usuń jednostkę",
     "delete_unit_description": "Kliknij, aby usunąć najbliższą jednostkę"
+  },
+  "discord_user_header": {
+    "avatar_alt": "Awatar"
+  },
+  "player_stats_table": {
+    "building_stats": "Statystyki budynków",
+    "ship_arrivals": "Przybycia statków",
+    "nuke_stats": "Statystyki bomb",
+    "player_metrics": "Statystyki Gracza",
+    "building": "Budynek",
+    "ship_type": "Typ Statku",
+    "weapon": "Broń",
+    "built": "Wybudowano",
+    "destroyed": "Zniszczono",
+    "captured": "Przechwycono",
+    "lost": "Utracono",
+    "hits": "Trafienia",
+    "launched": "Wysłane",
+    "landed": "Wylądowano",
+    "sent": "Wysłano",
+    "arrived": "Dostarczono",
+    "attack": "Atak",
+    "received": "Otrzymano",
+    "cancelled": "Anulowano",
+    "count": "Ilość",
+    "gold": "Złoto",
+    "workers": "Robotnicy",
+    "war": "Wojna",
+    "trade": "Handel",
+    "steal": "Kradzież",
+    "unit": {
+      "city": "Miasto",
+      "port": "Port",
+      "defp": "Punkt Obronny",
+      "saml": "Wyrzutnia SAM",
+      "silo": "Silos rakietowy",
+      "wshp": "Okręt wojenny",
+      "fact": "Fabryka",
+      "trade": "Statek Handlowy",
+      "trans": "Statek Transportowy",
+      "abomb": "Bomba atomowa",
+      "hbomb": "Bomba wodorowa",
+      "mirv": "MIRV",
+      "mirvw": "Głowica MIRV"
+    }
+  },
+  "game_list": {
+    "recent_games": "Ostatnie Rozgrywki",
+    "game_id": "Identyfikator Gry",
+    "mode": "Tryb",
+    "mode_ffa": "Każdy na Każdego",
+    "mode_team": "Drużyna",
+    "view": "Widok",
+    "details": "Szczegóły",
+    "started": "Rozpoczęto",
+    "map": "Mapa",
+    "difficulty": "Poziom trudności",
+    "type": "Rodzaj"
+  },
+  "player_stats_tree": {
+    "public": "Publiczne",
+    "private": "Prywatne",
+    "singleplayer": "Gra Jednoosobowa",
+    "mode": "Tryb",
+    "stats_wins": "Wygrane",
+    "stats_losses": "Przegrane",
+    "stats_wlr": "Współczynnik Wygranych do Przegranych",
+    "stats_games_played": "Gry zagrane",
+    "mode_ffa": "Każdy na Każdego",
+    "mode_team": "Drużyna"
   }
 }
