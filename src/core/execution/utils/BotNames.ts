@@ -284,7 +284,8 @@ export const COMMUNITY_FULL_ELF_NAMES = [
   "Fulayon the YT Elf",
   "Drew durnell YT Elf",
   "The Spiffing Brit YT Elf",
-  "Ultimus Rex YT Elf"
+  "Ultimus Rex YT Elf",
+  "MizuUmi the YT Elf"
 ];
 export const SPECIAL_FULL_ELF_NAMES = [
   "Santa",
