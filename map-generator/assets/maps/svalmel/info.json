@@ -1,0 +1,35 @@
+{
+  "name": "Svalmel",
+  "nations": [
+    {
+      "coordinates": [900, 850],
+      "name": "Santa Claus",
+      "strength": 2,
+      "flag": "santa_claus"
+    },
+    {
+      "coordinates": [275, 525],
+      "name": "Svalbard",
+      "strength": 2,
+      "flag": "no"
+    },
+    {
+      "coordinates": [860, 1360],
+      "name": "Melville",
+      "strength": 2,
+      "flag": "ca"
+    },
+    {
+      "coordinates": [1370, 465],
+      "name": "Bathurst",
+      "strength": 1,
+      "flag": "ca"
+    },
+    {
+      "coordinates": [910, 250],
+      "name": "Nordaustlandet",
+      "strength": 1,
+      "flag": "no"
+    }
+  ]
+}
