@@ -119,17 +119,33 @@ export class PlayerExecution implements Execution {
 
   private removeClusters() {
     const clusters = this.calculateClusters();
-    clusters.sort((a, b) => b.size - a.size);
+    // We only need the largest cluster; avoid sorting (O(k log k)) when a linear scan (O(k)) is enough.
+    let mainIdx = -1;
+    let mainSize = -1;
+    for (let i = 0; i < clusters.length; i++) {
+      const size = clusters[i].size;
+      if (size > mainSize) {
+        mainSize = size;
+        mainIdx = i;
+      }
+    }
 
-    const main = clusters.shift();
+    const main = clusters[mainIdx];
     if (main === undefined) throw new Error("No clusters");
+    if (mainIdx > 0) {
+      // Swap to make iteration over "other clusters" straightforward without copying.
+      const tmp = clusters[0];
+      clusters[0] = main;
+      clusters[mainIdx] = tmp;
+    }
     this.player.largestClusterBoundingBox = calculateBoundingBox(this.mg, main);
     const surroundedBy = this.surroundedBySamePlayer(main);
     if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
       this.removeCluster(main);
     }
 
-    for (const cluster of clusters) {
+    for (let i = 1; i < clusters.length; i++) {
+      const cluster = clusters[i];
       if (this.isSurrounded(cluster)) {
         this.removeCluster(cluster);
       }
