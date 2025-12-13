@@ -175,6 +175,18 @@ export const GameConfigSchema = z.object({
   disabledUnits: z.enum(UnitType).array().optional(),
   playerTeams: TeamCountConfigSchema.optional(),
 });
+export const LobbyPresetConfigSchema = GameConfigSchema.extend({
+  useRandomMap: z.boolean().optional(),
+  compactMap: z.boolean().optional(),
+  maxTimer: z.boolean().optional(),
+}).partial();
+export type LobbyPresetConfig = z.infer<typeof LobbyPresetConfigSchema>;
+
+export const LobbyPresetSchema = z.object({
+  name: z.string().default("Preset"),
+  config: LobbyPresetConfigSchema.default({}),
+});
+export type LobbyPreset = z.infer<typeof LobbyPresetSchema>;
 
 export const TeamSchema = z.string();
 
