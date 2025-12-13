@@ -149,24 +149,26 @@ export class PublicLobby extends LitElement {
       <button
         @click=${() => this.lobbyClicked(lobby)}
         ?disabled=${this.isButtonDebounced}
-        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${this
-          .isLobbyHighlighted
-          ? "bg-gradient-to-r from-emerald-600 to-emerald-500"
-          : "bg-gradient-to-r from-red-800 to-red-700"} text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${this
-          .isButtonDebounced
-          ? "opacity-70 cursor-not-allowed"
-          : ""}"
+        class="isolate grid h-40 grid-cols-[100%] grid-rows-[100%] place-content-stretch w-full overflow-hidden ${
+          this.isLobbyHighlighted
+            ? "bg-gradient-to-r from-emerald-600 to-emerald-500"
+            : "bg-gradient-to-r from-red-800 to-red-700"
+        } text-white font-medium rounded-xl transition-opacity duration-200 hover:opacity-90 ${
+          this.isButtonDebounced ? "opacity-70 cursor-not-allowed" : ""
+        }"
       >
-        ${mapImageSrc
-          ? html`<img
-              src="${mapImageSrc}"
-              alt="${lobby.gameConfig.gameMap}"
-              class="place-self-start col-span-full row-span-full h-full -z-10"
-              style="mask-image: linear-gradient(to left, transparent, #fff)"
-            />`
-          : html`<div
-              class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
-            ></div>`}
+        ${
+          mapImageSrc
+            ? html`<img
+                src="${mapImageSrc}"
+                alt="${lobby.gameConfig.gameMap}"
+                class="place-self-start col-span-full row-span-full h-full -z-10"
+                style="mask-image: linear-gradient(to left, transparent, #fff)"
+              />`
+            : html`<div
+                class="place-self-start col-span-full row-span-full h-full -z-10 bg-gray-300"
+              ></div>`
+        }
         <div
           class="flex flex-col justify-between h-full col-span-full row-span-full p-4 md:p-6 text-right z-0"
         >
@@ -176,21 +178,23 @@ export class PublicLobby extends LitElement {
             </div>
             <div class="text-md font-medium text-red-300">
               <span
-                class="text-sm ${this.isLobbyHighlighted
-                  ? "text-emerald-600"
-                  : "text-red-800"} bg-white rounded-sm px-1"
+                class="text-sm ${
+                  this.isLobbyHighlighted ? "text-emerald-600" : "text-red-800"
+                } bg-white rounded-sm px-1"
                   ? "text-green-600"
                   : "text-blue-600"} bg-white rounded-sm px-1"
                 >${modeLabel}</span
               >
-              ${teamDetailLabel
-                ? html`<span
-                    class="text-sm ${this.isLobbyHighlighted
-                      ? "text-green-600"
-                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
-                    >${teamDetailLabel}</span
-                  >`
-                : ""}
+              ${
+                teamDetailLabel
+                  ? html`<span
+                      class="text-sm ${this.isLobbyHighlighted
+                        ? "text-green-600"
+                        : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
+                      >${teamDetailLabel}</span
+                    >`
+                  : ""
+              }
               <span
                 >${translateText(
                   `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
