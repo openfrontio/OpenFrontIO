@@ -200,7 +200,13 @@ class Client {
     const helpButton = document.getElementById("help-button");
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
-      hlpModal.open();
+      if (hlpModal) {
+        hlpModal.open();
+      } else {
+        console.error(
+          "Help modal element not found, cannot open instructions.",
+        );
+      }
     });
 
     const flagInputModal = document.querySelector(
