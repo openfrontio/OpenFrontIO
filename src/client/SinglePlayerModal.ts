@@ -25,7 +25,7 @@ import { generateID } from "../core/Util";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import { LobbyPresetStore } from "./components/lobbyConfig/PresetControls";
+import { LobbyPresetControls } from "./components/lobbyConfig/PresetControls";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
@@ -62,7 +62,6 @@ export class SinglePlayerModal extends LitElement {
   @state() private presetNameInput = "";
 
   private userSettings: UserSettings = new UserSettings();
-  private presetStore = new LobbyPresetStore(this.userSettings);
 
   connectedCallback() {
     super.connectedCallback();
@@ -450,7 +449,7 @@ export class SinglePlayerModal extends LitElement {
   }
 
   private loadPresets() {
-    this.lobbyPresets = this.presetStore.list();
+    this.lobbyPresets = LobbyPresetControls.listPresets(this.userSettings);
   }
 
   private handlePresetSelect(e: CustomEvent<string>) {
@@ -492,7 +491,11 @@ export class SinglePlayerModal extends LitElement {
     if (!name) {
       return;
     }
-    this.lobbyPresets = this.presetStore.save(name, this.buildPresetConfig());
+    this.lobbyPresets = LobbyPresetControls.savePreset(
+      this.userSettings,
+      name,
+      this.buildPresetConfig(),
+    );
     this.selectedPresetName = name;
     this.presetNameInput = "";
   }
@@ -531,7 +534,10 @@ export class SinglePlayerModal extends LitElement {
     if (!presetName) {
       return;
     }
-    this.lobbyPresets = this.presetStore.delete(presetName);
+    this.lobbyPresets = LobbyPresetControls.deletePreset(
+      this.userSettings,
+      presetName,
+    );
     if (this.selectedPresetName === presetName) {
       this.selectedPresetName = "";
     }

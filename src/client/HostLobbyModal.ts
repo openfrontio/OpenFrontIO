@@ -27,7 +27,7 @@ import {
 import { generateID } from "../core/Util";
 import "./components/baseComponents/Modal";
 import "./components/Difficulties";
-import { LobbyPresetStore } from "./components/lobbyConfig/PresetControls";
+import { LobbyPresetControls } from "./components/lobbyConfig/PresetControls";
 import "./components/LobbyTeamView";
 import "./components/Maps";
 import { JoinLobbyEvent } from "./Main";
@@ -70,7 +70,6 @@ export class HostLobbyModal extends LitElement {
   // Add a new timer for debouncing bot changes
   private botsUpdateTimer: number | null = null;
   private userSettings: UserSettings = new UserSettings();
-  private presetStore = new LobbyPresetStore(this.userSettings);
   private mapLoader = terrainMapFileLoader;
 
   connectedCallback() {
@@ -664,7 +663,7 @@ export class HostLobbyModal extends LitElement {
   }
 
   private loadPresets() {
-    this.lobbyPresets = this.presetStore.list();
+    this.lobbyPresets = LobbyPresetControls.listPresets(this.userSettings);
   }
 
   private handlePresetSelect(e: CustomEvent<string>) {
@@ -706,7 +705,11 @@ export class HostLobbyModal extends LitElement {
     if (!name) {
       return;
     }
-    this.lobbyPresets = this.presetStore.save(name, this.buildPresetConfig());
+    this.lobbyPresets = LobbyPresetControls.savePreset(
+      this.userSettings,
+      name,
+      this.buildPresetConfig(),
+    );
     this.selectedPresetName = name;
     this.presetNameInput = "";
   }
@@ -748,7 +751,10 @@ export class HostLobbyModal extends LitElement {
     if (!presetName) {
       return;
     }
-    this.lobbyPresets = this.presetStore.delete(presetName);
+    this.lobbyPresets = LobbyPresetControls.deletePreset(
+      this.userSettings,
+      presetName,
+    );
     if (this.selectedPresetName === presetName) {
       this.selectedPresetName = "";
     }

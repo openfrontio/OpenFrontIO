@@ -11,37 +11,53 @@ import {
 import { translateText } from "../../Utils";
 import "../baseComponents/Button";
 
-export class LobbyPresetStore {
-  constructor(private userSettings = new UserSettings()) {}
+@customElement("lobby-preset-controls")
+export class LobbyPresetControls extends LitElement {
+  @property({ type: Array }) presets: LobbyPreset[] = [];
+  @property({ type: String }) selectedName = "";
+  @property({ type: String }) nameInput = "";
 
-  list(): LobbyPreset[] {
-    return this.userSettings
+  static listPresets(userSettings = new UserSettings()): LobbyPreset[] {
+    return userSettings
       .getLobbyPresets()
-      .map((preset) => this.normalizePreset(preset));
+      .map((preset) => LobbyPresetControls.normalizePreset(preset));
   }
 
-  save(name: string, config: LobbyPresetConfig): LobbyPreset[] {
-    const presets = this.list().filter((preset) => preset.name !== name);
+  static savePreset(
+    userSettings: UserSettings,
+    name: string,
+    config: LobbyPresetConfig,
+  ): LobbyPreset[] {
+    const presets = LobbyPresetControls.listPresets(userSettings).filter(
+      (preset) => preset.name !== name,
+    );
     const updated = [
       ...presets,
-      { name, config: this.normalizePresetConfig(config) },
+      {
+        name,
+        config: LobbyPresetControls.normalizePresetConfig(config),
+      },
     ];
-    this.userSettings.setLobbyPresets(updated);
+    userSettings.setLobbyPresets(updated);
     return updated;
   }
 
-  delete(name: string): LobbyPreset[] {
-    const updated = this.list().filter((preset) => preset.name !== name);
-    this.userSettings.setLobbyPresets(updated);
+  static deletePreset(userSettings: UserSettings, name: string): LobbyPreset[] {
+    const updated = LobbyPresetControls.listPresets(userSettings).filter(
+      (preset) => preset.name !== name,
+    );
+    userSettings.setLobbyPresets(updated);
     return updated;
   }
 
-  private normalizePreset(preset: LobbyPreset): LobbyPreset {
-    const config = this.normalizePresetConfig(preset?.config ?? {});
+  private static normalizePreset(preset: LobbyPreset): LobbyPreset {
+    const config = LobbyPresetControls.normalizePresetConfig(
+      preset?.config ?? {},
+    );
     return { name: preset?.name ?? "Preset", config };
   }
 
-  private normalizePresetConfig(
+  private static normalizePresetConfig(
     config: Partial<LobbyPresetConfig>,
   ): LobbyPresetConfig {
     const parsed = LobbyPresetConfigSchema.parse(config);
@@ -65,13 +81,6 @@ export class LobbyPresetStore {
       disabledUnits: parsed.disabledUnits ?? [],
     };
   }
-}
-
-@customElement("lobby-preset-controls")
-export class LobbyPresetControls extends LitElement {
-  @property({ type: Array }) presets: LobbyPreset[] = [];
-  @property({ type: String }) selectedName = "";
-  @property({ type: String }) nameInput = "";
 
   createRenderRoot() {
     return this;
