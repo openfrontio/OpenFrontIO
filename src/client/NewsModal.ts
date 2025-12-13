@@ -115,14 +115,14 @@ export class NewsModal extends LitElement {
       // Apply markdown processing directly
       markdown = markdown
         .replace(
-          /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
-          (_match, prNumber) =>
-            `[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
+          /(^|[^\\(])\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
+          (match, prefix, prNumber) =>
+            `${prefix}[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
         )
         .replace(
-          /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g,
-          (_match, comparison) =>
-            `[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
+          /(^|[^\\(])\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g,
+          (match, prefix, comparison) =>
+            `${prefix}[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
         );
 
       this.markdown = markdown;

@@ -637,7 +637,7 @@ function enableSnowflakes() {
 function removeSnowflakes() {
   const snowContainer = document.querySelector(".snow") as HTMLElement;
   if (snowContainer) {
-    snowContainer.innerHTML = ""; // Clear all snowflakes
+    snowContainer.replaceChildren(); // Clear all snowflakes
   }
 }
 
