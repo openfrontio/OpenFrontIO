@@ -89,6 +89,12 @@ export class FakeHumanExecution implements Execution {
     if (this.random.chance(10)) {
       // this.isTraitor = true
     }
+
+    if (!this.mg.hasPlayer(this.nation.playerInfo.id)) {
+      this.player = this.mg.addPlayer(this.nation.playerInfo);
+    } else {
+      this.player = this.mg.player(this.nation.playerInfo.id);
+    }
   }
 
   private updateRelationsFromEmbargos() {
@@ -151,23 +157,19 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
+    if (this.player === null) {
+      return;
+    }
+
     if (this.mg.inSpawnPhase()) {
       const rl = this.randomSpawnLand();
       if (rl === null) {
         console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
         return;
       }
+      this.player.setSpawnTile(rl);
       this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
       return;
-    }
-
-    if (this.player === null) {
-      this.player =
-        this.mg.players().find((p) => p.id() === this.nation.playerInfo.id) ??
-        null;
-      if (this.player === null) {
-        return;
-      }
     }
 
     if (!this.player.isAlive()) {
@@ -605,6 +607,24 @@ export class FakeHumanExecution implements Execution {
         continue;
       }
       const tile = this.mg.ref(x, y);
+
+      const isOtherPlayerSpawnedNearby = this.mg.allPlayers().some((player) => {
+        const spawnTile = player.spawnTile();
+
+        if (spawnTile === undefined) {
+          return false;
+        }
+
+        return (
+          this.mg.manhattanDist(spawnTile, tile) <
+          this.mg.config().minDistanceBetweenPlayers()
+        );
+      });
+
+      if (isOtherPlayerSpawnedNearby) {
+        continue;
+      }
+
       if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
         if (
           this.mg.terrainType(tile) === TerrainType.Mountain &&

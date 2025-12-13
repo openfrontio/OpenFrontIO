@@ -549,7 +549,8 @@ export interface Player {
   markDisconnected(isDisconnected: boolean): void;
 
   hasSpawned(): boolean;
-  setHasSpawned(hasSpawned: boolean): void;
+  setSpawnTile(spawnTile: TileRef): void;
+  spawnTile(): TileRef | undefined;
 
   // Territory
   tiles(): ReadonlySet<TileRef>;

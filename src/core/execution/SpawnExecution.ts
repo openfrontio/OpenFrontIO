@@ -48,7 +48,10 @@ export class SpawnExecution implements Execution {
         this.mg.addExecution(new BotExecution(player));
       }
     }
-    player.setHasSpawned(true);
+
+    if (player.spawnTile() === undefined) {
+      player.setSpawnTile(this.tile);
+    }
   }
 
   isActive(): boolean {
