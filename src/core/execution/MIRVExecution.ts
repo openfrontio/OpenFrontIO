@@ -22,6 +22,7 @@ export class MirvExecution implements Execution {
 
   private mirvRange = 1500;
   private warheadCount = 350;
+  private MIRV_FIXED_TRAVEL_TIME = 40; // Ticks
 
   private random: PseudoRandom;
 
@@ -43,7 +44,6 @@ export class MirvExecution implements Execution {
     this.mg = mg;
     this.pathFinder = new ParabolaPathFinder(mg);
     this.targetPlayer = this.mg.owner(this.dst);
-    this.speed = this.mg.config().defaultNukeSpeed();
 
     // Record stats
     this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
@@ -72,11 +72,16 @@ export class MirvExecution implements Execution {
         targetTile: this.dst,
       });
       const x = Math.floor(
-        (this.mg.x(this.dst) + this.mg.x(this.mg.x(this.nuke.tile()))) / 2,
+        (this.mg.x(this.dst) + this.mg.x(this.nuke.tile())) / 2,
       );
       const y = Math.max(0, this.mg.y(this.dst) - 500) + 50;
       this.separateDst = this.mg.ref(x, y);
       this.pathFinder.computeControlPoints(spawn, this.separateDst);
+      // Calculate speed for fixed travel time
+      const distance = Math.sqrt(
+        this.mg.euclideanDistSquared(spawn, this.separateDst),
+      );
+      this.speed = distance / this.MIRV_FIXED_TRAVEL_TIME;
 
       this.mg.displayIncomingUnit(
         this.nuke.id(),
