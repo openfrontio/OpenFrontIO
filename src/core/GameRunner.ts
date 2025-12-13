@@ -96,6 +96,7 @@ export class GameRunner {
   private isExecuting = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
+  private tileUpdateBuffer = new BigUint64Array(1024); // Reusable buffer for packed tile updates
 
   constructor(
     public game: Game,
@@ -176,12 +177,26 @@ export class GameRunner {
     }
 
     // Many tiles are updated to pack it into an array
-    const packedTileUpdates = updates[GameUpdateType.Tile].map((u) => u.update);
+    const tileUpdates = updates[GameUpdateType.Tile];
+    const numUpdates = tileUpdates.length;
+
+    // Grow buffer if needed
+    if (numUpdates > this.tileUpdateBuffer.length) {
+      this.tileUpdateBuffer = new BigUint64Array(
+        Math.max(numUpdates, this.tileUpdateBuffer.length * 2),
+      );
+    }
+
+    // Write directly to buffer
+    for (let i = 0; i < numUpdates; i++) {
+      this.tileUpdateBuffer[i] = tileUpdates[i].update;
+    }
+
     updates[GameUpdateType.Tile] = [];
 
     this.callBack({
       tick: this.game.ticks(),
-      packedTileUpdates: new BigUint64Array(packedTileUpdates),
+      packedTileUpdates: this.tileUpdateBuffer.subarray(0, numUpdates),
       updates: updates,
       playerNameViewData: this.playerViewData,
       tickExecutionDuration: tickExecutionDuration,
