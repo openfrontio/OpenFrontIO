@@ -91,6 +91,7 @@ export class BuildUnitIntentEvent implements GameEvent {
   constructor(
     public readonly unit: UnitType,
     public readonly tile: TileRef,
+    public readonly rocketDirectionUp?: boolean,
   ) {}
 }
 
@@ -572,6 +573,7 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       unit: event.unit,
       tile: event.tile,
+      rocketDirectionUp: event.rocketDirectionUp,
     });
   }
 
