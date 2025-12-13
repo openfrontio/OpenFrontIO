@@ -1,10 +1,9 @@
 import { LitElement, css, html } from "lit";
 import { resolveMarkdown } from "lit-markdown";
 import { customElement, property, query } from "lit/decorators.js";
-
+import changelog from "../../resources/changelog.md";
 import megaphone from "../../resources/images/Megaphone.svg";
 import santaHatIcon from "../../resources/images/SantaHat.png";
-
 import version from "../../resources/version.txt";
 import { translateText } from "../client/Utils";
 import "./components/baseComponents/Button";
@@ -107,25 +106,22 @@ export class NewsModal extends LitElement {
   public open() {
     if (!this.initialized) {
       this.initialized = true;
-
-      // Direct assignment of markdown content from the import.
-      // Assuming the Webpack loader for .md files provides the content as a string.
-      let markdown = "";
-
-      // Apply markdown processing directly
-      markdown = markdown
-        .replace(
-          /(^|[^\\(])\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
-          (match, prefix, prNumber) =>
-            `${prefix}[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
+      fetch(changelog)
+        .then((response) => (response.ok ? response.text() : "Failed to load"))
+        .then((markdown) =>
+          markdown
+            .replace(
+              /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g,
+              (_match, prNumber) =>
+                `[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
+            )
+            .replace(
+              /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g,
+              (_match, comparison) =>
+                `[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
+            ),
         )
-        .replace(
-          /(^|[^\\(])\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g,
-          (match, prefix, comparison) =>
-            `${prefix}[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
-        );
-
-      this.markdown = markdown;
+        .then((markdown) => (this.markdown = markdown));
     }
     this.requestUpdate();
     this.modalEl?.open();
