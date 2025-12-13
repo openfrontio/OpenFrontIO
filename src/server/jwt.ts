@@ -6,7 +6,7 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
-import { ServerConfig } from "../core/configuration/Config";
+import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { PersistentIdSchema } from "../core/Schemas";
 
 type TokenVerificationResult =
@@ -22,7 +22,14 @@ export async function verifyClientToken(
   config: ServerConfig,
 ): Promise<TokenVerificationResult> {
   if (PersistentIdSchema.safeParse(token).success) {
-    return { type: "success", persistentId: token, claims: null };
+    if (config.env() === GameEnv.Dev) {
+      return { type: "success", persistentId: token, claims: null };
+    } else {
+      return {
+        type: "error",
+        message: "persistent ID not allowed in production",
+      };
+    }
   }
   try {
     const issuer = config.jwtIssuer();
