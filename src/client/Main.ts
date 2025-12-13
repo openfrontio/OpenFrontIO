@@ -44,6 +44,7 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./snow.css";
 import "./styles.css";
+export { getPersistentID, getPlayToken } from "./Auth";
 
 declare global {
   interface Window {
@@ -692,23 +693,6 @@ document.addEventListener("DOMContentLoaded", () => {
     enableSnowflakes();
   }
 });
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPlayToken(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.token;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-export function getPersistentID(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.claims.sub;
-  return getPersistentIDFromCookie();
-}
-
-// WARNING: DO NOT EXPOSE THIS ID
-function getPersistentIDFromCookie(): string {
-  const COOKIE_NAME = "player_persistent_id";
 async function getTurnstileToken(): Promise<{
   token: string;
   createdAt: number;
