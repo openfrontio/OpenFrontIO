@@ -37,15 +37,9 @@ export class PlayerExecution implements Execution {
     opts: {
       rejectIfEdgeTile?: boolean;
       // IMPORTANT: This checks `mg.isShore(tile)` which is based on the terrain "shoreline" bit.
-      // That can include shorelines around BOTH oceans and lakes.
       // If you only want to reject true *ocean* adjacency, use `rejectIfOceanNeighbor` instead.
-      rejectIfShoreTile?: boolean;
-      // Reject if any neighbor is `mg.isOcean(...)` (i.e. true ocean).
-      // This is *not* equivalent to `rejectIfShoreTile`:
-      // - `rejectIfOceanNeighbor` rejects only ocean-adjacent land (like `mg.isOceanShore(tile)`),
-      //   and in this helper we detect it without allocating `neighbors(...)` arrays.
-      // - `rejectIfShoreTile` rejects any shoreline-bit tile (including lake shorelines).
-      rejectIfOceanNeighbor?: boolean;
+      rejectIfShoreTile?: boolean; //Includes both ocean and lake shorelines.
+      rejectIfOceanNeighbor?: boolean; //Only rejects true ocean adjacency.
       rejectIfUnownedNeighbor?: boolean;
       trackEnemyBBox?: boolean;
       trackSingleEnemyId?: boolean;
@@ -303,10 +297,10 @@ export class PlayerExecution implements Execution {
     const mg = this.mg;
     const scan = this.scanClusterBoundary(cluster, {
       rejectIfEdgeTile: true,
-      // This keeps the prior `mg.isShore(tile)` behavior which is based on the terrain "shoreline" bit.
-      // which can include both ocean and lake shorelines.
-      //we may also(only?) want rejectIfOceanNeighbor: true, but this matches the previous behavior.
-      rejectIfShoreTile: true,
+      //prior `mg.isShore(tile)` behavior was based on the terrain "shoreline" bit.
+      //which can include both ocean and lake shorelines. We now only reject true ocean adjacency.
+      //rejectIfShoreTile: true,
+      rejectIfOceanNeighbor: true,
       trackEnemyBBox: true,
     });
     if (!scan || !scan.hasEnemyNeighbor) return false;
