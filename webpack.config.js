@@ -109,7 +109,6 @@ export default async (env, argv) => {
           __dirname,
           "node_modules/protobufjs/minimal.js",
         ),
-        resources: path.resolve(__dirname, "resources"),
       },
     },
     plugins: [

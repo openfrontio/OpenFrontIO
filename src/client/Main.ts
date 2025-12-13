@@ -1,4 +1,4 @@
-import Snowflake3Png from "../../resources/images/Snowflake_3.png";
+import Snowflake3Png from "../../resources/images/Snowflake_3.webp";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
@@ -200,13 +200,7 @@ class Client {
     const helpButton = document.getElementById("help-button");
     if (helpButton === null) throw new Error("Missing help-button");
     helpButton.addEventListener("click", () => {
-      if (hlpModal) {
-        hlpModal.open();
-      } else {
-        console.error(
-          "Help modal element not found, cannot open instructions.",
-        );
-      }
+      hlpModal.open();
     });
 
     const flagInputModal = document.querySelector(
@@ -687,10 +681,10 @@ function enableSnowflakes() {
 function removeSnowflakes() {
   const snowContainer = document.querySelector(".snow") as HTMLElement;
   if (snowContainer) {
-    snowContainer.replaceChildren(); // Clear all snowflakes
+    snowContainer.replaceChildren();
   }
 }
-
+// Initialize the client when the DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 

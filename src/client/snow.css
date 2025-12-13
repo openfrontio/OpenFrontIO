@@ -26,7 +26,7 @@
   position: absolute;
   width: 89px; /* Increased size */
   height: 89px; /* Increased size */
-  background-image: url("/resources/images/SantaHat.png"); /* Use direct path for CSS background */
+  background-image: url("/resources/images/SantaHat.webp"); /* Use direct path for CSS background */
   background-size: contain;
   background-repeat: no-repeat;
   top: -25px; /* Adjusted position */

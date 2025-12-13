@@ -2,7 +2,6 @@ import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 
-// At class level, outside the class definition
 let activeModalCount = 0;
 
 @customElement("o-modal")
