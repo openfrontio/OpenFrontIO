@@ -305,7 +305,7 @@ export const COMMUNITY_PREFIXES = [
   "The Sparkling Elf",
   "Valentino",
   "Mr Cube",
-  "Nukemen",
+  "Nukeman",
   "Baguette Bot",
   "Kiwi",
   "FakeNeo",
