@@ -21,6 +21,7 @@ import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
 import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import swordIcon from "../../../../resources/images/SwordIconWhite.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
+import traitorConfirmIcon from "../../../../resources/images/TraitorIconConfirmWhite.svg";
 import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
 import xIcon from "../../../../resources/images/XIcon.svg";
 import { EventBus } from "../../../core/EventBus";
@@ -191,6 +192,11 @@ const allyRequestElement: MenuElement = {
   },
 };
 
+// Safe-unalley state
+export const RadialMenuState = {
+  breakAlliancePendingId: null as string | null,
+};
+
 const allyBreakElement: MenuElement = {
   id: "ally_break",
   name: "break",
@@ -201,11 +207,17 @@ const allyBreakElement: MenuElement = {
   color: COLORS.breakAlly,
   icon: traitorIcon,
   action: (params: MenuElementParams) => {
-    params.playerActionHandler.handleBreakAlliance(
-      params.myPlayer,
-      params.selected!,
-    );
-    params.closeMenu();
+    if (RadialMenuState.breakAlliancePendingId === params.selected?.id()) {
+      params.playerActionHandler.handleBreakAlliance(
+        params.myPlayer,
+        params.selected!,
+      );
+      RadialMenuState.breakAlliancePendingId = null;
+      params.closeMenu();
+    } else {
+      RadialMenuState.breakAlliancePendingId = params.selected?.id() ?? null;
+      // menu stays open for confirmation; menu will be re-rendered by RadialMenu
+    }
   },
 };
 
@@ -573,7 +585,27 @@ export const rootMenuElement: MenuElement = {
   subMenu: (params: MenuElementParams) => {
     let ally = allyRequestElement;
     if (params.selected?.isAlliedWith(params.myPlayer)) {
-      ally = allyBreakElement;
+      // If confirmation is pending for this player, show confirm button instead of break
+      if (
+        RadialMenuState.breakAlliancePendingId &&
+        params.selected?.id() === RadialMenuState.breakAlliancePendingId
+      ) {
+        ally = {
+          ...allyBreakElement,
+          name: "confirm_break",
+          color: "#800080",
+          icon: traitorConfirmIcon,
+          text: undefined,
+        };
+      } else {
+        ally = {
+          ...allyBreakElement,
+          name: "break",
+          color: COLORS.breakAlly,
+          icon: traitorIcon,
+          text: undefined,
+        };
+      }
     }
 
     const tileOwner = params.game.owner(params.tile);

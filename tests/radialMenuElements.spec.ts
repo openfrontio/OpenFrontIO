@@ -16,6 +16,7 @@ jest.mock("../src/client/Utils", () => ({
 
 import {
   COLORS,
+  RadialMenuState,
   rootMenuElement,
   type MenuElementParams,
 } from "../src/client/graphics/layers/RadialMenuElements";
@@ -77,8 +78,12 @@ const makeParams = (opts?: Partial<MenuElementParams>): MenuElementParams => {
 const findAllyBreak = (items: any[]) =>
   items.find((i) => i && i.id === "ally_break");
 
-describe("RadialMenuElements ally break", () => {
-  test("shows break option with correct color when allied", () => {
+describe("RadialMenuElements ally break/confirm", () => {
+  beforeEach(() => {
+    RadialMenuState.breakAlliancePendingId = null;
+  });
+
+  test("stage 1 shows break with default color", () => {
     const params = makeParams();
     const items = rootMenuElement.subMenu!(params);
     const ally = findAllyBreak(items)!;
@@ -87,17 +92,34 @@ describe("RadialMenuElements ally break", () => {
     expect(ally.color).toBe(COLORS.breakAlly);
   });
 
-  test("action calls handleBreakAlliance and closes menu", () => {
+  test("stage 2 shows confirm with purple color when pending id matches", () => {
     const params = makeParams();
+    RadialMenuState.breakAlliancePendingId = params.selected!.id();
     const items = rootMenuElement.subMenu!(params);
     const ally = findAllyBreak(items)!;
+    expect(ally.name).toBe("confirm_break");
+    expect(ally.color).toBe("#800080");
+  });
 
+  test("action toggles pending state then confirms and resets", () => {
+    const params = makeParams();
+    // First click: set pending state, do not close, do not call handler
+    let items = rootMenuElement.subMenu!(params);
+    let ally = findAllyBreak(items)!;
     ally.action!(params);
+    expect(RadialMenuState.breakAlliancePendingId).toBe(params.selected!.id());
+    expect(params.closeMenu).not.toHaveBeenCalled();
+    expect(
+      params.playerActionHandler.handleBreakAlliance,
+    ).not.toHaveBeenCalled();
 
-    expect(params.playerActionHandler.handleBreakAlliance).toHaveBeenCalledWith(
-      params.myPlayer,
-      params.selected,
-    );
+    // Second click: with pending state, confirm and reset + close menu
+    items = rootMenuElement.subMenu!(params);
+    ally = findAllyBreak(items)!;
+    expect(ally.name).toBe("confirm_break");
+    ally.action!(params);
+    expect(params.playerActionHandler.handleBreakAlliance).toHaveBeenCalled();
     expect(params.closeMenu).toHaveBeenCalled();
+    expect(RadialMenuState.breakAlliancePendingId).toBeNull();
   });
 });
