@@ -88,7 +88,7 @@ describe("Spawn execution", () => {
     ).toBe(1);
   });
 
-  test("Spawn on spicific tile", async () => {
+  test("Spawn on specific tile", async () => {
     const playerInfo = new PlayerInfo(
       `player`,
       PlayerType.Human,
@@ -107,5 +107,7 @@ describe("Spawn execution", () => {
 
     // Should spawn fewer than requested when map is too small
     expect(game.playerByClientID("client_id")?.spawnTile()).toBe(60);
+    // Previous territory from first spawn should be relinquished
+    expect(game.owner(50).isPlayer()).toBe(false);
   });
 });

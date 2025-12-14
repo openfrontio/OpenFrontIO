@@ -18,7 +18,9 @@ export class SpawnExecution implements Execution {
     private playerInfo: PlayerInfo,
     public tile?: TileRef,
   ) {
-    this.random = new PseudoRandom(simpleHash(gameID));
+    this.random = new PseudoRandom(
+      simpleHash(playerInfo.id) + simpleHash(gameID),
+    );
   }
 
   init(mg: Game, ticks: number) {

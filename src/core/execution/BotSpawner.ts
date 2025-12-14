@@ -22,28 +22,20 @@ export class BotSpawner {
   }
 
   spawnBots(numBots: number): SpawnExecution[] {
-    let tries = 0;
-    while (this.bots.length < numBots) {
-      if (tries > 10000) {
-        console.log("too many retries while spawning bots, giving up");
-        return this.bots;
-      }
+    for (let i = 0; i < numBots; i++) {
       const candidate = this.nextCandidateName();
       const spawn = this.spawnBot(candidate.name);
-      if (spawn !== null) {
-        // Only use candidate name once bot successfully spawned
-        if (candidate.source === "list") {
-          this.nameIndex++;
-        }
-        this.bots.push(spawn);
-      } else {
-        tries++;
+
+      if (candidate.source === "list") {
+        this.nameIndex++;
       }
+      this.bots.push(spawn);
     }
+
     return this.bots;
   }
 
-  spawnBot(botName: string): SpawnExecution | null {
+  spawnBot(botName: string): SpawnExecution {
     return new SpawnExecution(
       this.gameID,
       new PlayerInfo(botName, PlayerType.Bot, null, this.random.nextID()),
