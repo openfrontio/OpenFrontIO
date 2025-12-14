@@ -1,4 +1,4 @@
-import Snowflake3Png from "../../resources/images/Snowflake_3.webp";
+import Snowflake3Png from "../../resources/images/Snowflake.webp";
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
