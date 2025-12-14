@@ -357,7 +357,6 @@
     "left_click_menu": "Left Click Menu",
     "attack_ratio_label": "⚔️ Attack Ratio",
     "attack_ratio_desc": "What percentage of your troops to send in an attack (1–100%)",
-    "troop_ratio_desc": "Adjust the balance between troops (for combat) and workers (for gold production) (1–100%)",
     "territory_patterns_label": "🏳️ Territory Skins",
     "territory_patterns_desc": "Choose whether to display territory skin designs in game",
     "performance_overlay_label": "Performance Overlay",
