@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
@@ -99,6 +99,17 @@ export class EventsDisplay extends LitElement implements Layer {
     [MessageCategory.CHAT, false],
   ]);
 
+  @query(".events-container")
+  private _eventsContainer?: HTMLDivElement;
+  private _shouldScrollToBottom = true;
+
+  updated(changed: Map<string, unknown>) {
+    super.updated(changed);
+    if (this._eventsContainer && this._shouldScrollToBottom) {
+      this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
+    }
+  }
+
   private renderButton(options: {
     content: any; // Can be string, TemplateResult, or other renderable content
     onClick?: () => void;
@@ -189,6 +200,14 @@ export class EventsDisplay extends LitElement implements Layer {
 
   tick() {
     this.active = true;
+
+    if (this._eventsContainer) {
+      const el = this._eventsContainer;
+      this._shouldScrollToBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 5;
+    } else {
+      this._shouldScrollToBottom = true;
+    }
 
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this._isVisible = true;
@@ -1040,7 +1059,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full sm:rounded-b-lg"
+                class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full sm:rounded-b-lg events-container"
               >
                 <div>
                   <table

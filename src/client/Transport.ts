@@ -26,6 +26,7 @@ import {
   Winner,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
+import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -395,25 +396,25 @@ export class Transport {
     }
   }
 
-  joinGame() {
+  async joinGame() {
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
       clientID: this.lobbyConfig.clientID,
-      token: this.lobbyConfig.token,
       username: this.lobbyConfig.playerName,
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
+      token: await getPlayToken(),
     } satisfies ClientJoinMessage);
   }
 
-  rejoinGame(lastTurn: number) {
+  async rejoinGame(lastTurn: number) {
     this.sendMsg({
       type: "rejoin",
       gameID: this.lobbyConfig.gameID,
       clientID: this.lobbyConfig.clientID,
       lastTurn: lastTurn,
-      token: this.lobbyConfig.token,
+      token: await getPlayToken(),
     } satisfies ClientRejoinMessage);
   }
 

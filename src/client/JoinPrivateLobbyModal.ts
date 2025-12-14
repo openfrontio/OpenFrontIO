@@ -4,11 +4,11 @@ import { translateText } from "../client/Utils";
 import { GameInfo, GameRecordSchema } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { getApiBase } from "./Api";
 import { JoinLobbyEvent } from "./Main";
 import "./components/LobbyChatPanel";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { getApiBase } from "./jwt";
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
   @query("o-modal") private modalEl!: HTMLElement & {
