@@ -186,7 +186,7 @@ export class PublicLobby extends LitElement {
                 : ""}
               <span
                 >${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
                 )}</span
               >
             </div>
