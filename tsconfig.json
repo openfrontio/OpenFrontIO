@@ -29,7 +29,8 @@
     "proprietary/**/*",
     "generated/**/*",
     "tests/**/*",
-    "src/scripts"
+    "src/scripts",
+    "__mocks__/**/*"
   ],
   "exclude": ["node_modules"]
 }

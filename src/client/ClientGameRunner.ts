@@ -74,6 +74,13 @@ export function joinLobby(
     `joining lobby: gameID: ${lobbyConfig.gameID}, clientID: ${lobbyConfig.clientID}`,
   );
 
+  (window as any).__eventBus = eventBus;
+  (window as any).__clientID = lobbyConfig.clientID;
+  (window as any).__username = lobbyConfig.playerName;
+  document.dispatchEvent(
+    new CustomEvent("event-bus:ready", { bubbles: true, composed: true }),
+  );
+
   const userSettings: UserSettings = new UserSettings();
   startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config ?? {});
 
@@ -143,6 +150,19 @@ export function joinLobby(
           "error_modal.connection_error",
         );
       }
+    }
+    if (message.type === "lobby_chat") {
+      document.dispatchEvent(
+        new CustomEvent("lobby-chat:message", {
+          detail: {
+            username: message.username,
+            isHost: message.isHost,
+            text: message.text,
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
   };
   transport.connect(onconnect, onmessage);

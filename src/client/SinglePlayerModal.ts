@@ -575,6 +575,7 @@ export class SinglePlayerModal extends LitElement {
                 : GameMapSize.Normal,
               gameType: GameType.Singleplayer,
               gameMode: this.gameMode,
+              chatEnabled: false,
               playerTeams: this.teamCount,
               difficulty: this.selectedDifficulty,
               maxTimerValue: this.maxTimer ? this.maxTimerValue : undefined,
