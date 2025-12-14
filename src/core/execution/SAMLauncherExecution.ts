@@ -243,8 +243,6 @@ export class SAMLauncherExecution implements Execution {
       this.player = this.sam.owner();
     }
 
-    this.pseudoRandom ??= new PseudoRandom(this.sam.id());
-
     const mirvWarheadTargets = this.mg.nearbyUnits(
       this.sam.tile(),
       this.MIRVWarheadSearchRadius,
@@ -279,6 +277,15 @@ export class SAMLauncherExecution implements Execution {
           ? UnitType.MIRVWarhead
           : target?.unit.type();
       if (type === undefined) throw new Error("Unknown unit type");
+
+      // Seed random with ticks + sam ID + target ID for less predictable results
+      const targetId =
+        mirvWarheadTargets.length > 0
+          ? mirvWarheadTargets[0].unit.id()
+          : target!.unit.id();
+      this.pseudoRandom ??= new PseudoRandom(
+        this.mg.ticks() + this.sam.id() + targetId,
+      );
       const random = this.pseudoRandom.next();
       const hit = this.isHit(type, random);
       if (!hit) {
