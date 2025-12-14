@@ -649,6 +649,12 @@ class Client {
   }
 }
 function enableSnowflakes() {
+  // Respect user's motion preferences
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReducedMotion) {
+    return;
+  }
+
   const snowContainer = document.querySelector(".snow") as HTMLElement;
   if (!snowContainer) {
     console.warn("Snow container element not found");
