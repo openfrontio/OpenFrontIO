@@ -147,6 +147,26 @@ export const translateText = (
 };
 
 /**
+ * Returns the active language code from the LangSelector element, if present.
+ */
+export function getCurrentLanguage(): string | null {
+  const langSelector = document.querySelector(
+    "lang-selector",
+  ) as LangSelector | null;
+  return langSelector?.currentLang ?? null;
+}
+
+/**
+ * Checks whether the provided language (or current language if omitted) is
+ * right-to-left. Keeps RTL awareness centralized so UI components can align
+ * text correctly for languages such as Arabic and Persian.
+ */
+export function isRtlLanguage(lang?: string | null): boolean {
+  const currentLang = (lang ?? getCurrentLanguage() ?? "").toLowerCase();
+  return ["ar", "fa", "he"].some((rtl) => currentLang.startsWith(rtl));
+}
+
+/**
  * Severity colors mapping for message types
  */
 export const severityColors: Record<string, string> = {
