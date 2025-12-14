@@ -1,7 +1,14 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderDuration, translateText } from "../client/Utils";
-import { GameMapType, GameMode, HumansVsNations } from "../core/game/Game";
+import {
+  Duos,
+  GameMapType,
+  GameMode,
+  HumansVsNations,
+  Quads,
+  Trios,
+} from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { JoinLobbyEvent } from "./Main";
@@ -122,6 +129,20 @@ export class PublicLobby extends LitElement {
         ? (lobby.gameConfig.playerTeams ?? 0)
         : null;
 
+    const maxPlayers = lobby.gameConfig.maxPlayers ?? 0;
+    const teamSize = this.getTeamSize(teamCount, maxPlayers);
+    const teamTotal = this.getTeamTotal(teamCount, teamSize, maxPlayers);
+    const modeLabel = this.getModeLabel(
+      lobby.gameConfig.gameMode,
+      teamCount,
+      teamTotal,
+    );
+    const teamDetailLabel = this.getTeamDetailLabel(
+      lobby.gameConfig.gameMode,
+      teamCount,
+      teamTotal,
+      teamSize,
+    );
     const mapImageSrc = this.mapImages.get(lobby.gameID);
 
     return html`
@@ -158,20 +179,19 @@ export class PublicLobby extends LitElement {
                 class="text-sm ${this.isLobbyHighlighted
                   ? "text-green-600"
                   : "text-blue-600"} bg-white rounded-sm px-1"
+                >${modeLabel}</span
               >
-                ${lobby.gameConfig.gameMode === GameMode.Team
-                  ? typeof teamCount === "string"
-                    ? teamCount === HumansVsNations
-                      ? translateText("public_lobby.teams_hvn")
-                      : translateText(`public_lobby.teams_${teamCount}`)
-                    : translateText("public_lobby.teams", {
-                        num: teamCount ?? 0,
-                      })
-                  : translateText("game_mode.ffa")}</span
-              >
+              ${teamDetailLabel
+                ? html`<span
+                    class="text-sm ${this.isLobbyHighlighted
+                      ? "text-green-600"
+                      : "text-blue-600"} bg-white rounded-sm px-1 ml-1"
+                    >${teamDetailLabel}</span
+                  >`
+                : ""}
               <span
                 >${translateText(
-                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/\s+/g, "")}`,
+                  `map.${lobby.gameConfig.gameMap.toLowerCase().replace(/[\s.]+/g, "")}`,
                 )}</span
               >
             </div>
@@ -191,6 +211,68 @@ export class PublicLobby extends LitElement {
   leaveLobby() {
     this.isLobbyHighlighted = false;
     this.currLobby = null;
+  }
+
+  private getTeamSize(
+    teamCount: number | string | null,
+    maxPlayers: number,
+  ): number | undefined {
+    if (typeof teamCount === "string") {
+      if (teamCount === Duos) return 2;
+      if (teamCount === Trios) return 3;
+      if (teamCount === Quads) return 4;
+      if (teamCount === HumansVsNations) return Math.floor(maxPlayers / 2);
+      return undefined;
+    }
+    if (typeof teamCount === "number" && teamCount > 0) {
+      return Math.floor(maxPlayers / teamCount);
+    }
+    return undefined;
+  }
+
+  private getTeamTotal(
+    teamCount: number | string | null,
+    teamSize: number | undefined,
+    maxPlayers: number,
+  ): number | undefined {
+    if (typeof teamCount === "number") return teamCount;
+    if (teamCount === HumansVsNations) return 2;
+    if (teamSize && teamSize > 0) return Math.floor(maxPlayers / teamSize);
+    return undefined;
+  }
+
+  private getModeLabel(
+    gameMode: GameMode,
+    teamCount: number | string | null,
+    teamTotal: number | undefined,
+  ): string {
+    if (gameMode !== GameMode.Team) return translateText("game_mode.ffa");
+    if (teamCount === HumansVsNations)
+      return translateText("public_lobby.teams_hvn");
+    const totalTeams =
+      teamTotal ?? (typeof teamCount === "number" ? teamCount : 0);
+    return translateText("public_lobby.teams", { num: totalTeams });
+  }
+
+  private getTeamDetailLabel(
+    gameMode: GameMode,
+    teamCount: number | string | null,
+    teamTotal: number | undefined,
+    teamSize: number | undefined,
+  ): string | null {
+    if (gameMode !== GameMode.Team) return null;
+
+    if (typeof teamCount === "string" && teamCount !== HumansVsNations) {
+      const teamKey = `public_lobby.teams_${teamCount}`;
+      const maybeTranslated = translateText(teamKey);
+      if (maybeTranslated !== teamKey) return maybeTranslated;
+    }
+
+    if (teamTotal !== undefined && teamSize !== undefined) {
+      return translateText("public_lobby.players_per_team", { num: teamSize });
+    }
+
+    return null;
   }
 
   private lobbyClicked(lobby: GameInfo) {

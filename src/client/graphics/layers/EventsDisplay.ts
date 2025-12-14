@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
@@ -35,6 +35,7 @@ import {
   CancelBoatIntentEvent,
   SendAllianceExtensionIntentEvent,
   SendAllianceReplyIntentEvent,
+  SendAttackIntentEvent,
 } from "../../Transport";
 import { Layer } from "./Layer";
 
@@ -97,6 +98,17 @@ export class EventsDisplay extends LitElement implements Layer {
     [MessageCategory.ALLIANCE, false],
     [MessageCategory.CHAT, false],
   ]);
+
+  @query(".events-container")
+  private _eventsContainer?: HTMLDivElement;
+  private _shouldScrollToBottom = true;
+
+  updated(changed: Map<string, unknown>) {
+    super.updated(changed);
+    if (this._eventsContainer && this._shouldScrollToBottom) {
+      this._eventsContainer.scrollTop = this._eventsContainer.scrollHeight;
+    }
+  }
 
   private renderButton(options: {
     content: any; // Can be string, TemplateResult, or other renderable content
@@ -188,6 +200,14 @@ export class EventsDisplay extends LitElement implements Layer {
 
   tick() {
     this.active = true;
+
+    if (this._eventsContainer) {
+      const el = this._eventsContainer;
+      this._shouldScrollToBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 5;
+    } else {
+      this._shouldScrollToBottom = true;
+    }
 
     if (!this._isVisible && !this.game.inSpawnPhase()) {
       this._isVisible = true;
@@ -736,28 +756,54 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
+  private handleRetaliate(attack: AttackUpdate) {
+    const attacker = this.game.playerBySmallID(attack.attackerID) as PlayerView;
+    if (!attacker) return;
+
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer) return;
+
+    // Launch counterattack with the same number of troops as the incoming attack
+    this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), attack.troops));
+  }
+
   private renderIncomingAttacks() {
     return html`
       ${this.incomingAttacks.length > 0
         ? html`
-            ${this.incomingAttacks.map(
-              (attack) => html`
-                ${this.renderButton({
-                  content: html`
-                    ${renderTroops(attack.troops)}
-                    ${(
-                      this.game.playerBySmallID(attack.attackerID) as PlayerView
-                    )?.name()}
-                    ${attack.retreating
-                      ? `(${translateText("events_display.retreating")}...)`
+            <div class="flex flex-wrap gap-y-1 gap-x-2">
+              ${this.incomingAttacks.map(
+                (attack) => html`
+                  <div class="inline-flex items-center gap-1">
+                    ${this.renderButton({
+                      content: html`
+                        ${renderTroops(attack.troops)}
+                        ${(
+                          this.game.playerBySmallID(
+                            attack.attackerID,
+                          ) as PlayerView
+                        )?.name()}
+                        ${attack.retreating
+                          ? `(${translateText("events_display.retreating")}...)`
+                          : ""}
+                      `,
+                      onClick: () => this.attackWarningOnClick(attack),
+                      className: "text-left text-red-400",
+                      translate: false,
+                    })}
+                    ${!attack.retreating
+                      ? this.renderButton({
+                          content: translateText("events_display.retaliate"),
+                          onClick: () => this.handleRetaliate(attack),
+                          className:
+                            "inline-block px-3 py-1 text-white rounded text-md md:text-sm cursor-pointer transition-colors duration-300 bg-red-600 hover:bg-red-700",
+                          translate: true,
+                        })
                       : ""}
-                  `,
-                  onClick: () => this.attackWarningOnClick(attack),
-                  className: "text-left text-red-400",
-                  translate: false,
-                })}
-              `,
-            )}
+                  </div>
+                `,
+              )}
+            </div>
           `
         : ""}
     `;
@@ -947,32 +993,30 @@ export class EventsDisplay extends LitElement implements Layer {
       <!-- Events Toggle (when hidden) -->
       ${this._hidden
         ? html`
-            <div class="relative w-fit lg:bottom-2.5 lg:right-2.5 z-50">
+            <div class="relative w-fit lg:bottom-4 lg:right-4 z-50">
               ${this.renderButton({
                 content: html`
                   Events
                   <span
                     class="${this.newEvents
                       ? ""
-                      : "hidden"} inline-block px-2 bg-red-500 rounded-xl text-sm"
+                      : "hidden"} inline-block px-2 bg-red-500 rounded-lg text-sm"
                     >${this.newEvents}</span
                   >
                 `,
                 onClick: this.toggleHidden,
                 className:
-                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-md bg-gray-800/70 backdrop-blur",
+                  "text-white cursor-pointer pointer-events-auto w-fit p-2 lg:p-3 rounded-lg bg-gray-800/70 backdrop-blur",
               })}
             </div>
           `
         : html`
             <!-- Main Events Display -->
             <div
-              class="relative w-full sm:bottom-2.5 sm:right-2.5 z-50 sm:w-96 backdrop-blur"
+              class="relative w-full sm:bottom-4 sm:right-4 z-50 sm:w-96 backdrop-blur"
             >
               <!-- Button Bar -->
-              <div
-                class="w-full p-2 lg:p-3 rounded-t-none md:rounded-t-md bg-gray-800/70"
-              >
+              <div class="w-full p-2 lg:p-3 bg-gray-800/70 rounded-t-lg">
                 <div class="flex justify-between items-center">
                   <div class="flex gap-4">
                     ${this.renderToggleButton(
@@ -1015,7 +1059,7 @@ export class EventsDisplay extends LitElement implements Layer {
 
               <!-- Content Area -->
               <div
-                class="rounded-b-none md:rounded-b-md bg-gray-800/70 max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full h-full"
+                class="bg-gray-800/70 max-h-[30vh] overflow-y-auto w-full h-full sm:rounded-b-lg events-container"
               >
                 <div>
                   <table

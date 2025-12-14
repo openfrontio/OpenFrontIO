@@ -5,6 +5,7 @@ import { PlayerInfo, PlayerType, Team } from "./Game";
 export function assignTeams(
   players: PlayerInfo[],
   teams: Team[],
+  maxTeamSize: number = getMaxTeamSize(players.length, teams.length),
 ): Map<PlayerInfo, Team | "kicked"> {
   const result = new Map<PlayerInfo, Team | "kicked">();
   const teamPlayerCount = new Map<Team, number>();
@@ -24,8 +25,6 @@ export function assignTeams(
       noClanPlayers.push(player);
     }
   }
-
-  const maxTeamSize = Math.ceil(players.length / teams.length);
 
   // Sort clans by size (largest first)
   const sortedClans = Array.from(clanGroups.entries()).sort(
@@ -86,4 +85,20 @@ export function assignTeams(
   }
 
   return result;
+}
+
+export function assignTeamsLobbyPreview(
+  players: PlayerInfo[],
+  teams: Team[],
+  nationCount: number,
+): Map<PlayerInfo, Team | "kicked"> {
+  const maxTeamSize = getMaxTeamSize(
+    players.length + nationCount,
+    teams.length,
+  );
+  return assignTeams(players, teams, maxTeamSize);
+}
+
+export function getMaxTeamSize(numPlayers: number, numTeams: number): number {
+  return Math.ceil(numPlayers / numTeams);
 }

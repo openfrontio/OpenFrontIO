@@ -27,6 +27,8 @@ export enum GameEnv {
 }
 
 export interface ServerConfig {
+  turnstileSiteKey(): string;
+  turnstileSecretKey(): string;
   turnIntervalMs(): number;
   gameCreationRate(): number;
   lobbyMaxPlayers(
@@ -93,6 +95,7 @@ export interface Config {
   userSettings(): UserSettings;
   playerTeams(): TeamCountConfig;
 
+  useNationStrengthForStartManpower(): boolean;
   startManpower(playerInfo: PlayerInfo): number;
   troopIncreaseRate(player: Player | PlayerView): number;
   goldAdditionRate(player: Player | PlayerView): Gold;

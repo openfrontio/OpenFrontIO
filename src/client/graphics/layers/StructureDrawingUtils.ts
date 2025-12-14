@@ -143,19 +143,15 @@ export class SpriteFactory {
     const screenPos = this.transformHandler.worldToScreenCoordinates(worldPos);
 
     const isMarkedForDeletion = unit.markedForDeletion() !== false;
-    const isConstruction = unit.type() === UnitType.Construction;
-    const constructionType = unit.constructionType();
-    const structureType = isConstruction ? constructionType! : unit.type();
+    const isConstruction = unit.isUnderConstruction();
+    const structureType = unit.type();
     const { type, stage } = options;
     const { scale } = this.transformHandler;
 
+    this.renderSprites =
+      this.game.config().userSettings()?.structureSprites() ?? true;
+
     if (type === "icon" || type === "dot") {
-      if (isConstruction && constructionType === undefined) {
-        console.warn(
-          `Unit ${unit.id()} is a construction but has no construction type.`,
-        );
-        return parentContainer;
-      }
       const texture = this.createTexture(
         structureType,
         unit.owner(),

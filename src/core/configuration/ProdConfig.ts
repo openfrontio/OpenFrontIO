@@ -11,4 +11,7 @@ export const prodConfig = new (class extends DefaultServerConfig {
   jwtAudience(): string {
     return "openfront.io";
   }
+  turnstileSiteKey(): string {
+    return "0x4AAAAAACFLkaecN39lS8sk";
+  }
 })();
