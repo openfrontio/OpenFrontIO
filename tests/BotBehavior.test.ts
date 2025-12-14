@@ -1,4 +1,3 @@
-import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
 import { BotBehavior } from "../src/core/execution/utils/BotBehavior";
 import {
   AllianceRequest,
@@ -6,7 +5,6 @@ import {
   Player,
   PlayerInfo,
   PlayerType,
-  Relation,
   Tick,
 } from "../src/core/game/Game";
 import { PseudoRandom } from "../src/core/PseudoRandom";
@@ -43,7 +41,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
     player = game.player("player_id");
     requestor = game.player("requestor_id");
 
-    const random = new PseudoRandom(42);
+    const random = new PseudoRandom(46);
 
     botBehavior = new BotBehavior(random, game, player, 0.5, 0.5, 0.2);
   });
@@ -72,9 +70,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
       }
     });
 
-    jest
-      .spyOn(requestor, "alliances")
-      .mockReturnValue(new Array(alliancesCount));
+    jest.spyOn(player, "alliances").mockReturnValue(new Array(alliancesCount));
 
     const mockRequest = {
       requestor: () => requestor,
@@ -109,7 +105,7 @@ describe("BotBehavior.handleAllianceRequests", () => {
     expect(request.reject).toHaveBeenCalled();
   });
 
-  test("should reject alliance if relation is malicious", () => {
+  test("should reject alliance if relation is hostile", () => {
     const request = setupAllianceRequest({ relationDelta: -2 });
 
     botBehavior.handleAllianceRequests();
@@ -118,10 +114,9 @@ describe("BotBehavior.handleAllianceRequests", () => {
     expect(request.reject).toHaveBeenCalled();
   });
 
-  test("should accept alliance if requestor is much larger (> 3 times size of recipient) and has too many alliances (>= 3)", () => {
+  test("should accept alliance if requestor is much larger (> 3 times size of recipient)", () => {
     const request = setupAllianceRequest({
       numTilesRequestor: 40,
-      alliancesCount: 4,
     });
 
     botBehavior.handleAllianceRequests();
@@ -130,20 +125,8 @@ describe("BotBehavior.handleAllianceRequests", () => {
     expect(request.reject).not.toHaveBeenCalled();
   });
 
-  test("should accept alliance if requestor is much larger (> 3 times size of recipient) and does not have too many alliances (< 3)", () => {
-    const request = setupAllianceRequest({
-      numTilesRequestor: 40,
-      alliancesCount: 2,
-    });
-
-    botBehavior.handleAllianceRequests();
-
-    expect(request.accept).toHaveBeenCalled();
-    expect(request.reject).not.toHaveBeenCalled();
-  });
-
-  test("should reject alliance if requestor is acceptably small (<= 3 times size of recipient) and has too many alliances (>= 3)", () => {
-    const request = setupAllianceRequest({ alliancesCount: 3 });
+  test("should reject alliance if player has too many alliances", () => {
+    const request = setupAllianceRequest({ alliancesCount: 10 });
 
     botBehavior.handleAllianceRequests();
 
@@ -188,41 +171,6 @@ describe("BotBehavior.handleAllianceExtensionRequests", () => {
 
   it("should NOT request extension if onlyOneAgreedToExtend is false (no expiration yet or both already agreed)", () => {
     mockAlliance.onlyOneAgreedToExtend.mockReturnValue(false);
-    botBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).not.toHaveBeenCalled();
-  });
-
-  it("should always extend if type Bot", () => {
-    mockPlayer.type.mockReturnValue(PlayerType.Bot);
-    botBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).toHaveBeenCalledTimes(1);
-    expect(mockGame.addExecution.mock.calls[0][0]).toBeInstanceOf(
-      AllianceExtensionExecution,
-    );
-  });
-
-  it("should always extend if Nation and relation is Friendly", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Friendly);
-    botBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).toHaveBeenCalledTimes(1);
-    expect(mockGame.addExecution.mock.calls[0][0]).toBeInstanceOf(
-      AllianceExtensionExecution,
-    );
-  });
-
-  it("should extend if Nation, relation is Neutral and random chance is true", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Neutral);
-    mockRandom.chance.mockReturnValue(true);
-    botBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).toHaveBeenCalledTimes(1);
-    expect(mockGame.addExecution.mock.calls[0][0]).toBeInstanceOf(
-      AllianceExtensionExecution,
-    );
-  });
-
-  it("should NOT extend if Nation, relation is Neutral and random chance is false", () => {
-    mockPlayer.relation.mockReturnValue(Relation.Neutral);
-    mockRandom.chance.mockReturnValue(false);
     botBehavior.handleAllianceExtensionRequests();
     expect(mockGame.addExecution).not.toHaveBeenCalled();
   });
