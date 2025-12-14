@@ -64,23 +64,31 @@ const numPlayersConfig = {
   [GameMapType.FaroeIslands]: [20, 15, 10],
   [GameMapType.GatewayToTheAtlantic]: [100, 70, 50],
   [GameMapType.GiantWorldMap]: [100, 70, 50],
+  [GameMapType.GulfOfStLawrence]: [60, 40, 30],
   [GameMapType.Halkidiki]: [100, 50, 40],
   [GameMapType.Iceland]: [50, 40, 30],
   [GameMapType.Italia]: [50, 30, 20],
   [GameMapType.Japan]: [20, 15, 10],
+  [GameMapType.Lisbon]: [50, 40, 30],
   [GameMapType.Mars]: [70, 40, 30],
   [GameMapType.Mena]: [70, 50, 40],
   [GameMapType.Montreal]: [60, 40, 30],
+  [GameMapType.NewYorkCity]: [60, 40, 30],
   [GameMapType.NorthAmerica]: [70, 40, 30],
   [GameMapType.Oceania]: [10, 10, 10],
   [GameMapType.Pangaea]: [20, 15, 10],
   [GameMapType.Pluto]: [100, 70, 50],
   [GameMapType.SouthAmerica]: [70, 50, 40],
   [GameMapType.StraitOfGibraltar]: [100, 70, 50],
+  [GameMapType.Svalmel]: [40, 36, 30],
   [GameMapType.World]: [50, 30, 20],
 } as const satisfies Record<GameMapType, [number, number, number]>;
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  turnstileSecretKey(): string {
+    return process.env.TURNSTILE_SECRET_KEY ?? "";
+  }
+  abstract turnstileSiteKey(): string;
   allowedFlares(): string[] | undefined {
     return;
   }
@@ -356,7 +364,7 @@ export class DefaultConfig implements Config {
   trainSpawnRate(numPlayerFactories: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 16;
+    return (numPlayerFactories + 10) * 18;
   }
   trainGold(rel: "self" | "team" | "ally" | "other"): Gold {
     switch (rel) {
@@ -544,11 +552,6 @@ export class DefaultConfig implements Config {
           canBuildTrainStation: true,
           experimental: true,
           upgradable: true,
-        };
-      case UnitType.Construction:
-        return {
-          cost: () => 0n,
-          territoryBound: true,
         };
       case UnitType.Train:
         return {

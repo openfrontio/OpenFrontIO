@@ -8,6 +8,9 @@ export const preprodConfig = new (class extends DefaultServerConfig {
   numWorkers(): number {
     return 2;
   }
+  turnstileSiteKey(): string {
+    return "0x4AAAAAAB7QetxHwRCKw-aP";
+  }
   jwtAudience(): string {
     return "openfront.dev";
   }

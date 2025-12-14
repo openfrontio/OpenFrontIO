@@ -70,12 +70,12 @@ describe("UILayer", () => {
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
 
-    // a full hp unit doesnt have a health bar
+    // a full hp unit doesn't have a health bar
     unit.health = () => 10;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(false);
 
-    // a dead unit doesnt have a health bar
+    // a dead unit doesn't have a health bar
     unit.health = () => 5;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
@@ -98,7 +98,7 @@ describe("UILayer", () => {
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(true);
 
-    // an inactive unit doesnt have a health bar
+    // an inactive unit doesn't have a health bar
     unit.isActive = () => false;
     ui.drawHealthBar(unit);
     expect(ui["allHealthBars"].has(1)).toBe(false);
@@ -121,8 +121,8 @@ describe("UILayer", () => {
     ui.redraw();
     const unit = {
       id: () => 2,
-      type: () => "Construction",
-      constructionType: () => "City",
+      type: () => "City",
+      isUnderConstruction: () => true,
       owner: () => ({ id: () => 1 }),
       tile: () => ({}),
       isActive: () => true,
@@ -141,17 +141,20 @@ describe("UILayer", () => {
     ui.redraw();
     const unit = {
       id: () => 2,
-      type: () => "Construction",
-      constructionType: () => "City",
+      type: () => "City",
+      isUnderConstruction: () => true,
       owner: () => ({ id: () => 1 }),
       tile: () => ({}),
       isActive: () => true,
       createdAt: () => 1,
+      markedForDeletion: () => false,
     } as unknown as UnitView;
     ui.onUnitEvent(unit);
     expect(ui["allProgressBars"].has(2)).toBe(true);
 
     game.ticks = () => 6; // simulate enough ticks for completion
+    // simulate construction finished
+    (unit as any).isUnderConstruction = () => false;
     ui.tick();
     expect(ui["allProgressBars"].has(2)).toBe(false);
   });

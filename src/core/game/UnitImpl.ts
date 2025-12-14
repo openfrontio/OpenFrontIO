@@ -26,7 +26,7 @@ export class UnitImpl implements Unit {
   private _reachedTarget = false;
   private _wasDestroyedByEnemy: boolean = false;
   private _lastSetSafeFromPirates: number; // Only for trade ships
-  private _constructionType: UnitType | undefined;
+  private _underConstruction: boolean = false;
   private _lastOwner: PlayerImpl | null = null;
   private _troops: number;
   // Number of missiles in cooldown, if empty all missiles are ready.
@@ -75,6 +75,7 @@ export class UnitImpl implements Unit {
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
+      case UnitType.Factory:
         this.mg.stats().unitBuild(_owner, this._type);
     }
   }
@@ -132,7 +133,7 @@ export class UnitImpl implements Unit {
       targetable: this._targetable,
       lastPos: this._lastTile,
       health: this.hasHealth() ? Number(this._health) : undefined,
-      constructionType: this._constructionType,
+      underConstruction: this._underConstruction,
       targetUnitId: this._targetUnit?.id() ?? undefined,
       targetTile: this.targetTile() ?? undefined,
       missileTimerQueue: this._missileTimerQueue,
@@ -193,6 +194,7 @@ export class UnitImpl implements Unit {
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
+      case UnitType.Factory:
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
         break;
@@ -311,19 +313,15 @@ export class UnitImpl implements Unit {
     this._retreating = true;
   }
 
-  constructionType(): UnitType | null {
-    if (this.type() !== UnitType.Construction) {
-      throw new Error(`Cannot get construction type on ${this.type()}`);
-    }
-    return this._constructionType ?? null;
+  isUnderConstruction(): boolean {
+    return this._underConstruction;
   }
 
-  setConstructionType(type: UnitType): void {
-    if (this.type() !== UnitType.Construction) {
-      throw new Error(`Cannot set construction type on ${this.type()}`);
+  setUnderConstruction(underConstruction: boolean): void {
+    if (this._underConstruction !== underConstruction) {
+      this._underConstruction = underConstruction;
+      this.mg.addUpdate(this.toUpdate());
     }
-    this._constructionType = type;
-    this.mg.addUpdate(this.toUpdate());
   }
 
   hash(): number {
