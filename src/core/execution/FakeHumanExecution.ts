@@ -18,7 +18,6 @@ import { TileRef, euclDistFN } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { boundingBoxTiles, calculateBoundingBox, simpleHash } from "../Util";
-import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { structureSpawnTileValue } from "./nation/structureSpawnTileValue";
@@ -26,12 +25,14 @@ import { NukeExecution } from "./NukeExecution";
 import { SpawnExecution } from "./SpawnExecution";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { calculateTerritoryCenter, closestTwoTiles } from "./Util";
+import { AllianceBehavior } from "./utils/AllianceBehavior";
 import { BotBehavior } from "./utils/BotBehavior";
 
 export class FakeHumanExecution implements Execution {
   private active = true;
   private random: PseudoRandom;
   private behavior: BotBehavior | null = null; // Shared behavior logic for both bots and fakehumans
+  private allianceBehavior: AllianceBehavior | null = null;
   private mg: Game;
   private player: Player | null = null;
 
@@ -175,7 +176,7 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
-    if (this.behavior === null) {
+    if (this.behavior === null || this.allianceBehavior === null) {
       // Player is unavailable during init()
       this.behavior = new BotBehavior(
         this.random,
@@ -185,6 +186,11 @@ export class FakeHumanExecution implements Execution {
         this.reserveRatio,
         this.expandRatio,
       );
+      this.allianceBehavior = new AllianceBehavior(
+        this.random,
+        this.mg,
+        this.player,
+      );
 
       // Send an attack on the first tick
       this.behavior.forceSendAttack(this.mg.terraNullius());
@@ -192,8 +198,8 @@ export class FakeHumanExecution implements Execution {
     }
 
     this.updateRelationsFromEmbargos();
-    this.behavior.handleAllianceRequests();
-    this.behavior.handleAllianceExtensionRequests();
+    this.allianceBehavior.handleAllianceRequests();
+    this.allianceBehavior.handleAllianceExtensionRequests();
     this.handleUnits();
     this.handleEmbargoesToHostileNations();
     this.considerMIRV();
@@ -201,7 +207,11 @@ export class FakeHumanExecution implements Execution {
   }
 
   private maybeAttack() {
-    if (this.player === null || this.behavior === null) {
+    if (
+      this.player === null ||
+      this.behavior === null ||
+      this.allianceBehavior === null
+    ) {
       throw new Error("not initialized");
     }
 
@@ -211,15 +221,13 @@ export class FakeHumanExecution implements Execution {
         (t) =>
           this.mg.isLand(t) && this.mg.ownerID(t) !== this.player?.smallID(),
       );
-    const borderingPlayers = Array.from(
-      // Deduplication
-      new Map(
+    const borderingPlayers = [
+      ...new Set(
         border
           .map((t) => this.mg.playerBySmallID(this.mg.ownerID(t)))
-          .filter((o) => o.isPlayer())
-          .map((p) => [p.smallID(), p] as const),
-      ).values(),
-    ).sort((a, b) => a.troops() - b.troops());
+          .filter((o): o is Player => o.isPlayer()),
+      ),
+    ].sort((a, b) => a.troops() - b.troops());
     const borderingFriends = borderingPlayers.filter(
       (o) => this.player?.isFriendly(o) === true,
     );
@@ -246,7 +254,7 @@ export class FakeHumanExecution implements Execution {
         return;
       }
 
-      this.maybeSendAllianceRequests(borderingEnemies);
+      this.allianceBehavior.maybeSendAllianceRequests(borderingEnemies);
     }
 
     this.behavior.assistAllies();
@@ -254,45 +262,6 @@ export class FakeHumanExecution implements Execution {
     this.behavior.attackBestTarget(borderingFriends, borderingEnemies);
 
     this.maybeSendNuke(this.behavior.findBestNukeTarget(borderingEnemies));
-  }
-
-  private maybeSendAllianceRequests(borderingEnemies: Player[]) {
-    if (this.player === null || this.behavior === null) {
-      throw new Error("not initialized");
-    }
-
-    // Impossible / smart nations know the strategic value of alliances and thus send more requests
-    const { difficulty } = this.mg.config().gameConfig();
-    const shouldSendAllianceRequest = () => {
-      switch (difficulty) {
-        case Difficulty.Easy:
-          return this.random.chance(35);
-        case Difficulty.Medium:
-          return this.random.chance(30);
-        case Difficulty.Hard:
-          return this.random.chance(25);
-        default:
-          return this.random.chance(20);
-      }
-    };
-
-    // Only easy nations are allowed to send alliance requests to bots
-    const isAcceptablePlayerType = (p: Player) =>
-      (p.type() === PlayerType.Bot && difficulty === Difficulty.Easy) ||
-      p.type() !== PlayerType.Bot;
-
-    for (const enemy of borderingEnemies) {
-      if (
-        shouldSendAllianceRequest() &&
-        isAcceptablePlayerType(enemy) &&
-        this.player.canSendAllianceRequest(enemy) &&
-        this.behavior.getAllianceRequestDecision(enemy)
-      ) {
-        this.mg.addExecution(
-          new AllianceRequestExecution(this.player, enemy.id()),
-        );
-      }
-    }
   }
 
   private maybeSendNuke(other: Player | null) {

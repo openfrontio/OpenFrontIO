@@ -13,7 +13,6 @@ import {
   calculateBoundingBoxCenter,
   flattenedEmojiTable,
 } from "../../Util";
-import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AttackExecution } from "../AttackExecution";
 import { EmojiExecution } from "../EmojiExecution";
 import { TransportShipExecution } from "../TransportShipExecution";
@@ -39,31 +38,6 @@ export class BotBehavior {
     private reserveRatio: number,
     private expandRatio: number,
   ) {}
-
-  handleAllianceRequests() {
-    for (const req of this.player.incomingAllianceRequests()) {
-      if (this.getAllianceRequestDecision(req.requestor())) {
-        req.accept();
-      } else {
-        req.reject();
-      }
-    }
-  }
-
-  handleAllianceExtensionRequests() {
-    for (const alliance of this.player.alliances()) {
-      // Alliance expiration tracked by Events Panel, only human ally can click Request to Renew
-      // Skip if no expiration yet/ ally didn't request extension yet/ bot already agreed to extend
-      if (!alliance.onlyOneAgreedToExtend()) continue;
-
-      const human = alliance.other(this.player);
-      if (!this.getAllianceRequestDecision(human)) continue;
-
-      this.game.addExecution(
-        new AllianceExtensionExecution(this.player, human.id()),
-      );
-    }
-  }
 
   private emoji(player: Player, emoji: number) {
     if (player.type() !== PlayerType.Human) return;
@@ -561,155 +535,5 @@ export class BotBehavior {
         this.random.randElement(EMOJI_HECKLE),
       ),
     );
-  }
-
-  getAllianceRequestDecision(otherPlayer: Player): boolean {
-    // Easy (dumb) bots/nations sometimes get confused and accept/reject randomly (Just like dumb humans do)
-    if (this.isConfused()) {
-      return this.random.chance(2);
-    }
-    // Nearly always reject traitors
-    if (otherPlayer.isTraitor() && this.random.nextInt(0, 100) >= 10) {
-      return false;
-    }
-    // Before caring about the relation, first check if the otherPlayer is a threat
-    // Easy (dumb) bots/nations are blinded by hatred, they don't care about threats, they care about the relation
-    // Impossible (smart) bots/nations on the other hand are analyzing the facts
-    if (this.isAlliancePartnerThreat(otherPlayer)) {
-      return true;
-    }
-    // Reject if relation is bad
-    if (this.player.relation(otherPlayer) < Relation.Neutral) {
-      return false;
-    }
-    // Maybe accept if relation is friendly
-    if (this.isAlliancePartnerFriendly(otherPlayer)) {
-      return true;
-    }
-    // Reject if we already have some alliances, we don't want to ally with the entire map
-    if (this.checkAlreadyEnoughAlliances(otherPlayer)) {
-      return false;
-    }
-    // Accept if we are similarly strong
-    return this.isAlliancePartnerSimilarlyStrong(otherPlayer);
-  }
-
-  isConfused(): boolean {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return this.random.chance(10); // 10% chance to be confused on easy
-      case Difficulty.Medium:
-        return this.random.chance(20); // 5% chance to be confused on medium
-      case Difficulty.Hard:
-        return this.random.chance(40); // 2.5% chance to be confused on hard
-      default:
-        return false; // No confusion on impossible
-    }
-  }
-
-  isAlliancePartnerThreat(otherPlayer: Player): boolean {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        // On easy we are very dumb, we don't see anybody as a threat
-        return false;
-      case Difficulty.Medium:
-        // On medium we just see players with much more troops as a threat
-        return otherPlayer.troops() > this.player.troops() * 2.5;
-      case Difficulty.Hard:
-        // On hard we are smarter, we check for maxTroops to see the actual strength
-        return (
-          otherPlayer.troops() > this.player.troops() &&
-          this.game.config().maxTroops(otherPlayer) >
-            this.game.config().maxTroops(this.player) * 2
-        );
-      default:
-        // On impossible we check for multiple factors and try to not mess with stronger players (we want to steamroll over weaklings)
-        return (
-          (otherPlayer.troops() > this.player.troops() &&
-            this.game.config().maxTroops(otherPlayer) >
-              this.game.config().maxTroops(this.player) * 1.5) ||
-          (otherPlayer.troops() > this.player.troops() &&
-            otherPlayer.numTilesOwned() > this.player.numTilesOwned() * 1.5) ||
-          otherPlayer.troops() > this.player.troops() * 1.5
-        );
-    }
-  }
-
-  checkAlreadyEnoughAlliances(otherPlayer: Player): boolean {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return false; // On easy we never think we have enough alliances
-      case Difficulty.Medium:
-        return this.player.alliances().length >= this.random.nextInt(5, 8);
-      default: {
-        // On hard and impossible we try to not ally with all our neighbors (If we have 3+ neighbors)
-        const borderingPlayers = this.player
-          .neighbors()
-          .filter(
-            (n): n is Player => n.isPlayer() && n.type() !== PlayerType.Bot,
-          );
-        const borderingFriends = borderingPlayers.filter(
-          (o) => this.player?.isFriendly(o) === true,
-        );
-        if (
-          borderingPlayers.length >= 3 &&
-          borderingPlayers.includes(otherPlayer)
-        ) {
-          return borderingPlayers.length <= borderingFriends.length + 1;
-        }
-        if (difficulty === Difficulty.Hard) {
-          return this.player.alliances().length >= this.random.nextInt(3, 6);
-        }
-        return this.player.alliances().length >= this.random.nextInt(2, 5);
-      }
-    }
-  }
-
-  isAlliancePartnerFriendly(otherPlayer: Player): boolean {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-      case Difficulty.Medium:
-        return this.player.relation(otherPlayer) === Relation.Friendly;
-      case Difficulty.Hard:
-        return (
-          this.player.relation(otherPlayer) === Relation.Friendly &&
-          this.random.nextFloat(0, 100) >= 16.66
-        );
-      default:
-        return (
-          this.player.relation(otherPlayer) === Relation.Friendly &&
-          this.random.nextFloat(0, 100) >= 33.33
-        );
-    }
-  }
-
-  isAlliancePartnerSimilarlyStrong(otherPlayer: Player): boolean {
-    const { difficulty } = this.game.config().gameConfig();
-    switch (difficulty) {
-      case Difficulty.Easy:
-        return (
-          otherPlayer.troops() >
-          this.player.troops() * this.random.nextFloat(0.6, 0.7)
-        );
-      case Difficulty.Medium:
-        return (
-          otherPlayer.troops() >
-          this.player.troops() * this.random.nextFloat(0.7, 0.8)
-        );
-      case Difficulty.Hard:
-        return (
-          otherPlayer.troops() >
-          this.player.troops() * this.random.nextFloat(0.75, 0.85)
-        );
-      default:
-        return (
-          otherPlayer.troops() >
-          this.player.troops() * this.random.nextFloat(0.8, 0.9)
-        );
-    }
   }
 }
