@@ -7,10 +7,12 @@ import {
   PlayerType,
   UnitType,
 } from "../../src/core/game/Game";
+import { GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 
 describe("Construction economy", () => {
   let game: Game;
+  const gameID: GameID = "game_id";
   let player: Player;
 
   beforeEach(async () => {
@@ -27,7 +29,7 @@ describe("Construction economy", () => {
     );
     game.addPlayer(info);
     const spawn = game.ref(0, 10);
-    game.addExecution(new SpawnExecution(info, spawn));
+    game.addExecution(new SpawnExecution(gameID, info, spawn));
     while (game.inSpawnPhase()) {
       game.executeNextTick();
     }

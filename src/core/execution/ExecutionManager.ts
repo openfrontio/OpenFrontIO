@@ -69,7 +69,7 @@ export class Executor {
       case "move_warship":
         return new MoveWarshipExecution(player, intent.unitId, intent.tile);
       case "spawn":
-        return new SpawnExecution(player.info(), intent.tile);
+        return new SpawnExecution(this.gameID, player.info(), intent.tile);
       case "boat":
         return new TransportShipExecution(
           player,

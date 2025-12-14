@@ -1,5 +1,4 @@
 import { Game, PlayerInfo, PlayerType } from "../game/Game";
-import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import { simpleHash } from "../Util";
@@ -17,7 +16,7 @@ export class BotSpawner {
 
   constructor(
     private gs: Game,
-    gameID: GameID,
+    private gameID: GameID,
   ) {
     this.random = new PseudoRandom(simpleHash(gameID));
   }
@@ -45,37 +44,10 @@ export class BotSpawner {
   }
 
   spawnBot(botName: string): SpawnExecution | null {
-    const tile = this.randTile();
-    if (!this.gs.isLand(tile)) {
-      return null;
-    }
-
-    const isOtherPlayerSpawnedNearby = this.gs.allPlayers().some((player) => {
-      const spawnTile = player.spawnTile();
-
-      if (spawnTile === undefined) {
-        return false;
-      }
-
-      return (
-        this.gs.manhattanDist(spawnTile, tile) <
-        this.gs.config().minDistanceBetweenPlayers()
-      );
-    });
-
-    if (isOtherPlayerSpawnedNearby) {
-      return null;
-    }
-
-    const playerInfo = new PlayerInfo(
-      botName,
-      PlayerType.Bot,
-      null,
-      this.random.nextID(),
+    return new SpawnExecution(
+      this.gameID,
+      new PlayerInfo(botName, PlayerType.Bot, null, this.random.nextID()),
     );
-    this.gs.addPlayer(playerInfo).setSpawnTile(tile);
-
-    return new SpawnExecution(playerInfo, tile);
   }
 
   private nextCandidateName(): {
@@ -114,12 +86,5 @@ export class BotSpawner {
   private getRandomElf(): string {
     const suffixNumber = this.random.nextInt(1, 10001);
     return `Elf ${suffixNumber}`;
-  }
-
-  private randTile(): TileRef {
-    return this.gs.ref(
-      this.random.nextInt(0, this.gs.width()),
-      this.random.nextInt(0, this.gs.height()),
-    );
   }
 }

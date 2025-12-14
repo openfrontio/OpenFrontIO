@@ -9,7 +9,6 @@ import {
   PlayerID,
   PlayerType,
   Relation,
-  TerrainType,
   Tick,
   Unit,
   UnitType,
@@ -71,7 +70,7 @@ export class FakeHumanExecution implements Execution {
   private static readonly STEAMROLL_MIN_LEADER_CITIES = 10;
 
   constructor(
-    gameID: GameID,
+    private gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.FakeHuman
   ) {
     this.random = new PseudoRandom(
@@ -162,13 +161,9 @@ export class FakeHumanExecution implements Execution {
     }
 
     if (this.mg.inSpawnPhase()) {
-      const rl = this.randomSpawnLand();
-      if (rl === null) {
-        console.warn(`cannot spawn ${this.nation.playerInfo.name}`);
-        return;
-      }
-      this.player.setSpawnTile(rl);
-      this.mg.addExecution(new SpawnExecution(this.nation.playerInfo, rl));
+      this.mg.addExecution(
+        new SpawnExecution(this.gameID, this.nation.playerInfo),
+      );
       return;
     }
 
@@ -593,49 +588,6 @@ export class FakeHumanExecution implements Execution {
       ),
     );
     return;
-  }
-
-  randomSpawnLand(): TileRef | null {
-    const delta = 25;
-    let tries = 0;
-    while (tries < 50) {
-      tries++;
-      const cell = this.nation.spawnCell;
-      const x = this.random.nextInt(cell.x - delta, cell.x + delta);
-      const y = this.random.nextInt(cell.y - delta, cell.y + delta);
-      if (!this.mg.isValidCoord(x, y)) {
-        continue;
-      }
-      const tile = this.mg.ref(x, y);
-
-      const isOtherPlayerSpawnedNearby = this.mg.allPlayers().some((player) => {
-        const spawnTile = player.spawnTile();
-
-        if (spawnTile === undefined) {
-          return false;
-        }
-
-        return (
-          this.mg.manhattanDist(spawnTile, tile) <
-          this.mg.config().minDistanceBetweenPlayers()
-        );
-      });
-
-      if (isOtherPlayerSpawnedNearby) {
-        continue;
-      }
-
-      if (this.mg.isLand(tile) && !this.mg.hasOwner(tile)) {
-        if (
-          this.mg.terrainType(tile) === TerrainType.Mountain &&
-          this.random.chance(2)
-        ) {
-          continue;
-        }
-        return tile;
-      }
-    }
-    return null;
   }
 
   private randomBoatTarget(
