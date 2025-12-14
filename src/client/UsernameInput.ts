@@ -2,7 +2,6 @@ import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { v4 as uuidv4 } from "uuid";
 import { translateText } from "../client/Utils";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   MAX_USERNAME_LENGTH,
   validateUsername,
@@ -15,7 +14,6 @@ export class UsernameInput extends LitElement {
   @state() private username: string = "";
   @property({ type: String }) validationError: string = "";
   private _isValid: boolean = true;
-  private userSettings: UserSettings = new UserSettings();
 
   // Remove static styles since we're using Tailwind
 
@@ -31,7 +29,6 @@ export class UsernameInput extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.username = this.getStoredUsername();
-    this.dispatchUsernameEvent();
   }
 
   render() {
@@ -81,16 +78,6 @@ export class UsernameInput extends LitElement {
     if (username) {
       localStorage.setItem(usernameKey, username);
     }
-  }
-
-  private dispatchUsernameEvent() {
-    this.dispatchEvent(
-      new CustomEvent("username-change", {
-        detail: { username: this.username },
-        bubbles: true,
-        composed: true,
-      }),
-    );
   }
 
   private generateNewUsername(): string {
