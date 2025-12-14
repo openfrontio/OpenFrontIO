@@ -557,7 +557,7 @@ export class FakeHumanExecution implements Execution {
 
   private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
-    return this.mg.unitInfo(type).cost(this.player);
+    return this.mg.unitInfo(type).cost(this.mg, this.player);
   }
 
   sendBoatRandomly(borderingEnemies: Player[] = []) {

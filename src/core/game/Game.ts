@@ -175,7 +175,7 @@ export enum GameMapSize {
 }
 
 export interface UnitInfo {
-  cost: (player: Player) => Gold;
+  cost: (game: Game, player: Player) => Gold;
   // Determines if its owner changes when its tile is conquered.
   territoryBound: boolean;
   maxHealth?: number;
@@ -753,7 +753,6 @@ export interface Game extends GameMap {
   nations(): Nation[];
 
   numTilesWithFallout(): number;
-  // Optional as it's not initialized before the end of spawn phase
   stats(): Stats;
 
   addUpdate(update: GameUpdate): void;
